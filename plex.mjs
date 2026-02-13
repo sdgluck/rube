@@ -220,7 +220,6 @@ export function createPlexClient({ url, token, verbose = false }) {
 
   return {
     log,
-    request,
     getSections,
     getIdentity,
     getManagedHubs,
