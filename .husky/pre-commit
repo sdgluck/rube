@@ -1,0 +1,2 @@
+npx prettier --write --cache .
+git add -u
