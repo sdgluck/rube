@@ -224,7 +224,17 @@ if (command === "shuffle") {
             hubs.forEach((h, i) => console.log(`    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`));
         }
 
-        const shuffled = shuffleArray(hubs);
+        // Keep pinned hubs at the top per section
+        const PINNED_TITLES = {
+            Films: ["Recently Added Movies", "Recently Released Movies"],
+            TV:    ["Recently Added TV"],
+        };
+        const pinnedTitles = PINNED_TITLES[sectionTitle] || [];
+        const pinned = pinnedTitles
+            .map((t) => hubs.find((h) => h.title === t))
+            .filter(Boolean);
+        const rest = hubs.filter((h) => !pinned.includes(h));
+        const shuffled = [...pinned, ...shuffleArray(rest)];
 
         if (VERBOSE) {
             console.log("   New order:");
@@ -339,7 +349,11 @@ Examples:
 
     const PLEX_URL   = (args.url || process.env.PLEX_URL || "http://localhost:32400").replace(/\/+$/, "");
     const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
-    const MAX_COLLECTIONS = Math.max(1, parseInt(args.limit, 10) || 8);
+    const MAX_COLLECTIONS = parseInt(args.limit, 10) || 8;
+    if (MAX_COLLECTIONS > 10) {
+        console.error("Error: --limit cannot exceed 10.");
+        process.exit(1);
+    }
     const VERBOSE    = args.verbose;
 
     if (!PLEX_TOKEN) {
@@ -488,7 +502,7 @@ Examples:
 
 Rules:
 - Create exactly ${maxCollections} collections
-- Each collection should have between 10 and 30 items
+- Each collection MUST have between 15 and 30 items, no fewer than 15
 - Each item can appear in multiple collections
 - Only use titles that exactly match the input list
 - Collection names should be creative and fun, but NEVER use colons in names (no "Title: Subtitle" format)
@@ -498,8 +512,8 @@ Rules:
 
 Random seed for variety: ${seed}
 
-Return ONLY valid JSON, no markdown fences, no explanation. Format:
-[{"name": "Collection Name", "description": "Short description.", "items": ["Title (Year)", "Title (Year)"]}]
+Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
+[{"name":"Collection Name","description":"Short description.","items":["Title (Year)","Title (Year)"]}]
 
 Here are the items:
 ${itemList}`,
@@ -508,14 +522,27 @@ ${itemList}`,
         });
 
         const text = response.content[0].text.trim();
-        try {
-            return JSON.parse(text);
-        } catch {
-            // Try extracting JSON from markdown fences
-            const match = text.match(/\[[\s\S]*\]/);
-            if (match) return JSON.parse(match[0]);
-            throw new Error("Failed to parse AI response as JSON");
+        log("AI response:", text);
+        return parseJSON(text);
+    }
+
+    function parseJSON(text) {
+        // Try parsing as-is
+        try { return JSON.parse(text); } catch {}
+
+        // Extract JSON array from markdown fences or surrounding text
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) {
+            try { return JSON.parse(match[0]); } catch {}
+
+            // Fix trailing commas and retry
+            const cleaned = match[0]
+                .replace(/,\s*([}\]])/g, "$1")  // trailing commas
+                .replace(/[\x00-\x1f]/g, " ");  // control chars
+            try { return JSON.parse(cleaned); } catch {}
         }
+
+        throw new Error(`Failed to parse AI response as JSON:\n${text.slice(0, 200)}`);
     }
 
     // ─── Create a collection in Plex ────────────────────────────────────────────
@@ -625,8 +652,8 @@ ${itemList}`,
                 .map((title) => titleMap.get(title))
                 .filter(Boolean);
 
-            if (ratingKeys.length < 2) {
-                log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s)`);
+            if (ratingKeys.length < 15) {
+                log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`);
                 continue;
             }
 
