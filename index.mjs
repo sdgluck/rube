@@ -24,6 +24,11 @@
 
 import { parseArgs } from "node:util";
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  createPlexClient,
+  TINKERBELL_MARKER,
+  SECTION_TYPE_MAP,
+} from "./plex.mjs";
 
 // ─── CLI argument parsing ──────────────────────────────────────────────────────
 
@@ -138,44 +143,13 @@ if (command === "shuffle") {
     process.exit(1);
   }
 
+  const client = createPlexClient({
+    url: PLEX_URL,
+    token: PLEX_TOKEN,
+    verbose: VERBOSE,
+  });
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
-
-  const log = (...a) => VERBOSE && console.log("  ", ...a);
-
-  async function plex(path, { method = "GET", params = {} } = {}) {
-    const url = new URL(path, PLEX_URL);
-    url.searchParams.set("X-Plex-Token", PLEX_TOKEN);
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-    }
-
-    log(`${method} ${url.pathname}${url.search.replace(PLEX_TOKEN, "***")}`);
-
-    const res = await fetch(url.toString(), {
-      method,
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Client-Identifier": "plex-hub-shuffle",
-        "X-Plex-Product": "plex-hub-shuffle",
-        "X-Plex-Version": "1.0.0",
-      },
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(
-        `Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`,
-      );
-    }
-
-    const text = await res.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
-    }
-  }
 
   function shuffleArray(arr) {
     const a = [...arr];
@@ -188,34 +162,17 @@ if (command === "shuffle") {
 
   // ─── Core logic ─────────────────────────────────────────────────────────────
 
-  async function getSections() {
-    const data = await plex("/library/sections");
-    return data.MediaContainer.Directory || [];
-  }
-
-  async function getManagedHubs(sectionId) {
-    const data = await plex(`/hubs/sections/${sectionId}/manage`);
-    return (data && data.MediaContainer && data.MediaContainer.Hub) || [];
-  }
-
-  async function moveHub(sectionId, hubId, afterId) {
-    await plex(`/hubs/sections/${sectionId}/manage/${hubId}/move`, {
-      method: "PUT",
-      params: { after: afterId },
-    });
-  }
-
   async function reorderHubs(sectionId, orderedHubs) {
     for (let i = 0; i < orderedHubs.length; i++) {
       const hub = orderedHubs[i];
       const afterIdentifier = i === 0 ? "" : orderedHubs[i - 1].identifier;
 
-      log(
+      client.log(
         `Moving "${hub.title}" (${hub.identifier}) → after "${afterIdentifier || "(beginning)"}"`,
       );
 
       if (!DRY_RUN) {
-        await moveHub(sectionId, hub.identifier, afterIdentifier);
+        await client.moveHub(sectionId, hub.identifier, afterIdentifier);
       }
     }
   }
@@ -224,7 +181,7 @@ if (command === "shuffle") {
     const sectionId = section.key;
     const sectionTitle = section.title;
 
-    const hubs = await getManagedHubs(sectionId);
+    const hubs = await client.getManagedHubs(sectionId);
 
     if (hubs.length < 2) {
       console.log(
@@ -279,15 +236,15 @@ if (command === "shuffle") {
     console.log(`   Server: ${PLEX_URL}`);
 
     try {
-      const identity = await plex("/");
-      console.log(`   Server name: ${identity.MediaContainer.friendlyName}`);
+      const identity = await client.getIdentity();
+      console.log(`   Server name: ${identity.friendlyName}`);
     } catch (err) {
       console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
       console.error(`   ${err.message}`);
       process.exit(1);
     }
 
-    const allSections = await getSections();
+    const allSections = await client.getSections();
 
     let sections;
     if (args.section) {
@@ -401,121 +358,11 @@ Examples:
     process.exit(1);
   }
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
-
-  const log = (...a) => VERBOSE && console.log("  ", ...a);
-
-  async function plex(
-    path,
-    { method = "GET", params = {}, headers = {} } = {},
-  ) {
-    const url = new URL(path, PLEX_URL);
-    url.searchParams.set("X-Plex-Token", PLEX_TOKEN);
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-    }
-
-    log(`${method} ${url.pathname}${url.search.replace(PLEX_TOKEN, "***")}`);
-
-    const res = await fetch(url.toString(), {
-      method,
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Client-Identifier": "tinkerbell",
-        "X-Plex-Product": "tinkerbell",
-        "X-Plex-Version": "1.0.0",
-        ...headers,
-      },
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(
-        `Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`,
-      );
-    }
-
-    const text = await res.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
-    }
-  }
-
-  async function getSections() {
-    const data = await plex("/library/sections");
-    return data.MediaContainer.Directory || [];
-  }
-
-  async function getMachineIdentifier() {
-    const data = await plex("/");
-    return data.MediaContainer.machineIdentifier;
-  }
-
-  // ─── Delete previous tinkerbell collections ─────────────────────────────────
-
-  const TINKERBELL_MARKER = "[tinkerbell]";
-
-  async function deleteTinkerbellCollections(sectionId) {
-    const data = await plex(`/library/sections/${sectionId}/all`, {
-      params: { type: 18 },
-    });
-    const collections = data?.MediaContainer?.Metadata || [];
-
-    let deleted = 0;
-    for (const col of collections) {
-      let isTinkerbell = col.summary?.includes(TINKERBELL_MARKER);
-
-      if (!isTinkerbell) {
-        const detail = await plex(`/library/metadata/${col.ratingKey}`);
-        const labels = detail?.MediaContainer?.Metadata?.[0]?.Label || [];
-        isTinkerbell = labels.some((l) => l.tag.toLowerCase() === "tinkerbell");
-      }
-
-      if (isTinkerbell) {
-        log(`Deleting collection "${col.title}" (${col.ratingKey})`);
-        await plex(`/library/metadata/${col.ratingKey}`, { method: "DELETE" });
-        deleted++;
-      }
-    }
-    return deleted;
-  }
-
-  // ─── Fetch all items in a section (paginated) ───────────────────────────────
-
-  async function fetchAllItems(sectionId) {
-    const items = [];
-    const pageSize = 100;
-    let offset = 0;
-
-    while (true) {
-      const data = await plex(`/library/sections/${sectionId}/all`, {
-        params: {
-          "X-Plex-Container-Start": offset,
-          "X-Plex-Container-Size": pageSize,
-        },
-      });
-
-      const batch = data?.MediaContainer?.Metadata || [];
-      if (batch.length === 0) break;
-
-      for (const item of batch) {
-        items.push({
-          ratingKey: item.ratingKey,
-          title: item.title,
-          year: item.year,
-        });
-      }
-
-      offset += batch.length;
-      const total = data?.MediaContainer?.totalSize ?? 0;
-      if (offset >= total) break;
-    }
-
-    return items;
-  }
+  const client = createPlexClient({
+    url: PLEX_URL,
+    token: PLEX_TOKEN,
+    verbose: VERBOSE,
+  });
 
   // ─── Ask Claude for curated collections ─────────────────────────────────────
 
@@ -563,7 +410,7 @@ ${itemList}`,
     });
 
     const text = response.content[0].text.trim();
-    log("AI response:", text);
+    client.log("AI response:", text);
     return parseJSON(text);
   }
 
@@ -594,75 +441,6 @@ ${itemList}`,
     );
   }
 
-  // ─── Create a collection in Plex ────────────────────────────────────────────
-
-  const SECTION_TYPE_MAP = { movie: 1, show: 2, artist: 8, photo: 13 };
-
-  async function createCollection(
-    sectionId,
-    sectionType,
-    machineId,
-    name,
-    ratingKeys,
-  ) {
-    if (ratingKeys.length === 0) return null;
-
-    // Create collection with all items in a single request
-    const uri = `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
-
-    const data = await plex("/library/collections", {
-      method: "POST",
-      params: {
-        type: SECTION_TYPE_MAP[sectionType] || 1,
-        title: name,
-        smart: 0,
-        sectionId,
-        uri,
-      },
-    });
-
-    const collectionKey = data?.MediaContainer?.Metadata?.[0]?.ratingKey;
-    if (!collectionKey)
-      throw new Error(`Failed to create collection "${name}"`);
-
-    // Label with "Tinkerbell"
-    await plex(`/library/sections/${sectionId}/all`, {
-      method: "PUT",
-      params: {
-        type: 18,
-        id: collectionKey,
-        "label[0].tag.tag": "Tinkerbell",
-        "label.locked": 1,
-      },
-    });
-
-    return collectionKey;
-  }
-
-  // ─── Pin collection to homepage ─────────────────────────────────────────────
-
-  async function pinToHomepage(sectionId, collectionKey) {
-    // Register the collection as a managed hub
-    await plex(`/hubs/sections/${sectionId}/manage`, {
-      method: "POST",
-      params: { metadataItemId: collectionKey },
-    });
-
-    const hubIdentifier = `custom.collection.${sectionId}.${collectionKey}`;
-    log(`Promoting hub ${hubIdentifier}`);
-
-    // Promote it to home screens
-    await plex(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
-      method: "PUT",
-      params: {
-        promotedToOwnHome: 1,
-        promotedToRecommendedHome: 1,
-        promotedToSharedHome: 1,
-      },
-    });
-    return true;
-  }
-
   // ─── Process a single section ───────────────────────────────────────────────
 
   async function processSection(section, machineId) {
@@ -673,12 +451,12 @@ ${itemList}`,
 
     // Step 1: Delete old tinkerbell collections
     console.log(`   🗑  Deleting previous tinkerbell collections...`);
-    const deleted = await deleteTinkerbellCollections(sectionId);
+    const deleted = await client.deleteTinkerbellCollections(sectionId);
     console.log(`   🗑  Deleted ${deleted} old collection(s).`);
 
     // Step 2: Fetch all items
     console.log(`   📥 Fetching library items...`);
-    const items = await fetchAllItems(sectionId);
+    const items = await client.fetchAllItems(sectionId);
     console.log(`   📥 Found ${items.length} item(s).`);
 
     if (items.length < 10) {
@@ -712,7 +490,7 @@ ${itemList}`,
         .filter(Boolean);
 
       if (ratingKeys.length < 15) {
-        log(
+        client.log(
           `Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`,
         );
         continue;
@@ -722,7 +500,7 @@ ${itemList}`,
         `   📦 Creating "${col.name}" (${ratingKeys.length} items)...`,
       );
 
-      const collectionKey = await createCollection(
+      const collectionKey = await client.createCollection(
         sectionId,
         section.type,
         machineId,
@@ -731,11 +509,11 @@ ${itemList}`,
       );
 
       if (collectionKey) {
-        const pinned = await pinToHomepage(sectionId, collectionKey);
+        const pinned = await client.pinToHomepage(sectionId, collectionKey);
         if (pinned) {
-          log(`Pinned "${col.name}" to homepage`);
+          client.log(`Pinned "${col.name}" to homepage`);
         } else {
-          log(`Created "${col.name}" but could not pin to homepage`);
+          client.log(`Created "${col.name}" but could not pin to homepage`);
         }
         created++;
       }
@@ -754,16 +532,16 @@ ${itemList}`,
 
     let machineId;
     try {
-      const identity = await plex("/");
-      machineId = identity.MediaContainer.machineIdentifier;
-      console.log(`   Server name: ${identity.MediaContainer.friendlyName}`);
+      const identity = await client.getIdentity();
+      machineId = identity.machineIdentifier;
+      console.log(`   Server name: ${identity.friendlyName}`);
     } catch (err) {
       console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
       console.error(`   ${err.message}`);
       process.exit(1);
     }
 
-    const allSections = await getSections();
+    const allSections = await client.getSections();
 
     let sections;
     if (args.section) {
@@ -876,47 +654,11 @@ Examples:
     process.exit(1);
   }
 
-  const log = (...a) => VERBOSE && console.log("  ", ...a);
-
-  async function plex(path, { method = "GET", params = {} } = {}) {
-    const url = new URL(path, PLEX_URL);
-    url.searchParams.set("X-Plex-Token", PLEX_TOKEN);
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-    }
-
-    log(`${method} ${url.pathname}${url.search.replace(PLEX_TOKEN, "***")}`);
-
-    const res = await fetch(url.toString(), {
-      method,
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Client-Identifier": "tinkerbell",
-        "X-Plex-Product": "tinkerbell",
-        "X-Plex-Version": "1.0.0",
-      },
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(
-        `Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`,
-      );
-    }
-
-    const text = await res.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
-    }
-  }
-
-  async function getSections() {
-    const data = await plex("/library/sections");
-    return data.MediaContainer.Directory || [];
-  }
+  const client = createPlexClient({
+    url: PLEX_URL,
+    token: PLEX_TOKEN,
+    verbose: VERBOSE,
+  });
 
   async function cleanupSection(section) {
     const sectionId = section.key;
@@ -924,10 +666,7 @@ Examples:
 
     console.log(`\n🧹 "${sectionTitle}" — fetching collections...`);
 
-    const data = await plex(`/library/sections/${sectionId}/all`, {
-      params: { type: 18 },
-    });
-    const collections = data?.MediaContainer?.Metadata || [];
+    const collections = await client.getCollections(sectionId);
 
     if (collections.length === 0) {
       console.log(`   No collections found.`);
@@ -940,16 +679,15 @@ Examples:
     for (const col of collections) {
       if (DELETE_ALL) {
         console.log(`   🗑  "${col.title}" — deleted`);
-        await plex(`/library/metadata/${col.ratingKey}`, { method: "DELETE" });
+        await client.deleteItem(col.ratingKey);
         deleted++;
         continue;
       }
 
-      const hasSummaryMarker = col.summary?.includes("[tinkerbell]");
+      const hasSummaryMarker = col.summary?.includes(TINKERBELL_MARKER);
       let hasLabel = false;
       if (!hasSummaryMarker) {
-        const detail = await plex(`/library/metadata/${col.ratingKey}`);
-        const labels = detail?.MediaContainer?.Metadata?.[0]?.Label || [];
+        const labels = await client.getCollectionLabels(col.ratingKey);
         hasLabel = labels.some((l) => l.tag.toLowerCase() === "tinkerbell");
       }
 
@@ -958,7 +696,7 @@ Examples:
 
       if (DELETE_ALL || isTinkerbell || isAfterFrom) {
         console.log(`   🗑  "${col.title}" — deleted`);
-        await plex(`/library/metadata/${col.ratingKey}`, { method: "DELETE" });
+        await client.deleteItem(col.ratingKey);
         deleted++;
       } else {
         console.log(`   ⏭  "${col.title}" — skipped`);
@@ -978,15 +716,15 @@ Examples:
     console.log(`   Server: ${PLEX_URL}`);
 
     try {
-      const identity = await plex("/");
-      console.log(`   Server name: ${identity.MediaContainer.friendlyName}`);
+      const identity = await client.getIdentity();
+      console.log(`   Server name: ${identity.friendlyName}`);
     } catch (err) {
       console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
       console.error(`   ${err.message}`);
       process.exit(1);
     }
 
-    const allSections = await getSections();
+    const allSections = await client.getSections();
 
     let sections;
     if (args.section) {
