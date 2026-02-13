@@ -547,15 +547,14 @@ Rules:
 - Each collection MUST have between 15 and 30 items, no fewer than 15
 - Each item can appear in multiple collections
 - Only use titles that exactly match the input list
-- Collection names should be creative and fun, but NEVER use colons in names (no "Title: Subtitle" format)
-- Each collection needs a short description (one sentence)
+- Collection names should be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format)
 - Be surprising and inventive with your themes — avoid obvious genres or decades groupings
 - Think of unexpected connections between items: tonal similarities, visual motifs, narrative parallels, thematic undercurrents, shared vibes
 
 Random seed for variety: ${seed}
 
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
-[{"name":"Collection Name","description":"Short description.","items":["Title (Year)","Title (Year)"]}]
+[{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]
 
 Here are the items:
 ${itemList}`,
@@ -604,7 +603,6 @@ ${itemList}`,
     sectionType,
     machineId,
     name,
-    description,
     ratingKeys,
   ) {
     if (ratingKeys.length === 0) return null;
@@ -620,7 +618,6 @@ ${itemList}`,
         smart: 0,
         sectionId,
         uri,
-        summary: `${description} ${TINKERBELL_MARKER}`,
       },
     });
 
@@ -730,7 +727,6 @@ ${itemList}`,
         section.type,
         machineId,
         col.name,
-        col.description,
         ratingKeys,
       );
 
