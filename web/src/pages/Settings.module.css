@@ -23,7 +23,23 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+}
+
+.group {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.groupTitle {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0 6px;
+  color: #555;
 }
 
 .field {
@@ -64,6 +80,36 @@
   transition: background 0.15s;
 }
 
-.button:hover {
+.button:hover:not(:disabled) {
   background: #3b5de7;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.buttonSecondary {
+  align-self: flex-start;
+  padding: 8px 18px;
+  background: #fff;
+  color: #4a6cf7;
+  border: 1px solid #4a6cf7;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  background: #4a6cf7;
+  color: #fff;
+}
+
+.buttonSecondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

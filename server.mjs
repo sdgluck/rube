@@ -56,6 +56,32 @@ const server = createServer(async (req, res) => {
   const path = url.pathname;
 
   // API routes
+  if (path === "/api/test-plex" && req.method === "POST") {
+    try {
+      const { plex_url, plex_token } = JSON.parse(await readBody(req));
+      if (!plex_url || !plex_token) {
+        return json(res, 400, { error: "Plex URL and token are required" });
+      }
+      const testUrl = new URL("/", plex_url);
+      testUrl.searchParams.set("X-Plex-Token", plex_token);
+      const pRes = await fetch(testUrl.toString(), {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!pRes.ok) {
+        return json(res, 200, {
+          ok: false,
+          error: `Plex returned ${pRes.status} ${pRes.statusText}`,
+        });
+      }
+      const data = await pRes.json();
+      const name = data?.MediaContainer?.friendlyName || "Unknown";
+      return json(res, 200, { ok: true, serverName: name });
+    } catch (err) {
+      return json(res, 200, { ok: false, error: err.message });
+    }
+  }
+
   if (path === "/api/config") {
     if (req.method === "GET") {
       return json(res, 200, getAllConfig());

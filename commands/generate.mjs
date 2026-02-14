@@ -1,13 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient } from "../plex.mjs";
+import { getConfig } from "../config.mjs";
 
 export default async function run(args) {
   const PLEX_URL = (
     args.url ||
+    getConfig("plex_url") ||
     process.env.PLEX_URL ||
     "http://localhost:32400"
   ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
+  const PLEX_TOKEN =
+    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const ANTHROPIC_API_KEY =
+    getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
   const MAX_COLLECTIONS = parseInt(args.limit, 10) || 8;
   if (MAX_COLLECTIONS > 10) {
     console.error("Error: --limit cannot exceed 10.");
@@ -22,8 +27,10 @@ export default async function run(args) {
     process.exit(1);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required.");
+  if (!ANTHROPIC_API_KEY) {
+    console.error(
+      "Error: Anthropic API key is required. Set it via the admin UI, ANTHROPIC_API_KEY env var, or config.",
+    );
     process.exit(1);
   }
 
@@ -34,7 +41,7 @@ export default async function run(args) {
   });
 
   async function generateCollections(items, sectionTitle, maxCollections) {
-    const anthropic = new Anthropic();
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i--) {

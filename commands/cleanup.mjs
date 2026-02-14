@@ -1,12 +1,15 @@
 import { createPlexClient } from "../plex.mjs";
+import { getConfig } from "../config.mjs";
 
 export default async function run(args) {
   const PLEX_URL = (
     args.url ||
+    getConfig("plex_url") ||
     process.env.PLEX_URL ||
     "http://localhost:32400"
   ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
+  const PLEX_TOKEN =
+    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
   const DELETE_ALL = args.all;
   const FROM_DATE = args.from
     ? Math.floor(new Date(args.from).getTime() / 1000)

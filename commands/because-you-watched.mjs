@@ -1,15 +1,20 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient } from "../plex.mjs";
+import { getConfig } from "../config.mjs";
 
 const BYW_LABEL = "tinkerbell:byw";
 
 export default async function run(args) {
   const PLEX_URL = (
     args.url ||
+    getConfig("plex_url") ||
     process.env.PLEX_URL ||
     "http://localhost:32400"
   ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
+  const PLEX_TOKEN =
+    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const ANTHROPIC_API_KEY =
+    getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
   const LIMIT = Math.min(parseInt(args.limit, 10) || 10, 20);
   const VERBOSE = args.verbose;
 
@@ -20,8 +25,10 @@ export default async function run(args) {
     process.exit(1);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required.");
+  if (!ANTHROPIC_API_KEY) {
+    console.error(
+      "Error: Anthropic API key is required. Set it via the admin UI, ANTHROPIC_API_KEY env var, or config.",
+    );
     process.exit(1);
   }
 
@@ -228,7 +235,7 @@ async function generateBYWCollections(
   libraryItems,
   sectionTitle,
 ) {
-  const anthropic = new Anthropic();
+  const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
   const itemList = libraryItems
     .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)

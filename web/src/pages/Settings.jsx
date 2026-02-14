@@ -1,32 +1,14 @@
 import { useState, useEffect } from "react";
-import { getConfig, saveConfig } from "../api";
+import { getConfig, saveConfig, testPlex } from "../api";
 import styles from "./Settings.module.css";
-
-const FIELDS = [
-  {
-    key: "plex_url",
-    label: "Plex URL",
-    type: "text",
-    placeholder: "http://localhost:32400",
-  },
-  {
-    key: "plex_token",
-    label: "Plex Token",
-    type: "password",
-    placeholder: "Enter token",
-  },
-  {
-    key: "anthropic_api_key",
-    label: "AI Token",
-    type: "password",
-    placeholder: "Enter API key",
-  },
-];
 
 export default function Settings() {
   const [values, setValues] = useState({});
   const [status, setStatus] = useState(null);
+  const [plexStatus, setPlexStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getConfig()
@@ -35,16 +17,61 @@ export default function Settings() {
       .finally(() => setLoading(false));
   }, []);
 
+  const set = (key, value) => setValues({ ...values, [key]: value });
+
+  const runPlexTest = async (url, token) => {
+    setPlexStatus(null);
+    if (!url || !token) {
+      setPlexStatus({ type: "error", msg: "Both URL and token are required" });
+      return false;
+    }
+    setTesting(true);
+    try {
+      const result = await testPlex(url, token);
+      if (result.ok) {
+        setPlexStatus({
+          type: "success",
+          msg: `Connected to "${result.serverName}"`,
+        });
+        return true;
+      }
+      throw "nope";
+    } catch {
+      setPlexStatus({ type: "error", msg: "Connection test failed" });
+      return false;
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleTest = () => {
+    runPlexTest(values.plex_url, values.plex_token);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
+    setSaving(true);
     try {
-      const data = {};
-      for (const f of FIELDS) data[f.key] = values[f.key] || "";
-      await saveConfig(data);
+      const ok = await runPlexTest(values.plex_url, values.plex_token);
+      if (!ok) {
+        setStatus({
+          type: "error",
+          msg: "Plex connection failed — settings not saved",
+        });
+        setSaving(false);
+        return;
+      }
+      await saveConfig({
+        plex_url: values.plex_url || "",
+        plex_token: values.plex_token || "",
+        anthropic_api_key: values.anthropic_api_key || "",
+      });
       setStatus({ type: "success", msg: "Settings saved" });
     } catch {
       setStatus({ type: "error", msg: "Failed to save settings" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -59,22 +86,59 @@ export default function Settings() {
         </div>
       )}
       <form onSubmit={handleSubmit} className={styles.form}>
-        {FIELDS.map((f) => (
-          <label key={f.key} className={styles.field}>
-            <span className={styles.label}>{f.label}</span>
+        <fieldset className={styles.group}>
+          <legend className={styles.groupTitle}>Plex</legend>
+          <label className={styles.field}>
+            <span className={styles.label}>Plex URL</span>
             <input
-              type={f.type}
+              type="text"
               className={styles.input}
-              placeholder={f.placeholder}
-              value={values[f.key] || ""}
-              onChange={(e) =>
-                setValues({ ...values, [f.key]: e.target.value })
-              }
+              placeholder="http://localhost:32400"
+              value={values.plex_url || ""}
+              onChange={(e) => set("plex_url", e.target.value)}
             />
           </label>
-        ))}
-        <button type="submit" className={styles.button}>
-          Save
+          <label className={styles.field}>
+            <span className={styles.label}>Plex Token</span>
+            <input
+              type="password"
+              className={styles.input}
+              placeholder="Enter token"
+              value={values.plex_token || ""}
+              onChange={(e) => set("plex_token", e.target.value)}
+            />
+          </label>
+          {plexStatus && (
+            <div className={`${styles.toast} ${styles[plexStatus.type]}`}>
+              {plexStatus.msg}
+            </div>
+          )}
+          <button
+            type="button"
+            className={styles.buttonSecondary}
+            onClick={handleTest}
+            disabled={testing}
+          >
+            {testing ? "Testing..." : "Test Connection"}
+          </button>
+        </fieldset>
+
+        <fieldset className={styles.group}>
+          <legend className={styles.groupTitle}>AI</legend>
+          <label className={styles.field}>
+            <span className={styles.label}>AI Token</span>
+            <input
+              type="password"
+              className={styles.input}
+              placeholder="Enter API key"
+              value={values.anthropic_api_key || ""}
+              onChange={(e) => set("anthropic_api_key", e.target.value)}
+            />
+          </label>
+        </fieldset>
+
+        <button type="submit" className={styles.button} disabled={saving}>
+          {saving ? "Saving..." : "Save"}
         </button>
       </form>
     </div>
