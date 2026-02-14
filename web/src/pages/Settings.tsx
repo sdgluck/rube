@@ -9,13 +9,14 @@ interface Status {
 
 export default function Settings() {
   const [values, setValues] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState<Status | null>(null);
   const [plexStatus, setPlexStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingPlex, setSavingPlex] = useState(false);
   const [selectedLibraries, setSelectedLibraries] = useState<string[]>([]);
   const [libStatus, setLibStatus] = useState<Status | null>(null);
   const [savingLibs, setSavingLibs] = useState(false);
+  const [aiStatus, setAiStatus] = useState<Status | null>(null);
+  const [savingAi, setSavingAi] = useState(false);
 
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -89,30 +90,43 @@ export default function Settings() {
     runPlexTest(values.plex_url, values.plex_token);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus(null);
-    setSaving(true);
+  const handleSavePlex = async () => {
+    setPlexStatus(null);
+    setSavingPlex(true);
     try {
       const ok = await runPlexTest(values.plex_url, values.plex_token);
       if (!ok) {
-        setStatus({
+        setPlexStatus({
           type: "error",
           msg: "Plex connection failed — settings not saved",
         });
-        setSaving(false);
+        setSavingPlex(false);
         return;
       }
       await saveConfigMutation.mutateAsync({
         plex_url: values.plex_url || "",
         plex_token: values.plex_token || "",
+      });
+      setPlexStatus({ type: "success", msg: "Plex settings saved" });
+    } catch {
+      setPlexStatus({ type: "error", msg: "Failed to save Plex settings" });
+    } finally {
+      setSavingPlex(false);
+    }
+  };
+
+  const handleSaveAi = async () => {
+    setAiStatus(null);
+    setSavingAi(true);
+    try {
+      await saveConfigMutation.mutateAsync({
         anthropic_api_key: values.anthropic_api_key || "",
       });
-      setStatus({ type: "success", msg: "Settings saved" });
+      setAiStatus({ type: "success", msg: "AI settings saved" });
     } catch {
-      setStatus({ type: "error", msg: "Failed to save settings" });
+      setAiStatus({ type: "error", msg: "Failed to save AI settings" });
     } finally {
-      setSaving(false);
+      setSavingAi(false);
     }
   };
 
@@ -124,8 +138,7 @@ export default function Settings() {
   return (
     <div>
       <h2 className={styles.heading}>Settings</h2>
-      {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <div className={styles.form}>
         <fieldset className={styles.group}>
           <legend className={styles.groupTitle}>Plex</legend>
           <label className={styles.field}>
@@ -149,9 +162,14 @@ export default function Settings() {
             />
           </label>
           {plexStatus && <div className={`${styles.toast} ${styles[plexStatus.type]}`}>{plexStatus.msg}</div>}
-          <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
-            {testing ? "Testing..." : "Test Connection"}
-          </button>
+          <div className={styles.buttons}>
+            <button type="button" className={styles.button} onClick={handleSavePlex} disabled={savingPlex}>
+              {savingPlex ? "Saving..." : "Save"}
+            </button>
+            <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
+              {testing ? "Testing..." : "Test Connection"}
+            </button>
+          </div>
         </fieldset>
 
         <fieldset className={styles.group}>
@@ -179,13 +197,8 @@ export default function Settings() {
                 ))}
               </div>
               {libStatus && <div className={`${styles.toast} ${styles[libStatus.type]}`}>{libStatus.msg}</div>}
-              <button
-                type="button"
-                className={styles.buttonSecondary}
-                onClick={handleSaveLibraries}
-                disabled={savingLibs}
-              >
-                {savingLibs ? "Saving..." : "Save Libraries"}
+              <button type="button" className={styles.button} onClick={handleSaveLibraries} disabled={savingLibs}>
+                {savingLibs ? "Saving..." : "Save"}
               </button>
             </>
           )}
@@ -203,12 +216,12 @@ export default function Settings() {
               onChange={(e) => set("anthropic_api_key", e.target.value)}
             />
           </label>
+          {aiStatus && <div className={`${styles.toast} ${styles[aiStatus.type]}`}>{aiStatus.msg}</div>}
+          <button type="button" className={styles.button} onClick={handleSaveAi} disabled={savingAi}>
+            {savingAi ? "Saving..." : "Save"}
+          </button>
         </fieldset>
-
-        <button type="submit" className={styles.button} disabled={saving}>
-          {saving ? "Saving..." : "Save"}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }

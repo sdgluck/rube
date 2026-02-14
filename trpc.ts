@@ -34,8 +34,8 @@ export const appRouter = t.router({
       throw new Error(`Plex returned ${pRes.status} ${pRes.statusText}`);
     }
     const data = await pRes.json();
-    const directories = data?.MediaContainer?.Directory || [];
-    return directories.map((d: { key: string; title: string; type: string }) => ({
+    const directories: Array<{ key: string; title: string; type: string }> = data?.MediaContainer?.Directory || [];
+    return directories.map((d) => ({
       key: d.key,
       title: d.title,
       type: d.type,
