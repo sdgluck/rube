@@ -7,9 +7,10 @@
  *   tinkerbell <command> [options]
  *
  * Commands:
- *   shuffle            Shuffle the hub ordering on your Plex homepage
- *   generate           Use AI to create curated collections from library items
- *   cleanup            Delete tinkerbell-generated collections
+ *   shuffle              Shuffle the hub ordering on your Plex homepage
+ *   generate             Use AI to create curated collections from library items
+ *   because-you-watched  Create "Because you watched X" collections from watch history
+ *   cleanup              Delete tinkerbell-generated collections
  *
  * Global options:
  *   --url, -u          Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
@@ -23,12 +24,6 @@
  */
 
 import { parseArgs } from "node:util";
-import Anthropic from "@anthropic-ai/sdk";
-import {
-  createPlexClient,
-  TINKERBELL_MARKER,
-  SECTION_TYPE_MAP,
-} from "./plex.mjs";
 
 // ─── CLI argument parsing ──────────────────────────────────────────────────────
 
@@ -54,9 +49,10 @@ Usage:
   tinkerbell <command> [options]
 
 Commands:
-  shuffle            Shuffle the hub ordering on your Plex homepage
-  generate           Use AI to create curated collections from library items
-  cleanup            Delete tinkerbell-generated collections
+  shuffle              Shuffle the hub ordering on your Plex homepage
+  generate             Use AI to create curated collections from library items
+  because-you-watched  Create "Because you watched X" collections from watch history
+  cleanup              Delete tinkerbell-generated collections
 
 Global options:
   --url, -u          Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
@@ -95,198 +91,9 @@ Examples:
   );
 }
 
-if (globalArgs.help && !command) {
-  printUsage();
-  process.exit(0);
-}
-
-if (!command) {
-  printUsage();
-  process.exit(1);
-}
-
-// ─── Sub-command: shuffle ───────────────────────────────────────────────────────
-
-if (command === "shuffle") {
-  // Re-parse with shuffle-specific options
-  const { values: args } = parseArgs({
-    options: {
-      url: { type: "string", short: "u" },
-      token: { type: "string", short: "t" },
-      section: { type: "string", short: "s" },
-      "dry-run": { type: "boolean", short: "d", default: false },
-      verbose: { type: "boolean", short: "v", default: false },
-      help: { type: "boolean", short: "h", default: false },
-    },
-    strict: true,
-    allowPositionals: true,
-  });
-
-  if (args.help) {
-    printShuffleUsage();
-    process.exit(0);
-  }
-
-  const PLEX_URL = (
-    args.url ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
-  const DRY_RUN = args["dry-run"];
-  const VERBOSE = args.verbose;
-
-  if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
-    process.exit(1);
-  }
-
-  const client = createPlexClient({
-    url: PLEX_URL,
-    token: PLEX_TOKEN,
-    verbose: VERBOSE,
-  });
-
-  // ─── Helpers ────────────────────────────────────────────────────────────────
-
-  function shuffleArray(arr) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  // ─── Core logic ─────────────────────────────────────────────────────────────
-
-  async function reorderHubs(sectionId, orderedHubs) {
-    for (let i = 0; i < orderedHubs.length; i++) {
-      const hub = orderedHubs[i];
-      const afterIdentifier = i === 0 ? "" : orderedHubs[i - 1].identifier;
-
-      client.log(
-        `Moving "${hub.title}" (${hub.identifier}) → after "${afterIdentifier || "(beginning)"}"`,
-      );
-
-      if (!DRY_RUN) {
-        await client.moveHub(sectionId, hub.identifier, afterIdentifier);
-      }
-    }
-  }
-
-  async function shuffleSection(section) {
-    const sectionId = section.key;
-    const sectionTitle = section.title;
-
-    const hubs = await client.getManagedHubs(sectionId);
-
-    if (hubs.length < 2) {
-      console.log(
-        `⏭  "${sectionTitle}" — only ${hubs.length} hub(s), nothing to shuffle.`,
-      );
-      return;
-    }
-
-    console.log(`\n🔀 "${sectionTitle}" — shuffling ${hubs.length} hubs...`);
-
-    if (VERBOSE) {
-      console.log("   Current order:");
-      hubs.forEach((h, i) =>
-        console.log(
-          `    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`,
-        ),
-      );
-    }
-
-    // Keep pinned hubs at the top per section
-    const PINNED_TITLES = {
-      Films: ["Recently Added Movies", "Recently Released Movies"],
-      TV: ["Recently Added TV"],
-    };
-    const pinnedTitles = PINNED_TITLES[sectionTitle] || [];
-    const pinned = pinnedTitles
-      .map((t) => hubs.find((h) => h.title === t))
-      .filter(Boolean);
-    const rest = hubs.filter((h) => !pinned.includes(h));
-    const shuffled = [...pinned, ...shuffleArray(rest)];
-
-    if (VERBOSE) {
-      console.log("   New order:");
-      shuffled.forEach((h, i) =>
-        console.log(
-          `    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`,
-        ),
-      );
-    }
-
-    await reorderHubs(sectionId, shuffled);
-
-    console.log(
-      `✅ "${sectionTitle}" — ${hubs.length} hubs shuffled${DRY_RUN ? " (dry run)" : ""}.`,
-    );
-  }
-
-  // ─── Main ───────────────────────────────────────────────────────────────────
-
-  async function main() {
-    console.log(`🎲 tinkerbell shuffle${DRY_RUN ? " (DRY RUN)" : ""}`);
-    console.log(`   Server: ${PLEX_URL}`);
-
-    try {
-      const identity = await client.getIdentity();
-      console.log(`   Server name: ${identity.friendlyName}`);
-    } catch (err) {
-      console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-      console.error(`   ${err.message}`);
-      process.exit(1);
-    }
-
-    const allSections = await client.getSections();
-
-    let sections;
-    if (args.section) {
-      const match = allSections.find(
-        (s) =>
-          s.key === args.section ||
-          s.title.toLowerCase() === args.section.toLowerCase(),
-      );
-      if (!match) {
-        console.error(`\n❌ Section "${args.section}" not found.`);
-        console.error("   Available sections:");
-        allSections.forEach((s) =>
-          console.error(`     [${s.key}] ${s.title} (${s.type})`),
-        );
-        process.exit(1);
-      }
-      sections = [match];
-    } else {
-      sections = allSections;
-    }
-
-    console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
-
-    for (const section of sections) {
-      await shuffleSection(section);
-    }
-
-    console.log("\n🎉 All done!");
-  }
-
-  main().catch((err) => {
-    console.error(`\n❌ Fatal error: ${err.message}`);
-    if (VERBOSE) console.error(err.stack);
-    process.exit(1);
-  });
-}
-
-// ─── Sub-command: generate ──────────────────────────────────────────────────────
-else if (command === "generate") {
-  function printGenerateUsage() {
-    console.log(
-      `
+function printGenerateUsage() {
+  console.log(
+    `
 tinkerbell generate — Use AI to create curated Plex collections.
 
 Generates themed collections from your library items using Claude AI,
@@ -311,279 +118,13 @@ Environment variables:
 Examples:
   PLEX_TOKEN=abc ANTHROPIC_API_KEY=sk-ant-... tinkerbell generate
   tinkerbell generate --token abc --section Movies
-        `.trim(),
-    );
-  }
-
-  const { values: args } = parseArgs({
-    options: {
-      url: { type: "string", short: "u" },
-      token: { type: "string", short: "t" },
-      section: { type: "string", short: "s" },
-      limit: { type: "string", short: "l" },
-      verbose: { type: "boolean", short: "v", default: false },
-      help: { type: "boolean", short: "h", default: false },
-    },
-    strict: true,
-    allowPositionals: true,
-  });
-
-  if (args.help) {
-    printGenerateUsage();
-    process.exit(0);
-  }
-
-  const PLEX_URL = (
-    args.url ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
-  const MAX_COLLECTIONS = parseInt(args.limit, 10) || 8;
-  if (MAX_COLLECTIONS > 10) {
-    console.error("Error: --limit cannot exceed 10.");
-    process.exit(1);
-  }
-  const VERBOSE = args.verbose;
-
-  if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
-    process.exit(1);
-  }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required.");
-    process.exit(1);
-  }
-
-  const client = createPlexClient({
-    url: PLEX_URL,
-    token: PLEX_TOKEN,
-    verbose: VERBOSE,
-  });
-
-  // ─── Ask Claude for curated collections ─────────────────────────────────────
-
-  async function generateCollections(items, sectionTitle, maxCollections) {
-    const anthropic = new Anthropic();
-
-    const shuffled = [...items];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    const itemList = shuffled
-      .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
-      .join("\n");
-
-    const seed = Math.floor(Math.random() * 1_000_000);
-
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
-      temperature: 1,
-      messages: [
-        {
-          role: "user",
-          content: `You are a movie/TV curator. Given this list of items from a Plex "${sectionTitle}" library, create curated themed collections.
-
-Rules:
-- Create exactly ${maxCollections} collections
-- Each collection MUST have between 15 and 30 items, no fewer than 15
-- Each item can appear in multiple collections
-- Only use titles that exactly match the input list
-- Collection names should be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format)
-- Be surprising and inventive with your themes — avoid obvious genres or decades groupings
-- Think of unexpected connections between items: tonal similarities, visual motifs, narrative parallels, thematic undercurrents, shared vibes
-
-Random seed for variety: ${seed}
-
-Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
-[{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]
-
-Here are the items:
-${itemList}`,
-        },
-      ],
-    });
-
-    const text = response.content[0].text.trim();
-    client.log("AI response:", text);
-    return parseJSON(text);
-  }
-
-  function parseJSON(text) {
-    // Try parsing as-is
-    try {
-      return JSON.parse(text);
-    } catch {}
-
-    // Extract JSON array from markdown fences or surrounding text
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {}
-
-      // Fix trailing commas and retry
-      const cleaned = match[0]
-        .replace(/,\s*([}\]])/g, "$1") // trailing commas
-        .replace(/[\x00-\x1f]/g, " "); // control chars
-      try {
-        return JSON.parse(cleaned);
-      } catch {}
-    }
-
-    throw new Error(
-      `Failed to parse AI response as JSON:\n${text.slice(0, 200)}`,
-    );
-  }
-
-  // ─── Process a single section ───────────────────────────────────────────────
-
-  async function processSection(section, machineId) {
-    const sectionId = section.key;
-    const sectionTitle = section.title;
-
-    console.log(`\n📚 "${sectionTitle}" — starting...`);
-
-    // Step 1: Delete old tinkerbell collections
-    console.log(`   🗑  Deleting previous tinkerbell collections...`);
-    const deleted = await client.deleteTinkerbellCollections(sectionId);
-    console.log(`   🗑  Deleted ${deleted} old collection(s).`);
-
-    // Step 2: Fetch all items
-    console.log(`   📥 Fetching library items...`);
-    const items = await client.fetchAllItems(sectionId);
-    console.log(`   📥 Found ${items.length} item(s).`);
-
-    if (items.length < 10) {
-      console.log(`   ⏭  Too few items to generate collections, skipping.`);
-      return;
-    }
-
-    // Step 3: Ask AI for collections
-    console.log(`   🤖 Asking Claude for curated collections...`);
-    const aiCollections = await generateCollections(
-      items,
-      sectionTitle,
-      MAX_COLLECTIONS,
-    );
-    console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
-
-    // Build title→ratingKey lookup
-    const titleMap = new Map();
-    for (const item of items) {
-      const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
-      titleMap.set(key, item.ratingKey);
-      // Also map without year for fuzzy matching
-      titleMap.set(item.title, item.ratingKey);
-    }
-
-    // Step 4: Create collections and pin them
-    let created = 0;
-    for (const col of aiCollections) {
-      const ratingKeys = col.items
-        .map((title) => titleMap.get(title))
-        .filter(Boolean);
-
-      if (ratingKeys.length < 15) {
-        client.log(
-          `Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`,
-        );
-        continue;
-      }
-
-      console.log(
-        `   📦 Creating "${col.name}" (${ratingKeys.length} items)...`,
-      );
-
-      const collectionKey = await client.createCollection(
-        sectionId,
-        section.type,
-        machineId,
-        col.name,
-        ratingKeys,
-      );
-
-      if (collectionKey) {
-        const pinned = await client.pinToHomepage(sectionId, collectionKey);
-        if (pinned) {
-          client.log(`Pinned "${col.name}" to homepage`);
-        } else {
-          client.log(`Created "${col.name}" but could not pin to homepage`);
-        }
-        created++;
-      }
-    }
-
-    console.log(
-      `   ✅ Created and pinned ${created} collection(s) for "${sectionTitle}".`,
-    );
-  }
-
-  // ─── Main ───────────────────────────────────────────────────────────────────
-
-  async function main() {
-    console.log(`🧚 tinkerbell generate`);
-    console.log(`   Server: ${PLEX_URL}`);
-
-    let machineId;
-    try {
-      const identity = await client.getIdentity();
-      machineId = identity.machineIdentifier;
-      console.log(`   Server name: ${identity.friendlyName}`);
-    } catch (err) {
-      console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-      console.error(`   ${err.message}`);
-      process.exit(1);
-    }
-
-    const allSections = await client.getSections();
-
-    let sections;
-    if (args.section) {
-      const match = allSections.find(
-        (s) =>
-          s.key === args.section ||
-          s.title.toLowerCase() === args.section.toLowerCase(),
-      );
-      if (!match) {
-        console.error(`\n❌ Section "${args.section}" not found.`);
-        console.error("   Available sections:");
-        allSections.forEach((s) =>
-          console.error(`     [${s.key}] ${s.title} (${s.type})`),
-        );
-        process.exit(1);
-      }
-      sections = [match];
-    } else {
-      sections = allSections;
-    }
-
-    console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
-
-    for (const section of sections) {
-      await processSection(section, machineId);
-    }
-
-    console.log("\n🎉 All done!");
-  }
-
-  main().catch((err) => {
-    console.error(`\n❌ Fatal error: ${err.message}`);
-    if (VERBOSE) console.error(err.stack);
-    process.exit(1);
-  });
+    `.trim(),
+  );
 }
 
-// ─── Sub-command: cleanup ───────────────────────────────────────────────────────
-else if (command === "cleanup") {
-  function printCleanupUsage() {
-    console.log(
-      `
+function printCleanupUsage() {
+  console.log(
+    `
 tinkerbell cleanup — Delete tinkerbell-generated collections.
 
 Removes collections previously created by "tinkerbell generate".
@@ -607,10 +148,106 @@ Global options:
 Examples:
   tinkerbell cleanup --token abc
   tinkerbell cleanup --token abc --section Movies --all
-        `.trim(),
-    );
+    `.trim(),
+  );
+}
+
+function printBecauseYouWatchedUsage() {
+  console.log(
+    `
+tinkerbell because-you-watched — Create "Because you watched X" collections.
+
+Analyses your watch history and creates personalised recommendation
+collections on your Plex homepage, similar to Netflix/Spotify.
+
+Usage:
+  tinkerbell because-you-watched [options]
+
+Options:
+  --user, -U       Plex account username    (omit for all users' history)
+  --section, -s    Library section name/ID  (omit to process ALL sections)
+  --limit, -l      Number of watched items  (default: 10, max: 20)
+
+Global options:
+  --url, -u        Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
+  --token, -t      Plex auth token           (env: PLEX_TOKEN, required)
+  --verbose, -v    Show detailed output      (default: false)
+  --help, -h       Show this help message
+
+Environment variables:
+  ANTHROPIC_API_KEY   Your Anthropic API key (required)
+
+Examples:
+  PLEX_TOKEN=abc ANTHROPIC_API_KEY=sk-ant-... tinkerbell because-you-watched
+  tinkerbell because-you-watched --token abc --user John --limit 5
+  tinkerbell because-you-watched --token abc --section Movies
+    `.trim(),
+  );
+}
+
+if (globalArgs.help && !command) {
+  printUsage();
+  process.exit(0);
+}
+
+if (!command) {
+  printUsage();
+  process.exit(1);
+}
+
+// ─── Command dispatch ──────────────────────────────────────────────────────────
+
+if (command === "shuffle") {
+  const { values: args } = parseArgs({
+    options: {
+      url: { type: "string", short: "u" },
+      token: { type: "string", short: "t" },
+      section: { type: "string", short: "s" },
+      "dry-run": { type: "boolean", short: "d", default: false },
+      verbose: { type: "boolean", short: "v", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
+
+  if (args.help) {
+    printShuffleUsage();
+    process.exit(0);
   }
 
+  const { default: run } = await import("./commands/shuffle.mjs");
+  await run(args).catch((err) => {
+    console.error(`\n❌ Fatal error: ${err.message}`);
+    if (args.verbose) console.error(err.stack);
+    process.exit(1);
+  });
+} else if (command === "generate") {
+  const { values: args } = parseArgs({
+    options: {
+      url: { type: "string", short: "u" },
+      token: { type: "string", short: "t" },
+      section: { type: "string", short: "s" },
+      limit: { type: "string", short: "l" },
+      verbose: { type: "boolean", short: "v", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
+
+  if (args.help) {
+    printGenerateUsage();
+    process.exit(0);
+  }
+
+  const { default: run } = await import("./commands/generate.mjs");
+  await run(args).catch((err) => {
+    console.error(`\n❌ Fatal error: ${err.message}`);
+    if (args.verbose) console.error(err.stack);
+    process.exit(1);
+  });
+} else if (command === "cleanup") {
   const { values: args } = parseArgs({
     options: {
       url: { type: "string", short: "u" },
@@ -630,135 +267,36 @@ Examples:
     process.exit(0);
   }
 
-  const PLEX_URL = (
-    args.url ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || process.env.PLEX_TOKEN;
-  const DELETE_ALL = args.all;
-  const FROM_DATE = args.from
-    ? Math.floor(new Date(args.from).getTime() / 1000)
-    : null;
-  const VERBOSE = args.verbose;
-
-  if (args.from && !FROM_DATE) {
-    console.error("Error: Invalid date for --from. Use YYYY-MM-DD format.");
+  const { default: run } = await import("./commands/cleanup.mjs");
+  await run(args).catch((err) => {
+    console.error(`\n❌ Fatal error: ${err.message}`);
+    if (args.verbose) console.error(err.stack);
     process.exit(1);
-  }
-
-  if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
-    process.exit(1);
-  }
-
-  const client = createPlexClient({
-    url: PLEX_URL,
-    token: PLEX_TOKEN,
-    verbose: VERBOSE,
+  });
+} else if (command === "because-you-watched") {
+  const { values: args } = parseArgs({
+    options: {
+      url: { type: "string", short: "u" },
+      token: { type: "string", short: "t" },
+      user: { type: "string", short: "U" },
+      section: { type: "string", short: "s" },
+      limit: { type: "string", short: "l" },
+      verbose: { type: "boolean", short: "v", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
   });
 
-  async function cleanupSection(section) {
-    const sectionId = section.key;
-    const sectionTitle = section.title;
-
-    console.log(`\n🧹 "${sectionTitle}" — fetching collections...`);
-
-    const collections = await client.getCollections(sectionId);
-
-    if (collections.length === 0) {
-      console.log(`   No collections found.`);
-      return 0;
-    }
-
-    console.log(`   Found ${collections.length} collection(s).`);
-
-    let deleted = 0;
-    for (const col of collections) {
-      if (DELETE_ALL) {
-        console.log(`   🗑  "${col.title}" — deleted`);
-        await client.deleteItem(col.ratingKey);
-        deleted++;
-        continue;
-      }
-
-      const hasSummaryMarker = col.summary?.includes(TINKERBELL_MARKER);
-      let hasLabel = false;
-      if (!hasSummaryMarker) {
-        const labels = await client.getCollectionLabels(col.ratingKey);
-        hasLabel = labels.some((l) => l.tag.toLowerCase() === "tinkerbell");
-      }
-
-      const isTinkerbell = hasSummaryMarker || hasLabel;
-      const isAfterFrom = FROM_DATE && col.addedAt >= FROM_DATE;
-
-      if (DELETE_ALL || isTinkerbell || isAfterFrom) {
-        console.log(`   🗑  "${col.title}" — deleted`);
-        await client.deleteItem(col.ratingKey);
-        deleted++;
-      } else {
-        console.log(`   ⏭  "${col.title}" — skipped`);
-      }
-    }
-
-    console.log(
-      `   ✅ Deleted ${deleted} collection(s) from "${sectionTitle}".`,
-    );
-    return deleted;
+  if (args.help) {
+    printBecauseYouWatchedUsage();
+    process.exit(0);
   }
 
-  async function main() {
-    console.log(
-      `🧹 tinkerbell cleanup${DELETE_ALL ? " (ALL collections)" : ""}`,
-    );
-    console.log(`   Server: ${PLEX_URL}`);
-
-    try {
-      const identity = await client.getIdentity();
-      console.log(`   Server name: ${identity.friendlyName}`);
-    } catch (err) {
-      console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-      console.error(`   ${err.message}`);
-      process.exit(1);
-    }
-
-    const allSections = await client.getSections();
-
-    let sections;
-    if (args.section) {
-      const match = allSections.find(
-        (s) =>
-          s.key === args.section ||
-          s.title.toLowerCase() === args.section.toLowerCase(),
-      );
-      if (!match) {
-        console.error(`\n❌ Section "${args.section}" not found.`);
-        console.error("   Available sections:");
-        allSections.forEach((s) =>
-          console.error(`     [${s.key}] ${s.title} (${s.type})`),
-        );
-        process.exit(1);
-      }
-      sections = [match];
-    } else {
-      sections = allSections;
-    }
-
-    console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
-
-    let total = 0;
-    for (const section of sections) {
-      total += await cleanupSection(section);
-    }
-
-    console.log(`\n🎉 Done! Deleted ${total} collection(s) total.`);
-  }
-
-  main().catch((err) => {
+  const { default: run } = await import("./commands/because-you-watched.mjs");
+  await run(args).catch((err) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
-    if (VERBOSE) console.error(err.stack);
+    if (args.verbose) console.error(err.stack);
     process.exit(1);
   });
 } else {

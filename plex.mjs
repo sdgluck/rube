@@ -6,7 +6,6 @@
  *   const client = createPlexClient({ url, token, verbose });
  */
 
-export const TINKERBELL_MARKER = "[tinkerbell]";
 export const SECTION_TYPE_MAP = { movie: 1, show: 2, artist: 8, photo: 13 };
 
 export function createPlexClient({ url, token, verbose = false }) {
@@ -198,6 +197,86 @@ export function createPlexClient({ url, token, verbose = false }) {
     return true;
   }
 
+  // ─── Watch history & accounts ──────────────────────────────────────────────
+
+  async function getWatchHistory({
+    accountID,
+    librarySectionID,
+    limit = 50,
+  } = {}) {
+    const params = {
+      sort: "viewedAt:desc",
+      "X-Plex-Container-Size": limit,
+    };
+    if (accountID) params.accountID = accountID;
+    if (librarySectionID) params.librarySectionID = librarySectionID;
+
+    const data = await request("/status/sessions/history/all", { params });
+    return data?.MediaContainer?.Metadata || [];
+  }
+
+  async function getAccounts() {
+    const data = await request("/accounts");
+    return data?.MediaContainer?.Account || [];
+  }
+
+  // ─── Label-based collection management ────────────────────────────────────
+
+  async function deleteCollectionsByLabel(sectionId, label) {
+    const collections = await getCollections(sectionId);
+    let deleted = 0;
+    for (const col of collections) {
+      const labels = await getCollectionLabels(col.ratingKey);
+      if (labels.some((l) => l.tag.toLowerCase() === label.toLowerCase())) {
+        log(`Deleting collection "${col.title}" (${col.ratingKey})`);
+        await deleteItem(col.ratingKey);
+        deleted++;
+      }
+    }
+    return deleted;
+  }
+
+  async function createCollectionWithLabel(
+    sectionId,
+    sectionType,
+    machineId,
+    name,
+    ratingKeys,
+    label,
+  ) {
+    if (ratingKeys.length === 0) return null;
+
+    const uri = `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
+
+    const data = await request("/library/collections", {
+      method: "POST",
+      params: {
+        type: SECTION_TYPE_MAP[sectionType] || 1,
+        title: name,
+        smart: 0,
+        sectionId,
+        uri,
+      },
+    });
+
+    const collectionKey = data?.MediaContainer?.Metadata?.[0]?.ratingKey;
+    if (!collectionKey)
+      throw new Error(`Failed to create collection "${name}"`);
+
+    // Label with the given label
+    await request(`/library/sections/${sectionId}/all`, {
+      method: "PUT",
+      params: {
+        type: 18,
+        id: collectionKey,
+        "label[0].tag.tag": label,
+        "label.locked": 1,
+      },
+    });
+
+    return collectionKey;
+  }
+
   // ─── Cleanup operations ─────────────────────────────────────────────────────
 
   async function getCollections(sectionId) {
@@ -231,5 +310,9 @@ export function createPlexClient({ url, token, verbose = false }) {
     getCollections,
     getCollectionLabels,
     deleteItem,
+    getWatchHistory,
+    getAccounts,
+    deleteCollectionsByLabel,
+    createCollectionWithLabel,
   };
 }
