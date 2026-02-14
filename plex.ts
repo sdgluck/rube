@@ -2,18 +2,83 @@
  * Plex API client factory.
  *
  * Usage:
- *   import { createPlexClient, SECTION_TYPE_MAP } from "./plex.mjs";
+ *   import { createPlexClient, SECTION_TYPE_MAP } from "./plex.ts";
  *   const client = createPlexClient({ url, token, verbose });
  */
 
-export const SECTION_TYPE_MAP = { movie: 1, show: 2, artist: 8, photo: 13 };
+export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
 
-export function createPlexClient({ url, token, verbose = false }) {
-  const log = (...a) => verbose && console.log("  ", ...a);
+interface PlexClientOptions {
+  url: string;
+  token: string;
+  verbose?: boolean;
+}
+
+interface RequestOptions {
+  method?: string;
+  params?: Record<string, string | number | undefined | null>;
+  headers?: Record<string, string>;
+}
+
+export interface PlexSection {
+  key: string;
+  title: string;
+  type: string;
+}
+
+export interface PlexHub {
+  identifier: string;
+  title: string;
+}
+
+export interface PlexItem {
+  ratingKey: string;
+  title: string;
+  year?: number;
+}
+
+export interface PlexHistoryItem {
+  type: string;
+  ratingKey: string;
+  title: string;
+  year?: number;
+  grandparentTitle?: string;
+  grandparentRatingKey?: string;
+}
+
+export interface PlexCollection {
+  ratingKey: string;
+  title: string;
+  addedAt?: number;
+}
+
+export interface PlexLabel {
+  tag: string;
+}
+
+export interface PlexAccount {
+  id: string;
+  name?: string;
+}
+
+interface PinOptions {
+  promotedToOwnHome?: number;
+  promotedToRecommendedHome?: number;
+  promotedToSharedHome?: number;
+}
+
+interface WatchHistoryOptions {
+  accountID?: string;
+  librarySectionID?: string;
+  limit?: number;
+}
+
+export function createPlexClient({ url, token, verbose = false }: PlexClientOptions) {
+  const log = (...a: unknown[]) => verbose && console.log("  ", ...a);
 
   // ─── Core ───────────────────────────────────────────────────────────────────
 
-  async function request(path, { method = "GET", params = {}, headers = {} } = {}) {
+  async function request(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
     const reqUrl = new URL(path, url);
     reqUrl.searchParams.set("X-Plex-Token", token);
     for (const [k, v] of Object.entries(params)) {
@@ -47,24 +112,24 @@ export function createPlexClient({ url, token, verbose = false }) {
     }
   }
 
-  async function getSections() {
+  async function getSections(): Promise<PlexSection[]> {
     const data = await request("/library/sections");
     return data.MediaContainer.Directory || [];
   }
 
-  async function getIdentity() {
+  async function getIdentity(): Promise<{ friendlyName: string; machineIdentifier: string }> {
     const data = await request("/");
     return data.MediaContainer;
   }
 
   // ─── Shuffle operations ─────────────────────────────────────────────────────
 
-  async function getManagedHubs(sectionId) {
+  async function getManagedHubs(sectionId: string): Promise<PlexHub[]> {
     const data = await request(`/hubs/sections/${sectionId}/manage`);
     return (data && data.MediaContainer && data.MediaContainer.Hub) || [];
   }
 
-  async function moveHub(sectionId, hubId, afterId) {
+  async function moveHub(sectionId: string, hubId: string, afterId: string): Promise<void> {
     await request(`/hubs/sections/${sectionId}/manage/${hubId}/move`, {
       method: "PUT",
       params: { after: afterId },
@@ -73,8 +138,8 @@ export function createPlexClient({ url, token, verbose = false }) {
 
   // ─── Generate operations ────────────────────────────────────────────────────
 
-  async function fetchAllItems(sectionId) {
-    const items = [];
+  async function fetchAllItems(sectionId: string): Promise<PlexItem[]> {
+    const items: PlexItem[] = [];
     const pageSize = 100;
     let offset = 0;
 
@@ -105,19 +170,19 @@ export function createPlexClient({ url, token, verbose = false }) {
     return items;
   }
 
-  async function deleteTinkerbellCollections(sectionId) {
-    await deleteCollectionsByLabel(sectionId, "tinkerbell");
+  async function deleteTinkerbellCollections(sectionId: string): Promise<number> {
+    return deleteCollectionsByLabel(sectionId, "tinkerbell");
   }
 
   async function pinToHomepage(
-    sectionId,
-    collectionKey,
-    opts = {
+    sectionId: string,
+    collectionKey: string,
+    opts: PinOptions = {
       promotedToOwnHome: 0,
       promotedToRecommendedHome: 0,
       promotedToSharedHome: 0,
     },
-  ) {
+  ): Promise<boolean> {
     await request(`/hubs/sections/${sectionId}/manage`, {
       method: "POST",
       params: { metadataItemId: collectionKey },
@@ -128,15 +193,17 @@ export function createPlexClient({ url, token, verbose = false }) {
 
     await request(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
       method: "PUT",
-      params: opts,
+      params: opts as unknown as Record<string, number>,
     });
     return true;
   }
 
   // ─── Watch history & accounts ──────────────────────────────────────────────
 
-  async function getWatchHistory({ accountID, librarySectionID, limit = 50 } = {}) {
-    const params = {
+  async function getWatchHistory({ accountID, librarySectionID, limit = 50 }: WatchHistoryOptions = {}): Promise<
+    PlexHistoryItem[]
+  > {
+    const params: Record<string, string | number> = {
       sort: "viewedAt:desc",
       "X-Plex-Container-Size": limit,
     };
@@ -147,19 +214,19 @@ export function createPlexClient({ url, token, verbose = false }) {
     return data?.MediaContainer?.Metadata || [];
   }
 
-  async function getAccounts() {
+  async function getAccounts(): Promise<PlexAccount[]> {
     const data = await request("/accounts");
     return data?.MediaContainer?.Account || [];
   }
 
   // ─── Label-based collection management ────────────────────────────────────
 
-  async function deleteCollectionsByLabel(sectionId, label) {
+  async function deleteCollectionsByLabel(sectionId: string, label: string): Promise<number> {
     const collections = await getCollections(sectionId);
     let deleted = 0;
     for (const col of collections) {
       const labels = await getCollectionLabels(col.ratingKey);
-      if (labels.some((l) => l.tag.toLowerCase() === label.toLowerCase())) {
+      if (labels.some((l: PlexLabel) => l.tag.toLowerCase() === label.toLowerCase())) {
         log(`Deleting collection "${col.title}" (${col.ratingKey})`);
         await deleteItem(col.ratingKey);
         deleted++;
@@ -168,7 +235,14 @@ export function createPlexClient({ url, token, verbose = false }) {
     return deleted;
   }
 
-  async function createCollectionWithLabel(sectionId, sectionType, machineId, name, ratingKeys, label) {
+  async function createCollectionWithLabel(
+    sectionId: string,
+    sectionType: string,
+    machineId: string,
+    name: string,
+    ratingKeys: string[],
+    label: string,
+  ): Promise<string | null> {
     if (ratingKeys.length === 0) return null;
 
     const uri = `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
@@ -203,19 +277,19 @@ export function createPlexClient({ url, token, verbose = false }) {
 
   // ─── Cleanup operations ─────────────────────────────────────────────────────
 
-  async function getCollections(sectionId) {
+  async function getCollections(sectionId: string): Promise<PlexCollection[]> {
     const data = await request(`/library/sections/${sectionId}/all`, {
       params: { type: 18 },
     });
     return data?.MediaContainer?.Metadata || [];
   }
 
-  async function getCollectionLabels(ratingKey) {
+  async function getCollectionLabels(ratingKey: string): Promise<PlexLabel[]> {
     const detail = await request(`/library/metadata/${ratingKey}`);
     return detail?.MediaContainer?.Metadata?.[0]?.Label || [];
   }
 
-  async function deleteItem(ratingKey) {
+  async function deleteItem(ratingKey: string): Promise<void> {
     await request(`/library/metadata/${ratingKey}`, { method: "DELETE" });
   }
 
@@ -238,3 +312,5 @@ export function createPlexClient({ url, token, verbose = false }) {
     createCollectionWithLabel,
   };
 }
+
+export type PlexClient = ReturnType<typeof createPlexClient>;

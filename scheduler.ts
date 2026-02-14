@@ -5,12 +5,12 @@ import { execFile } from "node:child_process";
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-function timestamp() {
+function timestamp(): string {
   return new Date().toISOString();
 }
 
-function buildArgs(command) {
-  const args = ["index.mjs", command];
+function buildArgs(command: string): string[] {
+  const args = ["index.ts", command];
 
   if (process.env.PLEX_URL) {
     args.push("--url", process.env.PLEX_URL);
@@ -34,7 +34,7 @@ function buildArgs(command) {
   return args;
 }
 
-function run(command) {
+function run(command: string): Promise<void> {
   const args = buildArgs(command);
   console.log(`[${timestamp()}] Running: node ${args.join(" ")}`);
 
@@ -44,8 +44,8 @@ function run(command) {
       env: process.env,
     });
 
-    child.stdout.pipe(process.stdout);
-    child.stderr.pipe(process.stderr);
+    child.stdout!.pipe(process.stdout);
+    child.stderr!.pipe(process.stderr);
 
     child.on("close", (code) => {
       if (code !== 0) {

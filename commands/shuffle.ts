@@ -1,7 +1,15 @@
-import { createPlexClient } from "../plex.mjs";
-import { getConfig } from "../config.mjs";
+import { createPlexClient, type PlexHub, type PlexSection } from "../plex.ts";
+import { getConfig } from "../config.ts";
 
-function shuffleArray(arr) {
+interface ShuffleArgs {
+  url?: string;
+  token?: string;
+  section?: string;
+  "dry-run"?: boolean;
+  verbose?: boolean;
+}
+
+function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -10,7 +18,7 @@ function shuffleArray(arr) {
   return a;
 }
 
-export default async function run(args) {
+export default async function run(args: ShuffleArgs): Promise<void> {
   const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
     /\/+$/,
     "",
@@ -33,11 +41,11 @@ export default async function run(args) {
   const MAX_REORDER_ATTEMPTS = 8;
   const SETTLE_DELAY = 3000;
 
-  function isCustomHub(hub) {
+  function isCustomHub(hub: PlexHub): boolean {
     return hub.identifier.startsWith("custom.");
   }
 
-  async function reorderCustomHubs(sectionId, allHubs, customOrder) {
+  async function reorderCustomHubs(sectionId: string, allHubs: PlexHub[], customOrder: PlexHub[]): Promise<void> {
     if (DRY_RUN) return;
 
     // Only move custom collection hubs — built-in Plex hubs (movie.genre,
@@ -89,7 +97,7 @@ export default async function run(args) {
     client.log(`Warning: could not fully settle after ${MAX_REORDER_ATTEMPTS} attempts`);
   }
 
-  async function shuffleSection(section) {
+  async function shuffleSection(section: PlexSection): Promise<void> {
     const sectionId = section.key;
     const sectionTitle = section.title;
 
@@ -119,18 +127,18 @@ export default async function run(args) {
     }
 
     // Keep pinned custom hubs at the top of the custom section
-    const PINNED_TITLES = {
+    const PINNED_TITLES: Record<string, string[]> = {
       Films: ["Recently Added Movies", "Recently Released Movies"],
       TV: ["Recently Added TV"],
     };
     const pinnedTitles = PINNED_TITLES[sectionTitle] || [];
-    const pinnedCustom = pinnedTitles.map((t) => customHubs.find((h) => h.title === t)).filter(Boolean);
+    const pinnedCustom = pinnedTitles.map((t) => customHubs.find((h) => h.title === t)).filter(Boolean) as PlexHub[];
     const shuffleable = customHubs.filter((h) => !pinnedCustom.includes(h));
     const shuffledCustom = [...pinnedCustom, ...shuffleArray(shuffleable)];
 
     // Rebuild full hub list: system hubs stay in their original positions,
     // custom hubs fill the remaining slots in shuffled order.
-    const finalOrder = [];
+    const finalOrder: PlexHub[] = [];
     let customIdx = 0;
     for (const hub of hubs) {
       if (isCustomHub(hub)) {
@@ -158,7 +166,7 @@ export default async function run(args) {
     console.log(`   Server name: ${identity.friendlyName}`);
   } catch (err) {
     console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-    console.error(`   ${err.message}`);
+    console.error(`   ${(err as Error).message}`);
     process.exit(1);
   }
 
@@ -167,7 +175,7 @@ export default async function run(args) {
   let sections;
   if (args.section) {
     const match = allSections.find(
-      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section!.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);

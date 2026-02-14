@@ -1,17 +1,31 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { createPlexClient } from "../plex.mjs";
-import { getConfig } from "../config.mjs";
+import { createPlexClient, type PlexClient, type PlexItem } from "../plex.ts";
+import { getConfig } from "../config.ts";
 
 const BYW_LABEL = "tinkerbell:byw";
 
-export default async function run(args) {
+interface BywArgs {
+  url?: string;
+  token?: string;
+  user?: string;
+  section?: string;
+  limit?: string;
+  verbose?: boolean;
+}
+
+interface AiCollection {
+  name: string;
+  items: string[];
+}
+
+export default async function run(args: BywArgs): Promise<void> {
   const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
     /\/+$/,
     "",
   );
   const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
   const ANTHROPIC_API_KEY = getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
-  const LIMIT = Math.min(parseInt(args.limit, 10) || 10, 20);
+  const LIMIT = Math.min(parseInt(args.limit!, 10) || 10, 20);
   const VERBOSE = args.verbose;
 
   if (!PLEX_TOKEN) {
@@ -35,22 +49,22 @@ export default async function run(args) {
   console.log(`🧚 tinkerbell because-you-watched`);
   console.log(`   Server: ${PLEX_URL}`);
 
-  let machineId;
+  let machineId: string;
   try {
     const identity = await client.getIdentity();
     machineId = identity.machineIdentifier;
     console.log(`   Server name: ${identity.friendlyName}`);
   } catch (err) {
     console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-    console.error(`   ${err.message}`);
+    console.error(`   ${(err as Error).message}`);
     process.exit(1);
   }
 
   // Resolve --user to accountID
-  let accountID;
+  let accountID: string | undefined;
   if (args.user) {
     const accounts = await client.getAccounts();
-    const match = accounts.find((a) => a.name?.toLowerCase() === args.user.toLowerCase());
+    const match = accounts.find((a) => a.name?.toLowerCase() === args.user!.toLowerCase());
     if (!match) {
       console.error(`\n❌ User "${args.user}" not found.`);
       console.error("   Available accounts:");
@@ -67,7 +81,7 @@ export default async function run(args) {
   let targetSections;
   if (args.section) {
     const match = allSections.find(
-      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section!.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);
@@ -101,7 +115,7 @@ export default async function run(args) {
     }
 
     // Deduplicate: for TV episodes group by show (grandparentTitle)
-    const seen = new Set();
+    const seen = new Set<string>();
     const watchedItems = [];
     for (const item of history) {
       const key =
@@ -138,16 +152,22 @@ export default async function run(args) {
 
     // Build watched item titles for the prompt
     const watchedTitles = watchedItems.map((item) =>
-      item.type === "episode" ? item.grandparentTitle : `${item.title}${item.year ? ` (${item.year})` : ""}`,
+      item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
     );
 
     // Ask AI for collections
     console.log(`   🤖 Asking Claude for "Because you watched" collections...`);
-    const aiCollections = await generateBYWCollections(client, watchedTitles, libraryItems, section.title);
+    const aiCollections = await generateBYWCollections(
+      ANTHROPIC_API_KEY,
+      client,
+      watchedTitles,
+      libraryItems,
+      section.title,
+    );
     console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
 
     // Build title→ratingKey lookup
-    const titleMap = new Map();
+    const titleMap = new Map<string, string>();
     for (const item of libraryItems) {
       const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
       titleMap.set(key, item.ratingKey);
@@ -157,7 +177,7 @@ export default async function run(args) {
     // Create collections and pin them
     let created = 0;
     for (const col of aiCollections) {
-      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean);
+      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
 
       if (ratingKeys.length < 10) {
         client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
@@ -196,8 +216,14 @@ export default async function run(args) {
   console.log("\n🎉 All done!");
 }
 
-async function generateBYWCollections(client, watchedTitles, libraryItems, sectionTitle) {
-  const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+async function generateBYWCollections(
+  apiKey: string,
+  client: PlexClient,
+  watchedTitles: string[],
+  libraryItems: PlexItem[],
+  sectionTitle: string,
+): Promise<AiCollection[]> {
+  const anthropic = new Anthropic({ apiKey });
 
   const itemList = libraryItems.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
 
@@ -232,12 +258,12 @@ ${itemList}`,
     ],
   });
 
-  const text = response.content[0].text.trim();
+  const text = (response.content[0] as { type: "text"; text: string }).text.trim();
   client.log("AI response:", text);
   return parseJSON(text);
 }
 
-function parseJSON(text) {
+function parseJSON(text: string): AiCollection[] {
   try {
     return JSON.parse(text);
   } catch {}

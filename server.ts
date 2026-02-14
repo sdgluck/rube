@@ -1,12 +1,12 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
-import { getAllConfig, setConfig } from "./config.mjs";
+import { getAllConfig, setConfig } from "./config.ts";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "web", "dist");
 
-const MIME_TYPES = {
+const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
   ".js": "application/javascript",
   ".css": "text/css",
@@ -16,7 +16,7 @@ const MIME_TYPES = {
   ".ico": "image/x-icon",
 };
 
-function json(res, status, data) {
+function json(res: ServerResponse, status: number, data: unknown): void {
   const body = JSON.stringify(data);
   res.writeHead(status, {
     "Content-Type": "application/json",
@@ -25,16 +25,16 @@ function json(res, status, data) {
   res.end(body);
 }
 
-function readBody(req) {
+function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on("data", (c) => chunks.push(c));
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
     req.on("end", () => resolve(Buffer.concat(chunks).toString()));
     req.on("error", reject);
   });
 }
 
-async function serveStatic(res, filePath) {
+async function serveStatic(res: ServerResponse, filePath: string): Promise<boolean> {
   try {
     const info = await stat(filePath);
     if (!info.isFile()) throw new Error("not a file");
@@ -51,8 +51,8 @@ async function serveStatic(res, filePath) {
   }
 }
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const url = new URL(req.url!, `http://${req.headers.host}`);
   const path = url.pathname;
 
   // API routes
@@ -78,7 +78,7 @@ const server = createServer(async (req, res) => {
       const name = data?.MediaContainer?.friendlyName || "Unknown";
       return json(res, 200, { ok: true, serverName: name });
     } catch (err) {
-      return json(res, 200, { ok: false, error: err.message });
+      return json(res, 200, { ok: false, error: (err as Error).message });
     }
   }
 
@@ -90,11 +90,11 @@ const server = createServer(async (req, res) => {
       try {
         const body = JSON.parse(await readBody(req));
         for (const [key, value] of Object.entries(body)) {
-          setConfig(key, value);
+          setConfig(key, value as string);
         }
         return json(res, 200, { ok: true });
       } catch (err) {
-        return json(res, 400, { error: err.message });
+        return json(res, 400, { error: (err as Error).message });
       }
     }
     return json(res, 405, { error: "Method not allowed" });

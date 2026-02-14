@@ -40,7 +40,7 @@ const { values: globalArgs, positionals } = parseArgs({
 
 const command = positionals[0];
 
-function printUsage() {
+function printUsage(): void {
   console.log(
     `
 tinkerbell — Manage your Plex homepage hubs.
@@ -65,7 +65,7 @@ Run "tinkerbell <command> --help" for command-specific help.
   );
 }
 
-function printShuffleUsage() {
+function printShuffleUsage(): void {
   console.log(
     `
 tinkerbell shuffle — Shuffle the hub ordering on your Plex homepage.
@@ -91,7 +91,7 @@ Examples:
   );
 }
 
-function printGenerateUsage() {
+function printGenerateUsage(): void {
   console.log(
     `
 tinkerbell generate — Use AI to create curated Plex collections.
@@ -122,7 +122,7 @@ Examples:
   );
 }
 
-function printCleanupUsage() {
+function printCleanupUsage(): void {
   console.log(
     `
 tinkerbell cleanup — Delete tinkerbell-generated collections.
@@ -152,7 +152,7 @@ Examples:
   );
 }
 
-function printBecauseYouWatchedUsage() {
+function printBecauseYouWatchedUsage(): void {
   console.log(
     `
 tinkerbell because-you-watched — Create "Because you watched X" collections.
@@ -216,8 +216,8 @@ if (command === "shuffle") {
     process.exit(0);
   }
 
-  const { default: run } = await import("./commands/shuffle.mjs");
-  await run(args).catch((err) => {
+  const { default: run } = await import("./commands/shuffle.ts");
+  await run(args).catch((err: Error) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
     if (args.verbose) console.error(err.stack);
     process.exit(1);
@@ -241,8 +241,8 @@ if (command === "shuffle") {
     process.exit(0);
   }
 
-  const { default: run } = await import("./commands/generate.mjs");
-  await run(args).catch((err) => {
+  const { default: run } = await import("./commands/generate.ts");
+  await run(args).catch((err: Error) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
     if (args.verbose) console.error(err.stack);
     process.exit(1);
@@ -267,8 +267,8 @@ if (command === "shuffle") {
     process.exit(0);
   }
 
-  const { default: run } = await import("./commands/cleanup.mjs");
-  await run(args).catch((err) => {
+  const { default: run } = await import("./commands/cleanup.ts");
+  await run(args).catch((err: Error) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
     if (args.verbose) console.error(err.stack);
     process.exit(1);
@@ -293,8 +293,8 @@ if (command === "shuffle") {
     process.exit(0);
   }
 
-  const { default: run } = await import("./commands/because-you-watched.mjs");
-  await run(args).catch((err) => {
+  const { default: run } = await import("./commands/because-you-watched.ts");
+  await run(args).catch((err: Error) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
     if (args.verbose) console.error(err.stack);
     process.exit(1);

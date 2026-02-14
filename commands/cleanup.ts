@@ -1,7 +1,16 @@
-import { createPlexClient } from "../plex.mjs";
-import { getConfig } from "../config.mjs";
+import { createPlexClient, type PlexSection } from "../plex.ts";
+import { getConfig } from "../config.ts";
 
-export default async function run(args) {
+interface CleanupArgs {
+  url?: string;
+  token?: string;
+  section?: string;
+  from?: string;
+  all?: boolean;
+  verbose?: boolean;
+}
+
+export default async function run(args: CleanupArgs): Promise<void> {
   const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
     /\/+$/,
     "",
@@ -27,7 +36,7 @@ export default async function run(args) {
     verbose: VERBOSE,
   });
 
-  async function cleanupSection(section) {
+  async function cleanupSection(section: PlexSection): Promise<number> {
     const sectionId = section.key;
     const sectionTitle = section.title;
 
@@ -53,7 +62,7 @@ export default async function run(args) {
 
       const labels = await client.getCollectionLabels(col.ratingKey);
       const isTinkerbell = labels.some((l) => l.tag.toLowerCase().startsWith("tinkerbell"));
-      const isAfterFrom = FROM_DATE && col.addedAt >= FROM_DATE;
+      const isAfterFrom = FROM_DATE && col.addedAt! >= FROM_DATE;
 
       if (isTinkerbell || isAfterFrom) {
         console.log(`   🗑  "${col.title}" — deleted`);
@@ -76,7 +85,7 @@ export default async function run(args) {
     console.log(`   Server name: ${identity.friendlyName}`);
   } catch (err) {
     console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-    console.error(`   ${err.message}`);
+    console.error(`   ${(err as Error).message}`);
     process.exit(1);
   }
 
@@ -85,7 +94,7 @@ export default async function run(args) {
   let sections;
   if (args.section) {
     const match = allSections.find(
-      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section!.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);

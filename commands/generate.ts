@@ -1,15 +1,28 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { createPlexClient } from "../plex.mjs";
-import { getConfig } from "../config.mjs";
+import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "../plex.ts";
+import { getConfig } from "../config.ts";
 
-export default async function run(args) {
+interface GenerateArgs {
+  url?: string;
+  token?: string;
+  section?: string;
+  limit?: string;
+  verbose?: boolean;
+}
+
+interface AiCollection {
+  name: string;
+  items: string[];
+}
+
+export default async function run(args: GenerateArgs): Promise<void> {
   const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
     /\/+$/,
     "",
   );
   const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
   const ANTHROPIC_API_KEY = getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
-  const MAX_COLLECTIONS = parseInt(args.limit, 10) || 8;
+  const MAX_COLLECTIONS = parseInt(args.limit!, 10) || 8;
   if (MAX_COLLECTIONS > 10) {
     console.error("Error: --limit cannot exceed 10.");
     process.exit(1);
@@ -34,7 +47,11 @@ export default async function run(args) {
     verbose: VERBOSE,
   });
 
-  async function generateCollections(items, sectionTitle, maxCollections) {
+  async function generateCollections(
+    items: PlexItem[],
+    sectionTitle: string,
+    maxCollections: number,
+  ): Promise<AiCollection[]> {
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
     const shuffled = [...items];
@@ -75,12 +92,12 @@ ${itemList}`,
       ],
     });
 
-    const text = response.content[0].text.trim();
+    const text = (response.content[0] as { type: "text"; text: string }).text.trim();
     client.log("AI response:", text);
     return parseJSON(text);
   }
 
-  function parseJSON(text) {
+  function parseJSON(text: string): AiCollection[] {
     // Try parsing as-is
     try {
       return JSON.parse(text);
@@ -105,7 +122,7 @@ ${itemList}`,
     throw new Error(`Failed to parse AI response as JSON:\n${text}`);
   }
 
-  async function processSection(section, machineId) {
+  async function processSection(section: PlexSection, machineId: string): Promise<void> {
     const sectionId = section.key;
     const sectionTitle = section.title;
 
@@ -132,7 +149,7 @@ ${itemList}`,
     console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
 
     // Build title→ratingKey lookup
-    const titleMap = new Map();
+    const titleMap = new Map<string, string>();
     for (const item of items) {
       const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
       titleMap.set(key, item.ratingKey);
@@ -143,7 +160,7 @@ ${itemList}`,
     // Step 4: Create collections and pin them
     let created = 0;
     for (const col of aiCollections) {
-      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean);
+      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
 
       if (ratingKeys.length < 15) {
         client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`);
@@ -182,14 +199,14 @@ ${itemList}`,
   console.log(`🧚 tinkerbell generate`);
   console.log(`   Server: ${PLEX_URL}`);
 
-  let machineId;
+  let machineId: string;
   try {
     const identity = await client.getIdentity();
     machineId = identity.machineIdentifier;
     console.log(`   Server name: ${identity.friendlyName}`);
   } catch (err) {
     console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-    console.error(`   ${err.message}`);
+    console.error(`   ${(err as Error).message}`);
     process.exit(1);
   }
 
@@ -198,7 +215,7 @@ ${itemList}`,
   let sections;
   if (args.section) {
     const match = allSections.find(
-      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section!.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);

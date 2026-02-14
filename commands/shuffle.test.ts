@@ -1,6 +1,6 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createPlexClient } from "../plex.mjs";
+import { createPlexClient, type PlexHub } from "../plex.ts";
 
 const PLEX_URL = (process.env.PLEX_URL || "http://localhost:32400").replace(/\/+$/, "");
 const PLEX_TOKEN = process.env.PLEX_TOKEN;
@@ -16,13 +16,13 @@ const client = createPlexClient({
   verbose: false,
 });
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-function isCustomHub(hub) {
+function isCustomHub(hub: PlexHub): boolean {
   return hub.identifier.startsWith("custom.");
 }
 
-function countMismatches(desired, actual) {
+function countMismatches(desired: PlexHub[], actual: PlexHub[]): number {
   let n = 0;
   for (let i = 0; i < Math.max(desired.length, actual.length); i++) {
     if (desired[i]?.identifier !== actual[i]?.identifier) n++;
@@ -31,7 +31,7 @@ function countMismatches(desired, actual) {
 }
 
 // Reorder only custom hubs, leaving system hubs in place
-async function reorderCustomOnly(sectionId, desired) {
+async function reorderCustomOnly(sectionId: string, desired: PlexHub[]): Promise<number> {
   const MAX_ATTEMPTS = 8;
   const SETTLE_DELAY = 3000;
 
@@ -72,8 +72,8 @@ async function reorderCustomOnly(sectionId, desired) {
 }
 
 // Build a new order: system hubs stay in place, custom hubs are shuffled
-function buildShuffledOrder(hubs, shuffledCustom) {
-  const result = [];
+function buildShuffledOrder(hubs: PlexHub[], shuffledCustom: PlexHub[]): PlexHub[] {
+  const result: PlexHub[] = [];
   let ci = 0;
   for (const hub of hubs) {
     if (isCustomHub(hub)) {
@@ -86,16 +86,17 @@ function buildShuffledOrder(hubs, shuffledCustom) {
 }
 
 describe("shuffle with system hubs fixed", () => {
-  let section;
-  let originalOrder;
+  let section: { key: string; title: string };
+  let originalOrder: PlexHub[];
 
   before(async () => {
     const sections = await client.getSections();
-    section = sections.find((s) => s.title.toLowerCase() === "films" || s.title.toLowerCase() === "movies");
-    if (!section) {
+    const found = sections.find((s) => s.title.toLowerCase() === "films" || s.title.toLowerCase() === "movies");
+    if (!found) {
       console.log("No Films/Movies section found");
       process.exit(1);
     }
+    section = found;
 
     originalOrder = await client.getManagedHubs(section.key);
     const sys = originalOrder.filter((h) => !isCustomHub(h));

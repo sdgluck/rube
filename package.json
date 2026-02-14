@@ -2,10 +2,12 @@
   "name": "tinkerbell3",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "node scheduler.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node scheduler.ts",
+    "dev": "concurrently -n server,web -c blue,magenta \"node server.ts\" \"yarn --cwd web dev\"",
+    "typecheck": "tsc",
+    "test": "node --test commands/shuffle.test.ts",
     "prepare": "husky"
   },
   "private": true,
@@ -13,7 +15,10 @@
     "@anthropic-ai/sdk": "^0.74.0"
   },
   "devDependencies": {
+    "@types/node": "^25.2.3",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
   }
 }
