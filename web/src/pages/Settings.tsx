@@ -1,36 +1,49 @@
 import { useState, useEffect } from "react";
-import { getConfig, saveConfig, testPlex, getPlexSections } from "../api";
+import { trpc } from "../trpc";
 import styles from "./Settings.module.css";
 
+interface Status {
+  type: "success" | "error";
+  msg: string;
+}
+
 export default function Settings() {
-  const [values, setValues] = useState({});
-  const [status, setStatus] = useState(null);
-  const [plexStatus, setPlexStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<Status | null>(null);
+  const [plexStatus, setPlexStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sections, setSections] = useState(null);
-  const [selectedLibraries, setSelectedLibraries] = useState([]);
-  const [libStatus, setLibStatus] = useState(null);
+  const [selectedLibraries, setSelectedLibraries] = useState<string[]>([]);
+  const [libStatus, setLibStatus] = useState<Status | null>(null);
   const [savingLibs, setSavingLibs] = useState(false);
 
+  const configQuery = trpc.config.get.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  const sectionsQuery = trpc.plexSections.useQuery(undefined, {
+    enabled: Boolean(values.plex_url && values.plex_token),
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
+  const saveConfigMutation = trpc.config.save.useMutation();
+  const testPlexMutation = trpc.testPlex.useMutation();
+
   useEffect(() => {
-    getConfig()
-      .then((cfg) => {
-        setValues(cfg);
-        if (cfg.plex_libraries) {
-          try {
-            setSelectedLibraries(JSON.parse(cfg.plex_libraries));
-          } catch {}
-        }
-      })
-      .catch(() => setStatus({ type: "error", msg: "Failed to load settings" }))
-      .finally(() => setLoading(false));
-  }, []);
+    if (configQuery.data) {
+      setValues(configQuery.data);
+      if (configQuery.data.plex_libraries) {
+        try {
+          setSelectedLibraries(JSON.parse(configQuery.data.plex_libraries));
+        } catch {}
+      }
+    }
+  }, [configQuery.data]);
 
-  const set = (key, value) => setValues({ ...values, [key]: value });
+  const set = (key: string, value: string) => setValues({ ...values, [key]: value });
 
-  const runPlexTest = async (url, token) => {
+  const runPlexTest = async (url: string | undefined, token: string | undefined): Promise<boolean> => {
     setPlexStatus(null);
     if (!url || !token) {
       setPlexStatus({ type: "error", msg: "Both URL and token are required" });
@@ -38,7 +51,7 @@ export default function Settings() {
     }
     setTesting(true);
     try {
-      const result = await testPlex(url, token);
+      const result = await testPlexMutation.mutateAsync({ plex_url: url, plex_token: token });
       if (result.ok) {
         setPlexStatus({
           type: "success",
@@ -55,22 +68,7 @@ export default function Settings() {
     }
   };
 
-  const loadSections = async () => {
-    try {
-      const data = await getPlexSections();
-      setSections(data);
-    } catch {
-      setSections([]);
-    }
-  };
-
-  useEffect(() => {
-    if (values.plex_url && values.plex_token) {
-      loadSections();
-    }
-  }, [values.plex_url, values.plex_token]);
-
-  const toggleLibrary = (title) => {
+  const toggleLibrary = (title: string) => {
     setSelectedLibraries((prev) => (prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]));
   };
 
@@ -78,7 +76,7 @@ export default function Settings() {
     setLibStatus(null);
     setSavingLibs(true);
     try {
-      await saveConfig({ plex_libraries: JSON.stringify(selectedLibraries) });
+      await saveConfigMutation.mutateAsync({ plex_libraries: JSON.stringify(selectedLibraries) });
       setLibStatus({ type: "success", msg: "Library selections saved" });
     } catch {
       setLibStatus({ type: "error", msg: "Failed to save library selections" });
@@ -91,7 +89,7 @@ export default function Settings() {
     runPlexTest(values.plex_url, values.plex_token);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
     setSaving(true);
@@ -105,7 +103,7 @@ export default function Settings() {
         setSaving(false);
         return;
       }
-      await saveConfig({
+      await saveConfigMutation.mutateAsync({
         plex_url: values.plex_url || "",
         plex_token: values.plex_token || "",
         anthropic_api_key: values.anthropic_api_key || "",
@@ -118,7 +116,10 @@ export default function Settings() {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (configQuery.isLoading) return <p>Loading...</p>;
+  if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
+
+  const sections = sectionsQuery.data;
 
   return (
     <div>
@@ -157,9 +158,9 @@ export default function Settings() {
           <legend className={styles.groupTitle}>Plex Libraries</legend>
           {!values.plex_url || !values.plex_token ? (
             <p className={styles.hint}>Configure Plex URL and token above first.</p>
-          ) : sections === null ? (
+          ) : sectionsQuery.isLoading ? (
             <p className={styles.hint}>Loading libraries...</p>
-          ) : sections.length === 0 ? (
+          ) : !sections || sections.length === 0 ? (
             <p className={styles.hint}>No libraries found. Check your Plex connection.</p>
           ) : (
             <>
