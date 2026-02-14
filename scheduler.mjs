@@ -21,8 +21,14 @@ function buildArgs(command) {
   if (process.env.SECTION) {
     args.push("--section", process.env.SECTION);
   }
-  if (command === "generate" && process.env.LIMIT) {
+  if (
+    (command === "generate" || command === "because-you-watched") &&
+    process.env.LIMIT
+  ) {
     args.push("--limit", process.env.LIMIT);
+  }
+  if (command === "because-you-watched" && process.env.BYW_USER) {
+    args.push("--user", process.env.BYW_USER);
   }
   if (process.env.VERBOSE === "true" || process.env.VERBOSE === "1") {
     args.push("--verbose");
@@ -68,14 +74,18 @@ console.log(`[${timestamp()}] Tinkerbell scheduler starting`);
 console.log(`  PLEX_URL:  ${process.env.PLEX_URL || "(default)"}`);
 console.log(`  SECTION:   ${process.env.SECTION || "(all)"}`);
 console.log(`  LIMIT:     ${process.env.LIMIT || "(default)"}`);
+console.log(`  BYW_USER:  ${process.env.BYW_USER || "(all)"}`);
 console.log(`  VERBOSE:   ${process.env.VERBOSE || "false"}`);
-console.log(`  Generate interval: 24h`);
-console.log(`  Shuffle interval:  30m\n`);
+console.log(`  Generate interval:             24h`);
+console.log(`  Because-you-watched interval:  24h`);
+console.log(`  Shuffle interval:              30m\n`);
 
-// Run generate then shuffle on startup
+// Run all commands on startup
 await run("generate");
+await run("because-you-watched");
 await run("shuffle");
 
 // Schedule recurring runs
 setInterval(() => run("generate"), TWENTY_FOUR_HOURS);
+setInterval(() => run("because-you-watched"), TWENTY_FOUR_HOURS);
 setInterval(() => run("shuffle"), THIRTY_MINUTES);
