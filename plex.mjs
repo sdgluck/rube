@@ -2,7 +2,7 @@
  * Plex API client factory.
  *
  * Usage:
- *   import { createPlexClient, TINKERBELL_MARKER, SECTION_TYPE_MAP } from "./plex.mjs";
+ *   import { createPlexClient, SECTION_TYPE_MAP } from "./plex.mjs";
  *   const client = createPlexClient({ url, token, verbose });
  */
 
@@ -111,70 +111,7 @@ export function createPlexClient({ url, token, verbose = false }) {
   }
 
   async function deleteTinkerbellCollections(sectionId) {
-    const data = await request(`/library/sections/${sectionId}/all`, {
-      params: { type: 18 },
-    });
-    const collections = data?.MediaContainer?.Metadata || [];
-
-    let deleted = 0;
-    for (const col of collections) {
-      let isTinkerbell = col.summary?.includes(TINKERBELL_MARKER);
-
-      if (!isTinkerbell) {
-        const detail = await request(`/library/metadata/${col.ratingKey}`);
-        const labels = detail?.MediaContainer?.Metadata?.[0]?.Label || [];
-        isTinkerbell = labels.some((l) => l.tag.toLowerCase() === "tinkerbell");
-      }
-
-      if (isTinkerbell) {
-        log(`Deleting collection "${col.title}" (${col.ratingKey})`);
-        await request(`/library/metadata/${col.ratingKey}`, {
-          method: "DELETE",
-        });
-        deleted++;
-      }
-    }
-    return deleted;
-  }
-
-  async function createCollection(
-    sectionId,
-    sectionType,
-    machineId,
-    name,
-    ratingKeys,
-  ) {
-    if (ratingKeys.length === 0) return null;
-
-    const uri = `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
-
-    const data = await request("/library/collections", {
-      method: "POST",
-      params: {
-        type: SECTION_TYPE_MAP[sectionType] || 1,
-        title: name,
-        smart: 0,
-        sectionId,
-        uri,
-      },
-    });
-
-    const collectionKey = data?.MediaContainer?.Metadata?.[0]?.ratingKey;
-    if (!collectionKey)
-      throw new Error(`Failed to create collection "${name}"`);
-
-    // Label with "Tinkerbell"
-    await request(`/library/sections/${sectionId}/all`, {
-      method: "PUT",
-      params: {
-        type: 18,
-        id: collectionKey,
-        "label[0].tag.tag": "Tinkerbell",
-        "label.locked": 1,
-      },
-    });
-
-    return collectionKey;
+    await deleteCollectionsByLabel(sectionId, "tinkerbell");
   }
 
   async function pinToHomepage(
@@ -308,8 +245,6 @@ export function createPlexClient({ url, token, verbose = false }) {
     getManagedHubs,
     moveHub,
     fetchAllItems,
-    deleteTinkerbellCollections,
-    createCollection,
     pinToHomepage,
     getCollections,
     getCollectionLabels,

@@ -114,7 +114,10 @@ ${itemList}`,
 
     // Step 1: Delete old tinkerbell collections
     console.log(`   🗑  Deleting previous tinkerbell collections...`);
-    const deleted = await client.deleteTinkerbellCollections(sectionId);
+    const deleted = await client.deleteCollectionsByLabel(
+      sectionId,
+      "tinkerbell:g",
+    );
     console.log(`   🗑  Deleted ${deleted} old collection(s).`);
 
     // Step 2: Fetch all items
@@ -163,12 +166,13 @@ ${itemList}`,
         `   📦 Creating "${col.name}" (${ratingKeys.length} items)...`,
       );
 
-      const collectionKey = await client.createCollection(
+      const collectionKey = await client.createCollectionWithLabel(
         sectionId,
         section.type,
         machineId,
         col.name,
         ratingKeys,
+        "tinkerbell:g",
       );
 
       if (collectionKey) {
