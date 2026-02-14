@@ -172,7 +172,11 @@ ${itemList}`,
       );
 
       if (collectionKey) {
-        const pinned = await client.pinToHomepage(sectionId, collectionKey);
+        const pinned = await client.pinToHomepage(sectionId, collectionKey, {
+          promotedToOwnHome: 1,
+          promotedToRecommendedHome: 1,
+          promotedToSharedHome: 1,
+        });
         if (pinned) {
           client.log(`Pinned "${col.name}" to homepage`);
         } else {

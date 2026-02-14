@@ -200,7 +200,11 @@ export default async function run(args) {
       );
 
       if (collectionKey) {
-        const pinned = await client.pinToHomepage(sectionId, collectionKey);
+        const pinned = await client.pinToHomepage(sectionId, collectionKey, {
+          promotedToOwnHome: 1,
+          promotedToRecommendedHome: 1,
+          promotedToSharedHome: 0,
+        });
         if (pinned) {
           client.log(`Pinned "${col.name}" to homepage`);
         } else {

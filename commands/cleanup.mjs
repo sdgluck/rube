@@ -56,12 +56,12 @@ export default async function run(args) {
       }
 
       const labels = await client.getCollectionLabels(col.ratingKey);
-      const isTinkerbell = labels.some(
-        (l) => l.tag.toLowerCase() === "tinkerbell",
+      const isTinkerbell = labels.some((l) =>
+        l.tag.toLowerCase().startsWith("tinkerbell"),
       );
       const isAfterFrom = FROM_DATE && col.addedAt >= FROM_DATE;
 
-      if (DELETE_ALL || isTinkerbell || isAfterFrom) {
+      if (isTinkerbell || isAfterFrom) {
         console.log(`   🗑  "${col.title}" — deleted`);
         await client.deleteItem(col.ratingKey);
         deleted++;

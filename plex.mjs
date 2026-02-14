@@ -177,7 +177,15 @@ export function createPlexClient({ url, token, verbose = false }) {
     return collectionKey;
   }
 
-  async function pinToHomepage(sectionId, collectionKey) {
+  async function pinToHomepage(
+    sectionId,
+    collectionKey,
+    opts = {
+      promotedToOwnHome: 0,
+      promotedToRecommendedHome: 0,
+      promotedToSharedHome: 0,
+    },
+  ) {
     await request(`/hubs/sections/${sectionId}/manage`, {
       method: "POST",
       params: { metadataItemId: collectionKey },
@@ -188,11 +196,7 @@ export function createPlexClient({ url, token, verbose = false }) {
 
     await request(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
       method: "PUT",
-      params: {
-        promotedToOwnHome: 1,
-        promotedToRecommendedHome: 1,
-        promotedToSharedHome: 1,
-      },
+      params: opts,
     });
     return true;
   }
