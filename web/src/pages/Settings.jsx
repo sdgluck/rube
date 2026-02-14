@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getConfig, saveConfig, testPlex } from "../api";
+import { getConfig, saveConfig, testPlex, getPlexSections } from "../api";
 import styles from "./Settings.module.css";
 
 export default function Settings() {
@@ -9,10 +9,21 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sections, setSections] = useState(null);
+  const [selectedLibraries, setSelectedLibraries] = useState([]);
+  const [libStatus, setLibStatus] = useState(null);
+  const [savingLibs, setSavingLibs] = useState(false);
 
   useEffect(() => {
     getConfig()
-      .then(setValues)
+      .then((cfg) => {
+        setValues(cfg);
+        if (cfg.plex_libraries) {
+          try {
+            setSelectedLibraries(JSON.parse(cfg.plex_libraries));
+          } catch {}
+        }
+      })
       .catch(() => setStatus({ type: "error", msg: "Failed to load settings" }))
       .finally(() => setLoading(false));
   }, []);
@@ -41,6 +52,38 @@ export default function Settings() {
       return false;
     } finally {
       setTesting(false);
+    }
+  };
+
+  const loadSections = async () => {
+    try {
+      const data = await getPlexSections();
+      setSections(data);
+    } catch {
+      setSections([]);
+    }
+  };
+
+  useEffect(() => {
+    if (values.plex_url && values.plex_token) {
+      loadSections();
+    }
+  }, [values.plex_url, values.plex_token]);
+
+  const toggleLibrary = (title) => {
+    setSelectedLibraries((prev) => (prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]));
+  };
+
+  const handleSaveLibraries = async () => {
+    setLibStatus(null);
+    setSavingLibs(true);
+    try {
+      await saveConfig({ plex_libraries: JSON.stringify(selectedLibraries) });
+      setLibStatus({ type: "success", msg: "Library selections saved" });
+    } catch {
+      setLibStatus({ type: "error", msg: "Failed to save library selections" });
+    } finally {
+      setSavingLibs(false);
     }
   };
 
@@ -108,6 +151,43 @@ export default function Settings() {
           <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
             {testing ? "Testing..." : "Test Connection"}
           </button>
+        </fieldset>
+
+        <fieldset className={styles.group}>
+          <legend className={styles.groupTitle}>Plex Libraries</legend>
+          {!values.plex_url || !values.plex_token ? (
+            <p className={styles.hint}>Configure Plex URL and token above first.</p>
+          ) : sections === null ? (
+            <p className={styles.hint}>Loading libraries...</p>
+          ) : sections.length === 0 ? (
+            <p className={styles.hint}>No libraries found. Check your Plex connection.</p>
+          ) : (
+            <>
+              <div className={styles.libraryList}>
+                {sections.map((s) => (
+                  <label key={s.key} className={styles.libraryItem}>
+                    <input
+                      type="checkbox"
+                      className={styles.toggle}
+                      checked={selectedLibraries.includes(s.title)}
+                      onChange={() => toggleLibrary(s.title)}
+                    />
+                    <span>{s.title}</span>
+                    <span className={styles.hint}>({s.type})</span>
+                  </label>
+                ))}
+              </div>
+              {libStatus && <div className={`${styles.toast} ${styles[libStatus.type]}`}>{libStatus.msg}</div>}
+              <button
+                type="button"
+                className={styles.buttonSecondary}
+                onClick={handleSaveLibraries}
+                disabled={savingLibs}
+              >
+                {savingLibs ? "Saving..." : "Save Libraries"}
+              </button>
+            </>
+          )}
         </fieldset>
 
         <fieldset className={styles.group}>

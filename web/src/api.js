@@ -14,6 +14,12 @@ export async function saveConfig(data) {
   return res.json();
 }
 
+export async function getPlexSections() {
+  const res = await fetch("/api/plex-sections");
+  if (!res.ok) throw new Error("Failed to load Plex sections");
+  return res.json();
+}
+
 export async function testPlex(plex_url, plex_token) {
   const res = await fetch("/api/test-plex", {
     method: "POST",

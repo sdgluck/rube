@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node scheduler.ts",
-    "dev": "concurrently -n server,web -c blue,magenta \"node server.ts\" \"yarn --cwd web dev\"",
+    "dev": "concurrently -n server,web -c blue,magenta \"node --watch-path=./ --watch server.ts\" \"yarn --cwd web dev\"",
     "typecheck": "tsc",
     "test": "node --test commands/shuffle.test.ts",
     "prepare": "husky"

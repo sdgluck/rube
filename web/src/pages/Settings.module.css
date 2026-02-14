@@ -113,3 +113,30 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.hint {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+
+.libraryList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.libraryItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.toggle {
+  width: 18px;
+  height: 18px;
+  accent-color: #4a6cf7;
+  cursor: pointer;
+}

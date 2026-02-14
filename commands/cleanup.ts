@@ -89,7 +89,13 @@ export default async function run(args: CleanupArgs): Promise<void> {
     process.exit(1);
   }
 
-  const allSections = await client.getSections();
+  let allSections = await client.getSections();
+
+  const configuredLibraries = getConfig("plex_libraries");
+  if (configuredLibraries) {
+    const allowed = JSON.parse(configuredLibraries) as string[];
+    allSections = allSections.filter((s) => allowed.includes(s.title));
+  }
 
   let sections;
   if (args.section) {

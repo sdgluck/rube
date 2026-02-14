@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
-import { getAllConfig, setConfig } from "./config.ts";
+import { getAllConfig, getConfig, setConfig } from "./config.ts";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "web", "dist");
@@ -79,6 +79,35 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return json(res, 200, { ok: true, serverName: name });
     } catch (err) {
       return json(res, 200, { ok: false, error: (err as Error).message });
+    }
+  }
+
+  if (path === "/api/plex-sections" && req.method === "GET") {
+    try {
+      const plexUrl = getConfig("plex_url");
+      const plexToken = getConfig("plex_token");
+      if (!plexUrl || !plexToken) {
+        return json(res, 400, { error: "Plex URL and token are not configured" });
+      }
+      const sectionsUrl = new URL("/library/sections", plexUrl);
+      sectionsUrl.searchParams.set("X-Plex-Token", plexToken);
+      const pRes = await fetch(sectionsUrl.toString(), {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!pRes.ok) {
+        return json(res, 502, { error: `Plex returned ${pRes.status} ${pRes.statusText}` });
+      }
+      const data = await pRes.json();
+      const directories = data?.MediaContainer?.Directory || [];
+      const sections = directories.map((d: { key: string; title: string; type: string }) => ({
+        key: d.key,
+        title: d.title,
+        type: d.type,
+      }));
+      return json(res, 200, sections);
+    } catch (err) {
+      return json(res, 500, { error: (err as Error).message });
     }
   }
 
