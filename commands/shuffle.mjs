@@ -32,19 +32,69 @@ export default async function run(args) {
     verbose: VERBOSE,
   });
 
-  async function reorderHubs(sectionId, orderedHubs) {
-    for (let i = 0; i < orderedHubs.length; i++) {
-      const hub = orderedHubs[i];
-      const afterIdentifier = i === 0 ? "" : orderedHubs[i - 1].identifier;
+  const MAX_REORDER_ATTEMPTS = 8;
+  const SETTLE_DELAY = 3000;
+
+  function isCustomHub(hub) {
+    return hub.identifier.startsWith("custom.");
+  }
+
+  async function reorderCustomHubs(sectionId, allHubs, customOrder) {
+    if (DRY_RUN) return;
+
+    // Only move custom collection hubs — built-in Plex hubs (movie.genre,
+    // movie.recentlyadded, etc.) have fixed positions and cannot be moved
+    // via the API. We place each custom hub after the hub that should
+    // precede it in the final order (which may be a system hub).
+    for (let attempt = 1; attempt <= MAX_REORDER_ATTEMPTS; attempt++) {
+      if (attempt === 1) {
+        for (let i = 0; i < allHubs.length; i++) {
+          if (!isCustomHub(allHubs[i])) continue;
+          const afterId = i === 0 ? "" : allHubs[i - 1].identifier;
+          client.log(
+            `Moving "${allHubs[i].title}" → after "${i === 0 ? "(beginning)" : allHubs[i - 1].title}"`,
+          );
+          await client.moveHub(sectionId, allHubs[i].identifier, afterId);
+        }
+      } else {
+        const current = await client.getManagedHubs(sectionId);
+        let fixes = 0;
+        for (let i = 0; i < allHubs.length; i++) {
+          if (!isCustomHub(allHubs[i])) continue;
+          if (current[i]?.identifier !== allHubs[i].identifier) {
+            const afterId = i === 0 ? "" : allHubs[i - 1].identifier;
+            client.log(`Fixing "${allHubs[i].title}" at position ${i}`);
+            await client.moveHub(sectionId, allHubs[i].identifier, afterId);
+            fixes++;
+          }
+        }
+        if (fixes === 0) {
+          client.log(`Settled after ${attempt} attempt(s)`);
+          return;
+        }
+      }
+
+      await new Promise((r) => setTimeout(r, SETTLE_DELAY));
+
+      const actual = await client.getManagedHubs(sectionId);
+      let mismatches = 0;
+      for (let i = 0; i < allHubs.length; i++) {
+        if (actual[i]?.identifier !== allHubs[i].identifier) mismatches++;
+      }
+
+      if (mismatches === 0) {
+        if (attempt > 1) client.log(`Settled after ${attempt} attempt(s)`);
+        return;
+      }
 
       client.log(
-        `Moving "${hub.title}" (${hub.identifier}) → after "${afterIdentifier || "(beginning)"}"`,
+        `Attempt ${attempt}: ${mismatches}/${allHubs.length} hubs misplaced, retrying...`,
       );
-
-      if (!DRY_RUN) {
-        await client.moveHub(sectionId, hub.identifier, afterIdentifier);
-      }
     }
+
+    client.log(
+      `Warning: could not fully settle after ${MAX_REORDER_ATTEMPTS} attempts`,
+    );
   }
 
   async function shuffleSection(section) {
@@ -71,28 +121,53 @@ export default async function run(args) {
       );
     }
 
-    // Keep pinned hubs at the top per section
+    // Built-in Plex hubs (movie.genre, etc.) cannot be moved via the API,
+    // so we keep them in their original positions and only shuffle custom
+    // collection hubs into the remaining slots.
+    const systemHubs = hubs.filter((h) => !isCustomHub(h));
+    const customHubs = hubs.filter((h) => isCustomHub(h));
+
+    if (customHubs.length < 2) {
+      console.log(
+        `⏭  "${sectionTitle}" — only ${customHubs.length} custom hub(s), nothing to shuffle.`,
+      );
+      return;
+    }
+
+    // Keep pinned custom hubs at the top of the custom section
     const PINNED_TITLES = {
       Films: ["Recently Added Movies", "Recently Released Movies"],
       TV: ["Recently Added TV"],
     };
     const pinnedTitles = PINNED_TITLES[sectionTitle] || [];
-    const pinned = pinnedTitles
-      .map((t) => hubs.find((h) => h.title === t))
+    const pinnedCustom = pinnedTitles
+      .map((t) => customHubs.find((h) => h.title === t))
       .filter(Boolean);
-    const rest = hubs.filter((h) => !pinned.includes(h));
-    const shuffled = [...pinned, ...shuffleArray(rest)];
+    const shuffleable = customHubs.filter((h) => !pinnedCustom.includes(h));
+    const shuffledCustom = [...pinnedCustom, ...shuffleArray(shuffleable)];
+
+    // Rebuild full hub list: system hubs stay in their original positions,
+    // custom hubs fill the remaining slots in shuffled order.
+    const finalOrder = [];
+    let customIdx = 0;
+    for (const hub of hubs) {
+      if (isCustomHub(hub)) {
+        finalOrder.push(shuffledCustom[customIdx++]);
+      } else {
+        finalOrder.push(hub);
+      }
+    }
 
     if (VERBOSE) {
       console.log("   New order:");
-      shuffled.forEach((h, i) =>
+      finalOrder.forEach((h, i) =>
         console.log(
           `    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`,
         ),
       );
     }
 
-    await reorderHubs(sectionId, shuffled);
+    await reorderCustomHubs(sectionId, finalOrder, shuffledCustom);
 
     console.log(
       `✅ "${sectionTitle}" — ${hubs.length} hubs shuffled${DRY_RUN ? " (dry run)" : ""}.`,
