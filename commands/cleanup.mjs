@@ -2,18 +2,13 @@ import { createPlexClient } from "../plex.mjs";
 import { getConfig } from "../config.mjs";
 
 export default async function run(args) {
-  const PLEX_URL = (
-    args.url ||
-    getConfig("plex_url") ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN =
-    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
+    /\/+$/,
+    "",
+  );
+  const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
   const DELETE_ALL = args.all;
-  const FROM_DATE = args.from
-    ? Math.floor(new Date(args.from).getTime() / 1000)
-    : null;
+  const FROM_DATE = args.from ? Math.floor(new Date(args.from).getTime() / 1000) : null;
   const VERBOSE = args.verbose;
 
   if (args.from && !FROM_DATE) {
@@ -22,9 +17,7 @@ export default async function run(args) {
   }
 
   if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
+    console.error("Error: Plex token is required. Use --token or set PLEX_TOKEN.");
     process.exit(1);
   }
 
@@ -59,9 +52,7 @@ export default async function run(args) {
       }
 
       const labels = await client.getCollectionLabels(col.ratingKey);
-      const isTinkerbell = labels.some((l) =>
-        l.tag.toLowerCase().startsWith("tinkerbell"),
-      );
+      const isTinkerbell = labels.some((l) => l.tag.toLowerCase().startsWith("tinkerbell"));
       const isAfterFrom = FROM_DATE && col.addedAt >= FROM_DATE;
 
       if (isTinkerbell || isAfterFrom) {
@@ -73,9 +64,7 @@ export default async function run(args) {
       }
     }
 
-    console.log(
-      `   ✅ Deleted ${deleted} collection(s) from "${sectionTitle}".`,
-    );
+    console.log(`   ✅ Deleted ${deleted} collection(s) from "${sectionTitle}".`);
     return deleted;
   }
 
@@ -96,16 +85,12 @@ export default async function run(args) {
   let sections;
   if (args.section) {
     const match = allSections.find(
-      (s) =>
-        s.key === args.section ||
-        s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);
       console.error("   Available sections:");
-      allSections.forEach((s) =>
-        console.error(`     [${s.key}] ${s.title} (${s.type})`),
-      );
+      allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
       process.exit(1);
     }
     sections = [match];

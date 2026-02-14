@@ -5,23 +5,17 @@ import { getConfig } from "../config.mjs";
 const BYW_LABEL = "tinkerbell:byw";
 
 export default async function run(args) {
-  const PLEX_URL = (
-    args.url ||
-    getConfig("plex_url") ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN =
-    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
-  const ANTHROPIC_API_KEY =
-    getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
+  const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
+    /\/+$/,
+    "",
+  );
+  const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const ANTHROPIC_API_KEY = getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
   const LIMIT = Math.min(parseInt(args.limit, 10) || 10, 20);
   const VERBOSE = args.verbose;
 
   if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
+    console.error("Error: Plex token is required. Use --token or set PLEX_TOKEN.");
     process.exit(1);
   }
 
@@ -56,9 +50,7 @@ export default async function run(args) {
   let accountID;
   if (args.user) {
     const accounts = await client.getAccounts();
-    const match = accounts.find(
-      (a) => a.name?.toLowerCase() === args.user.toLowerCase(),
-    );
+    const match = accounts.find((a) => a.name?.toLowerCase() === args.user.toLowerCase());
     if (!match) {
       console.error(`\n❌ User "${args.user}" not found.`);
       console.error("   Available accounts:");
@@ -75,16 +67,12 @@ export default async function run(args) {
   let targetSections;
   if (args.section) {
     const match = allSections.find(
-      (s) =>
-        s.key === args.section ||
-        s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);
       console.error("   Available sections:");
-      allSections.forEach((s) =>
-        console.error(`     [${s.key}] ${s.title} (${s.type})`),
-      );
+      allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
       process.exit(1);
     }
     targetSections = [match];
@@ -126,21 +114,15 @@ export default async function run(args) {
       if (watchedItems.length >= LIMIT) break;
     }
 
-    console.log(
-      `   📜 Found ${watchedItems.length} unique recently watched item(s):`,
-    );
+    console.log(`   📜 Found ${watchedItems.length} unique recently watched item(s):`);
     for (const item of watchedItems) {
       const title =
-        item.type === "episode"
-          ? item.grandparentTitle
-          : `${item.title}${item.year ? ` (${item.year})` : ""}`;
+        item.type === "episode" ? item.grandparentTitle : `${item.title}${item.year ? ` (${item.year})` : ""}`;
       console.log(`     • ${title}`);
     }
 
     // Delete old byw collections
-    console.log(
-      `   🗑  Deleting previous "because you watched" collections...`,
-    );
+    console.log(`   🗑  Deleting previous "because you watched" collections...`);
     const deleted = await client.deleteCollectionsByLabel(sectionId, BYW_LABEL);
     console.log(`   🗑  Deleted ${deleted} old collection(s).`);
 
@@ -156,19 +138,12 @@ export default async function run(args) {
 
     // Build watched item titles for the prompt
     const watchedTitles = watchedItems.map((item) =>
-      item.type === "episode"
-        ? item.grandparentTitle
-        : `${item.title}${item.year ? ` (${item.year})` : ""}`,
+      item.type === "episode" ? item.grandparentTitle : `${item.title}${item.year ? ` (${item.year})` : ""}`,
     );
 
     // Ask AI for collections
     console.log(`   🤖 Asking Claude for "Because you watched" collections...`);
-    const aiCollections = await generateBYWCollections(
-      client,
-      watchedTitles,
-      libraryItems,
-      section.title,
-    );
+    const aiCollections = await generateBYWCollections(client, watchedTitles, libraryItems, section.title);
     console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
 
     // Build title→ratingKey lookup
@@ -182,20 +157,14 @@ export default async function run(args) {
     // Create collections and pin them
     let created = 0;
     for (const col of aiCollections) {
-      const ratingKeys = col.items
-        .map((title) => titleMap.get(title))
-        .filter(Boolean);
+      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean);
 
       if (ratingKeys.length < 10) {
-        client.log(
-          `Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`,
-        );
+        client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
         continue;
       }
 
-      console.log(
-        `   📦 Creating "${col.name}" (${ratingKeys.length} items)...`,
-      );
+      console.log(`   📦 Creating "${col.name}" (${ratingKeys.length} items)...`);
 
       const collectionKey = await client.createCollectionWithLabel(
         sectionId,
@@ -221,25 +190,16 @@ export default async function run(args) {
       }
     }
 
-    console.log(
-      `   ✅ Created and pinned ${created} collection(s) for "${section.title}".`,
-    );
+    console.log(`   ✅ Created and pinned ${created} collection(s) for "${section.title}".`);
   }
 
   console.log("\n🎉 All done!");
 }
 
-async function generateBYWCollections(
-  client,
-  watchedTitles,
-  libraryItems,
-  sectionTitle,
-) {
+async function generateBYWCollections(client, watchedTitles, libraryItems, sectionTitle) {
   const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
-  const itemList = libraryItems
-    .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
-    .join("\n");
+  const itemList = libraryItems.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
 
   const watchedList = watchedTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
 
@@ -288,9 +248,7 @@ function parseJSON(text) {
       return JSON.parse(match[0]);
     } catch {}
 
-    const cleaned = match[0]
-      .replace(/,\s*([}\]])/g, "$1")
-      .replace(/[\x00-\x1f]/g, " ");
+    const cleaned = match[0].replace(/,\s*([}\]])/g, "$1").replace(/[\x00-\x1f]/g, " ");
     try {
       return JSON.parse(cleaned);
     } catch {}

@@ -13,10 +13,7 @@ export function createPlexClient({ url, token, verbose = false }) {
 
   // ─── Core ───────────────────────────────────────────────────────────────────
 
-  async function request(
-    path,
-    { method = "GET", params = {}, headers = {} } = {},
-  ) {
+  async function request(path, { method = "GET", params = {}, headers = {} } = {}) {
     const reqUrl = new URL(path, url);
     reqUrl.searchParams.set("X-Plex-Token", token);
     for (const [k, v] of Object.entries(params)) {
@@ -38,9 +35,7 @@ export function createPlexClient({ url, token, verbose = false }) {
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(
-        `Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`,
-      );
+      throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
     }
 
     const text = await res.text();
@@ -140,11 +135,7 @@ export function createPlexClient({ url, token, verbose = false }) {
 
   // ─── Watch history & accounts ──────────────────────────────────────────────
 
-  async function getWatchHistory({
-    accountID,
-    librarySectionID,
-    limit = 50,
-  } = {}) {
+  async function getWatchHistory({ accountID, librarySectionID, limit = 50 } = {}) {
     const params = {
       sort: "viewedAt:desc",
       "X-Plex-Container-Size": limit,
@@ -177,14 +168,7 @@ export function createPlexClient({ url, token, verbose = false }) {
     return deleted;
   }
 
-  async function createCollectionWithLabel(
-    sectionId,
-    sectionType,
-    machineId,
-    name,
-    ratingKeys,
-    label,
-  ) {
+  async function createCollectionWithLabel(sectionId, sectionType, machineId, name, ratingKeys, label) {
     if (ratingKeys.length === 0) return null;
 
     const uri = `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
@@ -201,8 +185,7 @@ export function createPlexClient({ url, token, verbose = false }) {
     });
 
     const collectionKey = data?.MediaContainer?.Metadata?.[0]?.ratingKey;
-    if (!collectionKey)
-      throw new Error(`Failed to create collection "${name}"`);
+    if (!collectionKey) throw new Error(`Failed to create collection "${name}"`);
 
     // Label with the given label
     await request(`/library/sections/${sectionId}/all`, {

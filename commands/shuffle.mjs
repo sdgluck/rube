@@ -11,21 +11,16 @@ function shuffleArray(arr) {
 }
 
 export default async function run(args) {
-  const PLEX_URL = (
-    args.url ||
-    getConfig("plex_url") ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN =
-    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
+    /\/+$/,
+    "",
+  );
+  const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
   const DRY_RUN = args["dry-run"];
   const VERBOSE = args.verbose;
 
   if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
+    console.error("Error: Plex token is required. Use --token or set PLEX_TOKEN.");
     process.exit(1);
   }
 
@@ -54,9 +49,7 @@ export default async function run(args) {
         for (let i = 0; i < allHubs.length; i++) {
           if (!isCustomHub(allHubs[i])) continue;
           const afterId = i === 0 ? "" : allHubs[i - 1].identifier;
-          client.log(
-            `Moving "${allHubs[i].title}" → after "${i === 0 ? "(beginning)" : allHubs[i - 1].title}"`,
-          );
+          client.log(`Moving "${allHubs[i].title}" → after "${i === 0 ? "(beginning)" : allHubs[i - 1].title}"`);
           await client.moveHub(sectionId, allHubs[i].identifier, afterId);
         }
       } else {
@@ -90,14 +83,10 @@ export default async function run(args) {
         return;
       }
 
-      client.log(
-        `Attempt ${attempt}: ${mismatches}/${allHubs.length} hubs misplaced, retrying...`,
-      );
+      client.log(`Attempt ${attempt}: ${mismatches}/${allHubs.length} hubs misplaced, retrying...`);
     }
 
-    client.log(
-      `Warning: could not fully settle after ${MAX_REORDER_ATTEMPTS} attempts`,
-    );
+    client.log(`Warning: could not fully settle after ${MAX_REORDER_ATTEMPTS} attempts`);
   }
 
   async function shuffleSection(section) {
@@ -107,9 +96,7 @@ export default async function run(args) {
     const hubs = await client.getManagedHubs(sectionId);
 
     if (hubs.length < 2) {
-      console.log(
-        `⏭  "${sectionTitle}" — only ${hubs.length} hub(s), nothing to shuffle.`,
-      );
+      console.log(`⏭  "${sectionTitle}" — only ${hubs.length} hub(s), nothing to shuffle.`);
       return;
     }
 
@@ -117,11 +104,7 @@ export default async function run(args) {
 
     if (VERBOSE) {
       console.log("   Current order:");
-      hubs.forEach((h, i) =>
-        console.log(
-          `    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`,
-        ),
-      );
+      hubs.forEach((h, i) => console.log(`    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`));
     }
 
     // Built-in Plex hubs (movie.genre, etc.) cannot be moved via the API,
@@ -131,9 +114,7 @@ export default async function run(args) {
     const customHubs = hubs.filter((h) => isCustomHub(h));
 
     if (customHubs.length < 2) {
-      console.log(
-        `⏭  "${sectionTitle}" — only ${customHubs.length} custom hub(s), nothing to shuffle.`,
-      );
+      console.log(`⏭  "${sectionTitle}" — only ${customHubs.length} custom hub(s), nothing to shuffle.`);
       return;
     }
 
@@ -143,9 +124,7 @@ export default async function run(args) {
       TV: ["Recently Added TV"],
     };
     const pinnedTitles = PINNED_TITLES[sectionTitle] || [];
-    const pinnedCustom = pinnedTitles
-      .map((t) => customHubs.find((h) => h.title === t))
-      .filter(Boolean);
+    const pinnedCustom = pinnedTitles.map((t) => customHubs.find((h) => h.title === t)).filter(Boolean);
     const shuffleable = customHubs.filter((h) => !pinnedCustom.includes(h));
     const shuffledCustom = [...pinnedCustom, ...shuffleArray(shuffleable)];
 
@@ -163,18 +142,12 @@ export default async function run(args) {
 
     if (VERBOSE) {
       console.log("   New order:");
-      finalOrder.forEach((h, i) =>
-        console.log(
-          `    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`,
-        ),
-      );
+      finalOrder.forEach((h, i) => console.log(`    ${String(i + 1).padStart(2)}. ${h.title} [${h.identifier}]`));
     }
 
     await reorderCustomHubs(sectionId, finalOrder, shuffledCustom);
 
-    console.log(
-      `✅ "${sectionTitle}" — ${hubs.length} hubs shuffled${DRY_RUN ? " (dry run)" : ""}.`,
-    );
+    console.log(`✅ "${sectionTitle}" — ${hubs.length} hubs shuffled${DRY_RUN ? " (dry run)" : ""}.`);
   }
 
   console.log(`🎲 tinkerbell shuffle${DRY_RUN ? " (DRY RUN)" : ""}`);
@@ -194,16 +167,12 @@ export default async function run(args) {
   let sections;
   if (args.section) {
     const match = allSections.find(
-      (s) =>
-        s.key === args.section ||
-        s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);
       console.error("   Available sections:");
-      allSections.forEach((s) =>
-        console.error(`     [${s.key}] ${s.title} (${s.type})`),
-      );
+      allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
       process.exit(1);
     }
     sections = [match];

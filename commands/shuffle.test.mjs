@@ -2,10 +2,7 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createPlexClient } from "../plex.mjs";
 
-const PLEX_URL = (process.env.PLEX_URL || "http://localhost:32400").replace(
-  /\/+$/,
-  "",
-);
+const PLEX_URL = (process.env.PLEX_URL || "http://localhost:32400").replace(/\/+$/, "");
 const PLEX_TOKEN = process.env.PLEX_TOKEN;
 
 if (!PLEX_TOKEN) {
@@ -66,15 +63,7 @@ async function reorderCustomOnly(sectionId, desired) {
 
     const actual = await client.getManagedHubs(sectionId);
     const m = countMismatches(desired, actual);
-    console.log(
-      "    Attempt " +
-        attempt +
-        ": " +
-        m +
-        "/" +
-        desired.length +
-        " mismatches",
-    );
+    console.log("    Attempt " + attempt + ": " + m + "/" + desired.length + " mismatches");
     if (m === 0) return 0;
   }
 
@@ -102,10 +91,7 @@ describe("shuffle with system hubs fixed", () => {
 
   before(async () => {
     const sections = await client.getSections();
-    section = sections.find(
-      (s) =>
-        s.title.toLowerCase() === "films" || s.title.toLowerCase() === "movies",
-    );
+    section = sections.find((s) => s.title.toLowerCase() === "films" || s.title.toLowerCase() === "movies");
     if (!section) {
       console.log("No Films/Movies section found");
       process.exit(1);
@@ -115,13 +101,7 @@ describe("shuffle with system hubs fixed", () => {
     const sys = originalOrder.filter((h) => !isCustomHub(h));
     const cust = originalOrder.filter((h) => isCustomHub(h));
     console.log(
-      "Using " +
-        JSON.stringify(section.title) +
-        ": " +
-        sys.length +
-        " system hubs, " +
-        cust.length +
-        " custom hubs\n",
+      "Using " + JSON.stringify(section.title) + ": " + sys.length + " system hubs, " + cust.length + " custom hubs\n",
     );
   });
 

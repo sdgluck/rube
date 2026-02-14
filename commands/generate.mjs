@@ -3,16 +3,12 @@ import { createPlexClient } from "../plex.mjs";
 import { getConfig } from "../config.mjs";
 
 export default async function run(args) {
-  const PLEX_URL = (
-    args.url ||
-    getConfig("plex_url") ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN =
-    args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
-  const ANTHROPIC_API_KEY =
-    getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
+  const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
+    /\/+$/,
+    "",
+  );
+  const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const ANTHROPIC_API_KEY = getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
   const MAX_COLLECTIONS = parseInt(args.limit, 10) || 8;
   if (MAX_COLLECTIONS > 10) {
     console.error("Error: --limit cannot exceed 10.");
@@ -21,9 +17,7 @@ export default async function run(args) {
   const VERBOSE = args.verbose;
 
   if (!PLEX_TOKEN) {
-    console.error(
-      "Error: Plex token is required. Use --token or set PLEX_TOKEN.",
-    );
+    console.error("Error: Plex token is required. Use --token or set PLEX_TOKEN.");
     process.exit(1);
   }
 
@@ -48,9 +42,7 @@ export default async function run(args) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    const itemList = shuffled
-      .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
-      .join("\n");
+    const itemList = shuffled.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
 
     const seed = Math.floor(Math.random() * 1_000_000);
 
@@ -121,10 +113,7 @@ ${itemList}`,
 
     // Step 1: Delete old tinkerbell collections
     console.log(`   🗑  Deleting previous tinkerbell collections...`);
-    const deleted = await client.deleteCollectionsByLabel(
-      sectionId,
-      "tinkerbell:g",
-    );
+    const deleted = await client.deleteCollectionsByLabel(sectionId, "tinkerbell:g");
     console.log(`   🗑  Deleted ${deleted} old collection(s).`);
 
     // Step 2: Fetch all items
@@ -139,11 +128,7 @@ ${itemList}`,
 
     // Step 3: Ask AI for collections
     console.log(`   🤖 Asking Claude for curated collections...`);
-    const aiCollections = await generateCollections(
-      items,
-      sectionTitle,
-      MAX_COLLECTIONS,
-    );
+    const aiCollections = await generateCollections(items, sectionTitle, MAX_COLLECTIONS);
     console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
 
     // Build title→ratingKey lookup
@@ -158,20 +143,14 @@ ${itemList}`,
     // Step 4: Create collections and pin them
     let created = 0;
     for (const col of aiCollections) {
-      const ratingKeys = col.items
-        .map((title) => titleMap.get(title))
-        .filter(Boolean);
+      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean);
 
       if (ratingKeys.length < 15) {
-        client.log(
-          `Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`,
-        );
+        client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`);
         continue;
       }
 
-      console.log(
-        `   📦 Creating "${col.name}" (${ratingKeys.length} items)...`,
-      );
+      console.log(`   📦 Creating "${col.name}" (${ratingKeys.length} items)...`);
 
       const collectionKey = await client.createCollectionWithLabel(
         sectionId,
@@ -197,9 +176,7 @@ ${itemList}`,
       }
     }
 
-    console.log(
-      `   ✅ Created and pinned ${created} collection(s) for "${sectionTitle}".`,
-    );
+    console.log(`   ✅ Created and pinned ${created} collection(s) for "${sectionTitle}".`);
   }
 
   console.log(`🧚 tinkerbell generate`);
@@ -221,16 +198,12 @@ ${itemList}`,
   let sections;
   if (args.section) {
     const match = allSections.find(
-      (s) =>
-        s.key === args.section ||
-        s.title.toLowerCase() === args.section.toLowerCase(),
+      (s) => s.key === args.section || s.title.toLowerCase() === args.section.toLowerCase(),
     );
     if (!match) {
       console.error(`\n❌ Section "${args.section}" not found.`);
       console.error("   Available sections:");
-      allSections.forEach((s) =>
-        console.error(`     [${s.key}] ${s.title} (${s.type})`),
-      );
+      allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
       process.exit(1);
     }
     sections = [match];

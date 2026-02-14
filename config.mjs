@@ -28,17 +28,13 @@ function getDb() {
 }
 
 export function getConfig(key) {
-  const row = getDb()
-    .prepare("SELECT value FROM config WHERE key = ?")
-    .get(key);
+  const row = getDb().prepare("SELECT value FROM config WHERE key = ?").get(key);
   return row ? row.value : undefined;
 }
 
 export function setConfig(key, value) {
   getDb()
-    .prepare(
-      "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-    )
+    .prepare("INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .run(key, String(value));
 }
 
@@ -47,9 +43,7 @@ export function deleteConfig(key) {
 }
 
 export function getAllConfig() {
-  const rows = getDb()
-    .prepare("SELECT key, value FROM config ORDER BY key")
-    .all();
+  const rows = getDb().prepare("SELECT key, value FROM config ORDER BY key").all();
   const result = {};
   for (const row of rows) {
     result[row.key] = row.value;

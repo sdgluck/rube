@@ -80,11 +80,7 @@ export default function Settings() {
   return (
     <div>
       <h2 className={styles.heading}>Settings</h2>
-      {status && (
-        <div className={`${styles.toast} ${styles[status.type]}`}>
-          {status.msg}
-        </div>
-      )}
+      {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
       <form onSubmit={handleSubmit} className={styles.form}>
         <fieldset className={styles.group}>
           <legend className={styles.groupTitle}>Plex</legend>
@@ -108,17 +104,8 @@ export default function Settings() {
               onChange={(e) => set("plex_token", e.target.value)}
             />
           </label>
-          {plexStatus && (
-            <div className={`${styles.toast} ${styles[plexStatus.type]}`}>
-              {plexStatus.msg}
-            </div>
-          )}
-          <button
-            type="button"
-            className={styles.buttonSecondary}
-            onClick={handleTest}
-            disabled={testing}
-          >
+          {plexStatus && <div className={`${styles.toast} ${styles[plexStatus.type]}`}>{plexStatus.msg}</div>}
+          <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
             {testing ? "Testing..." : "Test Connection"}
           </button>
         </fieldset>

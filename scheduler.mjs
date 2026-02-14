@@ -21,10 +21,7 @@ function buildArgs(command) {
   if (process.env.SECTION) {
     args.push("--section", process.env.SECTION);
   }
-  if (
-    (command === "generate" || command === "because-you-watched") &&
-    process.env.LIMIT
-  ) {
+  if ((command === "generate" || command === "because-you-watched") && process.env.LIMIT) {
     args.push("--limit", process.env.LIMIT);
   }
   if (command === "because-you-watched" && process.env.BYW_USER) {
@@ -60,9 +57,7 @@ function run(command) {
     });
 
     child.on("error", (err) => {
-      console.error(
-        `[${timestamp()}] "${command}" failed to start: ${err.message}`,
-      );
+      console.error(`[${timestamp()}] "${command}" failed to start: ${err.message}`);
       resolve();
     });
   });
