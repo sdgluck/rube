@@ -192,7 +192,6 @@ export default function Settings() {
                       onChange={() => toggleLibrary(s.title)}
                     />
                     <span>{s.title}</span>
-                    <span className={styles.hint}>({s.type})</span>
                   </label>
                 ))}
               </div>
