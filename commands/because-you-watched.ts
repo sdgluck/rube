@@ -8,7 +8,7 @@ interface BywArgs {
   url?: string;
   token?: string;
   user?: string;
-  section?: string;
+  sections?: string;
   limit?: string;
   verbose?: boolean;
 }
@@ -19,12 +19,14 @@ interface AiCollection {
 }
 
 export default async function run(args: BywArgs): Promise<void> {
-  const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
-    /\/+$/,
-    "",
-  );
-  const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
-  const ANTHROPIC_API_KEY = getConfig("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
+  const PLEX_URL = (
+    args.url ||
+    getConfig("global_plex_url") ||
+    process.env.PLEX_URL ||
+    "http://localhost:32400"
+  ).replace(/\/+$/, "");
+  const PLEX_TOKEN = args.token || getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+  const ANTHROPIC_API_KEY = getConfig("global_anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
   const LIMIT = Math.min(parseInt(args.limit!, 10) || 10, 20);
   const VERBOSE = args.verbose;
 
@@ -78,24 +80,21 @@ export default async function run(args: BywArgs): Promise<void> {
   // Resolve target sections
   let allSections = await client.getSections();
 
-  const configuredLibraries = getConfig("plex_libraries");
+  const configuredLibraries = getConfig("global_plex_libraries");
   if (configuredLibraries) {
-    const allowed = JSON.parse(configuredLibraries) as string[];
-    allSections = allSections.filter((s) => allowed.includes(s.title));
+    allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
   }
 
   let targetSections;
-  if (args.section) {
-    const match = allSections.find(
-      (s) => s.key === args.section || s.title.toLowerCase() === args.section!.toLowerCase(),
-    );
-    if (!match) {
-      console.error(`\n❌ Section "${args.section}" not found.`);
+  if (args.sections) {
+    const names = args.sections.split(",").map((s) => s.trim().toLowerCase());
+    targetSections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
+    if (targetSections.length === 0) {
+      console.error(`\n❌ No matching sections found for "${args.sections}".`);
       console.error("   Available sections:");
       allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
       process.exit(1);
     }
-    targetSections = [match];
   } else {
     targetSections = allSections;
   }

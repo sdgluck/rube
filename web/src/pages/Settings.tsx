@@ -8,7 +8,9 @@ interface Status {
 }
 
 export default function Settings() {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [plexUrl, setPlexUrl] = useState("");
+  const [plexToken, setPlexToken] = useState("");
+  const [anthropicApiKey, setAnthropicApiKey] = useState("");
   const [plexStatus, setPlexStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
   const [savingPlex, setSavingPlex] = useState(false);
@@ -23,7 +25,7 @@ export default function Settings() {
   });
 
   const sectionsQuery = trpc.plexSections.useQuery(undefined, {
-    enabled: Boolean(values.plex_url && values.plex_token),
+    enabled: Boolean(plexUrl && plexToken),
     refetchOnWindowFocus: false,
     retry: false,
   });
@@ -33,18 +35,16 @@ export default function Settings() {
 
   useEffect(() => {
     if (configQuery.data) {
-      setValues(configQuery.data);
-      if (configQuery.data.plex_libraries) {
-        try {
-          setSelectedLibraries(JSON.parse(configQuery.data.plex_libraries));
-        } catch {}
+      setPlexUrl(configQuery.data.global_plex_url || "");
+      setPlexToken(configQuery.data.global_plex_token || "");
+      setAnthropicApiKey(configQuery.data.global_anthropic_api_key || "");
+      if (configQuery.data.global_plex_libraries) {
+        setSelectedLibraries(configQuery.data.global_plex_libraries);
       }
     }
   }, [configQuery.data]);
 
-  const set = (key: string, value: string) => setValues({ ...values, [key]: value });
-
-  const runPlexTest = async (url: string | undefined, token: string | undefined): Promise<boolean> => {
+  const runPlexTest = async (url: string, token: string): Promise<boolean> => {
     setPlexStatus(null);
     if (!url || !token) {
       setPlexStatus({ type: "error", msg: "Both URL and token are required" });
@@ -77,7 +77,7 @@ export default function Settings() {
     setLibStatus(null);
     setSavingLibs(true);
     try {
-      await saveConfigMutation.mutateAsync({ plex_libraries: JSON.stringify(selectedLibraries) });
+      await saveConfigMutation.mutateAsync({ global_plex_libraries: selectedLibraries });
       setLibStatus({ type: "success", msg: "Library selections saved" });
     } catch {
       setLibStatus({ type: "error", msg: "Failed to save library selections" });
@@ -87,14 +87,14 @@ export default function Settings() {
   };
 
   const handleTest = () => {
-    runPlexTest(values.plex_url, values.plex_token);
+    runPlexTest(plexUrl, plexToken);
   };
 
   const handleSavePlex = async () => {
     setPlexStatus(null);
     setSavingPlex(true);
     try {
-      const ok = await runPlexTest(values.plex_url, values.plex_token);
+      const ok = await runPlexTest(plexUrl, plexToken);
       if (!ok) {
         setPlexStatus({
           type: "error",
@@ -104,8 +104,8 @@ export default function Settings() {
         return;
       }
       await saveConfigMutation.mutateAsync({
-        plex_url: values.plex_url || "",
-        plex_token: values.plex_token || "",
+        global_plex_url: plexUrl,
+        global_plex_token: plexToken,
       });
       setPlexStatus({ type: "success", msg: "Plex settings saved" });
     } catch {
@@ -120,7 +120,7 @@ export default function Settings() {
     setSavingAi(true);
     try {
       await saveConfigMutation.mutateAsync({
-        anthropic_api_key: values.anthropic_api_key || "",
+        global_anthropic_api_key: anthropicApiKey,
       });
       setAiStatus({ type: "success", msg: "AI settings saved" });
     } catch {
@@ -147,8 +147,8 @@ export default function Settings() {
               type="text"
               className={styles.input}
               placeholder="http://localhost:32400"
-              value={values.plex_url || ""}
-              onChange={(e) => set("plex_url", e.target.value)}
+              value={plexUrl}
+              onChange={(e) => setPlexUrl(e.target.value)}
             />
           </label>
           <label className={styles.field}>
@@ -157,8 +157,8 @@ export default function Settings() {
               type="password"
               className={styles.input}
               placeholder="Enter token"
-              value={values.plex_token || ""}
-              onChange={(e) => set("plex_token", e.target.value)}
+              value={plexToken}
+              onChange={(e) => setPlexToken(e.target.value)}
             />
           </label>
           {plexStatus && <div className={`${styles.toast} ${styles[plexStatus.type]}`}>{plexStatus.msg}</div>}
@@ -174,7 +174,7 @@ export default function Settings() {
 
         <fieldset className={styles.group}>
           <legend className={styles.groupTitle}>Plex Libraries</legend>
-          {!values.plex_url || !values.plex_token ? (
+          {!plexUrl || !plexToken ? (
             <p className={styles.hint}>Configure Plex URL and token above first.</p>
           ) : sectionsQuery.isLoading ? (
             <p className={styles.hint}>Loading libraries...</p>
@@ -211,8 +211,8 @@ export default function Settings() {
               type="password"
               className={styles.input}
               placeholder="Enter API key"
-              value={values.anthropic_api_key || ""}
-              onChange={(e) => set("anthropic_api_key", e.target.value)}
+              value={anthropicApiKey}
+              onChange={(e) => setAnthropicApiKey(e.target.value)}
             />
           </label>
           {aiStatus && <div className={`${styles.toast} ${styles[aiStatus.type]}`}>{aiStatus.msg}</div>}

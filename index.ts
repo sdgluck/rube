@@ -74,7 +74,7 @@ Usage:
   tinkerbell shuffle [options]
 
 Options:
-  --section, -s    Library section name/ID   (omit to shuffle ALL sections)
+  --sections, -s   Comma-separated section names/IDs  (omit to shuffle ALL sections)
   --dry-run, -d    Preview without applying  (default: false)
 
 Global options:
@@ -86,7 +86,7 @@ Global options:
 Examples:
   PLEX_TOKEN=abc123 tinkerbell shuffle
   tinkerbell shuffle --url http://192.168.1.10:32400 --token abc123
-  tinkerbell shuffle --token abc123 --section Movies --dry-run
+  tinkerbell shuffle --token abc123 --sections Movies --dry-run
     `.trim(),
   );
 }
@@ -103,7 +103,7 @@ Usage:
   tinkerbell generate [options]
 
 Options:
-  --section, -s    Library section name/ID   (omit to generate for ALL sections)
+  --sections, -s   Comma-separated section names/IDs  (omit to generate for ALL sections)
   --limit, -l      Max collections per section (default: 8)
 
 Global options:
@@ -117,7 +117,7 @@ Environment variables:
 
 Examples:
   PLEX_TOKEN=abc ANTHROPIC_API_KEY=sk-ant-... tinkerbell generate
-  tinkerbell generate --token abc --section Movies
+  tinkerbell generate --token abc --sections Movies
     `.trim(),
   );
 }
@@ -128,14 +128,14 @@ function printCleanupUsage(): void {
 tinkerbell cleanup — Delete tinkerbell-generated collections.
 
 Removes collections previously created by "tinkerbell generate".
-Use --all to remove ALL collections in a section (useful if broken
+Use --all to remove ALL collections in matched sections (useful if broken
 collections are preventing Plex from loading).
 
 Usage:
   tinkerbell cleanup [options]
 
 Options:
-  --section, -s    Library section name/ID   (omit to clean ALL sections)
+  --sections, -s   Comma-separated section names/IDs  (omit to clean ALL sections)
   --from, -f       Delete collections added on or after this date (YYYY-MM-DD)
   --all, -a        Delete ALL collections, not just tinkerbell ones
 
@@ -147,7 +147,7 @@ Global options:
 
 Examples:
   tinkerbell cleanup --token abc
-  tinkerbell cleanup --token abc --section Movies --all
+  tinkerbell cleanup --token abc --sections Movies --all
     `.trim(),
   );
 }
@@ -165,7 +165,7 @@ Usage:
 
 Options:
   --user, -U       Plex account username    (omit for all users' history)
-  --section, -s    Library section name/ID  (omit to process ALL sections)
+  --sections, -s   Comma-separated section names/IDs  (omit to process ALL sections)
   --limit, -l      Number of watched items  (default: 10, max: 20)
 
 Global options:
@@ -180,7 +180,7 @@ Environment variables:
 Examples:
   PLEX_TOKEN=abc ANTHROPIC_API_KEY=sk-ant-... tinkerbell because-you-watched
   tinkerbell because-you-watched --token abc --user John --limit 5
-  tinkerbell because-you-watched --token abc --section Movies
+  tinkerbell because-you-watched --token abc --sections Movies
     `.trim(),
   );
 }
@@ -202,7 +202,7 @@ if (command === "shuffle") {
     options: {
       url: { type: "string", short: "u" },
       token: { type: "string", short: "t" },
-      section: { type: "string", short: "s" },
+      sections: { type: "string", short: "s" },
       "dry-run": { type: "boolean", short: "d", default: false },
       verbose: { type: "boolean", short: "v", default: false },
       help: { type: "boolean", short: "h", default: false },
@@ -227,7 +227,7 @@ if (command === "shuffle") {
     options: {
       url: { type: "string", short: "u" },
       token: { type: "string", short: "t" },
-      section: { type: "string", short: "s" },
+      sections: { type: "string", short: "s" },
       limit: { type: "string", short: "l" },
       verbose: { type: "boolean", short: "v", default: false },
       help: { type: "boolean", short: "h", default: false },
@@ -252,7 +252,7 @@ if (command === "shuffle") {
     options: {
       url: { type: "string", short: "u" },
       token: { type: "string", short: "t" },
-      section: { type: "string", short: "s" },
+      sections: { type: "string", short: "s" },
       from: { type: "string", short: "f" },
       all: { type: "boolean", short: "a", default: false },
       verbose: { type: "boolean", short: "v", default: false },
@@ -279,7 +279,7 @@ if (command === "shuffle") {
       url: { type: "string", short: "u" },
       token: { type: "string", short: "t" },
       user: { type: "string", short: "U" },
-      section: { type: "string", short: "s" },
+      sections: { type: "string", short: "s" },
       limit: { type: "string", short: "l" },
       verbose: { type: "boolean", short: "v", default: false },
       help: { type: "boolean", short: "h", default: false },

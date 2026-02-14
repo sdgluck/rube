@@ -1,15 +1,18 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
-import { getAllConfig, getConfig, setConfig } from "./config.ts";
+import { getAllConfig, getConfig, setConfig, configSchema, type ConfigKey } from "./config.ts";
 
 const t = initTRPC.create();
 
 const configRouter = t.router({
   get: t.procedure.query(() => getAllConfig()),
 
-  save: t.procedure.input(z.record(z.string(), z.string())).mutation(({ input }) => {
-    for (const [key, value] of Object.entries(input)) {
-      setConfig(key, value);
+  save: t.procedure.input(configSchema.partial()).mutation(({ input }) => {
+    for (const key of Object.keys(input) as ConfigKey[]) {
+      const value = input[key];
+      if (value !== undefined) {
+        setConfig(key, value);
+      }
     }
     return { ok: true };
   }),
@@ -19,8 +22,8 @@ export const appRouter = t.router({
   config: configRouter,
 
   plexSections: t.procedure.query(async () => {
-    const plexUrl = getConfig("plex_url");
-    const plexToken = getConfig("plex_token");
+    const plexUrl = getConfig("global_plex_url");
+    const plexToken = getConfig("global_plex_token");
     if (!plexUrl || !plexToken) {
       throw new Error("Plex URL and token are not configured");
     }

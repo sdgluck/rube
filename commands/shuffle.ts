@@ -4,7 +4,7 @@ import { getConfig } from "../config.ts";
 interface ShuffleArgs {
   url?: string;
   token?: string;
-  section?: string;
+  sections?: string;
   "dry-run"?: boolean;
   verbose?: boolean;
 }
@@ -19,11 +19,13 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 export default async function run(args: ShuffleArgs): Promise<void> {
-  const PLEX_URL = (args.url || getConfig("plex_url") || process.env.PLEX_URL || "http://localhost:32400").replace(
-    /\/+$/,
-    "",
-  );
-  const PLEX_TOKEN = args.token || getConfig("plex_token") || process.env.PLEX_TOKEN;
+  const PLEX_URL = (
+    args.url ||
+    getConfig("global_plex_url") ||
+    process.env.PLEX_URL ||
+    "http://localhost:32400"
+  ).replace(/\/+$/, "");
+  const PLEX_TOKEN = args.token || getConfig("global_plex_token") || process.env.PLEX_TOKEN;
   const DRY_RUN = args["dry-run"];
   const VERBOSE = args.verbose;
 
@@ -172,24 +174,21 @@ export default async function run(args: ShuffleArgs): Promise<void> {
 
   let allSections = await client.getSections();
 
-  const configuredLibraries = getConfig("plex_libraries");
+  const configuredLibraries = getConfig("global_plex_libraries");
   if (configuredLibraries) {
-    const allowed = JSON.parse(configuredLibraries) as string[];
-    allSections = allSections.filter((s) => allowed.includes(s.title));
+    allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
   }
 
   let sections;
-  if (args.section) {
-    const match = allSections.find(
-      (s) => s.key === args.section || s.title.toLowerCase() === args.section!.toLowerCase(),
-    );
-    if (!match) {
-      console.error(`\n❌ Section "${args.section}" not found.`);
+  if (args.sections) {
+    const names = args.sections.split(",").map((s) => s.trim().toLowerCase());
+    sections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
+    if (sections.length === 0) {
+      console.error(`\n❌ No matching sections found for "${args.sections}".`);
       console.error("   Available sections:");
       allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
       process.exit(1);
     }
-    sections = [match];
   } else {
     sections = allSections;
   }

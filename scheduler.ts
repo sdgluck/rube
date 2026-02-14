@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 
 import { execFile } from "node:child_process";
+import { getConfig } from "./config.ts";
 
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+const plexUrl = getConfig("global_plex_url") || process.env.PLEX_URL;
+const plexToken = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+const sections = getConfig("scheduler_sections") || process.env.SECTION;
+const limit = getConfig("scheduler_limit") || process.env.LIMIT;
+const bywUser = getConfig("byw_plex_user") || process.env.BYW_USER;
+const verbose = getConfig("scheduler_verbose") || process.env.VERBOSE;
 
 function timestamp(): string {
   return new Date().toISOString();
@@ -12,22 +20,23 @@ function timestamp(): string {
 function buildArgs(command: string): string[] {
   const args = ["index.ts", command];
 
-  if (process.env.PLEX_URL) {
-    args.push("--url", process.env.PLEX_URL);
+  if (plexUrl) {
+    args.push("--url", plexUrl);
   }
-  if (process.env.PLEX_TOKEN) {
-    args.push("--token", process.env.PLEX_TOKEN);
+  if (plexToken) {
+    args.push("--token", plexToken);
   }
-  if (process.env.SECTION) {
-    args.push("--section", process.env.SECTION);
+  if (sections) {
+    const val = Array.isArray(sections) ? sections.join(",") : sections;
+    args.push("--sections", val);
   }
-  if ((command === "generate" || command === "because-you-watched") && process.env.LIMIT) {
-    args.push("--limit", process.env.LIMIT);
+  if ((command === "generate" || command === "because-you-watched") && limit) {
+    args.push("--limit", limit);
   }
-  if (command === "because-you-watched" && process.env.BYW_USER) {
-    args.push("--user", process.env.BYW_USER);
+  if (command === "because-you-watched" && bywUser) {
+    args.push("--user", bywUser);
   }
-  if (process.env.VERBOSE === "true" || process.env.VERBOSE === "1") {
+  if (verbose === "true" || verbose === "1") {
     args.push("--verbose");
   }
 
@@ -66,11 +75,11 @@ function run(command: string): Promise<void> {
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
 console.log(`[${timestamp()}] Tinkerbell scheduler starting`);
-console.log(`  PLEX_URL:  ${process.env.PLEX_URL || "(default)"}`);
-console.log(`  SECTION:   ${process.env.SECTION || "(all)"}`);
-console.log(`  LIMIT:     ${process.env.LIMIT || "(default)"}`);
-console.log(`  BYW_USER:  ${process.env.BYW_USER || "(all)"}`);
-console.log(`  VERBOSE:   ${process.env.VERBOSE || "false"}`);
+console.log(`  PLEX_URL:  ${plexUrl || "(default)"}`);
+console.log(`  SECTIONS:  ${sections ? (Array.isArray(sections) ? sections.join(",") : sections) : "(all)"}`);
+console.log(`  LIMIT:     ${limit || "(default)"}`);
+console.log(`  BYW_USER:  ${bywUser || "(all)"}`);
+console.log(`  VERBOSE:   ${verbose || "false"}`);
 console.log(`  Generate interval:             24h`);
 console.log(`  Because-you-watched interval:  24h`);
 console.log(`  Shuffle interval:              30m\n`);
