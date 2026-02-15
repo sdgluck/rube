@@ -51,9 +51,16 @@ export function getDb(): DatabaseSync {
         labels          TEXT DEFAULT '[]',
         added_at        INTEGER,
         thumb           TEXT DEFAULT '',
+        smart           INTEGER NOT NULL DEFAULT 0,
         synced_at       INTEGER NOT NULL
       )
     `);
+    // Migration: add smart column if missing
+    try {
+      db.exec("ALTER TABLE collections ADD COLUMN smart INTEGER NOT NULL DEFAULT 0");
+    } catch {
+      // Column already exists
+    }
     db.exec(`
       CREATE TABLE IF NOT EXISTS jobs (
         id        TEXT PRIMARY KEY,

@@ -149,6 +149,16 @@
   font-weight: 600;
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable:hover {
+  color: #4a6cf7;
+}
+
 .table td {
   padding: 10px 12px;
   border-bottom: 1px solid #eee;

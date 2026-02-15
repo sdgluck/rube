@@ -59,6 +59,7 @@ export interface PlexCollectionDetail {
   childCount: number;
   thumb: string;
   labels: string[];
+  smart: boolean;
   addedAt?: number;
 }
 
@@ -449,6 +450,7 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
       childCount: meta.childCount || 0,
       thumb: meta.thumb || "",
       labels: (meta.Label || []).map((l: PlexLabel) => l.tag),
+      smart: meta.smart === "1" || meta.smart === 1 || meta.smart === true,
       addedAt: meta.addedAt,
     };
   }

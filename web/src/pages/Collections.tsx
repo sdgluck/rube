@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
+
+type SortKey = "title" | "section_title" | "child_count" | "smart" | "labels" | "added_at";
+type SortDir = "asc" | "desc";
 
 export default function Collections() {
   const [sectionFilter, setSectionFilter] = useState("");
@@ -15,6 +19,8 @@ export default function Collections() {
   const [labelEditing, setLabelEditing] = useState(false);
   const [labelsToAdd, setLabelsToAdd] = useState("");
   const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<SortKey>("title");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,8 +34,11 @@ export default function Collections() {
       label: labelFilter || undefined,
       search: debouncedSearch || undefined,
     },
-    { refetchOnWindowFocus: false },
+    { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   );
+
+  // Unfiltered query for populating filter dropdowns
+  const allCollectionsQuery = trpc.collections.list.useQuery({}, { refetchOnWindowFocus: false });
 
   const syncMutation = trpc.collections.sync.useMutation();
   const deleteMutation = trpc.collections.delete.useMutation();
@@ -45,9 +54,49 @@ export default function Collections() {
     }
   };
 
-  // Derive unique sections and labels from the data
-  const sections = [...new Map(collections.map((c) => [c.section_id, c.section_title])).entries()];
-  const allLabels = [...new Set(collections.flatMap((c) => parseLabels(c.labels)))].sort();
+  // Derive unique sections and labels from unfiltered data
+  const allCollections = allCollectionsQuery.data || [];
+  const sections = [...new Map(allCollections.map((c) => [c.section_id, c.section_title])).entries()];
+  const allLabels = [...new Set(allCollections.flatMap((c) => parseLabels(c.labels)))].sort();
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedCollections = useMemo(() => {
+    const sorted = [...collections].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "title":
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case "section_title":
+          cmp = a.section_title.localeCompare(b.section_title);
+          break;
+        case "child_count":
+          cmp = a.child_count - b.child_count;
+          break;
+        case "smart":
+          cmp = (a.smart ? 1 : 0) - (b.smart ? 1 : 0);
+          break;
+        case "labels":
+          cmp = parseLabels(a.labels).join(",").localeCompare(parseLabels(b.labels).join(","));
+          break;
+        case "added_at":
+          cmp = (a.added_at ?? 0) - (b.added_at ?? 0);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [collections, sortKey, sortDir]);
+
+  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
   // Unique labels across selected collections
   const selectedLabels = [
@@ -67,6 +116,7 @@ export default function Collections() {
       const stats = await syncMutation.mutateAsync();
       setStatus({ type: "success", msg: `Synced ${stats.synced} collection(s), removed ${stats.removed} stale.` });
       collectionsQuery.refetch();
+      allCollectionsQuery.refetch();
     } catch {
       setStatus({ type: "error", msg: "Sync failed" });
     } finally {
@@ -80,6 +130,7 @@ export default function Collections() {
       await deleteMutation.mutateAsync({ ratingKey });
       setStatus({ type: "success", msg: `Deleted "${title}"` });
       collectionsQuery.refetch();
+      allCollectionsQuery.refetch();
     } catch {
       setStatus({ type: "error", msg: `Failed to delete "${title}"` });
     }
@@ -108,6 +159,7 @@ export default function Collections() {
       msg: failed > 0 ? `Deleted ${deleted}, failed ${failed}` : `Deleted ${deleted} collection(s)`,
     });
     collectionsQuery.refetch();
+    allCollectionsQuery.refetch();
   };
 
   const handleBulkEditLabels = async () => {
@@ -148,6 +200,7 @@ export default function Collections() {
       msg: failed > 0 ? `Updated ${updated}, failed ${failed}` : `Updated labels on ${updated} collection(s)`,
     });
     collectionsQuery.refetch();
+    allCollectionsQuery.refetch();
   };
 
   const toggleSelect = (ratingKey: string) => {
@@ -341,16 +394,29 @@ export default function Collections() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th>Title</th>
-                <th>Section</th>
-                <th>Items</th>
-                <th>Labels</th>
-                <th>Added</th>
+                <th className={styles.sortable} onClick={() => toggleSort("title")}>
+                  Title{sortIndicator("title")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("section_title")}>
+                  Section{sortIndicator("section_title")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("child_count")}>
+                  Items{sortIndicator("child_count")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("smart")}>
+                  Smart{sortIndicator("smart")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("labels")}>
+                  Labels{sortIndicator("labels")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("added_at")}>
+                  Added{sortIndicator("added_at")}
+                </th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {collections.map((col) => {
+              {sortedCollections.map((col) => {
                 const labels = parseLabels(col.labels);
                 return (
                   <tr
@@ -369,6 +435,7 @@ export default function Collections() {
                     <td>{col.title}</td>
                     <td>{col.section_title}</td>
                     <td>{col.child_count}</td>
+                    <td>{col.smart ? "Yes" : "No"}</td>
                     <td>
                       {labels.map((label) => (
                         <span

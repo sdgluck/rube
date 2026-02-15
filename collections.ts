@@ -15,6 +15,7 @@ export interface CollectionRow {
   labels: string;
   added_at: number | null;
   thumb: string;
+  smart: number;
   synced_at: number;
 }
 
@@ -35,8 +36,8 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
   const seenKeys = new Set<string>();
 
   const upsert = db.prepare(`
-    INSERT INTO collections (plex_rating_key, section_id, section_title, title, summary, child_count, labels, added_at, thumb, synced_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO collections (plex_rating_key, section_id, section_title, title, summary, child_count, labels, added_at, thumb, smart, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(plex_rating_key) DO UPDATE SET
       section_id = excluded.section_id,
       section_title = excluded.section_title,
@@ -46,6 +47,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
       labels = excluded.labels,
       added_at = excluded.added_at,
       thumb = excluded.thumb,
+      smart = excluded.smart,
       synced_at = excluded.synced_at
   `);
 
@@ -68,6 +70,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
         JSON.stringify(detail.labels),
         detail.addedAt ?? null,
         detail.thumb,
+        detail.smart ? 1 : 0,
         now,
       );
       synced++;
