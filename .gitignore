@@ -1,3 +1,3 @@
 node_modules/
-tinkerbell.db
+tinkerbell.db*
 web/dist
