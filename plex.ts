@@ -247,34 +247,78 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     try {
       return JSON.parse(text);
     } catch {
-      return null;
+      return { _raw: text };
     }
   }
 
   async function getSharings(machineIdentifier: string): Promise<PlexSharing[]> {
-    const data = await plexTvRequest("/api/users/");
-    const users = data?.MediaContainer?.User || [];
     const results: PlexSharing[] = [];
-    for (const user of users) {
-      const servers = Array.isArray(user.Server) ? user.Server : user.Server ? [user.Server] : [];
-      const match = servers.find((s: { machineIdentifier: string }) => s.machineIdentifier === machineIdentifier);
-      if (match) {
+    const seenIds = new Set<number>();
+
+    // Friends (shared users) — /api/users/ returns XML, not JSON
+    try {
+      const data = await plexTvRequest("/api/users/");
+      const xml: string = data?._raw || "";
+      if (xml) {
+        const userRegex = /<User\s([^>]+)>([\s\S]*?)<\/User>/g;
+        let match;
+        while ((match = userRegex.exec(xml)) !== null) {
+          const attrs = match[1];
+          const children = match[2];
+          const userId = attrs.match(/\bid="(\d+)"/)?.[1];
+          const username = attrs.match(/\busername="([^"]*)"/)?.[1];
+          const title = attrs.match(/\btitle="([^"]*)"/)?.[1];
+
+          const serverRegex = /<Server\s([^>]*machineIdentifier="[^"]*"[^>]*)\/?>|<Server\s([^>]*)>[^<]*<\/Server>/g;
+          let serverMatch;
+          while ((serverMatch = serverRegex.exec(children)) !== null) {
+            const serverAttrs = serverMatch[1] || serverMatch[2];
+            if (serverAttrs.includes(`machineIdentifier="${machineIdentifier}"`)) {
+              if (userId) {
+                const id = parseInt(userId, 10);
+                seenIds.add(id);
+                results.push({
+                  id,
+                  userId: id,
+                  username: username || title || "",
+                  machineIdentifier,
+                });
+              }
+              break;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      log(`Failed to fetch friends: ${(err as Error).message}`);
+    }
+
+    // Home/managed users
+    try {
+      const data = await plexTvRequest("/api/v2/home/users");
+      const homeUsers = data?.users || (Array.isArray(data) ? data : []);
+      for (const user of homeUsers) {
+        if (String(user.admin) === "1" || user.admin === true) continue;
+        if (String(user.guest) === "1" || user.guest === true) continue;
+        if (seenIds.has(user.id)) continue;
         results.push({
           id: user.id,
           userId: user.id,
-          username: user.username || user.title || "",
+          username: user.username || user.title || user.friendlyName || "",
           machineIdentifier,
         });
       }
+    } catch (err) {
+      log(`Failed to fetch home users: ${(err as Error).message}`);
     }
+
     return results;
   }
 
-  async function setSharingRestrictions(sharingId: number, labels: string[]): Promise<void> {
-    // Format: "label=Tinkerbell,User:Sam" — URLSearchParams encodes to label%3DTinkerbell%2CUser%3ASam
+  async function setSharingRestrictions(userId: number, labels: string[]): Promise<void> {
     const filterStr = `label=${labels.join(",")}`;
 
-    await plexTvRequest(`/api/v2/sharings/${sharingId}`, {
+    await plexTvRequest(`/api/friends/${userId}`, {
       method: "PUT",
       params: {
         filterMovies: filterStr,

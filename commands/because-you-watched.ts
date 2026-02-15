@@ -65,7 +65,14 @@ export default async function run(args: BywArgs): Promise<void> {
 
   // Resolve target users
   const accounts = await client.getAccounts();
-  const resolvedUsers: Array<{ name: string; accountID: string | undefined }> = [];
+  // Build map of account ID → plex.tv username (for label matching with sharing restrictions)
+  const sharings = await client.getSharings(machineId);
+  const idToPlexUsername = new Map<string, string>();
+  for (const s of sharings) {
+    idToPlexUsername.set(String(s.userId), s.username);
+  }
+
+  const resolvedUsers: Array<{ name: string; plexUsername: string; accountID: string | undefined }> = [];
 
   if (args.user) {
     // CLI --user flag: single user
@@ -76,13 +83,15 @@ export default async function run(args: BywArgs): Promise<void> {
       accounts.forEach((a) => console.error(`     ${a.name} (ID: ${a.id})`));
       process.exit(1);
     }
-    resolvedUsers.push({ name: match.name || args.user, accountID: match.id });
-    console.log(`   User: ${match.name} (ID: ${match.id})`);
+    const plexUsername = idToPlexUsername.get(match.id) || match.name || args.user;
+    resolvedUsers.push({ name: match.name || args.user, plexUsername, accountID: match.id });
+    console.log(`   User: ${match.name} (ID: ${match.id}, plex.tv: ${plexUsername})`);
   } else {
     // No --user flag: run for all accounts
     for (const account of accounts) {
       if (account.name) {
-        resolvedUsers.push({ name: account.name, accountID: account.id });
+        const plexUsername = idToPlexUsername.get(account.id) || account.name;
+        resolvedUsers.push({ name: account.name, plexUsername, accountID: account.id });
       }
     }
     if (resolvedUsers.length === 0) {
@@ -125,8 +134,8 @@ export default async function run(args: BywArgs): Promise<void> {
       console.log(`\n👤 Processing user: ${user.name}`);
     }
 
-    // Labels for this user's collections
-    const collectionLabels = isPerUser ? ["Tinkerbell", BYW_LABEL, `User:${user.name}`] : BYW_LABELS;
+    // Labels for this user's collections — use plex.tv username for sharing restriction compatibility
+    const collectionLabels = isPerUser ? ["Tinkerbell", BYW_LABEL, `User:${user.plexUsername}`] : BYW_LABELS;
 
     for (const section of targetSections) {
       step++;
@@ -226,7 +235,7 @@ export default async function run(args: BywArgs): Promise<void> {
 
         // When per-user, only touch collections with this user's label
         if (isPerUser) {
-          const hasUserLabel = labels.some((l) => l.tag === `User:${user.name}`);
+          const hasUserLabel = labels.some((l) => l.tag === `User:${user.plexUsername}`);
           if (!hasUserLabel) continue;
         }
 
