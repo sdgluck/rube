@@ -102,6 +102,9 @@ export default async function run(args: BywArgs): Promise<void> {
   console.log(`   Sections: ${targetSections.map((s) => s.title).join(", ")}`);
 
   for (const section of targetSections) {
+    console.log(
+      `§PROGRESS:${targetSections.indexOf(section) + 1}/${targetSections.length}:Processing "${section.title}"...`,
+    );
     const sectionId = section.key;
 
     console.log(`\n📚 "${section.title}" — starting...`);

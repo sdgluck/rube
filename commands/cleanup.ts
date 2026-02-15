@@ -116,6 +116,7 @@ export default async function run(args: CleanupArgs): Promise<void> {
 
   let total = 0;
   for (const section of sections) {
+    console.log(`§PROGRESS:${sections.indexOf(section) + 1}/${sections.length}:Cleaning "${section.title}"...`);
     total += await cleanupSection(section);
   }
 

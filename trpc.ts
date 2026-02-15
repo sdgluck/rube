@@ -9,6 +9,7 @@ import {
   updateCollection,
   deleteCollection,
 } from "./collections.ts";
+import { getJobs, getJobRuns, getJobRun, getActiveRuns, updateJob, startJob, cancelRun } from "./jobs.ts";
 
 const t = initTRPC.create();
 
@@ -83,9 +84,46 @@ const collectionsRouter = t.router({
   }),
 });
 
+const jobsRouter = t.router({
+  list: t.procedure.query(() => getJobs()),
+
+  runs: t.procedure
+    .input(z.object({ jobId: z.string(), limit: z.number().optional() }))
+    .query(({ input }) => getJobRuns(input.jobId, input.limit)),
+
+  run: t.procedure.input(z.object({ runId: z.string() })).query(({ input }) => {
+    const run = getJobRun(input.runId);
+    if (!run) throw new Error(`Run ${input.runId} not found`);
+    return run;
+  }),
+
+  activeRuns: t.procedure.query(() => getActiveRuns()),
+
+  update: t.procedure
+    .input(z.object({ jobId: z.string(), schedule: z.string().optional(), enabled: z.boolean().optional() }))
+    .mutation(({ input }) => {
+      const { jobId, ...updates } = input;
+      updateJob(jobId, updates);
+      return { ok: true };
+    }),
+
+  start: t.procedure.input(z.object({ jobId: z.string() })).mutation(({ input }) => {
+    const result = startJob(input.jobId);
+    if (!result) throw new Error(`Job ${input.jobId} is already running or not found`);
+    return { runId: result.runId };
+  }),
+
+  cancel: t.procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
+    const ok = cancelRun(input.runId);
+    if (!ok) throw new Error(`Run ${input.runId} is not running`);
+    return { ok: true };
+  }),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
+  jobs: jobsRouter,
 
   plexSections: t.procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");

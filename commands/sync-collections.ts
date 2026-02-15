@@ -66,6 +66,7 @@ export default async function run(args: SyncCollectionsArgs): Promise<void> {
   console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
   console.log(`\n   Syncing collections...`);
 
+  console.log(`§PROGRESS:1/1:Syncing ${sections.length} section(s)...`);
   const stats = await syncCollections(client, sections);
 
   console.log(`\n🎉 Done! Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);

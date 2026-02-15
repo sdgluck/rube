@@ -196,6 +196,7 @@ export default async function run(args: ShuffleArgs): Promise<void> {
   console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
 
   for (const section of sections) {
+    console.log(`§PROGRESS:${sections.indexOf(section) + 1}/${sections.length}:Shuffling "${section.title}"...`);
     await shuffleSection(section);
   }
 

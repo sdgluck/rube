@@ -236,6 +236,7 @@ ${itemList}`,
   console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
 
   for (const section of sections) {
+    console.log(`§PROGRESS:${sections.indexOf(section) + 1}/${sections.length}:Processing "${section.title}"...`);
     await processSection(section, machineId);
   }
 

@@ -55,6 +55,28 @@ export function getDb(): DatabaseSync {
         synced_at       INTEGER NOT NULL
       )
     `);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS jobs (
+        id        TEXT PRIMARY KEY,
+        name      TEXT NOT NULL,
+        command   TEXT NOT NULL,
+        schedule  TEXT NOT NULL DEFAULT '',
+        enabled   INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS job_runs (
+        id          TEXT PRIMARY KEY,
+        job_id      TEXT NOT NULL,
+        status      TEXT NOT NULL DEFAULT 'running',
+        log         TEXT NOT NULL DEFAULT '',
+        progress    REAL NOT NULL DEFAULT 0,
+        message     TEXT NOT NULL DEFAULT '',
+        started_at  INTEGER NOT NULL,
+        finished_at INTEGER,
+        FOREIGN KEY (job_id) REFERENCES jobs(id)
+      )
+    `);
   }
   return db;
 }

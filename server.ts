@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./trpc.ts";
+import { initJobs } from "./jobs.ts";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "web", "dist");
@@ -91,4 +92,5 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
 server.listen(PORT, () => {
   console.log(`Tinkerbell admin server listening on http://localhost:${PORT}`);
+  initJobs();
 });
