@@ -134,6 +134,13 @@ export async function updateCollection(
   }
 }
 
+export async function updateCollectionLabels(client: PlexClient, ratingKey: string, labels: string[]): Promise<void> {
+  const row = getLocalCollection(ratingKey);
+  if (!row) throw new Error(`Collection ${ratingKey} not found`);
+  await client.setCollectionLabels(row.section_id, ratingKey, labels);
+  getDb().prepare("UPDATE collections SET labels = ? WHERE plex_rating_key = ?").run(JSON.stringify(labels), ratingKey);
+}
+
 export async function deleteCollection(client: PlexClient, ratingKey: string): Promise<void> {
   await client.deleteItem(ratingKey);
   const db = getDb();

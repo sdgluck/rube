@@ -11,7 +11,10 @@ export default function Collections() {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
+  const [labelEditing, setLabelEditing] = useState(false);
+  const [labelsToAdd, setLabelsToAdd] = useState("");
+  const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export default function Collections() {
 
   const syncMutation = trpc.collections.sync.useMutation();
   const deleteMutation = trpc.collections.delete.useMutation();
+  const updateLabelsMutation = trpc.collections.updateLabels.useMutation();
 
   const collections = collectionsQuery.data || [];
 
@@ -45,9 +49,15 @@ export default function Collections() {
   const sections = [...new Map(collections.map((c) => [c.section_id, c.section_title])).entries()];
   const allLabels = [...new Set(collections.flatMap((c) => parseLabels(c.labels)))].sort();
 
+  // Unique labels across selected collections
+  const selectedLabels = [
+    ...new Set(collections.filter((c) => selected.has(c.plex_rating_key)).flatMap((c) => parseLabels(c.labels))),
+  ].sort();
+
   // Clear selection when filters change
   useEffect(() => {
     setSelected(new Set());
+    setLabelEditing(false);
   }, [sectionFilter, labelFilter, debouncedSearch]);
 
   const handleSync = async () => {
@@ -100,6 +110,46 @@ export default function Collections() {
     collectionsQuery.refetch();
   };
 
+  const handleBulkEditLabels = async () => {
+    const addList = labelsToAdd
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const removeSet = labelsToRemove;
+
+    if (addList.length === 0 && removeSet.size === 0) return;
+
+    const selectedCollections = collections.filter((c) => selected.has(c.plex_rating_key));
+    const total = selectedCollections.length;
+    setBulkProgress({ done: 0, total, label: "Updating labels" });
+    setStatus(null);
+
+    let updated = 0;
+    let failed = 0;
+    for (const col of selectedCollections) {
+      const current = parseLabels(col.labels);
+      const newLabels = [...new Set([...current.filter((l) => !removeSet.has(l)), ...addList])];
+      try {
+        await updateLabelsMutation.mutateAsync({ ratingKey: col.plex_rating_key, labels: newLabels });
+        updated++;
+      } catch {
+        failed++;
+      }
+      setBulkProgress({ done: updated + failed, total, label: "Updating labels" });
+    }
+
+    setSelected(new Set());
+    setBulkProgress(null);
+    setLabelEditing(false);
+    setLabelsToAdd("");
+    setLabelsToRemove(new Set());
+    setStatus({
+      type: failed > 0 ? "error" : "success",
+      msg: failed > 0 ? `Updated ${updated}, failed ${failed}` : `Updated labels on ${updated} collection(s)`,
+    });
+    collectionsQuery.refetch();
+  };
+
   const toggleSelect = (ratingKey: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -138,34 +188,113 @@ export default function Collections() {
       {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
 
       {(selected.size > 0 || bulkProgress) && (
-        <div className={styles.bulkBar}>
-          {bulkProgress ? (
-            <>
-              <span className={styles.bulkCount}>
-                Deleting {bulkProgress.done}/{bulkProgress.total}...
-              </span>
-              <div className={styles.bulkProgressBar}>
-                <div
-                  className={styles.bulkProgressFill}
-                  style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+        <>
+          <div
+            className={styles.bulkBar}
+            style={labelEditing ? { borderRadius: "6px 6px 0 0", marginBottom: 0 } : undefined}
+          >
+            {bulkProgress ? (
+              <>
+                <span className={styles.bulkCount}>
+                  {bulkProgress.label || "Deleting"} {bulkProgress.done}/{bulkProgress.total}...
+                </span>
+                <div className={styles.bulkProgressBar}>
+                  <div
+                    className={styles.bulkProgressFill}
+                    style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <span className={styles.bulkCount}>{selected.size} selected</span>
+                <button
+                  className={`${styles.buttonSmall} ${labelEditing ? styles.button : styles.buttonSecondary}`}
+                  onClick={() => {
+                    setLabelEditing(!labelEditing);
+                    setLabelsToAdd("");
+                    setLabelsToRemove(new Set());
+                  }}
+                >
+                  Edit Labels
+                </button>
+                <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
+                  Delete {selected.size}
+                </button>
+                <button
+                  className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
+                  onClick={() => {
+                    setSelected(new Set());
+                    setLabelEditing(false);
+                  }}
+                >
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+          {labelEditing && !bulkProgress && (
+            <div className={styles.labelEditor}>
+              <div className={styles.labelEditorRow}>
+                <label>Add labels:</label>
+                <input
+                  type="text"
+                  className={styles.labelEditorInput}
+                  placeholder="Label1, Label2, ..."
+                  value={labelsToAdd}
+                  onChange={(e) => setLabelsToAdd(e.target.value)}
                 />
               </div>
-            </>
-          ) : (
-            <>
-              <span className={styles.bulkCount}>{selected.size} selected</span>
-              <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
-                Delete {selected.size}
-              </button>
-              <button
-                className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
-                onClick={() => setSelected(new Set())}
-              >
-                Clear
-              </button>
-            </>
+              {selectedLabels.length > 0 && (
+                <div className={styles.labelEditorRow}>
+                  <label>Remove labels:</label>
+                  <div className={styles.labelCheckboxList}>
+                    {selectedLabels.map((lbl) => (
+                      <span key={lbl} className={styles.labelCheckboxItem}>
+                        <input
+                          type="checkbox"
+                          checked={labelsToRemove.has(lbl)}
+                          onChange={() =>
+                            setLabelsToRemove((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(lbl)) next.delete(lbl);
+                              else next.add(lbl);
+                              return next;
+                            })
+                          }
+                        />
+                        <span
+                          className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(lbl.toLowerCase()) ? styles.labelTinkerbell : lbl.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                        >
+                          {lbl}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className={styles.labelEditorActions}>
+                <button
+                  className={`${styles.button} ${styles.buttonSmall}`}
+                  onClick={handleBulkEditLabels}
+                  disabled={labelsToAdd.trim() === "" && labelsToRemove.size === 0}
+                >
+                  Apply
+                </button>
+                <button
+                  className={`${styles.buttonSecondary} ${styles.buttonSmall}`}
+                  onClick={() => {
+                    setLabelEditing(false);
+                    setLabelsToAdd("");
+                    setLabelsToRemove(new Set());
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {collections.length === 0 && !search && !sectionFilter && !labelFilter ? (

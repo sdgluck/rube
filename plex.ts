@@ -327,6 +327,16 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     });
   }
 
+  async function clearSharingRestrictions(userId: number): Promise<void> {
+    await plexTvRequest(`/api/friends/${userId}`, {
+      method: "PUT",
+      params: {
+        filterMovies: "label=",
+        filterTelevision: "label=",
+      },
+    });
+  }
+
   // ─── Watch history & accounts ──────────────────────────────────────────────
 
   async function getWatchHistory({ accountID, librarySectionID, limit = 50 }: WatchHistoryOptions = {}): Promise<
@@ -460,6 +470,191 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     await request(`/library/metadata/${ratingKey}`, { method: "PUT", params });
   }
 
+  // ─── Add label to all items in a section ───────────────────────────────────
+
+  async function addLabelToAllItems(
+    sectionId: string,
+    sectionType: string,
+    label: string,
+    onProgress?: (current: number, total: number) => void,
+  ): Promise<number> {
+    const typeNum = SECTION_TYPE_MAP[sectionType];
+    if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
+
+    const pageSize = 100;
+    let offset = 0;
+    let updated = 0;
+    let processed = 0;
+    let totalSize = 0;
+
+    while (true) {
+      const data = await request(`/library/sections/${sectionId}/all`, {
+        params: {
+          "X-Plex-Container-Start": offset,
+          "X-Plex-Container-Size": pageSize,
+        },
+      });
+
+      const batch = data?.MediaContainer?.Metadata || [];
+      if (batch.length === 0) break;
+
+      totalSize = data?.MediaContainer?.totalSize ?? totalSize;
+
+      const CONCURRENCY = 10;
+      const queue = [...batch];
+      let inFlight = 0;
+
+      await new Promise<void>((resolve, reject) => {
+        function next() {
+          if (queue.length === 0 && inFlight === 0) return resolve();
+
+          while (queue.length > 0 && inFlight < CONCURRENCY) {
+            const item = queue.shift()!;
+            const existingLabels: string[] = (item.Label || []).map((l: PlexLabel) => l.tag);
+
+            if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+              processed++;
+              if (onProgress) onProgress(processed, totalSize);
+              continue;
+            }
+
+            const newLabels = [...existingLabels, label];
+            const labelParams: Record<string, string | number> = {
+              type: typeNum,
+              id: item.ratingKey,
+              "label.locked": 1,
+            };
+            for (let i = 0; i < newLabels.length; i++) {
+              labelParams[`label[${i}].tag.tag`] = newLabels[i];
+            }
+
+            inFlight++;
+            request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams })
+              .then(() => {
+                updated++;
+                processed++;
+                inFlight--;
+                if (onProgress) onProgress(processed, totalSize);
+                next();
+              })
+              .catch(reject);
+          }
+          if (queue.length === 0 && inFlight === 0) resolve();
+        }
+        next();
+      });
+
+      offset += batch.length;
+      if (offset >= totalSize) break;
+    }
+
+    return updated;
+  }
+
+  // ─── Remove label from all items in a section ──────────────────────────────
+
+  async function removeLabelFromAllItems(
+    sectionId: string,
+    sectionType: string,
+    label: string,
+    onProgress?: (current: number, total: number) => void,
+  ): Promise<number> {
+    const typeNum = SECTION_TYPE_MAP[sectionType];
+    if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
+
+    const pageSize = 100;
+    let offset = 0;
+    let updated = 0;
+    let processed = 0;
+    let totalSize = 0;
+
+    while (true) {
+      const data = await request(`/library/sections/${sectionId}/all`, {
+        params: {
+          "X-Plex-Container-Start": offset,
+          "X-Plex-Container-Size": pageSize,
+        },
+      });
+
+      const batch = data?.MediaContainer?.Metadata || [];
+      if (batch.length === 0) break;
+
+      totalSize = data?.MediaContainer?.totalSize ?? totalSize;
+
+      const CONCURRENCY = 10;
+      const queue = [...batch];
+      let inFlight = 0;
+
+      await new Promise<void>((resolve, reject) => {
+        function next() {
+          if (queue.length === 0 && inFlight === 0) return resolve();
+
+          while (queue.length > 0 && inFlight < CONCURRENCY) {
+            const item = queue.shift()!;
+
+            inFlight++;
+            // Bulk listing may not include Label data — fetch individual metadata
+            request(`/library/metadata/${item.ratingKey}`)
+              .then((detail) => {
+                const meta = detail?.MediaContainer?.Metadata?.[0];
+                const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
+
+                if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+                  processed++;
+                  inFlight--;
+                  if (onProgress) onProgress(processed, totalSize);
+                  next();
+                  return;
+                }
+
+                const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
+                const labelParams: Record<string, string | number> = {
+                  type: typeNum,
+                  id: item.ratingKey,
+                  "label.locked": 1,
+                };
+                for (let i = 0; i < newLabels.length; i++) {
+                  labelParams[`label[${i}].tag.tag`] = newLabels[i];
+                }
+
+                return request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams }).then(
+                  () => {
+                    updated++;
+                    processed++;
+                    inFlight--;
+                    if (onProgress) onProgress(processed, totalSize);
+                    next();
+                  },
+                );
+              })
+              .catch(reject);
+          }
+          if (queue.length === 0 && inFlight === 0) resolve();
+        }
+        next();
+      });
+
+      offset += batch.length;
+      if (offset >= totalSize) break;
+    }
+
+    return updated;
+  }
+
+  // ─── Set labels on a collection ────────────────────────────────────────────
+
+  async function setCollectionLabels(sectionId: string, ratingKey: string, labels: string[]): Promise<void> {
+    const labelParams: Record<string, string | number> = {
+      type: 18,
+      id: ratingKey,
+      "label.locked": 1,
+    };
+    for (let i = 0; i < labels.length; i++) {
+      labelParams[`label[${i}].tag.tag`] = labels[i];
+    }
+    await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -482,6 +677,10 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     createCollectionWithLabel,
     getSharings,
     setSharingRestrictions,
+    clearSharingRestrictions,
+    setCollectionLabels,
+    addLabelToAllItems,
+    removeLabelFromAllItems,
   };
 }
 

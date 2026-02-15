@@ -7,6 +7,7 @@ import {
   getLocalCollections,
   getLocalCollection,
   updateCollection,
+  updateCollectionLabels,
   deleteCollection,
 } from "./collections.ts";
 import { getJobs, getJobRuns, getJobRun, getActiveRuns, updateJob, startJob, cancelRun } from "./jobs.ts";
@@ -64,6 +65,14 @@ const collectionsRouter = t.router({
       const { ratingKey, ...updates } = input;
       const client = getPlexClient();
       await updateCollection(client, ratingKey, updates);
+      return { ok: true };
+    }),
+
+  updateLabels: t.procedure
+    .input(z.object({ ratingKey: z.string(), labels: z.array(z.string()) }))
+    .mutation(async ({ input }) => {
+      const client = getPlexClient();
+      await updateCollectionLabels(client, input.ratingKey, input.labels);
       return { ok: true };
     }),
 

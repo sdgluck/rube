@@ -395,6 +395,54 @@ Examples:
     if (args.verbose) console.error(err.stack);
     process.exit(1);
   });
+} else if (command === "label-undo") {
+  const { values: args } = parseArgs({
+    options: {
+      url: { type: "string", short: "u" },
+      token: { type: "string", short: "t" },
+      sections: { type: "string", short: "s" },
+      verbose: { type: "boolean", short: "v", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
+
+  if (args.help) {
+    console.log(
+      `
+tinkerbell label-undo — Remove per-user sharing restrictions and labels.
+
+Removes the "Tinkerbell" label from all media items and clears sharing
+restrictions for all shared users. This undoes the changes made by
+"tinkerbell label".
+
+Usage:
+  tinkerbell label-undo [options]
+
+Options:
+  --sections, -s   Comma-separated section names/IDs  (omit for ALL)
+
+Global options:
+  --url, -u        Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
+  --token, -t      Plex auth token           (env: PLEX_TOKEN, required)
+  --verbose, -v    Show detailed output      (default: false)
+  --help, -h       Show this help message
+
+Examples:
+  tinkerbell label-undo --token abc123
+  tinkerbell label-undo --token abc123 --verbose
+      `.trim(),
+    );
+    process.exit(0);
+  }
+
+  const { default: run } = await import("./commands/label-undo.ts");
+  await run(args).catch((err: Error) => {
+    console.error(`\n❌ Fatal error: ${err.message}`);
+    if (args.verbose) console.error(err.stack);
+    process.exit(1);
+  });
 } else {
   console.error(`Unknown command: ${command}`);
   console.error('Run "tinkerbell --help" for available commands.');

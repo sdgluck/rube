@@ -18,6 +18,20 @@ function formatDuration(startMs: number, endMs?: number | null): string {
   return `${hours}h ${mins % 60}m`;
 }
 
+function formatEta(startMs: number, progress: number): string | null {
+  if (progress <= 0 || progress >= 1) return null;
+  const elapsed = Date.now() - startMs;
+  const remaining = elapsed / progress - elapsed;
+  const secs = Math.ceil(remaining / 1000);
+  if (secs <= 0) return null;
+  if (secs < 60) return `~${secs}s remaining`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  if (mins < 60) return `~${mins}m ${remSecs}s remaining`;
+  const hours = Math.floor(mins / 60);
+  return `~${hours}h ${mins % 60}m remaining`;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cls =
     status === "running"
@@ -98,6 +112,17 @@ export default function JobRun() {
         )}
         <span className={styles.metaLabel}>Duration</span>
         <span>{formatDuration(run.started_at, run.finished_at)}</span>
+        {run.status === "running" &&
+          run.progress > 0 &&
+          (() => {
+            const eta = formatEta(run.started_at, run.progress);
+            return eta ? (
+              <>
+                <span className={styles.metaLabel}>ETA</span>
+                <span>{eta}</span>
+              </>
+            ) : null;
+          })()}
         {run.message && (
           <>
             <span className={styles.metaLabel}>Status</span>

@@ -234,6 +234,77 @@
   background: #f0f4ff;
 }
 
+/* ─── Label editor ────────────────────────────────────────────────────────── */
+
+.labelEditor {
+  padding: 12px 16px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  margin-top: -16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.labelEditorRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.labelEditorRow label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4338ca;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.labelEditorInput {
+  padding: 6px 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: #fff;
+  flex: 1;
+  max-width: 400px;
+}
+
+.labelEditorInput:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}
+
+.labelCheckboxList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.labelCheckboxItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.labelCheckboxItem input {
+  width: 14px;
+  height: 14px;
+  accent-color: #4a6cf7;
+  cursor: pointer;
+}
+
+.labelEditorActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .emptyState {
   text-align: center;
   padding: 48px 24px;

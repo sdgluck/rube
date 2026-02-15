@@ -43,13 +43,38 @@ export default async function run(args: LabelArgs): Promise<void> {
     process.exit(1);
   }
 
-  // Get sharings from plex.tv
+  // Get configured library sections
+  let sections = await client.getSections();
+  const configuredLibraries = getConfig("global_plex_libraries");
+  if (configuredLibraries) {
+    sections = sections.filter((s) => configuredLibraries.includes(s.title));
+  }
+
+  if (args.sections) {
+    const allowed = args.sections.split(",").map((s) => s.trim());
+    sections = sections.filter((s) => allowed.includes(s.title));
+  }
+
+  // Phase 1: Add "Tinkerbell" label to all media items
+  console.log(`\n🏷️  Adding "Tinkerbell" label to all media items...`);
+  let totalUpdated = 0;
+  for (const section of sections) {
+    console.log(`\n   Section: ${section.title} (${section.type})`);
+    const updated = await client.addLabelToAllItems(section.key, section.type, "Tinkerbell", (current, total) => {
+      console.log(`§PROGRESS:${current}/${total}:Labelling items in "${section.title}"...`);
+    });
+    console.log(`   ✅ Updated ${updated} item(s) in "${section.title}"`);
+    totalUpdated += updated;
+  }
+  console.log(`\n   Total items labelled: ${totalUpdated}`);
+
+  // Phase 2: Configure user sharing restrictions
   console.log(`\n📋 Fetching shared users from plex.tv...`);
   const sharings = await client.getSharings(machineId);
 
   if (sharings.length === 0) {
     console.log(`   No shared users found for this server.`);
-    console.log(`\n✅ Nothing to configure.`);
+    console.log(`\n✅ Done — labelled ${totalUpdated} item(s), no users to configure.`);
     return;
   }
 
@@ -58,7 +83,6 @@ export default async function run(args: LabelArgs): Promise<void> {
     console.log(`     • ${sharing.username} (ID: ${sharing.userId})`);
   }
 
-  // Configure each user's sharing restrictions
   let configured = 0;
   for (const sharing of sharings) {
     console.log(`§PROGRESS:${sharings.indexOf(sharing) + 1}/${sharings.length}:Configuring "${sharing.username}"...`);
@@ -76,7 +100,7 @@ export default async function run(args: LabelArgs): Promise<void> {
     }
   }
 
-  console.log(`\n🎉 Configured ${configured}/${sharings.length} user(s).`);
-  console.log(`   Each user can see: collections with label "Tinkerbell" + "User:{username}"`);
+  console.log(`\n🎉 Done — labelled ${totalUpdated} item(s), configured ${configured}/${sharings.length} user(s).`);
+  console.log(`   Each user can see: items/collections with label "Tinkerbell" + "User:{username}"`);
   console.log(`   Admin/owner sees everything (no restriction applied).`);
 }

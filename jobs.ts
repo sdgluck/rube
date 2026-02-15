@@ -35,6 +35,7 @@ const DEFAULT_JOBS: Job[] = [
   { id: "shuffle", name: "Shuffle Hubs", command: "shuffle", schedule: "*/30 * * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
   { id: "label", name: "Sync Labels", command: "label", schedule: "", enabled: 1 },
+  { id: "label-undo", name: "Undo Labels", command: "label-undo", schedule: "", enabled: 1 },
 ];
 
 const activeProcesses = new Map<string, ChildProcess>();
