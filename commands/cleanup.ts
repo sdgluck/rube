@@ -63,7 +63,7 @@ export default async function run(args: CleanupArgs): Promise<void> {
       }
 
       const labels = await client.getCollectionLabels(col.ratingKey);
-      const isTinkerbell = labels.some((l) => l.tag.toLowerCase().startsWith("tinkerbell"));
+      const isTinkerbell = labels.some((l) => l.tag.toLowerCase() === "tinkerbell");
       const isAfterFrom = FROM_DATE && col.addedAt! >= FROM_DATE;
 
       if (isTinkerbell || isAfterFrom) {

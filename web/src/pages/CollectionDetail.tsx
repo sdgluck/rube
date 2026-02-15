@@ -97,7 +97,7 @@ export default function CollectionDetail() {
           {labels.map((label) => (
             <span
               key={label}
-              className={`${styles.label} ${label.startsWith("tinkerbell") ? styles.labelTinkerbell : ""}`}
+              className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : ""}`}
             >
               {label}
             </span>

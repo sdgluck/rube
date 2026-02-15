@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient, type PlexClient, type PlexItem } from "../plex.ts";
 import { getConfig } from "../config.ts";
 
-const BYW_LABEL = "tinkerbell:byw";
+const BYW_LABEL = "BecauseYouWatched";
+const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
 
 interface BywArgs {
   url?: string;
@@ -231,7 +232,7 @@ export default async function run(args: BywArgs): Promise<void> {
         machineId,
         col.name,
         ratingKeys,
-        BYW_LABEL,
+        BYW_LABELS,
       );
 
       if (collectionKey) {

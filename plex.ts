@@ -181,7 +181,7 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
   }
 
   async function deleteTinkerbellCollections(sectionId: string): Promise<number> {
-    return deleteCollectionsByLabel(sectionId, "tinkerbell");
+    return deleteCollectionsByLabel(sectionId, "Tinkerbell");
   }
 
   async function pinToHomepage(
@@ -251,7 +251,7 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     machineId: string,
     name: string,
     ratingKeys: string[],
-    label: string,
+    labels: string | string[],
   ): Promise<string | null> {
     if (ratingKeys.length === 0) return null;
 
@@ -271,15 +271,19 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     const collectionKey = data?.MediaContainer?.Metadata?.[0]?.ratingKey;
     if (!collectionKey) throw new Error(`Failed to create collection "${name}"`);
 
-    // Label with the given label
+    const labelArray = Array.isArray(labels) ? labels : [labels];
+    const labelParams: Record<string, string | number> = {
+      type: 18,
+      id: collectionKey,
+      "label.locked": 1,
+    };
+    for (let i = 0; i < labelArray.length; i++) {
+      labelParams[`label[${i}].tag.tag`] = labelArray[i];
+    }
+
     await request(`/library/sections/${sectionId}/all`, {
       method: "PUT",
-      params: {
-        type: 18,
-        id: collectionKey,
-        "label[0].tag.tag": label,
-        "label.locked": 1,
-      },
+      params: labelParams,
     });
 
     return collectionKey;
