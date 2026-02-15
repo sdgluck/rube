@@ -1,27 +1,13 @@
 import { randomUUID } from "node:crypto";
+import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
-import { getDb, getConfig } from "./config.ts";
+import { getConfig } from "./config.ts";
+import { db } from "./db/index.ts";
+import { jobs, jobRuns } from "./db/schema.ts";
 import type { JobContext, CommonJobConfig, GenerateJobConfig, BywJobConfig } from "../shared/job-context.ts";
 
-interface Job {
-  id: string;
-  name: string;
-  command: string;
-  schedule: string;
-  enabled: number;
-  config: string;
-}
-
-interface JobRun {
-  id: string;
-  job_id: string;
-  status: string;
-  log: string;
-  progress: number;
-  message: string;
-  started_at: number;
-  finished_at: number | null;
-}
+type Job = InferSelectModel<typeof jobs>;
+type JobRun = InferSelectModel<typeof jobRuns>;
 
 const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
@@ -94,22 +80,24 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 // Internal jobs run in-process without the command pattern
 const internalJobs: Record<string, () => string> = {
   "purge-runs": () => {
-    const db = getDb();
     const cutoff = Date.now() - SEVEN_DAYS_MS;
-    const result = db.prepare("DELETE FROM job_runs WHERE status != 'running' AND started_at < ?").run(cutoff);
+    const result = db
+      .delete(jobRuns)
+      .where(and(ne(jobRuns.status, "running"), lt(jobRuns.startedAt, cutoff)))
+      .run();
     return `Purged ${result.changes} job run(s) older than 7 days.`;
   },
 };
 
 function seedDefaultJobs(): void {
-  const db = getDb();
-  const stmt = db.prepare(
-    "INSERT OR IGNORE INTO jobs (id, name, command, schedule, enabled, config) VALUES (?, ?, ?, ?, ?, ?)",
-  );
   let inserted = 0;
   for (const job of DEFAULT_JOBS) {
     const configJson = DEFAULT_CONFIGS[job.id] || "{}";
-    const result = stmt.run(job.id, job.name, job.command, job.schedule, job.enabled, configJson);
+    const result = db
+      .insert(jobs)
+      .values({ ...job, config: configJson })
+      .onConflictDoNothing()
+      .run();
     if (result.changes > 0) inserted++;
   }
   if (inserted > 0) {
@@ -118,22 +106,26 @@ function seedDefaultJobs(): void {
 }
 
 function markStaleRunsAsFailed(): void {
-  const db = getDb();
   const result = db
-    .prepare("UPDATE job_runs SET status = 'failed', finished_at = ? WHERE status = 'running'")
-    .run(Date.now());
+    .update(jobRuns)
+    .set({ status: "failed", finishedAt: Date.now() })
+    .where(eq(jobRuns.status, "running"))
+    .run();
   if (result.changes > 0) {
     console.log(`[jobs] Marked ${result.changes} stale running run(s) as failed`);
   }
 }
 
 function startCronSchedules(): void {
-  const db = getDb();
-  const jobs = db.prepare("SELECT * FROM jobs WHERE enabled = 1 AND schedule != ''").all() as unknown as Job[];
-  for (const job of jobs) {
+  const enabledJobs = db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.enabled, 1), ne(jobs.schedule, "")))
+    .all();
+  for (const job of enabledJobs) {
     scheduleCron(job);
   }
-  console.log(`[jobs] Started ${jobs.length} cron schedule(s)`);
+  console.log(`[jobs] Started ${enabledJobs.length} cron schedule(s)`);
 }
 
 function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): void {
@@ -153,28 +145,47 @@ function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): v
 }
 
 export function startJob(jobId: string): { runId: string; done: Promise<void> } | null {
-  const db = getDb();
-
-  const job = db.prepare("SELECT * FROM jobs WHERE id = ?").get(jobId) as Job | undefined;
+  const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
   if (!job) return null;
 
   // Prevent duplicate runs
-  const existing = db.prepare("SELECT id FROM job_runs WHERE job_id = ? AND status = 'running'").get(jobId) as
-    | { id: string }
-    | undefined;
+  const existing = db
+    .select({ id: jobRuns.id })
+    .from(jobRuns)
+    .where(and(eq(jobRuns.jobId, jobId), eq(jobRuns.status, "running")))
+    .get();
   if (existing) return null;
 
   const runId = randomUUID();
   const now = Date.now();
 
-  db.prepare(
-    "INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at) VALUES (?, ?, 'running', '', 0, '', ?)",
-  ).run(runId, jobId, now);
+  db.insert(jobRuns)
+    .values({ id: runId, jobId, status: "running", log: "", progress: 0, message: "", startedAt: now })
+    .run();
 
   // Clean up old runs (keep last 50)
-  db.prepare(
-    "DELETE FROM job_runs WHERE job_id = ? AND id NOT IN (SELECT id FROM job_runs WHERE job_id = ? ORDER BY started_at DESC LIMIT 50)",
-  ).run(jobId, jobId);
+  const keepIds = db
+    .select({ id: jobRuns.id })
+    .from(jobRuns)
+    .where(eq(jobRuns.jobId, jobId))
+    .orderBy(desc(jobRuns.startedAt))
+    .limit(50)
+    .all()
+    .map((r) => r.id);
+
+  if (keepIds.length >= 50) {
+    db.delete(jobRuns)
+      .where(
+        and(
+          eq(jobRuns.jobId, jobId),
+          sql`${jobRuns.id} NOT IN (${sql.join(
+            keepIds.map((id) => sql`${id}`),
+            sql`,`,
+          )})`,
+        ),
+      )
+      .run();
+  }
 
   // Internal jobs run in-process without the command pattern
   const internalHandler = internalJobs[job.command];
@@ -183,18 +194,17 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
     const done = Promise.resolve().then(() => {
       try {
         const output = internalHandler();
-        db.prepare(
-          "UPDATE job_runs SET status = 'completed', log = ?, progress = 1, message = ?, finished_at = ? WHERE id = ?",
-        ).run(output, output, Date.now(), runId);
+        db.update(jobRuns)
+          .set({ status: "completed", log: output, progress: 1, message: output, finishedAt: Date.now() })
+          .where(eq(jobRuns.id, runId))
+          .run();
         console.log(`[jobs] ${job.name} completed: ${output}`);
       } catch (err) {
         const msg = (err as Error).message;
-        db.prepare("UPDATE job_runs SET status = 'failed', log = ?, message = ?, finished_at = ? WHERE id = ?").run(
-          msg,
-          msg,
-          Date.now(),
-          runId,
-        );
+        db.update(jobRuns)
+          .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
+          .where(eq(jobRuns.id, runId))
+          .run();
         console.error(`[jobs] ${job.name} failed: ${msg}`);
       }
     });
@@ -213,14 +223,12 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
   function flushLog(): void {
     if (logBuffer.length === 0) return;
     try {
-      const currentLog =
-        (db.prepare("SELECT log FROM job_runs WHERE id = ?").get(runId) as { log: string } | undefined)?.log ?? "";
-      db.prepare("UPDATE job_runs SET log = ?, progress = ?, message = ? WHERE id = ?").run(
-        currentLog + logBuffer,
-        progress,
-        message,
-        runId,
-      );
+      const currentRow = db.select({ log: jobRuns.log }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+      const currentLog = currentRow?.log ?? "";
+      db.update(jobRuns)
+        .set({ log: currentLog + logBuffer, progress, message })
+        .where(eq(jobRuns.id, runId))
+        .run();
       logBuffer = "";
     } catch {
       // DB may be closed during shutdown
@@ -271,10 +279,10 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
 
       if (!wasCancelled) {
         try {
-          db.prepare("UPDATE job_runs SET status = 'completed', progress = 1, finished_at = ? WHERE id = ?").run(
-            Date.now(),
-            runId,
-          );
+          db.update(jobRuns)
+            .set({ status: "completed", progress: 1, finishedAt: Date.now() })
+            .where(eq(jobRuns.id, runId))
+            .run();
         } catch {
           // DB may be closed
         }
@@ -296,7 +304,7 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
       flushLog();
 
       try {
-        db.prepare("UPDATE job_runs SET status = 'failed', finished_at = ? WHERE id = ?").run(Date.now(), runId);
+        db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
       } catch {
         // DB may be closed
       }
@@ -315,78 +323,87 @@ export function cancelRun(runId: string): boolean {
   activeControllers.delete(runId);
   controller.abort();
 
-  const db = getDb();
-  db.prepare("UPDATE job_runs SET status = 'cancelled', finished_at = ? WHERE id = ?").run(Date.now(), runId);
+  db.update(jobRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
 
   return true;
 }
 
 export function getJobs(): Array<
-  Job & { last_run_status?: string; last_run_started_at?: number; last_run_id?: string }
+  Job & { lastRunStatus?: string | null; lastRunStartedAt?: number | null; lastRunId?: string | null }
 > {
-  const db = getDb();
   const rows = db
-    .prepare(
-      `SELECT j.*, lr.status AS last_run_status, lr.started_at AS last_run_started_at, lr.id AS last_run_id
-       FROM jobs j
-       LEFT JOIN job_runs lr ON lr.id = (
-         SELECT id FROM job_runs WHERE job_id = j.id ORDER BY started_at DESC LIMIT 1
-       )
-       ORDER BY j.id`,
+    .select({
+      id: jobs.id,
+      name: jobs.name,
+      command: jobs.command,
+      schedule: jobs.schedule,
+      enabled: jobs.enabled,
+      config: jobs.config,
+      lastRunStatus: sql<string | null>`lr.status`.as("lastRunStatus"),
+      lastRunStartedAt: sql<number | null>`lr.started_at`.as("lastRunStartedAt"),
+      lastRunId: sql<string | null>`lr.id`.as("lastRunId"),
+    })
+    .from(jobs)
+    .leftJoin(
+      sql`job_runs lr`,
+      sql`lr.id = (SELECT id FROM job_runs WHERE job_id = ${jobs.id} ORDER BY started_at DESC LIMIT 1)`,
     )
-    .all() as unknown as Array<Job & { last_run_status?: string; last_run_started_at?: number; last_run_id?: string }>;
+    .orderBy(jobs.id)
+    .all();
   return rows;
 }
 
 export function getJobRuns(jobId: string, limit = 20): Array<Omit<JobRun, "log">> {
-  const db = getDb();
   return db
-    .prepare(
-      "SELECT id, job_id, status, progress, message, started_at, finished_at FROM job_runs WHERE job_id = ? ORDER BY started_at DESC LIMIT ?",
-    )
-    .all(jobId, limit) as Array<Omit<JobRun, "log">>;
+    .select({
+      id: jobRuns.id,
+      jobId: jobRuns.jobId,
+      status: jobRuns.status,
+      progress: jobRuns.progress,
+      message: jobRuns.message,
+      startedAt: jobRuns.startedAt,
+      finishedAt: jobRuns.finishedAt,
+    })
+    .from(jobRuns)
+    .where(eq(jobRuns.jobId, jobId))
+    .orderBy(desc(jobRuns.startedAt))
+    .limit(limit)
+    .all();
 }
 
 export function getJobRun(runId: string): JobRun | null {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM job_runs WHERE id = ?").get(runId) as JobRun | undefined;
-  return row ?? null;
+  return db.select().from(jobRuns).where(eq(jobRuns.id, runId)).get() ?? null;
 }
 
 export function getActiveRuns(): Array<{
   id: string;
-  job_id: string;
-  job_name: string;
+  jobId: string;
+  jobName: string;
   progress: number;
   message: string;
-  started_at: number;
+  startedAt: number;
 }> {
-  const db = getDb();
   return db
-    .prepare(
-      `SELECT jr.id, jr.job_id, j.name AS job_name, jr.progress, jr.message, jr.started_at
-       FROM job_runs jr
-       JOIN jobs j ON j.id = jr.job_id
-       WHERE jr.status = 'running'
-       ORDER BY jr.started_at`,
-    )
-    .all() as Array<{
-    id: string;
-    job_id: string;
-    job_name: string;
-    progress: number;
-    message: string;
-    started_at: number;
-  }>;
+    .select({
+      id: jobRuns.id,
+      jobId: jobRuns.jobId,
+      jobName: jobs.name,
+      progress: jobRuns.progress,
+      message: jobRuns.message,
+      startedAt: jobRuns.startedAt,
+    })
+    .from(jobRuns)
+    .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
+    .where(eq(jobRuns.status, "running"))
+    .orderBy(jobRuns.startedAt)
+    .all();
 }
 
 export function updateJob(
   jobId: string,
   updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
 ): void {
-  const db = getDb();
-
-  const job = db.prepare("SELECT * FROM jobs WHERE id = ?").get(jobId) as Job | undefined;
+  const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
   if (!job) throw new Error(`Job "${jobId}" not found`);
 
   if (updates.schedule !== undefined) {
@@ -394,17 +411,21 @@ export function updateJob(
     if (updates.schedule) {
       new Cron(updates.schedule);
     }
-    db.prepare("UPDATE jobs SET schedule = ? WHERE id = ?").run(updates.schedule, jobId);
+    db.update(jobs).set({ schedule: updates.schedule }).where(eq(jobs.id, jobId)).run();
     job.schedule = updates.schedule;
   }
 
   if (updates.enabled !== undefined) {
-    db.prepare("UPDATE jobs SET enabled = ? WHERE id = ?").run(updates.enabled ? 1 : 0, jobId);
-    job.enabled = updates.enabled ? 1 : 0;
+    const val = updates.enabled ? 1 : 0;
+    db.update(jobs).set({ enabled: val }).where(eq(jobs.id, jobId)).run();
+    job.enabled = val;
   }
 
   if (updates.config !== undefined) {
-    db.prepare("UPDATE jobs SET config = ? WHERE id = ?").run(JSON.stringify(updates.config), jobId);
+    db.update(jobs)
+      .set({ config: JSON.stringify(updates.config) })
+      .where(eq(jobs.id, jobId))
+      .run();
   }
 
   // Reschedule cron

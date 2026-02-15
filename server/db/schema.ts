@@ -1,0 +1,42 @@
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+
+export const config = sqliteTable("config", {
+  key: text("key").primaryKey(),
+  value: text("value"),
+});
+
+export const collections = sqliteTable("collections", {
+  plexRatingKey: text("plex_rating_key").primaryKey(),
+  sectionId: text("section_id").notNull(),
+  sectionTitle: text("section_title").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  childCount: integer("child_count").notNull().default(0),
+  labels: text("labels").notNull().default("[]"),
+  addedAt: integer("added_at"),
+  thumb: text("thumb").notNull().default(""),
+  smart: integer("smart").notNull().default(0),
+  syncedAt: integer("synced_at").notNull(),
+});
+
+export const jobs = sqliteTable("jobs", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  command: text("command").notNull(),
+  schedule: text("schedule").notNull().default(""),
+  enabled: integer("enabled").notNull().default(1),
+  config: text("config").notNull().default("{}"),
+});
+
+export const jobRuns = sqliteTable("job_runs", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id")
+    .notNull()
+    .references(() => jobs.id),
+  status: text("status").notNull().default("running"),
+  log: text("log").notNull().default(""),
+  progress: real("progress").notNull().default(0),
+  message: text("message").notNull().default(""),
+  startedAt: integer("started_at").notNull(),
+  finishedAt: integer("finished_at"),
+});

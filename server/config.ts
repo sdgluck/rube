@@ -9,9 +9,10 @@
  *   const libs = getConfig("global_plex_libraries"); // string[] | undefined
  */
 
-import { DatabaseSync } from "node:sqlite";
-import { join } from "node:path";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { db } from "./db/index.ts";
+import { config } from "./db/schema.ts";
 
 export const configSchema = z.object({
   global_plex_url: z.string(),
@@ -24,99 +25,30 @@ export type ConfigSchema = typeof configSchema;
 export type ConfigKey = keyof z.infer<ConfigSchema>;
 export type ConfigValue<K extends ConfigKey> = z.infer<ConfigSchema>[K];
 
-const DB_PATH = join(import.meta.dirname, "..", "tinkerbell.db");
-
-let db: DatabaseSync | undefined;
-
-export function getDb(): DatabaseSync {
-  if (!db) {
-    db = new DatabaseSync(DB_PATH);
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS config (
-        key   TEXT PRIMARY KEY,
-        value TEXT
-      )
-    `);
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS collections (
-        plex_rating_key TEXT PRIMARY KEY,
-        section_id      TEXT NOT NULL,
-        section_title   TEXT NOT NULL,
-        title           TEXT NOT NULL,
-        summary         TEXT DEFAULT '',
-        child_count     INTEGER DEFAULT 0,
-        labels          TEXT DEFAULT '[]',
-        added_at        INTEGER,
-        thumb           TEXT DEFAULT '',
-        smart           INTEGER NOT NULL DEFAULT 0,
-        synced_at       INTEGER NOT NULL
-      )
-    `);
-    // Migration: add smart column if missing
-    try {
-      db.exec("ALTER TABLE collections ADD COLUMN smart INTEGER NOT NULL DEFAULT 0");
-    } catch {
-      // Column already exists
-    }
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS jobs (
-        id        TEXT PRIMARY KEY,
-        name      TEXT NOT NULL,
-        command   TEXT NOT NULL,
-        schedule  TEXT NOT NULL DEFAULT '',
-        enabled   INTEGER NOT NULL DEFAULT 1,
-        config    TEXT NOT NULL DEFAULT '{}'
-      )
-    `);
-    // Migration: add config column to jobs if missing (for existing DBs)
-    try {
-      db.exec("ALTER TABLE jobs ADD COLUMN config TEXT NOT NULL DEFAULT '{}'");
-    } catch {
-      // Column already exists
-    }
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS job_runs (
-        id          TEXT PRIMARY KEY,
-        job_id      TEXT NOT NULL,
-        status      TEXT NOT NULL DEFAULT 'running',
-        log         TEXT NOT NULL DEFAULT '',
-        progress    REAL NOT NULL DEFAULT 0,
-        message     TEXT NOT NULL DEFAULT '',
-        started_at  INTEGER NOT NULL,
-        finished_at INTEGER,
-        FOREIGN KEY (job_id) REFERENCES jobs(id)
-      )
-    `);
-  }
-  return db;
-}
-
 export function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
-  const row = getDb().prepare("SELECT value FROM config WHERE key = ?").get(key) as { value: string } | undefined;
-  if (!row) return undefined;
+  const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
+  if (!row?.value) return undefined;
   const raw = JSON.parse(row.value);
   return configSchema.shape[key].parse(raw) as ConfigValue<K>;
 }
 
 export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
-  getDb()
-    .prepare("INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-    .run(key, JSON.stringify(value));
+  db.insert(config)
+    .values({ key, value: JSON.stringify(value) })
+    .onConflictDoUpdate({ target: config.key, set: { value: JSON.stringify(value) } })
+    .run();
 }
 
 export function deleteConfig(key: ConfigKey): void {
-  getDb().prepare("DELETE FROM config WHERE key = ?").run(key);
+  db.delete(config).where(eq(config.key, key)).run();
 }
 
 export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
-  const rows = getDb().prepare("SELECT key, value FROM config ORDER BY key").all() as Array<{
-    key: string;
-    value: string;
-  }>;
+  const rows = db.select().from(config).all();
   const raw: Record<string, unknown> = {};
   for (const row of rows) {
     if (row.key in configSchema.shape) {
-      raw[row.key] = JSON.parse(row.value);
+      raw[row.key] = JSON.parse(row.value!);
     }
   }
   return configSchema.partial().parse(raw);

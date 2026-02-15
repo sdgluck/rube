@@ -151,7 +151,7 @@ export default function Jobs() {
     retry: false,
   });
 
-  const hasRunning = jobsQuery.data?.some((j) => j.last_run_status === "running");
+  const hasRunning = jobsQuery.data?.some((j) => j.lastRunStatus === "running");
 
   useEffect(() => {
     if (hasRunning) {
@@ -267,10 +267,10 @@ export default function Jobs() {
                   />
                 </td>
                 <td>
-                  {job.last_run_status ? (
+                  {job.lastRunStatus ? (
                     <span>
-                      <StatusBadge status={job.last_run_status} />{" "}
-                      <span className={styles.runMeta}>{formatTime(job.last_run_started_at!)}</span>
+                      <StatusBadge status={job.lastRunStatus} />{" "}
+                      <span className={styles.runMeta}>{formatTime(job.lastRunStartedAt!)}</span>
                     </span>
                   ) : (
                     <span className={styles.runMeta}>Never</span>
@@ -279,7 +279,7 @@ export default function Jobs() {
                 <td onClick={(e) => e.stopPropagation()}>
                   <button
                     className={`${styles.button} ${styles.buttonSmall}`}
-                    disabled={job.last_run_status === "running" || startMutation.isPending}
+                    disabled={job.lastRunStatus === "running" || startMutation.isPending}
                     onClick={() => startMutation.mutate({ jobId: job.id })}
                   >
                     Run Now
@@ -309,7 +309,7 @@ export default function Jobs() {
                                 View Log
                               </Link>
                               <span className={styles.runMeta}>
-                                {formatTime(run.started_at)} &middot; {formatDuration(run.started_at, run.finished_at)}
+                                {formatTime(run.startedAt)} &middot; {formatDuration(run.startedAt, run.finishedAt)}
                               </span>
                             </li>
                           ))}

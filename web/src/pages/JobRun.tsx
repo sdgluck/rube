@@ -103,19 +103,19 @@ export default function JobRun() {
 
       <div className={styles.metaGrid}>
         <span className={styles.metaLabel}>Started</span>
-        <span>{formatTime(run.started_at)}</span>
-        {run.finished_at && (
+        <span>{formatTime(run.startedAt)}</span>
+        {run.finishedAt && (
           <>
             <span className={styles.metaLabel}>Finished</span>
-            <span>{formatTime(run.finished_at)}</span>
+            <span>{formatTime(run.finishedAt)}</span>
           </>
         )}
         <span className={styles.metaLabel}>Duration</span>
-        <span>{formatDuration(run.started_at, run.finished_at)}</span>
+        <span>{formatDuration(run.startedAt, run.finishedAt)}</span>
         {run.status === "running" &&
           run.progress > 0 &&
           (() => {
-            const eta = formatEta(run.started_at, run.progress);
+            const eta = formatEta(run.startedAt, run.progress);
             return eta ? (
               <>
                 <span className={styles.metaLabel}>ETA</span>

@@ -23,7 +23,7 @@ function SidebarActiveJobs() {
       {runs.map((run) => (
         <div key={run.id} className={styles.sidebarJob} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
           <div className={styles.spinner} />
-          <span className={styles.sidebarJobName}>{run.job_name}</span>
+          <span className={styles.sidebarJobName}>{run.jobName}</span>
           {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
           <button
             className={styles.sidebarCancel}

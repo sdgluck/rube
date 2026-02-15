@@ -4,7 +4,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
 
-type SortKey = "title" | "section_title" | "child_count" | "smart" | "labels" | "added_at";
+type SortKey = "title" | "sectionTitle" | "childCount" | "smart" | "labels" | "addedAt";
 type SortDir = "asc" | "desc";
 
 export default function Collections() {
@@ -56,7 +56,7 @@ export default function Collections() {
 
   // Derive unique sections and labels from unfiltered data
   const allCollections = allCollectionsQuery.data || [];
-  const sections = [...new Map(allCollections.map((c) => [c.section_id, c.section_title])).entries()];
+  const sections = [...new Map(allCollections.map((c) => [c.sectionId, c.sectionTitle])).entries()];
   const allLabels = [...new Set(allCollections.flatMap((c) => parseLabels(c.labels)))].sort();
 
   const toggleSort = (key: SortKey) => {
@@ -75,11 +75,11 @@ export default function Collections() {
         case "title":
           cmp = a.title.localeCompare(b.title);
           break;
-        case "section_title":
-          cmp = a.section_title.localeCompare(b.section_title);
+        case "sectionTitle":
+          cmp = a.sectionTitle.localeCompare(b.sectionTitle);
           break;
-        case "child_count":
-          cmp = a.child_count - b.child_count;
+        case "childCount":
+          cmp = a.childCount - b.childCount;
           break;
         case "smart":
           cmp = (a.smart ? 1 : 0) - (b.smart ? 1 : 0);
@@ -87,8 +87,8 @@ export default function Collections() {
         case "labels":
           cmp = parseLabels(a.labels).join(",").localeCompare(parseLabels(b.labels).join(","));
           break;
-        case "added_at":
-          cmp = (a.added_at ?? 0) - (b.added_at ?? 0);
+        case "addedAt":
+          cmp = (a.addedAt ?? 0) - (b.addedAt ?? 0);
           break;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -100,7 +100,7 @@ export default function Collections() {
 
   // Unique labels across selected collections
   const selectedLabels = [
-    ...new Set(collections.filter((c) => selected.has(c.plex_rating_key)).flatMap((c) => parseLabels(c.labels))),
+    ...new Set(collections.filter((c) => selected.has(c.plexRatingKey)).flatMap((c) => parseLabels(c.labels))),
   ].sort();
 
   // Clear selection when filters change
@@ -171,7 +171,7 @@ export default function Collections() {
 
     if (addList.length === 0 && removeSet.size === 0) return;
 
-    const selectedCollections = collections.filter((c) => selected.has(c.plex_rating_key));
+    const selectedCollections = collections.filter((c) => selected.has(c.plexRatingKey));
     const total = selectedCollections.length;
     setBulkProgress({ done: 0, total, label: "Updating labels" });
     setStatus(null);
@@ -182,7 +182,7 @@ export default function Collections() {
       const current = parseLabels(col.labels);
       const newLabels = [...new Set([...current.filter((l) => !removeSet.has(l)), ...addList])];
       try {
-        await updateLabelsMutation.mutateAsync({ ratingKey: col.plex_rating_key, labels: newLabels });
+        await updateLabelsMutation.mutateAsync({ ratingKey: col.plexRatingKey, labels: newLabels });
         updated++;
       } catch {
         failed++;
@@ -219,7 +219,7 @@ export default function Collections() {
     if (selected.size === collections.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(collections.map((c) => c.plex_rating_key)));
+      setSelected(new Set(collections.map((c) => c.plexRatingKey)));
     }
   };
 
@@ -397,11 +397,11 @@ export default function Collections() {
                 <th className={styles.sortable} onClick={() => toggleSort("title")}>
                   Title{sortIndicator("title")}
                 </th>
-                <th className={styles.sortable} onClick={() => toggleSort("section_title")}>
-                  Section{sortIndicator("section_title")}
+                <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
+                  Section{sortIndicator("sectionTitle")}
                 </th>
-                <th className={styles.sortable} onClick={() => toggleSort("child_count")}>
-                  Items{sortIndicator("child_count")}
+                <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
+                  Items{sortIndicator("childCount")}
                 </th>
                 <th className={styles.sortable} onClick={() => toggleSort("smart")}>
                   Smart{sortIndicator("smart")}
@@ -409,8 +409,8 @@ export default function Collections() {
                 <th className={styles.sortable} onClick={() => toggleSort("labels")}>
                   Labels{sortIndicator("labels")}
                 </th>
-                <th className={styles.sortable} onClick={() => toggleSort("added_at")}>
-                  Added{sortIndicator("added_at")}
+                <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
+                  Added{sortIndicator("addedAt")}
                 </th>
                 <th></th>
               </tr>
@@ -420,21 +420,21 @@ export default function Collections() {
                 const labels = parseLabels(col.labels);
                 return (
                   <tr
-                    key={col.plex_rating_key}
-                    className={`${styles.clickableRow} ${selected.has(col.plex_rating_key) ? styles.selectedRow : ""}`}
-                    onClick={() => navigate(`/collections/${col.plex_rating_key}`)}
+                    key={col.plexRatingKey}
+                    className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
+                    onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
                   >
                     <td className={styles.checkboxCell} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         className={styles.checkbox}
-                        checked={selected.has(col.plex_rating_key)}
-                        onChange={() => toggleSelect(col.plex_rating_key)}
+                        checked={selected.has(col.plexRatingKey)}
+                        onChange={() => toggleSelect(col.plexRatingKey)}
                       />
                     </td>
                     <td>{col.title}</td>
-                    <td>{col.section_title}</td>
-                    <td>{col.child_count}</td>
+                    <td>{col.sectionTitle}</td>
+                    <td>{col.childCount}</td>
                     <td>{col.smart ? "Yes" : "No"}</td>
                     <td>
                       {labels.map((label) => (
@@ -446,13 +446,13 @@ export default function Collections() {
                         </span>
                       ))}
                     </td>
-                    <td>{col.added_at ? new Date(col.added_at * 1000).toLocaleDateString() : ""}</td>
+                    <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
                     <td>
                       <button
                         className={`${styles.buttonDanger} ${styles.buttonSmall}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(col.plex_rating_key, col.title);
+                          handleDelete(col.plexRatingKey, col.title);
                         }}
                       >
                         Delete

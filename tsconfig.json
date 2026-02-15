@@ -10,6 +10,6 @@
     "isolatedModules": true,
     "skipLibCheck": true
   },
-  "include": ["server/**/*.ts", "shared/**/*.ts"],
+  "include": ["server/**/*.ts", "shared/**/*.ts", "drizzle.config.ts"],
   "exclude": ["node_modules", "web"]
 }

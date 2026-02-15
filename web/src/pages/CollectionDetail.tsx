@@ -87,9 +87,9 @@ export default function CollectionDetail() {
       </div>
 
       <div className={styles.meta}>
-        <span>Section: {collection.section_title}</span>
-        <span>{collection.child_count} items</span>
-        {collection.added_at && <span>Added: {new Date(collection.added_at * 1000).toLocaleDateString()}</span>}
+        <span>Section: {collection.sectionTitle}</span>
+        <span>{collection.childCount} items</span>
+        {collection.addedAt && <span>Added: {new Date(collection.addedAt * 1000).toLocaleDateString()}</span>}
       </div>
 
       {labels.length > 0 && (
