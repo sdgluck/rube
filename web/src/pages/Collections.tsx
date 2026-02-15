@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
@@ -6,14 +6,20 @@ import styles from "./Collections.module.css";
 export default function Collections() {
   const [sectionFilter, setSectionFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const collectionsQuery = trpc.collections.list.useQuery(
     {
       sectionId: sectionFilter || undefined,
-      search: search || undefined,
+      search: debouncedSearch || undefined,
     },
     { refetchOnWindowFocus: false },
   );
