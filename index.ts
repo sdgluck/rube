@@ -11,6 +11,7 @@
  *   generate             Use AI to create curated collections from library items
  *   because-you-watched  Create "Because you watched X" collections from watch history
  *   cleanup              Delete tinkerbell-generated collections
+ *   sync-collections     Sync all Plex collections to local database
  *
  * Global options:
  *   --url, -u          Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
@@ -53,6 +54,7 @@ Commands:
   generate             Use AI to create curated collections from library items
   because-you-watched  Create "Because you watched X" collections from watch history
   cleanup              Delete tinkerbell-generated collections
+  sync-collections     Sync all Plex collections to local database
 
 Global options:
   --url, -u          Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
@@ -294,6 +296,50 @@ if (command === "shuffle") {
   }
 
   const { default: run } = await import("./commands/because-you-watched.ts");
+  await run(args).catch((err: Error) => {
+    console.error(`\n❌ Fatal error: ${err.message}`);
+    if (args.verbose) console.error(err.stack);
+    process.exit(1);
+  });
+} else if (command === "sync-collections") {
+  const { values: args } = parseArgs({
+    options: {
+      url: { type: "string", short: "u" },
+      token: { type: "string", short: "t" },
+      sections: { type: "string", short: "s" },
+      verbose: { type: "boolean", short: "v", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
+
+  if (args.help) {
+    console.log(
+      `
+tinkerbell sync-collections — Sync all Plex collections to local database.
+
+Usage:
+  tinkerbell sync-collections [options]
+
+Options:
+  --sections, -s   Comma-separated section names/IDs  (omit to sync ALL sections)
+
+Global options:
+  --url, -u        Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
+  --token, -t      Plex auth token           (env: PLEX_TOKEN, required)
+  --verbose, -v    Show detailed output      (default: false)
+  --help, -h       Show this help message
+
+Examples:
+  tinkerbell sync-collections --token abc123
+  tinkerbell sync-collections --token abc123 --sections Movies
+      `.trim(),
+    );
+    process.exit(0);
+  }
+
+  const { default: run } = await import("./commands/sync-collections.ts");
   await run(args).catch((err: Error) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
     if (args.verbose) console.error(err.stack);

@@ -1,6 +1,14 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 import { getAllConfig, getConfig, setConfig, configSchema, type ConfigKey } from "./config.ts";
+import { createPlexClient } from "./plex.ts";
+import {
+  syncCollections,
+  getLocalCollections,
+  getLocalCollection,
+  updateCollection,
+  deleteCollection,
+} from "./collections.ts";
 
 const t = initTRPC.create();
 
@@ -18,8 +26,66 @@ const configRouter = t.router({
   }),
 });
 
+function getPlexClient() {
+  const plexUrl = getConfig("global_plex_url");
+  const plexToken = getConfig("global_plex_token");
+  if (!plexUrl || !plexToken) {
+    throw new Error("Plex URL and token are not configured");
+  }
+  return createPlexClient({ url: plexUrl, token: plexToken });
+}
+
+const collectionsRouter = t.router({
+  list: t.procedure
+    .input(
+      z
+        .object({ sectionId: z.string().optional(), label: z.string().optional(), search: z.string().optional() })
+        .optional(),
+    )
+    .query(({ input }) => {
+      return getLocalCollections(input);
+    }),
+
+  get: t.procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
+    const row = getLocalCollection(input.ratingKey);
+    if (!row) throw new Error(`Collection ${input.ratingKey} not found`);
+    return row;
+  }),
+
+  items: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+    const client = getPlexClient();
+    return client.getCollectionChildren(input.ratingKey);
+  }),
+
+  update: t.procedure
+    .input(z.object({ ratingKey: z.string(), title: z.string().optional(), summary: z.string().optional() }))
+    .mutation(async ({ input }) => {
+      const { ratingKey, ...updates } = input;
+      const client = getPlexClient();
+      await updateCollection(client, ratingKey, updates);
+      return { ok: true };
+    }),
+
+  delete: t.procedure.input(z.object({ ratingKey: z.string() })).mutation(async ({ input }) => {
+    const client = getPlexClient();
+    await deleteCollection(client, input.ratingKey);
+    return { ok: true };
+  }),
+
+  sync: t.procedure.mutation(async () => {
+    const client = getPlexClient();
+    let sections = await client.getSections();
+    const configuredLibraries = getConfig("global_plex_libraries");
+    if (configuredLibraries) {
+      sections = sections.filter((s) => configuredLibraries.includes(s.title));
+    }
+    return syncCollections(client, sections);
+  }),
+});
+
 export const appRouter = t.router({
   config: configRouter,
+  collections: collectionsRouter,
 
   plexSections: t.procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");

@@ -32,13 +32,27 @@ const DB_PATH = join(import.meta.dirname, "tinkerbell.db");
 
 let db: DatabaseSync | undefined;
 
-function getDb(): DatabaseSync {
+export function getDb(): DatabaseSync {
   if (!db) {
     db = new DatabaseSync(DB_PATH);
     db.exec(`
       CREATE TABLE IF NOT EXISTS config (
         key   TEXT PRIMARY KEY,
         value TEXT
+      )
+    `);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS collections (
+        plex_rating_key TEXT PRIMARY KEY,
+        section_id      TEXT NOT NULL,
+        section_title   TEXT NOT NULL,
+        title           TEXT NOT NULL,
+        summary         TEXT DEFAULT '',
+        child_count     INTEGER DEFAULT 0,
+        labels          TEXT DEFAULT '[]',
+        added_at        INTEGER,
+        thumb           TEXT DEFAULT '',
+        synced_at       INTEGER NOT NULL
       )
     `);
   }

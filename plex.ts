@@ -52,6 +52,16 @@ export interface PlexCollection {
   addedAt?: number;
 }
 
+export interface PlexCollectionDetail {
+  ratingKey: string;
+  title: string;
+  summary: string;
+  childCount: number;
+  thumb: string;
+  labels: string[];
+  addedAt?: number;
+}
+
 export interface PlexLabel {
   tag: string;
 }
@@ -293,6 +303,40 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     await request(`/library/metadata/${ratingKey}`, { method: "DELETE" });
   }
 
+  // ─── Collection detail operations ──────────────────────────────────────────
+
+  async function getCollectionDetail(ratingKey: string): Promise<PlexCollectionDetail> {
+    const detail = await request(`/library/metadata/${ratingKey}`);
+    const meta = detail?.MediaContainer?.Metadata?.[0];
+    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    return {
+      ratingKey: meta.ratingKey,
+      title: meta.title,
+      summary: meta.summary || "",
+      childCount: meta.childCount || 0,
+      thumb: meta.thumb || "",
+      labels: (meta.Label || []).map((l: PlexLabel) => l.tag),
+      addedAt: meta.addedAt,
+    };
+  }
+
+  async function getCollectionChildren(ratingKey: string): Promise<PlexItem[]> {
+    const data = await request(`/library/metadata/${ratingKey}/children`);
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((item: { ratingKey: string; title: string; year?: number }) => ({
+      ratingKey: item.ratingKey,
+      title: item.title,
+      year: item.year,
+    }));
+  }
+
+  async function updateCollection(ratingKey: string, updates: { title?: string; summary?: string }): Promise<void> {
+    const params: Record<string, string> = {};
+    if (updates.title !== undefined) params.title = updates.title;
+    if (updates.summary !== undefined) params.summary = updates.summary;
+    await request(`/library/metadata/${ratingKey}`, { method: "PUT", params });
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -305,6 +349,9 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     pinToHomepage,
     getCollections,
     getCollectionLabels,
+    getCollectionDetail,
+    getCollectionChildren,
+    updateCollection,
     deleteItem,
     getWatchHistory,
     getAccounts,

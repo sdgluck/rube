@@ -80,16 +80,19 @@ console.log(`  SECTIONS:  ${sections ? (Array.isArray(sections) ? sections.join(
 console.log(`  LIMIT:     ${limit || "(default)"}`);
 console.log(`  BYW_USER:  ${bywUser || "(all)"}`);
 console.log(`  VERBOSE:   ${verbose || "false"}`);
+console.log(`  Sync-collections interval:     24h`);
 console.log(`  Generate interval:             24h`);
 console.log(`  Because-you-watched interval:  24h`);
 console.log(`  Shuffle interval:              30m\n`);
 
-// Run all commands on startup
+// Run all commands on startup (sync collections first so data is fresh)
+await run("sync-collections");
 await run("generate");
 await run("because-you-watched");
 await run("shuffle");
 
 // Schedule recurring runs
+setInterval(() => run("sync-collections"), TWENTY_FOUR_HOURS);
 setInterval(() => run("generate"), TWENTY_FOUR_HOURS);
 setInterval(() => run("because-you-watched"), TWENTY_FOUR_HOURS);
 setInterval(() => run("shuffle"), THIRTY_MINUTES);
