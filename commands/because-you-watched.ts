@@ -143,11 +143,6 @@ export default async function run(args: BywArgs): Promise<void> {
       console.log(`     • ${title}`);
     }
 
-    // Delete old byw collections
-    console.log(`   🗑  Deleting previous "because you watched" collections...`);
-    const deleted = await client.deleteCollectionsByLabel(sectionId, BYW_LABEL);
-    console.log(`   🗑  Deleted ${deleted} old collection(s).`);
-
     // Fetch all items in section
     console.log(`   📥 Fetching library items...`);
     const libraryItems = await client.fetchAllItems(sectionId);
@@ -182,13 +177,49 @@ export default async function run(args: BywArgs): Promise<void> {
       titleMap.set(item.title, item.ratingKey);
     }
 
-    // Create collections and pin them
+    // Determine which new collections will actually be created
+    const newCollectionNames = new Set<string>();
+    for (const col of aiCollections) {
+      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
+      if (ratingKeys.length >= 10) {
+        newCollectionNames.add(col.name.toLowerCase());
+      }
+    }
+
+    // Delete old byw collections that are NOT in the new list
+    console.log(`   🗑  Cleaning up old "because you watched" collections...`);
+    const allCollections = await client.getCollections(sectionId);
+    let deleted = 0;
+    for (const col of allCollections) {
+      const labels = await client.getCollectionLabels(col.ratingKey);
+      if (!labels.some((l) => l.tag.toLowerCase() === BYW_LABEL.toLowerCase())) continue;
+      if (newCollectionNames.has(col.title.toLowerCase())) {
+        console.log(`   ♻️  Keeping "${col.title}" (still relevant)`);
+        continue;
+      }
+      client.log(`Deleting collection "${col.title}" (${col.ratingKey})`);
+      await client.deleteItem(col.ratingKey);
+      deleted++;
+    }
+    console.log(
+      `   🗑  Deleted ${deleted} old collection(s), kept ${newCollectionNames.size - deleted >= 0 ? allCollections.length - deleted : 0} existing.`,
+    );
+
+    // Create collections and pin them (skip if already exists)
     let created = 0;
     for (const col of aiCollections) {
       const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
 
       if (ratingKeys.length < 10) {
         client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
+        continue;
+      }
+
+      // Skip if a collection with this name already exists (was kept)
+      const existingCol = allCollections.find((c) => c.title.toLowerCase() === col.name.toLowerCase());
+      if (existingCol) {
+        console.log(`   ♻️  "${col.name}" already exists, skipping creation.`);
+        created++;
         continue;
       }
 
@@ -218,7 +249,7 @@ export default async function run(args: BywArgs): Promise<void> {
       }
     }
 
-    console.log(`   ✅ Created and pinned ${created} collection(s) for "${section.title}".`);
+    console.log(`   ✅ ${created} collection(s) for "${section.title}" (new + kept).`);
   }
 
   console.log("\n🎉 All done!");
