@@ -380,23 +380,8 @@ export function updateJob(jobId: string, updates: { schedule?: string; enabled?:
   scheduleCron(job);
 }
 
-async function runStartupSequence(): Promise<void> {
-  const commands = ["sync-collections", "generate", "because-you-watched", "shuffle"];
-  for (const cmd of commands) {
-    const result = startJob(cmd);
-    if (result) {
-      await result.done;
-    }
-  }
-}
-
 export function initJobs(): void {
   seedDefaultJobs();
   markStaleRunsAsFailed();
   startCronSchedules();
-
-  // Run startup sequence in background (non-blocking)
-  runStartupSequence().catch((err) => {
-    console.error("[jobs] Startup sequence error:", err);
-  });
 }
