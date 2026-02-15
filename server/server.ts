@@ -6,7 +6,7 @@ import { appRouter } from "./trpc.ts";
 import { initJobs } from "./jobs.ts";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
-const DIST_DIR = join(import.meta.dirname, "web", "dist");
+const DIST_DIR = join(import.meta.dirname, "..", "web", "dist");
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",

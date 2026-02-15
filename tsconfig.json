@@ -10,6 +10,6 @@
     "isolatedModules": true,
     "skipLibCheck": true
   },
-  "include": ["*.ts", "commands/*.ts"],
+  "include": ["server/**/*.ts", "shared/**/*.ts"],
   "exclude": ["node_modules", "web"]
 }

@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient, type PlexItem, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
-import type { JobContext, GenerateJobConfig } from "../job-context.ts";
+import type { JobContext, GenerateJobConfig } from "../../shared/job-context.ts";
 
 interface AiCollection {
   name: string;

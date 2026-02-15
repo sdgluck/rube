@@ -24,7 +24,7 @@ export type ConfigSchema = typeof configSchema;
 export type ConfigKey = keyof z.infer<ConfigSchema>;
 export type ConfigValue<K extends ConfigKey> = z.infer<ConfigSchema>[K];
 
-const DB_PATH = join(import.meta.dirname, "tinkerbell.db");
+const DB_PATH = join(import.meta.dirname, "..", "tinkerbell.db");
 
 let db: DatabaseSync | undefined;
 
@@ -58,21 +58,22 @@ export function getDb(): DatabaseSync {
     } catch {
       // Column already exists
     }
-    // Migration: add config column to jobs if missing
-    try {
-      db.exec("ALTER TABLE jobs ADD COLUMN config TEXT NOT NULL DEFAULT '{}'");
-    } catch {
-      // Column already exists
-    }
     db.exec(`
       CREATE TABLE IF NOT EXISTS jobs (
         id        TEXT PRIMARY KEY,
         name      TEXT NOT NULL,
         command   TEXT NOT NULL,
         schedule  TEXT NOT NULL DEFAULT '',
-        enabled   INTEGER NOT NULL DEFAULT 1
+        enabled   INTEGER NOT NULL DEFAULT 1,
+        config    TEXT NOT NULL DEFAULT '{}'
       )
     `);
+    // Migration: add config column to jobs if missing (for existing DBs)
+    try {
+      db.exec("ALTER TABLE jobs ADD COLUMN config TEXT NOT NULL DEFAULT '{}'");
+    } catch {
+      // Column already exists
+    }
     db.exec(`
       CREATE TABLE IF NOT EXISTS job_runs (
         id          TEXT PRIMARY KEY,

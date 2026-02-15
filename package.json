@@ -4,9 +4,9 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,magenta \"node --watch-path=./ --watch server.ts\" \"yarn --cwd web dev\"",
+    "dev": "concurrently -n server,web -c blue,magenta \"node --watch-path=./server --watch-path=./shared --watch server/server.ts\" \"yarn --cwd web dev\"",
     "typecheck": "tsc",
-    "test": "node --test commands/shuffle.test.ts",
+    "test": "node --test server/commands/shuffle.test.ts",
     "prepare": "husky"
   },
   "private": true,

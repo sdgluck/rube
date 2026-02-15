@@ -1,6 +1,6 @@
 import { createPlexClient, type PlexHub, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
-import type { JobContext, CommonJobConfig } from "../job-context.ts";
+import type { JobContext, CommonJobConfig } from "../../shared/job-context.ts";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];

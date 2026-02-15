@@ -476,6 +476,11 @@
   resolved "https://registry.yarnpkg.com/@trpc/react-query/-/react-query-11.10.0.tgz#344a15f9a8f0d3c554d1be9032c51a48b66073c0"
   integrity sha512-SKLpwEMU32mpDTCc3msMxb0fx113x4Jsiw0/t+ENY6AtyvhvDMRF1bpWtoNyY6zpX5wN4JCQMhHef8k0T1rJIw==
 
+"@trpc/server@^11.10.0":
+  version "11.10.0"
+  resolved "https://registry.yarnpkg.com/@trpc/server/-/server-11.10.0.tgz#962ea785240e0ba0183fb72d9aacf880675214eb"
+  integrity sha512-zZjTrR6He61e5TiT7e/bQqab/jRcXBZM8Fg78Yoo8uh5pz60dzzbYuONNUCOkafv5ppXVMms4NHYfNZgzw50vg==
+
 "@types/babel__core@^7.20.5":
   version "7.20.5"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.20.5.tgz#3df15f27ba85319caa07ba08d0721889bb39c017"

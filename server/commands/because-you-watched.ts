@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient, type PlexItem } from "../plex.ts";
 import { getConfig } from "../config.ts";
-import type { JobContext, BywJobConfig } from "../job-context.ts";
+import type { JobContext, BywJobConfig } from "../../shared/job-context.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];

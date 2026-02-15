@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Cron } from "croner";
 import { getDb, getConfig } from "./config.ts";
-import type { JobContext, CommonJobConfig, GenerateJobConfig, BywJobConfig } from "./job-context.ts";
+import type { JobContext, CommonJobConfig, GenerateJobConfig, BywJobConfig } from "../shared/job-context.ts";
 
 interface Job {
   id: string;

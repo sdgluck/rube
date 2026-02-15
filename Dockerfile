@@ -9,7 +9,7 @@ FROM node:25-alpine
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --production --frozen-lockfile
-COPY index.ts scheduler.ts plex.ts config.ts server.ts trpc.ts collections.ts jobs.ts ./
-COPY commands/ ./commands/
+COPY server/ ./server/
+COPY shared/ ./shared/
 COPY --from=frontend /web/dist ./web/dist/
-CMD ["node", "server.ts"]
+CMD ["node", "server/server.ts"]
