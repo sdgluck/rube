@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import Settings from "./pages/Settings";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
@@ -8,6 +8,7 @@ import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
 
 function SidebarActiveJobs() {
+  const navigate = useNavigate();
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
   const cancelMutation = trpc.jobs.cancel.useMutation({
     onSuccess: () => activeRunsQuery.refetch(),
@@ -20,13 +21,16 @@ function SidebarActiveJobs() {
     <div className={styles.sidebarJobs}>
       <div className={styles.sidebarJobsTitle}>Running</div>
       {runs.map((run) => (
-        <div key={run.id} className={styles.sidebarJob}>
+        <div key={run.id} className={styles.sidebarJob} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
           <div className={styles.spinner} />
           <span className={styles.sidebarJobName}>{run.job_name}</span>
           {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
           <button
             className={styles.sidebarCancel}
-            onClick={() => cancelMutation.mutate({ runId: run.id })}
+            onClick={(e) => {
+              e.stopPropagation();
+              cancelMutation.mutate({ runId: run.id });
+            }}
             title="Cancel"
           >
             &times;
