@@ -63,10 +63,12 @@ export default async function run(args: BywArgs): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve --user to accountID
-  let accountID: string | undefined;
+  // Resolve target users
+  const accounts = await client.getAccounts();
+  const resolvedUsers: Array<{ name: string; accountID: string | undefined }> = [];
+
   if (args.user) {
-    const accounts = await client.getAccounts();
+    // CLI --user flag: single user
     const match = accounts.find((a) => a.name?.toLowerCase() === args.user!.toLowerCase());
     if (!match) {
       console.error(`\n❌ User "${args.user}" not found.`);
@@ -74,8 +76,20 @@ export default async function run(args: BywArgs): Promise<void> {
       accounts.forEach((a) => console.error(`     ${a.name} (ID: ${a.id})`));
       process.exit(1);
     }
-    accountID = match.id;
-    console.log(`   User: ${match.name} (ID: ${accountID})`);
+    resolvedUsers.push({ name: match.name || args.user, accountID: match.id });
+    console.log(`   User: ${match.name} (ID: ${match.id})`);
+  } else {
+    // No --user flag: run for all accounts
+    for (const account of accounts) {
+      if (account.name) {
+        resolvedUsers.push({ name: account.name, accountID: account.id });
+      }
+    }
+    if (resolvedUsers.length === 0) {
+      console.error(`\n❌ No user accounts found.`);
+      process.exit(1);
+    }
+    console.log(`   Users: ${resolvedUsers.map((u) => u.name).join(", ")}`);
   }
 
   // Resolve target sections
@@ -102,155 +116,180 @@ export default async function run(args: BywArgs): Promise<void> {
 
   console.log(`   Sections: ${targetSections.map((s) => s.title).join(", ")}`);
 
-  for (const section of targetSections) {
-    console.log(
-      `§PROGRESS:${targetSections.indexOf(section) + 1}/${targetSections.length}:Processing "${section.title}"...`,
-    );
-    const sectionId = section.key;
+  const totalSteps = targetSections.length * resolvedUsers.length;
+  let step = 0;
 
-    console.log(`\n📚 "${section.title}" — starting...`);
-
-    // Fetch per-section watch history
-    console.log(`   📜 Fetching watch history...`);
-    const history = await client.getWatchHistory({
-      accountID,
-      librarySectionID: sectionId,
-      limit: LIMIT * 5,
-    });
-
-    if (history.length === 0) {
-      console.log(`   ⏭  No watch history found, skipping.`);
-      continue;
+  for (const user of resolvedUsers) {
+    const isPerUser = !!user.name;
+    if (isPerUser) {
+      console.log(`\n👤 Processing user: ${user.name}`);
     }
 
-    // Deduplicate: for TV episodes group by show (grandparentTitle)
-    const seen = new Set<string>();
-    const watchedItems = [];
-    for (const item of history) {
-      const key =
-        item.type === "episode"
-          ? `show:${item.grandparentRatingKey || item.grandparentTitle}`
-          : `${item.type}:${item.ratingKey}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      watchedItems.push(item);
-      if (watchedItems.length >= LIMIT) break;
-    }
+    // Labels for this user's collections
+    const collectionLabels = isPerUser ? ["Tinkerbell", BYW_LABEL, `User:${user.name}`] : BYW_LABELS;
 
-    console.log(`   📜 Found ${watchedItems.length} unique recently watched item(s):`);
-    for (const item of watchedItems) {
-      const title =
-        item.type === "episode" ? item.grandparentTitle : `${item.title}${item.year ? ` (${item.year})` : ""}`;
-      console.log(`     • ${title}`);
-    }
+    for (const section of targetSections) {
+      step++;
+      console.log(
+        `§PROGRESS:${step}/${totalSteps}:Processing "${section.title}"${isPerUser ? ` for ${user.name}` : ""}...`,
+      );
+      const sectionId = section.key;
 
-    // Fetch all items in section
-    console.log(`   📥 Fetching library items...`);
-    const libraryItems = await client.fetchAllItems(sectionId);
-    console.log(`   📥 Found ${libraryItems.length} item(s).`);
+      console.log(`\n📚 "${section.title}"${isPerUser ? ` (${user.name})` : ""} — starting...`);
 
-    if (libraryItems.length < 15) {
-      console.log(`   ⏭  Too few items to generate collections, skipping.`);
-      continue;
-    }
+      // Fetch per-section watch history
+      console.log(`   📜 Fetching watch history...`);
+      const history = await client.getWatchHistory({
+        accountID: user.accountID,
+        librarySectionID: sectionId,
+        limit: LIMIT * 5,
+      });
 
-    // Build watched item titles for the prompt
-    const watchedTitles = watchedItems.map((item) =>
-      item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
-    );
-
-    // Ask AI for collections
-    console.log(`   🤖 Asking Claude for "Because you watched" collections...`);
-    const aiCollections = await generateBYWCollections(
-      ANTHROPIC_API_KEY,
-      client,
-      watchedTitles,
-      libraryItems,
-      section.title,
-    );
-    console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
-
-    // Build title→ratingKey lookup
-    const titleMap = new Map<string, string>();
-    for (const item of libraryItems) {
-      const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
-      titleMap.set(key, item.ratingKey);
-      titleMap.set(item.title, item.ratingKey);
-    }
-
-    // Determine which new collections will actually be created
-    const newCollectionNames = new Set<string>();
-    for (const col of aiCollections) {
-      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
-      if (ratingKeys.length >= 10) {
-        newCollectionNames.add(col.name.toLowerCase());
-      }
-    }
-
-    // Delete old byw collections that are NOT in the new list
-    console.log(`   🗑  Cleaning up old "because you watched" collections...`);
-    const allCollections = await client.getCollections(sectionId);
-    let deleted = 0;
-    for (const col of allCollections) {
-      const labels = await client.getCollectionLabels(col.ratingKey);
-      if (!labels.some((l) => l.tag.toLowerCase() === BYW_LABEL.toLowerCase())) continue;
-      if (newCollectionNames.has(col.title.toLowerCase())) {
-        console.log(`   ♻️  Keeping "${col.title}" (still relevant)`);
-        continue;
-      }
-      client.log(`Deleting collection "${col.title}" (${col.ratingKey})`);
-      await client.deleteItem(col.ratingKey);
-      deleted++;
-    }
-    console.log(
-      `   🗑  Deleted ${deleted} old collection(s), kept ${newCollectionNames.size - deleted >= 0 ? allCollections.length - deleted : 0} existing.`,
-    );
-
-    // Create collections and pin them (skip if already exists)
-    let created = 0;
-    for (const col of aiCollections) {
-      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
-
-      if (ratingKeys.length < 10) {
-        client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
+      if (history.length === 0) {
+        console.log(`   ⏭  No watch history found, skipping.`);
         continue;
       }
 
-      // Skip if a collection with this name already exists (was kept)
-      const existingCol = allCollections.find((c) => c.title.toLowerCase() === col.name.toLowerCase());
-      if (existingCol) {
-        console.log(`   ♻️  "${col.name}" already exists, skipping creation.`);
-        created++;
+      // Deduplicate: for TV episodes group by show (grandparentTitle)
+      const seen = new Set<string>();
+      const watchedItems = [];
+      for (const item of history) {
+        const key =
+          item.type === "episode"
+            ? `show:${item.grandparentRatingKey || item.grandparentTitle}`
+            : `${item.type}:${item.ratingKey}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        watchedItems.push(item);
+        if (watchedItems.length >= LIMIT) break;
+      }
+
+      console.log(`   📜 Found ${watchedItems.length} unique recently watched item(s):`);
+      for (const item of watchedItems) {
+        const title =
+          item.type === "episode" ? item.grandparentTitle : `${item.title}${item.year ? ` (${item.year})` : ""}`;
+        console.log(`     • ${title}`);
+      }
+
+      // Fetch all items in section
+      console.log(`   📥 Fetching library items...`);
+      const libraryItems = await client.fetchAllItems(sectionId);
+      console.log(`   📥 Found ${libraryItems.length} item(s).`);
+
+      if (libraryItems.length < 15) {
+        console.log(`   ⏭  Too few items to generate collections, skipping.`);
         continue;
       }
 
-      console.log(`   📦 Creating "${col.name}" (${ratingKeys.length} items)...`);
-
-      const collectionKey = await client.createCollectionWithLabel(
-        sectionId,
-        section.type,
-        machineId,
-        col.name,
-        ratingKeys,
-        BYW_LABELS,
+      // Build watched item titles for the prompt
+      const watchedTitles = watchedItems.map((item) =>
+        item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
       );
 
-      if (collectionKey) {
-        const pinned = await client.pinToHomepage(sectionId, collectionKey, {
-          promotedToOwnHome: 1,
-          promotedToRecommendedHome: 1,
-          promotedToSharedHome: 0,
-        });
-        if (pinned) {
-          client.log(`Pinned "${col.name}" to homepage`);
-        } else {
-          client.log(`Created "${col.name}" but could not pin to homepage`);
-        }
-        created++;
-      }
-    }
+      // Ask AI for collections
+      console.log(`   🤖 Asking Claude for "Because you watched" collections...`);
+      const aiCollections = await generateBYWCollections(
+        ANTHROPIC_API_KEY,
+        client,
+        watchedTitles,
+        libraryItems,
+        section.title,
+      );
+      console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
 
-    console.log(`   ✅ ${created} collection(s) for "${section.title}" (new + kept).`);
+      // Build title→ratingKey lookup
+      const titleMap = new Map<string, string>();
+      for (const item of libraryItems) {
+        const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
+        titleMap.set(key, item.ratingKey);
+        titleMap.set(item.title, item.ratingKey);
+      }
+
+      // Determine which new collections will actually be created
+      const newCollectionNames = new Set<string>();
+      for (const col of aiCollections) {
+        const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
+        if (ratingKeys.length >= 10) {
+          newCollectionNames.add(col.name.toLowerCase());
+        }
+      }
+
+      // Delete old byw collections that are NOT in the new list
+      // When per-user, only delete collections that have this user's label
+      console.log(`   🗑  Cleaning up old "because you watched" collections...`);
+      const allCollections = await client.getCollections(sectionId);
+      let deleted = 0;
+      for (const col of allCollections) {
+        const labels = await client.getCollectionLabels(col.ratingKey);
+        const hasByw = labels.some((l) => l.tag.toLowerCase() === BYW_LABEL.toLowerCase());
+        if (!hasByw) continue;
+
+        // When per-user, only touch collections with this user's label
+        if (isPerUser) {
+          const hasUserLabel = labels.some((l) => l.tag === `User:${user.name}`);
+          if (!hasUserLabel) continue;
+        }
+
+        if (newCollectionNames.has(col.title.toLowerCase())) {
+          console.log(`   ♻️  Keeping "${col.title}" (still relevant)`);
+          continue;
+        }
+        client.log(`Deleting collection "${col.title}" (${col.ratingKey})`);
+        await client.deleteItem(col.ratingKey);
+        deleted++;
+      }
+      console.log(
+        `   🗑  Deleted ${deleted} old collection(s), kept ${newCollectionNames.size - deleted >= 0 ? allCollections.length - deleted : 0} existing.`,
+      );
+
+      // Create collections and pin them (skip if already exists)
+      let created = 0;
+      for (const col of aiCollections) {
+        const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
+
+        if (ratingKeys.length < 10) {
+          client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
+          continue;
+        }
+
+        // Skip if a collection with this name already exists (was kept)
+        const existingCol = allCollections.find((c) => c.title.toLowerCase() === col.name.toLowerCase());
+        if (existingCol) {
+          console.log(`   ♻️  "${col.name}" already exists, skipping creation.`);
+          created++;
+          continue;
+        }
+
+        console.log(`   📦 Creating "${col.name}" (${ratingKeys.length} items)...`);
+
+        const collectionKey = await client.createCollectionWithLabel(
+          sectionId,
+          section.type,
+          machineId,
+          col.name,
+          ratingKeys,
+          collectionLabels,
+        );
+
+        if (collectionKey) {
+          const pinned = await client.pinToHomepage(sectionId, collectionKey, {
+            promotedToOwnHome: 1,
+            promotedToRecommendedHome: 1,
+            promotedToSharedHome: 0,
+          });
+          if (pinned) {
+            client.log(`Pinned "${col.name}" to homepage`);
+          } else {
+            client.log(`Created "${col.name}" but could not pin to homepage`);
+          }
+          created++;
+        }
+      }
+
+      console.log(
+        `   ✅ ${created} collection(s) for "${section.title}"${isPerUser ? ` (${user.name})` : ""} (new + kept).`,
+      );
+    }
   }
 
   console.log("\n🎉 All done!");

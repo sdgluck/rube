@@ -179,6 +179,11 @@
   color: #6c3483;
 }
 
+.labelUser {
+  background: #d5f5e3;
+  color: #1e8449;
+}
+
 /* ─── Bulk actions ────────────────────────────────────────────────────────── */
 
 .bulkBar {

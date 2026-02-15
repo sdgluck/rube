@@ -12,6 +12,7 @@
  *   because-you-watched  Create "Because you watched X" collections from watch history
  *   cleanup              Delete tinkerbell-generated collections
  *   sync-collections     Sync all Plex collections to local database
+ *   label                Configure per-user sharing restrictions via labels
  *
  * Global options:
  *   --url, -u          Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
@@ -55,6 +56,7 @@ Commands:
   because-you-watched  Create "Because you watched X" collections from watch history
   cleanup              Delete tinkerbell-generated collections
   sync-collections     Sync all Plex collections to local database
+  label                Configure per-user sharing restrictions via labels
 
 Global options:
   --url, -u          Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
@@ -166,7 +168,7 @@ Usage:
   tinkerbell because-you-watched [options]
 
 Options:
-  --user, -U       Plex account username    (omit for all users' history)
+  --user, -U       Plex account username    (omit for all users)
   --sections, -s   Comma-separated section names/IDs  (omit to process ALL sections)
   --limit, -l      Number of watched items  (default: 10, max: 20)
 
@@ -340,6 +342,54 @@ Examples:
   }
 
   const { default: run } = await import("./commands/sync-collections.ts");
+  await run(args).catch((err: Error) => {
+    console.error(`\n❌ Fatal error: ${err.message}`);
+    if (args.verbose) console.error(err.stack);
+    process.exit(1);
+  });
+} else if (command === "label") {
+  const { values: args } = parseArgs({
+    options: {
+      url: { type: "string", short: "u" },
+      token: { type: "string", short: "t" },
+      sections: { type: "string", short: "s" },
+      verbose: { type: "boolean", short: "v", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
+  });
+
+  if (args.help) {
+    console.log(
+      `
+tinkerbell label — Configure per-user sharing restrictions via labels.
+
+Sets Plex sharing restrictions so each user only sees collections
+labelled "Tinkerbell" and "User:{username}". Run once during setup
+or whenever users are added/removed.
+
+Usage:
+  tinkerbell label [options]
+
+Options:
+  --sections, -s   Comma-separated section names/IDs  (omit for ALL)
+
+Global options:
+  --url, -u        Plex server URL          (env: PLEX_URL, default: http://localhost:32400)
+  --token, -t      Plex auth token           (env: PLEX_TOKEN, required)
+  --verbose, -v    Show detailed output      (default: false)
+  --help, -h       Show this help message
+
+Examples:
+  tinkerbell label --token abc123
+  tinkerbell label --token abc123 --verbose
+      `.trim(),
+    );
+    process.exit(0);
+  }
+
+  const { default: run } = await import("./commands/label.ts");
   await run(args).catch((err: Error) => {
     console.error(`\n❌ Fatal error: ${err.message}`);
     if (args.verbose) console.error(err.stack);

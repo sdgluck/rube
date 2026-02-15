@@ -71,6 +71,13 @@ export interface PlexAccount {
   name?: string;
 }
 
+export interface PlexSharing {
+  id: number;
+  userId: number;
+  username: string;
+  machineIdentifier: string;
+}
+
 interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;
@@ -206,6 +213,74 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
       params: opts as unknown as Record<string, number>,
     });
     return true;
+  }
+
+  // ─── Plex.tv API ──────────────────────────────────────────────────────────
+
+  async function plexTvRequest(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
+    const reqUrl = new URL(path, "https://plex.tv");
+    reqUrl.searchParams.set("X-Plex-Token", token);
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
+    }
+
+    log(`[plex.tv] ${method} ${reqUrl.pathname}`);
+
+    const res = await fetch(reqUrl.toString(), {
+      method,
+      headers: {
+        Accept: "application/json",
+        "X-Plex-Client-Identifier": "tinkerbell",
+        "X-Plex-Product": "tinkerbell",
+        "X-Plex-Version": "1.0.0",
+        ...headers,
+      },
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Plex.tv API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
+    }
+
+    const text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  }
+
+  async function getSharings(machineIdentifier: string): Promise<PlexSharing[]> {
+    const data = await plexTvRequest("/api/users/");
+    const users = data?.MediaContainer?.User || [];
+    const results: PlexSharing[] = [];
+    for (const user of users) {
+      const servers = Array.isArray(user.Server) ? user.Server : user.Server ? [user.Server] : [];
+      const match = servers.find((s: { machineIdentifier: string }) => s.machineIdentifier === machineIdentifier);
+      if (match) {
+        results.push({
+          id: user.id,
+          userId: user.id,
+          username: user.username || user.title || "",
+          machineIdentifier,
+        });
+      }
+    }
+    return results;
+  }
+
+  async function setSharingRestrictions(sharingId: number, labels: string[]): Promise<void> {
+    // Format: "label=Tinkerbell,User:Sam" — URLSearchParams encodes to label%3DTinkerbell%2CUser%3ASam
+    const filterStr = `label=${labels.join(",")}`;
+
+    await plexTvRequest(`/api/v2/sharings/${sharingId}`, {
+      method: "PUT",
+      params: {
+        filterMovies: filterStr,
+        filterTelevision: filterStr,
+      },
+    });
   }
 
   // ─── Watch history & accounts ──────────────────────────────────────────────
@@ -361,6 +436,8 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     getAccounts,
     deleteCollectionsByLabel,
     createCollectionWithLabel,
+    getSharings,
+    setSharingRestrictions,
   };
 }
 

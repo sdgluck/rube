@@ -12,4 +12,4 @@ RUN yarn install --production --frozen-lockfile
 COPY index.ts scheduler.ts plex.ts config.ts server.ts trpc.ts collections.ts jobs.ts ./
 COPY commands/ ./commands/
 COPY --from=frontend /web/dist ./web/dist/
-CMD ["node", "scheduler.ts"]
+CMD ["node", "server.ts"]

@@ -34,6 +34,7 @@ const DEFAULT_JOBS: Job[] = [
   },
   { id: "shuffle", name: "Shuffle Hubs", command: "shuffle", schedule: "*/30 * * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
+  { id: "label", name: "Sync Labels", command: "label", schedule: "", enabled: 1 },
 ];
 
 const activeProcesses = new Map<string, ChildProcess>();
@@ -58,7 +59,6 @@ function buildArgs(command: string): string[] {
   const plexToken = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
   const sections = getConfig("scheduler_sections") || process.env.SECTION;
   const limit = getConfig("scheduler_limit") || process.env.LIMIT;
-  const bywUser = getConfig("byw_plex_user") || process.env.BYW_USER;
   const verbose = getConfig("scheduler_verbose") || process.env.VERBOSE;
 
   const args = ["index.ts", command];
@@ -75,9 +75,6 @@ function buildArgs(command: string): string[] {
   }
   if ((command === "generate" || command === "because-you-watched") && limit) {
     args.push("--limit", limit);
-  }
-  if (command === "because-you-watched" && bywUser) {
-    args.push("--user", bywUser);
   }
   if (verbose === "true" || verbose === "1") {
     args.push("--verbose");

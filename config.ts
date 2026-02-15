@@ -21,7 +21,6 @@ export const configSchema = z.object({
   scheduler_sections: z.array(z.string()),
   scheduler_limit: z.string(),
   scheduler_verbose: z.string(),
-  byw_plex_user: z.string(),
 });
 
 export type ConfigSchema = typeof configSchema;
