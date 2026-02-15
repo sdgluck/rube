@@ -45,6 +45,96 @@ function StatusBadge({ status }: { status?: string }) {
   return <span className={`${styles.badge} ${cls}`}>{status}</span>;
 }
 
+function JobConfigEditor({
+  job,
+  onSave,
+  sections,
+}: {
+  job: { id: string; command: string; config: string };
+  onSave: (config: Record<string, unknown>) => void;
+  sections?: Array<{ key: string; title: string; type: string }>;
+}) {
+  const parsed = (() => {
+    try {
+      return JSON.parse(job.config || "{}");
+    } catch {
+      return {};
+    }
+  })();
+
+  const [selectedSections, setSelectedSections] = useState<string[]>(parsed.sections || []);
+  const [limit, setLimit] = useState<number>(parsed.limit ?? (job.command === "generate" ? 8 : 10));
+  const [dirty, setDirty] = useState(false);
+
+  const hasLimit = job.command === "generate" || job.command === "because-you-watched";
+  const maxLimit = job.command === "generate" ? 10 : 20;
+
+  const toggleSection = (title: string) => {
+    setSelectedSections((prev) => (prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]));
+    setDirty(true);
+  };
+
+  const handleSave = () => {
+    const config: Record<string, unknown> = {};
+    if (selectedSections.length > 0) {
+      config.sections = selectedSections;
+    }
+    if (hasLimit) {
+      config.limit = limit;
+    }
+    onSave(config);
+    setDirty(false);
+  };
+
+  return (
+    <div className={styles.configEditor}>
+      <div className={styles.configField}>
+        <span className={styles.configLabel}>Sections</span>
+        {sections && sections.length > 0 ? (
+          <div className={styles.configSections}>
+            {sections.map((s) => (
+              <label key={s.key} className={styles.configSectionItem}>
+                <input
+                  type="checkbox"
+                  checked={selectedSections.includes(s.title)}
+                  onChange={() => toggleSection(s.title)}
+                />
+                <span>{s.title}</span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <span className={styles.configHint}>Configure Plex connection in Settings first</span>
+        )}
+        {selectedSections.length === 0 && sections && sections.length > 0 && (
+          <span className={styles.configHint}>All sections (default)</span>
+        )}
+      </div>
+      {hasLimit && (
+        <div className={styles.configField}>
+          <label className={styles.configLabel}>
+            Limit
+            <input
+              type="number"
+              className={styles.configNumberInput}
+              min={1}
+              max={maxLimit}
+              value={limit}
+              onChange={(e) => {
+                setLimit(Math.max(1, Math.min(maxLimit, parseInt(e.target.value, 10) || 1)));
+                setDirty(true);
+              }}
+            />
+          </label>
+        </div>
+      )}
+      <button className={`${styles.button} ${styles.buttonSmall}`} onClick={handleSave} disabled={!dirty}>
+        Save Config
+      </button>
+    </div>
+  );
+}
+
 export default function Jobs() {
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
   const [editingCron, setEditingCron] = useState<Record<string, string>>({});
@@ -56,6 +146,10 @@ export default function Jobs() {
     { jobId: expandedJob!, limit: 10 },
     { enabled: !!expandedJob, refetchInterval: 3000 },
   );
+  const sectionsQuery = trpc.plexSections.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   const hasRunning = jobsQuery.data?.some((j) => j.last_run_status === "running");
 
@@ -105,6 +199,13 @@ export default function Jobs() {
   const handleToggleEnabled = useCallback(
     (jobId: string, currentEnabled: number) => {
       updateMutation.mutate({ jobId, enabled: !currentEnabled });
+    },
+    [updateMutation],
+  );
+
+  const handleSaveConfig = useCallback(
+    (jobId: string, config: Record<string, unknown>) => {
+      updateMutation.mutate({ jobId, config });
     },
     [updateMutation],
   );
@@ -186,27 +287,37 @@ export default function Jobs() {
                 </td>
               </tr>
               {expandedJob === job.id && (
-                <tr key={`${job.id}-runs`}>
+                <tr key={`${job.id}-detail`}>
                   <td colSpan={5} className={styles.runsContainer}>
-                    {runsQuery.isLoading ? (
-                      <p>Loading runs...</p>
-                    ) : runsQuery.data && runsQuery.data.length > 0 ? (
-                      <ul className={styles.runsList}>
-                        {runsQuery.data.map((run) => (
-                          <li key={run.id} className={styles.runItem}>
-                            <StatusBadge status={run.status} />
-                            <Link to={`/jobs/runs/${run.id}`} className={styles.runLink}>
-                              View Log
-                            </Link>
-                            <span className={styles.runMeta}>
-                              {formatTime(run.started_at)} &middot; {formatDuration(run.started_at, run.finished_at)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className={styles.noRuns}>No runs yet</p>
+                    {job.command !== "purge-runs" && (
+                      <JobConfigEditor
+                        job={job}
+                        onSave={(config) => handleSaveConfig(job.id, config)}
+                        sections={sectionsQuery.data}
+                      />
                     )}
+                    <div className={styles.runsSection}>
+                      <h4 className={styles.runsTitle}>Run History</h4>
+                      {runsQuery.isLoading ? (
+                        <p>Loading runs...</p>
+                      ) : runsQuery.data && runsQuery.data.length > 0 ? (
+                        <ul className={styles.runsList}>
+                          {runsQuery.data.map((run) => (
+                            <li key={run.id} className={styles.runItem}>
+                              <StatusBadge status={run.status} />
+                              <Link to={`/jobs/runs/${run.id}`} className={styles.runLink}>
+                                View Log
+                              </Link>
+                              <span className={styles.runMeta}>
+                                {formatTime(run.started_at)} &middot; {formatDuration(run.started_at, run.finished_at)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className={styles.noRuns}>No runs yet</p>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )}

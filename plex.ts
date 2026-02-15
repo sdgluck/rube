@@ -3,7 +3,7 @@
  *
  * Usage:
  *   import { createPlexClient, SECTION_TYPE_MAP } from "./plex.ts";
- *   const client = createPlexClient({ url, token, verbose });
+ *   const client = createPlexClient({ url, token });
  */
 
 export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
@@ -11,7 +11,7 @@ export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, art
 interface PlexClientOptions {
   url: string;
   token: string;
-  verbose?: boolean;
+  signal?: AbortSignal;
 }
 
 interface RequestOptions {
@@ -91,9 +91,7 @@ interface WatchHistoryOptions {
   limit?: number;
 }
 
-export function createPlexClient({ url, token, verbose = false }: PlexClientOptions) {
-  const log = (...a: unknown[]) => verbose && console.log("  ", ...a);
-
+export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   // ─── Core ───────────────────────────────────────────────────────────────────
 
   async function request(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
@@ -103,10 +101,9 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
       if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
     }
 
-    log(`${method} ${reqUrl.pathname}${reqUrl.search.replace(token, "***")}`);
-
     const res = await fetch(reqUrl.toString(), {
       method,
+      signal,
       headers: {
         Accept: "application/json",
         "X-Plex-Client-Identifier": "tinkerbell",
@@ -207,7 +204,6 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     });
 
     const hubIdentifier = `custom.collection.${sectionId}.${collectionKey}`;
-    log(`Promoting hub ${hubIdentifier}`);
 
     await request(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
       method: "PUT",
@@ -225,10 +221,9 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
       if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
     }
 
-    log(`[plex.tv] ${method} ${reqUrl.pathname}`);
-
     const res = await fetch(reqUrl.toString(), {
       method,
+      signal,
       headers: {
         Accept: "application/json",
         "X-Plex-Client-Identifier": "tinkerbell",
@@ -290,8 +285,8 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
           }
         }
       }
-    } catch (err) {
-      log(`Failed to fetch friends: ${(err as Error).message}`);
+    } catch {
+      // Failed to fetch friends
     }
 
     // Home/managed users
@@ -309,8 +304,8 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
           machineIdentifier,
         });
       }
-    } catch (err) {
-      log(`Failed to fetch home users: ${(err as Error).message}`);
+    } catch {
+      // Failed to fetch home users
     }
 
     return results;
@@ -367,7 +362,6 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
     for (const col of collections) {
       const labels = await getCollectionLabels(col.ratingKey);
       if (labels.some((l: PlexLabel) => l.tag.toLowerCase() === label.toLowerCase())) {
-        log(`Deleting collection "${col.title}" (${col.ratingKey})`);
         await deleteItem(col.ratingKey);
         deleted++;
       }
@@ -660,7 +654,6 @@ export function createPlexClient({ url, token, verbose = false }: PlexClientOpti
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
-    log,
     getSections,
     getIdentity,
     getManagedHubs,

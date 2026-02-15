@@ -339,3 +339,75 @@
   font-size: 0.85rem;
   font-style: italic;
 }
+
+/* ─── Job config editor ──────────────────────────────────────────────────────── */
+
+.configEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.configField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.configLabel {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.configSections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.configSectionItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.configNumberInput {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.configNumberInput:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+}
+
+.configHint {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.runsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.runsTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  margin: 0;
+}

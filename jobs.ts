@@ -1,7 +1,7 @@
-import { execFile, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { Cron } from "croner";
 import { getDb, getConfig } from "./config.ts";
+import type { JobContext, CommonJobConfig, GenerateJobConfig, BywJobConfig } from "./job-context.ts";
 
 interface Job {
   id: string;
@@ -9,6 +9,7 @@ interface Job {
   command: string;
   schedule: string;
   enabled: number;
+  config: string;
 }
 
 interface JobRun {
@@ -22,7 +23,7 @@ interface JobRun {
   finished_at: number | null;
 }
 
-const DEFAULT_JOBS: Job[] = [
+const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
   {
@@ -38,14 +39,59 @@ const DEFAULT_JOBS: Job[] = [
   { id: "label-undo", name: "Undo Labels", command: "label-undo", schedule: "", enabled: 1 },
 ];
 
-const activeProcesses = new Map<string, ChildProcess>();
-const cronJobs = new Map<string, Cron>();
+const DEFAULT_CONFIGS: Record<string, string> = {
+  generate: '{"limit":8}',
+  "because-you-watched": '{"limit":10}',
+};
 
-const PROGRESS_RE = /§PROGRESS:(\d+)\/(\d+):(.+)/;
+// Command registry — maps command name to its run function
+const commandRegistry: Record<
+  string,
+  (ctx: JobContext, config: CommonJobConfig | GenerateJobConfig | BywJobConfig) => Promise<void>
+> = {};
+
+async function loadCommand(name: string) {
+  if (commandRegistry[name]) return;
+  switch (name) {
+    case "shuffle": {
+      const mod = await import("./commands/shuffle.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "generate": {
+      const mod = await import("./commands/generate.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "because-you-watched": {
+      const mod = await import("./commands/because-you-watched.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "sync-collections": {
+      const mod = await import("./commands/sync-collections.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "label": {
+      const mod = await import("./commands/label.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "label-undo": {
+      const mod = await import("./commands/label-undo.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+  }
+}
+
+const activeControllers = new Map<string, AbortController>();
+const cronJobs = new Map<string, Cron>();
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Internal jobs run in-process instead of spawning a child
+// Internal jobs run in-process without the command pattern
 const internalJobs: Record<string, () => string> = {
   "purge-runs": () => {
     const db = getDb();
@@ -55,41 +101,15 @@ const internalJobs: Record<string, () => string> = {
   },
 };
 
-function buildArgs(command: string): string[] {
-  const plexUrl = getConfig("global_plex_url") || process.env.PLEX_URL;
-  const plexToken = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-  const sections = getConfig("scheduler_sections") || process.env.SECTION;
-  const limit = getConfig("scheduler_limit") || process.env.LIMIT;
-  const verbose = getConfig("scheduler_verbose") || process.env.VERBOSE;
-
-  const args = ["index.ts", command];
-
-  if (plexUrl) {
-    args.push("--url", plexUrl);
-  }
-  if (plexToken) {
-    args.push("--token", plexToken);
-  }
-  if (sections) {
-    const val = Array.isArray(sections) ? sections.join(",") : sections;
-    args.push("--sections", val);
-  }
-  if ((command === "generate" || command === "because-you-watched") && limit) {
-    args.push("--limit", limit);
-  }
-  if (verbose === "true" || verbose === "1") {
-    args.push("--verbose");
-  }
-
-  return args;
-}
-
 function seedDefaultJobs(): void {
   const db = getDb();
-  const stmt = db.prepare("INSERT OR IGNORE INTO jobs (id, name, command, schedule, enabled) VALUES (?, ?, ?, ?, ?)");
+  const stmt = db.prepare(
+    "INSERT OR IGNORE INTO jobs (id, name, command, schedule, enabled, config) VALUES (?, ?, ?, ?, ?, ?)",
+  );
   let inserted = 0;
   for (const job of DEFAULT_JOBS) {
-    const result = stmt.run(job.id, job.name, job.command, job.schedule, job.enabled);
+    const configJson = DEFAULT_CONFIGS[job.id] || "{}";
+    const result = stmt.run(job.id, job.name, job.command, job.schedule, job.enabled, configJson);
     if (result.changes > 0) inserted++;
   }
   if (inserted > 0) {
@@ -116,7 +136,7 @@ function startCronSchedules(): void {
   console.log(`[jobs] Started ${jobs.length} cron schedule(s)`);
 }
 
-function scheduleCron(job: Job): void {
+function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): void {
   const existing = cronJobs.get(job.id);
   if (existing) {
     existing.stop();
@@ -156,7 +176,7 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
     "DELETE FROM job_runs WHERE job_id = ? AND id NOT IN (SELECT id FROM job_runs WHERE job_id = ? ORDER BY started_at DESC LIMIT 50)",
   ).run(jobId, jobId);
 
-  // Internal jobs run in-process
+  // Internal jobs run in-process without the command pattern
   const internalHandler = internalJobs[job.command];
   if (internalHandler) {
     console.log(`[jobs] Running internal job: ${job.name}`);
@@ -181,15 +201,9 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
     return { runId, done };
   }
 
-  const args = buildArgs(job.command);
-  console.log(`[jobs] Starting ${job.name}: node ${args.join(" ")}`);
-
-  const child = execFile(process.execPath, args, {
-    cwd: import.meta.dirname,
-    env: process.env,
-  });
-
-  activeProcesses.set(runId, child);
+  // Command jobs run in-process via the command registry
+  const controller = new AbortController();
+  activeControllers.set(runId, controller);
 
   let logBuffer = "";
   let progress = 0;
@@ -213,81 +227,93 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
     }
   }
 
-  function handleData(data: Buffer): void {
-    const text = data.toString();
-    logBuffer += text;
+  const ctx: JobContext = {
+    log: (...args: unknown[]) => {
+      const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
+      logBuffer += text;
+      // Update message to the last non-empty log line
+      const trimmed = text.trim();
+      if (trimmed) message = trimmed;
+    },
+    progress: (current: number, total: number, msg: string) => {
+      progress = total > 0 ? (current - 1) / total : 0;
+      message = msg;
+    },
+    signal: controller.signal,
+  };
 
-    // Parse progress markers
-    const lines = text.split("\n");
-    for (const line of lines) {
-      const match = line.match(PROGRESS_RE);
-      if (match) {
-        const current = parseInt(match[1], 10);
-        const total = parseInt(match[2], 10);
-        progress = total > 0 ? (current - 1) / total : 0;
-        message = match[3];
-      } else if (line.trim()) {
-        message = line.trim();
-      }
-    }
+  // Parse per-job config
+  let jobConfig: Record<string, unknown> = {};
+  try {
+    jobConfig = JSON.parse(job.config || "{}");
+  } catch {
+    // Invalid config, use empty
   }
-
-  child.stdout?.on("data", handleData);
-  child.stderr?.on("data", handleData);
 
   flushTimer = setInterval(flushLog, 500);
 
-  const done = new Promise<void>((resolve) => {
-    child.on("close", (code) => {
+  console.log(`[jobs] Starting ${job.name} (in-process)`);
+
+  const done = (async () => {
+    try {
+      await loadCommand(job.command);
+      const commandFn = commandRegistry[job.command];
+      if (!commandFn) {
+        throw new Error(`Unknown command: ${job.command}`);
+      }
+      await commandFn(ctx, jobConfig as CommonJobConfig);
+
       if (flushTimer) clearInterval(flushTimer);
       flushLog();
 
-      // If already removed from activeProcesses, it was cancelled
-      const wasCancelled = !activeProcesses.has(runId);
-      activeProcesses.delete(runId);
+      const wasCancelled = !activeControllers.has(runId);
+      activeControllers.delete(runId);
 
       if (!wasCancelled) {
-        const status = code === 0 ? "completed" : "failed";
         try {
-          db.prepare("UPDATE job_runs SET status = ?, progress = ?, finished_at = ? WHERE id = ?").run(
-            status,
-            code === 0 ? 1 : progress,
+          db.prepare("UPDATE job_runs SET status = 'completed', progress = 1, finished_at = ? WHERE id = ?").run(
             Date.now(),
             runId,
           );
         } catch {
           // DB may be closed
         }
-        console.log(`[jobs] ${job.name} ${status} (exit code ${code})`);
+        console.log(`[jobs] ${job.name} completed`);
       }
-      resolve();
-    });
-
-    child.on("error", (err) => {
+    } catch (err) {
       if (flushTimer) clearInterval(flushTimer);
-      logBuffer += `\nError: ${err.message}\n`;
+
+      const wasCancelled = !activeControllers.has(runId);
+      activeControllers.delete(runId);
+
+      if (wasCancelled) {
+        // Already marked as cancelled by cancelRun()
+        return;
+      }
+
+      const errorMsg = (err as Error).message;
+      logBuffer += `\nError: ${errorMsg}\n`;
       flushLog();
-      activeProcesses.delete(runId);
+
       try {
         db.prepare("UPDATE job_runs SET status = 'failed', finished_at = ? WHERE id = ?").run(Date.now(), runId);
       } catch {
         // DB may be closed
       }
-      console.error(`[jobs] ${job.name} failed to start: ${err.message}`);
-      resolve();
-    });
-  });
+      console.error(`[jobs] ${job.name} failed: ${errorMsg}`);
+    }
+  })();
 
   return { runId, done };
 }
 
 export function cancelRun(runId: string): boolean {
-  const child = activeProcesses.get(runId);
-  if (!child) return false;
+  const controller = activeControllers.get(runId);
+  if (!controller) return false;
 
-  // Remove from map first so close handler knows it was cancelled
-  activeProcesses.delete(runId);
-  child.kill("SIGTERM");
+  // Remove from map first so the job handler knows it was cancelled
+  activeControllers.delete(runId);
+  controller.abort();
 
   const db = getDb();
   db.prepare("UPDATE job_runs SET status = 'cancelled', finished_at = ? WHERE id = ?").run(Date.now(), runId);
@@ -354,7 +380,10 @@ export function getActiveRuns(): Array<{
   }>;
 }
 
-export function updateJob(jobId: string, updates: { schedule?: string; enabled?: boolean }): void {
+export function updateJob(
+  jobId: string,
+  updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
+): void {
   const db = getDb();
 
   const job = db.prepare("SELECT * FROM jobs WHERE id = ?").get(jobId) as Job | undefined;
@@ -372,6 +401,10 @@ export function updateJob(jobId: string, updates: { schedule?: string; enabled?:
   if (updates.enabled !== undefined) {
     db.prepare("UPDATE jobs SET enabled = ? WHERE id = ?").run(updates.enabled ? 1 : 0, jobId);
     job.enabled = updates.enabled ? 1 : 0;
+  }
+
+  if (updates.config !== undefined) {
+    db.prepare("UPDATE jobs SET config = ? WHERE id = ?").run(JSON.stringify(updates.config), jobId);
   }
 
   // Reschedule cron

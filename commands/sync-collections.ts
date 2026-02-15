@@ -1,46 +1,27 @@
 import { createPlexClient } from "../plex.ts";
 import { getConfig } from "../config.ts";
 import { syncCollections } from "../collections.ts";
+import type { JobContext, CommonJobConfig } from "../job-context.ts";
 
-interface SyncCollectionsArgs {
-  url?: string;
-  token?: string;
-  sections?: string;
-  verbose?: boolean;
-}
-
-export default async function run(args: SyncCollectionsArgs): Promise<void> {
-  const PLEX_URL = (
-    args.url ||
-    getConfig("global_plex_url") ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-  const VERBOSE = args.verbose;
+export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
+  const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+  const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
 
   if (!PLEX_TOKEN) {
-    console.error("Error: Plex token is required. Use --token or set PLEX_TOKEN.");
-    process.exit(1);
+    throw new Error("Plex token is required. Configure it in Settings.");
   }
 
   const client = createPlexClient({
     url: PLEX_URL,
     token: PLEX_TOKEN,
-    verbose: VERBOSE,
+    signal: ctx.signal,
   });
 
-  console.log(`🔄 tinkerbell sync-collections`);
-  console.log(`   Server: ${PLEX_URL}`);
+  ctx.log(`tinkerbell sync-collections`);
+  ctx.log(`Server: ${PLEX_URL}`);
 
-  try {
-    const identity = await client.getIdentity();
-    console.log(`   Server name: ${identity.friendlyName}`);
-  } catch (err) {
-    console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-    console.error(`   ${(err as Error).message}`);
-    process.exit(1);
-  }
+  const identity = await client.getIdentity();
+  ctx.log(`Server name: ${identity.friendlyName}`);
 
   let allSections = await client.getSections();
 
@@ -50,24 +31,21 @@ export default async function run(args: SyncCollectionsArgs): Promise<void> {
   }
 
   let sections;
-  if (args.sections) {
-    const names = args.sections.split(",").map((s) => s.trim().toLowerCase());
+  if (config.sections && config.sections.length > 0) {
+    const names = config.sections.map((s) => s.trim().toLowerCase());
     sections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
     if (sections.length === 0) {
-      console.error(`\n❌ No matching sections found for "${args.sections}".`);
-      console.error("   Available sections:");
-      allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
-      process.exit(1);
+      throw new Error(`No matching sections found for "${config.sections.join(", ")}".`);
     }
   } else {
     sections = allSections;
   }
 
-  console.log(`   Sections: ${sections.map((s) => s.title).join(", ")}`);
-  console.log(`\n   Syncing collections...`);
+  ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
+  ctx.log(`Syncing collections...`);
 
-  console.log(`§PROGRESS:1/1:Syncing ${sections.length} section(s)...`);
+  ctx.progress(1, 1, `Syncing ${sections.length} section(s)...`);
   const stats = await syncCollections(client, sections);
 
-  console.log(`\n🎉 Done! Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);
+  ctx.log(`Done! Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);
 }

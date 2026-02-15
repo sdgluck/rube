@@ -18,9 +18,6 @@ export const configSchema = z.object({
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
   global_anthropic_api_key: z.string(),
-  scheduler_sections: z.array(z.string()),
-  scheduler_limit: z.string(),
-  scheduler_verbose: z.string(),
 });
 
 export type ConfigSchema = typeof configSchema;
@@ -58,6 +55,12 @@ export function getDb(): DatabaseSync {
     // Migration: add smart column if missing
     try {
       db.exec("ALTER TABLE collections ADD COLUMN smart INTEGER NOT NULL DEFAULT 0");
+    } catch {
+      // Column already exists
+    }
+    // Migration: add config column to jobs if missing
+    try {
+      db.exec("ALTER TABLE jobs ADD COLUMN config TEXT NOT NULL DEFAULT '{}'");
     } catch {
       // Column already exists
     }

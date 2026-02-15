@@ -13,7 +13,6 @@ if (!PLEX_TOKEN) {
 const client = createPlexClient({
   url: PLEX_URL,
   token: PLEX_TOKEN,
-  verbose: false,
 });
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));

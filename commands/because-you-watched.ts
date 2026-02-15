@@ -1,71 +1,45 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { createPlexClient, type PlexClient, type PlexItem } from "../plex.ts";
+import { createPlexClient, type PlexItem } from "../plex.ts";
 import { getConfig } from "../config.ts";
+import type { JobContext, BywJobConfig } from "../job-context.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
-
-interface BywArgs {
-  url?: string;
-  token?: string;
-  user?: string;
-  sections?: string;
-  limit?: string;
-  verbose?: boolean;
-}
 
 interface AiCollection {
   name: string;
   items: string[];
 }
 
-export default async function run(args: BywArgs): Promise<void> {
-  const PLEX_URL = (
-    args.url ||
-    getConfig("global_plex_url") ||
-    process.env.PLEX_URL ||
-    "http://localhost:32400"
-  ).replace(/\/+$/, "");
-  const PLEX_TOKEN = args.token || getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+export default async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
+  const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+  const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
   const ANTHROPIC_API_KEY = getConfig("global_anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
-  const LIMIT = Math.min(parseInt(args.limit!, 10) || 10, 20);
-  const VERBOSE = args.verbose;
+  const LIMIT = Math.min(config.limit ?? 10, 20);
 
   if (!PLEX_TOKEN) {
-    console.error("Error: Plex token is required. Use --token or set PLEX_TOKEN.");
-    process.exit(1);
+    throw new Error("Plex token is required. Configure it in Settings.");
   }
 
   if (!ANTHROPIC_API_KEY) {
-    console.error(
-      "Error: Anthropic API key is required. Set it via the admin UI, ANTHROPIC_API_KEY env var, or config.",
-    );
-    process.exit(1);
+    throw new Error("Anthropic API key is required. Configure it in Settings.");
   }
 
   const client = createPlexClient({
     url: PLEX_URL,
     token: PLEX_TOKEN,
-    verbose: VERBOSE,
+    signal: ctx.signal,
   });
 
-  console.log(`🧚 tinkerbell because-you-watched`);
-  console.log(`   Server: ${PLEX_URL}`);
+  ctx.log(`tinkerbell because-you-watched`);
+  ctx.log(`Server: ${PLEX_URL}`);
 
-  let machineId: string;
-  try {
-    const identity = await client.getIdentity();
-    machineId = identity.machineIdentifier;
-    console.log(`   Server name: ${identity.friendlyName}`);
-  } catch (err) {
-    console.error(`\n❌ Could not connect to Plex server at ${PLEX_URL}`);
-    console.error(`   ${(err as Error).message}`);
-    process.exit(1);
-  }
+  const identity = await client.getIdentity();
+  const machineId = identity.machineIdentifier;
+  ctx.log(`Server name: ${identity.friendlyName}`);
 
-  // Resolve target users
+  // Always run for all accounts
   const accounts = await client.getAccounts();
-  // Build map of account ID → plex.tv username (for label matching with sharing restrictions)
   const sharings = await client.getSharings(machineId);
   const idToPlexUsername = new Map<string, string>();
   for (const s of sharings) {
@@ -74,32 +48,16 @@ export default async function run(args: BywArgs): Promise<void> {
 
   const resolvedUsers: Array<{ name: string; plexUsername: string; accountID: string | undefined }> = [];
 
-  if (args.user) {
-    // CLI --user flag: single user
-    const match = accounts.find((a) => a.name?.toLowerCase() === args.user!.toLowerCase());
-    if (!match) {
-      console.error(`\n❌ User "${args.user}" not found.`);
-      console.error("   Available accounts:");
-      accounts.forEach((a) => console.error(`     ${a.name} (ID: ${a.id})`));
-      process.exit(1);
+  for (const account of accounts) {
+    if (account.name) {
+      const plexUsername = idToPlexUsername.get(account.id) || account.name;
+      resolvedUsers.push({ name: account.name, plexUsername, accountID: account.id });
     }
-    const plexUsername = idToPlexUsername.get(match.id) || match.name || args.user;
-    resolvedUsers.push({ name: match.name || args.user, plexUsername, accountID: match.id });
-    console.log(`   User: ${match.name} (ID: ${match.id}, plex.tv: ${plexUsername})`);
-  } else {
-    // No --user flag: run for all accounts
-    for (const account of accounts) {
-      if (account.name) {
-        const plexUsername = idToPlexUsername.get(account.id) || account.name;
-        resolvedUsers.push({ name: account.name, plexUsername, accountID: account.id });
-      }
-    }
-    if (resolvedUsers.length === 0) {
-      console.error(`\n❌ No user accounts found.`);
-      process.exit(1);
-    }
-    console.log(`   Users: ${resolvedUsers.map((u) => u.name).join(", ")}`);
   }
+  if (resolvedUsers.length === 0) {
+    throw new Error("No user accounts found.");
+  }
+  ctx.log(`Users: ${resolvedUsers.map((u) => u.name).join(", ")}`);
 
   // Resolve target sections
   let allSections = await client.getSections();
@@ -110,20 +68,17 @@ export default async function run(args: BywArgs): Promise<void> {
   }
 
   let targetSections;
-  if (args.sections) {
-    const names = args.sections.split(",").map((s) => s.trim().toLowerCase());
+  if (config.sections && config.sections.length > 0) {
+    const names = config.sections.map((s) => s.trim().toLowerCase());
     targetSections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
     if (targetSections.length === 0) {
-      console.error(`\n❌ No matching sections found for "${args.sections}".`);
-      console.error("   Available sections:");
-      allSections.forEach((s) => console.error(`     [${s.key}] ${s.title} (${s.type})`));
-      process.exit(1);
+      throw new Error(`No matching sections found for "${config.sections.join(", ")}".`);
     }
   } else {
     targetSections = allSections;
   }
 
-  console.log(`   Sections: ${targetSections.map((s) => s.title).join(", ")}`);
+  ctx.log(`Sections: ${targetSections.map((s) => s.title).join(", ")}`);
 
   const totalSteps = targetSections.length * resolvedUsers.length;
   let step = 0;
@@ -131,23 +86,19 @@ export default async function run(args: BywArgs): Promise<void> {
   for (const user of resolvedUsers) {
     const isPerUser = !!user.name;
     if (isPerUser) {
-      console.log(`\n👤 Processing user: ${user.name}`);
+      ctx.log(`Processing user: ${user.name}`);
     }
 
-    // Labels for this user's collections — use plex.tv username for sharing restriction compatibility
     const collectionLabels = isPerUser ? ["Tinkerbell", BYW_LABEL, `User:${user.plexUsername}`] : BYW_LABELS;
 
     for (const section of targetSections) {
       step++;
-      console.log(
-        `§PROGRESS:${step}/${totalSteps}:Processing "${section.title}"${isPerUser ? ` for ${user.name}` : ""}...`,
-      );
+      ctx.progress(step, totalSteps, `Processing "${section.title}"${isPerUser ? ` for ${user.name}` : ""}...`);
       const sectionId = section.key;
 
-      console.log(`\n📚 "${section.title}"${isPerUser ? ` (${user.name})` : ""} — starting...`);
+      ctx.log(`"${section.title}"${isPerUser ? ` (${user.name})` : ""} — starting...`);
 
-      // Fetch per-section watch history
-      console.log(`   📜 Fetching watch history...`);
+      ctx.log(`Fetching watch history...`);
       const history = await client.getWatchHistory({
         accountID: user.accountID,
         librarySectionID: sectionId,
@@ -155,11 +106,11 @@ export default async function run(args: BywArgs): Promise<void> {
       });
 
       if (history.length === 0) {
-        console.log(`   ⏭  No watch history found, skipping.`);
+        ctx.log(`No watch history found, skipping.`);
         continue;
       }
 
-      // Deduplicate: for TV episodes group by show (grandparentTitle)
+      // Deduplicate
       const seen = new Set<string>();
       const watchedItems = [];
       for (const item of history) {
@@ -173,40 +124,32 @@ export default async function run(args: BywArgs): Promise<void> {
         if (watchedItems.length >= LIMIT) break;
       }
 
-      console.log(`   📜 Found ${watchedItems.length} unique recently watched item(s):`);
-      for (const item of watchedItems) {
-        const title =
-          item.type === "episode" ? item.grandparentTitle : `${item.title}${item.year ? ` (${item.year})` : ""}`;
-        console.log(`     • ${title}`);
-      }
+      ctx.log(`Found ${watchedItems.length} unique recently watched item(s).`);
 
       // Fetch all items in section
-      console.log(`   📥 Fetching library items...`);
+      ctx.log(`Fetching library items...`);
       const libraryItems = await client.fetchAllItems(sectionId);
-      console.log(`   📥 Found ${libraryItems.length} item(s).`);
+      ctx.log(`Found ${libraryItems.length} item(s).`);
 
       if (libraryItems.length < 15) {
-        console.log(`   ⏭  Too few items to generate collections, skipping.`);
+        ctx.log(`Too few items to generate collections, skipping.`);
         continue;
       }
 
-      // Build watched item titles for the prompt
       const watchedTitles = watchedItems.map((item) =>
         item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
       );
 
-      // Ask AI for collections
-      console.log(`   🤖 Asking Claude for "Because you watched" collections...`);
+      ctx.log(`Asking Claude for "Because you watched" collections...`);
       const aiCollections = await generateBYWCollections(
         ANTHROPIC_API_KEY,
-        client,
+        ctx,
         watchedTitles,
         libraryItems,
         section.title,
       );
-      console.log(`   🤖 Got ${aiCollections.length} collection(s) from AI.`);
+      ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
 
-      // Build title→ratingKey lookup
       const titleMap = new Map<string, string>();
       for (const item of libraryItems) {
         const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
@@ -214,7 +157,6 @@ export default async function run(args: BywArgs): Promise<void> {
         titleMap.set(item.title, item.ratingKey);
       }
 
-      // Determine which new collections will actually be created
       const newCollectionNames = new Set<string>();
       for (const col of aiCollections) {
         const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
@@ -223,9 +165,7 @@ export default async function run(args: BywArgs): Promise<void> {
         }
       }
 
-      // Delete old byw collections that are NOT in the new list
-      // When per-user, only delete collections that have this user's label
-      console.log(`   🗑  Cleaning up old "because you watched" collections...`);
+      ctx.log(`Cleaning up old "because you watched" collections...`);
       const allCollections = await client.getCollections(sectionId);
       let deleted = 0;
       for (const col of allCollections) {
@@ -233,43 +173,38 @@ export default async function run(args: BywArgs): Promise<void> {
         const hasByw = labels.some((l) => l.tag.toLowerCase() === BYW_LABEL.toLowerCase());
         if (!hasByw) continue;
 
-        // When per-user, only touch collections with this user's label
         if (isPerUser) {
           const hasUserLabel = labels.some((l) => l.tag === `User:${user.plexUsername}`);
           if (!hasUserLabel) continue;
         }
 
         if (newCollectionNames.has(col.title.toLowerCase())) {
-          console.log(`   ♻️  Keeping "${col.title}" (still relevant)`);
+          ctx.log(`Keeping "${col.title}" (still relevant)`);
           continue;
         }
-        client.log(`Deleting collection "${col.title}" (${col.ratingKey})`);
+        ctx.log(`Deleting collection "${col.title}" (${col.ratingKey})`);
         await client.deleteItem(col.ratingKey);
         deleted++;
       }
-      console.log(
-        `   🗑  Deleted ${deleted} old collection(s), kept ${newCollectionNames.size - deleted >= 0 ? allCollections.length - deleted : 0} existing.`,
-      );
+      ctx.log(`Deleted ${deleted} old collection(s).`);
 
-      // Create collections and pin them (skip if already exists)
       let created = 0;
       for (const col of aiCollections) {
         const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
 
         if (ratingKeys.length < 10) {
-          client.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
+          ctx.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 10`);
           continue;
         }
 
-        // Skip if a collection with this name already exists (was kept)
         const existingCol = allCollections.find((c) => c.title.toLowerCase() === col.name.toLowerCase());
         if (existingCol) {
-          console.log(`   ♻️  "${col.name}" already exists, skipping creation.`);
+          ctx.log(`"${col.name}" already exists, skipping creation.`);
           created++;
           continue;
         }
 
-        console.log(`   📦 Creating "${col.name}" (${ratingKeys.length} items)...`);
+        ctx.log(`Creating "${col.name}" (${ratingKeys.length} items)...`);
 
         const collectionKey = await client.createCollectionWithLabel(
           sectionId,
@@ -281,32 +216,26 @@ export default async function run(args: BywArgs): Promise<void> {
         );
 
         if (collectionKey) {
-          const pinned = await client.pinToHomepage(sectionId, collectionKey, {
+          await client.pinToHomepage(sectionId, collectionKey, {
             promotedToOwnHome: 1,
             promotedToRecommendedHome: 1,
             promotedToSharedHome: 0,
           });
-          if (pinned) {
-            client.log(`Pinned "${col.name}" to homepage`);
-          } else {
-            client.log(`Created "${col.name}" but could not pin to homepage`);
-          }
+          ctx.log(`Pinned "${col.name}" to homepage`);
           created++;
         }
       }
 
-      console.log(
-        `   ✅ ${created} collection(s) for "${section.title}"${isPerUser ? ` (${user.name})` : ""} (new + kept).`,
-      );
+      ctx.log(`${created} collection(s) for "${section.title}"${isPerUser ? ` (${user.name})` : ""} (new + kept).`);
     }
   }
 
-  console.log("\n🎉 All done!");
+  ctx.log("All done!");
 }
 
 async function generateBYWCollections(
   apiKey: string,
-  client: PlexClient,
+  ctx: JobContext,
   watchedTitles: string[],
   libraryItems: PlexItem[],
   sectionTitle: string,
@@ -347,7 +276,7 @@ ${itemList}`,
   });
 
   const text = (response.content[0] as { type: "text"; text: string }).text.trim();
-  client.log("AI response:", text);
+  ctx.log("AI response:", text);
   return parseJSON(text);
 }
 

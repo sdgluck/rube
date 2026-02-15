@@ -109,7 +109,14 @@ const jobsRouter = t.router({
   activeRuns: t.procedure.query(() => getActiveRuns()),
 
   update: t.procedure
-    .input(z.object({ jobId: z.string(), schedule: z.string().optional(), enabled: z.boolean().optional() }))
+    .input(
+      z.object({
+        jobId: z.string(),
+        schedule: z.string().optional(),
+        enabled: z.boolean().optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
     .mutation(({ input }) => {
       const { jobId, ...updates } = input;
       updateJob(jobId, updates);
