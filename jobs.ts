@@ -33,12 +33,25 @@ const DEFAULT_JOBS: Job[] = [
     enabled: 1,
   },
   { id: "shuffle", name: "Shuffle Hubs", command: "shuffle", schedule: "*/30 * * * *", enabled: 1 },
+  { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
 ];
 
 const activeProcesses = new Map<string, ChildProcess>();
 const cronJobs = new Map<string, Cron>();
 
 const PROGRESS_RE = /§PROGRESS:(\d+)\/(\d+):(.+)/;
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Internal jobs run in-process instead of spawning a child
+const internalJobs: Record<string, () => string> = {
+  "purge-runs": () => {
+    const db = getDb();
+    const cutoff = Date.now() - SEVEN_DAYS_MS;
+    const result = db.prepare("DELETE FROM job_runs WHERE status != 'running' AND started_at < ?").run(cutoff);
+    return `Purged ${result.changes} job run(s) older than 7 days.`;
+  },
+};
 
 function buildArgs(command: string): string[] {
   const plexUrl = getConfig("global_plex_url") || process.env.PLEX_URL;
@@ -75,13 +88,14 @@ function buildArgs(command: string): string[] {
 
 function seedDefaultJobs(): void {
   const db = getDb();
-  const count = db.prepare("SELECT COUNT(*) as c FROM jobs").get() as { c: number };
-  if (count.c === 0) {
-    const stmt = db.prepare("INSERT INTO jobs (id, name, command, schedule, enabled) VALUES (?, ?, ?, ?, ?)");
-    for (const job of DEFAULT_JOBS) {
-      stmt.run(job.id, job.name, job.command, job.schedule, job.enabled);
-    }
-    console.log(`[jobs] Seeded ${DEFAULT_JOBS.length} default job(s)`);
+  const stmt = db.prepare("INSERT OR IGNORE INTO jobs (id, name, command, schedule, enabled) VALUES (?, ?, ?, ?, ?)");
+  let inserted = 0;
+  for (const job of DEFAULT_JOBS) {
+    const result = stmt.run(job.id, job.name, job.command, job.schedule, job.enabled);
+    if (result.changes > 0) inserted++;
+  }
+  if (inserted > 0) {
+    console.log(`[jobs] Seeded ${inserted} new default job(s)`);
   }
 }
 
@@ -143,6 +157,31 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
   db.prepare(
     "DELETE FROM job_runs WHERE job_id = ? AND id NOT IN (SELECT id FROM job_runs WHERE job_id = ? ORDER BY started_at DESC LIMIT 50)",
   ).run(jobId, jobId);
+
+  // Internal jobs run in-process
+  const internalHandler = internalJobs[job.command];
+  if (internalHandler) {
+    console.log(`[jobs] Running internal job: ${job.name}`);
+    const done = Promise.resolve().then(() => {
+      try {
+        const output = internalHandler();
+        db.prepare(
+          "UPDATE job_runs SET status = 'completed', log = ?, progress = 1, message = ?, finished_at = ? WHERE id = ?",
+        ).run(output, output, Date.now(), runId);
+        console.log(`[jobs] ${job.name} completed: ${output}`);
+      } catch (err) {
+        const msg = (err as Error).message;
+        db.prepare("UPDATE job_runs SET status = 'failed', log = ?, message = ?, finished_at = ? WHERE id = ?").run(
+          msg,
+          msg,
+          Date.now(),
+          runId,
+        );
+        console.error(`[jobs] ${job.name} failed: ${msg}`);
+      }
+    });
+    return { runId, done };
+  }
 
   const args = buildArgs(job.command);
   console.log(`[jobs] Starting ${job.name}: node ${args.join(" ")}`);
