@@ -430,7 +430,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .jobDetailHeader .heading {
@@ -446,16 +446,18 @@
   gap: 12px;
 }
 
-.detailSectionFixed {
+.detailSectionCapped {
   composes: detailSection;
-  height: 50vh;
+  max-height: 50vh;
   overflow-y: auto;
+  min-height: 0;
 }
 
-.detailSectionFixedWithFooter {
+.detailSectionCappedWithFooter {
   composes: detailSection;
-  height: 50vh;
+  max-height: 50vh;
   overflow: hidden;
+  min-height: 0;
 }
 
 .detailSectionScroll {

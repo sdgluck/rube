@@ -197,7 +197,7 @@ export default function JobDetail() {
       <div className={styles.jobDetailColumns}>
         {/* Config section */}
         <fieldset
-          className={job.command !== "purge-runs" ? styles.detailSectionFixedWithFooter : styles.detailSectionFixed}
+          className={job.command !== "purge-runs" ? styles.detailSectionCappedWithFooter : styles.detailSectionCapped}
         >
           <legend className={styles.detailSectionTitle}>Configuration</legend>
           <div className={styles.detailSectionScroll}>
@@ -313,7 +313,7 @@ export default function JobDetail() {
         </fieldset>
 
         {/* Run history section */}
-        <fieldset className={styles.detailSectionFixed}>
+        <fieldset className={styles.detailSectionCapped}>
           <legend className={styles.detailSectionTitle}>Run History</legend>
           {runsQuery.isLoading ? (
             <p>Loading runs...</p>
