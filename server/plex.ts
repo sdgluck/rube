@@ -157,33 +157,13 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   async function fetchAllItems(sectionId: string): Promise<PlexItem[]> {
     const items: PlexItem[] = [];
-    const pageSize = 100;
-    let offset = 0;
-
-    while (true) {
-      const data = await request(`/library/sections/${sectionId}/all`, {
-        params: {
-          "X-Plex-Container-Start": offset,
-          "X-Plex-Container-Size": pageSize,
-        },
+    for await (const { item } of allItems(sectionId)) {
+      items.push({
+        ratingKey: item.ratingKey as string,
+        title: item.title as string,
+        year: item.year as number | undefined,
       });
-
-      const batch = data?.MediaContainer?.Metadata || [];
-      if (batch.length === 0) break;
-
-      for (const item of batch) {
-        items.push({
-          ratingKey: item.ratingKey,
-          title: item.title,
-          year: item.year,
-        });
-      }
-
-      offset += batch.length;
-      const total = data?.MediaContainer?.totalSize ?? 0;
-      if (offset >= total) break;
     }
-
     return items;
   }
 
@@ -468,23 +448,11 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     await request(`/library/metadata/${ratingKey}`, { method: "PUT", params });
   }
 
-  // ─── Add label to all items in a section ───────────────────────────────────
+  // ─── Iterate all items in a section ─────────────────────────────────────────
 
-  async function addLabelToAllItems(
-    sectionId: string,
-    sectionType: string,
-    label: string,
-    onProgress?: (current: number, total: number) => void,
-  ): Promise<number> {
-    const typeNum = SECTION_TYPE_MAP[sectionType];
-    if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
-
-    const queue = new PQueue({ concurrency: 10 });
+  async function* allItems(sectionId: string): AsyncGenerator<{ item: Record<string, unknown>; totalSize: number }> {
     const pageSize = 100;
     let offset = 0;
-    let updated = 0;
-    let processed = 0;
-    let totalSize = 0;
 
     while (true) {
       const data = await request(`/library/sections/${sectionId}/all`, {
@@ -497,37 +465,57 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       const batch = data?.MediaContainer?.Metadata || [];
       if (batch.length === 0) break;
 
-      totalSize = data?.MediaContainer?.totalSize ?? totalSize;
+      const totalSize: number = data?.MediaContainer?.totalSize ?? 0;
 
       for (const item of batch) {
-        const existingLabels: string[] = (item.Label || []).map((l: PlexLabel) => l.tag);
-
-        if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-          processed++;
-          if (onProgress) onProgress(processed, totalSize);
-          continue;
-        }
-
-        const newLabels = [...existingLabels, label];
-        const labelParams: Record<string, string | number> = {
-          type: typeNum,
-          id: item.ratingKey,
-          "label.locked": 1,
-        };
-        for (let i = 0; i < newLabels.length; i++) {
-          labelParams[`label[${i}].tag.tag`] = newLabels[i];
-        }
-
-        void queue.add(async () => {
-          await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-          updated++;
-          processed++;
-          if (onProgress) onProgress(processed, totalSize);
-        });
+        yield { item, totalSize };
       }
 
       offset += batch.length;
       if (offset >= totalSize) break;
+    }
+  }
+
+  // ─── Add label to all items in a section ───────────────────────────────────
+
+  async function addLabelToAllItems(
+    sectionId: string,
+    sectionType: string,
+    label: string,
+    onProgress?: (current: number, total: number) => void,
+  ): Promise<number> {
+    const typeNum = SECTION_TYPE_MAP[sectionType];
+    if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
+
+    const queue = new PQueue({ concurrency: 10 });
+    let updated = 0;
+    let processed = 0;
+
+    for await (const { item, totalSize } of allItems(sectionId)) {
+      const existingLabels: string[] = ((item.Label as PlexLabel[]) || []).map((l) => l.tag);
+
+      if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+        processed++;
+        if (onProgress) onProgress(processed, totalSize);
+        continue;
+      }
+
+      const newLabels = [...existingLabels, label];
+      const labelParams: Record<string, string | number> = {
+        type: typeNum,
+        id: item.ratingKey as string,
+        "label.locked": 1,
+      };
+      for (let i = 0; i < newLabels.length; i++) {
+        labelParams[`label[${i}].tag.tag`] = newLabels[i];
+      }
+
+      void queue.add(async () => {
+        await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+        updated++;
+        processed++;
+        if (onProgress) onProgress(processed, totalSize);
+      });
     }
 
     await queue.onIdle();
@@ -547,57 +535,37 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
 
     const queue = new PQueue({ concurrency: 10 });
-    const pageSize = 100;
-    let offset = 0;
     let updated = 0;
     let processed = 0;
-    let totalSize = 0;
 
-    while (true) {
-      const data = await request(`/library/sections/${sectionId}/all`, {
-        params: {
-          "X-Plex-Container-Start": offset,
-          "X-Plex-Container-Size": pageSize,
-        },
-      });
+    for await (const { item, totalSize } of allItems(sectionId)) {
+      void queue.add(async () => {
+        // Bulk listing may not include Label data — fetch individual metadata
+        const detail = await request(`/library/metadata/${item.ratingKey}`);
+        const meta = detail?.MediaContainer?.Metadata?.[0];
+        const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
 
-      const batch = data?.MediaContainer?.Metadata || [];
-      if (batch.length === 0) break;
-
-      totalSize = data?.MediaContainer?.totalSize ?? totalSize;
-
-      for (const item of batch) {
-        void queue.add(async () => {
-          // Bulk listing may not include Label data — fetch individual metadata
-          const detail = await request(`/library/metadata/${item.ratingKey}`);
-          const meta = detail?.MediaContainer?.Metadata?.[0];
-          const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
-
-          if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-            processed++;
-            if (onProgress) onProgress(processed, totalSize);
-            return;
-          }
-
-          const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
-          const labelParams: Record<string, string | number> = {
-            type: typeNum,
-            id: item.ratingKey,
-            "label.locked": 1,
-          };
-          for (let i = 0; i < newLabels.length; i++) {
-            labelParams[`label[${i}].tag.tag`] = newLabels[i];
-          }
-
-          await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-          updated++;
+        if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
           processed++;
           if (onProgress) onProgress(processed, totalSize);
-        });
-      }
+          return;
+        }
 
-      offset += batch.length;
-      if (offset >= totalSize) break;
+        const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
+        const labelParams: Record<string, string | number> = {
+          type: typeNum,
+          id: item.ratingKey as string,
+          "label.locked": 1,
+        };
+        for (let i = 0; i < newLabels.length; i++) {
+          labelParams[`label[${i}].tag.tag`] = newLabels[i];
+        }
+
+        await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+        updated++;
+        processed++;
+        if (onProgress) onProgress(processed, totalSize);
+      });
     }
 
     await queue.onIdle();
