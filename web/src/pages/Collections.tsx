@@ -7,6 +7,7 @@ import styles from "./Collections.module.css";
 
 type SortKey = "title" | "sectionTitle" | "childCount" | "smart" | "labels" | "addedAt";
 type SortDir = "asc" | "desc";
+type ViewMode = "table" | "grid";
 
 const SORT_KEYS = new Set<string>(["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"]);
 
@@ -20,6 +21,7 @@ export default function Collections() {
     ? (searchParams.get("sort") as SortKey)
     : "title";
   const sortDir: SortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
+  const viewMode: ViewMode = searchParams.get("view") === "grid" ? "grid" : "table";
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -400,88 +402,131 @@ export default function Collections() {
                 </option>
               ))}
             </select>
+            <div className={styles.viewToggle}>
+              <button
+                className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+                onClick={() => setParam("view", "")}
+              >
+                Table
+              </button>
+              <button
+                className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+                onClick={() => setParam("view", "grid")}
+              >
+                Grid
+              </button>
+            </div>
           </div>
 
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.checkboxCell}>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={collections.length > 0 && selected.size === collections.length}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("title")}>
-                  Title{sortIndicator("title")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
-                  Section{sortIndicator("sectionTitle")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
-                  Items{sortIndicator("childCount")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("smart")}>
-                  Smart{sortIndicator("smart")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("labels")}>
-                  Labels{sortIndicator("labels")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
-                  Added{sortIndicator("addedAt")}
-                </th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedCollections.map((col) => {
-                const labels = parseLabels(col.labels);
-                return (
-                  <tr
-                    key={col.plexRatingKey}
-                    className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
-                    onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
-                  >
-                    <td className={styles.checkboxCell} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className={styles.checkbox}
-                        checked={selected.has(col.plexRatingKey)}
-                        onChange={() => toggleSelect(col.plexRatingKey)}
-                      />
-                    </td>
-                    <td>{col.title}</td>
-                    <td>{col.sectionTitle}</td>
-                    <td>{col.childCount}</td>
-                    <td>{col.smart ? "Yes" : "No"}</td>
-                    <td>
-                      {labels.map((label) => (
-                        <span
-                          key={label}
-                          className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+          {viewMode === "grid" ? (
+            <div className={styles.grid}>
+              {sortedCollections.map((col) => (
+                <div
+                  key={col.plexRatingKey}
+                  className={styles.card}
+                  onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
+                >
+                  {col.thumb ? (
+                    <img
+                      className={styles.cardPoster}
+                      src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                      alt={col.title}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className={styles.cardPosterPlaceholder}>No poster</div>
+                  )}
+                  <div className={styles.cardTitle} title={col.title}>
+                    {col.title}
+                  </div>
+                  <div className={styles.cardMeta}>
+                    {col.childCount} item{col.childCount !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.checkboxCell}>
+                    <input
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={collections.length > 0 && selected.size === collections.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("title")}>
+                    Title{sortIndicator("title")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
+                    Section{sortIndicator("sectionTitle")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
+                    Items{sortIndicator("childCount")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("smart")}>
+                    Smart{sortIndicator("smart")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("labels")}>
+                    Labels{sortIndicator("labels")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
+                    Added{sortIndicator("addedAt")}
+                  </th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedCollections.map((col) => {
+                  const labels = parseLabels(col.labels);
+                  return (
+                    <tr
+                      key={col.plexRatingKey}
+                      className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
+                      onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
+                    >
+                      <td className={styles.checkboxCell} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className={styles.checkbox}
+                          checked={selected.has(col.plexRatingKey)}
+                          onChange={() => toggleSelect(col.plexRatingKey)}
+                        />
+                      </td>
+                      <td>{col.title}</td>
+                      <td>{col.sectionTitle}</td>
+                      <td>{col.childCount}</td>
+                      <td>{col.smart ? "Yes" : "No"}</td>
+                      <td>
+                        {labels.map((label) => (
+                          <span
+                            key={label}
+                            className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </td>
+                      <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
+                      <td>
+                        <button
+                          className={`${styles.buttonDanger} ${styles.buttonSmall}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(col.plexRatingKey, col.title);
+                          }}
                         >
-                          {label}
-                        </span>
-                      ))}
-                    </td>
-                    <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
-                    <td>
-                      <button
-                        className={`${styles.buttonDanger} ${styles.buttonSmall}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(col.plexRatingKey, col.title);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </>
       )}
     </div>

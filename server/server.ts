@@ -4,6 +4,7 @@ import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./trpc.ts";
 import { initJobs } from "./jobs.ts";
+import { getConfig } from "./config.ts";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "..", "web", "dist");
@@ -68,6 +69,43 @@ async function sendFetchResponse(fetchRes: Response, res: ServerResponse): Promi
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url!, `http://${req.headers.host}`);
   const path = url.pathname;
+
+  // Plex image proxy
+  if (path === "/api/plex-image") {
+    const thumbPath = url.searchParams.get("path");
+    const plexUrl = getConfig("global_plex_url");
+    const plexToken = getConfig("global_plex_token");
+    if (!thumbPath || !plexUrl || !plexToken) {
+      res.writeHead(400);
+      res.end();
+      return;
+    }
+    try {
+      const imageUrl = new URL(thumbPath, plexUrl);
+      imageUrl.searchParams.set("X-Plex-Token", plexToken);
+      const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
+      if (!pRes.ok || !pRes.body) {
+        res.writeHead(pRes.status);
+        res.end();
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": pRes.headers.get("Content-Type") || "image/jpeg",
+        "Cache-Control": "public, max-age=86400",
+      });
+      const reader = pRes.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+    } catch {
+      res.writeHead(502);
+      res.end();
+    }
+    return;
+  }
 
   // tRPC API routes
   if (path.startsWith("/api/trpc")) {
