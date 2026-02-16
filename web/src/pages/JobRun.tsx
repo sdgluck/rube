@@ -83,8 +83,8 @@ export default function JobRun() {
 
   return (
     <div className={styles.runDetail}>
-      <Link to="/jobs" className={styles.backLink}>
-        &larr; Back to Jobs
+      <Link to={`/jobs/${run.jobId}`} className={styles.backLink}>
+        &larr; Back to Job
       </Link>
 
       <div className={styles.runHeader}>

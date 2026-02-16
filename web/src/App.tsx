@@ -7,6 +7,7 @@ import SettingsSonarr from "./pages/SettingsSonarr";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
 import JobRun from "./pages/JobRun";
 import Users from "./pages/Users";
 import { trpc } from "./trpc";
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
           <Route path="/users" element={<Users />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/jobs/:jobId" element={<JobDetail />} />
           <Route path="/jobs/runs/:runId" element={<JobRun />} />
           <Route path="/settings" element={<Settings />}>
             <Route index element={<Navigate to="/settings/plex" replace />} />

@@ -411,3 +411,99 @@
   color: #555;
   margin: 0;
 }
+
+/* ─── Job detail page ───────────────────────────────────────────────────────── */
+
+.jobDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.jobDetailHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jobDetailColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.jobDetailHeader .heading {
+  margin-bottom: 0;
+}
+
+.detailSection {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailSectionFixed {
+  composes: detailSection;
+  height: 50vh;
+  overflow-y: auto;
+}
+
+.detailSectionFixedWithFooter {
+  composes: detailSection;
+  height: 50vh;
+  overflow: hidden;
+}
+
+.detailSectionScroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.detailSectionFooter {
+  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.detailSectionTitle {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0 6px;
+  color: #555;
+}
+
+.cronText {
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.85rem;
+}
+
+.configTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.configTable th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.configTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.configSummary {
+  color: #888;
+  font-size: 0.85rem;
+}
