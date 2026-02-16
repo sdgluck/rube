@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
 
@@ -10,6 +10,8 @@ export default function CollectionDetail() {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingLabels, setSavingLabels] = useState(false);
+  const [labelInput, setLabelInput] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const collectionQuery = trpc.collections.get.useQuery(
@@ -23,6 +25,7 @@ export default function CollectionDetail() {
   );
 
   const updateMutation = trpc.collections.update.useMutation();
+  const updateLabelsMutation = trpc.collections.updateLabels.useMutation();
   const deleteMutation = trpc.collections.delete.useMutation();
 
   const collection = collectionQuery.data;
@@ -75,9 +78,16 @@ export default function CollectionDetail() {
 
   return (
     <div>
-      <Link to="/collections" className={styles.backLink}>
+      <a
+        href="#"
+        className={styles.backLink}
+        onClick={(e) => {
+          e.preventDefault();
+          navigate(-1);
+        }}
+      >
         &larr; Back to Collections
-      </Link>
+      </a>
 
       <div className={styles.detailHeader}>
         <h2 className={styles.heading}>{collection.title}</h2>
@@ -100,10 +110,65 @@ export default function CollectionDetail() {
               className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
             >
               {label}
+              <button
+                className={styles.labelRemove}
+                title={`Remove "${label}"`}
+                onClick={async () => {
+                  if (!ratingKey) return;
+                  setSavingLabels(true);
+                  setStatus(null);
+                  try {
+                    await updateLabelsMutation.mutateAsync({
+                      ratingKey,
+                      labels: labels.filter((l) => l !== label),
+                    });
+                    setStatus({ type: "success", msg: `Removed label "${label}"` });
+                    collectionQuery.refetch();
+                  } catch {
+                    setStatus({ type: "error", msg: `Failed to remove label "${label}"` });
+                  } finally {
+                    setSavingLabels(false);
+                  }
+                }}
+                disabled={savingLabels}
+              >
+                &times;
+              </button>
             </span>
           ))}
         </div>
       )}
+
+      <div className={styles.labelEditorRow} style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          className={styles.labelEditorInput}
+          placeholder="Add label..."
+          value={labelInput}
+          onChange={(e) => setLabelInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const value = labelInput.trim();
+              if (!value || !ratingKey) return;
+              setSavingLabels(true);
+              setStatus(null);
+              updateLabelsMutation
+                .mutateAsync({ ratingKey, labels: [...new Set([...labels, value])] })
+                .then(() => {
+                  setLabelInput("");
+                  setStatus({ type: "success", msg: `Added label "${value}"` });
+                  collectionQuery.refetch();
+                })
+                .catch(() => {
+                  setStatus({ type: "error", msg: `Failed to add label "${value}"` });
+                })
+                .finally(() => setSavingLabels(false));
+            }
+          }}
+          disabled={savingLabels}
+        />
+      </div>
 
       {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
 

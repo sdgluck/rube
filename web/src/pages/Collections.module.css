@@ -194,6 +194,22 @@
   color: #1e8449;
 }
 
+.labelRemove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  margin-left: 4px;
+  padding: 0 2px;
+  opacity: 0.6;
+}
+
+.labelRemove:hover {
+  opacity: 1;
+}
+
 /* ─── Bulk actions ────────────────────────────────────────────────────────── */
 
 .bulkBar {

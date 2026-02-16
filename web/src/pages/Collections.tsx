@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "../trpc";
@@ -8,11 +8,42 @@ import styles from "./Collections.module.css";
 type SortKey = "title" | "sectionTitle" | "childCount" | "smart" | "labels" | "addedAt";
 type SortDir = "asc" | "desc";
 
+const SORT_KEYS = new Set<string>(["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"]);
+
 export default function Collections() {
-  const [sectionFilter, setSectionFilter] = useState("");
-  const [labelFilter, setLabelFilter] = useState("");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const sectionFilter = searchParams.get("section") ?? "";
+  const labelFilter = searchParams.get("label") ?? "";
+  const search = searchParams.get("q") ?? "";
+  const sortKey: SortKey = SORT_KEYS.has(searchParams.get("sort") ?? "")
+    ? (searchParams.get("sort") as SortKey)
+    : "title";
+  const sortDir: SortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
+
+  const setParam = useCallback(
+    (key: string, value: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (value) {
+            next.set(key, value);
+          } else {
+            next.delete(key);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const setSectionFilter = useCallback((v: string) => setParam("section", v), [setParam]);
+  const setLabelFilter = useCallback((v: string) => setParam("label", v), [setParam]);
+  const setSearch = useCallback((v: string) => setParam("q", v), [setParam]);
+
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -20,8 +51,6 @@ export default function Collections() {
   const [labelEditing, setLabelEditing] = useState(false);
   const [labelsToAdd, setLabelsToAdd] = useState("");
   const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<SortKey>("title");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,12 +90,22 @@ export default function Collections() {
   const allLabels = [...new Set(allCollections.flatMap((c) => parseLabels(c.labels)))].sort();
 
   const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (sortKey === key) {
+          const newDir = sortDir === "asc" ? "desc" : "asc";
+          if (newDir === "asc") next.delete("dir");
+          else next.set("dir", newDir);
+        } else {
+          if (key === "title") next.delete("sort");
+          else next.set("sort", key);
+          next.delete("dir");
+        }
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const sortedCollections = useMemo(() => {
@@ -155,7 +194,7 @@ export default function Collections() {
         }
         setBulkProgress({ done: deleted + failed, total: count });
       },
-      { concurrency: 10 },
+      { concurrency: 5 },
     );
     setSelected(new Set());
     setBulkProgress(null);
