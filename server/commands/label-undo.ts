@@ -48,7 +48,24 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   }
   ctx.log(`Total items unlabelled: ${totalUpdated}`);
 
-  // Phase 2: Clear user sharing restrictions
+  // Phase 2: Remove "User:" labels from collections
+  ctx.log(`Removing "User:" labels from collections...`);
+  let collectionsUpdated = 0;
+  for (const section of sections) {
+    const colls = await client.getCollections(section.key);
+    for (const col of colls) {
+      const labels = await client.getCollectionLabels(col.ratingKey);
+      const userLabels = labels.filter((l) => l.tag.startsWith("User:"));
+      if (userLabels.length === 0) continue;
+      const remaining = labels.filter((l) => !l.tag.startsWith("User:")).map((l) => l.tag);
+      await client.setCollectionLabels(section.key, col.ratingKey, remaining);
+      ctx.log(`Removed ${userLabels.map((l) => l.tag).join(", ")} from "${col.title}"`);
+      collectionsUpdated++;
+    }
+  }
+  ctx.log(`Removed User labels from ${collectionsUpdated} collection(s)`);
+
+  // Phase 3: Clear user sharing restrictions
   ctx.log(`Fetching shared users from plex.tv...`);
   const sharings = await client.getSharings(machineId);
 
@@ -78,6 +95,6 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   }
 
   ctx.log(
-    `Done — removed labels from ${totalUpdated} item(s), cleared restrictions for ${cleared}/${sharings.length} user(s).`,
+    `Done — removed labels from ${totalUpdated} item(s), removed User labels from ${collectionsUpdated} collection(s), cleared restrictions for ${cleared}/${sharings.length} user(s).`,
   );
 }

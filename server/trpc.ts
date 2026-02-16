@@ -147,10 +147,41 @@ async function testArrConnection(url: string, apiKey: string) {
   return data.instanceName || data.appName || "Unknown";
 }
 
+const usersRouter = t.router({
+  list: t.procedure.query(async () => {
+    const client = getPlexClient();
+    const identity = await client.getIdentity();
+    const sharings = await client.getSharings(identity.machineIdentifier);
+    const allCollections = getLocalCollections();
+
+    // Build a map of User:{username} → collection count
+    const userCollectionCounts = new Map<string, number>();
+    for (const col of allCollections) {
+      const labels: string[] = JSON.parse(col.labels);
+      for (const label of labels) {
+        if (label.startsWith("User:")) {
+          userCollectionCounts.set(label, (userCollectionCounts.get(label) || 0) + 1);
+        }
+      }
+    }
+
+    return sharings.map((s) => {
+      const userLabel = `User:${s.username}`;
+      return {
+        id: s.userId,
+        username: s.username,
+        label: userLabel,
+        collectionCount: userCollectionCounts.get(userLabel) || 0,
+      };
+    });
+  }),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
   jobs: jobsRouter,
+  users: usersRouter,
 
   plexSections: t.procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");

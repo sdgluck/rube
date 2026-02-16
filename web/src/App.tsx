@@ -8,6 +8,7 @@ import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Jobs from "./pages/Jobs";
 import JobRun from "./pages/JobRun";
+import Users from "./pages/Users";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
 
@@ -54,6 +55,9 @@ export default function App() {
           <NavLink to="/collections" className="nav-link">
             Collections
           </NavLink>
+          <NavLink to="/users" className="nav-link">
+            Users
+          </NavLink>
           <NavLink to="/jobs" className="nav-link">
             Jobs
           </NavLink>
@@ -67,6 +71,7 @@ export default function App() {
         <Routes>
           <Route path="/collections" element={<Collections />} />
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
+          <Route path="/users" element={<Users />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/jobs/runs/:runId" element={<JobRun />} />
           <Route path="/settings" element={<Settings />}>

@@ -290,7 +290,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   }
 
   async function setSharingRestrictions(userId: number, labels: string[]): Promise<void> {
-    const filterStr = `label=${labels.join(",")}`;
+    const filterStr = `label=${labels.join("|")}`;
 
     await plexTvRequest(`/api/friends/${userId}`, {
       method: "PUT",
@@ -305,8 +305,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     await plexTvRequest(`/api/friends/${userId}`, {
       method: "PUT",
       params: {
-        filterMovies: "label=",
-        filterTelevision: "label=",
+        filterMovies: "",
+        filterTelevision: "",
       },
     });
   }
