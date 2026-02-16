@@ -1,5 +1,9 @@
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import Settings from "./pages/Settings";
+import SettingsPlex from "./pages/SettingsPlex";
+import SettingsAi from "./pages/SettingsAi";
+import SettingsRadarr from "./pages/SettingsRadarr";
+import SettingsSonarr from "./pages/SettingsSonarr";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Jobs from "./pages/Jobs";
@@ -65,7 +69,13 @@ export default function App() {
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/jobs/runs/:runId" element={<JobRun />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<Settings />}>
+            <Route index element={<Navigate to="/settings/plex" replace />} />
+            <Route path="plex" element={<SettingsPlex />} />
+            <Route path="ai" element={<SettingsAi />} />
+            <Route path="radarr" element={<SettingsRadarr />} />
+            <Route path="sonarr" element={<SettingsSonarr />} />
+          </Route>
           <Route path="*" element={<Navigate to="/collections" replace />} />
         </Routes>
       </main>
