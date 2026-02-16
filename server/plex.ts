@@ -572,36 +572,13 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   // ─── Set labels on a collection ────────────────────────────────────────────
 
   async function setCollectionLabels(sectionId: string, ratingKey: string, labels: string[]): Promise<void> {
-    const currentLabels = await getCollectionLabels(ratingKey);
-    const currentSet = new Set(currentLabels.map((l) => l.tag));
-    const desiredSet = new Set(labels);
-
     const labelParams: Record<string, string | number> = {
-      type: 18,
-      id: ratingKey,
+      "label.locked": 1,
     };
-
-    let idx = 0;
-
-    // Add labels not already present
-    for (const tag of desiredSet) {
-      if (!currentSet.has(tag)) {
-        labelParams[`label[${idx}].tag.tag`] = tag;
-        idx++;
-      }
+    for (let i = 0; i < labels.length; i++) {
+      labelParams[`label[${i}].tag.tag`] = labels[i];
     }
-
-    // Remove labels no longer wanted
-    for (const tag of currentSet) {
-      if (!desiredSet.has(tag)) {
-        labelParams[`label[${idx}].tag.tag-`] = tag;
-        idx++;
-      }
-    }
-
-    if (idx === 0) return;
-
-    await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+    await request(`/library/metadata/${ratingKey}`, { method: "PUT", params: labelParams });
   }
 
   // ─── Public API ─────────────────────────────────────────────────────────────
