@@ -402,6 +402,7 @@ export default function Collections() {
                 </option>
               ))}
             </select>
+            <div className={styles.filtersSpacer} />
             <div className={styles.viewToggle}>
               <button
                 className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
