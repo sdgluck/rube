@@ -167,10 +167,6 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     return items;
   }
 
-  async function deleteTinkerbellCollections(sectionId: string): Promise<number> {
-    return deleteCollectionsByLabel(sectionId, "Tinkerbell");
-  }
-
   async function pinToHomepage(
     sectionId: string,
     collectionKey: string,
