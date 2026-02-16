@@ -21,7 +21,9 @@ export default function Collections() {
     ? (searchParams.get("sort") as SortKey)
     : "title";
   const sortDir: SortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
-  const viewMode: ViewMode = searchParams.get("view") === "grid" ? "grid" : "table";
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (localStorage.getItem("collections-view") as ViewMode) || "table",
+  );
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -406,13 +408,19 @@ export default function Collections() {
             <div className={styles.viewToggle}>
               <button
                 className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
-                onClick={() => setParam("view", "")}
+                onClick={() => {
+                  setViewMode("table");
+                  localStorage.setItem("collections-view", "table");
+                }}
               >
                 Table
               </button>
               <button
                 className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
-                onClick={() => setParam("view", "grid")}
+                onClick={() => {
+                  setViewMode("grid");
+                  localStorage.setItem("collections-view", "grid");
+                }}
               >
                 Grid
               </button>
