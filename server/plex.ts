@@ -6,6 +6,8 @@
  *   const client = createPlexClient({ url, token });
  */
 
+import PQueue from "p-queue";
+
 export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
 
 interface PlexClientOptions {
@@ -477,6 +479,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const typeNum = SECTION_TYPE_MAP[sectionType];
     if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
 
+    const queue = new PQueue({ concurrency: 10 });
     const pageSize = 100;
     let offset = 0;
     let updated = 0;
@@ -496,53 +499,38 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
       totalSize = data?.MediaContainer?.totalSize ?? totalSize;
 
-      const CONCURRENCY = 10;
-      const queue = [...batch];
-      let inFlight = 0;
+      for (const item of batch) {
+        const existingLabels: string[] = (item.Label || []).map((l: PlexLabel) => l.tag);
 
-      await new Promise<void>((resolve, reject) => {
-        function next() {
-          if (queue.length === 0 && inFlight === 0) return resolve();
-
-          while (queue.length > 0 && inFlight < CONCURRENCY) {
-            const item = queue.shift()!;
-            const existingLabels: string[] = (item.Label || []).map((l: PlexLabel) => l.tag);
-
-            if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-              processed++;
-              if (onProgress) onProgress(processed, totalSize);
-              continue;
-            }
-
-            const newLabels = [...existingLabels, label];
-            const labelParams: Record<string, string | number> = {
-              type: typeNum,
-              id: item.ratingKey,
-              "label.locked": 1,
-            };
-            for (let i = 0; i < newLabels.length; i++) {
-              labelParams[`label[${i}].tag.tag`] = newLabels[i];
-            }
-
-            inFlight++;
-            request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams })
-              .then(() => {
-                updated++;
-                processed++;
-                inFlight--;
-                if (onProgress) onProgress(processed, totalSize);
-                next();
-              })
-              .catch(reject);
-          }
-          if (queue.length === 0 && inFlight === 0) resolve();
+        if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+          processed++;
+          if (onProgress) onProgress(processed, totalSize);
+          continue;
         }
-        next();
-      });
+
+        const newLabels = [...existingLabels, label];
+        const labelParams: Record<string, string | number> = {
+          type: typeNum,
+          id: item.ratingKey,
+          "label.locked": 1,
+        };
+        for (let i = 0; i < newLabels.length; i++) {
+          labelParams[`label[${i}].tag.tag`] = newLabels[i];
+        }
+
+        void queue.add(async () => {
+          await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+          updated++;
+          processed++;
+          if (onProgress) onProgress(processed, totalSize);
+        });
+      }
 
       offset += batch.length;
       if (offset >= totalSize) break;
     }
+
+    await queue.onIdle();
 
     return updated;
   }
@@ -558,6 +546,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const typeNum = SECTION_TYPE_MAP[sectionType];
     if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
 
+    const queue = new PQueue({ concurrency: 10 });
     const pageSize = 100;
     let offset = 0;
     let updated = 0;
@@ -577,62 +566,41 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
       totalSize = data?.MediaContainer?.totalSize ?? totalSize;
 
-      const CONCURRENCY = 10;
-      const queue = [...batch];
-      let inFlight = 0;
+      for (const item of batch) {
+        void queue.add(async () => {
+          // Bulk listing may not include Label data — fetch individual metadata
+          const detail = await request(`/library/metadata/${item.ratingKey}`);
+          const meta = detail?.MediaContainer?.Metadata?.[0];
+          const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
 
-      await new Promise<void>((resolve, reject) => {
-        function next() {
-          if (queue.length === 0 && inFlight === 0) return resolve();
-
-          while (queue.length > 0 && inFlight < CONCURRENCY) {
-            const item = queue.shift()!;
-
-            inFlight++;
-            // Bulk listing may not include Label data — fetch individual metadata
-            request(`/library/metadata/${item.ratingKey}`)
-              .then((detail) => {
-                const meta = detail?.MediaContainer?.Metadata?.[0];
-                const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
-
-                if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-                  processed++;
-                  inFlight--;
-                  if (onProgress) onProgress(processed, totalSize);
-                  next();
-                  return;
-                }
-
-                const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
-                const labelParams: Record<string, string | number> = {
-                  type: typeNum,
-                  id: item.ratingKey,
-                  "label.locked": 1,
-                };
-                for (let i = 0; i < newLabels.length; i++) {
-                  labelParams[`label[${i}].tag.tag`] = newLabels[i];
-                }
-
-                return request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams }).then(
-                  () => {
-                    updated++;
-                    processed++;
-                    inFlight--;
-                    if (onProgress) onProgress(processed, totalSize);
-                    next();
-                  },
-                );
-              })
-              .catch(reject);
+          if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+            processed++;
+            if (onProgress) onProgress(processed, totalSize);
+            return;
           }
-          if (queue.length === 0 && inFlight === 0) resolve();
-        }
-        next();
-      });
+
+          const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
+          const labelParams: Record<string, string | number> = {
+            type: typeNum,
+            id: item.ratingKey,
+            "label.locked": 1,
+          };
+          for (let i = 0; i < newLabels.length; i++) {
+            labelParams[`label[${i}].tag.tag`] = newLabels[i];
+          }
+
+          await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+          updated++;
+          processed++;
+          if (onProgress) onProgress(processed, totalSize);
+        });
+      }
 
       offset += batch.length;
       if (offset >= totalSize) break;
     }
+
+    await queue.onIdle();
 
     return updated;
   }

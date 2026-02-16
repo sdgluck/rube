@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
+import pMap from "p-map";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
 
@@ -143,15 +144,19 @@ export default function Collections() {
     setStatus(null);
     let deleted = 0;
     let failed = 0;
-    for (const ratingKey of selected) {
-      try {
-        await deleteMutation.mutateAsync({ ratingKey });
-        deleted++;
-      } catch {
-        failed++;
-      }
-      setBulkProgress({ done: deleted + failed, total: count });
-    }
+    await pMap(
+      [...selected],
+      async (ratingKey) => {
+        try {
+          await deleteMutation.mutateAsync({ ratingKey });
+          deleted++;
+        } catch {
+          failed++;
+        }
+        setBulkProgress({ done: deleted + failed, total: count });
+      },
+      { concurrency: 10 },
+    );
     setSelected(new Set());
     setBulkProgress(null);
     setStatus({
