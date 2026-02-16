@@ -1,15 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient, type PlexItem } from "../plex.ts";
 import { getConfig } from "../config.ts";
+import { z } from "zod";
 import type { JobContext, BywJobConfig } from "../../shared/job-context.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
 
-interface AiCollection {
-  name: string;
-  items: string[];
-}
+const aiCollectionSchema = z.object({
+  name: z.string(),
+  items: z.array(z.string()),
+});
+
+type AiCollection = z.infer<typeof aiCollectionSchema>;
 
 export default async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
@@ -141,13 +144,19 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
       );
 
       ctx.log(`Asking Claude for "Because you watched" collections...`);
-      const aiCollections = await generateBYWCollections(
-        ANTHROPIC_API_KEY,
-        ctx,
-        watchedTitles,
-        libraryItems,
-        section.title,
-      );
+      const aiCollections: AiCollection[] = [];
+      for (let i = 0; i < watchedTitles.length; i++) {
+        const title = watchedTitles[i];
+        ctx.log(`[${i + 1}/${watchedTitles.length}] Generating collection for "${title}"...`);
+        try {
+          const col = await generateBYWCollection(ANTHROPIC_API_KEY, ctx, title, libraryItems, section.title);
+          if (col) {
+            aiCollections.push(col);
+          }
+        } catch (err) {
+          ctx.log(`Failed to generate collection for "${title}": ${(err as Error).message}`);
+        }
+      }
       ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
 
       const titleMap = new Map<string, string>();
@@ -233,41 +242,38 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
   ctx.log("All done!");
 }
 
-async function generateBYWCollections(
+async function generateBYWCollection(
   apiKey: string,
   ctx: JobContext,
-  watchedTitles: string[],
+  watchedTitle: string,
   libraryItems: PlexItem[],
   sectionTitle: string,
-): Promise<AiCollection[]> {
+): Promise<AiCollection | null> {
   const anthropic = new Anthropic({ apiKey });
 
   const itemList = libraryItems.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
 
-  const watchedList = watchedTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
-
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-5-20250929",
-    max_tokens: 4096,
+    max_tokens: 1024,
     temperature: 1,
     messages: [
       {
         role: "user",
-        content: `You are a movie/TV curator. Given a user's recently watched items and their full Plex "${sectionTitle}" library, create "Because you watched" collections.
+        content: `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
 
-Recently watched items:
-${watchedList}
+Recently watched: ${watchedTitle}
 
 Rules:
-- Create exactly one collection per watched item, named "Because you watched [Title]"
-- Each collection MUST have between 15 and 30 items
+- Name the collection "Because you watched ${watchedTitle}"
+- The collection MUST have between 15 and 30 items
 - Only use titles that exactly match the library list below
-- Do NOT include the watched item itself in its collection
+- Do NOT include "${watchedTitle}" in the collection
 - Pick items that are thematically similar: shared vibes, tonal similarities, narrative parallels, genre connections, visual motifs
-- Each collection should feel like a genuine recommendation, not just the same genre
+- The collection should feel like a genuine recommendation, not just the same genre
 
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
-[{"name":"Because you watched Title","items":["Title (Year)","Title (Year)"]}]
+{"name":"Because you watched ${watchedTitle}","items":["Title (Year)","Title (Year)"]}
 
 Here is the full library:
 ${itemList}`,
@@ -277,25 +283,46 @@ ${itemList}`,
 
   const text = (response.content[0] as { type: "text"; text: string }).text.trim();
   ctx.log("AI response:", text);
-  return parseJSON(text);
+
+  const parsed = extractJSON(text);
+  if (parsed === null) {
+    ctx.log(`Skipping "${watchedTitle}" — could not extract JSON from AI response`);
+    return null;
+  }
+
+  const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+  const result = aiCollectionSchema.safeParse(obj);
+  if (!result.success) {
+    ctx.log(`Skipping "${watchedTitle}" — invalid AI response: ${result.error.message}`);
+    return null;
+  }
+
+  return result.data;
 }
 
-function parseJSON(text: string): AiCollection[] {
+function extractJSON(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {}
 
-  const match = text.match(/\[[\s\S]*\]/);
-  if (match) {
+  const objMatch = text.match(/\{[\s\S]*\}/);
+  if (objMatch) {
     try {
-      return JSON.parse(match[0]);
+      return JSON.parse(objMatch[0]);
     } catch {}
 
-    const cleaned = match[0].replace(/,\s*([}\]])/g, "$1").replace(/[\x00-\x1f]/g, " ");
+    const cleaned = objMatch[0].replace(/,\s*([}\]])/g, "$1").replace(/[\x00-\x1f]/g, " ");
     try {
       return JSON.parse(cleaned);
     } catch {}
   }
 
-  throw new Error(`Failed to parse AI response as JSON:\n${text}`);
+  const arrMatch = text.match(/\[[\s\S]*\]/);
+  if (arrMatch) {
+    try {
+      return JSON.parse(arrMatch[0]);
+    } catch {}
+  }
+
+  return null;
 }
