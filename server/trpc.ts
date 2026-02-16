@@ -136,6 +136,17 @@ const jobsRouter = t.router({
   }),
 });
 
+async function testArrConnection(url: string, apiKey: string) {
+  const testUrl = new URL("/api/v3/system/status", url);
+  const res = await fetch(testUrl.toString(), {
+    headers: { Accept: "application/json", "X-Api-Key": apiKey },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const data = await res.json();
+  return data.instanceName || data.appName || "Unknown";
+}
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
@@ -188,6 +199,24 @@ export const appRouter = t.router({
         return { ok: false as const, error: (err as Error).message };
       }
     }),
+
+  testRadarr: t.procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+    try {
+      const instanceName = await testArrConnection(input.url, input.api_key);
+      return { ok: true as const, instanceName };
+    } catch (err) {
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
+
+  testSonarr: t.procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+    try {
+      const instanceName = await testArrConnection(input.url, input.api_key);
+      return { ok: true as const, instanceName };
+    } catch (err) {
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
 });
 
 export type AppRouter = typeof appRouter;

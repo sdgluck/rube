@@ -19,6 +19,10 @@ export const configSchema = z.object({
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
   global_anthropic_api_key: z.string(),
+  global_radarr_url: z.string(),
+  global_radarr_api_key: z.string(),
+  global_sonarr_url: z.string(),
+  global_sonarr_api_key: z.string(),
 });
 
 export type ConfigSchema = typeof configSchema;
