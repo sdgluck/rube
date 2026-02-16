@@ -46,6 +46,8 @@ export interface PlexHistoryItem {
   year?: number;
   grandparentTitle?: string;
   grandparentRatingKey?: string;
+  accountID?: number;
+  viewedAt?: number;
 }
 
 export interface PlexCollection {
@@ -324,7 +326,16 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     if (librarySectionID) params.librarySectionID = librarySectionID;
 
     const data = await request("/status/sessions/history/all", { params });
-    return data?.MediaContainer?.Metadata || [];
+    return (data?.MediaContainer?.Metadata || []).map((item: Record<string, unknown>) => ({
+      type: item.type as string,
+      ratingKey: item.ratingKey as string,
+      title: item.title as string,
+      year: item.year as number | undefined,
+      grandparentTitle: item.grandparentTitle as string | undefined,
+      grandparentRatingKey: item.grandparentRatingKey as string | undefined,
+      accountID: item.accountID as number | undefined,
+      viewedAt: item.viewedAt as number | undefined,
+    }));
   }
 
   async function getAccounts(): Promise<PlexAccount[]> {

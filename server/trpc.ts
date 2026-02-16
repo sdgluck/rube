@@ -151,8 +151,12 @@ const usersRouter = t.router({
   list: t.procedure.query(async () => {
     const client = getPlexClient();
     const identity = await client.getIdentity();
-    const sharings = await client.getSharings(identity.machineIdentifier);
-    const allCollections = getLocalCollections();
+    const [sharings, allCollections, accounts, history] = await Promise.all([
+      client.getSharings(identity.machineIdentifier),
+      Promise.resolve(getLocalCollections()),
+      client.getAccounts(),
+      client.getWatchHistory({ limit: 500 }),
+    ]);
 
     // Build a map of User:{username} → collection count
     const userCollectionCounts = new Map<string, number>();
@@ -165,13 +169,34 @@ const usersRouter = t.router({
       }
     }
 
+    // Build a map of accountID → most recent history item
+    const lastWatchedByAccount = new Map<number, { title: string; viewedAt: number }>();
+    for (const item of history) {
+      if (!item.accountID || !item.viewedAt) continue;
+      if (!lastWatchedByAccount.has(item.accountID)) {
+        // History is sorted viewedAt:desc so first occurrence is most recent
+        const title = item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title;
+        lastWatchedByAccount.set(item.accountID, { title, viewedAt: item.viewedAt });
+      }
+    }
+
+    // Build maps to match sharing users to local account IDs
+    const accountById = new Map(accounts.map((a) => [Number(a.id), a]));
+    const accountByName = new Map(accounts.map((a) => [a.name?.toLowerCase(), a]));
+
     return sharings.map((s) => {
       const userLabel = `User:${s.username}`;
+
+      // Match sharing user to local account by ID first, then by name
+      const account = accountById.get(s.userId) || accountByName.get(s.username.toLowerCase());
+      const lastWatched = account ? lastWatchedByAccount.get(Number(account.id)) : undefined;
+
       return {
         id: s.userId,
         username: s.username,
         label: userLabel,
         collectionCount: userCollectionCounts.get(userLabel) || 0,
+        lastWatched: lastWatched || null,
       };
     });
   }),
