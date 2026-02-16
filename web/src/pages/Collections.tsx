@@ -44,7 +44,6 @@ export default function Collections() {
   const setSearch = useCallback((v: string) => setParam("q", v), [setParam]);
 
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
@@ -70,7 +69,6 @@ export default function Collections() {
   // Unfiltered query for populating filter dropdowns
   const allCollectionsQuery = trpc.collections.list.useQuery({}, { refetchOnWindowFocus: false });
 
-  const syncMutation = trpc.collections.sync.useMutation();
   const deleteMutation = trpc.collections.delete.useMutation();
   const updateLabelsMutation = trpc.collections.updateLabels.useMutation();
 
@@ -148,21 +146,6 @@ export default function Collections() {
     setSelected(new Set());
     setLabelEditing(false);
   }, [sectionFilter, labelFilter, debouncedSearch]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setStatus(null);
-    try {
-      const stats = await syncMutation.mutateAsync();
-      setStatus({ type: "success", msg: `Synced ${stats.synced} collection(s), removed ${stats.removed} stale.` });
-      collectionsQuery.refetch();
-      allCollectionsQuery.refetch();
-    } catch {
-      setStatus({ type: "error", msg: "Sync failed" });
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const handleDelete = async (ratingKey: string, title: string) => {
     if (!confirm(`Delete "${title}"? This will remove it from Plex.`)) return;
@@ -273,14 +256,7 @@ export default function Collections() {
 
   return (
     <div>
-      <div className={styles.header}>
-        <h2 className={styles.heading}>Collections</h2>
-        <div className={styles.headerActions}>
-          <button className={styles.button} onClick={handleSync} disabled={syncing}>
-            {syncing ? "Syncing..." : "Sync Now"}
-          </button>
-        </div>
-      </div>
+      <h2 className={styles.heading}>Collections</h2>
 
       {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
 
@@ -397,7 +373,6 @@ export default function Collections() {
       {collections.length === 0 && !search && !sectionFilter && !labelFilter ? (
         <div className={styles.emptyState}>
           <p>No collections synced yet.</p>
-          <p className={styles.hint}>Click "Sync Now" to pull collections from Plex.</p>
         </div>
       ) : (
         <>
