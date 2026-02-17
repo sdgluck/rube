@@ -13,3 +13,7 @@ export interface GenerateJobConfig extends CommonJobConfig {}
 export interface BywJobConfig extends CommonJobConfig {
   limit?: number;
 }
+
+export interface OverlaysJobConfig extends CommonJobConfig {
+  mode?: "apply" | "remove";
+}

@@ -125,6 +125,32 @@ export interface PlexDirectoryEntry {
   key: string;
 }
 
+export interface PlexMediaFullDetail {
+  ratingKey: string;
+  title: string;
+  year?: number;
+  thumb?: string;
+  type: string;
+  contentRating?: string;
+  rating?: number;
+  audienceRating?: number;
+  guids: string[];
+  media: Array<{
+    videoResolution?: string;
+    videoCodec?: string;
+    audioCodec?: string;
+    bitrate?: number;
+    width?: number;
+    height?: number;
+  }>;
+}
+
+export interface PlexPoster {
+  key: string;
+  selected: boolean;
+  ratingKey: string;
+}
+
 interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;
@@ -171,6 +197,35 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     } catch {
       return null;
     }
+  }
+
+  async function requestRaw(
+    path: string,
+    { method = "GET", params = {}, headers = {} }: RequestOptions = {},
+  ): Promise<Response> {
+    const reqUrl = new URL(path, url);
+    reqUrl.searchParams.set("X-Plex-Token", token);
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
+    }
+
+    const res = await fetch(reqUrl.toString(), {
+      method,
+      signal,
+      headers: {
+        "X-Plex-Client-Identifier": "tinkerbell",
+        "X-Plex-Product": "tinkerbell",
+        "X-Plex-Version": "1.0.0",
+        ...headers,
+      },
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
+    }
+
+    return res;
   }
 
   async function getSections(): Promise<PlexSection[]> {
@@ -785,6 +840,84 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     };
   }
 
+  // ─── Overlay operations ────────────────────────────────────────────────────
+
+  async function getItemFullDetail(ratingKey: string): Promise<PlexMediaFullDetail> {
+    const data = await request(`/library/metadata/${ratingKey}`);
+    const meta = data?.MediaContainer?.Metadata?.[0];
+    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+
+    const guids: string[] = (meta.Guid || []).map((g: { id: string }) => g.id);
+    const media: PlexMediaFullDetail["media"] = (meta.Media || []).map((m: Record<string, unknown>) => ({
+      videoResolution: m.videoResolution as string | undefined,
+      videoCodec: m.videoCodec as string | undefined,
+      audioCodec:
+        ((m.Part as Array<Record<string, unknown>>)?.[0]?.audioProfile as string | undefined) ??
+        (m.audioCodec as string | undefined),
+      bitrate: m.bitrate as number | undefined,
+      width: m.width as number | undefined,
+      height: m.height as number | undefined,
+    }));
+
+    return {
+      ratingKey: meta.ratingKey,
+      title: meta.title,
+      year: meta.year,
+      thumb: meta.thumb,
+      type: meta.type,
+      contentRating: meta.contentRating,
+      rating: meta.rating,
+      audienceRating: meta.audienceRating,
+      guids,
+      media,
+    };
+  }
+
+  async function downloadPoster(thumbPath: string): Promise<Buffer> {
+    const res = await requestRaw(thumbPath);
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  async function uploadPoster(ratingKey: string, imageBuffer: Buffer): Promise<void> {
+    const reqUrl = new URL(`/library/metadata/${ratingKey}/posters`, url);
+    reqUrl.searchParams.set("X-Plex-Token", token);
+
+    const res = await fetch(reqUrl.toString(), {
+      method: "POST",
+      signal,
+      headers: {
+        "Content-Type": "image/jpeg",
+        "X-Plex-Client-Identifier": "tinkerbell",
+        "X-Plex-Product": "tinkerbell",
+        "X-Plex-Version": "1.0.0",
+      },
+      body: new Uint8Array(imageBuffer),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Plex API POST /library/metadata/${ratingKey}/posters → ${res.status}\n${body}`);
+    }
+  }
+
+  async function getPosters(ratingKey: string): Promise<PlexPoster[]> {
+    const data = await request(`/library/metadata/${ratingKey}/posters`);
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((p: Record<string, unknown>) => ({
+      key: p.key as string,
+      selected: p.selected === true || p.selected === "1",
+      ratingKey: p.ratingKey as string,
+    }));
+  }
+
+  async function selectPoster(ratingKey: string, posterUrl: string): Promise<void> {
+    await request(`/library/metadata/${ratingKey}/posters`, {
+      method: "PUT",
+      params: { url: posterUrl },
+    });
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -819,6 +952,12 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     getRecentlyAdded,
     getItems,
     getItemDetail,
+    getItemFullDetail,
+    downloadPoster,
+    uploadPoster,
+    getPosters,
+    selectPoster,
+    allItems,
   };
 }
 

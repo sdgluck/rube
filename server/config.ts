@@ -23,6 +23,7 @@ export const configSchema = z.object({
   global_radarr_api_key: z.string(),
   global_sonarr_url: z.string(),
   global_sonarr_api_key: z.string(),
+  global_omdb_api_key: z.string(),
 });
 
 export type ConfigSchema = typeof configSchema;

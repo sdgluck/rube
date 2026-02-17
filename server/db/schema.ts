@@ -49,3 +49,26 @@ export const jobRuns = sqliteTable("job_runs", {
   startedAt: integer("started_at").notNull(),
   finishedAt: integer("finished_at"),
 });
+
+export const overlayConfigs = sqliteTable("overlay_configs", {
+  id: text("id").primaryKey(), // "{sectionId}:{position}"
+  sectionId: text("section_id").notNull(),
+  position: text("position").notNull(),
+  overlayType: text("overlay_type").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const overlayOriginals = sqliteTable("overlay_originals", {
+  ratingKey: text("rating_key").primaryKey(),
+  sectionId: text("section_id").notNull(),
+  originalPosterUrl: text("original_poster_url").notNull(),
+  appliedAt: integer("applied_at").notNull(),
+});
+
+export const omdbCache = sqliteTable("omdb_cache", {
+  imdbId: text("imdb_id").primaryKey(),
+  imdbRating: text("imdb_rating"),
+  rtRating: text("rt_rating"),
+  response: text("response").notNull(),
+  fetchedAt: integer("fetched_at").notNull(),
+});

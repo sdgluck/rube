@@ -5,7 +5,13 @@ import { getConfig } from "./config.ts";
 import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
-import type { JobContext, CommonJobConfig, GenerateJobConfig, BywJobConfig } from "../shared/job-context.ts";
+import type {
+  JobContext,
+  CommonJobConfig,
+  GenerateJobConfig,
+  BywJobConfig,
+  OverlaysJobConfig,
+} from "../shared/job-context.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -24,16 +30,19 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
   { id: "label", name: "Sync Labels", command: "label", schedule: "", enabled: 1 },
   { id: "label-undo", name: "Undo Labels", command: "label-undo", schedule: "", enabled: 1 },
+  { id: "overlays", name: "Apply Overlays", command: "overlays", schedule: "", enabled: 1 },
+  { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
 ];
 
 const DEFAULT_CONFIGS: Record<string, string> = {
   "because-you-watched": '{"limit":10}',
+  "overlays-remove": '{"mode":"remove"}',
 };
 
 // Command registry — maps command name to its run function
 const commandRegistry: Record<
   string,
-  (ctx: JobContext, config: CommonJobConfig | GenerateJobConfig | BywJobConfig) => Promise<void>
+  (ctx: JobContext, config: CommonJobConfig | GenerateJobConfig | BywJobConfig | OverlaysJobConfig) => Promise<void>
 > = {};
 
 async function loadCommand(name: string) {
@@ -66,6 +75,11 @@ async function loadCommand(name: string) {
     }
     case "label-undo": {
       const mod = await import("./commands/label-undo.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "overlays": {
+      const mod = await import("./commands/overlays.ts");
       commandRegistry[name] = mod.default;
       break;
     }

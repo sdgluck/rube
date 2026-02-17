@@ -12,6 +12,19 @@ import {
 } from "./collections.ts";
 import { getJobs, getJobRuns, getJobRun, getActiveRuns, updateJob, startJob, cancelRun } from "./jobs.ts";
 import { getRules, getRule, createRule, updateRule, deleteRule } from "./rules.ts";
+import {
+  getOverlayConfigs,
+  setOverlayConfig,
+  removeOverlayConfig,
+  clearOverlayConfigs,
+  getOverlaidItemCount,
+  resolveOverlayValue,
+  OVERLAY_POSITIONS,
+  OVERLAY_TYPES,
+  type OverlayPosition,
+  type OverlayType,
+} from "./overlays.ts";
+import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 
 const t = initTRPC.create();
 
@@ -390,6 +403,91 @@ const mediaRouter = t.router({
   }),
 });
 
+const overlaysRouter = t.router({
+  configs: t.procedure
+    .input(z.object({ sectionId: z.string() }))
+    .query(({ input }) => getOverlayConfigs(input.sectionId)),
+
+  setConfig: t.procedure
+    .input(
+      z.object({
+        sectionId: z.string(),
+        position: z.enum(OVERLAY_POSITIONS as [string, ...string[]]),
+        overlayType: z.enum(OVERLAY_TYPES as [string, ...string[]]),
+      }),
+    )
+    .mutation(({ input }) => {
+      setOverlayConfig(input.sectionId, input.position as OverlayPosition, input.overlayType as OverlayType);
+      return { ok: true };
+    }),
+
+  removeConfig: t.procedure
+    .input(z.object({ sectionId: z.string(), position: z.enum(OVERLAY_POSITIONS as [string, ...string[]]) }))
+    .mutation(({ input }) => {
+      removeOverlayConfig(input.sectionId, input.position as OverlayPosition);
+      return { ok: true };
+    }),
+
+  clearConfigs: t.procedure.input(z.object({ sectionId: z.string() })).mutation(({ input }) => {
+    clearOverlayConfigs(input.sectionId);
+    return { ok: true };
+  }),
+
+  status: t.procedure
+    .input(z.object({ sectionId: z.string() }))
+    .query(({ input }) => ({ count: getOverlaidItemCount(input.sectionId) })),
+
+  sampleItem: t.procedure.input(z.object({ sectionId: z.string() })).query(async ({ input }) => {
+    const client = getPlexClient();
+    // Get a random item from the section
+    const result = await client.getItems(input.sectionId, { offset: 0, size: 1 });
+    if (result.items.length === 0) return null;
+    // Pick a random offset
+    const randomOffset = Math.floor(Math.random() * result.total);
+    const randomResult = await client.getItems(input.sectionId, { offset: randomOffset, size: 1 });
+    const item = randomResult.items[0] || result.items[0];
+    const detail = await client.getItemFullDetail(item.ratingKey);
+    return detail;
+  }),
+
+  previewValues: t.procedure
+    .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
+    .query(async ({ input }) => {
+      const configs = getOverlayConfigs(input.sectionId);
+      if (configs.length === 0) return {};
+
+      const client = getPlexClient();
+      const detail = await client.getItemFullDetail(input.ratingKey);
+      const mediaInfo = detail.media[0] || {};
+
+      const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
+
+      let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
+      if (needsOmdb) {
+        const imdbId = extractImdbId(detail.guids);
+        if (imdbId) {
+          const omdb = await getOmdbRatings(imdbId);
+          if (omdb) ratings = omdb;
+        }
+      }
+
+      const values: Record<string, string | null> = {};
+      for (const cfg of configs) {
+        values[cfg.position] = resolveOverlayValue(
+          cfg.overlayType as OverlayType,
+          {
+            videoResolution: mediaInfo.videoResolution,
+            videoCodec: mediaInfo.videoCodec,
+            audioCodec: mediaInfo.audioCodec,
+            contentRating: detail.contentRating,
+          },
+          ratings,
+        );
+      }
+      return values;
+    }),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
@@ -398,6 +496,7 @@ export const appRouter = t.router({
   rules: rulesRouter,
   users: usersRouter,
   stats: statsRouter,
+  overlays: overlaysRouter,
 
   plexSections: t.procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");

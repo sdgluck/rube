@@ -1,0 +1,375 @@
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.tab:hover {
+  color: #333;
+}
+
+.tabActive {
+  color: #4a6cf7;
+  border-bottom-color: #4a6cf7;
+}
+
+/* ─── Description ─────────────────────────────────────────────────────────── */
+
+.description {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+/* ─── Overlay editor layout ──────────────────────────────────────────────── */
+
+.overlayEditor {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+/* ─── Poster preview ─────────────────────────────────────────────────────── */
+
+.posterPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.posterContainer {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e9ecef;
+  aspect-ratio: 2 / 3;
+}
+
+.posterImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.posterPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+/* ─── Drop zones ─────────────────────────────────────────────────────────── */
+
+.dropZone {
+  position: absolute;
+  min-width: 60px;
+  min-height: 26px;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  z-index: 2;
+}
+
+.dropZone:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dropZoneOver {
+  border-color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.25);
+}
+
+.dropZoneAssigned {
+  border: none;
+}
+
+.posTopLeft {
+  top: 10px;
+  left: 10px;
+}
+
+.posTopCenter {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.posTopRight {
+  top: 10px;
+  right: 10px;
+}
+
+.posBottomLeft {
+  bottom: 10px;
+  left: 10px;
+}
+
+.posBottomCenter {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.posBottomRight {
+  bottom: 10px;
+  right: 10px;
+}
+
+.dropZonePlaceholder {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ─── Badges ─────────────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.badgeGold {
+  background: #d4a017;
+  color: #fff;
+}
+
+.badgeBlue {
+  background: #2563eb;
+  color: #fff;
+}
+
+.badgeGreen {
+  background: #16a34a;
+  color: #fff;
+}
+
+.badgeGray {
+  background: #6b7280;
+  color: #fff;
+}
+
+.badgeImdb {
+  background: #f5c518;
+  color: #000;
+}
+
+.badgeRt {
+  background: #fa320a;
+  color: #fff;
+}
+
+.badgeDark {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.badgeRemove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.7;
+}
+
+.badgeRemove:hover {
+  opacity: 1;
+}
+
+/* ─── Chip panel ─────────────────────────────────────────────────────────── */
+
+.chipPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chipPanelTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #555;
+  margin: 0;
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  transition:
+    transform 0.1s,
+    box-shadow 0.15s;
+  background: #f0f4ff;
+  color: #4a6cf7;
+  border: 1px solid #c7d2fe;
+}
+
+.chip:active {
+  cursor: grabbing;
+  transform: scale(0.97);
+}
+
+.chip:hover {
+  box-shadow: 0 2px 8px rgba(74, 108, 247, 0.2);
+}
+
+.chipDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chipDisabled:active {
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Poster meta ────────────────────────────────────────────────────────── */
+
+.posterMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.posterTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.shuffleBtn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.shuffleBtn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* ─── Status bar ─────────────────────────────────────────────────────────── */
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.statusCount {
+  font-size: 0.9rem;
+  color: #555;
+  flex: 1;
+}
+
+.statusBtn {
+  background: #4a6cf7;
+  color: #fff;
+  padding: 8px 20px;
+  border: 1px solid #4a6cf7;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.statusBtn:hover:not(:disabled) {
+  background: #3b5de7;
+}
+
+.statusBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.statusBtnDanger {
+  background: #fff;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.statusBtnDanger:hover:not(:disabled) {
+  background: #dc3545;
+  color: #fff;
+}
+
+.statusBtnDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
