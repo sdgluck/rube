@@ -119,6 +119,12 @@ export interface PlexMediaDetail extends PlexMediaItem {
   collections: Array<{ id: number; tag: string }>;
 }
 
+export interface PlexDirectoryEntry {
+  tag: string;
+  count: number;
+  key: string;
+}
+
 interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;
@@ -203,6 +209,43 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       });
     }
     return items;
+  }
+
+  async function fetchItemsSorted(sectionId: string, sort: string, limit: number): Promise<PlexItem[]> {
+    const data = await request(`/library/sections/${sectionId}/all`, {
+      params: {
+        sort,
+        "X-Plex-Container-Size": limit,
+      },
+    });
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((item: Record<string, unknown>) => ({
+      ratingKey: item.ratingKey as string,
+      title: item.title as string,
+      year: item.year as number | undefined,
+    }));
+  }
+
+  async function fetchGroupedByField(sectionId: string, field: string, limit: number): Promise<PlexDirectoryEntry[]> {
+    const data = await request(`/library/sections/${sectionId}/${field}`);
+    const dirs: Array<Record<string, unknown>> = data?.MediaContainer?.Directory || [];
+    const entries = dirs.map((d) => ({
+      tag: d.title as string,
+      count: (d.size as number) || (d.childCount as number) || 0,
+      key: d.key as string,
+    }));
+    entries.sort((a, b) => b.count - a.count);
+    return entries.slice(0, limit);
+  }
+
+  async function fetchItemsByFilter(filterPath: string): Promise<PlexItem[]> {
+    const data = await request(filterPath);
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((item: Record<string, unknown>) => ({
+      ratingKey: item.ratingKey as string,
+      title: item.title as string,
+      year: item.year as number | undefined,
+    }));
   }
 
   async function pinToHomepage(
@@ -750,6 +793,9 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     getManagedHubs,
     moveHub,
     fetchAllItems,
+    fetchItemsSorted,
+    fetchGroupedByField,
+    fetchItemsByFilter,
     pinToHomepage,
     getCollections,
     getCollectionLabels,

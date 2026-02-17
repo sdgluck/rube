@@ -8,9 +8,7 @@ export interface CommonJobConfig {
   sections?: string[];
 }
 
-export interface GenerateJobConfig extends CommonJobConfig {
-  limit?: number;
-}
+export interface GenerateJobConfig extends CommonJobConfig {}
 
 export interface BywJobConfig extends CommonJobConfig {
   limit?: number;

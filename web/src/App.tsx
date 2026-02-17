@@ -7,6 +7,7 @@ import SettingsRadarr from "./pages/SettingsRadarr";
 import SettingsSonarr from "./pages/SettingsSonarr";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
+import Rules from "./pages/Rules";
 import Media from "./pages/Media";
 import MediaDetail from "./pages/MediaDetail";
 import Jobs from "./pages/Jobs";
@@ -65,6 +66,9 @@ export default function App() {
           <NavLink to="/media" className="nav-link">
             Media
           </NavLink>
+          <NavLink to="/rules" className="nav-link">
+            Rules
+          </NavLink>
           <NavLink to="/users" className="nav-link">
             Users
           </NavLink>
@@ -82,6 +86,7 @@ export default function App() {
           <Route path="/stats" element={<Stats />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
+          <Route path="/rules" element={<Rules />} />
           <Route path="/media" element={<Media />} />
           <Route path="/media/:ratingKey" element={<MediaDetail />} />
           <Route path="/users" element={<Users />} />

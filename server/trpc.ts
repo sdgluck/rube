@@ -11,6 +11,7 @@ import {
   deleteCollection,
 } from "./collections.ts";
 import { getJobs, getJobRuns, getJobRun, getActiveRuns, updateJob, startJob, cancelRun } from "./jobs.ts";
+import { getRules, getRule, createRule, updateRule, deleteRule } from "./rules.ts";
 
 const t = initTRPC.create();
 
@@ -255,6 +256,45 @@ const usersRouter = t.router({
   }),
 });
 
+const rulesRouter = t.router({
+  list: t.procedure.query(() => getRules()),
+
+  get: t.procedure.input(z.object({ id: z.string() })).query(({ input }) => {
+    const rule = getRule(input.id);
+    if (!rule) throw new Error(`Rule ${input.id} not found`);
+    return rule;
+  }),
+
+  create: t.procedure
+    .input(z.object({ name: z.string(), type: z.string(), config: z.string() }))
+    .mutation(({ input }) => {
+      return createRule(input);
+    }),
+
+  update: t.procedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        enabled: z.boolean().optional(),
+        config: z.string().optional(),
+      }),
+    )
+    .mutation(({ input }) => {
+      const { id, ...updates } = input;
+      updateRule(id, {
+        ...updates,
+        enabled: updates.enabled !== undefined ? (updates.enabled ? 1 : 0) : undefined,
+      });
+      return { ok: true };
+    }),
+
+  delete: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    deleteRule(input.id);
+    return { ok: true };
+  }),
+});
+
 const mediaRouter = t.router({
   list: t.procedure
     .input(
@@ -355,6 +395,7 @@ export const appRouter = t.router({
   collections: collectionsRouter,
   media: mediaRouter,
   jobs: jobsRouter,
+  rules: rulesRouter,
   users: usersRouter,
   stats: statsRouter,
 

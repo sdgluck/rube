@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 import { getConfig } from "./config.ts";
+import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
 import type { JobContext, CommonJobConfig, GenerateJobConfig, BywJobConfig } from "../shared/job-context.ts";
@@ -26,7 +27,6 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
 ];
 
 const DEFAULT_CONFIGS: Record<string, string> = {
-  generate: '{"limit":8}',
   "because-you-watched": '{"limit":10}',
 };
 
@@ -434,6 +434,7 @@ export function updateJob(
 
 export function initJobs(): void {
   seedDefaultJobs();
+  seedDefaultRules();
   markStaleRunsAsFailed();
   startCronSchedules();
 }

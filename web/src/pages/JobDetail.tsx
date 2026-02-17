@@ -77,13 +77,13 @@ export default function JobDetail() {
         }
       })();
       setSelectedSections(parsed.sections || []);
-      setLimit(parsed.limit ?? (job.command === "generate" ? 8 : 10));
+      setLimit(parsed.limit ?? 10);
       setConfigDirty(false);
     }
   }, [job?.config, job?.command]);
 
-  const hasLimit = job?.command === "generate" || job?.command === "because-you-watched";
-  const maxLimit = job?.command === "generate" ? 10 : 20;
+  const hasLimit = job?.command === "because-you-watched";
+  const maxLimit = 20;
   const sections = sectionsQuery.data;
 
   const latestRunId = runsQuery.data?.[0]?.id;
@@ -272,6 +272,14 @@ export default function JobDetail() {
                     </td>
                     <td className={styles.configSummary}>
                       {selectedSections.length > 0 ? selectedSections.join(", ") : "All sections"}
+                    </td>
+                  </tr>
+                )}
+                {job.command === "generate" && (
+                  <tr>
+                    <td>Rules</td>
+                    <td colSpan={2}>
+                      <Link to="/rules">Manage rules &rarr;</Link>
                     </td>
                   </tr>
                 )}

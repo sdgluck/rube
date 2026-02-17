@@ -1,0 +1,112 @@
+.description {
+  font-size: 0.9rem;
+  color: #888;
+  margin: -16px 0 24px;
+}
+
+.ruleForm {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ruleFormField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ruleFormField label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.promptTextarea {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: monospace;
+  background: #fff;
+  resize: vertical;
+  min-height: 200px;
+}
+
+.promptTextarea:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+}
+
+.promptHint {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.formActions {
+  display: flex;
+  gap: 10px;
+}
+
+.configSummary {
+  font-size: 0.85rem;
+  color: #888;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggleCell {
+  text-align: center;
+}
+
+.typeLabel {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e9ecef;
+  color: #495057;
+}
+
+.typeAi {
+  background: #e8daef;
+  color: #6c3483;
+}
+
+.typeCriteria {
+  background: #d5f5e3;
+  color: #1e8449;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.configSections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.configSectionItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.configSectionItem input {
+  width: 14px;
+  height: 14px;
+  accent-color: #4a6cf7;
+  cursor: pointer;
+}

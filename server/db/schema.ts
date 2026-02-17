@@ -28,6 +28,15 @@ export const jobs = sqliteTable("jobs", {
   config: text("config").notNull().default("{}"),
 });
 
+export const rules = sqliteTable("rules", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  enabled: integer("enabled").notNull().default(1),
+  config: text("config").notNull().default("{}"),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const jobRuns = sqliteTable("job_runs", {
   id: text("id").primaryKey(),
   jobId: text("job_id")
