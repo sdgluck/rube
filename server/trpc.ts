@@ -82,6 +82,19 @@ const collectionsRouter = t.router({
     return { ok: true };
   }),
 
+  smartConfig: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+    const client = getPlexClient();
+    return client.getSmartCollectionContent(input.ratingKey);
+  }),
+
+  updateSmartFilters: t.procedure
+    .input(z.object({ ratingKey: z.string(), contentUri: z.string() }))
+    .mutation(async ({ input }) => {
+      const client = getPlexClient();
+      await client.updateSmartCollectionContent(input.ratingKey, input.contentUri);
+      return { ok: true };
+    }),
+
   sync: t.procedure.mutation(async () => {
     const client = getPlexClient();
     let sections = await client.getSections();

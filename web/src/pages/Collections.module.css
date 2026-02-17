@@ -589,3 +589,137 @@
   color: #666;
   margin-bottom: 16px;
 }
+
+/* ─── Smart filter editor ─────────────────────────────────────────────────── */
+
+.sortRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+}
+
+.filterInput {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+  flex: 1;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+}
+
+.filterRemoveBtn {
+  background: none;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.filterRemoveBtn:hover {
+  background: #dc3545;
+  color: #fff;
+}
+
+.filterAddBtn {
+  background: none;
+  border: none;
+  color: #4a6cf7;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.filterAddBtn:hover {
+  text-decoration: underline;
+}
+
+.filterActions {
+  display: flex;
+  gap: 16px;
+}
+
+.combinerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.combinerLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.combinerDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.combinerDivider::before,
+.combinerDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+}
+
+.combinerDividerText {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filterGroupBox {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fafbfc;
+}
+
+.filterGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

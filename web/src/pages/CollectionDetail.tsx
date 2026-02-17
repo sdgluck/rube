@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
+import SmartFiltersEditor from "./SmartFiltersEditor";
 
 type ViewMode = "table" | "grid";
 
@@ -207,6 +208,8 @@ export default function CollectionDetail() {
               </button>
             </div>
           </fieldset>
+
+          {collection.smart === 1 && <SmartFiltersEditor ratingKey={ratingKey!} onSave={() => itemsQuery.refetch()} />}
         </div>
       </div>
 
