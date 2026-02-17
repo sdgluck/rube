@@ -105,6 +105,20 @@ export interface PlexRecentItem {
   addedAt: number;
 }
 
+export interface PlexMediaItem {
+  ratingKey: string;
+  title: string;
+  year?: number;
+  thumb?: string;
+  type: string;
+  addedAt?: number;
+}
+
+export interface PlexMediaDetail extends PlexMediaItem {
+  summary: string;
+  collections: Array<{ id: number; tag: string }>;
+}
+
 interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;
@@ -679,6 +693,55 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     }));
   }
 
+  // ─── Media browsing ────────────────────────────────────────────────────────
+
+  async function getItems(
+    sectionId: string,
+    options: { offset?: number; size?: number; title?: string; type?: number } = {},
+  ): Promise<{ items: PlexMediaItem[]; total: number }> {
+    const { offset = 0, size = 50, title, type } = options;
+    const data = await request(`/library/sections/${sectionId}/all`, {
+      params: {
+        "X-Plex-Container-Start": offset,
+        "X-Plex-Container-Size": size,
+        ...(title ? { title } : {}),
+        ...(type ? { type } : {}),
+      },
+    });
+    const metadata = data?.MediaContainer?.Metadata || [];
+    const total: number = data?.MediaContainer?.totalSize ?? 0;
+    return {
+      items: metadata.map((item: Record<string, unknown>) => ({
+        ratingKey: item.ratingKey as string,
+        title: item.title as string,
+        year: item.year as number | undefined,
+        thumb: item.thumb as string | undefined,
+        type: item.type as string,
+        addedAt: item.addedAt as number | undefined,
+      })),
+      total,
+    };
+  }
+
+  async function getItemDetail(ratingKey: string): Promise<PlexMediaDetail> {
+    const data = await request(`/library/metadata/${ratingKey}`);
+    const meta = data?.MediaContainer?.Metadata?.[0];
+    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    return {
+      ratingKey: meta.ratingKey,
+      title: meta.title,
+      year: meta.year,
+      thumb: meta.thumb,
+      type: meta.type,
+      addedAt: meta.addedAt,
+      summary: meta.summary || "",
+      collections: (meta.Collection || []).map((c: { id: number; tag: string }) => ({
+        id: c.id,
+        tag: c.tag,
+      })),
+    };
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -708,6 +771,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     updateSmartCollectionContent,
     getActiveSessions,
     getRecentlyAdded,
+    getItems,
+    getItemDetail,
   };
 }
 

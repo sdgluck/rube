@@ -723,3 +723,18 @@
   align-items: center;
   gap: 8px;
 }
+
+/* ─── Pagination ─────────────────────────────────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.paginationInfo {
+  font-size: 0.9rem;
+  color: #666;
+}

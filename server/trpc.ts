@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 import { getAllConfig, getConfig, setConfig, configSchema, type ConfigKey } from "./config.ts";
-import { createPlexClient } from "./plex.ts";
+import { createPlexClient, SECTION_TYPE_MAP } from "./plex.ts";
 import {
   syncCollections,
   getLocalCollections,
@@ -255,9 +255,105 @@ const usersRouter = t.router({
   }),
 });
 
+const mediaRouter = t.router({
+  list: t.procedure
+    .input(
+      z.object({
+        sectionId: z.string().optional(),
+        type: z.string().optional(),
+        search: z.string().optional(),
+        offset: z.number().default(0),
+        limit: z.number().default(50),
+      }),
+    )
+    .query(async ({ input }) => {
+      const client = getPlexClient();
+      let sections = await client.getSections();
+      const configuredLibraries = getConfig("global_plex_libraries");
+      if (configuredLibraries) {
+        sections = sections.filter((s) => configuredLibraries.includes(s.title));
+      }
+      if (input.sectionId) {
+        sections = sections.filter((s) => s.key === input.sectionId);
+      }
+
+      const typeNum = input.type ? SECTION_TYPE_MAP[input.type] : undefined;
+
+      if (sections.length === 1) {
+        const section = sections[0];
+        const result = await client.getItems(section.key, {
+          offset: input.offset,
+          size: input.limit,
+          title: input.search || undefined,
+          type: typeNum,
+        });
+        return {
+          items: result.items.map((item) => ({ ...item, sectionTitle: section.title })),
+          total: result.total,
+          offset: input.offset,
+          limit: input.limit,
+        };
+      }
+
+      // Multi-section: fetch from each and merge
+      let allItems: Array<{
+        ratingKey: string;
+        title: string;
+        year?: number;
+        thumb?: string;
+        type: string;
+        addedAt?: number;
+        sectionTitle: string;
+      }> = [];
+      let total = 0;
+      for (const section of sections) {
+        const result = await client.getItems(section.key, {
+          offset: 0,
+          size: input.offset + input.limit,
+          title: input.search || undefined,
+          type: typeNum,
+        });
+        allItems.push(...result.items.map((item) => ({ ...item, sectionTitle: section.title })));
+        total += result.total;
+      }
+
+      // Sort by title and apply pagination
+      allItems.sort((a, b) => a.title.localeCompare(b.title));
+      const paged = allItems.slice(input.offset, input.offset + input.limit);
+
+      return {
+        items: paged,
+        total,
+        offset: input.offset,
+        limit: input.limit,
+      };
+    }),
+
+  get: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+    const client = getPlexClient();
+    const detail = await client.getItemDetail(input.ratingKey);
+
+    const enrichedCollections = detail.collections.map((col) => {
+      const local = getLocalCollection(String(col.id));
+      return {
+        ratingKey: String(col.id),
+        title: col.tag,
+        isLocal: !!local,
+        sectionTitle: local?.sectionTitle,
+      };
+    });
+
+    return {
+      ...detail,
+      collections: enrichedCollections,
+    };
+  }),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
+  media: mediaRouter,
   jobs: jobsRouter,
   users: usersRouter,
   stats: statsRouter,
