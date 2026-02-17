@@ -160,6 +160,46 @@ async function testArrConnection(url: string, apiKey: string) {
   return data.instanceName || data.appName || "Unknown";
 }
 
+const statsRouter = t.router({
+  sessions: t.procedure.query(async () => {
+    const client = getPlexClient();
+    return client.getActiveSessions();
+  }),
+
+  recentlyAdded: t.procedure.query(async () => {
+    const client = getPlexClient();
+    return client.getRecentlyAdded(20);
+  }),
+
+  mostWatched: t.procedure.query(async () => {
+    const client = getPlexClient();
+    const history = await client.getWatchHistory({ limit: 1000 });
+    const cutoff = Math.floor(Date.now() / 1000) - 7 * 86400;
+    const recentHistory = history.filter((item) => (item.viewedAt ?? 0) >= cutoff);
+
+    const counts = new Map<
+      string,
+      { title: string; year?: number; type: string; grandparentTitle?: string; plays: number }
+    >();
+    for (const item of recentHistory) {
+      const existing = counts.get(item.ratingKey);
+      if (existing) {
+        existing.plays++;
+      } else {
+        counts.set(item.ratingKey, {
+          title: item.title,
+          year: item.year,
+          type: item.type,
+          grandparentTitle: item.grandparentTitle,
+          plays: 1,
+        });
+      }
+    }
+
+    return [...counts.values()].sort((a, b) => b.plays - a.plays).slice(0, 10);
+  }),
+});
+
 const usersRouter = t.router({
   list: t.procedure.query(async () => {
     const client = getPlexClient();
@@ -220,6 +260,7 @@ export const appRouter = t.router({
   collections: collectionsRouter,
   jobs: jobsRouter,
   users: usersRouter,
+  stats: statsRouter,
 
   plexSections: t.procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");

@@ -1,4 +1,5 @@
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import SettingsPlex from "./pages/SettingsPlex";
 import SettingsAi from "./pages/SettingsAi";
@@ -53,6 +54,9 @@ export default function App() {
       <aside className="sidebar">
         <h1 className="sidebar-title">Tinkerbell</h1>
         <nav>
+          <NavLink to="/stats" className="nav-link">
+            Stats
+          </NavLink>
           <NavLink to="/collections" className="nav-link">
             Collections
           </NavLink>
@@ -70,6 +74,7 @@ export default function App() {
       </aside>
       <main className="content">
         <Routes>
+          <Route path="/stats" element={<Stats />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
           <Route path="/users" element={<Users />} />
@@ -83,7 +88,7 @@ export default function App() {
             <Route path="radarr" element={<SettingsRadarr />} />
             <Route path="sonarr" element={<SettingsSonarr />} />
           </Route>
-          <Route path="*" element={<Navigate to="/collections" replace />} />
+          <Route path="*" element={<Navigate to="/stats" replace />} />
         </Routes>
       </main>
     </div>

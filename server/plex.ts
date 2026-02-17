@@ -84,6 +84,27 @@ export interface PlexSharing {
   machineIdentifier: string;
 }
 
+export interface PlexSession {
+  title: string;
+  type: string;
+  year?: number;
+  thumb?: string;
+  grandparentTitle?: string;
+  user: string;
+  player: string;
+  state: string;
+  decision: string;
+}
+
+export interface PlexRecentItem {
+  ratingKey: string;
+  title: string;
+  year?: number;
+  thumb?: string;
+  type: string;
+  addedAt: number;
+}
+
 interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;
@@ -623,6 +644,41 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     });
   }
 
+  // ─── Sessions & recently added ─────────────────────────────────────────────
+
+  async function getActiveSessions(): Promise<PlexSession[]> {
+    const data = await request("/status/sessions");
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((item: Record<string, unknown>) => ({
+      title: item.title as string,
+      type: item.type as string,
+      year: item.year as number | undefined,
+      thumb: item.thumb as string | undefined,
+      grandparentTitle: item.grandparentTitle as string | undefined,
+      user: ((item.User as Record<string, unknown>)?.title as string) || "Unknown",
+      player: ((item.Player as Record<string, unknown>)?.title as string) || "Unknown",
+      state: ((item.Player as Record<string, unknown>)?.state as string) || "playing",
+      decision:
+        (((item.Media as Array<Record<string, unknown>>)?.[0]?.Part as Array<Record<string, unknown>>)?.[0]
+          ?.decision as string) || "directplay",
+    }));
+  }
+
+  async function getRecentlyAdded(limit = 20): Promise<PlexRecentItem[]> {
+    const data = await request("/library/recentlyAdded", {
+      params: { "X-Plex-Container-Size": limit },
+    });
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((item: Record<string, unknown>) => ({
+      ratingKey: item.ratingKey as string,
+      title: item.title as string,
+      year: item.year as number | undefined,
+      thumb: item.thumb as string | undefined,
+      type: item.type as string,
+      addedAt: item.addedAt as number,
+    }));
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -650,6 +706,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     removeLabelFromAllItems,
     getSmartCollectionContent,
     updateSmartCollectionContent,
+    getActiveSessions,
+    getRecentlyAdded,
   };
 }
 
