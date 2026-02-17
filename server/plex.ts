@@ -37,6 +37,7 @@ export interface PlexItem {
   ratingKey: string;
   title: string;
   year?: number;
+  thumb?: string;
 }
 
 export interface PlexHistoryItem {
@@ -439,12 +440,26 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   }
 
   async function getCollectionChildren(ratingKey: string): Promise<PlexItem[]> {
-    const data = await request(`/library/metadata/${ratingKey}/children`);
-    const metadata = data?.MediaContainer?.Metadata || [];
-    return metadata.map((item: { ratingKey: string; title: string; year?: number }) => ({
+    // Check if this is a smart collection — smart collections don't serve items
+    // via /children, they use a dynamic query path stored in the metadata's key field.
+    const detail = await request(`/library/metadata/${ratingKey}`);
+    const meta = detail?.MediaContainer?.Metadata?.[0];
+    const isSmart = meta?.smart === "1" || meta?.smart === 1 || meta?.smart === true;
+
+    let metadata;
+    if (isSmart && meta?.key) {
+      const data = await request(meta.key);
+      metadata = data?.MediaContainer?.Metadata || [];
+    } else {
+      const data = await request(`/library/metadata/${ratingKey}/children`);
+      metadata = data?.MediaContainer?.Metadata || [];
+    }
+
+    return metadata.map((item: { ratingKey: string; title: string; year?: number; thumb?: string }) => ({
       ratingKey: item.ratingKey,
       title: item.title,
       year: item.year,
+      thumb: item.thumb,
     }));
   }
 
@@ -592,6 +607,22 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     await request(`/library/metadata/${ratingKey}`, { method: "PUT", params: labelParams });
   }
 
+  // ─── Smart collection operations ───────────────────────────────────────────
+
+  async function getSmartCollectionContent(ratingKey: string): Promise<{ content: string; key: string }> {
+    const detail = await request(`/library/metadata/${ratingKey}`);
+    const meta = detail?.MediaContainer?.Metadata?.[0];
+    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    return { content: meta.content || "", key: meta.key || "" };
+  }
+
+  async function updateSmartCollectionContent(ratingKey: string, contentUri: string): Promise<void> {
+    await request(`/library/collections/${ratingKey}/items`, {
+      method: "PUT",
+      params: { uri: contentUri },
+    });
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -617,6 +648,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     setCollectionLabels,
     addLabelToAllItems,
     removeLabelFromAllItems,
+    getSmartCollectionContent,
+    updateSmartCollectionContent,
   };
 }
 
