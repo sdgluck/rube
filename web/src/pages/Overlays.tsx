@@ -60,6 +60,7 @@ function getPlaceholderValue(type: string): string {
 export default function Overlays() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<string | null>(null);
+  const [testImage, setTestImage] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
@@ -106,6 +107,12 @@ export default function Overlays() {
   });
 
   const startJobMutation = trpc.jobs.start.useMutation();
+
+  const testOverlayMutation = trpc.overlays.testOverlay.useMutation({
+    onSuccess: (data) => {
+      setTestImage(`data:image/jpeg;base64,${data.image}`);
+    },
+  });
 
   const configs = configsQuery.data || [];
   const previewValues = previewQuery.data || {};
@@ -235,6 +242,17 @@ export default function Overlays() {
                 <button className={styles.shuffleBtn} onClick={handleShuffle} disabled={sampleQuery.isFetching}>
                   Shuffle
                 </button>
+                <button
+                  className={styles.shuffleBtn}
+                  onClick={() => {
+                    if (sampleQuery.data?.ratingKey) {
+                      testOverlayMutation.mutate({ sectionId, ratingKey: sampleQuery.data.ratingKey });
+                    }
+                  }}
+                  disabled={!sampleQuery.data?.ratingKey || configs.length === 0 || testOverlayMutation.isPending}
+                >
+                  {testOverlayMutation.isPending ? "Rendering..." : "Test"}
+                </button>
               </div>
             </div>
 
@@ -288,6 +306,21 @@ export default function Overlays() {
             </button>
           </div>
         </>
+      )}
+
+      {testImage && (
+        <div className={styles.modalBackdrop} onClick={() => setTestImage(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Overlay Preview</h3>
+              <button className={styles.modalClose} onClick={() => setTestImage(null)}>
+                &times;
+              </button>
+            </div>
+            <img src={testImage} className={styles.modalImage} alt="Overlay preview" />
+            <p className={styles.modalHint}>This is a preview only — no changes have been made in Plex.</p>
+          </div>
+        </div>
       )}
     </div>
   );

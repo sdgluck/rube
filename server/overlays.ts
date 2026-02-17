@@ -165,14 +165,25 @@ export function getBadgeColors(type: OverlayType, value: string): BadgeColors {
 
 // ─── SVG badge rendering ────────────────────────────────────────────────────
 
-export function createBadgeSvg(text: string, bgColor: string, textColor: string): Buffer {
-  const fontSize = 14;
-  const charWidth = 8.5;
-  const paddingX = 10;
-  const paddingY = 6;
+// Reference width for scaling — badges are designed at this size
+const REF_WIDTH = 600;
+
+/**
+ * Compute a scale factor so badges are proportional to poster width.
+ * A 600px poster gets scale 1, a 1200px poster gets scale 2, etc.
+ */
+function badgeScale(imgW: number): number {
+  return imgW / REF_WIDTH;
+}
+
+export function createBadgeSvg(text: string, bgColor: string, textColor: string, scale: number): Buffer {
+  const fontSize = Math.round(14 * scale);
+  const charWidth = 8.5 * scale;
+  const paddingX = Math.round(10 * scale);
+  const paddingY = Math.round(6 * scale);
   const width = Math.ceil(text.length * charWidth + paddingX * 2);
   const height = fontSize + paddingY * 2;
-  const radius = 4;
+  const radius = Math.round(4 * scale);
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
   <rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="${bgColor}"/>
@@ -188,28 +199,28 @@ function escapeXml(str: string): string {
 
 // ─── Position calculation ───────────────────────────────────────────────────
 
-const MARGIN = 10;
-
 export function calculatePosition(
   position: OverlayPosition,
   imgW: number,
   imgH: number,
   badgeW: number,
   badgeH: number,
+  scale: number,
 ): { left: number; top: number } {
+  const margin = Math.round(10 * scale);
   switch (position) {
     case "top-left":
-      return { left: MARGIN, top: MARGIN };
+      return { left: margin, top: margin };
     case "top-center":
-      return { left: Math.round((imgW - badgeW) / 2), top: MARGIN };
+      return { left: Math.round((imgW - badgeW) / 2), top: margin };
     case "top-right":
-      return { left: imgW - badgeW - MARGIN, top: MARGIN };
+      return { left: imgW - badgeW - margin, top: margin };
     case "bottom-left":
-      return { left: MARGIN, top: imgH - badgeH - MARGIN };
+      return { left: margin, top: imgH - badgeH - margin };
     case "bottom-center":
-      return { left: Math.round((imgW - badgeW) / 2), top: imgH - badgeH - MARGIN };
+      return { left: Math.round((imgW - badgeW) / 2), top: imgH - badgeH - margin };
     case "bottom-right":
-      return { left: imgW - badgeW - MARGIN, top: imgH - badgeH - MARGIN };
+      return { left: imgW - badgeW - margin, top: imgH - badgeH - margin };
   }
 }
 
@@ -226,19 +237,20 @@ export async function compositeOverlays(posterBuffer: Buffer, badges: Badge[]): 
   const metadata = await image.metadata();
   const imgW = metadata.width || 600;
   const imgH = metadata.height || 900;
+  const scale = badgeScale(imgW);
 
   const composites: sharp.OverlayOptions[] = [];
 
   for (const badge of badges) {
     const colors = getBadgeColors(badge.type, badge.value);
-    const svgBuf = createBadgeSvg(badge.value, colors.bg, colors.text);
+    const svgBuf = createBadgeSvg(badge.value, colors.bg, colors.text, scale);
 
     // Get SVG dimensions
     const svgMeta = await sharp(svgBuf).metadata();
     const badgeW = svgMeta.width || 80;
     const badgeH = svgMeta.height || 26;
 
-    const pos = calculatePosition(badge.position, imgW, imgH, badgeW, badgeH);
+    const pos = calculatePosition(badge.position, imgW, imgH, badgeW, badgeH, scale);
 
     composites.push({
       input: svgBuf,

@@ -19,10 +19,12 @@ import {
   clearOverlayConfigs,
   getOverlaidItemCount,
   resolveOverlayValue,
+  compositeOverlays,
   OVERLAY_POSITIONS,
   OVERLAY_TYPES,
   type OverlayPosition,
   type OverlayType,
+  type Badge,
 } from "./overlays.ts";
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 
@@ -485,6 +487,57 @@ const overlaysRouter = t.router({
         );
       }
       return values;
+    }),
+
+  testOverlay: t.procedure
+    .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
+    .mutation(async ({ input }) => {
+      const configs = getOverlayConfigs(input.sectionId);
+      if (configs.length === 0) throw new Error("No overlays configured for this section");
+
+      const client = getPlexClient();
+      const detail = await client.getItemFullDetail(input.ratingKey);
+      if (!detail.thumb) throw new Error("Item has no poster");
+
+      const mediaInfo = detail.media[0] || {};
+      const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
+
+      let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
+      if (needsOmdb) {
+        const imdbId = extractImdbId(detail.guids);
+        if (imdbId) {
+          const omdb = await getOmdbRatings(imdbId);
+          if (omdb) ratings = omdb;
+        }
+      }
+
+      const badges: Badge[] = [];
+      for (const cfg of configs) {
+        const value = resolveOverlayValue(
+          cfg.overlayType as OverlayType,
+          {
+            videoResolution: mediaInfo.videoResolution,
+            videoCodec: mediaInfo.videoCodec,
+            audioCodec: mediaInfo.audioCodec,
+            contentRating: detail.contentRating,
+          },
+          ratings,
+        );
+        if (value) {
+          badges.push({
+            position: cfg.position as Badge["position"],
+            type: cfg.overlayType as OverlayType,
+            value,
+          });
+        }
+      }
+
+      if (badges.length === 0) throw new Error("No overlay values resolved for this item");
+
+      const posterBuf = await client.downloadPoster(detail.thumb);
+      const composited = await compositeOverlays(posterBuf, badges);
+
+      return { image: composited.toString("base64") };
     }),
 });
 
