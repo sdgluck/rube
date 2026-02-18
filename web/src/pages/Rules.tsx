@@ -19,6 +19,7 @@ interface FormState {
   type: string;
   prompt: string;
   limit: number;
+  minItems: number;
   sections: string[];
 }
 
@@ -27,6 +28,7 @@ const EMPTY_FORM: FormState = {
   type: "ai_prompt",
   prompt: "",
   limit: 8,
+  minItems: 15,
   sections: [],
 };
 
@@ -72,6 +74,7 @@ export default function Rules() {
       type: rule.type,
       prompt: (config.prompt as string) || "",
       limit: (config.limit as number) ?? defaultLimitForType(rule.type),
+      minItems: (config.minItems as number) ?? 15,
       sections: (config.sections as string[]) || [],
     });
     setIsEditing(true);
@@ -85,7 +88,10 @@ export default function Rules() {
   function handleSave() {
     if (!form) return;
     const config: Record<string, unknown> = { limit: form.limit };
-    if (form.type === "ai_prompt") config.prompt = form.prompt;
+    if (form.type === "ai_prompt") {
+      config.prompt = form.prompt;
+      config.minItems = form.minItems;
+    }
     if (form.sections.length > 0) config.sections = form.sections;
     const configStr = JSON.stringify(config);
 
@@ -148,7 +154,7 @@ export default function Rules() {
               try {
                 const c = JSON.parse(rule.config || "{}");
                 if (rule.type === "ai_prompt") {
-                  configSummary = `Limit: ${c.limit ?? 8}`;
+                  configSummary = `Limit: ${c.limit ?? 8} | Min items: ${c.minItems ?? 15}`;
                 } else if (rule.type === "top_rated" || rule.type === "lowest_rated") {
                   configSummary = `${c.limit ?? 50} items`;
                 } else {
@@ -225,18 +231,38 @@ export default function Rules() {
           </div>
 
           {form.type === "ai_prompt" && (
-            <div className={styles.ruleFormField}>
-              <label>Prompt Template</label>
-              <textarea
-                className={styles.promptTextarea}
-                value={form.prompt}
-                onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-                placeholder="Enter your AI prompt template..."
-              />
-              <span className={styles.promptHint}>
-                Available placeholders: {"{sectionTitle}"}, {"{limit}"}
-              </span>
-            </div>
+            <>
+              <div className={styles.ruleFormField}>
+                <label>Prompt Template</label>
+                <textarea
+                  className={styles.promptTextarea}
+                  value={form.prompt}
+                  onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+                  placeholder="Enter your AI prompt template..."
+                />
+                <span className={styles.promptHint}>
+                  Available placeholders: {"{sectionTitle}"}, {"{limit}"}, {"{minItems}"}
+                </span>
+              </div>
+              <div className={styles.ruleFormField}>
+                <label>Min items per collection</label>
+                <input
+                  type="number"
+                  className={shared.input}
+                  style={{ maxWidth: 120 }}
+                  min={1}
+                  max={100}
+                  value={form.minItems}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      minItems: Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)),
+                    })
+                  }
+                />
+                <span className={styles.promptHint}>Collections with fewer matched items will be skipped</span>
+              </div>
+            </>
           )}
 
           <div className={styles.ruleFormField}>
@@ -261,6 +287,7 @@ export default function Rules() {
                 })
               }
             />
+            <span className={styles.promptHint}>Collections replace those generated in previous runs</span>
           </div>
 
           {sections.length > 0 && (

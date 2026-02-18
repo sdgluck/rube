@@ -41,7 +41,7 @@ const DEFAULT_AI_PROMPT = `You are a movie/TV curator. Given this list of items 
 
 Rules:
 - Create exactly {limit} collections
-- Each collection MUST have between 15 and 30 items, no fewer than 15
+- Each collection MUST have between {minItems} and 30 items, no fewer than {minItems}
 - Each item can appear in multiple collections
 - Only use titles that exactly match the input list
 - Collection names should be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format)

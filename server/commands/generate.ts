@@ -12,6 +12,7 @@ interface AiCollection {
 interface RuleConfig {
   prompt?: string;
   limit?: number;
+  minItems?: number;
   sections?: string[];
 }
 
@@ -59,6 +60,7 @@ async function handleAiPrompt(
 
   const promptTemplate = ruleConfig.prompt || "";
   const maxCollections = ruleConfig.limit ?? 8;
+  const minItems = ruleConfig.minItems ?? 15;
 
   if (maxCollections > 10) {
     throw new Error("Limit cannot exceed 10.");
@@ -81,7 +83,8 @@ async function handleAiPrompt(
 
     const prompt = promptTemplate
       .replace(/\{sectionTitle\}/g, sectionTitle)
-      .replace(/\{limit\}/g, String(maxCollections));
+      .replace(/\{limit\}/g, String(maxCollections))
+      .replace(/\{minItems\}/g, String(minItems));
 
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -128,8 +131,8 @@ ${itemList}`,
     for (const col of aiCollections) {
       const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
 
-      if (ratingKeys.length < 15) {
-        ctx.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least 15`);
+      if (ratingKeys.length < minItems) {
+        ctx.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least ${minItems}`);
         continue;
       }
 
