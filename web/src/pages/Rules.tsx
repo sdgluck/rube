@@ -292,7 +292,7 @@ export default function Rules() {
 
           {sections.length > 0 && (
             <div className={styles.ruleFormField}>
-              <label>Sections (optional override)</label>
+              <label>Sections</label>
               <div className={styles.configSections}>
                 {sections.map((s) => (
                   <label key={s.key} className={styles.configSectionItem}>
@@ -312,6 +312,7 @@ export default function Rules() {
                   </label>
                 ))}
               </div>
+              <span className={styles.promptHint}>Default is all sections</span>
             </div>
           )}
 
