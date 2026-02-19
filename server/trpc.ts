@@ -271,6 +271,8 @@ const usersRouter = t.router({
   }),
 });
 
+const testControllers = new Map<string, AbortController>();
+
 const rulesRouter = t.router({
   list: t.procedure.query(() => getRules()),
 
@@ -306,6 +308,24 @@ const rulesRouter = t.router({
 
   delete: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     deleteRule(input.id);
+    return { ok: true };
+  }),
+
+  test: t.procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+    testControllers.get(input.id)?.abort();
+    const controller = new AbortController();
+    testControllers.set(input.id, controller);
+    try {
+      const { testRule } = await import("./commands/generate.ts");
+      return await testRule(input.id, controller.signal);
+    } finally {
+      testControllers.delete(input.id);
+    }
+  }),
+
+  cancelTest: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    testControllers.get(input.id)?.abort();
+    testControllers.delete(input.id);
     return { ok: true };
   }),
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "../trpc";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
@@ -9,7 +9,29 @@ const RULE_TYPES = [
   { value: "lowest_rated", label: "Lowest Rated" },
   { value: "actors", label: "Actors" },
   { value: "studios", label: "Studios" },
+  { value: "imdb_chart", label: "IMDb Chart" },
+  { value: "imdb_list", label: "IMDb List" },
+  { value: "rt_top_rated", label: "RT Top Rated" },
 ];
+
+const IMDB_CHARTS = [
+  { value: "top_250_movies", label: "Top 250 Movies" },
+  { value: "top_250_tv", label: "Top 250 TV Shows" },
+  { value: "popular_movies", label: "Most Popular Movies" },
+  { value: "popular_tv", label: "Most Popular TV Shows" },
+  { value: "box_office", label: "Box Office" },
+];
+
+const IMDB_CHART_LABELS: Record<string, string> = Object.fromEntries(IMDB_CHARTS.map((c) => [c.value, c.label]));
+
+// Charts that target a specific Plex section type
+const IMDB_CHART_SECTION_TYPE: Record<string, string> = {
+  top_250_movies: "movie",
+  top_250_tv: "show",
+  popular_movies: "movie",
+  popular_tv: "show",
+  box_office: "movie",
+};
 
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));
 
@@ -21,6 +43,8 @@ interface FormState {
   limit: number;
   minItems: number;
   sections: string[];
+  chart: string;
+  listId: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -30,18 +54,26 @@ const EMPTY_FORM: FormState = {
   limit: 8,
   minItems: 15,
   sections: [],
+  chart: "top_250_movies",
+  listId: "",
 };
 
 function defaultLimitForType(type: string): number {
   if (type === "ai_prompt") return 8;
   if (type === "top_rated" || type === "lowest_rated") return 50;
+  if (type === "rt_top_rated") return 100;
   return 10;
 }
 
 function maxLimitForType(type: string): number {
   if (type === "ai_prompt") return 10;
   if (type === "top_rated" || type === "lowest_rated") return 200;
+  if (type === "rt_top_rated") return 200;
   return 50;
+}
+
+function typeHasLimit(type: string): boolean {
+  return type !== "imdb_chart" && type !== "imdb_list";
 }
 
 export default function Rules() {
@@ -52,8 +84,13 @@ export default function Rules() {
   const updateMutation = trpc.rules.update.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const deleteMutation = trpc.rules.delete.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
 
+  const testMutation = trpc.rules.test.useMutation();
+  const cancelTestMutation = trpc.rules.cancelTest.useMutation();
+  const testingRuleIdRef = useRef<string | null>(null);
+
   const [form, setForm] = useState<FormState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
 
   const rules = rulesQuery.data || [];
   const sections = sectionsQuery.data || [];
@@ -76,6 +113,8 @@ export default function Rules() {
       limit: (config.limit as number) ?? defaultLimitForType(rule.type),
       minItems: (config.minItems as number) ?? 15,
       sections: (config.sections as string[]) || [],
+      chart: (config.chart as string) || "top_250_movies",
+      listId: (config.listId as string) || "",
     });
     setIsEditing(true);
   }
@@ -87,11 +126,14 @@ export default function Rules() {
 
   function handleSave() {
     if (!form) return;
-    const config: Record<string, unknown> = { limit: form.limit };
+    const config: Record<string, unknown> = {};
+    if (typeHasLimit(form.type)) config.limit = form.limit;
     if (form.type === "ai_prompt") {
       config.prompt = form.prompt;
       config.minItems = form.minItems;
     }
+    if (form.type === "imdb_chart") config.chart = form.chart;
+    if (form.type === "imdb_list") config.listId = form.listId;
     if (form.sections.length > 0) config.sections = form.sections;
     const configStr = JSON.stringify(config);
 
@@ -111,12 +153,53 @@ export default function Rules() {
     deleteMutation.mutate({ id: rule.id });
   }
 
+  function handleTest(rule: (typeof rules)[0]) {
+    setTestingRuleId(rule.id);
+    testingRuleIdRef.current = rule.id;
+    testMutation.mutate({ id: rule.id });
+  }
+
+  function handleCancelTest() {
+    if (testingRuleId) {
+      cancelTestMutation.mutate({ id: testingRuleId });
+    }
+    testingRuleIdRef.current = null;
+    setTestingRuleId(null);
+    testMutation.reset();
+  }
+
+  function closeTestPreview() {
+    testingRuleIdRef.current = null;
+    setTestingRuleId(null);
+    testMutation.reset();
+  }
+
+  // Cancel test on unmount (e.g. navigation away)
+  useEffect(() => {
+    return () => {
+      if (testingRuleIdRef.current) {
+        cancelTestMutation.mutate({ id: testingRuleIdRef.current });
+      }
+    };
+  }, []);
+
   // When switching type in create mode, reset limit to default
   useEffect(() => {
     if (form && !isEditing) {
       setForm((prev) => (prev ? { ...prev, limit: defaultLimitForType(prev.type) } : prev));
     }
   }, [form?.type]);
+
+  // Auto-select sections for type-specific IMDB charts
+  const chartSectionType = form?.type === "imdb_chart" ? IMDB_CHART_SECTION_TYPE[form.chart] : undefined;
+  const sectionsLocked = !!chartSectionType;
+
+  useEffect(() => {
+    if (form?.type === "imdb_chart" && chartSectionType && sections.length > 0) {
+      const locked = sections.filter((s) => s.type === chartSectionType).map((s) => s.title);
+      setForm((prev) => (prev ? { ...prev, sections: locked } : prev));
+    }
+  }, [form?.type, form?.chart, chartSectionType, sections]);
 
   if (rulesQuery.isLoading) return <p>Loading...</p>;
 
@@ -159,20 +242,31 @@ export default function Rules() {
                   configSummary = `Limit: ${c.limit ?? 8} | Min items: ${c.minItems ?? 15}`;
                 } else if (rule.type === "top_rated" || rule.type === "lowest_rated") {
                   configSummary = `${c.limit ?? 50} items`;
+                } else if (rule.type === "imdb_chart") {
+                  configSummary = IMDB_CHART_LABELS[c.chart] || c.chart || "—";
+                } else if (rule.type === "imdb_list") {
+                  configSummary = c.listId || "—";
+                } else if (rule.type === "rt_top_rated") {
+                  configSummary = `Top ${c.limit ?? 100} items`;
                 } else {
                   configSummary = `Max: ${c.limit ?? 10}`;
                 }
                 if (c.sections?.length) configSummary += ` | Sections: ${c.sections.join(", ")}`;
               } catch {}
 
-              const isAi = rule.type === "ai_prompt";
+              const typeBadge =
+                rule.type === "ai_prompt"
+                  ? styles.typeAi
+                  : rule.type === "imdb_chart" || rule.type === "imdb_list"
+                    ? styles.typeImdb
+                    : rule.type === "rt_top_rated"
+                      ? styles.typeRt
+                      : styles.typeCriteria;
               return (
                 <tr key={rule.id}>
                   <td>{rule.name}</td>
                   <td>
-                    <span className={`${styles.typeLabel} ${isAi ? styles.typeAi : styles.typeCriteria}`}>
-                      {TYPE_LABELS[rule.type] || rule.type}
-                    </span>
+                    <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
                   </td>
                   <td className={styles.toggleCell}>
                     <input type="checkbox" checked={!!rule.enabled} onChange={() => handleToggle(rule)} />
@@ -182,6 +276,19 @@ export default function Rules() {
                   </td>
                   <td>
                     <div className={styles.actions}>
+                      {testMutation.isPending && testingRuleId === rule.id ? (
+                        <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelTest}>
+                          Cancel
+                        </button>
+                      ) : (
+                        <button
+                          className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                          onClick={() => handleTest(rule)}
+                          disabled={testMutation.isPending}
+                        >
+                          Test
+                        </button>
+                      )}
                       <button
                         className={`${shared.button} ${shared.buttonSmall}`}
                         onClick={() => startEdit(rule)}
@@ -202,6 +309,48 @@ export default function Rules() {
             })}
           </tbody>
         </table>
+      )}
+
+      {testMutation.isError && (
+        <div className={styles.testPreviewError}>
+          Error: {testMutation.error?.message || "Test failed"}
+          <button className={styles.testPreviewCloseBtn} style={{ marginLeft: 12 }} onClick={closeTestPreview}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {testMutation.data && (
+        <div className={styles.testPreview}>
+          <div className={styles.testPreviewHeader}>
+            <h3>Test Results — {rules.find((r) => r.id === testingRuleId)?.name || "Rule"}</h3>
+            <button className={styles.testPreviewCloseBtn} onClick={closeTestPreview}>
+              Close
+            </button>
+          </div>
+          {testMutation.data.collections.length === 0 ? (
+            <div className={styles.testPreviewEmpty}>No collections would be created by this rule.</div>
+          ) : (
+            testMutation.data.collections.map((col, i) => (
+              <div key={i} className={styles.testPreviewCollection}>
+                <div className={styles.testPreviewCollectionHeader}>
+                  <span className={styles.testPreviewCollectionName}>{col.name}</span>
+                  <span className={styles.testPreviewCollectionMeta}>
+                    {col.sectionTitle} — {col.items.length} item{col.items.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className={styles.testPreviewItems}>
+                  {col.items.map((item, j) => (
+                    <div key={j} className={styles.testPreviewItem}>
+                      {item.title}
+                      {item.year && <span className={styles.testPreviewItemYear}> ({item.year})</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
       {form && (
@@ -267,30 +416,67 @@ export default function Rules() {
             </>
           )}
 
-          <div className={styles.ruleFormField}>
-            <label>
-              {form.type === "ai_prompt"
-                ? "Collections per section"
-                : form.type === "top_rated" || form.type === "lowest_rated"
-                  ? "Items per collection"
-                  : "Max collections"}
-            </label>
-            <input
-              type="number"
-              className={shared.input}
-              style={{ maxWidth: 120 }}
-              min={1}
-              max={maxLimitForType(form.type)}
-              value={form.limit}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  limit: Math.max(1, Math.min(maxLimitForType(form.type), parseInt(e.target.value, 10) || 1)),
-                })
-              }
-            />
-            <span className={styles.promptHint}>Collections replace those generated in previous runs</span>
-          </div>
+          {form.type === "imdb_chart" && (
+            <div className={styles.ruleFormField}>
+              <label>Chart</label>
+              <select
+                className={shared.select}
+                value={form.chart}
+                onChange={(e) => setForm({ ...form, chart: e.target.value })}
+              >
+                {IMDB_CHARTS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.type === "imdb_list" && (
+            <div className={styles.ruleFormField}>
+              <label>IMDb List ID or URL</label>
+              <input
+                className={shared.input}
+                value={form.listId}
+                onChange={(e) => setForm({ ...form, listId: e.target.value })}
+                placeholder="ls123456789 or https://www.imdb.com/list/ls123456789/"
+              />
+            </div>
+          )}
+
+          {form.type === "rt_top_rated" && (
+            <div className={styles.ruleFormField}>
+              <span className={styles.promptHint}>Requires an OMDB API key configured in Settings.</span>
+            </div>
+          )}
+
+          {typeHasLimit(form.type) && (
+            <div className={styles.ruleFormField}>
+              <label>
+                {form.type === "ai_prompt"
+                  ? "Collections per section"
+                  : form.type === "top_rated" || form.type === "lowest_rated" || form.type === "rt_top_rated"
+                    ? "Items per collection"
+                    : "Max collections"}
+              </label>
+              <input
+                type="number"
+                className={shared.input}
+                style={{ maxWidth: 120 }}
+                min={1}
+                max={maxLimitForType(form.type)}
+                value={form.limit}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    limit: Math.max(1, Math.min(maxLimitForType(form.type), parseInt(e.target.value, 10) || 1)),
+                  })
+                }
+              />
+              <span className={styles.promptHint}>Collections replace those generated in previous runs</span>
+            </div>
+          )}
 
           {sections.length > 0 && (
             <div className={styles.ruleFormField}>
@@ -301,6 +487,7 @@ export default function Rules() {
                     <input
                       type="checkbox"
                       checked={form.sections.includes(s.title)}
+                      disabled={sectionsLocked}
                       onChange={() =>
                         setForm({
                           ...form,
@@ -314,7 +501,11 @@ export default function Rules() {
                   </label>
                 ))}
               </div>
-              <span className={styles.promptHint}>Default is all sections</span>
+              <span className={styles.promptHint}>
+                {sectionsLocked
+                  ? `Sections are determined by the selected chart (${chartSectionType === "movie" ? "Movies" : "TV Shows"} only)`
+                  : "Default is all sections"}
+              </span>
             </div>
           )}
 
@@ -322,7 +513,12 @@ export default function Rules() {
             <button
               className={shared.button}
               onClick={handleSave}
-              disabled={!form.name.trim() || createMutation.isPending || updateMutation.isPending}
+              disabled={
+                !form.name.trim() ||
+                (form.type === "imdb_list" && !form.listId.trim()) ||
+                createMutation.isPending ||
+                updateMutation.isPending
+              }
             >
               {isEditing ? "Save" : "Create"}
             </button>

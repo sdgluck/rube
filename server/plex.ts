@@ -605,7 +605,10 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   // ─── Iterate all items in a section ─────────────────────────────────────────
 
-  async function* allItems(sectionId: string): AsyncGenerator<{ item: Record<string, unknown>; totalSize: number }> {
+  async function* allItems(
+    sectionId: string,
+    opts?: { includeGuids?: boolean },
+  ): AsyncGenerator<{ item: Record<string, unknown>; totalSize: number }> {
     const pageSize = 100;
     let offset = 0;
 
@@ -614,6 +617,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         params: {
           "X-Plex-Container-Start": offset,
           "X-Plex-Container-Size": pageSize,
+          ...(opts?.includeGuids ? { includeGuids: 1 } : {}),
         },
       });
 
@@ -629,6 +633,26 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       offset += batch.length;
       if (offset >= totalSize) break;
     }
+  }
+
+  async function allItemsWithGuids(sectionId: string): Promise<
+    Array<{
+      ratingKey: string;
+      title: string;
+      year?: number;
+      guids: string[];
+    }>
+  > {
+    const results: Array<{ ratingKey: string; title: string; year?: number; guids: string[] }> = [];
+    for await (const { item } of allItems(sectionId, { includeGuids: true })) {
+      results.push({
+        ratingKey: item.ratingKey as string,
+        title: item.title as string,
+        year: item.year as number | undefined,
+        guids: ((item.Guid as Array<{ id: string }>) || []).map((g) => g.id),
+      });
+    }
+    return results;
   }
 
   // ─── Add label to all items in a section ───────────────────────────────────
@@ -958,6 +982,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     getPosters,
     selectPoster,
     allItems,
+    allItemsWithGuids,
   };
 }
 
