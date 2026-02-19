@@ -1,7 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { trpc } from "../trpc";
+import DropdownButton from "../DropdownButton";
+import ConfirmModal from "../ConfirmModal";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
+
+function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const RULE_TYPES = [
   { value: "ai_prompt", label: "AI Prompt" },
@@ -91,9 +101,79 @@ export default function Rules() {
   const [form, setForm] = useState<FormState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const rules = rulesQuery.data || [];
   const sections = sectionsQuery.data || [];
+
+  function getExportData() {
+    return rules.map((r) => {
+      let config: Record<string, unknown> = {};
+      try {
+        config = JSON.parse(r.config || "{}");
+      } catch {}
+      return { name: r.name, type: r.type, enabled: !!r.enabled, config };
+    });
+  }
+
+  function handleExportFile() {
+    downloadJson(getExportData(), "tinkerbell-rules.json");
+  }
+
+  async function handleExportClipboard() {
+    await navigator.clipboard.writeText(JSON.stringify(getExportData(), null, 2));
+    setImportStatus({ type: "success", message: "Copied rules to clipboard" });
+  }
+
+  async function importRules(text: string) {
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) throw new Error("Expected an array of rules");
+    let count = 0;
+    for (const rule of data) {
+      await createMutation.mutateAsync({
+        name: rule.name,
+        type: rule.type,
+        config: JSON.stringify(rule.config || {}),
+      });
+      if (rule.enabled === false) {
+        const latest = utils.rules.list.getData();
+        const created = latest?.find((r) => r.name === rule.name && r.type === rule.type);
+        if (created) {
+          await updateMutation.mutateAsync({ id: created.id, enabled: false });
+        }
+      }
+      count++;
+    }
+    utils.rules.list.invalidate();
+    setImportStatus({ type: "success", message: `Imported ${count} rule${count !== 1 ? "s" : ""}` });
+  }
+
+  async function handleImportFile(file: File) {
+    try {
+      await importRules(await file.text());
+    } catch (err) {
+      setImportStatus({
+        type: "error",
+        message: `Import failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleImportClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      await importRules(text);
+    } catch (err) {
+      setImportStatus({
+        type: "error",
+        message: `Import failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      });
+    }
+  }
 
   function startCreate() {
     setForm({ ...EMPTY_FORM });
@@ -149,8 +229,42 @@ export default function Rules() {
   }
 
   function handleDelete(rule: (typeof rules)[0]) {
-    if (!confirm(`Delete rule "${rule.name}"?`)) return;
-    deleteMutation.mutate({ id: rule.id });
+    setPendingConfirm({
+      message: `Delete rule "${rule.name}"?`,
+      onConfirm: () => {
+        deleteMutation.mutate({ id: rule.id });
+        setPendingConfirm(null);
+      },
+    });
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === rules.length) setSelected(new Set());
+    else setSelected(new Set(rules.map((r) => r.id)));
+  }
+
+  function handleBulkDelete() {
+    const count = selected.size;
+    setPendingConfirm({
+      message: `Delete ${count} rule${count !== 1 ? "s" : ""}?`,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        for (const id of selected) {
+          await deleteMutation.mutateAsync({ id });
+        }
+        setSelected(new Set());
+        utils.rules.list.invalidate();
+      },
+    });
   }
 
   function handleTest(rule: (typeof rules)[0]) {
@@ -209,13 +323,66 @@ export default function Rules() {
         <h2 className={shared.heading}>
           Rules{rules.length > 0 && <span className="count-badge">{rules.length}</span>}
         </h2>
-        <button className={shared.button} onClick={startCreate} disabled={!!form}>
-          Add Rule
-        </button>
+        <div className={shared.headerActions}>
+          <DropdownButton
+            label="Export"
+            className={shared.buttonSecondary}
+            disabled={rules.length === 0}
+            options={[
+              { label: "File", onClick: handleExportFile },
+              { label: "Clipboard", onClick: handleExportClipboard },
+            ]}
+          />
+          <DropdownButton
+            label="Import"
+            className={shared.buttonSecondary}
+            options={[
+              { label: "File", onClick: () => fileInputRef.current?.click() },
+              { label: "Clipboard", onClick: handleImportClipboard },
+            ]}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: "none" }}
+            onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
+          />
+          <button className={shared.button} onClick={startCreate} disabled={!!form}>
+            Add Rule
+          </button>
+        </div>
       </div>
       <p className={styles.description}>
         Rules define how the Generate Collections job creates collections. Each enabled rule runs during generation.
       </p>
+
+      {importStatus && (
+        <div className={`${shared.toast} ${importStatus.type === "success" ? shared.success : shared.error}`}>
+          {importStatus.message}
+          <button
+            className={styles.testPreviewCloseBtn}
+            style={{ marginLeft: 12 }}
+            onClick={() => setImportStatus(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {selected.size > 0 && (
+        <div className={styles.bulkBar}>
+          <span>
+            {selected.size} rule{selected.size !== 1 ? "s" : ""} selected
+          </span>
+          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleBulkDelete}>
+            Delete selected
+          </button>
+          <button className={`${shared.buttonSecondary} ${shared.buttonSmall}`} onClick={() => setSelected(new Set())}>
+            Cancel
+          </button>
+        </div>
+      )}
 
       {rules.length === 0 && !form ? (
         <div className={shared.emptyState}>
@@ -226,6 +393,13 @@ export default function Rules() {
         <table className={shared.table}>
           <thead>
             <tr>
+              <th className={styles.checkboxCell}>
+                <input
+                  type="checkbox"
+                  checked={rules.length > 0 && selected.size === rules.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
               <th>Name</th>
               <th>Type</th>
               <th>Enabled</th>
@@ -264,6 +438,9 @@ export default function Rules() {
                       : styles.typeCriteria;
               return (
                 <tr key={rule.id}>
+                  <td className={styles.checkboxCell}>
+                    <input type="checkbox" checked={selected.has(rule.id)} onChange={() => toggleSelected(rule.id)} />
+                  </td>
                   <td>{rule.name}</td>
                   <td>
                     <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
@@ -523,6 +700,15 @@ export default function Rules() {
             </button>
           </div>
         </div>
+      )}
+
+      {pendingConfirm && (
+        <ConfirmModal
+          message={pendingConfirm.message}
+          confirmLabel="Delete"
+          onConfirm={pendingConfirm.onConfirm}
+          onCancel={() => setPendingConfirm(null)}
+        />
       )}
     </div>
   );

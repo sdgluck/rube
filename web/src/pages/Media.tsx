@@ -184,7 +184,6 @@ export default function Media() {
             </option>
           ))}
         </select>
-        <div className={styles.filtersSpacer} />
         <button
           className={`${styles.advancedFilterToggle} ${showAdvanced ? styles.advancedFilterToggleActive : ""}`}
           onClick={() => setShowAdvanced((v) => !v)}
@@ -192,6 +191,7 @@ export default function Media() {
           Filters
           {activeFilterCount > 0 && <span className={styles.advancedFilterBadge}>{activeFilterCount}</span>}
         </button>
+        <div className={styles.filtersSpacer} />
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "../trpc";
+import ConfirmModal from "../ConfirmModal";
 import styles from "./Collections.module.css";
 
 type SortKey = "title" | "sectionTitle" | "childCount" | "smart" | "labels" | "addedAt";
@@ -54,6 +55,7 @@ export default function Collections() {
   const [labelEditing, setLabelEditing] = useState(false);
   const [labelsToAdd, setLabelsToAdd] = useState("");
   const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -151,46 +153,56 @@ export default function Collections() {
     setLabelEditing(false);
   }, [sectionFilter, labelFilter, debouncedSearch]);
 
-  const handleDelete = async (ratingKey: string, title: string) => {
-    if (!confirm(`Delete "${title}"? This will remove it from Plex.`)) return;
-    try {
-      await deleteMutation.mutateAsync({ ratingKey });
-      setStatus({ type: "success", msg: `Deleted "${title}"` });
-      collectionsQuery.refetch();
-      allCollectionsQuery.refetch();
-    } catch {
-      setStatus({ type: "error", msg: `Failed to delete "${title}"` });
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    const count = selected.size;
-    if (!confirm(`Delete ${count} collection(s)? This will remove them from Plex.`)) return;
-    setBulkProgress({ done: 0, total: count });
-    setStatus(null);
-    let deleted = 0;
-    let failed = 0;
-    await pMap(
-      [...selected],
-      async (ratingKey) => {
+  const handleDelete = (ratingKey: string, title: string) => {
+    setPendingConfirm({
+      message: `Delete "${title}"? This will remove it from Plex.`,
+      onConfirm: async () => {
+        setPendingConfirm(null);
         try {
           await deleteMutation.mutateAsync({ ratingKey });
-          deleted++;
+          setStatus({ type: "success", msg: `Deleted "${title}"` });
+          collectionsQuery.refetch();
+          allCollectionsQuery.refetch();
         } catch {
-          failed++;
+          setStatus({ type: "error", msg: `Failed to delete "${title}"` });
         }
-        setBulkProgress({ done: deleted + failed, total: count });
       },
-      { concurrency: 5 },
-    );
-    setSelected(new Set());
-    setBulkProgress(null);
-    setStatus({
-      type: failed > 0 ? "error" : "success",
-      msg: failed > 0 ? `Deleted ${deleted}, failed ${failed}` : `Deleted ${deleted} collection(s)`,
     });
-    collectionsQuery.refetch();
-    allCollectionsQuery.refetch();
+  };
+
+  const handleBulkDelete = () => {
+    const count = selected.size;
+    setPendingConfirm({
+      message: `Delete ${count} collection(s)? This will remove them from Plex.`,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        setBulkProgress({ done: 0, total: count });
+        setStatus(null);
+        let deleted = 0;
+        let failed = 0;
+        await pMap(
+          [...selected],
+          async (ratingKey) => {
+            try {
+              await deleteMutation.mutateAsync({ ratingKey });
+              deleted++;
+            } catch {
+              failed++;
+            }
+            setBulkProgress({ done: deleted + failed, total: count });
+          },
+          { concurrency: 5 },
+        );
+        setSelected(new Set());
+        setBulkProgress(null);
+        setStatus({
+          type: failed > 0 ? "error" : "success",
+          msg: failed > 0 ? `Deleted ${deleted}, failed ${failed}` : `Deleted ${deleted} collection(s)`,
+        });
+        collectionsQuery.refetch();
+        allCollectionsQuery.refetch();
+      },
+    });
   };
 
   const handleBulkEditLabels = async () => {
@@ -539,6 +551,15 @@ export default function Collections() {
             </table>
           )}
         </>
+      )}
+
+      {pendingConfirm && (
+        <ConfirmModal
+          message={pendingConfirm.message}
+          confirmLabel="Delete"
+          onConfirm={pendingConfirm.onConfirm}
+          onCancel={() => setPendingConfirm(null)}
+        />
       )}
     </div>
   );

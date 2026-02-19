@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
+import ConfirmModal from "../ConfirmModal";
 import styles from "./Collections.module.css";
 import SmartFiltersEditor from "./SmartFiltersEditor";
 
@@ -19,6 +20,7 @@ export default function CollectionDetail() {
     () => (localStorage.getItem("collection-items-view") as ViewMode) || "table",
   );
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const collectionQuery = trpc.collections.get.useQuery(
     { ratingKey: ratingKey! },
@@ -59,15 +61,20 @@ export default function CollectionDetail() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!ratingKey || !collection) return;
-    if (!confirm(`Delete "${collection.title}"? This will remove it from Plex.`)) return;
-    try {
-      await deleteMutation.mutateAsync({ ratingKey });
-      navigate("/collections");
-    } catch {
-      setStatus({ type: "error", msg: "Failed to delete collection" });
-    }
+    setPendingConfirm({
+      message: `Delete "${collection.title}"? This will remove it from Plex.`,
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          await deleteMutation.mutateAsync({ ratingKey });
+          navigate("/collections");
+        } catch {
+          setStatus({ type: "error", msg: "Failed to delete collection" });
+        }
+      },
+    });
   };
 
   if (collectionQuery.isLoading) return <p>Loading...</p>;
@@ -281,6 +288,15 @@ export default function CollectionDetail() {
           </table>
         )}
       </fieldset>
+
+      {pendingConfirm && (
+        <ConfirmModal
+          message={pendingConfirm.message}
+          confirmLabel="Delete"
+          onConfirm={pendingConfirm.onConfirm}
+          onCancel={() => setPendingConfirm(null)}
+        />
+      )}
     </div>
   );
 }

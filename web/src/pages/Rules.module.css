@@ -100,6 +100,31 @@
   gap: 8px;
 }
 
+.checkboxCell {
+  width: 32px;
+  text-align: center;
+}
+
+.checkboxCell input {
+  width: 14px;
+  height: 14px;
+  accent-color: #4a6cf7;
+  cursor: pointer;
+}
+
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #f0f4ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
 .configSections {
   display: flex;
   flex-wrap: wrap;

@@ -1,6 +1,13 @@
+.jobsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
 .heading {
   font-size: 1.5rem;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 /* ─── Job table ──────────────────────────────────────────────────────────────── */
