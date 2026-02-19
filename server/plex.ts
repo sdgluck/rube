@@ -234,6 +234,14 @@ export interface PlexPoster {
   ratingKey: string;
 }
 
+export interface MediaFilters {
+  videoResolution?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+}
+
 interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;
@@ -964,6 +972,51 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     };
   }
 
+  async function getItemsFiltered(
+    sectionId: string,
+    filters: MediaFilters,
+    options: { offset?: number; size?: number; title?: string; type?: number } = {},
+  ): Promise<{ items: PlexMediaItem[]; total: number }> {
+    const { offset = 0, size = 50, title, type } = options;
+    const titleLower = title?.toLowerCase();
+    const matched: PlexMediaItem[] = [];
+
+    for await (const { item } of allItems(sectionId)) {
+      // Type filter
+      if (type) {
+        const itemType = SECTION_TYPE_MAP[item.type as string];
+        if (itemType && itemType !== type) continue;
+      }
+
+      // Title filter
+      if (titleLower && !(item.title as string).toLowerCase().includes(titleLower)) continue;
+
+      // Media property filters — check Media[0]
+      const media = (item.Media as Array<Record<string, unknown>>)?.[0];
+      if (!media) continue;
+
+      if (filters.videoResolution && media.videoResolution !== filters.videoResolution) continue;
+      if (filters.videoCodec && media.videoCodec !== filters.videoCodec) continue;
+      if (filters.audioCodec && media.audioCodec !== filters.audioCodec) continue;
+      if (filters.audioChannels && media.audioChannels !== filters.audioChannels) continue;
+      if (filters.container && media.container !== filters.container) continue;
+
+      matched.push({
+        ratingKey: item.ratingKey as string,
+        title: item.title as string,
+        year: item.year as number | undefined,
+        thumb: item.thumb as string | undefined,
+        type: item.type as string,
+        addedAt: item.addedAt as number | undefined,
+      });
+    }
+
+    return {
+      items: matched.slice(offset, offset + size),
+      total: matched.length,
+    };
+  }
+
   async function getItemDetail(ratingKey: string): Promise<PlexMediaDetail> {
     const data = await request(`/library/metadata/${ratingKey}`);
     const meta = data?.MediaContainer?.Metadata?.[0];
@@ -1156,6 +1209,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     getActiveSessions,
     getRecentlyAdded,
     getItems,
+    getItemsFiltered,
     getItemDetail,
     getItemFullDetail,
     downloadPoster,

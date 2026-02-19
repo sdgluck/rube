@@ -724,6 +724,81 @@
   gap: 8px;
 }
 
+/* ─── Advanced filters ───────────────────────────────────────────────────── */
+
+.advancedFilterToggle {
+  padding: 7px 12px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.advancedFilterToggle:hover {
+  border-color: #4a6cf7;
+  color: #4a6cf7;
+}
+
+.advancedFilterToggleActive {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+  color: #fff;
+}
+
+.advancedFilterToggleActive:hover {
+  background: #3b5de7;
+  color: #fff;
+}
+
+.advancedFilterBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  background: #fff;
+  color: #4a6cf7;
+}
+
+.advancedFilters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.clearFilters {
+  background: none;
+  border: none;
+  color: #4a6cf7;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.clearFilters:hover {
+  text-decoration: underline;
+}
+
 /* ─── Pagination ─────────────────────────────────────────────────────────── */
 
 .pagination {
