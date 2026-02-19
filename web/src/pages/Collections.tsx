@@ -260,7 +260,9 @@ export default function Collections() {
 
   return (
     <div>
-      <h2 className={styles.heading}>Collections</h2>
+      <h2 className={styles.heading}>
+        Collections{collections.length > 0 && <span className="count-badge">{collections.length}</span>}
+      </h2>
 
       {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
 

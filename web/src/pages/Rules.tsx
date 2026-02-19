@@ -123,7 +123,9 @@ export default function Rules() {
   return (
     <div>
       <div className={shared.header}>
-        <h2 className={shared.heading}>Rules</h2>
+        <h2 className={shared.heading}>
+          Rules{rules.length > 0 && <span className="count-badge">{rules.length}</span>}
+        </h2>
         <button className={shared.button} onClick={startCreate} disabled={!!form}>
           Add Rule
         </button>

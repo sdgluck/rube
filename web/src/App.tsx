@@ -18,6 +18,16 @@ import Overlays from "./pages/Overlays";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
 
+function SidebarStreamCount() {
+  const sessionsQuery = trpc.stats.sessions.useQuery(undefined, {
+    refetchInterval: 10000,
+    refetchOnWindowFocus: false,
+  });
+  const count = sessionsQuery.data?.length || 0;
+  if (count === 0) return null;
+  return <span className="stream-badge">{count}</span>;
+}
+
 function SidebarActiveJobs() {
   const navigate = useNavigate();
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
@@ -58,8 +68,9 @@ export default function App() {
       <aside className="sidebar">
         <h1 className="sidebar-title">Tinkerbell</h1>
         <nav>
-          <NavLink to="/stats" className="nav-link">
+          <NavLink to="/stats" className="nav-link nav-link-with-badge">
             Stats
+            <SidebarStreamCount />
           </NavLink>
           <NavLink to="/collections" className="nav-link">
             Collections

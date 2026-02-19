@@ -58,8 +58,46 @@ body {
   font-weight: 600;
 }
 
+.nav-link-with-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stream-badge {
+  background: #4a6cf7;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  line-height: 1;
+}
+
 .content {
   flex: 1;
   padding: 32px 40px;
   min-width: 0;
+}
+
+.count-badge {
+  background: #e5e7eb;
+  color: #555;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  margin-left: 10px;
+  vertical-align: middle;
+  line-height: 1;
 }

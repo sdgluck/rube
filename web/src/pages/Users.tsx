@@ -13,7 +13,7 @@ export default function Users() {
 
   return (
     <div>
-      <h2 className={styles.heading}>Users</h2>
+      <h2 className={styles.heading}>Users{users.length > 0 && <span className="count-badge">{users.length}</span>}</h2>
 
       {users.length === 0 ? (
         <div className={styles.emptyState}>

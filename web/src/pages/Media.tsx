@@ -87,7 +87,7 @@ export default function Media() {
 
   return (
     <div>
-      <h2 className={styles.heading}>Media</h2>
+      <h2 className={styles.heading}>Media{total > 0 && <span className="count-badge">{total}</span>}</h2>
 
       <div className={styles.filters}>
         <input

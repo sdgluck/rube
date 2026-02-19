@@ -146,12 +146,9 @@ export default function Overlays() {
     utils.overlays.sampleItem.invalidate({ sectionId });
   };
 
-  const plexUrl = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
-  const baseUrl = plexUrl.data?.global_plex_url || "";
-  const plexToken = plexUrl.data?.global_plex_token || "";
-
-  const posterUrl =
-    sampleQuery.data?.thumb && baseUrl ? `${baseUrl}${sampleQuery.data.thumb}?X-Plex-Token=${plexToken}` : null;
+  const posterUrl = sampleQuery.data?.thumb
+    ? `/api/plex-image?path=${encodeURIComponent(sampleQuery.data.thumb)}`
+    : null;
 
   if (sectionsQuery.isLoading) return <p>Loading...</p>;
 

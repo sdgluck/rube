@@ -55,7 +55,7 @@ export default function Jobs() {
 
   return (
     <div>
-      <h1 className={styles.heading}>Jobs</h1>
+      <h1 className={styles.heading}>Jobs{jobs.length > 0 && <span className="count-badge">{jobs.length}</span>}</h1>
       <table className={styles.table}>
         <thead>
           <tr>
