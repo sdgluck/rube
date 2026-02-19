@@ -3,8 +3,8 @@ import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import SettingsPlex from "./pages/SettingsPlex";
 import SettingsAi from "./pages/SettingsAi";
-import SettingsRadarr from "./pages/SettingsRadarr";
-import SettingsSonarr from "./pages/SettingsSonarr";
+import SettingsArrs from "./pages/SettingsArrs";
+import SettingsCritics from "./pages/SettingsCritics";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Rules from "./pages/Rules";
@@ -113,8 +113,8 @@ export default function App() {
             <Route index element={<Navigate to="/settings/plex" replace />} />
             <Route path="plex" element={<SettingsPlex />} />
             <Route path="ai" element={<SettingsAi />} />
-            <Route path="radarr" element={<SettingsRadarr />} />
-            <Route path="sonarr" element={<SettingsSonarr />} />
+            <Route path="arrs" element={<SettingsArrs />} />
+            <Route path="critics" element={<SettingsCritics />} />
           </Route>
           <Route path="*" element={<Navigate to="/stats" replace />} />
         </Routes>
