@@ -9,6 +9,7 @@
     "test": "node --test server/commands/shuffle.test.ts",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
+    "dev:setup": "bash scripts/setup-hosts.sh",
     "prepare": "husky"
   },
   "private": true,
