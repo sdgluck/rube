@@ -90,10 +90,36 @@ export interface PlexSession {
   year?: number;
   thumb?: string;
   grandparentTitle?: string;
+  parentTitle?: string;
+  parentIndex?: number;
+  index?: number;
+  duration?: number;
+  viewOffset?: number;
   user: string;
+  userThumb?: string;
   player: string;
+  product?: string;
+  platform?: string;
   state: string;
+  local?: boolean;
+  relayed?: boolean;
+  secure?: boolean;
+  address?: string;
+  location?: string;
+  bandwidth?: number;
   decision: string;
+  videoResolution?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+  videoDecision?: string;
+  audioDecision?: string;
+  transcodeSpeed?: number;
+  transcodeProgress?: number;
+  transcodeHwEncoding?: boolean;
+  sourceVideoCodec?: string;
+  sourceAudioCodec?: string;
 }
 
 export interface PlexRecentItem {
@@ -114,9 +140,66 @@ export interface PlexMediaItem {
   addedAt?: number;
 }
 
+export interface PlexStreamInfo {
+  streamType: number; // 1=video, 2=audio, 3=subtitle
+  codec?: string;
+  displayTitle?: string;
+  bitrate?: number;
+  // Video
+  width?: number;
+  height?: number;
+  frameRate?: number;
+  profile?: string;
+  level?: number;
+  bitDepth?: number;
+  chromaSubsampling?: string;
+  colorPrimaries?: string;
+  colorRange?: string;
+  colorSpace?: string;
+  scanType?: string;
+  // Audio
+  channels?: number;
+  audioChannelLayout?: string;
+  samplingRate?: number;
+  language?: string;
+  languageCode?: string;
+}
+
+export interface PlexPartInfo {
+  file?: string;
+  size?: number;
+  container?: string;
+  duration?: number;
+  streams: PlexStreamInfo[];
+}
+
+export interface PlexMediaInfo {
+  videoResolution?: string;
+  videoCodec?: string;
+  videoFrameRate?: string;
+  videoProfile?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+  bitrate?: number;
+  width?: number;
+  height?: number;
+  optimizedForStreaming?: boolean;
+  parts: PlexPartInfo[];
+}
+
 export interface PlexMediaDetail extends PlexMediaItem {
   summary: string;
+  contentRating?: string;
+  duration?: number;
+  originallyAvailableAt?: string;
+  studio?: string;
+  rating?: number;
+  audienceRating?: number;
+  genres: string[];
+  directors: string[];
   collections: Array<{ id: number; tag: string }>;
+  media: PlexMediaInfo[];
 }
 
 export interface PlexDirectoryEntry {
@@ -785,19 +868,55 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   async function getActiveSessions(): Promise<PlexSession[]> {
     const data = await request("/status/sessions");
     const metadata = data?.MediaContainer?.Metadata || [];
-    return metadata.map((item: Record<string, unknown>) => ({
-      title: item.title as string,
-      type: item.type as string,
-      year: item.year as number | undefined,
-      thumb: item.thumb as string | undefined,
-      grandparentTitle: item.grandparentTitle as string | undefined,
-      user: ((item.User as Record<string, unknown>)?.title as string) || "Unknown",
-      player: ((item.Player as Record<string, unknown>)?.title as string) || "Unknown",
-      state: ((item.Player as Record<string, unknown>)?.state as string) || "playing",
-      decision:
-        (((item.Media as Array<Record<string, unknown>>)?.[0]?.Part as Array<Record<string, unknown>>)?.[0]
-          ?.decision as string) || "directplay",
-    }));
+    return metadata.map((item: Record<string, unknown>) => {
+      const player = item.Player as Record<string, unknown> | undefined;
+      const user = item.User as Record<string, unknown> | undefined;
+      const session = item.Session as Record<string, unknown> | undefined;
+      const media = (item.Media as Array<Record<string, unknown>>)?.[0];
+      const part = (media?.Part as Array<Record<string, unknown>>)?.[0];
+      const transcode = item.TranscodeSession as Record<string, unknown> | undefined;
+
+      return {
+        title: item.title as string,
+        type: item.type as string,
+        year: item.year as number | undefined,
+        thumb: item.thumb as string | undefined,
+        grandparentTitle: item.grandparentTitle as string | undefined,
+        parentTitle: item.parentTitle as string | undefined,
+        parentIndex: item.parentIndex as number | undefined,
+        index: item.index as number | undefined,
+        duration: (item.duration as number | undefined) ?? (media?.duration as number | undefined),
+        viewOffset: item.viewOffset as number | undefined,
+        user: (user?.title as string) || "Unknown",
+        userThumb: user?.thumb as string | undefined,
+        player: (player?.title as string) || "Unknown",
+        product: player?.product as string | undefined,
+        platform: player?.platform as string | undefined,
+        state: (player?.state as string) || "playing",
+        local: player?.local !== undefined ? player.local === true || player.local === 1 : undefined,
+        relayed: player?.relayed !== undefined ? player.relayed === true || player.relayed === 1 : undefined,
+        secure: player?.secure !== undefined ? player.secure === true || player.secure === 1 : undefined,
+        address: player?.address as string | undefined,
+        location: session?.location as string | undefined,
+        bandwidth: session?.bandwidth as number | undefined,
+        decision: (part?.decision as string) || "directplay",
+        videoResolution: media?.videoResolution as string | undefined,
+        videoCodec: media?.videoCodec as string | undefined,
+        audioCodec: media?.audioCodec as string | undefined,
+        audioChannels: media?.audioChannels as number | undefined,
+        container: media?.container as string | undefined,
+        videoDecision: transcode?.videoDecision as string | undefined,
+        audioDecision: transcode?.audioDecision as string | undefined,
+        transcodeSpeed: transcode?.speed as number | undefined,
+        transcodeProgress: transcode?.progress as number | undefined,
+        transcodeHwEncoding:
+          transcode?.transcodeHwEncoding !== undefined
+            ? transcode.transcodeHwEncoding === true || transcode.transcodeHwEncoding === 1
+            : undefined,
+        sourceVideoCodec: transcode?.sourceVideoCodec as string | undefined,
+        sourceAudioCodec: transcode?.sourceAudioCodec as string | undefined,
+      };
+    });
   }
 
   async function getRecentlyAdded(limit = 20): Promise<PlexRecentItem[]> {
@@ -849,6 +968,59 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const data = await request(`/library/metadata/${ratingKey}`);
     const meta = data?.MediaContainer?.Metadata?.[0];
     if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+
+    const media: PlexMediaInfo[] = (meta.Media || []).map((m: Record<string, unknown>) => {
+      const parts: PlexPartInfo[] = ((m.Part as Array<Record<string, unknown>>) || []).map(
+        (p: Record<string, unknown>) => {
+          const streams: PlexStreamInfo[] = ((p.Stream as Array<Record<string, unknown>>) || []).map(
+            (s: Record<string, unknown>) => ({
+              streamType: s.streamType as number,
+              codec: s.codec as string | undefined,
+              displayTitle: s.displayTitle as string | undefined,
+              bitrate: s.bitrate as number | undefined,
+              width: s.width as number | undefined,
+              height: s.height as number | undefined,
+              frameRate: s.frameRate != null ? Number(s.frameRate) : undefined,
+              profile: s.profile as string | undefined,
+              level: s.level as number | undefined,
+              bitDepth: s.bitDepth as number | undefined,
+              chromaSubsampling: s.chromaSubsampling as string | undefined,
+              colorPrimaries: s.colorPrimaries as string | undefined,
+              colorRange: s.colorRange as string | undefined,
+              colorSpace: s.colorSpace as string | undefined,
+              scanType: s.scanType as string | undefined,
+              channels: s.channels as number | undefined,
+              audioChannelLayout: s.audioChannelLayout as string | undefined,
+              samplingRate: s.samplingRate as number | undefined,
+              language: s.language as string | undefined,
+              languageCode: s.languageCode as string | undefined,
+            }),
+          );
+          return {
+            file: p.file as string | undefined,
+            size: p.size as number | undefined,
+            container: p.container as string | undefined,
+            duration: p.duration as number | undefined,
+            streams,
+          };
+        },
+      );
+      return {
+        videoResolution: m.videoResolution as string | undefined,
+        videoCodec: m.videoCodec as string | undefined,
+        videoFrameRate: m.videoFrameRate as string | undefined,
+        videoProfile: m.videoProfile as string | undefined,
+        audioCodec: m.audioCodec as string | undefined,
+        audioChannels: m.audioChannels as number | undefined,
+        container: m.container as string | undefined,
+        bitrate: m.bitrate as number | undefined,
+        width: m.width as number | undefined,
+        height: m.height as number | undefined,
+        optimizedForStreaming: m.optimizedForStreaming === 1 || m.optimizedForStreaming === true,
+        parts,
+      };
+    });
+
     return {
       ratingKey: meta.ratingKey,
       title: meta.title,
@@ -857,10 +1029,19 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       type: meta.type,
       addedAt: meta.addedAt,
       summary: meta.summary || "",
+      contentRating: meta.contentRating,
+      duration: meta.duration,
+      originallyAvailableAt: meta.originallyAvailableAt,
+      studio: meta.studio,
+      rating: meta.rating,
+      audienceRating: meta.audienceRating,
+      genres: (meta.Genre || []).map((g: { tag: string }) => g.tag),
+      directors: (meta.Director || []).map((d: { tag: string }) => d.tag),
       collections: (meta.Collection || []).map((c: { id: number; tag: string }) => ({
         id: c.id,
         tag: c.tag,
       })),
+      media,
     };
   }
 

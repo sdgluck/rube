@@ -501,11 +501,7 @@ export default function Rules() {
                   </label>
                 ))}
               </div>
-              <span className={styles.promptHint}>
-                {sectionsLocked
-                  ? `Sections are determined by the selected chart (${chartSectionType === "movie" ? "Movies" : "TV Shows"} only)`
-                  : "Default is all sections"}
-              </span>
+              <span className={styles.promptHint}>{sectionsLocked ? null : "Default is all sections"}</span>
             </div>
           )}
 

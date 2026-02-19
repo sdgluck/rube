@@ -80,7 +80,7 @@ export default function Overlays() {
 
   const sampleQuery = trpc.overlays.sampleItem.useQuery(
     { sectionId },
-    { enabled: !!sectionId, refetchOnWindowFocus: false },
+    { enabled: !!sectionId, refetchOnWindowFocus: false, staleTime: Infinity },
   );
 
   const previewQuery = trpc.overlays.previewValues.useQuery(
