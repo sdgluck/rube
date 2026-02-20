@@ -73,6 +73,14 @@ export const healthChecks = sqliteTable("health_checks", {
   timestamp: integer("timestamp").notNull(),
 });
 
+export const events = sqliteTable("events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  metadata: text("metadata"),
+  timestamp: integer("timestamp").notNull(),
+});
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

@@ -5,6 +5,7 @@ import { getConfig } from "./config.ts";
 import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
+import { emitEvent } from "./events.ts";
 import type {
   JobContext,
   CommonJobConfig,
@@ -84,6 +85,14 @@ async function loadCommand(name: string) {
       break;
     }
   }
+}
+
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
 }
 
 const activeControllers = new Map<string, AbortController>();
@@ -212,6 +221,7 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
           .set({ status: "completed", log: output, progress: 1, message: output, finishedAt: Date.now() })
           .where(eq(jobRuns.id, runId))
           .run();
+        emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - now)}`, { jobId: job.id });
         console.log(`[jobs] ${job.name} completed: ${output}`);
       } catch (err) {
         const msg = (err as Error).message;
@@ -219,6 +229,7 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
           .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
           .where(eq(jobRuns.id, runId))
           .run();
+        emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id });
         console.error(`[jobs] ${job.name} failed: ${msg}`);
       }
     });
@@ -297,6 +308,7 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
             .set({ status: "completed", progress: 1, finishedAt: Date.now() })
             .where(eq(jobRuns.id, runId))
             .run();
+          emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - now)}`, { jobId: job.id });
         } catch {
           // DB may be closed
         }
@@ -319,6 +331,7 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
 
       try {
         db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
+        emitEvent("job.failed", `${job.name} failed: ${errorMsg}`, { jobId: job.id });
       } catch {
         // DB may be closed
       }

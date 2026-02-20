@@ -44,12 +44,22 @@ body {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   text-decoration: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background 0.15s;
+  margin-left: auto;
+}
+
+.health-dot-link:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .health-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
@@ -57,21 +67,25 @@ body {
 
 .health-dot-green {
   background: #28a745;
+  box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
 }
 
 .health-dot-orange {
   background: #fd7e14;
+  box-shadow: 0 0 6px rgba(253, 126, 20, 0.5);
 }
 
 .health-dot-red {
   background: #dc3545;
+  box-shadow: 0 0 6px rgba(220, 53, 69, 0.5);
 }
 
 .health-tooltip {
   display: none;
   position: absolute;
-  left: calc(100% + 12px);
-  top: -6px;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-25%);
   background: #1e1e2f;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -86,7 +100,7 @@ body {
   content: "";
   position: absolute;
   right: 100%;
-  top: 10px;
+  top: 16px;
   border: 6px solid transparent;
   border-right-color: rgba(255, 255, 255, 0.12);
 }
@@ -95,7 +109,7 @@ body {
   content: "";
   position: absolute;
   right: 100%;
-  top: 11px;
+  top: 17px;
   border: 5px solid transparent;
   border-right-color: #1e1e2f;
 }

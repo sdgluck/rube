@@ -18,6 +18,7 @@ import JobDetail from "./pages/JobDetail";
 import JobRun from "./pages/JobRun";
 import Users from "./pages/Users";
 import Overlays from "./pages/Overlays";
+import Events from "./pages/Events";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
 
@@ -140,6 +141,9 @@ export default function App() {
           <NavLink to="/jobs" className="nav-link">
             Jobs
           </NavLink>
+          <NavLink to="/events" className="nav-link">
+            Events
+          </NavLink>
           <NavLink to="/settings" className="nav-link">
             Settings
           </NavLink>
@@ -156,6 +160,7 @@ export default function App() {
           <Route path="/media/:ratingKey" element={<MediaDetail />} />
           <Route path="/overlays" element={<Overlays />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/events" element={<Events />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/jobs/:jobId" element={<JobDetail />} />
           <Route path="/jobs/runs/:runId" element={<JobRun />} />

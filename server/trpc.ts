@@ -28,6 +28,7 @@ import {
 } from "./overlays.ts";
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 import { reportHealth, getHealthLatest, getHealthHistory, pruneHealthChecks } from "./health.ts";
+import { getEvents } from "./events.ts";
 
 const t = initTRPC.create();
 
@@ -756,6 +757,12 @@ const healthRouter = t.router({
   }),
 });
 
+const eventsRouter = t.router({
+  list: t.procedure
+    .input(z.object({ limit: z.number().default(50), offset: z.number().default(0) }))
+    .query(({ input }) => getEvents(input)),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
@@ -765,6 +772,7 @@ export const appRouter = t.router({
   users: usersRouter,
   stats: statsRouter,
   overlays: overlaysRouter,
+  events: eventsRouter,
   health: healthRouter,
 
   plexSections: t.procedure.query(async () => {
