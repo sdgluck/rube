@@ -176,6 +176,28 @@ export default function Overlays() {
             ))}
           </nav>
 
+          <div className={styles.statusBar}>
+            <span className={styles.statusCount}>
+              {statusQuery.data
+                ? `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} have overlays applied`
+                : "Loading..."}
+            </span>
+            <button
+              className={styles.statusBtn}
+              onClick={() => startJobMutation.mutate({ jobId: "overlays" })}
+              disabled={startJobMutation.isPending || configs.length === 0}
+            >
+              Apply Overlays
+            </button>
+            <button
+              className={styles.statusBtnDanger}
+              onClick={() => startJobMutation.mutate({ jobId: "overlays-remove" })}
+              disabled={startJobMutation.isPending || (statusQuery.data?.count || 0) === 0}
+            >
+              Remove All Overlays
+            </button>
+          </div>
+
           <div className={styles.overlayEditor}>
             {/* Left: Poster preview with drop zones */}
             <div className={styles.posterPreview}>
@@ -279,28 +301,6 @@ export default function Overlays() {
                 })}
               </div>
             </div>
-          </div>
-
-          <div className={styles.statusBar}>
-            <span className={styles.statusCount}>
-              {statusQuery.data
-                ? `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} have overlays applied`
-                : "Loading..."}
-            </span>
-            <button
-              className={styles.statusBtn}
-              onClick={() => startJobMutation.mutate({ jobId: "overlays" })}
-              disabled={startJobMutation.isPending || configs.length === 0}
-            >
-              Apply Overlays
-            </button>
-            <button
-              className={styles.statusBtnDanger}
-              onClick={() => startJobMutation.mutate({ jobId: "overlays-remove" })}
-              disabled={startJobMutation.isPending || (statusQuery.data?.count || 0) === 0}
-            >
-              Remove All Overlays
-            </button>
           </div>
         </>
       )}

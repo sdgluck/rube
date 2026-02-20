@@ -1,3 +1,5 @@
+import { reportHealth } from "./health.ts";
+
 const IMDB_CHARTS: Record<string, { name: string; path: string }> = {
   top_250_movies: { name: "IMDb Top 250 Movies", path: "/chart/top/" },
   top_250_tv: { name: "IMDb Top 250 TV Shows", path: "/chart/toptv/" },
@@ -45,10 +47,20 @@ export async function fetchImdbChart(chartId: string): Promise<{ name: string; i
   const chart = IMDB_CHARTS[chartId];
   if (!chart) throw new Error(`Unknown IMDb chart: ${chartId}`);
 
-  const res = await fetch(`https://www.imdb.com${chart.path}`, {
-    headers: { "User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch IMDb chart ${chartId}: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`https://www.imdb.com${chart.path}`, {
+      headers: { "User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
+    });
+  } catch (err) {
+    reportHealth("IMDb", "error", `GET ${chart.path} → ${(err as Error).message}`);
+    throw err;
+  }
+  if (!res.ok) {
+    reportHealth("IMDb", "error", `GET ${chart.path} → ${res.status}`);
+    throw new Error(`Failed to fetch IMDb chart ${chartId}: ${res.status}`);
+  }
+  reportHealth("IMDb", "ok", `GET ${chart.path} → ${res.status}`);
 
   const html = await res.text();
   const jsonLd = extractJsonLd(html);
@@ -70,10 +82,20 @@ export async function fetchImdbList(listIdOrUrl: string): Promise<{ title: strin
     throw new Error(`Invalid IMDb list ID: "${listIdOrUrl}". Expected format: ls123456789`);
   }
 
-  const res = await fetch(`https://www.imdb.com/list/${listId}/`, {
-    headers: { "User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch IMDb list ${listId}: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`https://www.imdb.com/list/${listId}/`, {
+      headers: { "User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
+    });
+  } catch (err) {
+    reportHealth("IMDb", "error", `GET /list/${listId} → ${(err as Error).message}`);
+    throw err;
+  }
+  if (!res.ok) {
+    reportHealth("IMDb", "error", `GET /list/${listId} → ${res.status}`);
+    throw new Error(`Failed to fetch IMDb list ${listId}: ${res.status}`);
+  }
+  reportHealth("IMDb", "ok", `GET /list/${listId} → ${res.status}`);
 
   const html = await res.text();
   const jsonLd = extractJsonLd(html);

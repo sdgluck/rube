@@ -7,6 +7,7 @@
  */
 
 import PQueue from "p-queue";
+import { reportHealth } from "./health.ts";
 
 export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
 
@@ -89,6 +90,7 @@ export interface PlexSession {
   type: string;
   year?: number;
   thumb?: string;
+  parentThumb?: string;
   grandparentTitle?: string;
   parentTitle?: string;
   parentIndex?: number;
@@ -264,22 +266,31 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
     }
 
-    const res = await fetch(reqUrl.toString(), {
-      method,
-      signal,
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Client-Identifier": "tinkerbell",
-        "X-Plex-Product": "tinkerbell",
-        "X-Plex-Version": "1.0.0",
-        ...headers,
-      },
-    });
+    let res: Response;
+    try {
+      res = await fetch(reqUrl.toString(), {
+        method,
+        signal,
+        headers: {
+          Accept: "application/json",
+          "X-Plex-Client-Identifier": "tinkerbell",
+          "X-Plex-Product": "tinkerbell",
+          "X-Plex-Version": "1.0.0",
+          ...headers,
+        },
+      });
+    } catch (err) {
+      reportHealth("Plex", "error", `${method} ${path} → ${(err as Error).message}`);
+      throw err;
+    }
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
+      reportHealth("Plex", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
       throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
     }
+
+    reportHealth("Plex", "ok", `${method} ${path} → ${res.status}`);
 
     const text = await res.text();
     if (!text) return null;
@@ -426,22 +437,31 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
     }
 
-    const res = await fetch(reqUrl.toString(), {
-      method,
-      signal,
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Client-Identifier": "tinkerbell",
-        "X-Plex-Product": "tinkerbell",
-        "X-Plex-Version": "1.0.0",
-        ...headers,
-      },
-    });
+    let res: Response;
+    try {
+      res = await fetch(reqUrl.toString(), {
+        method,
+        signal,
+        headers: {
+          Accept: "application/json",
+          "X-Plex-Client-Identifier": "tinkerbell",
+          "X-Plex-Product": "tinkerbell",
+          "X-Plex-Version": "1.0.0",
+          ...headers,
+        },
+      });
+    } catch (err) {
+      reportHealth("Plex.tv", "error", `${method} ${path} → ${(err as Error).message}`);
+      throw err;
+    }
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
+      reportHealth("Plex.tv", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
       throw new Error(`Plex.tv API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
     }
+
+    reportHealth("Plex.tv", "ok", `${method} ${path} → ${res.status}`);
 
     const text = await res.text();
     if (!text) return null;
@@ -889,6 +909,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         type: item.type as string,
         year: item.year as number | undefined,
         thumb: item.thumb as string | undefined,
+        parentThumb: item.parentThumb as string | undefined,
         grandparentTitle: item.grandparentTitle as string | undefined,
         parentTitle: item.parentTitle as string | undefined,
         parentIndex: item.parentIndex as number | undefined,

@@ -5,6 +5,7 @@ import { getConfig } from "../config.ts";
 import { getEnabledRules, type Rule } from "../rules.ts";
 import { fetchImdbChart, fetchImdbList } from "../imdb.ts";
 import { extractImdbId, getOmdbRatings } from "../omdb.ts";
+import { reportHealth } from "../health.ts";
 import type { JobContext, GenerateJobConfig } from "../../shared/job-context.ts";
 
 interface AiCollection {
@@ -103,22 +104,33 @@ async function handleAiPrompt(
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
     ctx.log(`Asking Claude for curated collections...`);
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
-      temperature: 1,
-      messages: [
-        {
-          role: "user",
-          content: `${prompt}
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 4096,
+        temperature: 1,
+        messages: [
+          {
+            role: "user",
+            content: `${prompt}
 
 Random seed for variety: ${seed}
 
 Here are the items:
 ${itemList}`,
-        },
-      ],
-    });
+          },
+        ],
+      });
+      reportHealth(
+        "Claude AI",
+        "ok",
+        `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
+      );
+    } catch (err) {
+      reportHealth("Claude AI", "error", (err as Error).message);
+      throw err;
+    }
 
     const text = (response.content[0] as { type: "text"; text: string }).text.trim();
     ctx.log("AI response:", text);
@@ -576,20 +588,31 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         const aiStartTime = Date.now();
         const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
         signal?.throwIfAborted();
-        const response = await anthropic.messages.create(
-          {
-            model: "claude-sonnet-4-5-20250929",
-            max_tokens: 4096,
-            temperature: 1,
-            messages: [
-              {
-                role: "user",
-                content: `${prompt}\n\nRandom seed for variety: ${seed}\n\nHere are the items:\n${itemList}`,
-              },
-            ],
-          },
-          { signal },
-        );
+        let response;
+        try {
+          response = await anthropic.messages.create(
+            {
+              model: "claude-sonnet-4-5-20250929",
+              max_tokens: 4096,
+              temperature: 1,
+              messages: [
+                {
+                  role: "user",
+                  content: `${prompt}\n\nRandom seed for variety: ${seed}\n\nHere are the items:\n${itemList}`,
+                },
+              ],
+            },
+            { signal },
+          );
+          reportHealth(
+            "Claude AI",
+            "ok",
+            `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
+          );
+        } catch (err) {
+          reportHealth("Claude AI", "error", (err as Error).message);
+          throw err;
+        }
         log(
           `[ai_prompt] Claude responded in ${Date.now() - aiStartTime}ms (usage: ${response.usage.input_tokens} in, ${response.usage.output_tokens} out)`,
         );

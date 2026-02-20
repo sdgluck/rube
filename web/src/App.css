@@ -35,6 +35,109 @@ body {
   margin-bottom: 32px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-dot-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.health-dot-green {
+  background: #28a745;
+}
+
+.health-dot-orange {
+  background: #fd7e14;
+}
+
+.health-dot-red {
+  background: #dc3545;
+}
+
+.health-tooltip {
+  display: none;
+  position: absolute;
+  left: calc(100% + 12px);
+  top: -6px;
+  background: #1e1e2f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.health-tooltip::before {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 10px;
+  border: 6px solid transparent;
+  border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.health-tooltip::after {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 11px;
+  border: 5px solid transparent;
+  border-right-color: #1e1e2f;
+}
+
+.health-dot-link:hover .health-tooltip {
+  display: block;
+}
+
+.health-tooltip-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.health-tooltip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.health-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-tooltip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.health-tooltip-name {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
 }
 
 .nav-link {

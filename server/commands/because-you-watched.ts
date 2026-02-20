@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createPlexClient, type PlexItem } from "../plex.ts";
 import { getConfig } from "../config.ts";
+import { reportHealth } from "../health.ts";
 import { z } from "zod";
 import type { JobContext, BywJobConfig } from "../../shared/job-context.ts";
 
@@ -253,14 +254,16 @@ async function generateBYWCollection(
 
   const itemList = libraryItems.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 1024,
-    temperature: 1,
-    messages: [
-      {
-        role: "user",
-        content: `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
+  let response;
+  try {
+    response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 1024,
+      temperature: 1,
+      messages: [
+        {
+          role: "user",
+          content: `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
 
 Recently watched: ${watchedTitle}
 
@@ -277,9 +280,18 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 
 Here is the full library:
 ${itemList}`,
-      },
-    ],
-  });
+        },
+      ],
+    });
+    reportHealth(
+      "Claude AI",
+      "ok",
+      `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
+    );
+  } catch (err) {
+    reportHealth("Claude AI", "error", (err as Error).message);
+    throw err;
+  }
 
   const text = (response.content[0] as { type: "text"; text: string }).text.trim();
   ctx.log("AI response:", text);

@@ -65,6 +65,14 @@ export const overlayOriginals = sqliteTable("overlay_originals", {
   appliedAt: integer("applied_at").notNull(),
 });
 
+export const healthChecks = sqliteTable("health_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  service: text("service").notNull(),
+  status: text("status").notNull(), // "ok" | "error"
+  message: text("message").notNull(),
+  timestamp: integer("timestamp").notNull(),
+});
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

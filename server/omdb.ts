@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { omdbCache } from "./db/schema.ts";
 import { getConfig } from "./config.ts";
+import { reportHealth } from "./health.ts";
 
 export function extractImdbId(guids: string[]): string | null {
   for (const guid of guids) {
@@ -23,8 +24,18 @@ export async function getOmdbRatings(
   const apiKey = getConfig("global_omdb_api_key");
   if (!apiKey) return null;
 
-  const res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`);
-  if (!res.ok) return null;
+  let res: Response;
+  try {
+    res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`);
+  } catch (err) {
+    reportHealth("OMDB", "error", (err as Error).message);
+    return null;
+  }
+  if (!res.ok) {
+    reportHealth("OMDB", "error", `${res.status} ${res.statusText}`);
+    return null;
+  }
+  reportHealth("OMDB", "ok", `GET /?i=${imdbId} → ${res.status}`);
 
   const data = await res.json();
   if (data.Response === "False") return null;

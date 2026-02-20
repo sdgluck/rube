@@ -27,6 +27,12 @@ export default function Settings() {
         >
           Notifications
         </NavLink>
+        <NavLink
+          to="/settings/health"
+          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
+        >
+          Health
+        </NavLink>
       </nav>
       <Outlet />
     </div>

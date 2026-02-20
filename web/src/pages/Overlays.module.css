@@ -43,7 +43,7 @@
 
 .overlayEditor {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 1fr auto;
   gap: 32px;
   align-items: flex-start;
 }
@@ -53,15 +53,18 @@
 .posterPreview {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
 }
 
 .posterContainer {
+  --poster-height: min(80vh, 700px);
   position: relative;
   border-radius: 8px;
   overflow: hidden;
   background: #e9ecef;
-  aspect-ratio: 2 / 3;
+  height: var(--poster-height);
+  width: calc(var(--poster-height) * 2 / 3);
 }
 
 .posterImage {
@@ -222,11 +225,12 @@
 .chipPanel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  min-width: 160px;
 }
 
 .chipPanelTitle {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #555;
   margin: 0;
@@ -234,13 +238,14 @@
 
 .chipList {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
 .chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   padding: 8px 14px;
   border-radius: 20px;
   font-size: 0.85rem;
@@ -253,6 +258,7 @@
   background: #f0f4ff;
   color: #4a6cf7;
   border: 1px solid #c7d2fe;
+  white-space: nowrap;
 }
 
 .chip:active {
@@ -318,7 +324,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 32px;
+  margin-bottom: 32px;
   padding: 16px 20px;
   background: #f8f9fa;
   border: 1px solid #e9ecef;

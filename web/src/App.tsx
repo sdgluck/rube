@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, NavLink, Navigate, useNavigate, Link } from "react-router-dom";
 import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import SettingsPlex from "./pages/SettingsPlex";
@@ -7,6 +7,7 @@ import SettingsArrs from "./pages/SettingsArrs";
 import SettingsDatabases from "./pages/SettingsDatabases.tsx";
 import SettingsNotifications from "./pages/SettingsNotifications.tsx";
 import SettingsNotificationsPushover from "./pages/SettingsNotificationsPushover.tsx";
+import SettingsHealth from "./pages/SettingsHealth.tsx";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Rules from "./pages/Rules";
@@ -19,6 +20,51 @@ import Users from "./pages/Users";
 import Overlays from "./pages/Overlays";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
+
+function SidebarHealthDot() {
+  const query = trpc.health.status.useQuery(undefined, {
+    refetchInterval: 30000,
+    refetchOnWindowFocus: false,
+  });
+
+  const services = query.data;
+  if (!services) return null;
+
+  const configured = services.filter((s) => s.configured);
+  if (configured.length === 0) return null;
+
+  const withStatus = configured.filter((s) => s.status !== null);
+  if (withStatus.length === 0) return null;
+
+  const okCount = withStatus.filter((s) => s.status === "ok").length;
+  const errorCount = withStatus.filter((s) => s.status === "error").length;
+
+  let colorClass = "health-dot-green";
+  if (errorCount === withStatus.length) {
+    colorClass = "health-dot-red";
+  } else if (errorCount > 0) {
+    colorClass = "health-dot-orange";
+  }
+
+  return (
+    <Link to="/settings/health" className="health-dot-link">
+      <span className={`health-dot ${colorClass}`} />
+      <div className="health-tooltip">
+        <div className="health-tooltip-title">
+          {okCount} healthy, {errorCount} unhealthy
+        </div>
+        <div className="health-tooltip-list">
+          {withStatus.map((s) => (
+            <div key={s.service} className="health-tooltip-row">
+              <span className={`health-tooltip-dot ${s.status === "ok" ? "health-dot-green" : "health-dot-red"}`} />
+              <span className="health-tooltip-name">{s.service}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 function SidebarStreamCount() {
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, {
@@ -68,7 +114,9 @@ export default function App() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <h1 className="sidebar-title">Tinkerbell</h1>
+        <h1 className="sidebar-title">
+          Tinkerbell <SidebarHealthDot />
+        </h1>
         <nav>
           <NavLink to="/stats" className="nav-link nav-link-with-badge">
             Stats
@@ -121,6 +169,7 @@ export default function App() {
               <Route index element={<Navigate to="/settings/notifications/pushover" replace />} />
               <Route path="pushover" element={<SettingsNotificationsPushover />} />
             </Route>
+            <Route path="health" element={<SettingsHealth />} />
           </Route>
           <Route path="*" element={<Navigate to="/stats" replace />} />
         </Routes>

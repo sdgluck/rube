@@ -160,10 +160,10 @@ export default function Stats() {
               return (
                 <div key={i} className={styles.sessionCard}>
                   <div className={styles.sessionThumbCol}>
-                    {session.thumb ? (
+                    {(isEpisode ? session.parentThumb || session.thumb : session.thumb) ? (
                       <img
                         className={styles.sessionThumb}
-                        src={`/api/plex-image?path=${encodeURIComponent(session.thumb)}`}
+                        src={`/api/plex-image?path=${encodeURIComponent(isEpisode ? session.parentThumb || session.thumb! : session.thumb!)}`}
                         alt={session.title}
                       />
                     ) : (

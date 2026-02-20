@@ -27,6 +27,7 @@ import {
   type Badge,
 } from "./overlays.ts";
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
+import { reportHealth, getHealthLatest, getHealthHistory, pruneHealthChecks } from "./health.ts";
 
 const t = initTRPC.create();
 
@@ -629,6 +630,132 @@ const overlaysRouter = t.router({
     }),
 });
 
+const HEALTH_SERVICES = [
+  {
+    service: "Plex",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_plex_url && c.global_plex_token),
+  },
+  { service: "Plex.tv", configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_plex_token },
+  { service: "Claude AI", configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_anthropic_api_key },
+  { service: "OMDB", configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_omdb_api_key },
+  { service: "IMDb", configuredFn: () => true },
+  {
+    service: "Radarr",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_radarr_url && c.global_radarr_api_key),
+  },
+  {
+    service: "Sonarr",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_sonarr_url && c.global_sonarr_api_key),
+  },
+] as const;
+
+async function checkServiceHealth(service: string): Promise<void> {
+  const cfg = getAllConfig();
+
+  switch (service) {
+    case "Plex": {
+      if (!cfg.global_plex_url || !cfg.global_plex_token) throw new Error("Not configured");
+      const client = createPlexClient({ url: cfg.global_plex_url, token: cfg.global_plex_token });
+      await client.getIdentity();
+      break;
+    }
+    case "Plex.tv": {
+      if (!cfg.global_plex_token) throw new Error("Not configured");
+      const reqUrl = new URL("/api/v2/user", "https://plex.tv");
+      reqUrl.searchParams.set("X-Plex-Token", cfg.global_plex_token);
+      const res = await fetch(reqUrl.toString(), {
+        headers: { Accept: "application/json", "X-Plex-Client-Identifier": "tinkerbell" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      reportHealth("Plex.tv", "ok", `GET /api/v2/user → ${res.status}`);
+      break;
+    }
+    case "Claude AI": {
+      if (!cfg.global_anthropic_api_key) throw new Error("Not configured");
+      const { default: Anthropic } = await import("@anthropic-ai/sdk");
+      const anthropic = new Anthropic({ apiKey: cfg.global_anthropic_api_key });
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 1,
+        messages: [{ role: "user", content: "hi" }],
+      });
+      reportHealth("Claude AI", "ok", `${response.model} — health check OK`);
+      break;
+    }
+    case "OMDB": {
+      if (!cfg.global_omdb_api_key) throw new Error("Not configured");
+      const res = await fetch(`https://www.omdbapi.com/?apikey=${cfg.global_omdb_api_key}&t=test`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      reportHealth("OMDB", "ok", `GET / → ${res.status}`);
+      break;
+    }
+    case "IMDb": {
+      const res = await fetch("https://www.imdb.com/chart/top/", {
+        headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      reportHealth("IMDb", "ok", `GET /chart/top/ → ${res.status}`);
+      break;
+    }
+    case "Radarr": {
+      if (!cfg.global_radarr_url || !cfg.global_radarr_api_key) throw new Error("Not configured");
+      const name = await testArrConnection(cfg.global_radarr_url, cfg.global_radarr_api_key);
+      reportHealth("Radarr", "ok", `Connected — ${name}`);
+      break;
+    }
+    case "Sonarr": {
+      if (!cfg.global_sonarr_url || !cfg.global_sonarr_api_key) throw new Error("Not configured");
+      const name = await testArrConnection(cfg.global_sonarr_url, cfg.global_sonarr_api_key);
+      reportHealth("Sonarr", "ok", `Connected — ${name}`);
+      break;
+    }
+    default:
+      throw new Error(`Unknown service: ${service}`);
+  }
+}
+
+const healthRouter = t.router({
+  status: t.procedure.query(() => {
+    pruneHealthChecks();
+    const entries = getHealthLatest();
+    const cfg = getAllConfig();
+
+    return HEALTH_SERVICES.map((svc) => {
+      const entry = entries.find((e) => e.service === svc.service);
+      return {
+        service: svc.service,
+        configured: svc.configuredFn(cfg),
+        status: entry?.status ?? null,
+        message: entry?.message ?? null,
+        timestamp: entry?.timestamp ?? null,
+      };
+    });
+  }),
+
+  history: t.procedure.input(z.object({ hours: z.number().default(24) })).query(({ input }) => {
+    const since = Date.now() - input.hours * 60 * 60 * 1000;
+    const result: Record<string, Array<{ status: string; timestamp: number }>> = {};
+    for (const svc of HEALTH_SERVICES) {
+      result[svc.service] = getHealthHistory(svc.service, since);
+    }
+    return result;
+  }),
+
+  check: t.procedure.input(z.object({ service: z.string() })).mutation(async ({ input }) => {
+    try {
+      await checkServiceHealth(input.service);
+      return { ok: true as const };
+    } catch (err) {
+      reportHealth(input.service, "error", (err as Error).message);
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
@@ -638,6 +765,7 @@ export const appRouter = t.router({
   users: usersRouter,
   stats: statsRouter,
   overlays: overlaysRouter,
+  health: healthRouter,
 
   plexSections: t.procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");
@@ -690,8 +818,10 @@ export const appRouter = t.router({
   testRadarr: t.procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
     try {
       const instanceName = await testArrConnection(input.url, input.api_key);
+      reportHealth("Radarr", "ok", `Connected — ${instanceName}`);
       return { ok: true as const, instanceName };
     } catch (err) {
+      reportHealth("Radarr", "error", (err as Error).message);
       return { ok: false as const, error: (err as Error).message };
     }
   }),
@@ -699,8 +829,10 @@ export const appRouter = t.router({
   testSonarr: t.procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
     try {
       const instanceName = await testArrConnection(input.url, input.api_key);
+      reportHealth("Sonarr", "ok", `Connected — ${instanceName}`);
       return { ok: true as const, instanceName };
     } catch (err) {
+      reportHealth("Sonarr", "error", (err as Error).message);
       return { ok: false as const, error: (err as Error).message };
     }
   }),
