@@ -24,6 +24,8 @@ export const configSchema = z.object({
   global_sonarr_url: z.string(),
   global_sonarr_api_key: z.string(),
   global_omdb_api_key: z.string(),
+  global_mdblist_api_key: z.string(),
+  global_pushover_api_key: z.string(),
 });
 
 export type ConfigSchema = typeof configSchema;

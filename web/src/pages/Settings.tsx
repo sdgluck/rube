@@ -13,13 +13,19 @@ export default function Settings() {
           AI
         </NavLink>
         <NavLink to="/settings/arrs" className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}>
-          *arrs
+          Arrs
         </NavLink>
         <NavLink
-          to="/settings/critics"
+          to="/settings/databases"
           className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
         >
-          Critics
+          Databases
+        </NavLink>
+        <NavLink
+          to="/settings/notifications"
+          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
+        >
+          Notifications
         </NavLink>
       </nav>
       <Outlet />

@@ -4,7 +4,9 @@ import Settings from "./pages/Settings";
 import SettingsPlex from "./pages/SettingsPlex";
 import SettingsAi from "./pages/SettingsAi";
 import SettingsArrs from "./pages/SettingsArrs";
-import SettingsCritics from "./pages/SettingsCritics";
+import SettingsDatabases from "./pages/SettingsDatabases.tsx";
+import SettingsNotifications from "./pages/SettingsNotifications.tsx";
+import SettingsNotificationsPushover from "./pages/SettingsNotificationsPushover.tsx";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Rules from "./pages/Rules";
@@ -114,7 +116,11 @@ export default function App() {
             <Route path="plex" element={<SettingsPlex />} />
             <Route path="ai" element={<SettingsAi />} />
             <Route path="arrs" element={<SettingsArrs />} />
-            <Route path="critics" element={<SettingsCritics />} />
+            <Route path="databases" element={<SettingsDatabases />} />
+            <Route path="notifications" element={<SettingsNotifications />}>
+              <Route index element={<Navigate to="/settings/notifications/pushover" replace />} />
+              <Route path="pushover" element={<SettingsNotificationsPushover />} />
+            </Route>
           </Route>
           <Route path="*" element={<Navigate to="/stats" replace />} />
         </Routes>

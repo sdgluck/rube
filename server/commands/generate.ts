@@ -481,49 +481,83 @@ export interface TestRuleResult {
 }
 
 export async function testRule(ruleId: string, signal?: AbortSignal): Promise<TestRuleResult> {
+  const log = (...args: unknown[]) => console.log("[test-rule]", ...args);
+  const startTime = Date.now();
+
+  log(`Starting test for rule "${ruleId}"`);
+
   const { getRule } = await import("../rules.ts");
 
   const rule = getRule(ruleId);
-  if (!rule) throw new Error(`Rule "${ruleId}" not found`);
+  if (!rule) {
+    log(`Rule "${ruleId}" not found`);
+    throw new Error(`Rule "${ruleId}" not found`);
+  }
+
+  log(`Rule: "${rule.name}" (type: ${rule.type})`);
 
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-  if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
+  if (!PLEX_TOKEN) {
+    log("Error: Plex token not configured");
+    throw new Error("Plex token is required. Configure it in Settings.");
+  }
 
+  log(`Connecting to Plex at ${PLEX_URL}`);
   const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal });
 
+  log("Fetching Plex sections...");
   let allSections = await client.getSections();
+  log(`Found ${allSections.length} section(s): ${allSections.map((s) => s.title).join(", ")}`);
+
   const configuredLibraries = getConfig("global_plex_libraries");
   if (configuredLibraries) {
     allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
+    log(`Filtered to configured libraries: ${allSections.map((s) => s.title).join(", ")}`);
   }
 
   const ruleConfig = parseRuleConfig(rule);
+  log("Rule config:", JSON.stringify(ruleConfig));
 
   let sections: PlexSection[];
   if (ruleConfig.sections && ruleConfig.sections.length > 0) {
     const names = ruleConfig.sections.map((s) => s.trim().toLowerCase());
     sections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
-    if (sections.length === 0) throw new Error("No matching sections for rule config.");
+    if (sections.length === 0) {
+      log(`Error: No matching sections for filter: ${ruleConfig.sections.join(", ")}`);
+      throw new Error("No matching sections for rule config.");
+    }
+    log(`Sections filtered by rule config: ${sections.map((s) => s.title).join(", ")}`);
   } else {
     sections = allSections;
+    log(`Using all sections: ${sections.map((s) => s.title).join(", ")}`);
   }
 
   const collections: TestCollectionPreview[] = [];
 
   switch (rule.type) {
     case "ai_prompt": {
+      log("[ai_prompt] Starting AI prompt test");
       const ANTHROPIC_API_KEY = getConfig("global_anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
-      if (!ANTHROPIC_API_KEY) throw new Error("Anthropic API key is required for AI prompt rules.");
+      if (!ANTHROPIC_API_KEY) {
+        log("[ai_prompt] Error: Anthropic API key not configured");
+        throw new Error("Anthropic API key is required for AI prompt rules.");
+      }
 
       const promptTemplate = ruleConfig.prompt || "";
       const maxCollections = ruleConfig.limit ?? 8;
       const minItems = ruleConfig.minItems ?? 15;
+      log(`[ai_prompt] limit=${maxCollections}, minItems=${minItems}, promptLength=${promptTemplate.length}`);
       if (maxCollections > 10) throw new Error("Limit cannot exceed 10.");
 
       for (const section of sections) {
+        log(`[ai_prompt] Processing section "${section.title}"...`);
         const items = await client.fetchAllItems(section.key);
-        if (items.length < 10) continue;
+        log(`[ai_prompt] Fetched ${items.length} items from "${section.title}"`);
+        if (items.length < 10) {
+          log(`[ai_prompt] Skipping "${section.title}" — fewer than 10 items`);
+          continue;
+        }
 
         const prompt = promptTemplate
           .replace(/\{sectionTitle\}/g, section.title)
@@ -538,6 +572,8 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         const itemList = shuffled.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
         const seed = Math.floor(Math.random() * 1_000_000);
 
+        log(`[ai_prompt] Sending prompt to Claude (seed=${seed}, ${items.length} items)...`);
+        const aiStartTime = Date.now();
         const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
         signal?.throwIfAborted();
         const response = await anthropic.messages.create(
@@ -554,10 +590,14 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
           },
           { signal },
         );
+        log(
+          `[ai_prompt] Claude responded in ${Date.now() - aiStartTime}ms (usage: ${response.usage.input_tokens} in, ${response.usage.output_tokens} out)`,
+        );
 
         const text = (response.content[0] as { type: "text"; text: string }).text.trim();
         const noopCtx: JobContext = { log() {}, progress() {}, signal: new AbortController().signal };
         const aiCollections = parseJSON(noopCtx, text);
+        log(`[ai_prompt] Parsed ${aiCollections.length} collection(s) from AI response`);
 
         // Build reverse map: ratingKey → {title, year}
         const titleMap = new Map<string, string>();
@@ -578,7 +618,13 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
               if (info) matchedItems.push(info);
             }
           }
-          if (matchedItems.length < minItems) continue;
+          log(
+            `[ai_prompt] Collection "${col.name}": ${matchedItems.length}/${col.items.length} items matched (min: ${minItems})`,
+          );
+          if (matchedItems.length < minItems) {
+            log(`[ai_prompt] Skipping "${col.name}" — below minItems threshold`);
+            continue;
+          }
           collections.push({ name: col.name, sectionTitle: section.title, items: matchedItems });
         }
       }
@@ -590,9 +636,12 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
       const sort = rule.type === "top_rated" ? "rating:desc" : "rating:asc";
       const displayName = rule.type === "top_rated" ? "Top Rated" : "Lowest Rated";
       const limit = ruleConfig.limit ?? 50;
+      log(`[${rule.type}] sort=${sort}, limit=${limit}`);
 
       for (const section of sections) {
+        log(`[${rule.type}] Fetching sorted items from "${section.title}"...`);
         const items = await client.fetchItemsSorted(section.key, sort, limit);
+        log(`[${rule.type}] Got ${items.length} items from "${section.title}"`);
         if (items.length === 0) continue;
         collections.push({
           name: `${displayName} in ${section.title}`,
@@ -607,12 +656,19 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
     case "studios": {
       const field = rule.type === "actors" ? "actor" : "studio";
       const maxCollections_ = ruleConfig.limit ?? 10;
+      log(`[${rule.type}] field=${field}, maxCollections=${maxCollections_}`);
 
       for (const section of sections) {
+        log(`[${rule.type}] Fetching grouped entries from "${section.title}"...`);
         const entries = await client.fetchGroupedByField(section.key, field, maxCollections_);
+        log(`[${rule.type}] Got ${entries.length} ${field} group(s) from "${section.title}"`);
         for (const entry of entries) {
           const items = await client.fetchItemsByFilter(entry.key);
-          if (items.length < 3) continue;
+          log(`[${rule.type}] "${entry.tag}": ${items.length} items`);
+          if (items.length < 3) {
+            log(`[${rule.type}] Skipping "${entry.tag}" — fewer than 3 items`);
+            continue;
+          }
           collections.push({
             name: entry.tag,
             sectionTitle: section.title,
@@ -626,10 +682,14 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
     case "imdb_chart": {
       const chartId = ruleConfig.chart;
       if (!chartId) throw new Error("IMDb chart ID is required.");
+      log(`[imdb_chart] Fetching chart "${chartId}"...`);
       const { name: chartName, imdbIds } = await fetchImdbChart(chartId);
+      log(`[imdb_chart] Chart "${chartName}": ${imdbIds.length} IMDb IDs`);
 
       for (const section of sections) {
+        log(`[imdb_chart] Matching against section "${section.title}"...`);
         const items = await client.allItemsWithGuids(section.key);
+        log(`[imdb_chart] Fetched ${items.length} items with GUIDs from "${section.title}"`);
         const imdbToItem = new Map<string, { title: string; year?: number }>();
         for (const item of items) {
           for (const guid of item.guids) {
@@ -640,11 +700,13 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
             }
           }
         }
+        log(`[imdb_chart] ${imdbToItem.size} items have IMDb IDs in "${section.title}"`);
 
         const matched = imdbIds.map((id) => imdbToItem.get(id)).filter(Boolean) as Array<{
           title: string;
           year?: number;
         }>;
+        log(`[imdb_chart] Matched ${matched.length}/${imdbIds.length} chart entries in "${section.title}"`);
         if (matched.length === 0) continue;
         collections.push({ name: chartName, sectionTitle: section.title, items: matched });
       }
@@ -654,10 +716,14 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
     case "imdb_list": {
       const listId = ruleConfig.listId;
       if (!listId) throw new Error("IMDb list ID is required.");
+      log(`[imdb_list] Fetching list "${listId}"...`);
       const { title: listTitle, imdbIds } = await fetchImdbList(listId);
+      log(`[imdb_list] List "${listTitle}": ${imdbIds.length} IMDb IDs`);
 
       for (const section of sections) {
+        log(`[imdb_list] Matching against section "${section.title}"...`);
         const items = await client.allItemsWithGuids(section.key);
+        log(`[imdb_list] Fetched ${items.length} items with GUIDs from "${section.title}"`);
         const imdbToItem = new Map<string, { title: string; year?: number }>();
         for (const item of items) {
           for (const guid of item.guids) {
@@ -668,11 +734,13 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
             }
           }
         }
+        log(`[imdb_list] ${imdbToItem.size} items have IMDb IDs in "${section.title}"`);
 
         const matched = imdbIds.map((id) => imdbToItem.get(id)).filter(Boolean) as Array<{
           title: string;
           year?: number;
         }>;
+        log(`[imdb_list] Matched ${matched.length}/${imdbIds.length} list entries in "${section.title}"`);
         if (matched.length === 0) continue;
         collections.push({ name: listTitle, sectionTitle: section.title, items: matched });
       }
@@ -681,14 +749,21 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
 
     case "rt_top_rated": {
       const omdbKey = getConfig("global_omdb_api_key");
-      if (!omdbKey) throw new Error("OMDB API key is required for RT Top Rated rules.");
+      if (!omdbKey) {
+        log("[rt_top_rated] Error: OMDB API key not configured");
+        throw new Error("OMDB API key is required for RT Top Rated rules.");
+      }
       const limit = Math.min(ruleConfig.limit ?? 100, 200);
+      log(`[rt_top_rated] limit=${limit}`);
 
       for (const section of sections) {
+        log(`[rt_top_rated] Processing section "${section.title}"...`);
         signal?.throwIfAborted();
         const items = await client.allItemsWithGuids(section.key);
+        log(`[rt_top_rated] Fetched ${items.length} items with GUIDs from "${section.title}"`);
         const scored: Array<{ title: string; year?: number; score: number }> = [];
         const queue = new PQueue({ concurrency: 5 });
+        let omdbLookups = 0;
 
         if (signal) {
           signal.addEventListener("abort", () => queue.clear(), { once: true });
@@ -697,6 +772,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         for (const item of items) {
           const imdbId = extractImdbId(item.guids);
           if (!imdbId) continue;
+          omdbLookups++;
           void queue.add(async () => {
             signal?.throwIfAborted();
             const ratings = await getOmdbRatings(imdbId);
@@ -708,12 +784,15 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
             }
           });
         }
+        log(`[rt_top_rated] Queued ${omdbLookups} OMDB lookups for "${section.title}"...`);
         await queue.onIdle();
         signal?.throwIfAborted();
 
+        log(`[rt_top_rated] ${scored.length}/${omdbLookups} items have RT scores in "${section.title}"`);
         if (scored.length === 0) continue;
         scored.sort((a, b) => b.score - a.score);
         const top = scored.slice(0, limit);
+        log(`[rt_top_rated] Top score: ${top[0].score}%, bottom of top ${limit}: ${top[top.length - 1].score}%`);
         collections.push({
           name: `Rotten Tomatoes Top ${limit} in ${section.title}`,
           sectionTitle: section.title,
@@ -724,8 +803,12 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
     }
 
     default:
+      log(`Error: Unknown rule type "${rule.type}"`);
       throw new Error(`Unknown rule type: ${rule.type}`);
   }
+
+  const totalItems = collections.reduce((sum, c) => sum + c.items.length, 0);
+  log(`Test complete in ${Date.now() - startTime}ms — ${collections.length} collection(s), ${totalItems} total items`);
 
   return { collections };
 }

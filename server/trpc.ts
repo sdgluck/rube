@@ -312,18 +312,29 @@ const rulesRouter = t.router({
   }),
 
   test: t.procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
-    testControllers.get(input.id)?.abort();
+    if (testControllers.has(input.id)) {
+      console.log(`[test-rule] Aborting previous test for rule "${input.id}"`);
+      testControllers.get(input.id)?.abort();
+    }
     const controller = new AbortController();
     testControllers.set(input.id, controller);
     try {
       const { testRule } = await import("./commands/generate.ts");
       return await testRule(input.id, controller.signal);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        console.log(`[test-rule] Test for rule "${input.id}" was cancelled`);
+      } else {
+        console.error(`[test-rule] Test for rule "${input.id}" failed:`, err instanceof Error ? err.message : err);
+      }
+      throw err;
     } finally {
       testControllers.delete(input.id);
     }
   }),
 
   cancelTest: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    console.log(`[test-rule] Cancel requested for rule "${input.id}"`);
     testControllers.get(input.id)?.abort();
     testControllers.delete(input.id);
     return { ok: true };
