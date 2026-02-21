@@ -29,16 +29,26 @@ import {
   type Badge,
 } from "./overlays.ts";
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
-import { reportHealth, getHealthLatest, getHealthHistory, pruneHealthChecks } from "./health.ts";
-import { getCachedSessions, getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
+import { reportHealth, getHealthLatest, getHealthHistory } from "./health.ts";
+import { getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
 import { getEvents } from "./events.ts";
 
 const t = initTRPC.create();
 
-const configRouter = t.router({
-  get: t.procedure.query(() => getAllConfig()),
+const logDuration = t.middleware(async ({ path, type, next }) => {
+  const start = performance.now();
+  const result = await next();
+  const ms = (performance.now() - start).toFixed(1);
+  console.log(`[trpc] ${type} ${path} — ${ms}ms`);
+  return result;
+});
 
-  save: t.procedure.input(configSchema.partial()).mutation(({ input }) => {
+const procedure = t.procedure.use(logDuration);
+
+const configRouter = t.router({
+  get: procedure.query(() => getAllConfig()),
+
+  save: procedure.input(configSchema.partial()).mutation(({ input }) => {
     for (const key of Object.keys(input) as ConfigKey[]) {
       const value = input[key];
       if (value !== undefined) {
@@ -83,17 +93,17 @@ const collectionsRouter = t.router({
       });
     }),
 
-  filters: t.procedure.query(() => {
+  filters: procedure.query(() => {
     return getCollectionFilters();
   }),
 
-  get: t.procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
+  get: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
     const row = getLocalCollection(input.ratingKey);
     if (!row) throw new Error(`Collection ${input.ratingKey} not found`);
     return row;
   }),
 
-  items: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+  items: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
     const client = getPlexClient();
     return client.getCollectionChildren(input.ratingKey);
   }),
@@ -115,13 +125,13 @@ const collectionsRouter = t.router({
       return { ok: true };
     }),
 
-  delete: t.procedure.input(z.object({ ratingKey: z.string() })).mutation(async ({ input }) => {
+  delete: procedure.input(z.object({ ratingKey: z.string() })).mutation(async ({ input }) => {
     const client = getPlexClient();
     await deleteCollection(client, input.ratingKey);
     return { ok: true };
   }),
 
-  smartConfig: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+  smartConfig: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
     const client = getPlexClient();
     return client.getSmartCollectionContent(input.ratingKey);
   }),
@@ -134,7 +144,7 @@ const collectionsRouter = t.router({
       return { ok: true };
     }),
 
-  sync: t.procedure.mutation(async () => {
+  sync: procedure.mutation(async () => {
     const client = getPlexClient();
     let sections = await client.getSections();
     const configuredLibraries = getConfig("global_plex_libraries");
@@ -146,19 +156,19 @@ const collectionsRouter = t.router({
 });
 
 const jobsRouter = t.router({
-  list: t.procedure.query(() => getJobs()),
+  list: procedure.query(() => getJobs()),
 
   runs: t.procedure
     .input(z.object({ jobId: z.string(), limit: z.number().optional() }))
     .query(({ input }) => getJobRuns(input.jobId, input.limit)),
 
-  run: t.procedure.input(z.object({ runId: z.string() })).query(({ input }) => {
+  run: procedure.input(z.object({ runId: z.string() })).query(({ input }) => {
     const run = getJobRun(input.runId);
     if (!run) throw new Error(`Run ${input.runId} not found`);
     return run;
   }),
 
-  activeRuns: t.procedure.query(() => getActiveRuns()),
+  activeRuns: procedure.query(() => getActiveRuns()),
 
   update: t.procedure
     .input(
@@ -175,13 +185,13 @@ const jobsRouter = t.router({
       return { ok: true };
     }),
 
-  start: t.procedure.input(z.object({ jobId: z.string() })).mutation(async ({ input }) => {
+  start: procedure.input(z.object({ jobId: z.string() })).mutation(async ({ input }) => {
     const result = await startJob(input.jobId);
     if (!result) throw new Error(`Job ${input.jobId} is already running or not found`);
     return { runId: result.runId };
   }),
 
-  cancel: t.procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
+  cancel: procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
     const ok = cancelRun(input.runId);
     if (!ok) throw new Error(`Run ${input.runId} is not running`);
     return { ok: true };
@@ -200,13 +210,16 @@ async function testArrConnection(url: string, apiKey: string) {
 }
 
 const statsRouter = t.router({
-  sessions: t.procedure.query(() => getCachedSessions()),
-  recentlyAdded: t.procedure.query(() => getCachedRecentlyAdded()),
-  mostWatched: t.procedure.query(() => getCachedMostWatched()),
+  sessions: procedure.query(async () => {
+    const client = getPlexClient();
+    return client.getActiveSessions();
+  }),
+  recentlyAdded: procedure.query(() => getCachedRecentlyAdded()),
+  mostWatched: procedure.query(() => getCachedMostWatched()),
 });
 
 const usersRouter = t.router({
-  list: t.procedure.query(async () => {
+  list: procedure.query(async () => {
     const client = getPlexClient();
     const identity = await client.getIdentity();
     const [sharings, allCollectionsResult, accounts, history] = await Promise.all([
@@ -264,9 +277,9 @@ const usersRouter = t.router({
 const testControllers = new Map<string, AbortController>();
 
 const rulesRouter = t.router({
-  list: t.procedure.query(() => getRules()),
+  list: procedure.query(() => getRules()),
 
-  get: t.procedure.input(z.object({ id: z.string() })).query(({ input }) => {
+  get: procedure.input(z.object({ id: z.string() })).query(({ input }) => {
     const rule = getRule(input.id);
     if (!rule) throw new Error(`Rule ${input.id} not found`);
     return rule;
@@ -296,12 +309,12 @@ const rulesRouter = t.router({
       return { ok: true };
     }),
 
-  delete: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+  delete: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     deleteRule(input.id);
     return { ok: true };
   }),
 
-  test: t.procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+  test: procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
     if (testControllers.has(input.id)) {
       console.log(`[test-rule] Aborting previous test for rule "${input.id}"`);
       testControllers.get(input.id)?.abort();
@@ -323,7 +336,7 @@ const rulesRouter = t.router({
     }
   }),
 
-  cancelTest: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+  cancelTest: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     console.log(`[test-rule] Cancel requested for rule "${input.id}"`);
     testControllers.get(input.id)?.abort();
     testControllers.delete(input.id);
@@ -362,7 +375,7 @@ const mediaRouter = t.router({
       });
     }),
 
-  get: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+  get: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
     const client = getPlexClient();
     const detail = await client.getItemDetail(input.ratingKey);
 
@@ -382,11 +395,11 @@ const mediaRouter = t.router({
     };
   }),
 
-  columns: t.procedure.query(() => {
+  columns: procedure.query(() => {
     return getConfig("media_columns") ?? null;
   }),
 
-  saveColumns: t.procedure.input(z.array(z.object({ id: z.string(), visible: z.boolean() }))).mutation(({ input }) => {
+  saveColumns: procedure.input(z.array(z.object({ id: z.string(), visible: z.boolean() }))).mutation(({ input }) => {
     setConfig("media_columns", input);
     return { ok: true };
   }),
@@ -417,7 +430,7 @@ const overlaysRouter = t.router({
       return { ok: true };
     }),
 
-  clearConfigs: t.procedure.input(z.object({ sectionId: z.string() })).mutation(({ input }) => {
+  clearConfigs: procedure.input(z.object({ sectionId: z.string() })).mutation(({ input }) => {
     clearOverlayConfigs(input.sectionId);
     return { ok: true };
   }),
@@ -426,7 +439,7 @@ const overlaysRouter = t.router({
     .input(z.object({ sectionId: z.string() }))
     .query(({ input }) => ({ count: getOverlaidItemCount(input.sectionId) })),
 
-  sampleItem: t.procedure.input(z.object({ sectionId: z.string() })).query(async ({ input }) => {
+  sampleItem: procedure.input(z.object({ sectionId: z.string() })).query(async ({ input }) => {
     const client = getPlexClient();
     // Get a random item from the section
     const result = await client.getItems(input.sectionId, { offset: 0, size: 1 });
@@ -617,9 +630,9 @@ async function checkServiceHealth(service: string): Promise<void> {
 }
 
 const healthRouter = t.router({
-  status: t.procedure.query(() => {
-    pruneHealthChecks();
-    const entries = getHealthLatest();
+  status: procedure.query(() => {
+    const serviceNames = HEALTH_SERVICES.map((s) => s.service);
+    const entries = getHealthLatest(serviceNames);
     const cfg = getAllConfig();
 
     return HEALTH_SERVICES.map((svc) => {
@@ -634,7 +647,7 @@ const healthRouter = t.router({
     });
   }),
 
-  history: t.procedure.input(z.object({ hours: z.number().default(24) })).query(({ input }) => {
+  history: procedure.input(z.object({ hours: z.number().default(24) })).query(({ input }) => {
     const since = Date.now() - input.hours * 60 * 60 * 1000;
     const result: Record<string, Array<{ status: string; timestamp: number }>> = {};
     for (const svc of HEALTH_SERVICES) {
@@ -643,7 +656,7 @@ const healthRouter = t.router({
     return result;
   }),
 
-  check: t.procedure.input(z.object({ service: z.string() })).mutation(async ({ input }) => {
+  check: procedure.input(z.object({ service: z.string() })).mutation(async ({ input }) => {
     try {
       await checkServiceHealth(input.service);
       return { ok: true as const };
@@ -672,7 +685,7 @@ export const appRouter = t.router({
   events: eventsRouter,
   health: healthRouter,
 
-  plexSections: t.procedure.query(async () => {
+  plexSections: procedure.query(async () => {
     const plexUrl = getConfig("global_plex_url");
     const plexToken = getConfig("global_plex_token");
     if (!plexUrl || !plexToken) {
@@ -720,7 +733,7 @@ export const appRouter = t.router({
       }
     }),
 
-  testRadarr: t.procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+  testRadarr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
     try {
       const instanceName = await testArrConnection(input.url, input.api_key);
       reportHealth("Radarr", "ok", `Connected — ${instanceName}`);
@@ -731,7 +744,7 @@ export const appRouter = t.router({
     }
   }),
 
-  testSonarr: t.procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+  testSonarr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
     try {
       const instanceName = await testArrConnection(input.url, input.api_key);
       reportHealth("Sonarr", "ok", `Connected — ${instanceName}`);

@@ -24,25 +24,23 @@ export function reportHealth(service: string, status: "ok" | "error", message: s
   }
 }
 
-export function getHealthLatest(): Array<{ service: string; status: string; message: string; timestamp: number }> {
-  // Get the latest entry per service using a subquery for max timestamp
-  const rows = db
-    .select()
-    .from(healthChecks)
-    .where(
-      eq(
-        healthChecks.id,
-        sql`(SELECT id FROM health_checks h2 WHERE h2.service = ${healthChecks.service} ORDER BY h2.timestamp DESC LIMIT 1)`,
-      ),
-    )
-    .all();
-
-  return rows.map((r) => ({
-    service: r.service,
-    status: r.status,
-    message: r.message,
-    timestamp: r.timestamp,
-  }));
+export function getHealthLatest(
+  services: string[],
+): Array<{ service: string; status: string; message: string; timestamp: number }> {
+  const results: Array<{ service: string; status: string; message: string; timestamp: number }> = [];
+  for (const service of services) {
+    const row = db
+      .select()
+      .from(healthChecks)
+      .where(eq(healthChecks.service, service))
+      .orderBy(desc(healthChecks.timestamp))
+      .limit(1)
+      .get();
+    if (row) {
+      results.push({ service: row.service, status: row.status, message: row.message, timestamp: row.timestamp });
+    }
+  }
+  return results;
 }
 
 export function getHealthHistory(service: string, since: number): Array<{ status: string; timestamp: number }> {

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 
 export const config = sqliteTable("config", {
   key: text("key").primaryKey(),
@@ -65,13 +65,17 @@ export const overlayOriginals = sqliteTable("overlay_originals", {
   appliedAt: integer("applied_at").notNull(),
 });
 
-export const healthChecks = sqliteTable("health_checks", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  service: text("service").notNull(),
-  status: text("status").notNull(), // "ok" | "error"
-  message: text("message").notNull(),
-  timestamp: integer("timestamp").notNull(),
-});
+export const healthChecks = sqliteTable(
+  "health_checks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    service: text("service").notNull(),
+    status: text("status").notNull(), // "ok" | "error"
+    message: text("message").notNull(),
+    timestamp: integer("timestamp").notNull(),
+  },
+  (table) => [index("idx_health_checks_service_timestamp").on(table.service, table.timestamp)],
+);
 
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),

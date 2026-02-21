@@ -99,6 +99,65 @@ function episodeLabel(session: { parentIndex?: number; index?: number }): string
   return "";
 }
 
+function SessionSkeleton() {
+  return (
+    <div className={styles.skeletonSessionCard}>
+      <div className={styles.skeletonThumb} />
+      <div className={styles.sessionBody}>
+        <div className={styles.skeletonLine} style={{ width: "60%" }} />
+        <div className={styles.skeletonLine} style={{ width: "40%", marginTop: 6 }} />
+        <div className={styles.skeletonProgressBar} />
+        <div style={{ display: "flex", gap: 5 }}>
+          <div className={styles.skeletonBadge} />
+          <div className={styles.skeletonBadge} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecentlyAddedSkeleton() {
+  return (
+    <div className={styles.scrollRow}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} style={{ flexShrink: 0 }}>
+          <div className={styles.skeletonPoster} />
+          <div className={styles.skeletonPosterTitle} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MostWatchedSkeleton() {
+  return (
+    <table className={styles.table}>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Title</th>
+          <th>Plays</th>
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: 5 }, (_, i) => (
+          <tr key={i} className={styles.skeletonTableRow}>
+            <td>
+              <div className={styles.skeletonTableCell} style={{ width: 20 }} />
+            </td>
+            <td>
+              <div className={styles.skeletonTableCell} style={{ width: `${50 + (i % 3) * 15}%` }} />
+            </td>
+            <td>
+              <div className={styles.skeletonTableCell} style={{ width: 30 }} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export default function Stats() {
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, {
     refetchInterval: 5000,
@@ -118,6 +177,12 @@ export default function Stats() {
             <span className={styles.streamCount}>{sessionsQuery.data.length}</span>
           )}
         </div>
+        {sessionsQuery.isLoading && (
+          <div className={styles.sessionGrid}>
+            <SessionSkeleton />
+            <SessionSkeleton />
+          </div>
+        )}
         {sessionsQuery.error && <div className={styles.error}>Failed to load sessions</div>}
         {sessionsQuery.data && sessionsQuery.data.length === 0 && (
           <div className={styles.emptyState}>No active streams</div>
@@ -264,13 +329,17 @@ export default function Stats() {
       {/* Recently Added */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Recently Added</div>
+        {recentQuery.isLoading && <RecentlyAddedSkeleton />}
+        {recentQuery.data && !recentQuery.data.jobEnabled && (
+          <div className={styles.emptyState}>The "Sync Recently Added" job is disabled. Results may be stale.</div>
+        )}
         {recentQuery.error && <div className={styles.error}>Failed to load recently added</div>}
-        {recentQuery.data && recentQuery.data.length === 0 && (
+        {recentQuery.data && recentQuery.data.items.length === 0 && (
           <div className={styles.emptyState}>No recently added media</div>
         )}
-        {recentQuery.data && recentQuery.data.length > 0 && (
+        {recentQuery.data && recentQuery.data.items.length > 0 && (
           <div className={styles.scrollRow}>
-            {recentQuery.data.map((item) => (
+            {recentQuery.data.items.map((item) => (
               <div key={item.ratingKey} className={styles.posterCard}>
                 {item.thumb ? (
                   <img
@@ -295,6 +364,7 @@ export default function Stats() {
       {/* Most Watched This Week */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Most Watched This Week</div>
+        {mostWatchedQuery.isLoading && <MostWatchedSkeleton />}
         {mostWatchedQuery.error && <div className={styles.error}>Failed to load most watched</div>}
         {mostWatchedQuery.data && mostWatchedQuery.data.length === 0 && (
           <div className={styles.emptyState}>No watch history this week</div>

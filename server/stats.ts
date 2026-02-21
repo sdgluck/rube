@@ -1,16 +1,16 @@
 /**
  * Stats module — background sync of Plex stats to local SQLite cache.
  *
- * Sessions and recently added are refreshed on timers.
- * Most watched is synced via the "Sync Most Watched" job.
+ * Recently added and most watched are synced via jobs.
+ * Sessions are fetched real-time (not cached here).
  */
 
 import { eq } from "drizzle-orm";
 import { db } from "./db/index.ts";
-import { statsCache } from "./db/schema.ts";
+import { statsCache, jobs } from "./db/schema.ts";
 import { createPlexClient } from "./plex.ts";
 import { getConfig } from "./config.ts";
-import type { PlexSession, PlexRecentItem } from "./plex.ts";
+import type { PlexRecentItem } from "./plex.ts";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
 
@@ -40,28 +40,14 @@ function tryGetPlexClient() {
   return createPlexClient({ url: plexUrl, token: plexToken });
 }
 
-// ─── Sync functions ───────────────────────────────────────────────────────────
+// ─── Sync functions (called by jobs) ──────────────────────────────────────────
 
-async function syncSessions(): Promise<void> {
+export async function syncRecentlyAdded(): Promise<string> {
   const client = tryGetPlexClient();
-  if (!client) return;
-  try {
-    const sessions = await client.getActiveSessions();
-    writeCache("sessions", sessions);
-  } catch (err) {
-    console.error("[stats] Failed to sync sessions:", (err as Error).message);
-  }
-}
-
-async function syncRecentlyAdded(): Promise<void> {
-  const client = tryGetPlexClient();
-  if (!client) return;
-  try {
-    const recent = await client.getRecentlyAdded(20);
-    writeCache("recentlyAdded", recent);
-  } catch (err) {
-    console.error("[stats] Failed to sync recently added:", (err as Error).message);
-  }
+  if (!client) throw new Error("Plex not configured");
+  const recent = await client.getRecentlyAdded(20);
+  writeCache("recentlyAdded", recent);
+  return `Synced ${recent.length} recently added items`;
 }
 
 export interface MostWatchedItem {
@@ -103,37 +89,12 @@ export async function syncMostWatched(): Promise<string> {
 
 // ─── Read functions (called by tRPC endpoints) ───────────────────────────────
 
-export function getCachedSessions(): PlexSession[] {
-  return readCache<PlexSession[]>("sessions") ?? [];
-}
-
-export function getCachedRecentlyAdded(): PlexRecentItem[] {
-  return readCache<PlexRecentItem[]>("recentlyAdded") ?? [];
+export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled: boolean } {
+  const items = readCache<PlexRecentItem[]>("recentlyAdded") ?? [];
+  const job = db.select({ enabled: jobs.enabled }).from(jobs).where(eq(jobs.id, "sync-recently-added")).get();
+  return { items, jobEnabled: job?.enabled === 1 };
 }
 
 export function getCachedMostWatched(): MostWatchedItem[] {
   return readCache<MostWatchedItem[]>("mostWatched") ?? [];
-}
-
-// ─── Background timers ───────────────────────────────────────────────────────
-
-let sessionsTimer: ReturnType<typeof setInterval> | null = null;
-let recentlyAddedTimer: ReturnType<typeof setInterval> | null = null;
-
-export function startStatsSync(): void {
-  // Immediate first sync
-  syncSessions();
-  syncRecentlyAdded();
-
-  // Sessions every 30s
-  sessionsTimer = setInterval(syncSessions, 30_000);
-  // Recently added every 5 minutes
-  recentlyAddedTimer = setInterval(syncRecentlyAdded, 5 * 60_000);
-
-  console.log("[stats] Background stats sync started");
-}
-
-export function stopStatsSync(): void {
-  if (sessionsTimer) clearInterval(sessionsTimer);
-  if (recentlyAddedTimer) clearInterval(recentlyAddedTimer);
 }

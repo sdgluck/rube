@@ -6,7 +6,8 @@ import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
-import { startStatsSync, syncMostWatched } from "./stats.ts";
+import { pruneHealthChecks } from "./health.ts";
+import { syncRecentlyAdded, syncMostWatched } from "./stats.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -28,6 +29,13 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "label-undo", name: "Undo Labels", command: "label-undo", schedule: "", enabled: 1 },
   { id: "overlays", name: "Apply Overlays", command: "overlays", schedule: "", enabled: 1 },
   { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
+  {
+    id: "sync-recently-added",
+    name: "Sync Recently Added",
+    command: "sync-recently-added",
+    schedule: "*/15 * * * *",
+    enabled: 1,
+  },
   {
     id: "sync-most-watched",
     name: "Sync Most Watched",
@@ -62,8 +70,10 @@ const internalJobs: Record<string, () => string | Promise<string>> = {
       .delete(jobRuns)
       .where(and(ne(jobRuns.status, "running"), lt(jobRuns.startedAt, cutoff)))
       .run();
+    pruneHealthChecks();
     return `Purged ${result.changes} job run(s) older than 7 days.`;
   },
+  "sync-recently-added": () => syncRecentlyAdded(),
   "sync-most-watched": () => syncMostWatched(),
 };
 
@@ -342,5 +352,4 @@ export async function initJobs(): Promise<void> {
   markStaleRunsAsFailed();
   await startSidequest();
   startCronSchedules();
-  startStatsSync();
 }

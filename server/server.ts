@@ -138,8 +138,6 @@ server.listen(PORT, () => {
 
 async function shutdown() {
   const { stopSidequest } = await import("./jobs.ts");
-  const { stopStatsSync } = await import("./stats.ts");
-  stopStatsSync();
   await stopSidequest();
   server.close();
   process.exit(0);
