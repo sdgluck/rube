@@ -98,6 +98,12 @@ export const mediaItems = sqliteTable("media_items", {
   syncedAt: integer("synced_at").notNull(),
 });
 
+export const statsCache = sqliteTable("stats_cache", {
+  key: text("key").primaryKey(),
+  data: text("data").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

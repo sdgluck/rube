@@ -30,6 +30,7 @@ import {
 } from "./overlays.ts";
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 import { reportHealth, getHealthLatest, getHealthHistory, pruneHealthChecks } from "./health.ts";
+import { getCachedSessions, getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
 import { getEvents } from "./events.ts";
 
 const t = initTRPC.create();
@@ -199,43 +200,9 @@ async function testArrConnection(url: string, apiKey: string) {
 }
 
 const statsRouter = t.router({
-  sessions: t.procedure.query(async () => {
-    const client = getPlexClient();
-    return client.getActiveSessions();
-  }),
-
-  recentlyAdded: t.procedure.query(async () => {
-    const client = getPlexClient();
-    return client.getRecentlyAdded(20);
-  }),
-
-  mostWatched: t.procedure.query(async () => {
-    const client = getPlexClient();
-    const history = await client.getWatchHistory({ limit: 1000 });
-    const cutoff = Math.floor(Date.now() / 1000) - 7 * 86400;
-    const recentHistory = history.filter((item) => (item.viewedAt ?? 0) >= cutoff);
-
-    const counts = new Map<
-      string,
-      { title: string; year?: number; type: string; grandparentTitle?: string; plays: number }
-    >();
-    for (const item of recentHistory) {
-      const existing = counts.get(item.ratingKey);
-      if (existing) {
-        existing.plays++;
-      } else {
-        counts.set(item.ratingKey, {
-          title: item.title,
-          year: item.year,
-          type: item.type,
-          grandparentTitle: item.grandparentTitle,
-          plays: 1,
-        });
-      }
-    }
-
-    return [...counts.values()].sort((a, b) => b.plays - a.plays).slice(0, 10);
-  }),
+  sessions: t.procedure.query(() => getCachedSessions()),
+  recentlyAdded: t.procedure.query(() => getCachedRecentlyAdded()),
+  mostWatched: t.procedure.query(() => getCachedMostWatched()),
 });
 
 const usersRouter = t.router({

@@ -6,6 +6,7 @@ import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
+import { startStatsSync, syncMostWatched } from "./stats.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -27,6 +28,13 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "label-undo", name: "Undo Labels", command: "label-undo", schedule: "", enabled: 1 },
   { id: "overlays", name: "Apply Overlays", command: "overlays", schedule: "", enabled: 1 },
   { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
+  {
+    id: "sync-most-watched",
+    name: "Sync Most Watched",
+    command: "sync-most-watched",
+    schedule: "0 * * * *",
+    enabled: 1,
+  },
 ];
 
 const DEFAULT_CONFIGS: Record<string, string> = {
@@ -47,7 +55,7 @@ const cronJobs = new Map<string, Cron>();
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Internal jobs run in-process without the command pattern
-const internalJobs: Record<string, () => string> = {
+const internalJobs: Record<string, () => string | Promise<string>> = {
   "purge-runs": () => {
     const cutoff = Date.now() - SEVEN_DAYS_MS;
     const result = db
@@ -56,6 +64,7 @@ const internalJobs: Record<string, () => string> = {
       .run();
     return `Purged ${result.changes} job run(s) older than 7 days.`;
   },
+  "sync-most-watched": () => syncMostWatched(),
 };
 
 function seedDefaultJobs(): void {
@@ -186,7 +195,7 @@ export async function startJob(jobId: string): Promise<{ runId: string } | null>
   if (internalHandler) {
     console.log(`[jobs] Running internal job: ${job.name}`);
     try {
-      const output = internalHandler();
+      const output = await internalHandler();
       db.update(jobRuns)
         .set({ status: "completed", log: output, progress: 1, message: output, finishedAt: Date.now() })
         .where(eq(jobRuns.id, runId))
@@ -333,4 +342,5 @@ export async function initJobs(): Promise<void> {
   markStaleRunsAsFailed();
   await startSidequest();
   startCronSchedules();
+  startStatsSync();
 }
