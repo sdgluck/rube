@@ -1137,6 +1137,17 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     };
   }
 
+  // ─── Metadata children ─────────────────────────────────────────────────────
+
+  async function getMetadataChildren(ratingKey: string): Promise<Array<{ ratingKey: string; type: string }>> {
+    const data = await request(`/library/metadata/${ratingKey}/children`);
+    const metadata = data?.MediaContainer?.Metadata || [];
+    return metadata.map((m: Record<string, unknown>) => ({
+      ratingKey: m.ratingKey as string,
+      type: m.type as string,
+    }));
+  }
+
   // ─── Overlay operations ────────────────────────────────────────────────────
 
   async function getItemFullDetail(ratingKey: string): Promise<PlexMediaFullDetail> {
@@ -1250,6 +1261,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     getItems,
     getItemsFiltered,
     getItemDetail,
+    getMetadataChildren,
     getItemFullDetail,
     downloadPoster,
     uploadPoster,

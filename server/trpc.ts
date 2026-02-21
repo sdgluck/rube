@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 import { getAllConfig, getConfig, setConfig, configSchema, type ConfigKey } from "./config.ts";
-import { createPlexClient } from "./plex.ts";
+import { createPlexClient, type PlexClient } from "./plex.ts";
 import { getLocalMediaItems } from "./media.ts";
 import {
   syncCollections,
@@ -405,6 +405,40 @@ const mediaRouter = t.router({
   }),
 });
 
+/**
+ * For shows, media info lives on episodes, not on the show itself.
+ * Traverse show → first season → first episode to get media info.
+ */
+async function getMediaInfoForItem(
+  client: PlexClient,
+  detail: {
+    ratingKey: string;
+    type: string;
+    media: Array<{ videoResolution?: string; videoCodec?: string; audioCodec?: string }>;
+  },
+) {
+  if (detail.media.length > 0) return detail.media[0];
+
+  if (detail.type === "show") {
+    const seasons = await client.getMetadataChildren(detail.ratingKey);
+    if (seasons.length > 0) {
+      const episodes = await client.getMetadataChildren(seasons[0].ratingKey);
+      if (episodes.length > 0) {
+        const ep = await client.getItemFullDetail(episodes[0].ratingKey);
+        if (ep.media.length > 0) return ep.media[0];
+      }
+    }
+  } else if (detail.type === "season") {
+    const episodes = await client.getMetadataChildren(detail.ratingKey);
+    if (episodes.length > 0) {
+      const ep = await client.getItemFullDetail(episodes[0].ratingKey);
+      if (ep.media.length > 0) return ep.media[0];
+    }
+  }
+
+  return {};
+}
+
 const overlaysRouter = t.router({
   configs: t.procedure
     .input(z.object({ sectionId: z.string() }))
@@ -460,7 +494,7 @@ const overlaysRouter = t.router({
 
       const client = getPlexClient();
       const detail = await client.getItemFullDetail(input.ratingKey);
-      const mediaInfo = detail.media[0] || {};
+      const mediaInfo = await getMediaInfoForItem(client, detail);
 
       const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
 
@@ -499,7 +533,7 @@ const overlaysRouter = t.router({
       const detail = await client.getItemFullDetail(input.ratingKey);
       if (!detail.thumb) throw new Error("Item has no poster");
 
-      const mediaInfo = detail.media[0] || {};
+      const mediaInfo = await getMediaInfoForItem(client, detail);
       const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
 
       let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
