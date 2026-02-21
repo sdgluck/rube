@@ -103,9 +103,9 @@ export default function Rules() {
   const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const lastClickedIndex = useRef<number | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastClickedIndex = useRef<number | null>(null);
 
   const rules = rulesQuery.data || [];
   const sections = sectionsQuery.data || [];
@@ -241,12 +241,15 @@ export default function Rules() {
 
   function handleCheckboxClick(index: number, e: React.MouseEvent) {
     const id = rules[index].id;
+
     if (e.shiftKey && lastClickedIndex.current != null) {
       const from = Math.min(lastClickedIndex.current, index);
       const to = Math.max(lastClickedIndex.current, index);
       setSelected((prev) => {
         const next = new Set(prev);
-        for (let i = from; i <= to; i++) next.add(rules[i].id);
+        for (let i = from; i <= to; i++) {
+          next.add(rules[i].id);
+        }
         return next;
       });
     } else {
@@ -257,6 +260,7 @@ export default function Rules() {
         return next;
       });
     }
+
     lastClickedIndex.current = index;
   }
 

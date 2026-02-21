@@ -57,12 +57,12 @@ export default function Collections() {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const lastClickedIndex = useRef<number | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
   const [labelEditing, setLabelEditing] = useState(false);
   const [labelsToAdd, setLabelsToAdd] = useState("");
   const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const lastClickedIndex = useRef<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -235,23 +235,27 @@ export default function Collections() {
   };
 
   const handleCheckboxClick = (index: number, e: React.MouseEvent) => {
-    const id = collections[index].plexRatingKey;
+    const key = collections[index].plexRatingKey;
+
     if (e.shiftKey && lastClickedIndex.current != null) {
       const from = Math.min(lastClickedIndex.current, index);
       const to = Math.max(lastClickedIndex.current, index);
       setSelected((prev) => {
         const next = new Set(prev);
-        for (let i = from; i <= to; i++) next.add(collections[i].plexRatingKey);
+        for (let i = from; i <= to; i++) {
+          next.add(collections[i].plexRatingKey);
+        }
         return next;
       });
     } else {
       setSelected((prev) => {
         const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
         return next;
       });
     }
+
     lastClickedIndex.current = index;
   };
 
