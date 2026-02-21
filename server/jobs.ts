@@ -1,18 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
-import { getConfig } from "./config.ts";
 import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
-import type {
-  JobContext,
-  CommonJobConfig,
-  GenerateJobConfig,
-  BywJobConfig,
-  OverlaysJobConfig,
-} from "../shared/job-context.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -41,58 +34,6 @@ const DEFAULT_CONFIGS: Record<string, string> = {
   "overlays-remove": '{"mode":"remove"}',
 };
 
-// Command registry — maps command name to its run function
-const commandRegistry: Record<
-  string,
-  (ctx: JobContext, config: CommonJobConfig | GenerateJobConfig | BywJobConfig | OverlaysJobConfig) => Promise<void>
-> = {};
-
-async function loadCommand(name: string) {
-  if (commandRegistry[name]) return;
-  switch (name) {
-    case "shuffle": {
-      const mod = await import("./commands/shuffle.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "generate": {
-      const mod = await import("./commands/generate.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "because-you-watched": {
-      const mod = await import("./commands/because-you-watched.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "sync-media": {
-      const mod = await import("./commands/sync-media.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "sync-collections": {
-      const mod = await import("./commands/sync-collections.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "label": {
-      const mod = await import("./commands/label.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "label-undo": {
-      const mod = await import("./commands/label-undo.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-    case "overlays": {
-      const mod = await import("./commands/overlays.ts");
-      commandRegistry[name] = mod.default;
-      break;
-    }
-  }
-}
-
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
@@ -101,7 +42,6 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
-const activeControllers = new Map<string, AbortController>();
 const cronJobs = new Map<string, Cron>();
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -168,12 +108,37 @@ function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): v
 
   const cron = new Cron(job.schedule, () => {
     console.log(`[jobs] Cron triggered: ${job.name}`);
-    startJob(job.id);
+    startJob(job.id).catch((err) => console.error(`[jobs] Failed to start ${job.name}:`, err));
   });
   cronJobs.set(job.id, cron);
 }
 
-export function startJob(jobId: string): { runId: string; done: Promise<void> } | null {
+async function startSidequest(): Promise<void> {
+  const { Sidequest } = await import("sidequest");
+  const dbPath = join(import.meta.dirname, "..", "sidequest.sqlite");
+  await Sidequest.start({
+    backend: { driver: "@sidequest/sqlite-backend", config: dbPath },
+    queues: [{ name: "default", concurrency: 1, priority: 50, state: "active" }],
+    maxConcurrentJobs: 1,
+    manualJobResolution: true,
+    jobsFilePath: join(import.meta.dirname, "sidequest-registry.ts"),
+    gracefulShutdown: true,
+    logger: { level: "warn" },
+  });
+  console.log("[jobs] Sidequest engine started");
+}
+
+export async function stopSidequest(): Promise<void> {
+  try {
+    const { Sidequest } = await import("sidequest");
+    await Sidequest.stop();
+    console.log("[jobs] Sidequest engine stopped");
+  } catch {
+    // Engine may not have started
+  }
+}
+
+export async function startJob(jobId: string): Promise<{ runId: string } | null> {
   const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
   if (!job) return null;
 
@@ -220,141 +185,38 @@ export function startJob(jobId: string): { runId: string; done: Promise<void> } 
   const internalHandler = internalJobs[job.command];
   if (internalHandler) {
     console.log(`[jobs] Running internal job: ${job.name}`);
-    const done = Promise.resolve().then(() => {
-      try {
-        const output = internalHandler();
-        db.update(jobRuns)
-          .set({ status: "completed", log: output, progress: 1, message: output, finishedAt: Date.now() })
-          .where(eq(jobRuns.id, runId))
-          .run();
-        emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - now)}`, { jobId: job.id });
-        console.log(`[jobs] ${job.name} completed: ${output}`);
-      } catch (err) {
-        const msg = (err as Error).message;
-        db.update(jobRuns)
-          .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
-          .where(eq(jobRuns.id, runId))
-          .run();
-        emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id });
-        console.error(`[jobs] ${job.name} failed: ${msg}`);
-      }
-    });
-    return { runId, done };
-  }
-
-  // Command jobs run in-process via the command registry
-  const controller = new AbortController();
-  activeControllers.set(runId, controller);
-
-  let logBuffer = "";
-  let progress = 0;
-  let message = "";
-  let flushTimer: ReturnType<typeof setInterval> | null = null;
-
-  function flushLog(): void {
-    if (logBuffer.length === 0) return;
     try {
-      const currentRow = db.select({ log: jobRuns.log }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
-      const currentLog = currentRow?.log ?? "";
+      const output = internalHandler();
       db.update(jobRuns)
-        .set({ log: currentLog + logBuffer, progress, message })
+        .set({ status: "completed", log: output, progress: 1, message: output, finishedAt: Date.now() })
         .where(eq(jobRuns.id, runId))
         .run();
-      logBuffer = "";
-    } catch {
-      // DB may be closed during shutdown
-    }
-  }
-
-  const ctx: JobContext = {
-    log: (...args: unknown[]) => {
-      const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
-      logBuffer += text;
-      // Update message to the last non-empty log line
-      const trimmed = text.trim();
-      if (trimmed) message = trimmed;
-    },
-    progress: (current: number, total: number, msg: string) => {
-      progress = total > 0 ? (current - 1) / total : 0;
-      message = msg;
-    },
-    signal: controller.signal,
-  };
-
-  // Parse per-job config
-  let jobConfig: Record<string, unknown> = {};
-  try {
-    jobConfig = JSON.parse(job.config || "{}");
-  } catch {
-    // Invalid config, use empty
-  }
-
-  flushTimer = setInterval(flushLog, 500);
-
-  console.log(`[jobs] Starting ${job.name} (in-process)`);
-
-  const done = (async () => {
-    try {
-      await loadCommand(job.command);
-      const commandFn = commandRegistry[job.command];
-      if (!commandFn) {
-        throw new Error(`Unknown command: ${job.command}`);
-      }
-      await commandFn(ctx, jobConfig as CommonJobConfig);
-
-      if (flushTimer) clearInterval(flushTimer);
-      flushLog();
-
-      const wasCancelled = !activeControllers.has(runId);
-      activeControllers.delete(runId);
-
-      if (!wasCancelled) {
-        try {
-          db.update(jobRuns)
-            .set({ status: "completed", progress: 1, finishedAt: Date.now() })
-            .where(eq(jobRuns.id, runId))
-            .run();
-          emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - now)}`, { jobId: job.id });
-        } catch {
-          // DB may be closed
-        }
-        console.log(`[jobs] ${job.name} completed`);
-      }
+      emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - now)}`, { jobId: job.id });
+      console.log(`[jobs] ${job.name} completed: ${output}`);
     } catch (err) {
-      if (flushTimer) clearInterval(flushTimer);
-
-      const wasCancelled = !activeControllers.has(runId);
-      activeControllers.delete(runId);
-
-      if (wasCancelled) {
-        // Already marked as cancelled by cancelRun()
-        return;
-      }
-
-      const errorMsg = (err as Error).message;
-      logBuffer += `\nError: ${errorMsg}\n`;
-      flushLog();
-
-      try {
-        db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
-        emitEvent("job.failed", `${job.name} failed: ${errorMsg}`, { jobId: job.id });
-      } catch {
-        // DB may be closed
-      }
-      console.error(`[jobs] ${job.name} failed: ${errorMsg}`);
+      const msg = (err as Error).message;
+      db.update(jobRuns)
+        .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
+        .where(eq(jobRuns.id, runId))
+        .run();
+      emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id });
+      console.error(`[jobs] ${job.name} failed: ${msg}`);
     }
-  })();
+    return { runId };
+  }
 
-  return { runId, done };
+  // Command jobs → enqueue via Sidequest worker thread
+  console.log(`[jobs] Enqueueing ${job.name} via Sidequest`);
+  const { Sidequest } = await import("sidequest");
+  const { CommandJob } = await import("./sidequest-job.ts");
+  await Sidequest.build(CommandJob).enqueue(job.command, runId, job.config || "{}", job.name, job.id);
+
+  return { runId };
 }
 
 export function cancelRun(runId: string): boolean {
-  const controller = activeControllers.get(runId);
-  if (!controller) return false;
-
-  // Remove from map first so the job handler knows it was cancelled
-  activeControllers.delete(runId);
-  controller.abort();
+  const run = db.select({ id: jobRuns.id, status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+  if (!run || run.status !== "running") return false;
 
   db.update(jobRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
 
@@ -465,9 +327,10 @@ export function updateJob(
   scheduleCron(job);
 }
 
-export function initJobs(): void {
+export async function initJobs(): Promise<void> {
   seedDefaultJobs();
   seedDefaultRules();
   markStaleRunsAsFailed();
+  await startSidequest();
   startCronSchedules();
 }

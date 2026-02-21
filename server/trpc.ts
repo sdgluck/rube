@@ -155,8 +155,8 @@ const jobsRouter = t.router({
       return { ok: true };
     }),
 
-  start: t.procedure.input(z.object({ jobId: z.string() })).mutation(({ input }) => {
-    const result = startJob(input.jobId);
+  start: t.procedure.input(z.object({ jobId: z.string() })).mutation(async ({ input }) => {
+    const result = await startJob(input.jobId);
     if (!result) throw new Error(`Job ${input.jobId} is already running or not found`);
     return { runId: result.runId };
   }),

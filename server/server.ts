@@ -130,5 +130,17 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
 server.listen(PORT, () => {
   console.log(`Tinkerbell admin server listening on http://localhost:${PORT}`);
-  initJobs();
+  initJobs().catch((err) => {
+    console.error("[jobs] Init failed:", err);
+    process.exit(1);
+  });
 });
+
+async function shutdown() {
+  const { stopSidequest } = await import("./jobs.ts");
+  await stopSidequest();
+  server.close();
+  process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
