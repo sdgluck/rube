@@ -103,6 +103,7 @@ export default function Rules() {
   const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const lastClickedIndex = useRef<number | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -238,13 +239,25 @@ export default function Rules() {
     });
   }
 
-  function toggleSelected(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  function handleCheckboxClick(index: number, e: React.MouseEvent) {
+    const id = rules[index].id;
+    if (e.shiftKey && lastClickedIndex.current != null) {
+      const from = Math.min(lastClickedIndex.current, index);
+      const to = Math.max(lastClickedIndex.current, index);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (let i = from; i <= to; i++) next.add(rules[i].id);
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
+    lastClickedIndex.current = index;
   }
 
   function toggleSelectAll() {
@@ -408,7 +421,7 @@ export default function Rules() {
             </tr>
           </thead>
           <tbody>
-            {rules.map((rule) => {
+            {rules.map((rule, i) => {
               let configSummary = "";
               try {
                 const c = JSON.parse(rule.config || "{}");
@@ -438,8 +451,8 @@ export default function Rules() {
                       : styles.typeCriteria;
               return (
                 <tr key={rule.id}>
-                  <td className={styles.checkboxCell}>
-                    <input type="checkbox" checked={selected.has(rule.id)} onChange={() => toggleSelected(rule.id)} />
+                  <td className={styles.checkboxCell} onClick={(e) => handleCheckboxClick(i, e)}>
+                    <input type="checkbox" checked={selected.has(rule.id)} readOnly />
                   </td>
                   <td>{rule.name}</td>
                   <td>

@@ -31,6 +31,8 @@
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
   vertical-align: middle;
+  height: 52px;
+  box-sizing: border-box;
 }
 
 .table tbody tr:hover {

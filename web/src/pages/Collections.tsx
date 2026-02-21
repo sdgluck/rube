@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
@@ -57,6 +57,7 @@ export default function Collections() {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const lastClickedIndex = useRef<number | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
   const [labelEditing, setLabelEditing] = useState(false);
   const [labelsToAdd, setLabelsToAdd] = useState("");
@@ -233,16 +234,25 @@ export default function Collections() {
     filtersQuery.refetch();
   };
 
-  const toggleSelect = (ratingKey: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(ratingKey)) {
-        next.delete(ratingKey);
-      } else {
-        next.add(ratingKey);
-      }
-      return next;
-    });
+  const handleCheckboxClick = (index: number, e: React.MouseEvent) => {
+    const id = collections[index].plexRatingKey;
+    if (e.shiftKey && lastClickedIndex.current != null) {
+      const from = Math.min(lastClickedIndex.current, index);
+      const to = Math.max(lastClickedIndex.current, index);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (let i = from; i <= to; i++) next.add(collections[i].plexRatingKey);
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
+    lastClickedIndex.current = index;
   };
 
   const toggleSelectAll = () => {
@@ -487,7 +497,7 @@ export default function Collections() {
                 </tr>
               </thead>
               <tbody>
-                {collections.map((col) => {
+                {collections.map((col, i) => {
                   const labels = parseLabels(col.labels);
                   return (
                     <tr
@@ -495,12 +505,18 @@ export default function Collections() {
                       className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
                       onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
                     >
-                      <td className={styles.checkboxCell} onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className={styles.checkboxCell}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCheckboxClick(i, e);
+                        }}
+                      >
                         <input
                           type="checkbox"
                           className={styles.checkbox}
                           checked={selected.has(col.plexRatingKey)}
-                          onChange={() => toggleSelect(col.plexRatingKey)}
+                          readOnly
                         />
                       </td>
                       <td>{col.title}</td>

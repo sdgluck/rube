@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import pMap from "p-map";
 import { trpc } from "../trpc";
 import DropdownButton from "../DropdownButton";
 import styles from "./Jobs.module.css";
@@ -52,6 +53,9 @@ export default function Jobs() {
 
   const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const lastClickedIndex = useRef<number | null>(null);
 
   const hasRunning = jobsQuery.data?.some((j) => j.lastRunStatus === "running");
 
@@ -126,6 +130,57 @@ export default function Jobs() {
     }
   }
 
+  function handleCheckboxClick(index: number, e: React.MouseEvent) {
+    const id = jobs[index].id;
+
+    if (e.shiftKey && lastClickedIndex.current != null) {
+      const from = Math.min(lastClickedIndex.current, index);
+      const to = Math.max(lastClickedIndex.current, index);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (let i = from; i <= to; i++) {
+          next.add(jobs[i].id);
+        }
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
+
+    lastClickedIndex.current = index;
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === jobs.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(jobs.map((j) => j.id)));
+    }
+  }
+
+  async function bulkSetEnabled(enabled: boolean) {
+    const ids = [...selected];
+    setBulkProgress({ done: 0, total: ids.length });
+    let done = 0;
+    await pMap(
+      ids,
+      async (jobId) => {
+        await updateMutation.mutateAsync({ jobId, enabled });
+        done++;
+        setBulkProgress({ done, total: ids.length });
+      },
+      { concurrency: 5 },
+    );
+    setBulkProgress(null);
+    setSelected(new Set());
+    utils.jobs.list.invalidate();
+  }
+
   if (jobsQuery.isLoading) return <p>Loading...</p>;
   if (jobsQuery.error) return <p>Error: {jobsQuery.error.message}</p>;
 
@@ -180,9 +235,51 @@ export default function Jobs() {
         </div>
       )}
 
+      {selected.size > 0 && (
+        <div className={shared.bulkBar}>
+          {bulkProgress ? (
+            <>
+              <span style={{ fontSize: "0.85rem" }}>
+                {bulkProgress.done}/{bulkProgress.total}
+              </span>
+              <div className={shared.bulkProgressBar}>
+                <div
+                  className={shared.bulkProgressFill}
+                  style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{selected.size} selected</span>
+              <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
+                Enable
+              </button>
+              <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(false)}>
+                Disable
+              </button>
+              <button
+                className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <table className={styles.table}>
         <thead>
           <tr>
+            <th className={shared.checkboxCell}>
+              <input
+                type="checkbox"
+                className={shared.checkbox}
+                checked={jobs.length > 0 && selected.size === jobs.length}
+                onChange={toggleSelectAll}
+              />
+            </th>
             <th>Name</th>
             <th>Schedule</th>
             <th>Enabled</th>
@@ -191,8 +288,21 @@ export default function Jobs() {
           </tr>
         </thead>
         <tbody>
-          {jobs.map((job) => (
-            <tr key={job.id} className={styles.clickableRow} onClick={() => navigate(`/jobs/${job.id}`)}>
+          {jobs.map((job, i) => (
+            <tr
+              key={job.id}
+              className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+              onClick={() => navigate(`/jobs/${job.id}`)}
+            >
+              <td
+                className={shared.checkboxCell}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCheckboxClick(i, e);
+                }}
+              >
+                <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+              </td>
               <td>{job.name}</td>
               <td>
                 <span className={styles.cronText}>{job.schedule || "—"}</span>
