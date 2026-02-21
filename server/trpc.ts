@@ -7,6 +7,7 @@ import {
   syncCollections,
   getLocalCollections,
   getLocalCollection,
+  getCollectionFilters,
   updateCollection,
   updateCollectionLabels,
   deleteCollection,
@@ -59,13 +60,31 @@ function getPlexClient() {
 const collectionsRouter = t.router({
   list: t.procedure
     .input(
-      z
-        .object({ sectionId: z.string().optional(), label: z.string().optional(), search: z.string().optional() })
-        .optional(),
+      z.object({
+        sectionId: z.string().optional(),
+        label: z.string().optional(),
+        search: z.string().optional(),
+        offset: z.number().default(0),
+        limit: z.number().default(50),
+        sort: z.string().optional(),
+        sortDir: z.enum(["asc", "desc"]).default("asc"),
+      }),
     )
     .query(({ input }) => {
-      return getLocalCollections(input);
+      return getLocalCollections({
+        sectionId: input.sectionId,
+        label: input.label,
+        search: input.search || undefined,
+        offset: input.offset,
+        limit: input.limit,
+        sort: input.sort,
+        sortDir: input.sortDir,
+      });
     }),
+
+  filters: t.procedure.query(() => {
+    return getCollectionFilters();
+  }),
 
   get: t.procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
     const row = getLocalCollection(input.ratingKey);
@@ -223,12 +242,13 @@ const usersRouter = t.router({
   list: t.procedure.query(async () => {
     const client = getPlexClient();
     const identity = await client.getIdentity();
-    const [sharings, allCollections, accounts, history] = await Promise.all([
+    const [sharings, allCollectionsResult, accounts, history] = await Promise.all([
       client.getSharings(identity.machineIdentifier),
       Promise.resolve(getLocalCollections()),
       client.getAccounts(),
       client.getWatchHistory({ limit: 500 }),
     ]);
+    const allCollections = allCollectionsResult.items;
 
     // Build a map of User:{username} → collection count
     const userCollectionCounts = new Map<string, number>();

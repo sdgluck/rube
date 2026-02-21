@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
@@ -11,6 +11,7 @@ type SortDir = "asc" | "desc";
 type ViewMode = "table" | "grid";
 
 const SORT_KEYS = new Set<string>(["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"]);
+const PAGE_SIZE = 50;
 
 export default function Collections() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -18,6 +19,7 @@ export default function Collections() {
   const sectionFilter = searchParams.get("section") ?? "";
   const labelFilter = searchParams.get("label") ?? "";
   const search = searchParams.get("q") ?? "";
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const sortKey: SortKey = SORT_KEYS.has(searchParams.get("sort") ?? "")
     ? (searchParams.get("sort") as SortKey)
     : "title";
@@ -35,6 +37,10 @@ export default function Collections() {
             next.set(key, value);
           } else {
             next.delete(key);
+          }
+          // Reset page when filters/sort change
+          if (key !== "page") {
+            next.delete("page");
           }
           return next;
         },
@@ -63,22 +69,30 @@ export default function Collections() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const offset = (page - 1) * PAGE_SIZE;
+
   const collectionsQuery = trpc.collections.list.useQuery(
     {
       sectionId: sectionFilter || undefined,
       label: labelFilter || undefined,
       search: debouncedSearch || undefined,
+      offset,
+      limit: PAGE_SIZE,
+      sort: sortKey,
+      sortDir,
     },
     { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   );
 
-  // Unfiltered query for populating filter dropdowns
-  const allCollectionsQuery = trpc.collections.list.useQuery({}, { refetchOnWindowFocus: false });
+  // Lightweight query for populating filter dropdowns
+  const filtersQuery = trpc.collections.filters.useQuery(undefined, { refetchOnWindowFocus: false });
 
   const deleteMutation = trpc.collections.delete.useMutation();
   const updateLabelsMutation = trpc.collections.updateLabels.useMutation();
 
-  const collections = collectionsQuery.data || [];
+  const collections = collectionsQuery.data?.items ?? [];
+  const total = collectionsQuery.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const parseLabels = (labelsJson: string): string[] => {
     try {
@@ -88,10 +102,9 @@ export default function Collections() {
     }
   };
 
-  // Derive unique sections and labels from unfiltered data
-  const allCollections = allCollectionsQuery.data || [];
-  const sections = [...new Map(allCollections.map((c) => [c.sectionId, c.sectionTitle])).entries()];
-  const allLabels = [...new Set(allCollections.flatMap((c) => parseLabels(c.labels)))].sort();
+  // Derive sections and labels from lightweight filters query
+  const sections = filtersQuery.data?.sections ?? [];
+  const allLabels = filtersQuery.data?.labels ?? [];
 
   const toggleSort = (key: SortKey) => {
     setSearchParams(
@@ -106,39 +119,13 @@ export default function Collections() {
           else next.set("sort", key);
           next.delete("dir");
         }
+        // Reset page on sort change
+        next.delete("page");
         return next;
       },
       { replace: true },
     );
   };
-
-  const sortedCollections = useMemo(() => {
-    const sorted = [...collections].sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "title":
-          cmp = a.title.localeCompare(b.title);
-          break;
-        case "sectionTitle":
-          cmp = a.sectionTitle.localeCompare(b.sectionTitle);
-          break;
-        case "childCount":
-          cmp = a.childCount - b.childCount;
-          break;
-        case "smart":
-          cmp = (a.smart ? 1 : 0) - (b.smart ? 1 : 0);
-          break;
-        case "labels":
-          cmp = parseLabels(a.labels).join(",").localeCompare(parseLabels(b.labels).join(","));
-          break;
-        case "addedAt":
-          cmp = (a.addedAt ?? 0) - (b.addedAt ?? 0);
-          break;
-      }
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return sorted;
-  }, [collections, sortKey, sortDir]);
 
   const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
@@ -162,7 +149,7 @@ export default function Collections() {
           await deleteMutation.mutateAsync({ ratingKey });
           setStatus({ type: "success", msg: `Deleted "${title}"` });
           collectionsQuery.refetch();
-          allCollectionsQuery.refetch();
+          filtersQuery.refetch();
         } catch {
           setStatus({ type: "error", msg: `Failed to delete "${title}"` });
         }
@@ -200,7 +187,7 @@ export default function Collections() {
           msg: failed > 0 ? `Deleted ${deleted}, failed ${failed}` : `Deleted ${deleted} collection(s)`,
         });
         collectionsQuery.refetch();
-        allCollectionsQuery.refetch();
+        filtersQuery.refetch();
       },
     });
   };
@@ -243,7 +230,7 @@ export default function Collections() {
       msg: failed > 0 ? `Updated ${updated}, failed ${failed}` : `Updated labels on ${updated} collection(s)`,
     });
     collectionsQuery.refetch();
-    allCollectionsQuery.refetch();
+    filtersQuery.refetch();
   };
 
   const toggleSelect = (ratingKey: string) => {
@@ -266,15 +253,13 @@ export default function Collections() {
     }
   };
 
-  if (collectionsQuery.isLoading) return <p>Loading...</p>;
+  if (collectionsQuery.isLoading && !collectionsQuery.data) return <p>Loading...</p>;
   if (collectionsQuery.error)
     return <div className={`${styles.toast} ${styles.error}`}>Failed to load collections</div>;
 
   return (
     <div>
-      <h2 className={styles.heading}>
-        Collections{collections.length > 0 && <span className="count-badge">{collections.length}</span>}
-      </h2>
+      <h2 className={styles.heading}>Collections{total > 0 && <span className="count-badge">{total}</span>}</h2>
 
       {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
 
@@ -404,9 +389,9 @@ export default function Collections() {
             />
             <select className={styles.select} value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
               <option value="">All sections</option>
-              {sections.map(([id, title]) => (
-                <option key={id} value={id}>
-                  {title}
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
                 </option>
               ))}
             </select>
@@ -443,7 +428,7 @@ export default function Collections() {
 
           {viewMode === "grid" ? (
             <div className={styles.grid}>
-              {sortedCollections.map((col) => (
+              {collections.map((col) => (
                 <div
                   key={col.plexRatingKey}
                   className={styles.card}
@@ -502,7 +487,7 @@ export default function Collections() {
                 </tr>
               </thead>
               <tbody>
-                {sortedCollections.map((col) => {
+                {collections.map((col) => {
                   const labels = parseLabels(col.labels);
                   return (
                     <tr
@@ -549,6 +534,28 @@ export default function Collections() {
                 })}
               </tbody>
             </table>
+          )}
+
+          {total > PAGE_SIZE && (
+            <div className={styles.pagination}>
+              <button
+                className={styles.buttonSecondary}
+                disabled={page <= 1}
+                onClick={() => setParam("page", String(page - 1))}
+              >
+                Previous
+              </button>
+              <span className={styles.paginationInfo}>
+                Page {page} of {totalPages} ({total} items)
+              </span>
+              <button
+                className={styles.buttonSecondary}
+                disabled={page >= totalPages}
+                onClick={() => setParam("page", String(page + 1))}
+              >
+                Next
+              </button>
+            </div>
           )}
         </>
       )}

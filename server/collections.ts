@@ -2,7 +2,7 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import { eq, and, like, type InferSelectModel } from "drizzle-orm";
+import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { collections } from "./db/schema.ts";
 import type { PlexClient, PlexSection } from "./plex.ts";
@@ -18,6 +18,10 @@ interface CollectionFilters {
   sectionId?: string;
   label?: string;
   search?: string;
+  offset?: number;
+  limit?: number;
+  sort?: string;
+  sortDir?: "asc" | "desc";
 }
 
 export async function syncCollections(client: PlexClient, sections: PlexSection[]): Promise<SyncStats> {
@@ -81,7 +85,16 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
   return { synced, removed };
 }
 
-export function getLocalCollections(filters?: CollectionFilters): CollectionRow[] {
+const SORT_COLUMNS = {
+  title: collections.title,
+  sectionTitle: collections.sectionTitle,
+  childCount: collections.childCount,
+  smart: collections.smart,
+  labels: collections.labels,
+  addedAt: collections.addedAt,
+} as const;
+
+export function getLocalCollections(filters?: CollectionFilters): { items: CollectionRow[]; total: number } {
   const conditions = [];
 
   if (filters?.sectionId) {
@@ -96,14 +109,53 @@ export function getLocalCollections(filters?: CollectionFilters): CollectionRow[
     conditions.push(like(collections.title, `%${filters.search}%`));
   }
 
-  const query = db.select().from(collections);
-  if (conditions.length > 0) {
-    return query
-      .where(and(...conditions))
-      .orderBy(collections.title)
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const countResult = db
+    .select({ count: sql<number>`count(*)` })
+    .from(collections)
+    .where(whereClause)
+    .get();
+  const total = countResult?.count ?? 0;
+
+  const sortCol = SORT_COLUMNS[filters?.sort as keyof typeof SORT_COLUMNS] ?? collections.title;
+  const orderFn = filters?.sortDir === "desc" ? desc : asc;
+
+  const query = db.select().from(collections).where(whereClause).orderBy(orderFn(sortCol));
+
+  if (filters?.limit != null) {
+    const items = query
+      .limit(filters.limit)
+      .offset(filters.offset ?? 0)
       .all();
+    return { items, total };
   }
-  return query.orderBy(collections.title).all();
+
+  return { items: query.all(), total };
+}
+
+export function getCollectionFilters(): { sections: { id: string; title: string }[]; labels: string[] } {
+  const rows = db
+    .select({ sectionId: collections.sectionId, sectionTitle: collections.sectionTitle, labels: collections.labels })
+    .from(collections)
+    .all();
+
+  const sectionMap = new Map<string, string>();
+  const labelSet = new Set<string>();
+
+  for (const row of rows) {
+    sectionMap.set(row.sectionId, row.sectionTitle);
+    try {
+      const parsed: string[] = JSON.parse(row.labels);
+      for (const l of parsed) labelSet.add(l);
+    } catch {}
+  }
+
+  const sections = [...sectionMap.entries()]
+    .map(([id, title]) => ({ id, title }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  return { sections, labels: [...labelSet].sort() };
 }
 
 export function getLocalCollection(ratingKey: string): CollectionRow | undefined {
