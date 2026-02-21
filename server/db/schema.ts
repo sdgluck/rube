@@ -81,6 +81,23 @@ export const events = sqliteTable("events", {
   timestamp: integer("timestamp").notNull(),
 });
 
+export const mediaItems = sqliteTable("media_items", {
+  ratingKey: text("rating_key").primaryKey(),
+  sectionId: text("section_id").notNull(),
+  sectionTitle: text("section_title").notNull(),
+  title: text("title").notNull(),
+  year: integer("year"),
+  thumb: text("thumb"),
+  type: text("type").notNull(),
+  addedAt: integer("added_at"),
+  videoResolution: text("video_resolution"),
+  videoCodec: text("video_codec"),
+  audioCodec: text("audio_codec"),
+  audioChannels: integer("audio_channels"),
+  container: text("container"),
+  syncedAt: integer("synced_at").notNull(),
+});
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

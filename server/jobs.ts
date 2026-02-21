@@ -18,6 +18,7 @@ type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
 
 const DEFAULT_JOBS: Omit<Job, "config">[] = [
+  { id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "0 0 * * *", enabled: 1 },
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
   {
@@ -61,6 +62,11 @@ async function loadCommand(name: string) {
     }
     case "because-you-watched": {
       const mod = await import("./commands/because-you-watched.ts");
+      commandRegistry[name] = mod.default;
+      break;
+    }
+    case "sync-media": {
+      const mod = await import("./commands/sync-media.ts");
       commandRegistry[name] = mod.default;
       break;
     }

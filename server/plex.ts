@@ -140,6 +140,11 @@ export interface PlexMediaItem {
   thumb?: string;
   type: string;
   addedAt?: number;
+  videoResolution?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
 }
 
 export interface PlexStreamInfo {
@@ -981,14 +986,22 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const metadata = data?.MediaContainer?.Metadata || [];
     const total: number = data?.MediaContainer?.totalSize ?? 0;
     return {
-      items: metadata.map((item: Record<string, unknown>) => ({
-        ratingKey: item.ratingKey as string,
-        title: item.title as string,
-        year: item.year as number | undefined,
-        thumb: item.thumb as string | undefined,
-        type: item.type as string,
-        addedAt: item.addedAt as number | undefined,
-      })),
+      items: metadata.map((item: Record<string, unknown>) => {
+        const media = (item.Media as Array<Record<string, unknown>>)?.[0];
+        return {
+          ratingKey: item.ratingKey as string,
+          title: item.title as string,
+          year: item.year as number | undefined,
+          thumb: item.thumb as string | undefined,
+          type: item.type as string,
+          addedAt: item.addedAt as number | undefined,
+          videoResolution: media?.videoResolution as string | undefined,
+          videoCodec: media?.videoCodec as string | undefined,
+          audioCodec: media?.audioCodec as string | undefined,
+          audioChannels: media?.audioChannels as number | undefined,
+          container: media?.container as string | undefined,
+        };
+      }),
       total,
     };
   }
@@ -1029,6 +1042,11 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         thumb: item.thumb as string | undefined,
         type: item.type as string,
         addedAt: item.addedAt as number | undefined,
+        videoResolution: media?.videoResolution as string | undefined,
+        videoCodec: media?.videoCodec as string | undefined,
+        audioCodec: media?.audioCodec as string | undefined,
+        audioChannels: media?.audioChannels as number | undefined,
+        container: media?.container as string | undefined,
       });
     }
 

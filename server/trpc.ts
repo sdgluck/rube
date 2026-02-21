@@ -1,7 +1,8 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 import { getAllConfig, getConfig, setConfig, configSchema, type ConfigKey } from "./config.ts";
-import { createPlexClient, SECTION_TYPE_MAP, type MediaFilters } from "./plex.ts";
+import { createPlexClient } from "./plex.ts";
+import { getLocalMediaItems } from "./media.ts";
 import {
   syncCollections,
   getLocalCollections,
@@ -359,119 +360,19 @@ const mediaRouter = t.router({
         container: z.string().optional(),
       }),
     )
-    .query(async ({ input }) => {
-      const client = getPlexClient();
-      let sections = await client.getSections();
-      const configuredLibraries = getConfig("global_plex_libraries");
-      if (configuredLibraries) {
-        sections = sections.filter((s) => configuredLibraries.includes(s.title));
-      }
-      if (input.sectionId) {
-        sections = sections.filter((s) => s.key === input.sectionId);
-      }
-
-      const typeNum = input.type ? SECTION_TYPE_MAP[input.type] : undefined;
-
-      const mediaFilters: MediaFilters = {
+    .query(({ input }) => {
+      return getLocalMediaItems({
+        sectionId: input.sectionId,
+        type: input.type,
+        search: input.search || undefined,
+        offset: input.offset,
+        limit: input.limit,
         videoResolution: input.videoResolution || undefined,
         videoCodec: input.videoCodec || undefined,
         audioCodec: input.audioCodec || undefined,
         audioChannels: input.audioChannels || undefined,
         container: input.container || undefined,
-      };
-      const hasMediaFilters = !!(
-        mediaFilters.videoResolution ||
-        mediaFilters.videoCodec ||
-        mediaFilters.audioCodec ||
-        mediaFilters.audioChannels ||
-        mediaFilters.container
-      );
-
-      if (hasMediaFilters) {
-        // Media filters require scanning all items via allItems() generator
-        let allItems: Array<{
-          ratingKey: string;
-          title: string;
-          year?: number;
-          thumb?: string;
-          type: string;
-          addedAt?: number;
-          sectionTitle: string;
-        }> = [];
-        let total = 0;
-
-        for (const section of sections) {
-          const result = await client.getItemsFiltered(section.key, mediaFilters, {
-            offset: 0,
-            size: Number.MAX_SAFE_INTEGER,
-            title: input.search || undefined,
-            type: typeNum,
-          });
-          allItems.push(...result.items.map((item) => ({ ...item, sectionTitle: section.title })));
-          total += result.total;
-        }
-
-        if (sections.length > 1) {
-          allItems.sort((a, b) => a.title.localeCompare(b.title));
-        }
-
-        const paged = allItems.slice(input.offset, input.offset + input.limit);
-        return {
-          items: paged,
-          total,
-          offset: input.offset,
-          limit: input.limit,
-        };
-      }
-
-      if (sections.length === 1) {
-        const section = sections[0];
-        const result = await client.getItems(section.key, {
-          offset: input.offset,
-          size: input.limit,
-          title: input.search || undefined,
-          type: typeNum,
-        });
-        return {
-          items: result.items.map((item) => ({ ...item, sectionTitle: section.title })),
-          total: result.total,
-          offset: input.offset,
-          limit: input.limit,
-        };
-      }
-
-      // Multi-section: fetch from each and merge
-      let allItems: Array<{
-        ratingKey: string;
-        title: string;
-        year?: number;
-        thumb?: string;
-        type: string;
-        addedAt?: number;
-        sectionTitle: string;
-      }> = [];
-      let total = 0;
-      for (const section of sections) {
-        const result = await client.getItems(section.key, {
-          offset: 0,
-          size: input.offset + input.limit,
-          title: input.search || undefined,
-          type: typeNum,
-        });
-        allItems.push(...result.items.map((item) => ({ ...item, sectionTitle: section.title })));
-        total += result.total;
-      }
-
-      // Sort by title and apply pagination
-      allItems.sort((a, b) => a.title.localeCompare(b.title));
-      const paged = allItems.slice(input.offset, input.offset + input.limit);
-
-      return {
-        items: paged,
-        total,
-        offset: input.offset,
-        limit: input.limit,
-      };
+      });
     }),
 
   get: t.procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
@@ -492,6 +393,15 @@ const mediaRouter = t.router({
       ...detail,
       collections: enrichedCollections,
     };
+  }),
+
+  columns: t.procedure.query(() => {
+    return getConfig("media_columns") ?? null;
+  }),
+
+  saveColumns: t.procedure.input(z.array(z.object({ id: z.string(), visible: z.boolean() }))).mutation(({ input }) => {
+    setConfig("media_columns", input);
+    return { ok: true };
   }),
 });
 

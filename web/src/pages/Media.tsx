@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
 import styles from "./Collections.module.css";
+import mediaStyles from "./Media.module.css";
 
 type ViewMode = "table" | "grid";
 
@@ -62,6 +63,58 @@ const ADVANCED_FILTER_KEYS = ["res", "vcodec", "acodec", "ach", "container"] as 
 
 const PAGE_SIZE = 50;
 
+interface ColumnDef {
+  id: string;
+  label: string;
+  render: (item: MediaItem) => string;
+}
+
+type MediaItem = {
+  ratingKey: string;
+  title: string;
+  year?: number;
+  thumb?: string;
+  type: string;
+  addedAt?: number;
+  sectionTitle: string;
+  videoResolution?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+};
+
+const AUDIO_CHANNELS_LABELS: Record<number, string> = {
+  1: "Mono",
+  2: "Stereo",
+  6: "5.1",
+  8: "7.1",
+};
+
+const ALL_COLUMNS: ColumnDef[] = [
+  { id: "title", label: "Title", render: (item) => item.title },
+  { id: "section", label: "Section", render: (item) => item.sectionTitle },
+  { id: "type", label: "Type", render: (item) => item.type },
+  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : "\u2014") },
+  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || "\u2014" },
+  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || "\u2014" },
+  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || "\u2014" },
+  {
+    id: "audioChannels",
+    label: "Channels",
+    render: (item) =>
+      item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : "\u2014",
+  },
+  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || "\u2014" },
+];
+
+const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
+  id: col.id,
+  visible: ["title", "section", "type", "year"].includes(col.id),
+}));
+
+type ColumnConfig = { id: string; visible: boolean };
+
 export default function Media() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -80,6 +133,49 @@ export default function Media() {
   const containerFilter = searchParams.get("container") ?? "";
 
   const activeFilterCount = [resFilter, vcodecFilter, acodecFilter, achFilter, containerFilter].filter(Boolean).length;
+
+  // Column configuration
+  const [showColumnConfig, setShowColumnConfig] = useState(false);
+  const columnConfigRef = useRef<HTMLDivElement>(null);
+  const columnsQuery = trpc.media.columns.useQuery(undefined, { refetchOnWindowFocus: false });
+  const saveColumnsMutation = trpc.media.saveColumns.useMutation({
+    onSuccess: () => columnsQuery.refetch(),
+  });
+
+  const columnConfig: ColumnConfig[] = columnsQuery.data ?? DEFAULT_COLUMNS;
+
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  const visibleColumns = columnConfig
+    .filter((c) => c.visible)
+    .map((c) => ALL_COLUMNS.find((col) => col.id === c.id)!)
+    .filter(Boolean);
+
+  // Close column config dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (columnConfigRef.current && !columnConfigRef.current.contains(e.target as Node)) {
+        setShowColumnConfig(false);
+      }
+    }
+    if (showColumnConfig) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showColumnConfig]);
+
+  function toggleColumn(id: string) {
+    const next = columnConfig.map((c) => (c.id === id ? { ...c, visible: !c.visible } : c));
+    saveColumnsMutation.mutate(next);
+  }
+
+  function moveColumn(from: number, to: number) {
+    if (from === to) return;
+    const next = [...columnConfig];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    saveColumnsMutation.mutate(next);
+  }
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -192,6 +288,46 @@ export default function Media() {
           {activeFilterCount > 0 && <span className={styles.advancedFilterBadge}>{activeFilterCount}</span>}
         </button>
         <div className={styles.filtersSpacer} />
+        {viewMode === "table" && (
+          <div className={mediaStyles.columnConfigWrapper} ref={columnConfigRef}>
+            <button
+              className={`${mediaStyles.columnConfigBtn} ${showColumnConfig ? mediaStyles.columnConfigBtnActive : ""}`}
+              onClick={() => setShowColumnConfig((v) => !v)}
+            >
+              Columns
+            </button>
+            {showColumnConfig && (
+              <div className={mediaStyles.columnConfigDropdown}>
+                {columnConfig.map((col, i) => {
+                  const def = ALL_COLUMNS.find((c) => c.id === col.id);
+                  if (!def) return null;
+                  return (
+                    <div
+                      key={col.id}
+                      className={`${mediaStyles.columnConfigItem} ${dragIndex === i ? mediaStyles.columnConfigItemDragging : ""}`}
+                      draggable
+                      onDragStart={() => setDragIndex(i)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null && dragIndex !== i) {
+                          moveColumn(dragIndex, i);
+                          setDragIndex(i);
+                        }
+                      }}
+                      onDragEnd={() => setDragIndex(null)}
+                    >
+                      <span className={mediaStyles.dragHandle}>&#x2630;</span>
+                      <label className={mediaStyles.columnConfigLabel}>
+                        <input type="checkbox" checked={col.visible} onChange={() => toggleColumn(col.id)} />
+                        {def.label}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
@@ -292,10 +428,9 @@ export default function Media() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Section</th>
-              <th>Type</th>
-              <th>Year</th>
+              {visibleColumns.map((col) => (
+                <th key={col.id}>{col.label}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -305,10 +440,11 @@ export default function Media() {
                 className={styles.clickableRow}
                 onClick={() => navigate(`/media/${item.ratingKey}`)}
               >
-                <td>{item.title}</td>
-                <td>{item.sectionTitle}</td>
-                <td>{item.type}</td>
-                <td className={styles.itemYear}>{item.year || "—"}</td>
+                {visibleColumns.map((col) => (
+                  <td key={col.id} className={col.id === "year" ? styles.itemYear : undefined}>
+                    {col.render(item)}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
