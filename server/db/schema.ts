@@ -5,19 +5,23 @@ export const config = sqliteTable("config", {
   value: text("value"),
 });
 
-export const collections = sqliteTable("collections", {
-  plexRatingKey: text("plex_rating_key").primaryKey(),
-  sectionId: text("section_id").notNull(),
-  sectionTitle: text("section_title").notNull(),
-  title: text("title").notNull(),
-  summary: text("summary").notNull().default(""),
-  childCount: integer("child_count").notNull().default(0),
-  labels: text("labels").notNull().default("[]"),
-  addedAt: integer("added_at"),
-  thumb: text("thumb").notNull().default(""),
-  smart: integer("smart").notNull().default(0),
-  syncedAt: integer("synced_at").notNull(),
-});
+export const collections = sqliteTable(
+  "collections",
+  {
+    plexRatingKey: text("plex_rating_key").primaryKey(),
+    sectionId: text("section_id").notNull(),
+    sectionTitle: text("section_title").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull().default(""),
+    childCount: integer("child_count").notNull().default(0),
+    labels: text("labels").notNull().default("[]"),
+    addedAt: integer("added_at"),
+    thumb: text("thumb").notNull().default(""),
+    smart: integer("smart").notNull().default(0),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [index("idx_collections_section").on(table.sectionId)],
+);
 
 export const jobs = sqliteTable("jobs", {
   id: text("id").primaryKey(),
@@ -37,33 +41,45 @@ export const rules = sqliteTable("rules", {
   createdAt: integer("created_at").notNull(),
 });
 
-export const jobRuns = sqliteTable("job_runs", {
-  id: text("id").primaryKey(),
-  jobId: text("job_id")
-    .notNull()
-    .references(() => jobs.id),
-  status: text("status").notNull().default("running"),
-  log: text("log").notNull().default(""),
-  progress: real("progress").notNull().default(0),
-  message: text("message").notNull().default(""),
-  startedAt: integer("started_at").notNull(),
-  finishedAt: integer("finished_at"),
-});
+export const jobRuns = sqliteTable(
+  "job_runs",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id),
+    status: text("status").notNull().default("running"),
+    log: text("log").notNull().default(""),
+    progress: real("progress").notNull().default(0),
+    message: text("message").notNull().default(""),
+    startedAt: integer("started_at").notNull(),
+    finishedAt: integer("finished_at"),
+  },
+  (table) => [index("idx_job_runs_job_status_started").on(table.jobId, table.status, table.startedAt)],
+);
 
-export const overlayConfigs = sqliteTable("overlay_configs", {
-  id: text("id").primaryKey(), // "{sectionId}:{position}"
-  sectionId: text("section_id").notNull(),
-  position: text("position").notNull(),
-  overlayType: text("overlay_type").notNull(),
-  createdAt: integer("created_at").notNull(),
-});
+export const overlayConfigs = sqliteTable(
+  "overlay_configs",
+  {
+    id: text("id").primaryKey(), // "{sectionId}:{position}"
+    sectionId: text("section_id").notNull(),
+    position: text("position").notNull(),
+    overlayType: text("overlay_type").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [index("idx_overlay_configs_section").on(table.sectionId)],
+);
 
-export const overlayOriginals = sqliteTable("overlay_originals", {
-  ratingKey: text("rating_key").primaryKey(),
-  sectionId: text("section_id").notNull(),
-  originalPosterUrl: text("original_poster_url").notNull(),
-  appliedAt: integer("applied_at").notNull(),
-});
+export const overlayOriginals = sqliteTable(
+  "overlay_originals",
+  {
+    ratingKey: text("rating_key").primaryKey(),
+    sectionId: text("section_id").notNull(),
+    originalPosterUrl: text("original_poster_url").notNull(),
+    appliedAt: integer("applied_at").notNull(),
+  },
+  (table) => [index("idx_overlay_originals_section").on(table.sectionId)],
+);
 
 export const healthChecks = sqliteTable(
   "health_checks",
@@ -77,30 +93,38 @@ export const healthChecks = sqliteTable(
   (table) => [index("idx_health_checks_service_timestamp").on(table.service, table.timestamp)],
 );
 
-export const events = sqliteTable("events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  type: text("type").notNull(),
-  message: text("message").notNull(),
-  metadata: text("metadata"),
-  timestamp: integer("timestamp").notNull(),
-});
+export const events = sqliteTable(
+  "events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    type: text("type").notNull(),
+    message: text("message").notNull(),
+    metadata: text("metadata"),
+    timestamp: integer("timestamp").notNull(),
+  },
+  (table) => [index("idx_events_timestamp").on(table.timestamp)],
+);
 
-export const mediaItems = sqliteTable("media_items", {
-  ratingKey: text("rating_key").primaryKey(),
-  sectionId: text("section_id").notNull(),
-  sectionTitle: text("section_title").notNull(),
-  title: text("title").notNull(),
-  year: integer("year"),
-  thumb: text("thumb"),
-  type: text("type").notNull(),
-  addedAt: integer("added_at"),
-  videoResolution: text("video_resolution"),
-  videoCodec: text("video_codec"),
-  audioCodec: text("audio_codec"),
-  audioChannels: integer("audio_channels"),
-  container: text("container"),
-  syncedAt: integer("synced_at").notNull(),
-});
+export const mediaItems = sqliteTable(
+  "media_items",
+  {
+    ratingKey: text("rating_key").primaryKey(),
+    sectionId: text("section_id").notNull(),
+    sectionTitle: text("section_title").notNull(),
+    title: text("title").notNull(),
+    year: integer("year"),
+    thumb: text("thumb"),
+    type: text("type").notNull(),
+    addedAt: integer("added_at"),
+    videoResolution: text("video_resolution"),
+    videoCodec: text("video_codec"),
+    audioCodec: text("audio_codec"),
+    audioChannels: integer("audio_channels"),
+    container: text("container"),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [index("idx_media_items_section_type").on(table.sectionId, table.type)],
+);
 
 export const statsCache = sqliteTable("stats_cache", {
   key: text("key").primaryKey(),
