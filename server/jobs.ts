@@ -94,8 +94,9 @@ function seedDefaultJobs(): void {
     console.log(`[jobs] Seeded ${inserted} new default job(s)`);
   }
 
-  // Clean up removed default jobs
+  // Clean up removed default jobs (delete runs first due to FK constraint)
   for (const id of REMOVED_JOBS) {
+    db.delete(jobRuns).where(eq(jobRuns.jobId, id)).run();
     db.delete(jobs).where(eq(jobs.id, id)).run();
   }
 }
