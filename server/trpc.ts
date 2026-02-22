@@ -593,6 +593,12 @@ const HEALTH_SERVICES = [
     service: "Sonarr",
     configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_sonarr_url && c.global_sonarr_api_key),
   },
+  { service: "MDBList", configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_mdblist_api_key },
+  {
+    service: "Pushover",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) =>
+      !!(c.global_pushover_api_key && c.global_pushover_user_key),
+  },
 ] as const;
 
 async function checkServiceHealth(service: string): Promise<void> {
@@ -657,6 +663,31 @@ async function checkServiceHealth(service: string): Promise<void> {
       if (!cfg.global_sonarr_url || !cfg.global_sonarr_api_key) throw new Error("Not configured");
       const name = await testArrConnection(cfg.global_sonarr_url, cfg.global_sonarr_api_key);
       reportHealth("Sonarr", "ok", `Connected — ${name}`);
+      break;
+    }
+    case "MDBList": {
+      if (!cfg.global_mdblist_api_key) throw new Error("Not configured");
+      const res = await fetch(`https://mdblist.com/api/user/?apikey=${cfg.global_mdblist_api_key}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      reportHealth("MDBList", "ok", `Connected — ${data.name || data.username || "OK"}`);
+      break;
+    }
+    case "Pushover": {
+      if (!cfg.global_pushover_api_key || !cfg.global_pushover_user_key) throw new Error("Not configured");
+      const res = await fetch("https://api.pushover.net/1/users/validate.json", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: cfg.global_pushover_api_key, user: cfg.global_pushover_user_key }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      if (data.status !== 1) throw new Error(data.errors?.join(", ") || "Invalid credentials");
+      reportHealth("Pushover", "ok", "Credentials valid");
       break;
     }
     default:
@@ -762,8 +793,10 @@ export const appRouter = t.router({
         }
         const data = await pRes.json();
         const name = data?.MediaContainer?.friendlyName || "Unknown";
+        reportHealth("Plex", "ok", `Connected — ${name}`);
         return { ok: true as const, serverName: name };
       } catch (err) {
+        reportHealth("Plex", "error", (err as Error).message);
         return { ok: false as const, error: (err as Error).message };
       }
     }),
@@ -790,11 +823,46 @@ export const appRouter = t.router({
     }
   }),
 
+  testOmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+    try {
+      const res = await fetch(`https://www.omdbapi.com/?apikey=${input.api_key}&t=Inception`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      if (data.Response === "False") throw new Error(data.Error || "Invalid API key");
+      reportHealth("OMDB", "ok", `Test query OK — ${data.Title}`);
+      return { ok: true as const, title: data.Title as string };
+    } catch (err) {
+      reportHealth("OMDB", "error", (err as Error).message);
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
+
+  testMdblist: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+    try {
+      const res = await fetch(`https://mdblist.com/api/user/?apikey=${input.api_key}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const name = (data.name || data.username || "OK") as string;
+      reportHealth("MDBList", "ok", `Connected — ${name}`);
+      return { ok: true as const, name };
+    } catch (err) {
+      reportHealth("MDBList", "error", (err as Error).message);
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
+
   testPushover: procedure.mutation(async () => {
     try {
       await sendPushover("Tinkerbell", "Test notification from Tinkerbell");
+      reportHealth("Pushover", "ok", "Test notification sent");
       return { ok: true as const };
     } catch (err) {
+      reportHealth("Pushover", "error", (err as Error).message);
       return { ok: false as const, error: (err as Error).message };
     }
   }),

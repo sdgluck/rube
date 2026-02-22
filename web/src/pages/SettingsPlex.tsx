@@ -27,6 +27,7 @@ export default function SettingsPlex() {
     retry: false,
   });
 
+  const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation();
   const testPlexMutation = trpc.testPlex.useMutation();
 
@@ -62,6 +63,7 @@ export default function SettingsPlex() {
       return false;
     } finally {
       setTesting(false);
+      utils.health.status.invalidate();
     }
   };
 

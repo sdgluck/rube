@@ -11,16 +11,21 @@ export default function SettingsDatabases() {
   const [omdbApiKey, setOmdbApiKey] = useState("");
   const [omdbStatus, setOmdbStatus] = useState<Status | null>(null);
   const [savingOmdb, setSavingOmdb] = useState(false);
+  const [testingOmdb, setTestingOmdb] = useState(false);
 
   const [mdblistApiKey, setMdblistApiKey] = useState("");
   const [mdblistStatus, setMdblistStatus] = useState<Status | null>(null);
   const [savingMdblist, setSavingMdblist] = useState(false);
+  const [testingMdblist, setTestingMdblist] = useState(false);
 
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
 
+  const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation();
+  const testOmdbMutation = trpc.testOmdb.useMutation();
+  const testMdblistMutation = trpc.testMdblist.useMutation();
 
   useEffect(() => {
     if (configQuery.data) {
@@ -41,6 +46,50 @@ export default function SettingsDatabases() {
       setOmdbStatus({ type: "error", msg: "Failed to save OMDB settings" });
     } finally {
       setSavingOmdb(false);
+    }
+  };
+
+  const handleTestOmdb = async () => {
+    setOmdbStatus(null);
+    if (!omdbApiKey) {
+      setOmdbStatus({ type: "error", msg: "API key is required" });
+      return;
+    }
+    setTestingOmdb(true);
+    try {
+      const result = await testOmdbMutation.mutateAsync({ api_key: omdbApiKey });
+      if (result.ok) {
+        setOmdbStatus({ type: "success", msg: `Connected — found "${result.title}"` });
+      } else {
+        setOmdbStatus({ type: "error", msg: result.error || "Connection test failed" });
+      }
+    } catch {
+      setOmdbStatus({ type: "error", msg: "Connection test failed" });
+    } finally {
+      setTestingOmdb(false);
+      utils.health.status.invalidate();
+    }
+  };
+
+  const handleTestMdblist = async () => {
+    setMdblistStatus(null);
+    if (!mdblistApiKey) {
+      setMdblistStatus({ type: "error", msg: "API key is required" });
+      return;
+    }
+    setTestingMdblist(true);
+    try {
+      const result = await testMdblistMutation.mutateAsync({ api_key: mdblistApiKey });
+      if (result.ok) {
+        setMdblistStatus({ type: "success", msg: `Connected — ${result.name}` });
+      } else {
+        setMdblistStatus({ type: "error", msg: result.error || "Connection test failed" });
+      }
+    } catch {
+      setMdblistStatus({ type: "error", msg: "Connection test failed" });
+    } finally {
+      setTestingMdblist(false);
+      utils.health.status.invalidate();
     }
   };
 
@@ -78,9 +127,14 @@ export default function SettingsDatabases() {
           <span className={styles.hint}>Free tier: 1,000 requests/day. Get a key at omdbapi.com</span>
         </label>
         {omdbStatus && <div className={`${styles.toast} ${styles[omdbStatus.type]}`}>{omdbStatus.msg}</div>}
-        <button type="button" className={styles.button} onClick={handleSaveOmdb} disabled={savingOmdb}>
-          {savingOmdb ? "Saving..." : "Save"}
-        </button>
+        <div className={styles.buttons}>
+          <button type="button" className={styles.button} onClick={handleSaveOmdb} disabled={savingOmdb}>
+            {savingOmdb ? "Saving..." : "Save"}
+          </button>
+          <button type="button" className={styles.buttonSecondary} onClick={handleTestOmdb} disabled={testingOmdb}>
+            {testingOmdb ? "Testing..." : "Test Connection"}
+          </button>
+        </div>
       </fieldset>
 
       <fieldset className={styles.group}>
@@ -97,9 +151,19 @@ export default function SettingsDatabases() {
           <span className={styles.hint}>Get a key at mdblist.com/preferences</span>
         </label>
         {mdblistStatus && <div className={`${styles.toast} ${styles[mdblistStatus.type]}`}>{mdblistStatus.msg}</div>}
-        <button type="button" className={styles.button} onClick={handleSaveMdblist} disabled={savingMdblist}>
-          {savingMdblist ? "Saving..." : "Save"}
-        </button>
+        <div className={styles.buttons}>
+          <button type="button" className={styles.button} onClick={handleSaveMdblist} disabled={savingMdblist}>
+            {savingMdblist ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            className={styles.buttonSecondary}
+            onClick={handleTestMdblist}
+            disabled={testingMdblist}
+          >
+            {testingMdblist ? "Testing..." : "Test Connection"}
+          </button>
+        </div>
       </fieldset>
     </div>
   );

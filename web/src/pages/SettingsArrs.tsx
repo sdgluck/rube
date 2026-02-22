@@ -24,6 +24,7 @@ export default function SettingsArrs() {
     refetchOnWindowFocus: false,
   });
 
+  const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation();
   const testRadarrMutation = trpc.testRadarr.useMutation();
   const testSonarrMutation = trpc.testSonarr.useMutation();
@@ -56,6 +57,7 @@ export default function SettingsArrs() {
       return false;
     } finally {
       setTestingRadarr(false);
+      utils.health.status.invalidate();
     }
   };
 
@@ -100,6 +102,7 @@ export default function SettingsArrs() {
       return false;
     } finally {
       setTestingSonarr(false);
+      utils.health.status.invalidate();
     }
   };
 

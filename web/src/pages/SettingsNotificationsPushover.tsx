@@ -23,6 +23,7 @@ export default function SettingsNotificationsPushover() {
     refetchOnWindowFocus: false,
   });
 
+  const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation();
   const testPushoverMutation = trpc.testPushover.useMutation();
 
@@ -79,6 +80,7 @@ export default function SettingsNotificationsPushover() {
       setStatus({ type: "error", msg: "Failed to send test notification" });
     } finally {
       setTesting(false);
+      utils.health.status.invalidate();
     }
   };
 
