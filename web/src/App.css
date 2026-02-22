@@ -84,8 +84,7 @@ body {
   display: none;
   position: absolute;
   left: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-25%);
+  top: 0;
   background: #1e1e2f;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -94,24 +93,6 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 100;
   pointer-events: none;
-}
-
-.health-tooltip::before {
-  content: "";
-  position: absolute;
-  right: 100%;
-  top: 16px;
-  border: 6px solid transparent;
-  border-right-color: rgba(255, 255, 255, 0.12);
-}
-
-.health-tooltip::after {
-  content: "";
-  position: absolute;
-  right: 100%;
-  top: 17px;
-  border: 5px solid transparent;
-  border-right-color: #1e1e2f;
 }
 
 .health-dot-link:hover .health-tooltip {
