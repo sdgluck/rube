@@ -95,99 +95,132 @@ class SimulatedClient {
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
-    let segmentUrls: string[] = [];
 
     // Check if this is a master playlist (contains #EXT-X-STREAM-INF)
     const isMaster = lines.some((l) => l.startsWith("#EXT-X-STREAM-INF"));
+
+    let mediaPlaylistUrl: string;
 
     if (isMaster) {
       // Find the first variant stream URL (line after #EXT-X-STREAM-INF)
       const variantUrl = lines.find(
         (l, i) => i > 0 && lines[i - 1].startsWith("#EXT-X-STREAM-INF") && !l.startsWith("#"),
       );
-      if (variantUrl) {
-        this.log?.(`  Following variant playlist: ${variantUrl}`);
-        try {
-          const variantRes = await client.fetchStreamUrl(variantUrl, this.clientId, this.controller.signal);
-          const variantM3u8 = await variantRes.text();
-          // Extract segment URLs from the media playlist
-          const variantLines = variantM3u8
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean);
-          segmentUrls = variantLines.filter((l) => !l.startsWith("#"));
-
-          // Segments may be relative to the variant playlist's path
-          const variantBase = variantUrl.substring(0, variantUrl.lastIndexOf("/") + 1);
-          segmentUrls = segmentUrls.map((s) => (s.startsWith("/") || s.startsWith("http") ? s : variantBase + s));
-        } catch {
-          // Fall through with empty segments
-        }
+      if (!variantUrl) {
+        throw new Error("Master playlist has no variant stream URLs");
       }
+      this.log?.(`  Following variant playlist: ${variantUrl}`);
+      mediaPlaylistUrl = variantUrl;
     } else {
-      // Already a media playlist — extract segments directly
-      segmentUrls = lines.filter((l) => !l.startsWith("#"));
+      throw new Error("Expected master playlist but got media playlist directly");
     }
 
-    if (segmentUrls.length === 0) {
-      throw new Error("No segments found in transcode playlist");
-    }
-
-    this.log?.(`  Found ${segmentUrls.length} segments`);
-
-    // Fetch segments in a loop to simulate playback
-    void this.fetchLoop(segmentUrls, client);
+    // Continuously poll the live media playlist and fetch new segments
+    void this.hlsLoop(mediaPlaylistUrl, client);
   }
 
   private async startDirectPlay(ratingKey: string, client: PlexClient): Promise<void> {
-    // Get the part key from item metadata for direct play streaming
     const detail = await client.getItemDetail(ratingKey);
     const partKey = detail.media?.[0]?.parts?.[0]?.file;
     if (!partKey) {
       throw new Error(`No playable part found for item ${ratingKey}`);
     }
     const partUrl = `/library/metadata/${ratingKey}/file`;
-    void this.fetchLoop([partUrl], client);
+    // For direct play, just keep fetching the file in a loop
+    void this.hlsLoop(partUrl, client, true);
   }
 
-  private async fetchLoop(urls: string[], client: PlexClient): Promise<void> {
+  /**
+   * For HLS transcode: continuously poll the media playlist for new segments and fetch them.
+   * For direct play: repeatedly fetch the file URL.
+   */
+  private async hlsLoop(playlistUrl: string, client: PlexClient, directPlay = false): Promise<void> {
     const signal = this.controller.signal;
-    let idx = 0;
+    const fetchedSegments = new Set<string>();
+    const playlistBase = playlistUrl.substring(0, playlistUrl.lastIndexOf("/") + 1);
+
     while (this.running && !signal.aborted) {
-      const url = urls[idx % urls.length];
-      try {
-        const res = await client.fetchStreamUrl(url, this.clientId, signal);
-        // Consume the body to keep the connection alive
-        const reader = res.body?.getReader();
-        if (reader) {
-          try {
-            while (this.running && !signal.aborted) {
-              const { done } = await reader.read();
-              if (done) break;
+      if (directPlay) {
+        // Direct play: fetch chunks of the file
+        try {
+          const res = await client.fetchStreamUrl(playlistUrl, this.clientId, signal);
+          const reader = res.body?.getReader();
+          if (reader) {
+            try {
+              // Read for a few seconds then loop
+              const deadline = Date.now() + 5000;
+              while (this.running && !signal.aborted && Date.now() < deadline) {
+                const { done } = await reader.read();
+                if (done) break;
+              }
+            } finally {
+              reader.releaseLock();
             }
-          } finally {
-            reader.releaseLock();
+          }
+        } catch {
+          if (signal.aborted) break;
+        }
+        await this.sleepAbortable(2000);
+        continue;
+      }
+
+      // HLS: poll the media playlist for new segments
+      try {
+        const res = await client.fetchStreamUrl(playlistUrl, this.clientId, signal);
+        const m3u8 = await res.text();
+        const lines = m3u8
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const segments = lines
+          .filter((l) => !l.startsWith("#"))
+          .map((s) => (s.startsWith("/") || s.startsWith("http") ? s : playlistBase + s));
+
+        // Fetch any new segments we haven't seen yet
+        for (const segUrl of segments) {
+          if (signal.aborted || !this.running) break;
+          if (fetchedSegments.has(segUrl)) continue;
+          fetchedSegments.add(segUrl);
+
+          try {
+            const segRes = await client.fetchStreamUrl(segUrl, this.clientId, signal);
+            const reader = segRes.body?.getReader();
+            if (reader) {
+              try {
+                while (this.running && !signal.aborted) {
+                  const { done } = await reader.read();
+                  if (done) break;
+                }
+              } finally {
+                reader.releaseLock();
+              }
+            }
+          } catch {
+            if (signal.aborted) break;
           }
         }
       } catch {
         if (signal.aborted) break;
       }
-      idx++;
-      // Small delay between segments to simulate real playback pacing
-      if (this.running && !signal.aborted) {
-        await new Promise<void>((resolve) => {
-          const timer = setTimeout(resolve, 2000);
-          signal.addEventListener(
-            "abort",
-            () => {
-              clearTimeout(timer);
-              resolve();
-            },
-            { once: true },
-          );
-        });
-      }
+
+      // Wait before polling the playlist again (HLS segments are typically 4-6s)
+      await this.sleepAbortable(4000);
     }
+  }
+
+  private sleepAbortable(ms: number): Promise<void> {
+    const signal = this.controller.signal;
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
+      );
+    });
   }
 
   async stop(client: PlexClient): Promise<void> {
@@ -374,7 +407,8 @@ export async function runStressTest(
           }
 
           for (const session of ourSessions) {
-            if (session.transcodeSpeed != null) {
+            // Only count non-zero speeds (0 means transcoder is still starting)
+            if (session.transcodeSpeed != null && session.transcodeSpeed > 0) {
               totalSpeed += session.transcodeSpeed;
               speedCount++;
             }
@@ -409,8 +443,9 @@ export async function runStressTest(
           `bandwidth=${avgBandwidth}kbps, errors=${errors}`,
       );
 
-      // Check for degradation
-      const degraded = (avgSpeed != null && avgSpeed < 1.0) || errors > 0;
+      // Check for degradation — only flag speed if we have actual readings (not null/startup)
+      const speedDegraded = avgSpeed != null && avgSpeed < 1.0;
+      const degraded = speedDegraded || errors > 0;
       if (degraded) {
         ctx.log(`Step ${step}: Degradation detected — stopping ramp-up`);
         // The previous step was the last healthy one
