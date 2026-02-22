@@ -9,6 +9,7 @@ import type {
   GenerateJobConfig,
   BywJobConfig,
   OverlaysJobConfig,
+  StressTestJobConfig,
 } from "../shared/job-context.ts";
 
 function formatDuration(ms: number): string {
@@ -83,7 +84,7 @@ export class CommandJob extends Job {
       const mod = await import(`./commands/${commandName}.ts`);
       const commandFn: (
         ctx: JobContext,
-        config: CommonJobConfig | GenerateJobConfig | BywJobConfig | OverlaysJobConfig,
+        config: CommonJobConfig | GenerateJobConfig | BywJobConfig | OverlaysJobConfig | StressTestJobConfig,
       ) => Promise<void> = mod.default;
       if (!commandFn) {
         throw new Error(`Unknown command: ${commandName}`);

@@ -1,0 +1,247 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.heading {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.configForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formGroup label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.formGroup select,
+.formGroup input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.activeBanner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.bannerSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #c7d2fe;
+  border-top-color: #4a6cf7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bannerText {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.bannerProgress {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.progressBar {
+  flex: 1;
+  max-width: 200px;
+  height: 6px;
+  background: #ddd;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #4a6cf7;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.resultCard {
+  text-align: center;
+  padding: 32px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.resultLabel {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.resultNumber {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+.resultUnit {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #666;
+  margin-left: 4px;
+}
+
+.configBadges {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e8e8e8;
+  color: #444;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid #eee;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.clickableRow:hover {
+  background: #f8f9fa;
+}
+
+.selectedRow {
+  background: #eef2ff !important;
+}
+
+.speedBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speedIndicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.speedGood {
+  background: #28a745;
+}
+
+.speedWarn {
+  background: #ffc107;
+}
+
+.speedBad {
+  background: #dc3545;
+}
+
+.stepFailed {
+  background: #fff5f5 !important;
+}
+
+.runsSection {
+  margin-top: 32px;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 0.95rem;
+}
+
+.duration {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.cancelButton {
+  background: none;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancelButton:hover {
+  background: #dc3545;
+  color: #fff;
+}

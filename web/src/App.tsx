@@ -19,6 +19,7 @@ import JobRun from "./pages/JobRun";
 import Users from "./pages/Users";
 import Overlays from "./pages/Overlays";
 import Events from "./pages/Events";
+import StressTest from "./pages/StressTest";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
 
@@ -119,6 +120,9 @@ export default function App() {
             Stats
             <SidebarStreamCount />
           </NavLink>
+          <NavLink to="/stress-test" className="nav-link">
+            Stress Test
+          </NavLink>
           <NavLink to="/collections" className="nav-link">
             Collections
           </NavLink>
@@ -149,6 +153,7 @@ export default function App() {
       <main className="content">
         <Routes>
           <Route path="/stats" element={<Stats />} />
+          <Route path="/stress-test" element={<StressTest />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
           <Route path="/rules" element={<Rules />} />

@@ -163,6 +163,15 @@ export const plexUsers = sqliteTable(
   (table) => [index("idx_plex_users_username").on(table.username)],
 );
 
+export const stressTestRuns = sqliteTable("stress_test_runs", {
+  id: text("id").primaryKey(),
+  config: text("config").notNull(),
+  maxSessions: integer("max_sessions"),
+  steps: text("steps").notNull().default("[]"),
+  startedAt: integer("started_at").notNull(),
+  finishedAt: integer("finished_at"),
+});
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

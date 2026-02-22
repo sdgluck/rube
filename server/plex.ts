@@ -100,6 +100,7 @@ export interface PlexSession {
   user: string;
   userThumb?: string;
   player: string;
+  playerMachineId?: string;
   product?: string;
   platform?: string;
   state: string;
@@ -939,6 +940,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         user: (user?.title as string) || "Unknown",
         userThumb: user?.thumb as string | undefined,
         player: (player?.title as string) || "Unknown",
+        playerMachineId: player?.machineIdentifier as string | undefined,
         product: player?.product as string | undefined,
         platform: player?.platform as string | undefined,
         state: (player?.state as string) || "playing",
@@ -1254,6 +1256,82 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     });
   }
 
+  // ─── Streaming / transcode control ────────────────────────────────────────
+
+  async function startTranscodeSession(ratingKey: string, sessionId: string, clientId: string): Promise<string> {
+    const res = await requestRaw("/video/:/transcode/universal/start.m3u8", {
+      params: {
+        path: `/library/metadata/${ratingKey}`,
+        mediaIndex: 0,
+        partIndex: 0,
+        protocol: "hls",
+        fastSeek: 1,
+        directPlay: 0,
+        directStream: 1,
+        offset: 0,
+        videoQuality: 75,
+        videoResolution: "1920x1080",
+        maxVideoBitrate: 8000,
+        subtitleSize: 100,
+        audioBoost: 100,
+        session: sessionId,
+        "X-Plex-Platform": "Chrome",
+      },
+      headers: { "X-Plex-Client-Identifier": clientId },
+    });
+    return res.text();
+  }
+
+  async function stopTranscodeSession(sessionId: string): Promise<void> {
+    try {
+      await requestRaw("/video/:/transcode/universal/stop", {
+        params: { session: sessionId },
+      });
+    } catch {
+      // Session may already be stopped
+    }
+  }
+
+  async function fetchStreamUrl(relativeUrl: string, clientId: string, fetchSignal?: AbortSignal): Promise<Response> {
+    const reqUrl = new URL(relativeUrl, url);
+    reqUrl.searchParams.set("X-Plex-Token", token);
+
+    return fetch(reqUrl.toString(), {
+      signal: fetchSignal || signal,
+      headers: {
+        "X-Plex-Client-Identifier": clientId,
+        "X-Plex-Product": "tinkerbell-stress",
+        "X-Plex-Version": "1.0.0",
+      },
+    });
+  }
+
+  async function reportTimeline(
+    ratingKey: string,
+    clientId: string,
+    opts: { state: string; time: number; duration: number },
+  ): Promise<void> {
+    try {
+      await request("/:/timeline", {
+        params: {
+          ratingKey,
+          key: `/library/metadata/${ratingKey}`,
+          state: opts.state,
+          time: opts.time,
+          duration: opts.duration,
+          "X-Plex-Client-Identifier": clientId,
+          "X-Plex-Product": "tinkerbell-stress",
+          "X-Plex-Device": "tinkerbell-stress",
+          "X-Plex-Device-Name": "Tinkerbell Stress Test",
+          "X-Plex-Platform": "Chrome",
+        },
+        headers: { "X-Plex-Client-Identifier": clientId },
+      });
+    } catch {
+      // Timeline updates are best-effort
+    }
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -1297,6 +1375,10 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     selectPoster,
     allItems,
     allItemsWithGuids,
+    startTranscodeSession,
+    stopTranscodeSession,
+    fetchStreamUrl,
+    reportTimeline,
   };
 }
 

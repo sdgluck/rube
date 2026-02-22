@@ -35,6 +35,7 @@ import { syncSections, getLocalSections } from "./sections.ts";
 import { syncUsers, getLocalUsers, updateUser } from "./users.ts";
 import { getEvents, getEventTypes } from "./events.ts";
 import { sendPushover, EVENT_TYPES } from "./notifications.ts";
+import { getStressTestRuns, getStressTestRun } from "./stress-test.ts";
 
 const t = initTRPC.create();
 
@@ -751,6 +752,11 @@ const eventsRouter = t.router({
   types: procedure.query(() => getEventTypes()),
 });
 
+const stressTestRouter = t.router({
+  runs: procedure.query(() => getStressTestRuns()),
+  run: procedure.input(z.object({ id: z.string() })).query(({ input }) => getStressTestRun(input.id)),
+});
+
 export const appRouter = t.router({
   config: configRouter,
   collections: collectionsRouter,
@@ -762,6 +768,7 @@ export const appRouter = t.router({
   overlays: overlaysRouter,
   events: eventsRouter,
   health: healthRouter,
+  stressTest: stressTestRouter,
 
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();
