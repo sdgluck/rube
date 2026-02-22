@@ -148,6 +148,21 @@ export const statsCache = sqliteTable("stats_cache", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const plexUsers = sqliteTable(
+  "plex_users",
+  {
+    userId: integer("user_id").primaryKey(),
+    username: text("username").notNull(),
+    name: text("name"),
+    label: text("label").notNull(),
+    collectionCount: integer("collection_count").notNull().default(0),
+    lastWatchedTitle: text("last_watched_title"),
+    lastWatchedAt: integer("last_watched_at"),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [index("idx_plex_users_username").on(table.username)],
+);
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

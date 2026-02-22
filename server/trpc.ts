@@ -32,6 +32,7 @@ import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 import { reportHealth, getHealthLatest, getHealthHistory } from "./health.ts";
 import { getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
 import { syncSections, getLocalSections } from "./sections.ts";
+import { syncUsers, getLocalUsers, updateUser } from "./users.ts";
 import { getEvents, getEventTypes } from "./events.ts";
 import { sendPushover, EVENT_TYPES } from "./notifications.ts";
 
@@ -221,58 +222,48 @@ const statsRouter = t.router({
 });
 
 const usersRouter = t.router({
-  list: procedure.query(async () => {
-    const client = getPlexClient();
-    const identity = await client.getIdentity();
-    const [sharings, allCollectionsResult, accounts, history] = await Promise.all([
-      client.getSharings(identity.machineIdentifier),
-      Promise.resolve(getLocalCollections()),
-      client.getAccounts(),
-      client.getWatchHistory({ limit: 500 }),
-    ]);
-    const allCollections = allCollectionsResult.items;
+  list: t.procedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        offset: z.number().default(0),
+        limit: z.number().default(50),
+        sort: z.string().optional(),
+        sortDir: z.enum(["asc", "desc"]).default("asc"),
+      }),
+    )
+    .query(async ({ input }) => {
+      const result = getLocalUsers({
+        search: input.search || undefined,
+        offset: input.offset,
+        limit: input.limit,
+        sort: input.sort,
+        sortDir: input.sortDir,
+      });
 
-    // Build a map of User:{username} → collection count
-    const userCollectionCounts = new Map<string, number>();
-    for (const col of allCollections) {
-      const labels: string[] = JSON.parse(col.labels);
-      for (const label of labels) {
-        if (label.startsWith("User:")) {
-          userCollectionCounts.set(label, (userCollectionCounts.get(label) || 0) + 1);
+      // If cache is empty, sync live and retry
+      if (result.total === 0 && !input.search) {
+        try {
+          const client = getPlexClient();
+          await syncUsers(client);
+          return getLocalUsers({
+            search: input.search || undefined,
+            offset: input.offset,
+            limit: input.limit,
+            sort: input.sort,
+            sortDir: input.sortDir,
+          });
+        } catch {
+          return result;
         }
       }
-    }
 
-    // Build a map of accountID → most recent history item
-    const lastWatchedByAccount = new Map<number, { title: string; viewedAt: number }>();
-    for (const item of history) {
-      if (!item.accountID || !item.viewedAt) continue;
-      if (!lastWatchedByAccount.has(item.accountID)) {
-        // History is sorted viewedAt:desc so first occurrence is most recent
-        const title = item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title;
-        lastWatchedByAccount.set(item.accountID, { title, viewedAt: item.viewedAt });
-      }
-    }
+      return result;
+    }),
 
-    // Build maps to match sharing users to local account IDs
-    const accountById = new Map(accounts.map((a) => [Number(a.id), a]));
-    const accountByName = new Map(accounts.map((a) => [a.name?.toLowerCase(), a]));
-
-    return sharings.map((s) => {
-      const userLabel = `User:${s.username}`;
-
-      // Match sharing user to local account by ID first, then by name
-      const account = accountById.get(s.userId) || accountByName.get(s.username.toLowerCase());
-      const lastWatched = account ? lastWatchedByAccount.get(Number(account.id)) : undefined;
-
-      return {
-        id: s.userId,
-        username: s.username,
-        label: userLabel,
-        collectionCount: userCollectionCounts.get(userLabel) || 0,
-        lastWatched: lastWatched || null,
-      };
-    });
+  update: t.procedure.input(z.object({ userId: z.number(), name: z.string().optional() })).mutation(({ input }) => {
+    updateUser(input.userId, { name: input.name || null });
+    return { ok: true };
   }),
 });
 

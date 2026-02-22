@@ -43,6 +43,7 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     schedule: "0 * * * *",
     enabled: 1,
   },
+  { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
 ];
 
 const DEFAULT_CONFIGS: Record<string, string> = {
