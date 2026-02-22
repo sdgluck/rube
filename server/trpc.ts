@@ -32,7 +32,7 @@ import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 import { reportHealth, getHealthLatest, getHealthHistory } from "./health.ts";
 import { getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
 import { syncSections, getLocalSections } from "./sections.ts";
-import { getEvents } from "./events.ts";
+import { getEvents, getEventTypes } from "./events.ts";
 import { sendPushover, EVENT_TYPES } from "./notifications.ts";
 
 const t = initTRPC.create();
@@ -745,8 +745,19 @@ const healthRouter = t.router({
 
 const eventsRouter = t.router({
   list: t.procedure
-    .input(z.object({ limit: z.number().default(50), offset: z.number().default(0) }))
+    .input(
+      z.object({
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+        type: z.string().optional(),
+        search: z.string().optional(),
+        sort: z.string().optional(),
+        sortDir: z.enum(["asc", "desc"]).default("desc"),
+      }),
+    )
     .query(({ input }) => getEvents(input)),
+
+  types: procedure.query(() => getEventTypes()),
 });
 
 export const appRouter = t.router({

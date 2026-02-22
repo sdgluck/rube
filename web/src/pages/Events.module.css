@@ -1,10 +1,5 @@
 /* ─── Events page ────────────────────────────────────────────────────────────── */
 
-.heading {
-  font-size: 1.5rem;
-  margin-bottom: 24px;
-}
-
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -74,34 +69,7 @@
   font-size: 0.85rem;
 }
 
-/* ─── Load more / empty ─────────────────────────────────────────────────────── */
-
-.loadMore {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.button {
-  background: #4a6cf7;
-  color: #fff;
-  padding: 6px 16px;
-  border: 1px solid #4a6cf7;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.button:hover:not(:disabled) {
-  background: #3b5de7;
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* ─── Empty state ──────────────────────────────────────────────────────────── */
 
 .empty {
   color: #888;
