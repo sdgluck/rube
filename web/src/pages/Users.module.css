@@ -16,6 +16,8 @@
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
   font-size: 0.9rem;
+  height: 48px;
+  vertical-align: middle;
 }
 
 .table tr:hover td {

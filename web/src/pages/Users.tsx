@@ -213,14 +213,15 @@ export default function Users() {
                       <td>{user.collectionCount}</td>
                       <td>
                         {user.lastWatchedTitle ? (
-                          <div>
-                            <div>{user.lastWatchedTitle}</div>
+                          <span>
+                            {user.lastWatchedTitle}
                             {user.lastWatchedAt && (
-                              <div className={styles.hint}>
-                                {new Date(user.lastWatchedAt * 1000).toLocaleDateString()}
-                              </div>
+                              <span className={styles.hint}>
+                                {" "}
+                                &middot; {new Date(user.lastWatchedAt * 1000).toLocaleDateString()}
+                              </span>
                             )}
-                          </div>
+                          </span>
                         ) : (
                           <span className={styles.hint}>—</span>
                         )}
