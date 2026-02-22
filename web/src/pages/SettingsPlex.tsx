@@ -27,9 +27,12 @@ export default function SettingsPlex() {
     retry: false,
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation();
   const testPlexMutation = trpc.testPlex.useMutation();
+  const refreshSectionsMutation = trpc.refreshSections.useMutation();
 
   useEffect(() => {
     if (configQuery.data) {
@@ -86,6 +89,18 @@ export default function SettingsPlex() {
 
   const handleTest = () => {
     runPlexTest(plexUrl, plexToken);
+  };
+
+  const handleRefreshSections = async () => {
+    setRefreshing(true);
+    try {
+      await refreshSectionsMutation.mutateAsync();
+      utils.plexSections.invalidate();
+    } catch {
+      // Refresh failed — sectionsQuery will show stale data
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleSavePlex = async () => {
@@ -177,9 +192,19 @@ export default function SettingsPlex() {
               ))}
             </div>
             {libStatus && <div className={`${styles.toast} ${styles[libStatus.type]}`}>{libStatus.msg}</div>}
-            <button type="button" className={styles.button} onClick={handleSaveLibraries} disabled={savingLibs}>
-              {savingLibs ? "Saving..." : "Save"}
-            </button>
+            <div className={styles.buttons}>
+              <button type="button" className={styles.button} onClick={handleSaveLibraries} disabled={savingLibs}>
+                {savingLibs ? "Saving..." : "Save"}
+              </button>
+              <button
+                type="button"
+                className={styles.buttonSecondary}
+                onClick={handleRefreshSections}
+                disabled={refreshing}
+              >
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
           </>
         )}
       </fieldset>

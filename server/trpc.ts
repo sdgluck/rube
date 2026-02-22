@@ -772,6 +772,13 @@ export const appRouter = t.router({
     return sections.map((s) => ({ key: s.key, title: s.title, type: s.type }));
   }),
 
+  refreshSections: procedure.mutation(async () => {
+    const client = getPlexClient();
+    const stats = await syncSections(client);
+    const sections = getLocalSections();
+    return { sections, synced: stats.synced, removed: stats.removed };
+  }),
+
   testPlex: t.procedure
     .input(z.object({ plex_url: z.string(), plex_token: z.string() }))
     .mutation(async ({ input }) => {
