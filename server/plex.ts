@@ -1267,7 +1267,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         protocol: "hls",
         fastSeek: 1,
         directPlay: 0,
-        directStream: 1,
+        directStream: 0,
         offset: 0,
         videoQuality: 75,
         videoResolution: "1920x1080",
