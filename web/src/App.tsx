@@ -37,7 +37,6 @@ function SidebarHealthDot() {
   const withStatus = configured.filter((s) => s.status !== null);
   if (withStatus.length === 0) return null;
 
-  const okCount = withStatus.filter((s) => s.status === "ok").length;
   const errorCount = withStatus.filter((s) => s.status === "error").length;
 
   let colorClass = "health-dot-green";
@@ -51,9 +50,6 @@ function SidebarHealthDot() {
     <Link to="/settings/health" className="health-dot-link">
       <span className={`health-dot ${colorClass}`} />
       <div className="health-tooltip">
-        <div className="health-tooltip-title">
-          {okCount} healthy, {errorCount} unhealthy
-        </div>
         <div className="health-tooltip-list">
           {withStatus.map((s) => (
             <div key={s.service} className="health-tooltip-row">
