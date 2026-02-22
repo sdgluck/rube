@@ -210,6 +210,32 @@
   word-break: break-word;
 }
 
+.logWrapper {
+  position: relative;
+}
+
+.logCopyBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ccc;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  z-index: 1;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.logCopyBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
 /* ─── Progress bar ───────────────────────────────────────────────────────────── */
 
 .progressBar {

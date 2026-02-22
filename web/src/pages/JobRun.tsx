@@ -137,9 +137,16 @@ export default function JobRun() {
         </div>
       )}
 
-      <pre ref={logRef} className={styles.logViewer} onScroll={handleLogScroll}>
-        {run.log || "(no output yet)"}
-      </pre>
+      <div className={styles.logWrapper}>
+        {run.log && (
+          <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(run.log)}>
+            Copy
+          </button>
+        )}
+        <pre ref={logRef} className={styles.logViewer} onScroll={handleLogScroll}>
+          {run.log || "(no output yet)"}
+        </pre>
+      </div>
     </div>
   );
 }

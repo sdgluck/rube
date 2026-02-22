@@ -372,9 +372,16 @@ export default function JobDetail() {
               <div className={styles.progressFill} style={{ width: `${Math.round(latestRun.progress * 100)}%` }} />
             </div>
           )}
-          <pre ref={logRef} className={styles.logViewer} onScroll={handleLogScroll}>
-            {latestRun.log || "(no output yet)"}
-          </pre>
+          <div className={styles.logWrapper}>
+            {latestRun.log && (
+              <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(latestRun.log)}>
+                Copy
+              </button>
+            )}
+            <pre ref={logRef} className={styles.logViewer} onScroll={handleLogScroll}>
+              {latestRun.log || "(no output yet)"}
+            </pre>
+          </div>
         </fieldset>
       )}
     </div>
