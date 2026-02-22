@@ -32,6 +32,7 @@ import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 import { reportHealth, getHealthLatest, getHealthHistory } from "./health.ts";
 import { getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
 import { getEvents } from "./events.ts";
+import { sendPushover, EVENT_TYPES } from "./notifications.ts";
 
 const t = initTRPC.create();
 
@@ -788,6 +789,17 @@ export const appRouter = t.router({
       return { ok: false as const, error: (err as Error).message };
     }
   }),
+
+  testPushover: procedure.mutation(async () => {
+    try {
+      await sendPushover("Tinkerbell", "Test notification from Tinkerbell");
+      return { ok: true as const };
+    } catch (err) {
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
+
+  pushoverEventTypes: procedure.query(() => EVENT_TYPES),
 });
 
 export type AppRouter = typeof appRouter;

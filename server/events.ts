@@ -1,6 +1,7 @@
 import { desc, sql } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { events } from "./db/schema.ts";
+import { notifyEvent } from "./notifications.ts";
 
 export function emitEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
   db.insert(events)
@@ -11,6 +12,8 @@ export function emitEvent(type: string, message: string, metadata?: Record<strin
       timestamp: Date.now(),
     })
     .run();
+
+  notifyEvent(type, message);
 }
 
 export function getEvents({ limit = 50, offset = 0 }: { limit?: number; offset?: number }): {
