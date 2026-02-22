@@ -401,6 +401,11 @@ const mediaRouter = t.router({
     };
   }),
 
+  children: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
+    const client = getPlexClient();
+    return client.getMetadataChildren(input.ratingKey);
+  }),
+
   columns: procedure.query(() => {
     return getConfig("media_columns") ?? null;
   }),

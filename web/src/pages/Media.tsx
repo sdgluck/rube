@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
@@ -138,6 +138,124 @@ const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
 
 type ColumnConfig = { id: string; visible: boolean };
 
+function childToMediaItem(child: {
+  ratingKey: string;
+  type: string;
+  title: string;
+  index?: number;
+  year?: number;
+  videoResolution?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+}): MediaItem {
+  return {
+    ratingKey: child.ratingKey,
+    title: child.index != null ? `${child.index}. ${child.title}` : child.title,
+    type: child.type,
+    year: child.year,
+    sectionTitle: "",
+    videoResolution: child.videoResolution,
+    videoCodec: child.videoCodec,
+    audioCodec: child.audioCodec,
+    audioChannels: child.audioChannels,
+    container: child.container,
+  };
+}
+
+function ChildrenRows({
+  parentRatingKey,
+  depth,
+  colSpan,
+  visibleColumns,
+  expandedRows,
+  toggleExpanded,
+  navigate,
+}: {
+  parentRatingKey: string;
+  depth: number;
+  colSpan: number;
+  visibleColumns: ColumnDef[];
+  expandedRows: Set<string>;
+  toggleExpanded: (key: string) => void;
+  navigate: (path: string) => void;
+}) {
+  const { data, isLoading } = trpc.media.children.useQuery({ ratingKey: parentRatingKey });
+
+  if (isLoading) {
+    return (
+      <tr className={mediaStyles.childRow}>
+        <td
+          colSpan={colSpan}
+          className={`${depth === 1 ? mediaStyles.childRowDepth1 : mediaStyles.childRowDepth2} ${mediaStyles.childRowLoading}`}
+        >
+          Loading...
+        </td>
+      </tr>
+    );
+  }
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <>
+      {data.map((child) => {
+        const isExpanded = expandedRows.has(child.ratingKey);
+        const canExpand = depth === 1 && child.type === "season";
+        const isEpisode = depth === 2;
+
+        return (
+          <React.Fragment key={child.ratingKey}>
+            <tr className={mediaStyles.childRow} onClick={() => navigate(`/media/${child.ratingKey}`)}>
+              {isEpisode ? (
+                visibleColumns.map((col, colIdx) => (
+                  <td key={col.id} className={colIdx === 0 ? mediaStyles.childRowDepth2 : undefined}>
+                    {col.render(childToMediaItem(child))}
+                  </td>
+                ))
+              ) : (
+                <td colSpan={colSpan} className={mediaStyles.childRowDepth1}>
+                  <span className={mediaStyles.childRowTitle}>
+                    {canExpand && (
+                      <button
+                        className={mediaStyles.expandToggle}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(child.ratingKey);
+                        }}
+                      >
+                        {isExpanded ? "\u25BC" : "\u25B6"}
+                      </button>
+                    )}
+                    {child.title}
+                    {child.leafCount != null && (
+                      <span style={{ color: "#999", marginLeft: 6, fontSize: "0.85em" }}>
+                        ({child.leafCount} episode{child.leafCount !== 1 ? "s" : ""})
+                      </span>
+                    )}
+                  </span>
+                </td>
+              )}
+            </tr>
+            {canExpand && isExpanded && (
+              <ChildrenRows
+                parentRatingKey={child.ratingKey}
+                depth={2}
+                colSpan={colSpan}
+                visibleColumns={visibleColumns}
+                expandedRows={expandedRows}
+                toggleExpanded={toggleExpanded}
+                navigate={navigate}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+}
+
 export default function Media() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -258,6 +376,16 @@ export default function Media() {
   };
 
   const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
+
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const toggleExpanded = useCallback((key: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
@@ -487,19 +615,43 @@ export default function Media() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr
-                key={item.ratingKey}
-                className={styles.clickableRow}
-                onClick={() => navigate(`/media/${item.ratingKey}`)}
-              >
-                {visibleColumns.map((col) => (
-                  <td key={col.id} className={col.id === "year" ? styles.itemYear : undefined}>
-                    {col.render(item)}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {items.map((item) => {
+              const isShow = item.type === "show";
+              const isExpanded = expandedRows.has(item.ratingKey);
+              return (
+                <React.Fragment key={item.ratingKey}>
+                  <tr className={styles.clickableRow} onClick={() => navigate(`/media/${item.ratingKey}`)}>
+                    {visibleColumns.map((col, colIdx) => (
+                      <td key={col.id} className={col.id === "year" ? styles.itemYear : undefined}>
+                        {colIdx === 0 && isShow && (
+                          <button
+                            className={mediaStyles.expandToggle}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded(item.ratingKey);
+                            }}
+                          >
+                            {isExpanded ? "\u25BC" : "\u25B6"}
+                          </button>
+                        )}
+                        {col.render(item)}
+                      </td>
+                    ))}
+                  </tr>
+                  {isShow && isExpanded && (
+                    <ChildrenRows
+                      parentRatingKey={item.ratingKey}
+                      depth={1}
+                      colSpan={visibleColumns.length}
+                      visibleColumns={visibleColumns}
+                      expandedRows={expandedRows}
+                      toggleExpanded={toggleExpanded}
+                      navigate={navigate}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       )}

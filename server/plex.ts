@@ -241,6 +241,21 @@ export interface PlexPoster {
   ratingKey: string;
 }
 
+export interface PlexChildItem {
+  ratingKey: string;
+  type: string;
+  title: string;
+  index?: number;
+  thumb?: string;
+  leafCount?: number;
+  year?: number;
+  videoResolution?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+}
+
 export interface MediaFilters {
   videoResolution?: string;
   videoCodec?: string;
@@ -1139,13 +1154,26 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   // ─── Metadata children ─────────────────────────────────────────────────────
 
-  async function getMetadataChildren(ratingKey: string): Promise<Array<{ ratingKey: string; type: string }>> {
+  async function getMetadataChildren(ratingKey: string): Promise<PlexChildItem[]> {
     const data = await request(`/library/metadata/${ratingKey}/children`);
     const metadata = data?.MediaContainer?.Metadata || [];
-    return metadata.map((m: Record<string, unknown>) => ({
-      ratingKey: m.ratingKey as string,
-      type: m.type as string,
-    }));
+    return metadata.map((m: Record<string, unknown>) => {
+      const media = (m.Media as Array<Record<string, unknown>>)?.[0];
+      return {
+        ratingKey: m.ratingKey as string,
+        type: m.type as string,
+        title: m.title as string,
+        index: m.index as number | undefined,
+        thumb: m.thumb as string | undefined,
+        leafCount: m.leafCount as number | undefined,
+        year: m.year as number | undefined,
+        videoResolution: media?.videoResolution as string | undefined,
+        videoCodec: media?.videoCodec as string | undefined,
+        audioCodec: media?.audioCodec as string | undefined,
+        audioChannels: media?.audioChannels as number | undefined,
+        container: media?.container as string | undefined,
+      };
+    });
   }
 
   // ─── Overlay operations ────────────────────────────────────────────────────

@@ -123,7 +123,16 @@ export const mediaItems = sqliteTable(
     container: text("container"),
     syncedAt: integer("synced_at").notNull(),
   },
-  (table) => [index("idx_media_items_section_type").on(table.sectionId, table.type)],
+  (table) => [
+    index("idx_media_items_section_type").on(table.sectionId, table.type),
+    index("idx_media_items_type").on(table.type),
+    index("idx_media_items_title").on(table.title),
+    index("idx_media_items_video_resolution").on(table.videoResolution),
+    index("idx_media_items_video_codec").on(table.videoCodec),
+    index("idx_media_items_audio_codec").on(table.audioCodec),
+    index("idx_media_items_audio_channels").on(table.audioChannels),
+    index("idx_media_items_container").on(table.container),
+  ],
 );
 
 export const plexSections = sqliteTable("plex_sections", {

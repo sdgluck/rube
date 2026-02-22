@@ -104,3 +104,48 @@
   cursor: pointer;
   flex-shrink: 0;
 }
+
+/* ─── Tree expand/collapse ──────────────────────────────────────────────── */
+
+.expandToggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 6px 0 0;
+  font-size: 0.75rem;
+  color: #888;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.expandToggle:hover {
+  color: #4a6cf7;
+}
+
+.childRow {
+  background: #fafbfc;
+  cursor: pointer;
+}
+
+.childRow:hover {
+  background: #f0f2f5;
+}
+
+.childRowDepth1 {
+  padding-left: 32px;
+}
+
+.childRowDepth2 {
+  padding-left: 56px;
+}
+
+.childRowLoading {
+  font-style: italic;
+  color: #999;
+}
+
+.childRowTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
