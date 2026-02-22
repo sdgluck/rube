@@ -45,6 +45,9 @@ function formatTime(ms: number): string {
   return new Date(ms).toLocaleString();
 }
 
+type SortKey = "name" | "schedule" | "enabled" | "lastRun" | "lastRunStatus";
+type SortDir = "asc" | "desc";
+
 export default function Jobs() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
@@ -56,6 +59,16 @@ export default function Jobs() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    const stored = localStorage.getItem("jobs-sort-key");
+    return stored && ["name", "schedule", "enabled", "lastRun", "lastRunStatus"].includes(stored)
+      ? (stored as SortKey)
+      : "name";
+  });
+  const [sortDir, setSortDir] = useState<SortDir>(() => {
+    const stored = localStorage.getItem("jobs-sort-dir");
+    return stored === "desc" ? "desc" : "asc";
+  });
 
   const hasRunning = jobsQuery.data?.some((j) => j.lastRunStatus === "running");
 
@@ -66,7 +79,43 @@ export default function Jobs() {
     }
   }, [hasRunning, utils]);
 
-  const jobs = jobsQuery.data ?? [];
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      const next = sortDir === "asc" ? "desc" : "asc";
+      setSortDir(next);
+      localStorage.setItem("jobs-sort-dir", next);
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+      localStorage.setItem("jobs-sort-key", key);
+      localStorage.setItem("jobs-sort-dir", "asc");
+    }
+  };
+
+  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
+
+  const rawJobs = jobsQuery.data ?? [];
+  const jobs = [...rawJobs].sort((a, b) => {
+    let cmp = 0;
+    switch (sortKey) {
+      case "name":
+        cmp = a.name.localeCompare(b.name);
+        break;
+      case "schedule":
+        cmp = (a.schedule || "").localeCompare(b.schedule || "");
+        break;
+      case "enabled":
+        cmp = (a.enabled ? 1 : 0) - (b.enabled ? 1 : 0);
+        break;
+      case "lastRun":
+        cmp = (a.lastRunStartedAt ?? 0) - (b.lastRunStartedAt ?? 0);
+        break;
+      case "lastRunStatus":
+        cmp = (a.lastRunStatus ?? "").localeCompare(b.lastRunStatus ?? "");
+        break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   function getExportData() {
     return jobs.map((j) => {
@@ -280,11 +329,21 @@ export default function Jobs() {
                 onChange={toggleSelectAll}
               />
             </th>
-            <th>Name</th>
-            <th>Schedule</th>
-            <th>Enabled</th>
-            <th>Last Run</th>
-            <th>Last Run Status</th>
+            <th className={styles.sortable} onClick={() => toggleSort("name")}>
+              Name{sortIndicator("name")}
+            </th>
+            <th className={styles.sortable} onClick={() => toggleSort("schedule")}>
+              Schedule{sortIndicator("schedule")}
+            </th>
+            <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
+              Enabled{sortIndicator("enabled")}
+            </th>
+            <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+              Last Run{sortIndicator("lastRun")}
+            </th>
+            <th className={styles.sortable} onClick={() => toggleSort("lastRunStatus")}>
+              Last Run Status{sortIndicator("lastRunStatus")}
+            </th>
           </tr>
         </thead>
         <tbody>

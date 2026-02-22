@@ -126,6 +126,13 @@ export const mediaItems = sqliteTable(
   (table) => [index("idx_media_items_section_type").on(table.sectionId, table.type)],
 );
 
+export const plexSections = sqliteTable("plex_sections", {
+  key: text("key").primaryKey(),
+  title: text("title").notNull(),
+  type: text("type").notNull(),
+  syncedAt: integer("synced_at").notNull(),
+});
+
 export const statsCache = sqliteTable("stats_cache", {
   key: text("key").primaryKey(),
   data: text("data").notNull(),

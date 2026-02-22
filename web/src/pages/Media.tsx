@@ -63,6 +63,29 @@ const ADVANCED_FILTER_KEYS = ["res", "vcodec", "acodec", "ach", "container"] as 
 
 const PAGE_SIZE = 50;
 
+type SortKey =
+  | "title"
+  | "section"
+  | "type"
+  | "year"
+  | "resolution"
+  | "videoCodec"
+  | "audioCodec"
+  | "audioChannels"
+  | "container";
+type SortDir = "asc" | "desc";
+const VALID_SORT_KEYS: Set<string> = new Set([
+  "title",
+  "section",
+  "type",
+  "year",
+  "resolution",
+  "videoCodec",
+  "audioCodec",
+  "audioChannels",
+  "container",
+]);
+
 interface ColumnDef {
   id: string;
   label: string;
@@ -125,6 +148,14 @@ export default function Media() {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("media-view") as ViewMode) || "table");
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    const stored = localStorage.getItem("media-sort-key");
+    return stored && VALID_SORT_KEYS.has(stored) ? (stored as SortKey) : "title";
+  });
+  const [sortDir, setSortDir] = useState<SortDir>(() => {
+    const stored = localStorage.getItem("media-sort-dir");
+    return stored === "desc" ? "desc" : "asc";
+  });
 
   const resFilter = searchParams.get("res") ?? "";
   const vcodecFilter = searchParams.get("vcodec") ?? "";
@@ -211,6 +242,23 @@ export default function Media() {
     );
   }, [setSearchParams]);
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      const next = sortDir === "asc" ? "desc" : "asc";
+      setSortDir(next);
+      localStorage.setItem("media-sort-dir", next);
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+      localStorage.setItem("media-sort-key", key);
+      localStorage.setItem("media-sort-dir", "asc");
+    }
+    // Reset to first page on sort change
+    setParam("page", "");
+  };
+
+  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
+
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
   useEffect(() => {
@@ -239,6 +287,8 @@ export default function Media() {
       audioCodec: acodecFilter || undefined,
       audioChannels: achFilter ? Number(achFilter) : undefined,
       container: containerFilter || undefined,
+      sort: sortKey,
+      sortDir,
     },
     { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   );
@@ -429,7 +479,10 @@ export default function Media() {
           <thead>
             <tr>
               {visibleColumns.map((col) => (
-                <th key={col.id}>{col.label}</th>
+                <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id as SortKey)}>
+                  {col.label}
+                  {sortIndicator(col.id as SortKey)}
+                </th>
               ))}
             </tr>
           </thead>

@@ -2,7 +2,7 @@
  * Media module — sync Plex media items to local SQLite and query them.
  */
 
-import { eq, and, like, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { mediaItems } from "./db/schema.ts";
 import type { PlexClient, PlexSection } from "./plex.ts";
@@ -25,6 +25,8 @@ interface MediaFilters {
   container?: string;
   offset?: number;
   limit?: number;
+  sort?: string;
+  sortDir?: "asc" | "desc";
 }
 
 export async function syncMedia(
@@ -100,6 +102,18 @@ export async function syncMedia(
   return { synced, removed };
 }
 
+const SORT_COLUMNS = {
+  title: mediaItems.title,
+  section: mediaItems.sectionTitle,
+  type: mediaItems.type,
+  year: mediaItems.year,
+  resolution: mediaItems.videoResolution,
+  videoCodec: mediaItems.videoCodec,
+  audioCodec: mediaItems.audioCodec,
+  audioChannels: mediaItems.audioChannels,
+  container: mediaItems.container,
+} as const;
+
 export function getLocalMediaItems(filters: MediaFilters): {
   items: Array<{
     ratingKey: string;
@@ -149,6 +163,9 @@ export function getLocalMediaItems(filters: MediaFilters): {
   const offset = filters.offset ?? 0;
   const limit = filters.limit ?? 50;
 
+  const sortCol = SORT_COLUMNS[filters.sort as keyof typeof SORT_COLUMNS] ?? mediaItems.title;
+  const orderFn = filters.sortDir === "desc" ? desc : asc;
+
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const countResult = db
@@ -162,7 +179,7 @@ export function getLocalMediaItems(filters: MediaFilters): {
     .select()
     .from(mediaItems)
     .where(whereClause)
-    .orderBy(mediaItems.title)
+    .orderBy(orderFn(sortCol))
     .limit(limit)
     .offset(offset)
     .all();

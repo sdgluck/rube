@@ -31,6 +31,7 @@ import {
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
 import { reportHealth, getHealthLatest, getHealthHistory } from "./health.ts";
 import { getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
+import { syncSections, getLocalSections } from "./sections.ts";
 import { getEvents } from "./events.ts";
 import { sendPushover, EVENT_TYPES } from "./notifications.ts";
 
@@ -359,6 +360,8 @@ const mediaRouter = t.router({
         audioCodec: z.string().optional(),
         audioChannels: z.number().optional(),
         container: z.string().optional(),
+        sort: z.string().optional(),
+        sortDir: z.enum(["asc", "desc"]).default("asc"),
       }),
     )
     .query(({ input }) => {
@@ -373,6 +376,8 @@ const mediaRouter = t.router({
         audioCodec: input.audioCodec || undefined,
         audioChannels: input.audioChannels || undefined,
         container: input.container || undefined,
+        sort: input.sort,
+        sortDir: input.sortDir,
       });
     }),
 
@@ -752,27 +757,14 @@ export const appRouter = t.router({
   health: healthRouter,
 
   plexSections: procedure.query(async () => {
-    const plexUrl = getConfig("global_plex_url");
-    const plexToken = getConfig("global_plex_token");
-    if (!plexUrl || !plexToken) {
-      throw new Error("Plex URL and token are not configured");
-    }
-    const sectionsUrl = new URL("/library/sections", plexUrl);
-    sectionsUrl.searchParams.set("X-Plex-Token", plexToken);
-    const pRes = await fetch(sectionsUrl.toString(), {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!pRes.ok) {
-      throw new Error(`Plex returned ${pRes.status} ${pRes.statusText}`);
-    }
-    const data = await pRes.json();
-    const directories: Array<{ key: string; title: string; type: string }> = data?.MediaContainer?.Directory || [];
-    return directories.map((d) => ({
-      key: d.key,
-      title: d.title,
-      type: d.type,
-    }));
+    const cached = getLocalSections();
+    if (cached.length > 0) return cached;
+
+    // Cache empty (first run) — fetch live and populate
+    const client = getPlexClient();
+    const sections = await client.getSections();
+    await syncSections(client);
+    return sections.map((s) => ({ key: s.key, title: s.title, type: s.type }));
   }),
 
   testPlex: t.procedure
