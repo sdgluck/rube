@@ -134,7 +134,7 @@ function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): v
 
 async function startSidequest(): Promise<void> {
   const { Sidequest } = await import("sidequest");
-  const dbPath = join(import.meta.dirname, "..", "sidequest.sqlite");
+  const dbPath = join(process.env.DATA_DIR || join(import.meta.dirname, ".."), "sidequest.sqlite");
   await Sidequest.start({
     backend: { driver: "@sidequest/sqlite-backend", config: dbPath },
     queues: [{ name: "default", concurrency: 1, priority: 50, state: "active" }],
