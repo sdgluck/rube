@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { fork, type ChildProcess } from "node:child_process";
+import { join } from "node:path";
 import { eq, desc } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { stressTestRuns } from "./db/schema.ts";
-import { createPlexClient } from "./plex.ts";
 import type { PlexClient } from "./plex.ts";
 import { getConfig } from "./config.ts";
 import type { JobContext } from "../shared/job-context.ts";
@@ -64,11 +65,13 @@ class SimulatedClient {
       await this.startDirectPlay(ratingKey, client);
     }
 
-    // Report initial "playing" state
+    // Report initial "playing" state (include session for transcode so Plex maintains the association)
+    const session = this.mode === "transcode" ? this.sessionId : undefined;
     await client.reportTimeline(ratingKey, this.clientId, {
       state: "playing",
       time: 0,
       duration: this.duration,
+      session,
     });
 
     // Periodically report timeline to keep session alive
@@ -80,6 +83,7 @@ class SimulatedClient {
           state: "playing",
           time: this.playbackTime,
           duration: this.duration,
+          session,
         });
       } catch {
         // Best-effort
@@ -239,6 +243,7 @@ class SimulatedClient {
         state: "stopped",
         time: this.playbackTime,
         duration: this.duration,
+        session: this.mode === "transcode" ? this.sessionId : undefined,
       });
     } catch {
       // Best-effort
@@ -588,18 +593,23 @@ export function getStressTestRun(id: string): {
   };
 }
 
-// --- In-process runner ---
+// --- Child process runner ---
 
-let activeStressTest: { id: string; controller: AbortController } | null = null;
+let activeStressTest: { id: string; child: ChildProcess } | null = null;
 
-export function startStressTestInProcess(config: StressTestConfig): { id: string } {
+export function startStressTest(config: StressTestConfig): { id: string } {
   if (activeStressTest) {
     throw new Error("A stress test is already running");
   }
 
   const id = randomUUID();
-  const controller = new AbortController();
   const now = Date.now();
+
+  const plexUrl = getConfig("global_plex_url");
+  const plexToken = getConfig("global_plex_token");
+  if (!plexUrl || !plexToken) {
+    throw new Error("Plex URL and token are not configured");
+  }
 
   db.insert(stressTestRuns)
     .values({
@@ -615,98 +625,48 @@ export function startStressTestInProcess(config: StressTestConfig): { id: string
     })
     .run();
 
-  activeStressTest = { id, controller };
+  const child = fork(join(import.meta.dirname, "stress-test-worker.ts"));
+  child.send({ id, config });
 
-  let logBuffer = "";
-  let currentProgress = 0;
-  let currentMessage = "";
-
-  function flushToDb(): void {
-    if (!logBuffer && currentProgress === 0) return;
+  child.on("exit", () => {
+    // If the process exits while status is still "running", mark as failed
     try {
-      const currentRow = db
-        .select({ log: stressTestRuns.log })
+      const row = db
+        .select({ status: stressTestRuns.status })
         .from(stressTestRuns)
         .where(eq(stressTestRuns.id, id))
         .get();
-      const existingLog = currentRow?.log ?? "";
-      db.update(stressTestRuns)
-        .set({
-          log: existingLog + logBuffer,
-          progress: currentProgress,
-          message: currentMessage,
-        })
-        .where(eq(stressTestRuns.id, id))
-        .run();
-      logBuffer = "";
+      if (row?.status === "running") {
+        db.update(stressTestRuns)
+          .set({ status: "failed", message: "Worker process exited unexpectedly", finishedAt: Date.now() })
+          .where(eq(stressTestRuns.id, id))
+          .run();
+      }
     } catch {
       // DB may be closed during shutdown
     }
-  }
-
-  const flushTimer = setInterval(flushToDb, 500);
-
-  const ctx: JobContext = {
-    log: (...args: unknown[]) => {
-      const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
-      logBuffer += text;
-      const trimmed = text.trim();
-      if (trimmed) currentMessage = trimmed;
-    },
-    progress: (current: number, total: number, msg: string) => {
-      currentProgress = total > 0 ? (current - 1) / total : 0;
-      currentMessage = msg;
-    },
-    signal: controller.signal,
-  };
-
-  const plexUrl = getConfig("global_plex_url");
-  const plexToken = getConfig("global_plex_token");
-  if (!plexUrl || !plexToken) {
-    clearInterval(flushTimer);
     activeStressTest = null;
-    db.update(stressTestRuns)
-      .set({ status: "failed", message: "Plex URL and token are not configured", finishedAt: Date.now() })
-      .where(eq(stressTestRuns.id, id))
-      .run();
-    throw new Error("Plex URL and token are not configured");
-  }
+  });
 
-  const client = createPlexClient({ url: plexUrl, token: plexToken, signal: controller.signal });
-
-  // Fire-and-forget
-  runStressTest(client, config, ctx, id)
-    .then(() => {
-      clearInterval(flushTimer);
-      flushToDb();
-      db.update(stressTestRuns)
-        .set({ status: "completed", progress: 1, finishedAt: Date.now() })
-        .where(eq(stressTestRuns.id, id))
-        .run();
-    })
-    .catch((err) => {
-      clearInterval(flushTimer);
-      logBuffer += `\nError: ${(err as Error).message}\n`;
-      flushToDb();
-      const status = controller.signal.aborted ? "cancelled" : "failed";
-      db.update(stressTestRuns)
-        .set({ status, message: (err as Error).message, finishedAt: Date.now() })
-        .where(eq(stressTestRuns.id, id))
-        .run();
-    })
-    .finally(() => {
-      clearInterval(flushTimer);
-      activeStressTest = null;
-    });
+  activeStressTest = { id, child };
 
   return { id };
 }
 
 export function cancelStressTest(): void {
   if (!activeStressTest) return;
-  const { id, controller } = activeStressTest;
-  controller.abort();
+  const { id, child } = activeStressTest;
+
+  // Update DB status — the worker polls this and self-aborts
   db.update(stressTestRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(stressTestRuns.id, id)).run();
+
+  // Backup: kill child after a short delay if still alive
+  setTimeout(() => {
+    if (child.exitCode === null) {
+      child.kill();
+    }
+  }, 5000);
+
   activeStressTest = null;
 }
 

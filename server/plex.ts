@@ -1313,22 +1313,26 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   async function reportTimeline(
     ratingKey: string,
     clientId: string,
-    opts: { state: string; time: number; duration: number },
+    opts: { state: string; time: number; duration: number; session?: string },
   ): Promise<void> {
     try {
+      const params: Record<string, string | number> = {
+        ratingKey,
+        key: `/library/metadata/${ratingKey}`,
+        state: opts.state,
+        time: opts.time,
+        duration: opts.duration,
+        "X-Plex-Client-Identifier": clientId,
+        "X-Plex-Product": "tinkerbell-stress",
+        "X-Plex-Device": "tinkerbell-stress",
+        "X-Plex-Device-Name": "Tinkerbell Stress Test",
+        "X-Plex-Platform": "Chrome",
+      };
+      if (opts.session) {
+        params.containerKey = `/video/:/transcode/universal/session/${opts.session}`;
+      }
       await request("/:/timeline", {
-        params: {
-          ratingKey,
-          key: `/library/metadata/${ratingKey}`,
-          state: opts.state,
-          time: opts.time,
-          duration: opts.duration,
-          "X-Plex-Client-Identifier": clientId,
-          "X-Plex-Product": "tinkerbell-stress",
-          "X-Plex-Device": "tinkerbell-stress",
-          "X-Plex-Device-Name": "Tinkerbell Stress Test",
-          "X-Plex-Platform": "Chrome",
-        },
+        params,
         headers: { "X-Plex-Client-Identifier": clientId },
       });
     } catch {

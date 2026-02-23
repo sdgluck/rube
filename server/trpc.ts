@@ -38,7 +38,7 @@ import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "./notifica
 import {
   getStressTestRuns,
   getStressTestRun,
-  startStressTestInProcess,
+  startStressTest,
   cancelStressTest,
   getActiveStressTest,
 } from "./stress-test.ts";
@@ -853,7 +853,7 @@ const stressTestRouter = t.router({
         maxSessions: z.number().optional(),
       }),
     )
-    .mutation(({ input }) => startStressTestInProcess(input)),
+    .mutation(({ input }) => startStressTest(input)),
 
   cancel: procedure.mutation(() => {
     cancelStressTest();
