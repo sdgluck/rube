@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { trpc } from "../trpc";
 import styles from "./Stats.module.css";
+
+type ViewMode = "table" | "grid";
 
 function decisionLabel(decision: string) {
   switch (decision) {
@@ -45,6 +48,11 @@ function formatDuration(ms: number): string {
   const s = totalSec % 60;
   if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function formatDate(ts: number): string {
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatBandwidth(kbps: number): string {
@@ -159,6 +167,12 @@ function MostWatchedSkeleton() {
 }
 
 export default function Stats() {
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (localStorage.getItem("streams-view") as ViewMode) || "grid",
+  );
+  const [recentViewMode, setRecentViewMode] = useState<ViewMode>(
+    () => (localStorage.getItem("recent-view") as ViewMode) || "grid",
+  );
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, {
     refetchInterval: 5000,
   });
@@ -176,6 +190,27 @@ export default function Stats() {
           {sessionsQuery.data && sessionsQuery.data.length > 0 && (
             <span className={styles.streamCount}>{sessionsQuery.data.length}</span>
           )}
+          <div className={styles.sectionTitleSpacer} />
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => {
+                setViewMode("table");
+                localStorage.setItem("streams-view", "table");
+              }}
+            >
+              Table
+            </button>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => {
+                setViewMode("grid");
+                localStorage.setItem("streams-view", "grid");
+              }}
+            >
+              Grid
+            </button>
+          </div>
         </div>
         {sessionsQuery.isLoading && (
           <div className={styles.sessionGrid}>
@@ -187,7 +222,7 @@ export default function Stats() {
         {sessionsQuery.data && sessionsQuery.data.length === 0 && (
           <div className={styles.emptyState}>No active streams</div>
         )}
-        {sessionsQuery.data && sessionsQuery.data.length > 0 && (
+        {sessionsQuery.data && sessionsQuery.data.length > 0 && viewMode === "grid" && (
           <div className={styles.sessionGrid}>
             {sessionsQuery.data.map((session, i) => {
               const progress =
@@ -324,11 +359,145 @@ export default function Stats() {
             })}
           </div>
         )}
+        {sessionsQuery.data && sessionsQuery.data.length > 0 && viewMode === "table" && (
+          <table className={styles.sessionsTable}>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>User</th>
+                <th>State</th>
+                <th>Decision</th>
+                <th>Quality</th>
+                <th>Bandwidth</th>
+                <th>Progress</th>
+                <th>Player</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessionsQuery.data.map((session, i) => {
+                const progress =
+                  session.duration && session.viewOffset
+                    ? Math.min(100, (session.viewOffset / session.duration) * 100)
+                    : 0;
+
+                const epLabel = episodeLabel(session);
+                const isEpisode = session.type === "episode";
+                const isTrack = session.type === "track";
+
+                const title =
+                  isEpisode && session.grandparentTitle
+                    ? session.grandparentTitle
+                    : isTrack && session.grandparentTitle
+                      ? `${session.grandparentTitle} — ${session.title}`
+                      : session.title;
+
+                const qualityParts: string[] = [];
+                if (session.videoResolution) qualityParts.push(formatResolution(session.videoResolution));
+                if (session.videoCodec) qualityParts.push(formatCodec(session.videoCodec));
+                if (session.audioCodec) qualityParts.push(formatCodec(session.audioCodec));
+                if (session.audioChannels) qualityParts.push(formatChannels(session.audioChannels));
+
+                let transcodeDetail = "";
+                if (session.decision === "transcode") {
+                  const parts: string[] = [];
+                  if (session.videoDecision === "transcode" && session.sourceVideoCodec && session.videoCodec) {
+                    parts.push(`${formatCodec(session.sourceVideoCodec)} → ${formatCodec(session.videoCodec)}`);
+                  }
+                  if (session.transcodeHwEncoding) parts.push("HW");
+                  if (session.transcodeSpeed) parts.push(`${session.transcodeSpeed.toFixed(1)}x`);
+                  transcodeDetail = parts.join(" · ");
+                }
+
+                return (
+                  <tr key={i}>
+                    <td>
+                      <div className={styles.sessionTitle}>{title}</div>
+                      {isEpisode && (
+                        <div className={styles.sessionEpisode}>
+                          {epLabel && <span className={styles.epBadge}>{epLabel}</span>}
+                          {session.title}
+                        </div>
+                      )}
+                      {!isEpisode && !isTrack && session.year && (
+                        <div className={styles.sessionSubtitle}>{session.year}</div>
+                      )}
+                    </td>
+                    <td>
+                      <div className={styles.sessionUserCol}>
+                        {session.userThumb && (
+                          <img className={styles.userAvatar} src={session.userThumb} alt={session.user} />
+                        )}
+                        <span className={styles.userName}>{session.user}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`${styles.badge} ${stateClass(session.state)}`}>
+                        {stateLabel(session.state)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`${styles.badge} ${decisionClass(session.decision)}`}>
+                        {decisionLabel(session.decision)}
+                      </span>
+                      {transcodeDetail && <div className={styles.transcodeDetailInline}>{transcodeDetail}</div>}
+                    </td>
+                    <td className={styles.qualityCell}>{qualityParts.join(" · ")}</td>
+                    <td>
+                      {session.bandwidth != null && session.bandwidth > 0 ? formatBandwidth(session.bandwidth) : ""}
+                    </td>
+                    <td>
+                      {session.duration != null && session.duration > 0 && (
+                        <div className={styles.tableProgressCell}>
+                          <div className={styles.progressBarOuter}>
+                            <div
+                              className={`${styles.progressBarFill} ${session.state === "paused" ? styles.progressBarPaused : ""}`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <span className={styles.progressTime}>
+                            {formatDuration(session.viewOffset ?? 0)} / {formatDuration(session.duration)}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className={styles.playerCell}>
+                      {session.product || session.player}
+                      {session.platform && ` (${session.platform})`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Recently Added */}
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>Recently Added</div>
+        <div className={styles.sectionTitle}>
+          Recently Added
+          <div className={styles.sectionTitleSpacer} />
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.viewToggleBtn} ${recentViewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => {
+                setRecentViewMode("table");
+                localStorage.setItem("recent-view", "table");
+              }}
+            >
+              Table
+            </button>
+            <button
+              className={`${styles.viewToggleBtn} ${recentViewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => {
+                setRecentViewMode("grid");
+                localStorage.setItem("recent-view", "grid");
+              }}
+            >
+              Grid
+            </button>
+          </div>
+        </div>
         {recentQuery.isLoading && <RecentlyAddedSkeleton />}
         {recentQuery.data && !recentQuery.data.jobEnabled && (
           <div className={styles.emptyState}>The "Sync Recently Added" job is disabled. Results may be stale.</div>
@@ -337,7 +506,7 @@ export default function Stats() {
         {recentQuery.data && recentQuery.data.items.length === 0 && (
           <div className={styles.emptyState}>No recently added media</div>
         )}
-        {recentQuery.data && recentQuery.data.items.length > 0 && (
+        {recentQuery.data && recentQuery.data.items.length > 0 && recentViewMode === "grid" && (
           <div className={styles.scrollRow}>
             {recentQuery.data.items.map((item) => (
               <div key={item.ratingKey} className={styles.posterCard}>
@@ -358,6 +527,43 @@ export default function Stats() {
               </div>
             ))}
           </div>
+        )}
+        {recentQuery.data && recentQuery.data.items.length > 0 && recentViewMode === "table" && (
+          <table className={styles.sessionsTable}>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Title</th>
+                <th>Year</th>
+                <th>Type</th>
+                <th>Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentQuery.data.items.map((item) => (
+                <tr key={item.ratingKey}>
+                  <td className={styles.recentThumbCell}>
+                    {item.thumb ? (
+                      <img
+                        className={styles.recentThumb}
+                        src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
+                        alt={item.title}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className={styles.recentThumbPlaceholder} />
+                    )}
+                  </td>
+                  <td>
+                    <span className={styles.sessionTitle}>{item.title}</span>
+                  </td>
+                  <td className={styles.qualityCell}>{item.year ?? ""}</td>
+                  <td className={styles.qualityCell}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</td>
+                  <td className={styles.qualityCell}>{formatDate(item.addedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 

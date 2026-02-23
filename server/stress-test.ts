@@ -115,8 +115,9 @@ class SimulatedClient {
       if (!variantUrl) {
         throw new Error("Master playlist has no variant stream URLs");
       }
-      this.log?.(`  Following variant playlist: ${variantUrl}`);
-      mediaPlaylistUrl = variantUrl;
+      // The variant URL is relative to the start.m3u8 request path — make it absolute
+      mediaPlaylistUrl = variantUrl.startsWith("/") ? variantUrl : `/video/:/transcode/universal/${variantUrl}`;
+      this.log?.(`  Following variant playlist: ${mediaPlaylistUrl}`);
     } else {
       throw new Error("Expected master playlist but got media playlist directly");
     }

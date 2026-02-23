@@ -33,6 +33,42 @@
   border-radius: 50%;
 }
 
+.sectionTitleSpacer {
+  flex: 1;
+}
+
+/* ─── View toggle ───────────────────────────────────────────────────────── */
+
+.viewToggle {
+  display: flex;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.viewToggleBtn {
+  padding: 7px 12px;
+  background: #fff;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  line-height: 1;
+}
+
+.viewToggleBtn:not(:last-child) {
+  border-right: 1px solid #ccc;
+}
+
+.viewToggleBtnActive {
+  background: #4a6cf7;
+  color: #fff;
+}
+
 /* ─── Active sessions ────────────────────────────────────────────────────── */
 
 .sessionGrid {
@@ -295,6 +331,81 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ─── Sessions table ────────────────────────────────────────────────────── */
+
+.sessionsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sessionsTable th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid #ddd;
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sessionsTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.sessionsTable tr:hover td {
+  background: #f8f9fa;
+}
+
+.transcodeDetailInline {
+  font-size: 0.7rem;
+  color: #a0522d;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+.qualityCell {
+  font-size: 0.8rem;
+  color: #555;
+  white-space: nowrap;
+}
+
+.playerCell {
+  font-size: 0.8rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.tableProgressCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+}
+
+.recentThumbCell {
+  width: 36px;
+  padding: 6px 8px !important;
+}
+
+.recentThumb {
+  width: 36px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #e9ecef;
+  display: block;
+}
+
+.recentThumbPlaceholder {
+  width: 36px;
+  height: 54px;
+  background: #e9ecef;
+  border-radius: 4px;
 }
 
 /* ─── Recently added ─────────────────────────────────────────────────────── */
