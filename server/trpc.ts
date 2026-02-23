@@ -34,7 +34,7 @@ import { getCachedRecentlyAdded, getCachedMostWatched } from "./stats.ts";
 import { syncSections, getLocalSections } from "./sections.ts";
 import { syncUsers, getLocalUsers, updateUser } from "./users.ts";
 import { getEvents, getEventTypes } from "./events.ts";
-import { sendPushover, EVENT_TYPES } from "./notifications.ts";
+import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "./notifications.ts";
 import {
   getStressTestRuns,
   getStressTestRun,
@@ -607,6 +607,35 @@ const HEALTH_SERVICES = [
     configuredFn: (c: Partial<z.infer<typeof configSchema>>) =>
       !!(c.global_pushover_api_key && c.global_pushover_user_key),
   },
+  {
+    service: "Discord",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_discord_webhook_url,
+  },
+  {
+    service: "Gotify",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_gotify_url && c.global_gotify_token),
+  },
+  {
+    service: "LunaSea",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_lunasea_webhook_url,
+  },
+  {
+    service: "Pushbullet",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_pushbullet_token,
+  },
+  {
+    service: "Slack",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_slack_webhook_url,
+  },
+  {
+    service: "Telegram",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) =>
+      !!(c.global_telegram_bot_token && c.global_telegram_chat_id),
+  },
+  {
+    service: "Webhook",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_webhook_url,
+  },
 ] as const;
 
 async function checkServiceHealth(service: string): Promise<void> {
@@ -696,6 +725,60 @@ async function checkServiceHealth(service: string): Promise<void> {
       const data = await res.json();
       if (data.status !== 1) throw new Error(data.errors?.join(", ") || "Invalid credentials");
       reportHealth("Pushover", "ok", "Credentials valid");
+      break;
+    }
+    case "Discord": {
+      if (!cfg.global_discord_webhook_url) throw new Error("Not configured");
+      const res = await fetch(cfg.global_discord_webhook_url, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      reportHealth("Discord", "ok", `Webhook valid — #${data.name || "unknown"}`);
+      break;
+    }
+    case "Gotify": {
+      if (!cfg.global_gotify_url || !cfg.global_gotify_token) throw new Error("Not configured");
+      const versionUrl = new URL("/version", cfg.global_gotify_url);
+      const res = await fetch(versionUrl.toString(), { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      reportHealth("Gotify", "ok", `Connected — v${data.version || "?"}`);
+      break;
+    }
+    case "LunaSea": {
+      if (!cfg.global_lunasea_webhook_url) throw new Error("Not configured");
+      reportHealth("LunaSea", "ok", "Webhook URL configured");
+      break;
+    }
+    case "Pushbullet": {
+      if (!cfg.global_pushbullet_token) throw new Error("Not configured");
+      const res = await fetch("https://api.pushbullet.com/v2/users/me", {
+        headers: { "Access-Token": cfg.global_pushbullet_token },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      reportHealth("Pushbullet", "ok", `Connected — ${data.name || data.email || "OK"}`);
+      break;
+    }
+    case "Slack": {
+      if (!cfg.global_slack_webhook_url) throw new Error("Not configured");
+      reportHealth("Slack", "ok", "Webhook URL configured");
+      break;
+    }
+    case "Telegram": {
+      if (!cfg.global_telegram_bot_token || !cfg.global_telegram_chat_id) throw new Error("Not configured");
+      const res = await fetch(`https://api.telegram.org/bot${cfg.global_telegram_bot_token}/getMe`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.description || "Invalid bot token");
+      reportHealth("Telegram", "ok", `Bot valid — @${data.result?.username || "?"}`);
+      break;
+    }
+    case "Webhook": {
+      if (!cfg.global_webhook_url) throw new Error("Not configured");
+      reportHealth("Webhook", "ok", "Webhook URL configured");
       break;
     }
     default:
@@ -892,18 +975,39 @@ export const appRouter = t.router({
     }
   }),
 
-  testPushover: procedure.mutation(async () => {
-    try {
-      await sendPushover("Tinkerbell", "Test notification from Tinkerbell");
-      reportHealth("Pushover", "ok", "Test notification sent");
-      return { ok: true as const };
-    } catch (err) {
-      reportHealth("Pushover", "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
-    }
-  }),
+  testNotification: procedure
+    .input(
+      z.object({
+        service: z.enum(NOTIFICATION_SERVICES as unknown as [string, ...string[]]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const HEALTH_NAMES: Record<string, string> = {
+        pushover: "Pushover",
+        discord: "Discord",
+        gotify: "Gotify",
+        lunasea: "LunaSea",
+        pushbullet: "Pushbullet",
+        slack: "Slack",
+        telegram: "Telegram",
+        webhook: "Webhook",
+      };
+      const healthName = HEALTH_NAMES[input.service] ?? input.service;
+      try {
+        await sendNotification(
+          input.service as (typeof NOTIFICATION_SERVICES)[number],
+          "Tinkerbell",
+          "Test notification from Tinkerbell",
+        );
+        reportHealth(healthName, "ok", "Test notification sent");
+        return { ok: true as const };
+      } catch (err) {
+        reportHealth(healthName, "error", (err as Error).message);
+        return { ok: false as const, error: (err as Error).message };
+      }
+    }),
 
-  pushoverEventTypes: procedure.query(() => EVENT_TYPES),
+  notificationEventTypes: procedure.query(() => EVENT_TYPES),
 });
 
 export type AppRouter = typeof appRouter;

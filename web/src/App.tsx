@@ -6,7 +6,14 @@ import SettingsAi from "./pages/SettingsAi";
 import SettingsArrs from "./pages/SettingsArrs";
 import SettingsDatabases from "./pages/SettingsDatabases.tsx";
 import SettingsNotifications from "./pages/SettingsNotifications.tsx";
+import SettingsNotificationsDiscord from "./pages/SettingsNotificationsDiscord.tsx";
+import SettingsNotificationsGotify from "./pages/SettingsNotificationsGotify.tsx";
+import SettingsNotificationsLunaSea from "./pages/SettingsNotificationsLunaSea.tsx";
+import SettingsNotificationsPushbullet from "./pages/SettingsNotificationsPushbullet.tsx";
 import SettingsNotificationsPushover from "./pages/SettingsNotificationsPushover.tsx";
+import SettingsNotificationsSlack from "./pages/SettingsNotificationsSlack.tsx";
+import SettingsNotificationsTelegram from "./pages/SettingsNotificationsTelegram.tsx";
+import SettingsNotificationsWebhook from "./pages/SettingsNotificationsWebhook.tsx";
 import SettingsHealth from "./pages/SettingsHealth.tsx";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
@@ -168,8 +175,15 @@ export default function App() {
             <Route path="arrs" element={<SettingsArrs />} />
             <Route path="databases" element={<SettingsDatabases />} />
             <Route path="notifications" element={<SettingsNotifications />}>
-              <Route index element={<Navigate to="/settings/notifications/pushover" replace />} />
+              <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
+              <Route path="discord" element={<SettingsNotificationsDiscord />} />
+              <Route path="gotify" element={<SettingsNotificationsGotify />} />
+              <Route path="lunasea" element={<SettingsNotificationsLunaSea />} />
+              <Route path="pushbullet" element={<SettingsNotificationsPushbullet />} />
               <Route path="pushover" element={<SettingsNotificationsPushover />} />
+              <Route path="slack" element={<SettingsNotificationsSlack />} />
+              <Route path="telegram" element={<SettingsNotificationsTelegram />} />
+              <Route path="webhook" element={<SettingsNotificationsWebhook />} />
             </Route>
             <Route path="health" element={<SettingsHealth />} />
             <Route path="stress-test" element={<StressTest />} />
