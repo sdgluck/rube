@@ -35,7 +35,13 @@ import { syncSections, getLocalSections } from "./sections.ts";
 import { syncUsers, getLocalUsers, updateUser } from "./users.ts";
 import { getEvents, getEventTypes } from "./events.ts";
 import { sendPushover, EVENT_TYPES } from "./notifications.ts";
-import { getStressTestRuns, getStressTestRun } from "./stress-test.ts";
+import {
+  getStressTestRuns,
+  getStressTestRun,
+  startStressTestInProcess,
+  cancelStressTest,
+  getActiveStressTest,
+} from "./stress-test.ts";
 
 const t = initTRPC.create();
 
@@ -755,6 +761,23 @@ const eventsRouter = t.router({
 const stressTestRouter = t.router({
   runs: procedure.query(() => getStressTestRuns()),
   run: procedure.input(z.object({ id: z.string() })).query(({ input }) => getStressTestRun(input.id)),
+
+  start: procedure
+    .input(
+      z.object({
+        mode: z.enum(["transcode", "directplay", "mixed"]),
+        transcodePct: z.number().optional(),
+        maxSessions: z.number().optional(),
+      }),
+    )
+    .mutation(({ input }) => startStressTestInProcess(input)),
+
+  cancel: procedure.mutation(() => {
+    cancelStressTest();
+    return { ok: true };
+  }),
+
+  activeRun: procedure.query(() => getActiveStressTest()),
 });
 
 export const appRouter = t.router({

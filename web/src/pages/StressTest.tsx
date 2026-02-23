@@ -30,16 +30,15 @@ function SpeedCell({ speed }: { speed: number | null }) {
 export default function StressTest() {
   const utils = trpc.useUtils();
   const runsQuery = trpc.stressTest.runs.useQuery();
-  const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
-  const startMutation = trpc.jobs.start.useMutation({
+  const activeRunQuery = trpc.stressTest.activeRun.useQuery(undefined, { refetchInterval: 2000 });
+  const startMutation = trpc.stressTest.start.useMutation({
     onSuccess: () => {
-      utils.jobs.activeRuns.invalidate();
+      utils.stressTest.activeRun.invalidate();
     },
   });
-  const updateMutation = trpc.jobs.update.useMutation();
-  const cancelMutation = trpc.jobs.cancel.useMutation({
+  const cancelMutation = trpc.stressTest.cancel.useMutation({
     onSuccess: () => {
-      utils.jobs.activeRuns.invalidate();
+      utils.stressTest.activeRun.invalidate();
       utils.stressTest.runs.invalidate();
     },
   });
@@ -55,14 +54,13 @@ export default function StressTest() {
     { enabled: !!selectedRunId, refetchInterval: selectedRunId ? 5000 : false },
   );
 
-  const stressTestRun = activeRunsQuery.data?.find((r) => r.jobId === "stress-test");
+  const stressTestRun = activeRunQuery.data;
   const isRunning = !!stressTestRun;
 
   async function handleStart() {
-    const config: Record<string, unknown> = { mode, maxSessions };
-    if (mode === "mixed") config.transcodePct = transcodePct;
-    await updateMutation.mutateAsync({ jobId: "stress-test", config });
-    await startMutation.mutateAsync({ jobId: "stress-test" });
+    const input: { mode: typeof mode; maxSessions: number; transcodePct?: number } = { mode, maxSessions };
+    if (mode === "mixed") input.transcodePct = transcodePct;
+    await startMutation.mutateAsync(input);
     setShowConfig(false);
   }
 
@@ -117,11 +115,7 @@ export default function StressTest() {
               style={{ width: 70 }}
             />
           </div>
-          <button
-            className={shared.button}
-            onClick={handleStart}
-            disabled={startMutation.isPending || updateMutation.isPending}
-          >
+          <button className={shared.button} onClick={handleStart} disabled={startMutation.isPending}>
             Start
           </button>
         </div>
@@ -143,7 +137,7 @@ export default function StressTest() {
             </>
           )}
           {stressTestRun.message && <span className={styles.bannerProgress}>{stressTestRun.message}</span>}
-          <button className={styles.cancelButton} onClick={() => cancelMutation.mutate({ runId: stressTestRun.id })}>
+          <button className={styles.cancelButton} onClick={() => cancelMutation.mutate()}>
             Cancel
           </button>
         </div>

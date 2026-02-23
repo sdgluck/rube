@@ -168,6 +168,10 @@ export const stressTestRuns = sqliteTable("stress_test_runs", {
   config: text("config").notNull(),
   maxSessions: integer("max_sessions"),
   steps: text("steps").notNull().default("[]"),
+  status: text("status").notNull().default("running"),
+  progress: real("progress").notNull().default(0),
+  message: text("message").notNull().default(""),
+  log: text("log").notNull().default(""),
   startedAt: integer("started_at").notNull(),
   finishedAt: integer("finished_at"),
 });

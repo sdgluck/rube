@@ -8,6 +8,7 @@ import { jobs, jobRuns } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
 import { pruneHealthChecks } from "./health.ts";
 import { syncRecentlyAdded, syncMostWatched } from "./stats.ts";
+import { markStaleStressTestsAsFailed } from "./stress-test.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -44,7 +45,6 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     enabled: 1,
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
-  { id: "stress-test", name: "Stress Test", command: "stress-test", schedule: "", enabled: 1 },
 ];
 
 const DEFAULT_CONFIGS: Record<string, string> = {
@@ -79,7 +79,7 @@ const internalJobs: Record<string, () => string | Promise<string>> = {
   "sync-most-watched": () => syncMostWatched(),
 };
 
-const REMOVED_JOBS = ["sync-sections"];
+const REMOVED_JOBS = ["sync-sections", "stress-test"];
 
 function seedDefaultJobs(): void {
   let inserted = 0;
@@ -360,6 +360,7 @@ export async function initJobs(): Promise<void> {
   seedDefaultJobs();
   seedDefaultRules();
   markStaleRunsAsFailed();
+  markStaleStressTestsAsFailed();
   await startSidequest();
   startCronSchedules();
 }

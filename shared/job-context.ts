@@ -17,9 +17,3 @@ export interface BywJobConfig extends CommonJobConfig {
 export interface OverlaysJobConfig extends CommonJobConfig {
   mode?: "apply" | "remove";
 }
-
-export interface StressTestJobConfig extends CommonJobConfig {
-  mode?: "transcode" | "directplay" | "mixed";
-  transcodePct?: number;
-  maxSessions?: number;
-}

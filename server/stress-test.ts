@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { eq, desc } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { stressTestRuns } from "./db/schema.ts";
+import { createPlexClient } from "./plex.ts";
 import type { PlexClient } from "./plex.ts";
+import { getConfig } from "./config.ts";
 import type { JobContext } from "../shared/job-context.ts";
 
 export interface StressTestConfig {
@@ -524,6 +526,7 @@ export function saveStressTestResult(id: string, result: StressTestResult): void
       config: JSON.stringify(result.config),
       maxSessions: result.maxSessions,
       steps: JSON.stringify(result.steps),
+      status: "completed",
       startedAt: result.startedAt,
       finishedAt: result.finishedAt,
     })
@@ -533,6 +536,7 @@ export function saveStressTestResult(id: string, result: StressTestResult): void
         config: JSON.stringify(result.config),
         maxSessions: result.maxSessions,
         steps: JSON.stringify(result.steps),
+        status: "completed",
         finishedAt: result.finishedAt,
       },
     })
@@ -543,6 +547,7 @@ export function getStressTestRuns(): Array<{
   id: string;
   config: StressTestConfig;
   maxSessions: number | null;
+  status: string;
   startedAt: number;
   finishedAt: number | null;
 }> {
@@ -551,6 +556,7 @@ export function getStressTestRuns(): Array<{
       id: stressTestRuns.id,
       config: stressTestRuns.config,
       maxSessions: stressTestRuns.maxSessions,
+      status: stressTestRuns.status,
       startedAt: stressTestRuns.startedAt,
       finishedAt: stressTestRuns.finishedAt,
     })
@@ -580,4 +586,157 @@ export function getStressTestRun(id: string): {
     config: JSON.parse(row.config) as StressTestConfig,
     steps: JSON.parse(row.steps) as StressTestStep[],
   };
+}
+
+// --- In-process runner ---
+
+let activeStressTest: { id: string; controller: AbortController } | null = null;
+
+export function startStressTestInProcess(config: StressTestConfig): { id: string } {
+  if (activeStressTest) {
+    throw new Error("A stress test is already running");
+  }
+
+  const id = randomUUID();
+  const controller = new AbortController();
+  const now = Date.now();
+
+  db.insert(stressTestRuns)
+    .values({
+      id,
+      config: JSON.stringify(config),
+      maxSessions: null,
+      steps: "[]",
+      status: "running",
+      progress: 0,
+      message: "",
+      log: "",
+      startedAt: now,
+    })
+    .run();
+
+  activeStressTest = { id, controller };
+
+  let logBuffer = "";
+  let currentProgress = 0;
+  let currentMessage = "";
+
+  function flushToDb(): void {
+    if (!logBuffer && currentProgress === 0) return;
+    try {
+      const currentRow = db
+        .select({ log: stressTestRuns.log })
+        .from(stressTestRuns)
+        .where(eq(stressTestRuns.id, id))
+        .get();
+      const existingLog = currentRow?.log ?? "";
+      db.update(stressTestRuns)
+        .set({
+          log: existingLog + logBuffer,
+          progress: currentProgress,
+          message: currentMessage,
+        })
+        .where(eq(stressTestRuns.id, id))
+        .run();
+      logBuffer = "";
+    } catch {
+      // DB may be closed during shutdown
+    }
+  }
+
+  const flushTimer = setInterval(flushToDb, 500);
+
+  const ctx: JobContext = {
+    log: (...args: unknown[]) => {
+      const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
+      logBuffer += text;
+      const trimmed = text.trim();
+      if (trimmed) currentMessage = trimmed;
+    },
+    progress: (current: number, total: number, msg: string) => {
+      currentProgress = total > 0 ? (current - 1) / total : 0;
+      currentMessage = msg;
+    },
+    signal: controller.signal,
+  };
+
+  const plexUrl = getConfig("global_plex_url");
+  const plexToken = getConfig("global_plex_token");
+  if (!plexUrl || !plexToken) {
+    clearInterval(flushTimer);
+    activeStressTest = null;
+    db.update(stressTestRuns)
+      .set({ status: "failed", message: "Plex URL and token are not configured", finishedAt: Date.now() })
+      .where(eq(stressTestRuns.id, id))
+      .run();
+    throw new Error("Plex URL and token are not configured");
+  }
+
+  const client = createPlexClient({ url: plexUrl, token: plexToken, signal: controller.signal });
+
+  // Fire-and-forget
+  runStressTest(client, config, ctx, id)
+    .then(() => {
+      clearInterval(flushTimer);
+      flushToDb();
+      db.update(stressTestRuns)
+        .set({ status: "completed", progress: 1, finishedAt: Date.now() })
+        .where(eq(stressTestRuns.id, id))
+        .run();
+    })
+    .catch((err) => {
+      clearInterval(flushTimer);
+      logBuffer += `\nError: ${(err as Error).message}\n`;
+      flushToDb();
+      const status = controller.signal.aborted ? "cancelled" : "failed";
+      db.update(stressTestRuns)
+        .set({ status, message: (err as Error).message, finishedAt: Date.now() })
+        .where(eq(stressTestRuns.id, id))
+        .run();
+    })
+    .finally(() => {
+      clearInterval(flushTimer);
+      activeStressTest = null;
+    });
+
+  return { id };
+}
+
+export function cancelStressTest(): void {
+  if (!activeStressTest) return;
+  const { id, controller } = activeStressTest;
+  controller.abort();
+  db.update(stressTestRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(stressTestRuns.id, id)).run();
+  activeStressTest = null;
+}
+
+export function getActiveStressTest(): {
+  id: string;
+  progress: number;
+  message: string;
+  startedAt: number;
+} | null {
+  if (!activeStressTest) return null;
+  const row = db
+    .select({
+      id: stressTestRuns.id,
+      progress: stressTestRuns.progress,
+      message: stressTestRuns.message,
+      startedAt: stressTestRuns.startedAt,
+    })
+    .from(stressTestRuns)
+    .where(eq(stressTestRuns.id, activeStressTest.id))
+    .get();
+  return row ?? null;
+}
+
+export function markStaleStressTestsAsFailed(): void {
+  const result = db
+    .update(stressTestRuns)
+    .set({ status: "failed", finishedAt: Date.now() })
+    .where(eq(stressTestRuns.status, "running"))
+    .run();
+  if (result.changes > 0) {
+    console.log(`[stress-test] Marked ${result.changes} stale running stress test(s) as failed`);
+  }
 }
