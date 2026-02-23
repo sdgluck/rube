@@ -81,6 +81,16 @@
   border-bottom-color: #4a6cf7;
 }
 
+.enabledDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #28a745;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
 .form {
   display: flex;
   flex-direction: column;

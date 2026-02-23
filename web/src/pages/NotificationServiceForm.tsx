@@ -72,6 +72,7 @@ export default function NotificationServiceForm({ service, title, fields, events
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await saveConfigMutation.mutateAsync(buildConfigPayload() as any);
+      utils.config.get.invalidate();
       setStatus({ type: "success", msg: `${title} settings saved` });
     } catch {
       setStatus({ type: "error", msg: `Failed to save ${title} settings` });
