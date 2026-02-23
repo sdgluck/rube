@@ -18,6 +18,11 @@ const OVERLAY_CHIPS = [
   { type: "content_rating", label: "Content Rating" },
   { type: "imdb_rating", label: "IMDb Rating" },
   { type: "rt_rating", label: "RT Rating" },
+  { type: "hdr", label: "HDR" },
+  { type: "audio_channels", label: "Audio Channels" },
+  { type: "edition", label: "Edition" },
+  { type: "studio", label: "Studio" },
+  { type: "runtime", label: "Runtime" },
 ] as const;
 
 type OverlayType = (typeof OVERLAY_CHIPS)[number]["type"];
@@ -33,6 +38,10 @@ function getBadgeClass(type: string, value: string): string {
       return styles.badgeImdb;
     case "rt_rating":
       return styles.badgeRt;
+    case "hdr":
+      return styles.badgePurple;
+    case "edition":
+      return styles.badgeTeal;
     default:
       return styles.badgeDark;
   }
@@ -52,6 +61,16 @@ function getPlaceholderValue(type: string): string {
       return "IMDb 8.5";
     case "rt_rating":
       return "RT 95%";
+    case "hdr":
+      return "HDR10";
+    case "audio_channels":
+      return "5.1";
+    case "edition":
+      return "Extended";
+    case "studio":
+      return "Studio";
+    case "runtime":
+      return "2h 15m";
     default:
       return type;
   }

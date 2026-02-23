@@ -423,7 +423,15 @@ async function getMediaInfoForItem(
   detail: {
     ratingKey: string;
     type: string;
-    media: Array<{ videoResolution?: string; videoCodec?: string; audioCodec?: string }>;
+    media: Array<{
+      videoResolution?: string;
+      videoCodec?: string;
+      audioCodec?: string;
+      audioChannels?: number;
+      bitDepth?: number;
+      colorSpace?: string;
+      videoDisplayTitle?: string;
+    }>;
   },
 ) {
   if (detail.media.length > 0) return detail.media[0];
@@ -524,7 +532,14 @@ const overlaysRouter = t.router({
             videoResolution: mediaInfo.videoResolution,
             videoCodec: mediaInfo.videoCodec,
             audioCodec: mediaInfo.audioCodec,
+            audioChannels: mediaInfo.audioChannels,
+            bitDepth: mediaInfo.bitDepth,
+            colorSpace: mediaInfo.colorSpace,
+            videoDisplayTitle: mediaInfo.videoDisplayTitle,
             contentRating: detail.contentRating,
+            duration: detail.duration,
+            studio: detail.studio,
+            editionTitle: detail.editionTitle,
           },
           ratings,
         );
@@ -562,7 +577,14 @@ const overlaysRouter = t.router({
             videoResolution: mediaInfo.videoResolution,
             videoCodec: mediaInfo.videoCodec,
             audioCodec: mediaInfo.audioCodec,
+            audioChannels: mediaInfo.audioChannels,
+            bitDepth: mediaInfo.bitDepth,
+            colorSpace: mediaInfo.colorSpace,
+            videoDisplayTitle: mediaInfo.videoDisplayTitle,
             contentRating: detail.contentRating,
+            duration: detail.duration,
+            studio: detail.studio,
+            editionTitle: detail.editionTitle,
           },
           ratings,
         );

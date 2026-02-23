@@ -14,7 +14,18 @@ export type OverlayPosition =
   | "bottom-center"
   | "bottom-right";
 
-export type OverlayType = "resolution" | "video_codec" | "audio_codec" | "content_rating" | "imdb_rating" | "rt_rating";
+export type OverlayType =
+  | "resolution"
+  | "video_codec"
+  | "audio_codec"
+  | "content_rating"
+  | "imdb_rating"
+  | "rt_rating"
+  | "hdr"
+  | "audio_channels"
+  | "edition"
+  | "studio"
+  | "runtime";
 
 export const OVERLAY_POSITIONS: OverlayPosition[] = [
   "top-left",
@@ -32,6 +43,11 @@ export const OVERLAY_TYPES: OverlayType[] = [
   "content_rating",
   "imdb_rating",
   "rt_rating",
+  "hdr",
+  "audio_channels",
+  "edition",
+  "studio",
+  "runtime",
 ];
 
 // ─── Config CRUD ────────────────────────────────────────────────────────────
@@ -92,7 +108,14 @@ interface MediaInfo {
   videoResolution?: string;
   videoCodec?: string;
   audioCodec?: string;
+  audioChannels?: number;
+  bitDepth?: number;
+  colorSpace?: string;
+  videoDisplayTitle?: string;
   contentRating?: string;
+  duration?: number;
+  studio?: string;
+  editionTitle?: string;
 }
 
 interface Ratings {
@@ -137,6 +160,38 @@ export function resolveOverlayValue(type: OverlayType, mediaInfo: MediaInfo, rat
       return ratings.imdbRating ? `IMDb ${ratings.imdbRating}` : null;
     case "rt_rating":
       return ratings.rtRating ? `RT ${ratings.rtRating}` : null;
+    case "hdr": {
+      const dt = mediaInfo.videoDisplayTitle?.toLowerCase() || "";
+      if (dt.includes("dolby vision")) return "DV";
+      if (dt.includes("hdr10+")) return "HDR10+";
+      if (dt.includes("hdr10")) return "HDR10";
+      if (dt.includes("hlg")) return "HLG";
+      if (dt.includes("hdr")) return "HDR";
+      if (mediaInfo.bitDepth && mediaInfo.bitDepth >= 10 && mediaInfo.colorSpace === "bt2020") return "HDR";
+      return null;
+    }
+    case "audio_channels": {
+      const ch = mediaInfo.audioChannels;
+      if (ch == null) return null;
+      if (ch === 8) return "7.1";
+      if (ch === 6) return "5.1";
+      if (ch === 2) return "Stereo";
+      if (ch === 1) return "Mono";
+      return `${ch}ch`;
+    }
+    case "edition":
+      return mediaInfo.editionTitle || null;
+    case "studio":
+      return mediaInfo.studio || null;
+    case "runtime": {
+      const ms = mediaInfo.duration;
+      if (!ms) return null;
+      const totalMin = Math.round(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
   }
 }
 
@@ -158,6 +213,10 @@ export function getBadgeColors(type: OverlayType, value: string): BadgeColors {
       return { bg: "#F5C518", text: "#000" };
     case "rt_rating":
       return { bg: "#FA320A", text: "#fff" };
+    case "hdr":
+      return { bg: "#7C3AED", text: "#fff" };
+    case "edition":
+      return { bg: "#0D9488", text: "#fff" };
     default:
       return { bg: "rgba(0,0,0,0.7)", text: "#fff" };
   }

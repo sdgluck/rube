@@ -227,14 +227,21 @@ export interface PlexMediaFullDetail {
   contentRating?: string;
   rating?: number;
   audienceRating?: number;
+  duration?: number;
+  studio?: string;
+  editionTitle?: string;
   guids: string[];
   media: Array<{
     videoResolution?: string;
     videoCodec?: string;
     audioCodec?: string;
+    audioChannels?: number;
     bitrate?: number;
     width?: number;
     height?: number;
+    bitDepth?: number;
+    colorSpace?: string;
+    videoDisplayTitle?: string;
   }>;
 }
 
@@ -1190,16 +1197,23 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
 
     const guids: string[] = (meta.Guid || []).map((g: { id: string }) => g.id);
-    const media: PlexMediaFullDetail["media"] = (meta.Media || []).map((m: Record<string, unknown>) => ({
-      videoResolution: m.videoResolution as string | undefined,
-      videoCodec: m.videoCodec as string | undefined,
-      audioCodec:
-        ((m.Part as Array<Record<string, unknown>>)?.[0]?.audioProfile as string | undefined) ??
-        (m.audioCodec as string | undefined),
-      bitrate: m.bitrate as number | undefined,
-      width: m.width as number | undefined,
-      height: m.height as number | undefined,
-    }));
+    const media: PlexMediaFullDetail["media"] = (meta.Media || []).map((m: Record<string, unknown>) => {
+      const parts = (m.Part as Array<Record<string, unknown>>) || [];
+      const streams = (parts[0]?.Stream as Array<Record<string, unknown>>) || [];
+      const videoStream = streams.find((s) => s.streamType === 1);
+      return {
+        videoResolution: m.videoResolution as string | undefined,
+        videoCodec: m.videoCodec as string | undefined,
+        audioCodec: (parts[0]?.audioProfile as string | undefined) ?? (m.audioCodec as string | undefined),
+        audioChannels: m.audioChannels as number | undefined,
+        bitrate: m.bitrate as number | undefined,
+        width: m.width as number | undefined,
+        height: m.height as number | undefined,
+        bitDepth: videoStream?.bitDepth as number | undefined,
+        colorSpace: videoStream?.colorSpace as string | undefined,
+        videoDisplayTitle: videoStream?.displayTitle as string | undefined,
+      };
+    });
 
     return {
       ratingKey: meta.ratingKey,
@@ -1210,6 +1224,9 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       contentRating: meta.contentRating,
       rating: meta.rating,
       audienceRating: meta.audienceRating,
+      duration: meta.duration,
+      studio: meta.studio,
+      editionTitle: meta.editionTitle,
       guids,
       media,
     };
