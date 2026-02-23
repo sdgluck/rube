@@ -1,11 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { trpc } from "../trpc";
+import { describeCron, formatTime } from "../utils";
 import styles from "./Jobs.module.css";
-
-function formatTime(ms: number): string {
-  return new Date(ms).toLocaleString();
-}
 
 function formatDuration(startMs: number, endMs?: number | null): string {
   const diff = (endMs || Date.now()) - startMs;
@@ -16,20 +13,6 @@ function formatDuration(startMs: number, endMs?: number | null): string {
   if (mins < 60) return `${mins}m ${remSecs}s`;
   const hours = Math.floor(mins / 60);
   return `${hours}h ${mins % 60}m`;
-}
-
-function describeCron(expr: string): string {
-  if (!expr) return "";
-  const parts = expr.trim().split(/\s+/);
-  if (parts.length !== 5) return expr;
-  const [min, hour, dom, mon, dow] = parts;
-
-  if (min.startsWith("*/")) return `Every ${min.slice(2)} minutes`;
-  if (dom === "*" && mon === "*" && dow === "*") {
-    if (hour === "*" && min === "0") return "Every hour";
-    if (hour !== "*") return `Daily at ${hour.padStart(2, "0")}:${min.padStart(2, "0")}`;
-  }
-  return expr;
 }
 
 function StatusBadge({ status }: { status?: string }) {

@@ -1,11 +1,8 @@
 import { useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { trpc } from "../trpc";
+import { formatTime } from "../utils";
 import styles from "./Jobs.module.css";
-
-function formatTime(ms: number): string {
-  return new Date(ms).toLocaleString();
-}
 
 function formatDuration(startMs: number, endMs?: number | null): string {
   const diff = (endMs || Date.now()) - startMs;

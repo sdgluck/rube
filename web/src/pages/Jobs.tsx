@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import pMap from "p-map";
 import { trpc } from "../trpc";
+import { describeCron, formatTime } from "../utils";
 import DropdownButton from "../DropdownButton";
 import styles from "./Jobs.module.css";
 import shared from "./Collections.module.css";
@@ -25,24 +26,6 @@ function StatusBadge({ status }: { status?: string }) {
           ? styles.badgeFailed
           : styles.badgeCancelled;
   return <span className={`${styles.badge} ${cls}`}>{status}</span>;
-}
-
-function describeCron(expr: string): string {
-  if (!expr) return "";
-  const parts = expr.trim().split(/\s+/);
-  if (parts.length !== 5) return expr;
-  const [min, hour, dom, mon, dow] = parts;
-
-  if (min.startsWith("*/")) return `Every ${min.slice(2)} minutes`;
-  if (dom === "*" && mon === "*" && dow === "*") {
-    if (hour === "*" && min === "0") return "Every hour";
-    if (hour !== "*") return `Daily at ${hour.padStart(2, "0")}:${min.padStart(2, "0")}`;
-  }
-  return expr;
-}
-
-function formatTime(ms: number): string {
-  return new Date(ms).toLocaleString();
 }
 
 type SortKey = "name" | "schedule" | "enabled" | "lastRun" | "lastRunStatus";
