@@ -120,9 +120,6 @@ export default function App() {
             Stats
             <SidebarStreamCount />
           </NavLink>
-          <NavLink to="/stress-test" className="nav-link">
-            Stress Test
-          </NavLink>
           <NavLink to="/collections" className="nav-link">
             Collections
           </NavLink>
@@ -153,7 +150,6 @@ export default function App() {
       <main className="content">
         <Routes>
           <Route path="/stats" element={<Stats />} />
-          <Route path="/stress-test" element={<StressTest />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/collections/:ratingKey" element={<CollectionDetail />} />
           <Route path="/rules" element={<Rules />} />
@@ -176,6 +172,7 @@ export default function App() {
               <Route path="pushover" element={<SettingsNotificationsPushover />} />
             </Route>
             <Route path="health" element={<SettingsHealth />} />
+            <Route path="stress-test" element={<StressTest />} />
           </Route>
           <Route path="*" element={<Navigate to="/stats" replace />} />
         </Routes>

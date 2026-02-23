@@ -70,10 +70,6 @@ export default function StressTest() {
   return (
     <div>
       <div className={styles.header}>
-        <h1 className={styles.heading}>
-          Stress Test
-          {runs.length > 0 && <span className="count-badge">{runs.length}</span>}
-        </h1>
         {!isRunning && (
           <button className={shared.button} onClick={() => setShowConfig(!showConfig)}>
             {showConfig ? "Cancel" : "Run Test"}

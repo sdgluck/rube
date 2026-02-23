@@ -33,6 +33,12 @@ export default function Settings() {
         >
           Health
         </NavLink>
+        <NavLink
+          to="/settings/stress-test"
+          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
+        >
+          Stress Test
+        </NavLink>
       </nav>
       <Outlet />
     </div>
