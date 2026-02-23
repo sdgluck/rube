@@ -204,6 +204,8 @@ export interface PlexMediaDetail extends PlexMediaItem {
   studio?: string;
   rating?: number;
   audienceRating?: number;
+  viewOffset?: number;
+  viewCount?: number;
   genres: string[];
   directors: string[];
   collections: Array<{ id: number; tag: string }>;
@@ -1144,6 +1146,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       studio: meta.studio,
       rating: meta.rating,
       audienceRating: meta.audienceRating,
+      viewOffset: meta.viewOffset as number | undefined,
+      viewCount: meta.viewCount as number | undefined,
       genres: (meta.Genre || []).map((g: { tag: string }) => g.tag),
       directors: (meta.Director || []).map((d: { tag: string }) => d.tag),
       collections: (meta.Collection || []).map((c: { id: number; tag: string }) => ({
@@ -1332,6 +1336,15 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     }
   }
 
+  async function markUnwatched(ratingKey: string): Promise<void> {
+    await request("/:/unscrobble", {
+      params: {
+        key: ratingKey,
+        identifier: "com.plexapp.plugins.library",
+      },
+    });
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -1379,6 +1392,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     stopTranscodeSession,
     fetchStreamUrl,
     reportTimeline,
+    markUnwatched,
   };
 }
 

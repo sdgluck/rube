@@ -286,14 +286,32 @@ export async function runStressTest(
   }
 
   // Collect a pool of ratingKeys (must be directly playable items: movies or episodes)
-  ctx.log("Gathering media items for test...");
+  // Skip items with existing watch progress to avoid polluting "Continue Watching"
+  ctx.log("Gathering unwatched media items for test...");
   const ratingKeys: string[] = [];
+  let skippedInProgress = 0;
+
+  async function addIfUnwatched(ratingKey: string): Promise<boolean> {
+    if (ratingKeys.length >= maxSessions * 2) return false;
+    try {
+      const detail = await client.getItemDetail(ratingKey);
+      if (detail.viewOffset && detail.viewOffset > 0) {
+        skippedInProgress++;
+        return false;
+      }
+      ratingKeys.push(ratingKey);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   // Movies are directly playable
   for (const section of movieSections) {
-    const result = await client.getItems(section.key, { offset: 0, size: 50 });
+    const result = await client.getItems(section.key, { offset: 0, size: 100 });
     for (const item of result.items) {
-      ratingKeys.push(item.ratingKey);
+      await addIfUnwatched(item.ratingKey);
+      if (ratingKeys.length >= maxSessions * 2) break;
     }
     if (ratingKeys.length >= maxSessions * 2) break;
   }
@@ -308,8 +326,9 @@ export async function runStressTest(
           const seasons = await client.getMetadataChildren(show.ratingKey);
           if (seasons.length > 0) {
             const episodes = await client.getMetadataChildren(seasons[0].ratingKey);
-            for (const ep of episodes.slice(0, 3)) {
-              ratingKeys.push(ep.ratingKey);
+            for (const ep of episodes.slice(0, 5)) {
+              await addIfUnwatched(ep.ratingKey);
+              if (ratingKeys.length >= maxSessions * 2) break;
             }
           }
         } catch {
@@ -321,7 +340,11 @@ export async function runStressTest(
   }
 
   if (ratingKeys.length === 0) {
-    throw new Error("No playable media items found in video sections");
+    throw new Error("No unwatched playable media items found in video sections");
+  }
+
+  if (skippedInProgress > 0) {
+    ctx.log(`Skipped ${skippedInProgress} item(s) with existing watch progress`);
   }
 
   // Shuffle the pool
@@ -337,6 +360,7 @@ export async function runStressTest(
   }
 
   let maxHealthySessions = 0;
+  const usedRatingKeys = new Set<string>();
 
   try {
     for (let step = 1; step <= maxSessions; step++) {
@@ -359,6 +383,7 @@ export async function runStressTest(
       try {
         await simClient.start(ratingKey, clientMode as "transcode" | "directplay", client);
         clients.push(simClient);
+        usedRatingKeys.add(ratingKey);
       } catch (err) {
         ctx.log(`Step ${step}: Failed to start session: ${(err as Error).message}`);
         steps.push({
@@ -459,6 +484,18 @@ export async function runStressTest(
     ctx.log(`Cleaning up ${clients.length} session(s)...`);
     ctx.progress(maxSessions, maxSessions + 1, "Cleaning up sessions...");
     await Promise.allSettled(clients.map((c) => c.stop(client)));
+
+    // Mark all used media items as unwatched to clean up watch history
+    if (usedRatingKeys.size > 0) {
+      ctx.log(`Marking ${usedRatingKeys.size} item(s) as unwatched...`);
+      for (const key of usedRatingKeys) {
+        try {
+          await client.markUnwatched(key);
+        } catch {
+          // Best-effort cleanup
+        }
+      }
+    }
   }
 
   const finishedAt = Date.now();
