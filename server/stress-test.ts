@@ -714,6 +714,7 @@ export function getActiveStressTest(): {
   id: string;
   progress: number;
   message: string;
+  log: string;
   startedAt: number;
 } | null {
   if (!activeStressTest) return null;
@@ -722,6 +723,7 @@ export function getActiveStressTest(): {
       id: stressTestRuns.id,
       progress: stressTestRuns.progress,
       message: stressTestRuns.message,
+      log: stressTestRuns.log,
       startedAt: stressTestRuns.startedAt,
     })
     .from(stressTestRuns)

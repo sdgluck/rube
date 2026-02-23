@@ -245,3 +245,18 @@
   background: #dc3545;
   color: #fff;
 }
+
+.logViewer {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  padding: 16px;
+  border-radius: 8px;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 24px;
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "../trpc";
 import styles from "./StressTest.module.css";
 import shared from "./Collections.module.css";
@@ -56,6 +56,13 @@ export default function StressTest() {
 
   const stressTestRun = activeRunQuery.data;
   const isRunning = !!stressTestRun;
+  const logRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [stressTestRun?.log]);
 
   async function handleStart() {
     const input: { mode: typeof mode; maxSessions: number; transcodePct?: number } = { mode, maxSessions };
@@ -137,6 +144,12 @@ export default function StressTest() {
             Cancel
           </button>
         </div>
+      )}
+
+      {isRunning && stressTestRun?.log && (
+        <pre ref={logRef} className={styles.logViewer}>
+          {stressTestRun.log}
+        </pre>
       )}
 
       {selectedRun && (
