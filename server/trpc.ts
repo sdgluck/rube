@@ -275,6 +275,7 @@ const usersRouter = t.router({
 });
 
 const testControllers = new Map<string, AbortController>();
+const runControllers = new Map<string, AbortController>();
 
 const rulesRouter = t.router({
   list: procedure.query(() => getRules()),
@@ -340,6 +341,35 @@ const rulesRouter = t.router({
     console.log(`[test-rule] Cancel requested for rule "${input.id}"`);
     testControllers.get(input.id)?.abort();
     testControllers.delete(input.id);
+    return { ok: true };
+  }),
+
+  run: procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+    if (runControllers.has(input.id)) {
+      console.log(`[run-rule] Aborting previous run for rule "${input.id}"`);
+      runControllers.get(input.id)?.abort();
+    }
+    const controller = new AbortController();
+    runControllers.set(input.id, controller);
+    try {
+      const { runSingleRule } = await import("./commands/generate.ts");
+      return await runSingleRule(input.id, controller.signal);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        console.log(`[run-rule] Run for rule "${input.id}" was cancelled`);
+      } else {
+        console.error(`[run-rule] Run for rule "${input.id}" failed:`, err instanceof Error ? err.message : err);
+      }
+      throw err;
+    } finally {
+      runControllers.delete(input.id);
+    }
+  }),
+
+  cancelRun: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    console.log(`[run-rule] Cancel requested for rule "${input.id}"`);
+    runControllers.get(input.id)?.abort();
+    runControllers.delete(input.id);
     return { ok: true };
   }),
 });

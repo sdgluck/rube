@@ -100,9 +100,16 @@ export default function Rules() {
   const cancelTestMutation = trpc.rules.cancelTest.useMutation();
   const testingRuleIdRef = useRef<string | null>(null);
 
+  const runMutation = trpc.rules.run.useMutation({
+    onSuccess: () => utils.rules.list.invalidate(),
+  });
+  const cancelRunMutation = trpc.rules.cancelRun.useMutation();
+  const runningRuleIdRef = useRef<string | null>(null);
+
   const [form, setForm] = useState<FormState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
+  const [runningRuleId, setRunningRuleId] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
@@ -307,11 +314,37 @@ export default function Rules() {
     testMutation.reset();
   }
 
-  // Cancel test on unmount (e.g. navigation away)
+  function handleRun(rule: (typeof rules)[0]) {
+    setRunningRuleId(rule.id);
+    runningRuleIdRef.current = rule.id;
+    runMutation.mutate(
+      { id: rule.id },
+      {
+        onSettled: () => {
+          runningRuleIdRef.current = null;
+          setRunningRuleId(null);
+        },
+      },
+    );
+  }
+
+  function handleCancelRun() {
+    if (runningRuleId) {
+      cancelRunMutation.mutate({ id: runningRuleId });
+    }
+    runningRuleIdRef.current = null;
+    setRunningRuleId(null);
+    runMutation.reset();
+  }
+
+  // Cancel test/run on unmount (e.g. navigation away)
   useEffect(() => {
     return () => {
       if (testingRuleIdRef.current) {
         cancelTestMutation.mutate({ id: testingRuleIdRef.current });
+      }
+      if (runningRuleIdRef.current) {
+        cancelRunMutation.mutate({ id: runningRuleIdRef.current });
       }
     };
   }, []);
@@ -480,6 +513,19 @@ export default function Rules() {
                           View
                         </button>
                       )}
+                      {runMutation.isPending && runningRuleId === rule.id ? (
+                        <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelRun}>
+                          Cancel
+                        </button>
+                      ) : (
+                        <button
+                          className={`${shared.button} ${shared.buttonSmall}`}
+                          onClick={() => handleRun(rule)}
+                          disabled={runMutation.isPending || testMutation.isPending}
+                        >
+                          Run
+                        </button>
+                      )}
                       {testMutation.isPending && testingRuleId === rule.id ? (
                         <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelTest}>
                           Cancel
@@ -488,7 +534,7 @@ export default function Rules() {
                         <button
                           className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
                           onClick={() => handleTest(rule)}
-                          disabled={testMutation.isPending}
+                          disabled={testMutation.isPending || runMutation.isPending}
                         >
                           Test
                         </button>
@@ -513,6 +559,15 @@ export default function Rules() {
             })}
           </tbody>
         </table>
+      )}
+
+      {runMutation.isError && (
+        <div className={styles.testPreviewError}>
+          Run failed: {runMutation.error?.message || "Unknown error"}
+          <button className={styles.testPreviewCloseBtn} style={{ marginLeft: 12 }} onClick={() => runMutation.reset()}>
+            Dismiss
+          </button>
+        </div>
       )}
 
       {testMutation.isError && (

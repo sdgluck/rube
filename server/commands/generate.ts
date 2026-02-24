@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import PQueue from "p-queue";
 import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
-import { getEnabledRules, setRuleLastCollection, type Rule } from "../rules.ts";
+import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../rules.ts";
 import { fetchImdbChart, fetchImdbList } from "../imdb.ts";
 import { extractImdbId, getOmdbRatings } from "../omdb.ts";
 import { reportHealth } from "../health.ts";
@@ -1003,4 +1003,105 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
   }
 
   ctx.log("\nAll done!");
+}
+
+export async function runSingleRule(
+  ruleId: string,
+  signal?: AbortSignal,
+): Promise<{ lastCollectionKey: string | null }> {
+  const rule = getRule(ruleId);
+  if (!rule) throw new Error(`Rule "${ruleId}" not found`);
+
+  const log = (...args: unknown[]) => console.log("[run-rule]", ...args);
+  log(`Running rule "${rule.name}" (${rule.type})`);
+
+  const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+  const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+  if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
+
+  const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal });
+  const identity = await client.getIdentity();
+  const machineId = identity.machineIdentifier;
+
+  let allSections = await client.getSections();
+  const configuredLibraries = getConfig("global_plex_libraries");
+  if (configuredLibraries) {
+    allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
+  }
+
+  const ruleConfig = parseRuleConfig(rule);
+
+  let sections: PlexSection[];
+  if (ruleConfig.sections && ruleConfig.sections.length > 0) {
+    const names = ruleConfig.sections.map((s) => s.trim().toLowerCase());
+    sections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
+    if (sections.length === 0) throw new Error("No matching sections for rule config.");
+  } else {
+    sections = allSections;
+  }
+
+  // Delete old collections for this rule
+  const ruleLabel = `Rule:${rule.id}`;
+  for (const section of sections) {
+    const deleted = await client.deleteCollectionsByLabel(section.key, ruleLabel);
+    if (deleted > 0) log(`Deleted ${deleted} old collection(s) from "${section.title}"`);
+  }
+
+  const labels = ["Tinkerbell", ruleLabel];
+  const ctx: JobContext = { log, progress: () => {}, signal: signal || new AbortController().signal };
+
+  let lastCollectionKey: string | null = null;
+  switch (rule.type) {
+    case "ai_prompt":
+      lastCollectionKey = await handleAiPrompt(ctx, client, sections, machineId, rule, ruleConfig, labels);
+      break;
+    case "top_rated":
+      lastCollectionKey = await handleRated(
+        ctx,
+        client,
+        sections,
+        machineId,
+        "rating:desc",
+        ruleConfig,
+        labels,
+        "Top Rated",
+      );
+      break;
+    case "lowest_rated":
+      lastCollectionKey = await handleRated(
+        ctx,
+        client,
+        sections,
+        machineId,
+        "rating:asc",
+        ruleConfig,
+        labels,
+        "Lowest Rated",
+      );
+      break;
+    case "actors":
+      lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
+      break;
+    case "studios":
+      lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
+      break;
+    case "imdb_chart":
+      lastCollectionKey = await handleImdbChart(ctx, client, sections, machineId, ruleConfig, labels);
+      break;
+    case "imdb_list":
+      lastCollectionKey = await handleImdbList(ctx, client, sections, machineId, ruleConfig, labels);
+      break;
+    case "rt_top_rated":
+      lastCollectionKey = await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
+      break;
+    default:
+      throw new Error(`Unknown rule type: ${rule.type}`);
+  }
+
+  if (lastCollectionKey) {
+    setRuleLastCollection(rule.id, lastCollectionKey);
+  }
+
+  log(`Done — lastCollectionKey: ${lastCollectionKey}`);
+  return { lastCollectionKey };
 }
