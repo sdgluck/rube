@@ -23,6 +23,7 @@ const RULE_TYPES = [
   { value: "imdb_chart", label: "IMDb Chart" },
   { value: "imdb_list", label: "IMDb List" },
   { value: "rt_top_rated", label: "RT Top Rated" },
+  { value: "seerr_requests", label: "Seerr Requests" },
 ];
 
 const IMDB_CHARTS = [
@@ -44,6 +45,15 @@ const IMDB_CHART_SECTION_TYPE: Record<string, string> = {
   box_office: "movie",
 };
 
+const SEERR_FILTERS = [
+  { value: "all", label: "All Requests" },
+  { value: "approved", label: "Approved" },
+  { value: "available", label: "Available" },
+  { value: "pending", label: "Pending" },
+];
+
+const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(SEERR_FILTERS.map((f) => [f.value, f.label]));
+
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));
 
 interface FormState {
@@ -56,6 +66,7 @@ interface FormState {
   sections: string[];
   chart: string;
   listId: string;
+  filter: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -67,12 +78,14 @@ const EMPTY_FORM: FormState = {
   sections: [],
   chart: "top_250_movies",
   listId: "",
+  filter: "all",
 };
 
 function defaultLimitForType(type: string): number {
   if (type === "ai_prompt") return 8;
   if (type === "top_rated" || type === "lowest_rated") return 50;
   if (type === "rt_top_rated") return 100;
+  if (type === "seerr_requests") return 50;
   return 10;
 }
 
@@ -80,6 +93,7 @@ function maxLimitForType(type: string): number {
   if (type === "ai_prompt") return 10;
   if (type === "top_rated" || type === "lowest_rated") return 200;
   if (type === "rt_top_rated") return 200;
+  if (type === "seerr_requests") return 200;
   return 50;
 }
 
@@ -205,6 +219,7 @@ export default function Rules() {
       sections: (config.sections as string[]) || [],
       chart: (config.chart as string) || "top_250_movies",
       listId: (config.listId as string) || "",
+      filter: (config.filter as string) || "all",
     });
     setIsEditing(true);
   }
@@ -224,6 +239,7 @@ export default function Rules() {
     }
     if (form.type === "imdb_chart") config.chart = form.chart;
     if (form.type === "imdb_list") config.listId = form.listId;
+    if (form.type === "seerr_requests") config.filter = form.filter;
     if (form.sections.length > 0) config.sections = form.sections;
     const configStr = JSON.stringify(config);
 
@@ -474,6 +490,8 @@ export default function Rules() {
                   configSummary = c.listId || "—";
                 } else if (rule.type === "rt_top_rated") {
                   configSummary = `Top ${c.limit ?? 100} items`;
+                } else if (rule.type === "seerr_requests") {
+                  configSummary = `${SEERR_FILTER_LABELS[c.filter] || "All Requests"} | ${c.limit ?? 50} items`;
                 } else {
                   configSummary = `Max: ${c.limit ?? 10}`;
                 }
@@ -487,7 +505,9 @@ export default function Rules() {
                     ? styles.typeImdb
                     : rule.type === "rt_top_rated"
                       ? styles.typeRt
-                      : styles.typeCriteria;
+                      : rule.type === "seerr_requests"
+                        ? styles.typeSeerr
+                        : styles.typeCriteria;
               return (
                 <tr key={rule.id}>
                   <td className={styles.checkboxCell} onClick={(e) => handleCheckboxClick(i, e)}>
@@ -708,6 +728,30 @@ export default function Rules() {
             <div className={styles.ruleFormField}>
               <span className={styles.promptHint}>Requires an OMDB API key configured in Settings.</span>
             </div>
+          )}
+
+          {form.type === "seerr_requests" && (
+            <>
+              <div className={styles.ruleFormField}>
+                <label>Filter</label>
+                <select
+                  className={shared.select}
+                  value={form.filter}
+                  onChange={(e) => setForm({ ...form, filter: e.target.value })}
+                >
+                  {SEERR_FILTERS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.ruleFormField}>
+                <span className={styles.promptHint}>
+                  Requires Jellyseerr/Overseerr configured in Settings &gt; Arrs.
+                </span>
+              </div>
+            </>
           )}
 
           {typeHasLimit(form.type) && (

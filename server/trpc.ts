@@ -653,6 +653,10 @@ const HEALTH_SERVICES = [
     service: "Sonarr",
     configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_sonarr_url && c.global_sonarr_api_key),
   },
+  {
+    service: "Seerr",
+    configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!(c.global_seerr_url && c.global_seerr_api_key),
+  },
   { service: "MDBList", configuredFn: (c: Partial<z.infer<typeof configSchema>>) => !!c.global_mdblist_api_key },
   {
     service: "Pushover",
@@ -752,6 +756,13 @@ async function checkServiceHealth(service: string): Promise<void> {
       if (!cfg.global_sonarr_url || !cfg.global_sonarr_api_key) throw new Error("Not configured");
       const name = await testArrConnection(cfg.global_sonarr_url, cfg.global_sonarr_api_key);
       reportHealth("Sonarr", "ok", `Connected — ${name}`);
+      break;
+    }
+    case "Seerr": {
+      if (!cfg.global_seerr_url || !cfg.global_seerr_api_key) throw new Error("Not configured");
+      const { testSeerrConnection } = await import("./seerr.ts");
+      const data = await testSeerrConnection(cfg.global_seerr_url, cfg.global_seerr_api_key);
+      reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
       break;
     }
     case "MDBList": {
@@ -990,6 +1001,18 @@ export const appRouter = t.router({
       return { ok: true as const, instanceName };
     } catch (err) {
       reportHealth("Sonarr", "error", (err as Error).message);
+      return { ok: false as const, error: (err as Error).message };
+    }
+  }),
+
+  testSeerr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+    try {
+      const { testSeerrConnection } = await import("./seerr.ts");
+      const data = await testSeerrConnection(input.url, input.api_key);
+      reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
+      return { ok: true as const, total: data.total };
+    } catch (err) {
+      reportHealth("Seerr", "error", (err as Error).message);
       return { ok: false as const, error: (err as Error).message };
     }
   }),

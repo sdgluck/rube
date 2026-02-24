@@ -20,6 +20,12 @@ export default function SettingsArrs() {
   const [testingSonarr, setTestingSonarr] = useState(false);
   const [savingSonarr, setSavingSonarr] = useState(false);
 
+  const [seerrUrl, setSeerrUrl] = useState("");
+  const [seerrApiKey, setSeerrApiKey] = useState("");
+  const [seerrStatus, setSeerrStatus] = useState<Status | null>(null);
+  const [testingSeerr, setTestingSeerr] = useState(false);
+  const [savingSeerr, setSavingSeerr] = useState(false);
+
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
@@ -28,6 +34,7 @@ export default function SettingsArrs() {
   const saveConfigMutation = trpc.config.save.useMutation();
   const testRadarrMutation = trpc.testRadarr.useMutation();
   const testSonarrMutation = trpc.testSonarr.useMutation();
+  const testSeerrMutation = trpc.testSeerr.useMutation();
 
   useEffect(() => {
     if (configQuery.data) {
@@ -35,6 +42,8 @@ export default function SettingsArrs() {
       setRadarrApiKey(configQuery.data.global_radarr_api_key || "");
       setSonarrUrl(configQuery.data.global_sonarr_url || "");
       setSonarrApiKey(configQuery.data.global_sonarr_api_key || "");
+      setSeerrUrl(configQuery.data.global_seerr_url || "");
+      setSeerrApiKey(configQuery.data.global_seerr_api_key || "");
     }
   }, [configQuery.data]);
 
@@ -128,6 +137,51 @@ export default function SettingsArrs() {
     }
   };
 
+  const runSeerrTest = async (url: string, apiKey: string): Promise<boolean> => {
+    setSeerrStatus(null);
+    if (!url || !apiKey) {
+      setSeerrStatus({ type: "error", msg: "Both URL and API key are required" });
+      return false;
+    }
+    setTestingSeerr(true);
+    try {
+      const result = await testSeerrMutation.mutateAsync({ url, api_key: apiKey });
+      if (result.ok) {
+        setSeerrStatus({ type: "success", msg: `Connected — ${result.total} total requests` });
+        return true;
+      }
+      throw "nope";
+    } catch {
+      setSeerrStatus({ type: "error", msg: "Connection test failed" });
+      return false;
+    } finally {
+      setTestingSeerr(false);
+      utils.health.status.invalidate();
+    }
+  };
+
+  const handleSaveSeerr = async () => {
+    setSeerrStatus(null);
+    setSavingSeerr(true);
+    try {
+      const ok = await runSeerrTest(seerrUrl, seerrApiKey);
+      if (!ok) {
+        setSeerrStatus({ type: "error", msg: "Seerr connection failed — settings not saved" });
+        setSavingSeerr(false);
+        return;
+      }
+      await saveConfigMutation.mutateAsync({
+        global_seerr_url: seerrUrl,
+        global_seerr_api_key: seerrApiKey,
+      });
+      setSeerrStatus({ type: "success", msg: "Seerr settings saved" });
+    } catch {
+      setSeerrStatus({ type: "error", msg: "Failed to save Seerr settings" });
+    } finally {
+      setSavingSeerr(false);
+    }
+  };
+
   if (configQuery.isLoading) return <p>Loading...</p>;
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
@@ -205,6 +259,44 @@ export default function SettingsArrs() {
             disabled={testingSonarr}
           >
             {testingSonarr ? "Testing..." : "Test Connection"}
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset className={styles.group}>
+        <legend className={styles.groupTitle}>Jellyseerr / Overseerr</legend>
+        <label className={styles.field}>
+          <span className={styles.label}>Seerr URL</span>
+          <input
+            type="text"
+            className={styles.input}
+            placeholder="http://localhost:5055"
+            value={seerrUrl}
+            onChange={(e) => setSeerrUrl(e.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span className={styles.label}>API Key</span>
+          <input
+            type="password"
+            className={styles.input}
+            placeholder="Enter API key"
+            value={seerrApiKey}
+            onChange={(e) => setSeerrApiKey(e.target.value)}
+          />
+        </label>
+        {seerrStatus && <div className={`${styles.toast} ${styles[seerrStatus.type]}`}>{seerrStatus.msg}</div>}
+        <div className={styles.buttons}>
+          <button type="button" className={styles.button} onClick={handleSaveSeerr} disabled={savingSeerr}>
+            {savingSeerr ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            className={styles.buttonSecondary}
+            onClick={() => runSeerrTest(seerrUrl, seerrApiKey)}
+            disabled={testingSeerr}
+          >
+            {testingSeerr ? "Testing..." : "Test Connection"}
           </button>
         </div>
       </fieldset>

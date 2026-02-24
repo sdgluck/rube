@@ -20,6 +20,7 @@ interface RuleConfig {
   sections?: string[];
   chart?: string;
   listId?: string;
+  filter?: string;
 }
 
 function parseRuleConfig(rule: Rule): RuleConfig {
@@ -504,6 +505,85 @@ async function handleRtTopRated(
   return lastCollectionKey;
 }
 
+async function handleSeerrRequests(
+  ctx: JobContext,
+  client: PlexClient,
+  sections: PlexSection[],
+  machineId: string,
+  rule: Rule,
+  ruleConfig: RuleConfig,
+  labels: string[],
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
+  const seerrUrl = getConfig("global_seerr_url");
+  const seerrApiKey = getConfig("global_seerr_api_key");
+  if (!seerrUrl || !seerrApiKey) {
+    throw new Error("Seerr URL and API key are required. Configure them in Settings > Arrs.");
+  }
+
+  const limit = Math.min(ruleConfig.limit ?? 50, 200);
+  const filter = ruleConfig.filter || "all";
+
+  ctx.log(`[Seerr Requests] Fetching requests (filter: ${filter}, limit: ${limit})...`);
+  const { fetchSeerrRequests } = await import("../seerr.ts");
+  const requests = await fetchSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter, limit });
+  ctx.log(`Fetched ${requests.length} request(s) from Seerr.`);
+
+  for (const section of sections) {
+    const sectionMediaType = section.type === "movie" ? "movie" : "tv";
+    const sectionRequests = requests.filter((r) => r.media.mediaType === sectionMediaType);
+
+    if (sectionRequests.length === 0) {
+      ctx.log(`[Seerr Requests] No ${sectionMediaType} requests for "${section.title}", skipping.`);
+      continue;
+    }
+
+    ctx.log(`[Seerr Requests] "${section.title}" — matching ${sectionRequests.length} requests against library...`);
+    const items = await client.allItemsWithGuids(section.key);
+
+    const tmdbToRatingKey = new Map<number, string>();
+    for (const item of items) {
+      for (const guid of item.guids) {
+        const match = guid.match(/tmdb:\/\/(\d+)/);
+        if (match) {
+          tmdbToRatingKey.set(parseInt(match[1], 10), item.ratingKey);
+          break;
+        }
+      }
+    }
+
+    const ratingKeys = sectionRequests.map((r) => tmdbToRatingKey.get(r.media.tmdbId)).filter(Boolean) as string[];
+
+    if (ratingKeys.length === 0) {
+      ctx.log(`No matching items found in "${section.title}", skipping.`);
+      continue;
+    }
+
+    const collectionName = rule.name;
+    ctx.log(`Creating "${collectionName}" (${ratingKeys.length} items)...`);
+    const collectionKey = await client.createCollectionWithLabel(
+      section.key,
+      section.type,
+      machineId,
+      collectionName,
+      ratingKeys,
+      labels,
+    );
+
+    if (collectionKey) {
+      await client.pinToHomepage(section.key, collectionKey, {
+        promotedToOwnHome: 1,
+        promotedToRecommendedHome: 1,
+        promotedToSharedHome: 1,
+      });
+      ctx.log(`Pinned "${collectionName}" to homepage`);
+      lastCollectionKey = collectionKey;
+    }
+  }
+
+  return lastCollectionKey;
+}
+
 // ─── Test / Preview ──────────────────────────────────────────────────────────
 
 export interface TestCollectionPreview {
@@ -849,6 +929,53 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
       break;
     }
 
+    case "seerr_requests": {
+      const seerrUrl = getConfig("global_seerr_url");
+      const seerrApiKey = getConfig("global_seerr_api_key");
+      if (!seerrUrl || !seerrApiKey) {
+        throw new Error("Seerr URL and API key are required. Configure them in Settings > Arrs.");
+      }
+      const limit = Math.min(ruleConfig.limit ?? 50, 200);
+      const filter = ruleConfig.filter || "all";
+      log(`[seerr_requests] filter=${filter}, limit=${limit}`);
+
+      const { fetchSeerrRequests } = await import("../seerr.ts");
+      const requests = await fetchSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter, limit });
+      log(`[seerr_requests] Fetched ${requests.length} request(s) from Seerr`);
+
+      for (const section of sections) {
+        const sectionMediaType = section.type === "movie" ? "movie" : "tv";
+        const sectionRequests = requests.filter((r) => r.media.mediaType === sectionMediaType);
+        log(`[seerr_requests] ${sectionRequests.length} ${sectionMediaType} requests for "${section.title}"`);
+
+        if (sectionRequests.length === 0) continue;
+
+        const items = await client.allItemsWithGuids(section.key);
+        log(`[seerr_requests] Fetched ${items.length} items with GUIDs from "${section.title}"`);
+
+        const tmdbToItem = new Map<number, { title: string; year?: number }>();
+        for (const item of items) {
+          for (const guid of item.guids) {
+            const match = guid.match(/tmdb:\/\/(\d+)/);
+            if (match) {
+              tmdbToItem.set(parseInt(match[1], 10), { title: item.title, year: item.year });
+              break;
+            }
+          }
+        }
+        log(`[seerr_requests] ${tmdbToItem.size} items have TMDB IDs in "${section.title}"`);
+
+        const matched = sectionRequests.map((r) => tmdbToItem.get(r.media.tmdbId)).filter(Boolean) as Array<{
+          title: string;
+          year?: number;
+        }>;
+        log(`[seerr_requests] Matched ${matched.length}/${sectionRequests.length} requests in "${section.title}"`);
+        if (matched.length === 0) continue;
+        collections.push({ name: rule.name, sectionTitle: section.title, items: matched });
+      }
+      break;
+    }
+
     default:
       log(`Error: Unknown rule type "${rule.type}"`);
       throw new Error(`Unknown rule type: ${rule.type}`);
@@ -993,6 +1120,9 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
       case "rt_top_rated":
         lastCollectionKey = await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
         break;
+      case "seerr_requests":
+        lastCollectionKey = await handleSeerrRequests(ctx, client, sections, machineId, rule, ruleConfig, labels);
+        break;
       default:
         ctx.log(`Unknown rule type: ${rule.type}, skipping.`);
     }
@@ -1093,6 +1223,9 @@ export async function runSingleRule(
       break;
     case "rt_top_rated":
       lastCollectionKey = await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
+      break;
+    case "seerr_requests":
+      lastCollectionKey = await handleSeerrRequests(ctx, client, sections, machineId, rule, ruleConfig, labels);
       break;
     default:
       throw new Error(`Unknown rule type: ${rule.type}`);
