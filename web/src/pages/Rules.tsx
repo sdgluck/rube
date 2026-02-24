@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import DropdownButton from "../DropdownButton";
 import ConfirmModal from "../ConfirmModal";
@@ -87,6 +88,7 @@ function typeHasLimit(type: string): boolean {
 }
 
 export default function Rules() {
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
   const rulesQuery = trpc.rules.list.useQuery();
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
@@ -470,6 +472,14 @@ export default function Rules() {
                   </td>
                   <td>
                     <div className={styles.actions}>
+                      {rule.lastCollectionRatingKey && (
+                        <button
+                          className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                          onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
+                        >
+                          View
+                        </button>
+                      )}
                       {testMutation.isPending && testingRuleId === rule.id ? (
                         <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelTest}>
                           Cancel

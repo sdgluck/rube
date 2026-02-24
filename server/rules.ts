@@ -21,7 +21,15 @@ export function createRule(input: { name: string; type: string; config: string }
   const id = randomUUID();
   const now = Date.now();
   db.insert(rules).values({ id, name: input.name, type: input.type, config: input.config, createdAt: now }).run();
-  return { id, name: input.name, type: input.type, enabled: 1, config: input.config, createdAt: now };
+  return {
+    id,
+    name: input.name,
+    type: input.type,
+    enabled: 1,
+    config: input.config,
+    createdAt: now,
+    lastCollectionRatingKey: null,
+  };
 }
 
 export function updateRule(id: string, updates: { name?: string; enabled?: number; config?: string }): void {
@@ -31,6 +39,10 @@ export function updateRule(id: string, updates: { name?: string; enabled?: numbe
   if (updates.config !== undefined) sets.config = updates.config;
   if (Object.keys(sets).length === 0) return;
   db.update(rules).set(sets).where(eq(rules.id, id)).run();
+}
+
+export function setRuleLastCollection(id: string, ratingKey: string): void {
+  db.update(rules).set({ lastCollectionRatingKey: ratingKey }).where(eq(rules.id, id)).run();
 }
 
 export function deleteRule(id: string): void {

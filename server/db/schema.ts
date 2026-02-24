@@ -39,6 +39,7 @@ export const rules = sqliteTable("rules", {
   enabled: integer("enabled").notNull().default(1),
   config: text("config").notNull().default("{}"),
   createdAt: integer("created_at").notNull(),
+  lastCollectionRatingKey: text("last_collection_rating_key"),
 });
 
 export const jobRuns = sqliteTable(

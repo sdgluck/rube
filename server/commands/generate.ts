@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import PQueue from "p-queue";
 import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
-import { getEnabledRules, type Rule } from "../rules.ts";
+import { getEnabledRules, setRuleLastCollection, type Rule } from "../rules.ts";
 import { fetchImdbChart, fetchImdbList } from "../imdb.ts";
 import { extractImdbId, getOmdbRatings } from "../omdb.ts";
 import { reportHealth } from "../health.ts";
@@ -58,7 +58,8 @@ async function handleAiPrompt(
   rule: Rule,
   ruleConfig: RuleConfig,
   labels: string[],
-): Promise<void> {
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
   const ANTHROPIC_API_KEY = getConfig("global_anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_API_KEY) {
     throw new Error("Anthropic API key is required for AI prompt rules. Configure it in Settings.");
@@ -171,12 +172,15 @@ ${itemList}`,
           promotedToSharedHome: 1,
         });
         ctx.log(`Pinned "${col.name}" to homepage`);
+        lastCollectionKey = collectionKey;
         created++;
       }
     }
 
     ctx.log(`Created and pinned ${created} collection(s) for "${sectionTitle}".`);
   }
+
+  return lastCollectionKey;
 }
 
 async function handleRated(
@@ -188,7 +192,8 @@ async function handleRated(
   ruleConfig: RuleConfig,
   labels: string[],
   displayName: string,
-): Promise<void> {
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
   const limit = ruleConfig.limit ?? 50;
 
   for (const section of sections) {
@@ -221,8 +226,11 @@ async function handleRated(
         promotedToSharedHome: 1,
       });
       ctx.log(`Pinned "${collectionName}" to homepage`);
+      lastCollectionKey = collectionKey;
     }
   }
+
+  return lastCollectionKey;
 }
 
 async function handleGrouped(
@@ -233,7 +241,8 @@ async function handleGrouped(
   field: string,
   ruleConfig: RuleConfig,
   labels: string[],
-): Promise<void> {
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
   const maxCollections = ruleConfig.limit ?? 10;
 
   for (const section of sections) {
@@ -274,12 +283,15 @@ async function handleGrouped(
           promotedToSharedHome: 1,
         });
         ctx.log(`Pinned "${collectionName}" to homepage`);
+        lastCollectionKey = collectionKey;
         created++;
       }
     }
 
     ctx.log(`Created ${created} ${field} collection(s) for "${section.title}".`);
   }
+
+  return lastCollectionKey;
 }
 
 async function handleImdbChart(
@@ -289,7 +301,8 @@ async function handleImdbChart(
   machineId: string,
   ruleConfig: RuleConfig,
   labels: string[],
-): Promise<void> {
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
   const chartId = ruleConfig.chart;
   if (!chartId) throw new Error("IMDb chart ID is required.");
 
@@ -336,8 +349,11 @@ async function handleImdbChart(
         promotedToSharedHome: 1,
       });
       ctx.log(`Pinned "${chartName}" to homepage`);
+      lastCollectionKey = collectionKey;
     }
   }
+
+  return lastCollectionKey;
 }
 
 async function handleImdbList(
@@ -347,7 +363,8 @@ async function handleImdbList(
   machineId: string,
   ruleConfig: RuleConfig,
   labels: string[],
-): Promise<void> {
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
   const listId = ruleConfig.listId;
   if (!listId) throw new Error("IMDb list ID is required.");
 
@@ -394,8 +411,11 @@ async function handleImdbList(
         promotedToSharedHome: 1,
       });
       ctx.log(`Pinned "${listTitle}" to homepage`);
+      lastCollectionKey = collectionKey;
     }
   }
+
+  return lastCollectionKey;
 }
 
 async function handleRtTopRated(
@@ -405,7 +425,8 @@ async function handleRtTopRated(
   machineId: string,
   ruleConfig: RuleConfig,
   labels: string[],
-): Promise<void> {
+): Promise<string | null> {
+  let lastCollectionKey: string | null = null;
   const omdbKey = getConfig("global_omdb_api_key");
   if (!omdbKey) {
     throw new Error("OMDB API key is required for RT Top Rated rules. Configure it in Settings.");
@@ -476,8 +497,11 @@ async function handleRtTopRated(
         promotedToSharedHome: 1,
       });
       ctx.log(`Pinned "${collectionName}" to homepage`);
+      lastCollectionKey = collectionKey;
     }
   }
+
+  return lastCollectionKey;
 }
 
 // ─── Test / Preview ──────────────────────────────────────────────────────────
@@ -925,33 +949,56 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
 
     const labels = ["Tinkerbell", ruleLabel];
 
+    let lastCollectionKey: string | null = null;
     switch (rule.type) {
       case "ai_prompt":
-        await handleAiPrompt(ctx, client, sections, machineId, rule, ruleConfig, labels);
+        lastCollectionKey = await handleAiPrompt(ctx, client, sections, machineId, rule, ruleConfig, labels);
         break;
       case "top_rated":
-        await handleRated(ctx, client, sections, machineId, "rating:desc", ruleConfig, labels, "Top Rated");
+        lastCollectionKey = await handleRated(
+          ctx,
+          client,
+          sections,
+          machineId,
+          "rating:desc",
+          ruleConfig,
+          labels,
+          "Top Rated",
+        );
         break;
       case "lowest_rated":
-        await handleRated(ctx, client, sections, machineId, "rating:asc", ruleConfig, labels, "Lowest Rated");
+        lastCollectionKey = await handleRated(
+          ctx,
+          client,
+          sections,
+          machineId,
+          "rating:asc",
+          ruleConfig,
+          labels,
+          "Lowest Rated",
+        );
         break;
       case "actors":
-        await handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
+        lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
         break;
       case "studios":
-        await handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
+        lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
         break;
       case "imdb_chart":
-        await handleImdbChart(ctx, client, sections, machineId, ruleConfig, labels);
+        lastCollectionKey = await handleImdbChart(ctx, client, sections, machineId, ruleConfig, labels);
         break;
       case "imdb_list":
-        await handleImdbList(ctx, client, sections, machineId, ruleConfig, labels);
+        lastCollectionKey = await handleImdbList(ctx, client, sections, machineId, ruleConfig, labels);
         break;
       case "rt_top_rated":
-        await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
+        lastCollectionKey = await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
         break;
       default:
         ctx.log(`Unknown rule type: ${rule.type}, skipping.`);
+    }
+
+    if (lastCollectionKey) {
+      setRuleLastCollection(rule.id, lastCollectionKey);
     }
   }
 
