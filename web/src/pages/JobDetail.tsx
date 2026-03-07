@@ -309,32 +309,34 @@ export default function JobDetail() {
           {runsQuery.isLoading ? (
             <p>Loading runs...</p>
           ) : runsQuery.data && runsQuery.data.length > 0 ? (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th>Duration</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {runsQuery.data.map((run) => (
-                  <tr key={run.id}>
-                    <td>
-                      <StatusBadge status={run.status} />
-                    </td>
-                    <td className={styles.runMeta}>{formatTime(run.startedAt)}</td>
-                    <td className={styles.runMeta}>{formatDuration(run.startedAt, run.finishedAt)}</td>
-                    <td>
-                      <Link to={`/jobs/runs/${run.id}`} className={styles.runLink}>
-                        View Log
-                      </Link>
-                    </td>
+            <div className="table-scroll">
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {runsQuery.data.map((run) => (
+                    <tr key={run.id}>
+                      <td>
+                        <StatusBadge status={run.status} />
+                      </td>
+                      <td className={styles.runMeta}>{formatTime(run.startedAt)}</td>
+                      <td className={styles.runMeta}>{formatDuration(run.startedAt, run.finishedAt)}</td>
+                      <td>
+                        <Link to={`/jobs/runs/${run.id}`} className={styles.runLink}>
+                          View Log
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className={styles.noRuns}>No runs yet</p>
           )}

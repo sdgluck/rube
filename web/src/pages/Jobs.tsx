@@ -301,66 +301,68 @@ export default function Jobs() {
         </div>
       )}
 
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th className={shared.checkboxCell}>
-              <input
-                type="checkbox"
-                className={shared.checkbox}
-                checked={jobs.length > 0 && selected.size === jobs.length}
-                onChange={toggleSelectAll}
-              />
-            </th>
-            <th className={styles.sortable} onClick={() => toggleSort("name")}>
-              Name{sortIndicator("name")}
-            </th>
-            <th className={styles.sortable} onClick={() => toggleSort("schedule")}>
-              Schedule{sortIndicator("schedule")}
-            </th>
-            <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
-              Enabled{sortIndicator("enabled")}
-            </th>
-            <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-              Last Run{sortIndicator("lastRun")}
-            </th>
-            <th className={styles.sortable} onClick={() => toggleSort("lastRunStatus")}>
-              Last Run Status{sortIndicator("lastRunStatus")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {jobs.map((job, i) => (
-            <tr
-              key={job.id}
-              className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-              onClick={() => navigate(`/jobs/${job.id}`)}
-            >
-              <td
-                className={shared.checkboxCell}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCheckboxClick(i, e);
-                }}
-              >
-                <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-              </td>
-              <td>{job.name}</td>
-              <td>
-                <span className={styles.cronText}>{job.schedule || "—"}</span>
-                {job.schedule && <div className={styles.cronHint}>{describeCron(job.schedule)}</div>}
-              </td>
-              <td>{job.enabled ? "Yes" : "No"}</td>
-              <td>
-                <span className={styles.runMeta}>
-                  {job.lastRunStartedAt ? formatTime(job.lastRunStartedAt) : "Never"}
-                </span>
-              </td>
-              <td>{job.lastRunStatus ? <StatusBadge status={job.lastRunStatus} /> : null}</td>
+      <div className="table-scroll">
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th className={shared.checkboxCell}>
+                <input
+                  type="checkbox"
+                  className={shared.checkbox}
+                  checked={jobs.length > 0 && selected.size === jobs.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
+              <th className={styles.sortable} onClick={() => toggleSort("name")}>
+                Name{sortIndicator("name")}
+              </th>
+              <th className={styles.sortable} onClick={() => toggleSort("schedule")}>
+                Schedule{sortIndicator("schedule")}
+              </th>
+              <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
+                Enabled{sortIndicator("enabled")}
+              </th>
+              <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+                Last Run{sortIndicator("lastRun")}
+              </th>
+              <th className={styles.sortable} onClick={() => toggleSort("lastRunStatus")}>
+                Last Run Status{sortIndicator("lastRunStatus")}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {jobs.map((job, i) => (
+              <tr
+                key={job.id}
+                className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                onClick={() => navigate(`/jobs/${job.id}`)}
+              >
+                <td
+                  className={shared.checkboxCell}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCheckboxClick(i, e);
+                  }}
+                >
+                  <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                </td>
+                <td>{job.name}</td>
+                <td>
+                  <span className={styles.cronText}>{job.schedule || "—"}</span>
+                  {job.schedule && <div className={styles.cronHint}>{describeCron(job.schedule)}</div>}
+                </td>
+                <td>{job.enabled ? "Yes" : "No"}</td>
+                <td>
+                  <span className={styles.runMeta}>
+                    {job.lastRunStartedAt ? formatTime(job.lastRunStartedAt) : "Never"}
+                  </span>
+                </td>
+                <td>{job.lastRunStatus ? <StatusBadge status={job.lastRunStatus} /> : null}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

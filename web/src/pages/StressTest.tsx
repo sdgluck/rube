@@ -169,35 +169,37 @@ export default function StressTest() {
           </div>
 
           <h2 className={styles.sectionTitle}>Steps</h2>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Step</th>
-                <th>Sessions</th>
-                <th>Transcode Speed</th>
-                <th>Bandwidth</th>
-                <th>Errors</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedRun.steps.map((step, i) => {
-                const isLast = i === selectedRun.steps.length - 1;
-                const isFailed =
-                  isLast && ((step.avgTranscodeSpeed != null && step.avgTranscodeSpeed < 1.0) || step.errors > 0);
-                return (
-                  <tr key={step.step} className={isFailed ? styles.stepFailed : ""}>
-                    <td>{step.step}</td>
-                    <td>{step.sessions}</td>
-                    <td>
-                      <SpeedCell speed={step.avgTranscodeSpeed} />
-                    </td>
-                    <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : "n/a"}</td>
-                    <td>{step.errors}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Step</th>
+                  <th>Sessions</th>
+                  <th>Transcode Speed</th>
+                  <th>Bandwidth</th>
+                  <th>Errors</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedRun.steps.map((step, i) => {
+                  const isLast = i === selectedRun.steps.length - 1;
+                  const isFailed =
+                    isLast && ((step.avgTranscodeSpeed != null && step.avgTranscodeSpeed < 1.0) || step.errors > 0);
+                  return (
+                    <tr key={step.step} className={isFailed ? styles.stepFailed : ""}>
+                      <td>{step.step}</td>
+                      <td>{step.sessions}</td>
+                      <td>
+                        <SpeedCell speed={step.avgTranscodeSpeed} />
+                      </td>
+                      <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : "n/a"}</td>
+                      <td>{step.errors}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -206,32 +208,34 @@ export default function StressTest() {
         {runs.length === 0 ? (
           <div className={styles.emptyState}>No stress test runs yet. Click "Run Test" to start one.</div>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Mode</th>
-                <th>Max Sessions</th>
-                <th>Duration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map((run) => (
-                <tr
-                  key={run.id}
-                  className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
-                  onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
-                >
-                  <td>{formatDate(run.startedAt)}</td>
-                  <td>
-                    <span className={styles.badge}>{run.config.mode}</span>
-                  </td>
-                  <td>{run.maxSessions ?? "?"}</td>
-                  <td className={styles.duration}>{formatDuration(run.startedAt, run.finishedAt)}</td>
+          <div className="table-scroll">
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Mode</th>
+                  <th>Max Sessions</th>
+                  <th>Duration</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {runs.map((run) => (
+                  <tr
+                    key={run.id}
+                    className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
+                    onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
+                  >
+                    <td>{formatDate(run.startedAt)}</td>
+                    <td>
+                      <span className={styles.badge}>{run.config.mode}</span>
+                    </td>
+                    <td>{run.maxSessions ?? "?"}</td>
+                    <td className={styles.duration}>{formatDuration(run.startedAt, run.finishedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

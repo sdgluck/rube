@@ -130,38 +130,40 @@ export default function Events() {
         <div className={styles.empty}>No events found.</div>
       ) : (
         <>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={sharedStyles.sortable} onClick={() => toggleSort("timestamp")}>
-                  Time{sortIndicator("timestamp")}
-                </th>
-                <th className={sharedStyles.sortable} onClick={() => toggleSort("type")}>
-                  Type{sortIndicator("type")}
-                </th>
-                <th className={sharedStyles.sortable} onClick={() => toggleSort("message")}>
-                  Message{sortIndicator("message")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => {
-                const badge = BADGE_MAP[event.type] ?? {
-                  label: event.type,
-                  className: styles.badgeDefault,
-                };
-                return (
-                  <tr key={event.id}>
-                    <td className={styles.timestamp}>{formatTimestamp(event.timestamp)}</td>
-                    <td>
-                      <span className={`${styles.badge} ${badge.className}`}>{badge.label}</span>
-                    </td>
-                    <td>{event.message}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={sharedStyles.sortable} onClick={() => toggleSort("timestamp")}>
+                    Time{sortIndicator("timestamp")}
+                  </th>
+                  <th className={sharedStyles.sortable} onClick={() => toggleSort("type")}>
+                    Type{sortIndicator("type")}
+                  </th>
+                  <th className={sharedStyles.sortable} onClick={() => toggleSort("message")}>
+                    Message{sortIndicator("message")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => {
+                  const badge = BADGE_MAP[event.type] ?? {
+                    label: event.type,
+                    className: styles.badgeDefault,
+                  };
+                  return (
+                    <tr key={event.id}>
+                      <td className={styles.timestamp}>{formatTimestamp(event.timestamp)}</td>
+                      <td>
+                        <span className={`${styles.badge} ${badge.className}`}>{badge.label}</span>
+                      </td>
+                      <td>{event.message}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {total > PAGE_SIZE && (
             <div className={sharedStyles.pagination}>

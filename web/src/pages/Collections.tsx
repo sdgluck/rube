@@ -499,92 +499,94 @@ export default function Collections() {
               ))}
             </div>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.checkboxCell}>
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={collections.length > 0 && selected.size === collections.length}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("title")}>
-                    Title{sortIndicator("title")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
-                    Section{sortIndicator("sectionTitle")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
-                    Items{sortIndicator("childCount")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("smart")}>
-                    Smart{sortIndicator("smart")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("labels")}>
-                    Labels{sortIndicator("labels")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
-                    Added{sortIndicator("addedAt")}
-                  </th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {collections.map((col, i) => {
-                  const labels = parseLabels(col.labels);
-                  return (
-                    <tr
-                      key={col.plexRatingKey}
-                      className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
-                      onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
-                    >
-                      <td
-                        className={styles.checkboxCell}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCheckboxClick(i, e);
-                        }}
+            <div className="table-scroll">
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.checkboxCell}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={collections.length > 0 && selected.size === collections.length}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("title")}>
+                      Title{sortIndicator("title")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
+                      Section{sortIndicator("sectionTitle")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
+                      Items{sortIndicator("childCount")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("smart")}>
+                      Smart{sortIndicator("smart")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("labels")}>
+                      Labels{sortIndicator("labels")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
+                      Added{sortIndicator("addedAt")}
+                    </th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {collections.map((col, i) => {
+                    const labels = parseLabels(col.labels);
+                    return (
+                      <tr
+                        key={col.plexRatingKey}
+                        className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
+                        onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
                       >
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={selected.has(col.plexRatingKey)}
-                          readOnly
-                        />
-                      </td>
-                      <td>{col.title}</td>
-                      <td>{col.sectionTitle}</td>
-                      <td>{col.childCount}</td>
-                      <td>{col.smart ? "Yes" : "No"}</td>
-                      <td>
-                        {labels.map((label) => (
-                          <span
-                            key={label}
-                            className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                          >
-                            {label}
-                          </span>
-                        ))}
-                      </td>
-                      <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
-                      <td>
-                        <button
-                          className={`${styles.buttonDanger} ${styles.buttonSmall}`}
+                        <td
+                          className={styles.checkboxCell}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(col.plexRatingKey, col.title);
+                            handleCheckboxClick(i, e);
                           }}
                         >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          <input
+                            type="checkbox"
+                            className={styles.checkbox}
+                            checked={selected.has(col.plexRatingKey)}
+                            readOnly
+                          />
+                        </td>
+                        <td>{col.title}</td>
+                        <td>{col.sectionTitle}</td>
+                        <td>{col.childCount}</td>
+                        <td>{col.smart ? "Yes" : "No"}</td>
+                        <td>
+                          {labels.map((label) => (
+                            <span
+                              key={label}
+                              className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </td>
+                        <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
+                        <td>
+                          <button
+                            className={`${styles.buttonDanger} ${styles.buttonSmall}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(col.plexRatingKey, col.title);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {total > PAGE_SIZE && (

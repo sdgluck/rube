@@ -603,57 +603,59 @@ export default function Media() {
           ))}
         </div>
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              {visibleColumns.map((col) => (
-                <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id as SortKey)}>
-                  {col.label}
-                  {sortIndicator(col.id as SortKey)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const isShow = item.type === "show";
-              const isExpanded = expandedRows.has(item.ratingKey);
-              return (
-                <React.Fragment key={item.ratingKey}>
-                  <tr className={styles.clickableRow} onClick={() => navigate(`/media/${item.ratingKey}`)}>
-                    {visibleColumns.map((col, colIdx) => (
-                      <td key={col.id} className={col.id === "year" ? styles.itemYear : undefined}>
-                        {colIdx === 0 && isShow && (
-                          <button
-                            className={mediaStyles.expandToggle}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleExpanded(item.ratingKey);
-                            }}
-                          >
-                            {isExpanded ? "\u25BC" : "\u25B6"}
-                          </button>
-                        )}
-                        {col.render(item)}
-                      </td>
-                    ))}
-                  </tr>
-                  {isShow && isExpanded && (
-                    <ChildrenRows
-                      parentRatingKey={item.ratingKey}
-                      depth={1}
-                      colSpan={visibleColumns.length}
-                      visibleColumns={visibleColumns}
-                      expandedRows={expandedRows}
-                      toggleExpanded={toggleExpanded}
-                      navigate={navigate}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                {visibleColumns.map((col) => (
+                  <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id as SortKey)}>
+                    {col.label}
+                    {sortIndicator(col.id as SortKey)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => {
+                const isShow = item.type === "show";
+                const isExpanded = expandedRows.has(item.ratingKey);
+                return (
+                  <React.Fragment key={item.ratingKey}>
+                    <tr className={styles.clickableRow} onClick={() => navigate(`/media/${item.ratingKey}`)}>
+                      {visibleColumns.map((col, colIdx) => (
+                        <td key={col.id} className={col.id === "year" ? styles.itemYear : undefined}>
+                          {colIdx === 0 && isShow && (
+                            <button
+                              className={mediaStyles.expandToggle}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleExpanded(item.ratingKey);
+                              }}
+                            >
+                              {isExpanded ? "\u25BC" : "\u25B6"}
+                            </button>
+                          )}
+                          {col.render(item)}
+                        </td>
+                      ))}
+                    </tr>
+                    {isShow && isExpanded && (
+                      <ChildrenRows
+                        parentRatingKey={item.ratingKey}
+                        depth={1}
+                        colSpan={visibleColumns.length}
+                        visibleColumns={visibleColumns}
+                        expandedRows={expandedRows}
+                        toggleExpanded={toggleExpanded}
+                        navigate={navigate}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {total > PAGE_SIZE && (

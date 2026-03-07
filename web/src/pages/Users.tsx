@@ -182,54 +182,56 @@ export default function Users() {
             </div>
           ) : (
             <>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("username")}>
-                      Username{sortIndicator("username")}
-                    </th>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("name")}>
-                      Name{sortIndicator("name")}
-                    </th>
-                    <th>Label</th>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("collectionCount")}>
-                      Collections{sortIndicator("collectionCount")}
-                    </th>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("lastWatchedAt")}>
-                      Last Watched{sortIndicator("lastWatchedAt")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.userId}>
-                      <td>{user.username}</td>
-                      <td>
-                        <EditableName userId={user.userId} value={user.name} onSaved={() => query.refetch()} />
-                      </td>
-                      <td>
-                        <span className={`${styles.label} ${styles.labelUser}`}>{user.label}</span>
-                      </td>
-                      <td>{user.collectionCount}</td>
-                      <td>
-                        {user.lastWatchedTitle ? (
-                          <span>
-                            {user.lastWatchedTitle}
-                            {user.lastWatchedAt && (
-                              <span className={styles.hint}>
-                                {" "}
-                                &middot; {new Date(user.lastWatchedAt * 1000).toLocaleDateString()}
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className={styles.hint}>—</span>
-                        )}
-                      </td>
+              <div className="table-scroll">
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={sharedStyles.sortable} onClick={() => toggleSort("username")}>
+                        Username{sortIndicator("username")}
+                      </th>
+                      <th className={sharedStyles.sortable} onClick={() => toggleSort("name")}>
+                        Name{sortIndicator("name")}
+                      </th>
+                      <th>Label</th>
+                      <th className={sharedStyles.sortable} onClick={() => toggleSort("collectionCount")}>
+                        Collections{sortIndicator("collectionCount")}
+                      </th>
+                      <th className={sharedStyles.sortable} onClick={() => toggleSort("lastWatchedAt")}>
+                        Last Watched{sortIndicator("lastWatchedAt")}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.userId}>
+                        <td>{user.username}</td>
+                        <td>
+                          <EditableName userId={user.userId} value={user.name} onSaved={() => query.refetch()} />
+                        </td>
+                        <td>
+                          <span className={`${styles.label} ${styles.labelUser}`}>{user.label}</span>
+                        </td>
+                        <td>{user.collectionCount}</td>
+                        <td>
+                          {user.lastWatchedTitle ? (
+                            <span>
+                              {user.lastWatchedTitle}
+                              {user.lastWatchedAt && (
+                                <span className={styles.hint}>
+                                  {" "}
+                                  &middot; {new Date(user.lastWatchedAt * 1000).toLocaleDateString()}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className={styles.hint}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {total > PAGE_SIZE && (
                 <div className={sharedStyles.pagination}>

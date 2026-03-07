@@ -476,104 +476,106 @@ export default function Rules() {
           <p className={shared.hint}>Add a rule to start generating collections.</p>
         </div>
       ) : (
-        <table className={shared.table}>
-          <thead>
-            <tr>
-              <th className={styles.checkboxCell}>
-                <input
-                  type="checkbox"
-                  checked={rules.length > 0 && selected.size === rules.length}
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Enabled</th>
-              <th>Config</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.map((rule, i) => {
-              let configSummary = "";
-              try {
-                const c = JSON.parse(rule.config || "{}");
-                configSummary = CONFIG_SUMMARY[rule.type]?.(c) ?? `Max: ${c.limit ?? 10}`;
-                if (c.sections?.length) configSummary += ` | Sections: ${c.sections.join(", ")}`;
-              } catch {}
+        <div className="table-scroll">
+          <table className={shared.table}>
+            <thead>
+              <tr>
+                <th className={styles.checkboxCell}>
+                  <input
+                    type="checkbox"
+                    checked={rules.length > 0 && selected.size === rules.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Enabled</th>
+                <th>Config</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rules.map((rule, i) => {
+                let configSummary = "";
+                try {
+                  const c = JSON.parse(rule.config || "{}");
+                  configSummary = CONFIG_SUMMARY[rule.type]?.(c) ?? `Max: ${c.limit ?? 10}`;
+                  if (c.sections?.length) configSummary += ` | Sections: ${c.sections.join(", ")}`;
+                } catch {}
 
-              const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
-              return (
-                <tr key={rule.id}>
-                  <td className={styles.checkboxCell} onClick={(e) => handleCheckboxClick(i, e)}>
-                    <input type="checkbox" checked={selected.has(rule.id)} readOnly />
-                  </td>
-                  <td>{rule.name}</td>
-                  <td>
-                    <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
-                  </td>
-                  <td className={styles.toggleCell}>
-                    <input type="checkbox" checked={!!rule.enabled} onChange={() => handleToggle(rule)} />
-                  </td>
-                  <td>
-                    <span className={styles.configSummary}>{configSummary}</span>
-                  </td>
-                  <td>
-                    <div className={styles.actions}>
-                      {rule.lastCollectionRatingKey && (
-                        <button
-                          className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
-                          onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
-                        >
-                          View
-                        </button>
-                      )}
-                      {runMutation.isPending && runningRuleId === rule.id ? (
-                        <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelRun}>
-                          Cancel
-                        </button>
-                      ) : (
+                const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
+                return (
+                  <tr key={rule.id}>
+                    <td className={styles.checkboxCell} onClick={(e) => handleCheckboxClick(i, e)}>
+                      <input type="checkbox" checked={selected.has(rule.id)} readOnly />
+                    </td>
+                    <td>{rule.name}</td>
+                    <td>
+                      <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
+                    </td>
+                    <td className={styles.toggleCell}>
+                      <input type="checkbox" checked={!!rule.enabled} onChange={() => handleToggle(rule)} />
+                    </td>
+                    <td>
+                      <span className={styles.configSummary}>{configSummary}</span>
+                    </td>
+                    <td>
+                      <div className={styles.actions}>
+                        {rule.lastCollectionRatingKey && (
+                          <button
+                            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                            onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
+                          >
+                            View
+                          </button>
+                        )}
+                        {runMutation.isPending && runningRuleId === rule.id ? (
+                          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelRun}>
+                            Cancel
+                          </button>
+                        ) : (
+                          <button
+                            className={`${shared.button} ${shared.buttonSmall}`}
+                            onClick={() => handleRun(rule)}
+                            disabled={runMutation.isPending || testMutation.isPending}
+                          >
+                            Run
+                          </button>
+                        )}
+                        {testMutation.isPending && testingRuleId === rule.id ? (
+                          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelTest}>
+                            Cancel
+                          </button>
+                        ) : (
+                          <button
+                            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                            onClick={() => handleTest(rule)}
+                            disabled={testMutation.isPending || runMutation.isPending}
+                          >
+                            Test
+                          </button>
+                        )}
                         <button
                           className={`${shared.button} ${shared.buttonSmall}`}
-                          onClick={() => handleRun(rule)}
-                          disabled={runMutation.isPending || testMutation.isPending}
+                          onClick={() => startEdit(rule)}
+                          disabled={!!form}
                         >
-                          Run
+                          Edit
                         </button>
-                      )}
-                      {testMutation.isPending && testingRuleId === rule.id ? (
-                        <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelTest}>
-                          Cancel
-                        </button>
-                      ) : (
                         <button
-                          className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
-                          onClick={() => handleTest(rule)}
-                          disabled={testMutation.isPending || runMutation.isPending}
+                          className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                          onClick={() => handleDelete(rule)}
                         >
-                          Test
+                          Delete
                         </button>
-                      )}
-                      <button
-                        className={`${shared.button} ${shared.buttonSmall}`}
-                        onClick={() => startEdit(rule)}
-                        disabled={!!form}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className={`${shared.buttonDanger} ${shared.buttonSmall}`}
-                        onClick={() => handleDelete(rule)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {runMutation.isError && (
