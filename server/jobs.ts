@@ -171,20 +171,19 @@ export async function startJob(jobId: string): Promise<{ runId: string } | null>
   const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
   if (!job) return null;
 
-  // Prevent duplicate runs
-  const existing = db
-    .select({ id: jobRuns.id })
-    .from(jobRuns)
-    .where(and(eq(jobRuns.jobId, jobId), eq(jobRuns.status, "running")))
-    .get();
-  if (existing) return null;
-
   const runId = randomUUID();
   const now = Date.now();
 
-  db.insert(jobRuns)
-    .values({ id: runId, jobId, status: "running", log: "", progress: 0, message: "", startedAt: now })
-    .run();
+  // Atomic insert — prevents race condition where two concurrent requests
+  // both see no running job and both insert
+  const result = db.run(sql`
+    INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at)
+    SELECT ${runId}, ${jobId}, 'running', '', 0, '', ${now}
+    WHERE NOT EXISTS (
+      SELECT 1 FROM job_runs WHERE job_id = ${jobId} AND status = 'running'
+    )
+  `);
+  if (result.changes === 0) return null;
 
   // Clean up old runs (keep last 50)
   const keepIds = db

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, useCallback } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate, Link } from "react-router-dom";
+import ErrorBoundary from "./ErrorBoundary";
 import Settings from "./pages/Settings";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
@@ -168,232 +169,234 @@ export default function App() {
         <SidebarActiveJobs />
       </aside>
       <main className="content">
-        <Suspense fallback={<p>Loading...</p>}>
-          <Routes>
-            <Route
-              path="/stats"
-              element={
-                <LazyPage>
-                  <Stats />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/collections"
-              element={
-                <LazyPage>
-                  <Collections />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/collections/:ratingKey"
-              element={
-                <LazyPage>
-                  <CollectionDetail />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/rules"
-              element={
-                <LazyPage>
-                  <Rules />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/media"
-              element={
-                <LazyPage>
-                  <Media />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/media/:ratingKey"
-              element={
-                <LazyPage>
-                  <MediaDetail />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/overlays"
-              element={
-                <LazyPage>
-                  <Overlays />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <LazyPage>
-                  <Users />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/events"
-              element={
-                <LazyPage>
-                  <Events />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/jobs"
-              element={
-                <LazyPage>
-                  <Jobs />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/jobs/:jobId"
-              element={
-                <LazyPage>
-                  <JobDetail />
-                </LazyPage>
-              }
-            />
-            <Route
-              path="/jobs/runs/:runId"
-              element={
-                <LazyPage>
-                  <JobRun />
-                </LazyPage>
-              }
-            />
-            <Route path="/settings" element={<Settings />}>
-              <Route index element={<Navigate to="/settings/plex" replace />} />
+        <ErrorBoundary>
+          <Suspense fallback={<p>Loading...</p>}>
+            <Routes>
               <Route
-                path="plex"
+                path="/stats"
                 element={
                   <LazyPage>
-                    <SettingsPlex />
+                    <Stats />
                   </LazyPage>
                 }
               />
               <Route
-                path="ai"
+                path="/collections"
                 element={
                   <LazyPage>
-                    <SettingsAi />
+                    <Collections />
                   </LazyPage>
                 }
               />
               <Route
-                path="arrs"
+                path="/collections/:ratingKey"
                 element={
                   <LazyPage>
-                    <SettingsArrs />
+                    <CollectionDetail />
                   </LazyPage>
                 }
               />
               <Route
-                path="databases"
+                path="/rules"
                 element={
                   <LazyPage>
-                    <SettingsDatabases />
+                    <Rules />
                   </LazyPage>
                 }
               />
               <Route
-                path="notifications"
+                path="/media"
                 element={
                   <LazyPage>
-                    <SettingsNotifications />
+                    <Media />
                   </LazyPage>
                 }
-              >
-                <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
+              />
+              <Route
+                path="/media/:ratingKey"
+                element={
+                  <LazyPage>
+                    <MediaDetail />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/overlays"
+                element={
+                  <LazyPage>
+                    <Overlays />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <LazyPage>
+                    <Users />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/events"
+                element={
+                  <LazyPage>
+                    <Events />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/jobs"
+                element={
+                  <LazyPage>
+                    <Jobs />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/jobs/:jobId"
+                element={
+                  <LazyPage>
+                    <JobDetail />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/jobs/runs/:runId"
+                element={
+                  <LazyPage>
+                    <JobRun />
+                  </LazyPage>
+                }
+              />
+              <Route path="/settings" element={<Settings />}>
+                <Route index element={<Navigate to="/settings/plex" replace />} />
                 <Route
-                  path="discord"
+                  path="plex"
                   element={
                     <LazyPage>
-                      <SettingsNotificationsDiscord />
+                      <SettingsPlex />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="gotify"
+                  path="ai"
                   element={
                     <LazyPage>
-                      <SettingsNotificationsGotify />
+                      <SettingsAi />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="lunasea"
+                  path="arrs"
                   element={
                     <LazyPage>
-                      <SettingsNotificationsLunaSea />
+                      <SettingsArrs />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="pushbullet"
+                  path="databases"
                   element={
                     <LazyPage>
-                      <SettingsNotificationsPushbullet />
+                      <SettingsDatabases />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="pushover"
+                  path="notifications"
                   element={
                     <LazyPage>
-                      <SettingsNotificationsPushover />
+                      <SettingsNotifications />
+                    </LazyPage>
+                  }
+                >
+                  <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
+                  <Route
+                    path="discord"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsDiscord />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="gotify"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsGotify />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="lunasea"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsLunaSea />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="pushbullet"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsPushbullet />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="pushover"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsPushover />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="slack"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsSlack />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="telegram"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsTelegram />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="webhook"
+                    element={
+                      <LazyPage>
+                        <SettingsNotificationsWebhook />
+                      </LazyPage>
+                    }
+                  />
+                </Route>
+                <Route
+                  path="health"
+                  element={
+                    <LazyPage>
+                      <SettingsHealth />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="slack"
+                  path="stress-test"
                   element={
                     <LazyPage>
-                      <SettingsNotificationsSlack />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="telegram"
-                  element={
-                    <LazyPage>
-                      <SettingsNotificationsTelegram />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="webhook"
-                  element={
-                    <LazyPage>
-                      <SettingsNotificationsWebhook />
+                      <StressTest />
                     </LazyPage>
                   }
                 />
               </Route>
-              <Route
-                path="health"
-                element={
-                  <LazyPage>
-                    <SettingsHealth />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="stress-test"
-                element={
-                  <LazyPage>
-                    <StressTest />
-                  </LazyPage>
-                }
-              />
-            </Route>
-            <Route path="*" element={<Navigate to="/stats" replace />} />
-          </Routes>
-        </Suspense>
+              <Route path="*" element={<Navigate to="/stats" replace />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </div>
   );

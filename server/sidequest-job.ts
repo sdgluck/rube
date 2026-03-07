@@ -19,8 +19,23 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
+const VALID_COMMANDS = new Set([
+  "shuffle",
+  "generate",
+  "because-you-watched",
+  "sync-collections",
+  "label",
+  "label-undo",
+  "sync-media",
+  "overlays",
+  "sync-users",
+]);
+
 export class CommandJob extends Job {
   async run(commandName: string, runId: string, configJson: string, jobName: string, jobId: string) {
+    if (!VALID_COMMANDS.has(commandName)) {
+      throw new Error(`Unknown command: ${commandName}`);
+    }
     const startedAt = Date.now();
     const controller = new AbortController();
 
@@ -60,8 +75,8 @@ export class CommandJob extends Job {
     let jobConfig: Record<string, unknown> = {};
     try {
       jobConfig = JSON.parse(configJson);
-    } catch {
-      // Invalid config, use empty
+    } catch (err) {
+      console.warn(`[jobs] Failed to parse config for ${jobName}:`, (err as Error).message);
     }
 
     // Periodic flush of log/progress to the DB
@@ -91,8 +106,6 @@ export class CommandJob extends Job {
 
       await commandFn(ctx, jobConfig as CommonJobConfig);
 
-      clearInterval(flushTimer);
-      clearInterval(cancelTimer);
       flushLog();
 
       // Check if cancelled during execution
@@ -111,9 +124,6 @@ export class CommandJob extends Job {
 
       return this.complete({ ok: true });
     } catch (err) {
-      clearInterval(flushTimer);
-      clearInterval(cancelTimer);
-
       // Check if cancelled
       const finalRow = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
       if (finalRow?.status === "cancelled") {
@@ -135,6 +145,9 @@ export class CommandJob extends Job {
 
       // Mark as complete in Sidequest (we handle failure status in our own DB)
       return this.complete({ error: errorMsg });
+    } finally {
+      clearInterval(flushTimer);
+      clearInterval(cancelTimer);
     }
   }
 }

@@ -286,6 +286,19 @@ interface WatchHistoryOptions {
   limit?: number;
 }
 
+const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 10_000;
+
+function retryDelay(attempt: number): number {
+  return Math.min(BASE_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   // ─── Core ───────────────────────────────────────────────────────────────────
 
@@ -296,38 +309,51 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
     }
 
-    let res: Response;
-    try {
-      res = await fetch(reqUrl.toString(), {
-        method,
-        signal,
-        headers: {
-          Accept: "application/json",
-          "X-Plex-Client-Identifier": "tinkerbell",
-          "X-Plex-Product": "tinkerbell",
-          "X-Plex-Version": "1.0.0",
-          ...headers,
-        },
-      });
-    } catch (err) {
-      reportHealth("Plex", "error", `${method} ${path} → ${(err as Error).message}`);
-      throw err;
-    }
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      let res: Response;
+      try {
+        res = await fetch(reqUrl.toString(), {
+          method,
+          signal,
+          headers: {
+            Accept: "application/json",
+            "X-Plex-Client-Identifier": "tinkerbell",
+            "X-Plex-Product": "tinkerbell",
+            "X-Plex-Version": "1.0.0",
+            ...headers,
+          },
+        });
+      } catch (err) {
+        // Network errors: retry if we have attempts left
+        if (attempt < MAX_RETRIES) {
+          console.warn(`[plex] ${method} ${path} network error, retrying (${attempt + 1}/${MAX_RETRIES})...`);
+          await sleep(retryDelay(attempt));
+          continue;
+        }
+        reportHealth("Plex", "error", `${method} ${path} → ${(err as Error).message}`);
+        throw err;
+      }
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      reportHealth("Plex", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
-      throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
-    }
+      if (!res.ok) {
+        if (RETRYABLE_STATUS_CODES.has(res.status) && attempt < MAX_RETRIES) {
+          console.warn(`[plex] ${method} ${path} → ${res.status}, retrying (${attempt + 1}/${MAX_RETRIES})...`);
+          await sleep(retryDelay(attempt));
+          continue;
+        }
+        const body = await res.text().catch(() => "");
+        reportHealth("Plex", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
+        throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
+      }
 
-    reportHealth("Plex", "ok", `${method} ${path} → ${res.status}`);
+      reportHealth("Plex", "ok", `${method} ${path} → ${res.status}`);
 
-    const text = await res.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
+      const text = await res.text();
+      if (!text) return null;
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
     }
   }
 
@@ -831,8 +857,12 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       }
 
       void queue.add(async () => {
-        await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-        updated++;
+        try {
+          await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+          updated++;
+        } catch (err) {
+          console.warn(`[plex] Failed to add label to item ${item.ratingKey}:`, (err as Error).message);
+        }
         processed++;
         if (onProgress) onProgress(processed, totalSize);
       });
@@ -860,29 +890,33 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
     for await (const { item, totalSize } of allItems(sectionId)) {
       void queue.add(async () => {
-        // Bulk listing may not include Label data — fetch individual metadata
-        const detail = await request(`/library/metadata/${item.ratingKey}`);
-        const meta = detail?.MediaContainer?.Metadata?.[0];
-        const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
+        try {
+          // Bulk listing may not include Label data — fetch individual metadata
+          const detail = await request(`/library/metadata/${item.ratingKey}`);
+          const meta = detail?.MediaContainer?.Metadata?.[0];
+          const existingLabels: string[] = (meta?.Label || []).map((l: PlexLabel) => l.tag);
 
-        if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-          processed++;
-          if (onProgress) onProgress(processed, totalSize);
-          return;
+          if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+            processed++;
+            if (onProgress) onProgress(processed, totalSize);
+            return;
+          }
+
+          const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
+          const labelParams: Record<string, string | number> = {
+            type: typeNum,
+            id: item.ratingKey as string,
+            "label.locked": 1,
+          };
+          for (let i = 0; i < newLabels.length; i++) {
+            labelParams[`label[${i}].tag.tag`] = newLabels[i];
+          }
+
+          await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+          updated++;
+        } catch (err) {
+          console.warn(`[plex] Failed to remove label from item ${item.ratingKey}:`, (err as Error).message);
         }
-
-        const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
-        const labelParams: Record<string, string | number> = {
-          type: typeNum,
-          id: item.ratingKey as string,
-          "label.locked": 1,
-        };
-        for (let i = 0; i < newLabels.length; i++) {
-          labelParams[`label[${i}].tag.tag`] = newLabels[i];
-        }
-
-        await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-        updated++;
         processed++;
         if (onProgress) onProgress(processed, totalSize);
       });

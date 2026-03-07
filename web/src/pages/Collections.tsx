@@ -391,6 +391,37 @@ export default function Collections() {
         <div className={styles.emptyState}>
           <p>No collections synced yet.</p>
         </div>
+      ) : collections.length === 0 && (search || sectionFilter || labelFilter) ? (
+        <>
+          <div className={styles.filters}>
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search collections..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select className={styles.select} value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
+              <option value="">All sections</option>
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+            <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
+              <option value="">All labels</option>
+              {allLabels.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.emptyState}>
+            <p>No collections match your filters.</p>
+          </div>
+        </>
       ) : (
         <>
           <div className={styles.filters}>

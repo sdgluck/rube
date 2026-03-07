@@ -148,7 +148,9 @@ export function getCollectionFilters(): { sections: { id: string; title: string 
     try {
       const parsed: string[] = JSON.parse(row.labels);
       for (const l of parsed) labelSet.add(l);
-    } catch {}
+    } catch (err) {
+      console.warn(`[collections] Failed to parse labels for section ${row.sectionId}:`, (err as Error).message);
+    }
   }
 
   const sections = [...sectionMap.entries()]

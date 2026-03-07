@@ -218,7 +218,14 @@ export default function Stats() {
             <SessionSkeleton />
           </div>
         )}
-        {sessionsQuery.error && <div className={styles.error}>Failed to load sessions</div>}
+        {sessionsQuery.error && (
+          <div className={styles.error}>
+            Failed to load sessions
+            <button className={styles.retryBtn} onClick={() => sessionsQuery.refetch()}>
+              Retry
+            </button>
+          </div>
+        )}
         {sessionsQuery.data && sessionsQuery.data.length === 0 && (
           <div className={styles.emptyState}>No active streams</div>
         )}
@@ -502,7 +509,14 @@ export default function Stats() {
         {recentQuery.data && !recentQuery.data.jobEnabled && (
           <div className={styles.emptyState}>The "Sync Recently Added" job is disabled. Results may be stale.</div>
         )}
-        {recentQuery.error && <div className={styles.error}>Failed to load recently added</div>}
+        {recentQuery.error && (
+          <div className={styles.error}>
+            Failed to load recently added
+            <button className={styles.retryBtn} onClick={() => recentQuery.refetch()}>
+              Retry
+            </button>
+          </div>
+        )}
         {recentQuery.data && recentQuery.data.items.length === 0 && (
           <div className={styles.emptyState}>No recently added media</div>
         )}
@@ -571,7 +585,14 @@ export default function Stats() {
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Most Watched This Week</div>
         {mostWatchedQuery.isLoading && <MostWatchedSkeleton />}
-        {mostWatchedQuery.error && <div className={styles.error}>Failed to load most watched</div>}
+        {mostWatchedQuery.error && (
+          <div className={styles.error}>
+            Failed to load most watched
+            <button className={styles.retryBtn} onClick={() => mostWatchedQuery.refetch()}>
+              Retry
+            </button>
+          </div>
+        )}
         {mostWatchedQuery.data && mostWatchedQuery.data.length === 0 && (
           <div className={styles.emptyState}>No watch history this week</div>
         )}
