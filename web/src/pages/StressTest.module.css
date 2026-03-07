@@ -15,7 +15,7 @@
   align-items: flex-end;
   gap: 16px;
   padding: 16px;
-  background: #f8f9fa;
+  background: var(--bg-surface-hover);
   border-radius: 8px;
   margin-bottom: 24px;
   flex-wrap: wrap;
@@ -30,7 +30,7 @@
 .formGroup label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -38,10 +38,11 @@
 .formGroup select,
 .formGroup input {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.9rem;
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .activeBanner {
@@ -49,8 +50,8 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  background: var(--bg-bulk);
+  border: 1px solid var(--bulk-border);
   border-radius: 8px;
   margin-bottom: 24px;
 }
@@ -58,8 +59,8 @@
 .bannerSpinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #c7d2fe;
-  border-top-color: #4a6cf7;
+  border: 2px solid var(--bulk-border);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -77,7 +78,7 @@
 }
 
 .bannerProgress {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
@@ -85,14 +86,14 @@
   flex: 1;
   max-width: 200px;
   height: 6px;
-  background: #ddd;
+  background: var(--border-color);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  background: #4a6cf7;
+  background: var(--accent);
   border-radius: 3px;
   transition: width 0.3s;
 }
@@ -100,14 +101,14 @@
 .resultCard {
   text-align: center;
   padding: 32px;
-  background: #f8f9fa;
+  background: var(--bg-surface-hover);
   border-radius: 12px;
   margin-bottom: 24px;
 }
 
 .resultLabel {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -116,14 +117,14 @@
 .resultNumber {
   font-size: 3rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .resultUnit {
   font-size: 1rem;
   font-weight: 400;
-  color: #666;
+  color: var(--text-secondary);
   margin-left: 4px;
 }
 
@@ -140,8 +141,8 @@
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: #e8e8e8;
-  color: #444;
+  background: var(--bg-badge);
+  color: var(--text-badge);
 }
 
 .table {
@@ -153,9 +154,9 @@
 .table th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid var(--border-light);
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -163,7 +164,7 @@
 
 .table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .clickableRow {
@@ -172,11 +173,11 @@
 }
 
 .clickableRow:hover {
-  background: #f8f9fa;
+  background: var(--bg-surface-hover);
 }
 
 .selectedRow {
-  background: #eef2ff !important;
+  background: var(--bg-bulk) !important;
 }
 
 .speedBar {
@@ -221,12 +222,12 @@
 .emptyState {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: var(--text-muted);
   font-size: 0.95rem;
 }
 
 .duration {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 

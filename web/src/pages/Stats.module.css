@@ -4,7 +4,7 @@
 }
 
 .section {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -13,7 +13,7 @@
 .sectionTitle {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #555;
+  color: var(--text-secondary);
   margin-bottom: 16px;
   display: flex;
   align-items: center;
@@ -24,7 +24,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -41,18 +41,18 @@
 
 .viewToggle {
   display: flex;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .viewToggleBtn {
   padding: 7px 12px;
-  background: #fff;
+  background: var(--bg-surface);
   border: none;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -61,11 +61,11 @@
 }
 
 .viewToggleBtn:not(:last-child) {
-  border-right: 1px solid #ccc;
+  border-right: 1px solid var(--border-input);
 }
 
 .viewToggleBtnActive {
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
 }
 
@@ -81,9 +81,9 @@
   display: flex;
   gap: 14px;
   padding: 14px;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  background: #fafbfc;
+  background: var(--filter-group-bg);
 }
 
 .sessionThumbCol {
@@ -95,14 +95,14 @@
   height: 96px;
   object-fit: cover;
   border-radius: 6px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   display: block;
 }
 
 .sessionThumbPlaceholder {
   width: 64px;
   height: 96px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   border-radius: 6px;
 }
 
@@ -136,7 +136,7 @@
 
 .sessionEpisode {
   font-size: 0.8rem;
-  color: #555;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -148,8 +148,8 @@
 .epBadge {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #4a6cf7;
-  background: #eef2ff;
+  color: var(--accent);
+  background: var(--bg-bulk);
   padding: 1px 6px;
   border-radius: 4px;
   flex-shrink: 0;
@@ -157,7 +157,7 @@
 
 .sessionSubtitle {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .sessionUserCol {
@@ -177,7 +177,7 @@
 .userName {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -191,7 +191,7 @@
 
 .progressTime {
   font-size: 0.7rem;
-  color: #888;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   min-width: 36px;
@@ -204,7 +204,7 @@
 .progressBarOuter {
   flex: 1;
   height: 5px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   border-radius: 3px;
   position: relative;
   overflow: hidden;
@@ -215,7 +215,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  background: #d5d5d5;
+  background: var(--border-input);
   border-radius: 3px;
   z-index: 0;
 }
@@ -232,7 +232,7 @@
 }
 
 .progressBarPaused {
-  background: #ccc;
+  background: var(--border-input);
 }
 
 /* ─── Stream details ─────────────────────────────────────────────────────── */
@@ -257,8 +257,8 @@
   border-radius: 12px;
   font-size: 0.68rem;
   font-weight: 600;
-  background: #e9ecef;
-  color: #495057;
+  background: var(--bg-badge);
+  color: var(--text-badge);
 }
 
 .badgePlaying {
@@ -309,8 +309,8 @@
 
 .streamMetaItem {
   font-size: 0.7rem;
-  color: #666;
-  background: #f0f0f0;
+  color: var(--text-secondary);
+  background: var(--bg-badge);
   padding: 2px 7px;
   border-radius: 4px;
   white-space: nowrap;
@@ -327,7 +327,7 @@
 
 .playerInfo {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -343,22 +343,22 @@
 .sessionsTable th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--border-color);
   font-size: 0.85rem;
-  color: #555;
+  color: var(--text-secondary);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .sessionsTable td {
   padding: 10px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   font-size: 0.9rem;
   vertical-align: middle;
 }
 
 .sessionsTable tr:hover td {
-  background: #f8f9fa;
+  background: var(--bg-surface-hover);
 }
 
 .transcodeDetailInline {
@@ -370,13 +370,13 @@
 
 .qualityCell {
   font-size: 0.8rem;
-  color: #555;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .playerCell {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -397,14 +397,14 @@
   height: 54px;
   object-fit: cover;
   border-radius: 4px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   display: block;
 }
 
 .recentThumbPlaceholder {
   width: 36px;
   height: 54px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   border-radius: 4px;
 }
 
@@ -422,7 +422,7 @@
 }
 
 .scrollRow::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: var(--border-input);
   border-radius: 3px;
 }
 
@@ -436,19 +436,19 @@
   height: 195px;
   object-fit: cover;
   border-radius: 8px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   display: block;
 }
 
 .posterPlaceholder {
   width: 130px;
   height: 195px;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
@@ -465,7 +465,7 @@
 .posterMeta {
   padding: 2px 2px 0;
   font-size: 0.7rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* ─── Most watched table ─────────────────────────────────────────────────── */
@@ -478,31 +478,31 @@
 .table th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--border-color);
   font-size: 0.85rem;
-  color: #555;
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
 .table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   font-size: 0.9rem;
 }
 
 .table tr:hover td {
-  background: #f8f9fa;
+  background: var(--bg-surface-hover);
 }
 
 .rank {
   font-weight: 700;
-  color: #888;
+  color: var(--text-muted);
   width: 40px;
 }
 
 .plays {
   font-weight: 600;
-  color: #4a6cf7;
+  color: var(--accent);
   width: 80px;
 }
 
@@ -511,7 +511,7 @@
 .emptyState {
   text-align: center;
   padding: 24px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -520,8 +520,8 @@
   border-radius: 6px;
   font-size: 0.9rem;
   margin-bottom: 16px;
-  background: #f8d7da;
-  color: #721c24;
+  background: var(--bg-error);
+  color: var(--text-error);
 }
 
 /* ─── Skeleton loading ──────────────────────────────────────────────────── */
@@ -536,7 +536,7 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #e9ecef 25%, #f3f4f6 50%, #e9ecef 75%);
+  background: linear-gradient(90deg, var(--card-poster-bg) 25%, var(--bg-surface-hover) 50%, var(--card-poster-bg) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.5s infinite linear;
   border-radius: 6px;
@@ -590,11 +590,27 @@
 
 .skeletonTableRow td {
   padding: 10px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .skeletonTableCell {
   composes: skeleton;
   height: 14px;
   border-radius: 4px;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .sessionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sessionsTable th,
+  .sessionsTable td,
+  .table th,
+  .table td {
+    padding: 8px 8px;
+    font-size: 0.82rem;
+  }
 }

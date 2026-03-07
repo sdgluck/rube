@@ -7,13 +7,13 @@
 
 .headerHint {
   font-size: 0.85rem;
-  color: #999;
+  color: var(--text-muted);
 }
 
 .refreshBtn {
-  background: #fff;
-  color: #4a6cf7;
-  border: 1px solid #4a6cf7;
+  background: var(--bg-surface);
+  color: var(--accent);
+  border: 1px solid var(--accent);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -23,7 +23,7 @@
 }
 
 .refreshBtn:hover {
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
 }
 
@@ -38,9 +38,9 @@
   align-items: center;
   gap: 14px;
   padding: 14px 18px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-surface);
 }
 
 .statusDot {
@@ -61,7 +61,7 @@
 }
 
 .statusNone {
-  background: #ccc;
+  background: var(--border-input);
 }
 
 .serviceInfo {
@@ -81,18 +81,25 @@
 .serviceName {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--text-primary);
+}
+
+.serviceUptime {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #28a745;
+  white-space: nowrap;
 }
 
 .serviceTime {
   font-size: 0.8rem;
-  color: #999;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
 .serviceMessage {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -107,8 +114,8 @@
 
 .checkBtn {
   background: none;
-  color: #4a6cf7;
-  border: 1px solid #4a6cf7;
+  color: var(--accent);
+  border: 1px solid var(--accent);
   padding: 5px 12px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -120,11 +127,18 @@
 }
 
 .checkBtn:hover:not(:disabled) {
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
 }
 
 .checkBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .serviceCard {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
 }

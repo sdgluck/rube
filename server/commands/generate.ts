@@ -23,6 +23,15 @@ interface RuleConfig {
   filter?: string;
 }
 
+async function fetchImdbChartNormalized(id: string): Promise<{ name: string; imdbIds: string[] }> {
+  return fetchImdbChart(id);
+}
+
+async function fetchImdbListNormalized(id: string): Promise<{ name: string; imdbIds: string[] }> {
+  const result = await fetchImdbList(id);
+  return { name: result.title, imdbIds: result.imdbIds };
+}
+
 function parseRuleConfig(rule: Rule): RuleConfig {
   try {
     return JSON.parse(rule.config || "{}");
@@ -295,24 +304,26 @@ async function handleGrouped(
   return lastCollectionKey;
 }
 
-async function handleImdbChart(
+async function handleImdbContent(
   ctx: JobContext,
   client: PlexClient,
   sections: PlexSection[],
   machineId: string,
   ruleConfig: RuleConfig,
   labels: string[],
+  fetchContent: (id: string) => Promise<{ name: string; imdbIds: string[] }>,
+  contentId: string,
+  contentType: string,
 ): Promise<string | null> {
   let lastCollectionKey: string | null = null;
-  const chartId = ruleConfig.chart;
-  if (!chartId) throw new Error("IMDb chart ID is required.");
+  if (!contentId) throw new Error(`IMDb ${contentType} ID is required.`);
 
-  ctx.log(`Fetching IMDb chart "${chartId}"...`);
-  const { name: chartName, imdbIds } = await fetchImdbChart(chartId);
-  ctx.log(`Found ${imdbIds.length} title(s) in "${chartName}".`);
+  ctx.log(`Fetching IMDb ${contentType} "${contentId}"...`);
+  const { name: contentName, imdbIds } = await fetchContent(contentId);
+  ctx.log(`Found ${imdbIds.length} title(s) in "${contentName}".`);
 
   for (const section of sections) {
-    ctx.log(`[${chartName}] "${section.title}" — matching against library...`);
+    ctx.log(`[${contentName}] "${section.title}" — matching against library...`);
     const items = await client.allItemsWithGuids(section.key);
 
     const imdbToRatingKey = new Map<string, string>();
@@ -333,12 +344,12 @@ async function handleImdbChart(
       continue;
     }
 
-    ctx.log(`Creating "${chartName}" (${ratingKeys.length} items)...`);
+    ctx.log(`Creating "${contentName}" (${ratingKeys.length} items)...`);
     const collectionKey = await client.createCollectionWithLabel(
       section.key,
       section.type,
       machineId,
-      chartName,
+      contentName,
       ratingKeys,
       labels,
     );
@@ -349,69 +360,7 @@ async function handleImdbChart(
         promotedToRecommendedHome: 1,
         promotedToSharedHome: 1,
       });
-      ctx.log(`Pinned "${chartName}" to homepage`);
-      lastCollectionKey = collectionKey;
-    }
-  }
-
-  return lastCollectionKey;
-}
-
-async function handleImdbList(
-  ctx: JobContext,
-  client: PlexClient,
-  sections: PlexSection[],
-  machineId: string,
-  ruleConfig: RuleConfig,
-  labels: string[],
-): Promise<string | null> {
-  let lastCollectionKey: string | null = null;
-  const listId = ruleConfig.listId;
-  if (!listId) throw new Error("IMDb list ID is required.");
-
-  ctx.log(`Fetching IMDb list "${listId}"...`);
-  const { title: listTitle, imdbIds } = await fetchImdbList(listId);
-  ctx.log(`Found ${imdbIds.length} title(s) in "${listTitle}".`);
-
-  for (const section of sections) {
-    ctx.log(`[${listTitle}] "${section.title}" — matching against library...`);
-    const items = await client.allItemsWithGuids(section.key);
-
-    const imdbToRatingKey = new Map<string, string>();
-    for (const item of items) {
-      for (const guid of item.guids) {
-        const match = guid.match(/imdb:\/\/(tt\d+)/);
-        if (match) {
-          imdbToRatingKey.set(match[1], item.ratingKey);
-          break;
-        }
-      }
-    }
-
-    const ratingKeys = imdbIds.map((id) => imdbToRatingKey.get(id)).filter(Boolean) as string[];
-
-    if (ratingKeys.length === 0) {
-      ctx.log(`No matching items found in "${section.title}", skipping.`);
-      continue;
-    }
-
-    ctx.log(`Creating "${listTitle}" (${ratingKeys.length} items)...`);
-    const collectionKey = await client.createCollectionWithLabel(
-      section.key,
-      section.type,
-      machineId,
-      listTitle,
-      ratingKeys,
-      labels,
-    );
-
-    if (collectionKey) {
-      await client.pinToHomepage(section.key, collectionKey, {
-        promotedToOwnHome: 1,
-        promotedToRecommendedHome: 1,
-        promotedToSharedHome: 1,
-      });
-      ctx.log(`Pinned "${listTitle}" to homepage`);
+      ctx.log(`Pinned "${contentName}" to homepage`);
       lastCollectionKey = collectionKey;
     }
   }
@@ -806,51 +755,22 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
       break;
     }
 
-    case "imdb_chart": {
-      const chartId = ruleConfig.chart;
-      if (!chartId) throw new Error("IMDb chart ID is required.");
-      log(`[imdb_chart] Fetching chart "${chartId}"...`);
-      const { name: chartName, imdbIds } = await fetchImdbChart(chartId);
-      log(`[imdb_chart] Chart "${chartName}": ${imdbIds.length} IMDb IDs`);
-
-      for (const section of sections) {
-        log(`[imdb_chart] Matching against section "${section.title}"...`);
-        const items = await client.allItemsWithGuids(section.key);
-        log(`[imdb_chart] Fetched ${items.length} items with GUIDs from "${section.title}"`);
-        const imdbToItem = new Map<string, { title: string; year?: number }>();
-        for (const item of items) {
-          for (const guid of item.guids) {
-            const match = guid.match(/imdb:\/\/(tt\d+)/);
-            if (match) {
-              imdbToItem.set(match[1], { title: item.title, year: item.year });
-              break;
-            }
-          }
-        }
-        log(`[imdb_chart] ${imdbToItem.size} items have IMDb IDs in "${section.title}"`);
-
-        const matched = imdbIds.map((id) => imdbToItem.get(id)).filter(Boolean) as Array<{
-          title: string;
-          year?: number;
-        }>;
-        log(`[imdb_chart] Matched ${matched.length}/${imdbIds.length} chart entries in "${section.title}"`);
-        if (matched.length === 0) continue;
-        collections.push({ name: chartName, sectionTitle: section.title, items: matched });
-      }
-      break;
-    }
-
+    case "imdb_chart":
     case "imdb_list": {
-      const listId = ruleConfig.listId;
-      if (!listId) throw new Error("IMDb list ID is required.");
-      log(`[imdb_list] Fetching list "${listId}"...`);
-      const { title: listTitle, imdbIds } = await fetchImdbList(listId);
-      log(`[imdb_list] List "${listTitle}": ${imdbIds.length} IMDb IDs`);
+      const isChart = rule.type === "imdb_chart";
+      const tag = isChart ? "imdb_chart" : "imdb_list";
+      const contentId = isChart ? ruleConfig.chart : ruleConfig.listId;
+      if (!contentId) throw new Error(`IMDb ${isChart ? "chart" : "list"} ID is required.`);
+      log(`[${tag}] Fetching "${contentId}"...`);
+      const { name: contentName, imdbIds } = isChart
+        ? await fetchImdbChartNormalized(contentId)
+        : await fetchImdbListNormalized(contentId);
+      log(`[${tag}] "${contentName}": ${imdbIds.length} IMDb IDs`);
 
       for (const section of sections) {
-        log(`[imdb_list] Matching against section "${section.title}"...`);
+        log(`[${tag}] Matching against section "${section.title}"...`);
         const items = await client.allItemsWithGuids(section.key);
-        log(`[imdb_list] Fetched ${items.length} items with GUIDs from "${section.title}"`);
+        log(`[${tag}] Fetched ${items.length} items with GUIDs from "${section.title}"`);
         const imdbToItem = new Map<string, { title: string; year?: number }>();
         for (const item of items) {
           for (const guid of item.guids) {
@@ -861,15 +781,15 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
             }
           }
         }
-        log(`[imdb_list] ${imdbToItem.size} items have IMDb IDs in "${section.title}"`);
+        log(`[${tag}] ${imdbToItem.size} items have IMDb IDs in "${section.title}"`);
 
         const matched = imdbIds.map((id) => imdbToItem.get(id)).filter(Boolean) as Array<{
           title: string;
           year?: number;
         }>;
-        log(`[imdb_list] Matched ${matched.length}/${imdbIds.length} list entries in "${section.title}"`);
+        log(`[${tag}] Matched ${matched.length}/${imdbIds.length} entries in "${section.title}"`);
         if (matched.length === 0) continue;
-        collections.push({ name: listTitle, sectionTitle: section.title, items: matched });
+        collections.push({ name: contentName, sectionTitle: section.title, items: matched });
       }
       break;
     }
@@ -987,6 +907,59 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
   return { collections };
 }
 
+async function dispatchRule(
+  ctx: JobContext,
+  client: PlexClient,
+  sections: PlexSection[],
+  machineId: string,
+  rule: Rule,
+  ruleConfig: RuleConfig,
+  labels: string[],
+): Promise<string | null> {
+  switch (rule.type) {
+    case "ai_prompt":
+      return handleAiPrompt(ctx, client, sections, machineId, rule, ruleConfig, labels);
+    case "top_rated":
+      return handleRated(ctx, client, sections, machineId, "rating:desc", ruleConfig, labels, "Top Rated");
+    case "lowest_rated":
+      return handleRated(ctx, client, sections, machineId, "rating:asc", ruleConfig, labels, "Lowest Rated");
+    case "actors":
+      return handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
+    case "studios":
+      return handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
+    case "imdb_chart":
+      return handleImdbContent(
+        ctx,
+        client,
+        sections,
+        machineId,
+        ruleConfig,
+        labels,
+        fetchImdbChartNormalized,
+        ruleConfig.chart || "",
+        "chart",
+      );
+    case "imdb_list":
+      return handleImdbContent(
+        ctx,
+        client,
+        sections,
+        machineId,
+        ruleConfig,
+        labels,
+        fetchImdbListNormalized,
+        ruleConfig.listId || "",
+        "list",
+      );
+    case "rt_top_rated":
+      return handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
+    case "seerr_requests":
+      return handleSeerrRequests(ctx, client, sections, machineId, rule, ruleConfig, labels);
+    default:
+      return null;
+  }
+}
+
 export default async function run(ctx: JobContext, config: GenerateJobConfig): Promise<void> {
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
@@ -1076,56 +1049,7 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
 
     const labels = ["Tinkerbell", ruleLabel];
 
-    let lastCollectionKey: string | null = null;
-    switch (rule.type) {
-      case "ai_prompt":
-        lastCollectionKey = await handleAiPrompt(ctx, client, sections, machineId, rule, ruleConfig, labels);
-        break;
-      case "top_rated":
-        lastCollectionKey = await handleRated(
-          ctx,
-          client,
-          sections,
-          machineId,
-          "rating:desc",
-          ruleConfig,
-          labels,
-          "Top Rated",
-        );
-        break;
-      case "lowest_rated":
-        lastCollectionKey = await handleRated(
-          ctx,
-          client,
-          sections,
-          machineId,
-          "rating:asc",
-          ruleConfig,
-          labels,
-          "Lowest Rated",
-        );
-        break;
-      case "actors":
-        lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
-        break;
-      case "studios":
-        lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
-        break;
-      case "imdb_chart":
-        lastCollectionKey = await handleImdbChart(ctx, client, sections, machineId, ruleConfig, labels);
-        break;
-      case "imdb_list":
-        lastCollectionKey = await handleImdbList(ctx, client, sections, machineId, ruleConfig, labels);
-        break;
-      case "rt_top_rated":
-        lastCollectionKey = await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
-        break;
-      case "seerr_requests":
-        lastCollectionKey = await handleSeerrRequests(ctx, client, sections, machineId, rule, ruleConfig, labels);
-        break;
-      default:
-        ctx.log(`Unknown rule type: ${rule.type}, skipping.`);
-    }
+    const lastCollectionKey = await dispatchRule(ctx, client, sections, machineId, rule, ruleConfig, labels);
 
     if (lastCollectionKey) {
       setRuleLastCollection(rule.id, lastCollectionKey);
@@ -1180,56 +1104,7 @@ export async function runSingleRule(
   const labels = ["Tinkerbell", ruleLabel];
   const ctx: JobContext = { log, progress: () => {}, signal: signal || new AbortController().signal };
 
-  let lastCollectionKey: string | null = null;
-  switch (rule.type) {
-    case "ai_prompt":
-      lastCollectionKey = await handleAiPrompt(ctx, client, sections, machineId, rule, ruleConfig, labels);
-      break;
-    case "top_rated":
-      lastCollectionKey = await handleRated(
-        ctx,
-        client,
-        sections,
-        machineId,
-        "rating:desc",
-        ruleConfig,
-        labels,
-        "Top Rated",
-      );
-      break;
-    case "lowest_rated":
-      lastCollectionKey = await handleRated(
-        ctx,
-        client,
-        sections,
-        machineId,
-        "rating:asc",
-        ruleConfig,
-        labels,
-        "Lowest Rated",
-      );
-      break;
-    case "actors":
-      lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
-      break;
-    case "studios":
-      lastCollectionKey = await handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
-      break;
-    case "imdb_chart":
-      lastCollectionKey = await handleImdbChart(ctx, client, sections, machineId, ruleConfig, labels);
-      break;
-    case "imdb_list":
-      lastCollectionKey = await handleImdbList(ctx, client, sections, machineId, ruleConfig, labels);
-      break;
-    case "rt_top_rated":
-      lastCollectionKey = await handleRtTopRated(ctx, client, sections, machineId, ruleConfig, labels);
-      break;
-    case "seerr_requests":
-      lastCollectionKey = await handleSeerrRequests(ctx, client, sections, machineId, rule, ruleConfig, labels);
-      break;
-    default:
-      throw new Error(`Unknown rule type: ${rule.type}`);
-  }
+  const lastCollectionKey = await dispatchRule(ctx, client, sections, machineId, rule, ruleConfig, labels);
 
   if (lastCollectionKey) {
     setRuleLastCollection(rule.id, lastCollectionKey);

@@ -1,11 +1,11 @@
 .description {
   font-size: 0.9rem;
-  color: #888;
+  color: var(--text-muted);
   margin: -16px 0 24px;
 }
 
 .ruleForm {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   margin-top: 24px;
@@ -27,24 +27,25 @@
 
 .promptTextarea {
   padding: 10px 12px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 0.85rem;
   font-family: monospace;
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text-primary);
   resize: vertical;
   min-height: 200px;
 }
 
 .promptTextarea:focus {
   outline: none;
-  border-color: #4a6cf7;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
 .promptHint {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .formActions {
@@ -54,7 +55,7 @@
 
 .configSummary {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-muted);
   max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -71,8 +72,8 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #e9ecef;
-  color: #495057;
+  background: var(--bg-badge);
+  color: var(--text-badge);
 }
 
 .typeAi {
@@ -113,7 +114,7 @@
 .checkboxCell input {
   width: 14px;
   height: 14px;
-  accent-color: #4a6cf7;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -122,8 +123,8 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: #f0f4ff;
-  border: 1px solid #c7d2fe;
+  background: var(--bg-bulk);
+  border: 1px solid var(--bulk-border);
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
@@ -147,14 +148,14 @@
 .configSectionItem input {
   width: 14px;
   height: 14px;
-  accent-color: #4a6cf7;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
 /* ─── Test preview panel ──────────────────────────────────────────────────── */
 
 .testPreview {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   margin-top: 24px;
@@ -174,20 +175,20 @@
 
 .testPreviewCloseBtn {
   background: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 4px 12px;
   font-size: 0.85rem;
   cursor: pointer;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .testPreviewCloseBtn:hover {
-  background: #f0f0f0;
+  background: var(--bg-surface-hover);
 }
 
 .testPreviewCollection {
-  border: 1px solid #eee;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 12px;
@@ -211,7 +212,7 @@
 
 .testPreviewCollectionMeta {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .testPreviewItems {
@@ -225,24 +226,24 @@
 .testPreviewItem {
   font-size: 0.85rem;
   padding: 2px 0;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .testPreviewItemYear {
-  color: #888;
+  color: var(--text-muted);
 }
 
 .testPreviewEmpty {
   text-align: center;
   padding: 24px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
 .testPreviewError {
   padding: 12px 16px;
-  background: #f8d7da;
-  color: #721c24;
+  background: var(--bg-error);
+  color: var(--text-error);
   border-radius: 6px;
   font-size: 0.9rem;
   margin-top: 24px;

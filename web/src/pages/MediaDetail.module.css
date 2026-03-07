@@ -11,8 +11,8 @@
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 4px;
-  background: #f0f0f0;
-  color: #555;
+  background: var(--bg-badge);
+  color: var(--text-secondary);
 }
 
 .genres {
@@ -33,7 +33,7 @@
 
 .summary {
   font-size: 0.9rem;
-  color: #444;
+  color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 20px;
 }
@@ -49,7 +49,7 @@
 .mediaVersion + .mediaVersion {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
 }
 
 /* ─── File row ───────────────────────────────────────────────────────────── */
@@ -60,14 +60,14 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 10px;
-  background: #f5f6f8;
+  background: var(--bg-surface-hover);
   border-radius: 6px;
 }
 
 .fileName {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -84,8 +84,8 @@
 .fileMeta > span {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #666;
-  background: #e9ecef;
+  color: var(--text-secondary);
+  background: var(--bg-badge);
   padding: 2px 7px;
   border-radius: 4px;
   white-space: nowrap;
@@ -129,8 +129,8 @@
 }
 
 .streamLabelSub {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-badge);
+  color: var(--text-badge);
 }
 
 .streamInfo {
@@ -143,7 +143,7 @@
 .streamTitle {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .streamTags {
@@ -154,8 +154,8 @@
 
 .streamTags > span {
   font-size: 0.7rem;
-  color: #666;
-  background: #f0f0f0;
+  color: var(--text-secondary);
+  background: var(--bg-badge);
   padding: 1px 6px;
   border-radius: 3px;
   white-space: nowrap;
@@ -171,7 +171,7 @@
 
 .subtitleItem {
   font-size: 0.78rem;
-  color: #444;
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -179,8 +179,8 @@
 
 .subtitleCodec {
   font-size: 0.65rem;
-  color: #888;
-  background: #f0f0f0;
+  color: var(--text-muted);
+  background: var(--bg-badge);
   padding: 1px 5px;
   border-radius: 3px;
 }
@@ -191,6 +191,6 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: #ccc;
+  background: var(--border-input);
   margin-right: 2px;
 }

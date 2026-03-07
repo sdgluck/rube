@@ -75,7 +75,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     const thumbPath = url.searchParams.get("path");
     const plexUrl = getConfig("global_plex_url");
     const plexToken = getConfig("global_plex_token");
-    if (!thumbPath || !plexUrl || !plexToken) {
+    if (!thumbPath || !thumbPath.startsWith("/") || !plexUrl || !plexToken) {
       res.writeHead(400);
       res.end();
       return;

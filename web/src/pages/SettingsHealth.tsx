@@ -122,6 +122,10 @@ export default function SettingsHealth() {
 
           const isChecking = checkMutation.isPending && checkMutation.variables?.service === svc.service;
           const history = historyQuery.data?.[svc.service] ?? [];
+          const uptimeStr =
+            history.length > 0
+              ? `${((history.filter((p) => p.status === "ok").length / history.length) * 100).toFixed(1)}% uptime`
+              : null;
 
           return (
             <div key={svc.service} className={styles.serviceCard}>
@@ -129,6 +133,7 @@ export default function SettingsHealth() {
               <div className={styles.serviceInfo}>
                 <div className={styles.serviceNameRow}>
                   <span className={styles.serviceName}>{svc.service}</span>
+                  {uptimeStr && <span className={styles.serviceUptime}>{uptimeStr}</span>}
                   {svc.timestamp && <span className={styles.serviceTime}>{timeAgo(svc.timestamp)}</span>}
                 </div>
                 <div className={styles.serviceMessage}>{message}</div>

@@ -3,7 +3,7 @@
 .tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 24px;
 }
 
@@ -14,7 +14,7 @@
   border-bottom: 2px solid transparent;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   transition:
     color 0.15s,
@@ -22,18 +22,18 @@
 }
 
 .tab:hover {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .tabActive {
-  color: #4a6cf7;
-  border-bottom-color: #4a6cf7;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 /* ─── Description ─────────────────────────────────────────────────────────── */
 
 .description {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0 0 20px;
   line-height: 1.5;
@@ -62,7 +62,7 @@
   position: relative;
   border-radius: 8px;
   overflow: hidden;
-  background: #e9ecef;
+  background: var(--card-poster-bg);
   height: var(--poster-height);
   width: calc(var(--poster-height) * 2 / 3);
 }
@@ -80,7 +80,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -107,7 +107,7 @@
 }
 
 .dropZoneOver {
-  border-color: #4a6cf7;
+  border-color: var(--accent);
   background: rgba(74, 108, 247, 0.25);
 }
 
@@ -242,7 +242,7 @@
 .chipPanelTitle {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -265,9 +265,9 @@
   transition:
     transform 0.1s,
     box-shadow 0.15s;
-  background: #f0f4ff;
-  color: #4a6cf7;
-  border: 1px solid #c7d2fe;
+  background: var(--bg-bulk);
+  color: var(--accent);
+  border: 1px solid var(--bulk-border);
   white-space: nowrap;
 }
 
@@ -301,7 +301,7 @@
 .posterTitle {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -310,12 +310,12 @@
 
 .shuffleBtn {
   background: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -324,8 +324,8 @@
 }
 
 .shuffleBtn:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
 }
 
 /* ─── Status bar ─────────────────────────────────────────────────────────── */
@@ -336,22 +336,22 @@
   gap: 16px;
   margin-bottom: 32px;
   padding: 16px 20px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--card-poster-bg);
   border-radius: 8px;
 }
 
 .statusCount {
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-secondary);
   flex: 1;
 }
 
 .statusBtn {
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
   padding: 8px 20px;
-  border: 1px solid #4a6cf7;
+  border: 1px solid var(--accent);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -360,7 +360,7 @@
 }
 
 .statusBtn:hover:not(:disabled) {
-  background: #3b5de7;
+  background: var(--accent-hover);
 }
 
 .statusBtn:disabled {
@@ -369,7 +369,7 @@
 }
 
 .statusBtnDanger {
-  background: #fff;
+  background: var(--bg-surface);
   color: #dc3545;
   border: 1px solid #dc3545;
   padding: 8px 20px;
@@ -403,7 +403,7 @@
 }
 
 .modal {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 12px;
   padding: 24px;
   max-width: 500px;
@@ -432,14 +432,14 @@
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0 4px;
   line-height: 1;
 }
 
 .modalClose:hover {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .modalImage {
@@ -450,6 +450,28 @@
 
 .modalHint {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
   text-align: center;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .overlayEditor {
+    grid-template-columns: 1fr;
+  }
+
+  .chipPanel {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .chipList {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .statusBar {
+    flex-wrap: wrap;
+  }
 }

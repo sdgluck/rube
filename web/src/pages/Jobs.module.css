@@ -21,9 +21,9 @@
 .table th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
@@ -34,19 +34,19 @@
 }
 
 .sortable:hover {
-  color: #4a6cf7;
+  color: var(--accent);
 }
 
 .table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
   height: 52px;
   box-sizing: border-box;
 }
 
 .table tbody tr:hover {
-  background: #f9f9fb;
+  background: var(--bg-surface-hover);
 }
 
 .clickableRow {
@@ -87,10 +87,10 @@
 /* ─── Buttons ────────────────────────────────────────────────────────────────── */
 
 .button {
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
   padding: 6px 16px;
-  border: 1px solid #4a6cf7;
+  border: 1px solid var(--accent);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -100,7 +100,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: #3b5de7;
+  background: var(--accent-hover);
 }
 
 .button:disabled {
@@ -127,7 +127,7 @@
 .toggle {
   width: 18px;
   height: 18px;
-  accent-color: #4a6cf7;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -137,20 +137,20 @@
   font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
   font-size: 0.85rem;
   padding: 4px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
   width: 140px;
 }
 
 .cronInput:focus {
   outline: none;
-  border-color: #4a6cf7;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
 .cronHint {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -162,7 +162,7 @@
 
 .runsContainer {
   padding: 12px 12px 12px 24px;
-  background: #f9f9fb;
+  background: var(--bg-surface-hover);
 }
 
 .runsList {
@@ -180,7 +180,7 @@
 }
 
 .runLink {
-  color: #4a6cf7;
+  color: var(--accent);
   text-decoration: none;
   font-weight: 500;
 }
@@ -190,7 +190,7 @@
 }
 
 .runMeta {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -212,6 +212,65 @@
 
 .logWrapper {
   position: relative;
+}
+
+.logToolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.logFilterInput {
+  padding: 6px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  width: 200px;
+}
+
+.logFilterInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+}
+
+.logErrorToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.logErrorToggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.logToolbarBtn {
+  background: none;
+  border: 1px solid var(--border-input);
+  color: var(--text-secondary);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.logToolbarBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .logCopyBtn {
@@ -241,7 +300,7 @@
 .progressBar {
   width: 100%;
   height: 6px;
-  background: #e5e7eb;
+  background: var(--bg-badge);
   border-radius: 3px;
   overflow: hidden;
   margin: 8px 0;
@@ -249,7 +308,7 @@
 
 .progressFill {
   height: 100%;
-  background: #4a6cf7;
+  background: var(--accent);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -257,7 +316,7 @@
 /* ─── Run detail page ────────────────────────────────────────────────────────── */
 
 .backLink {
-  color: #4a6cf7;
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.9rem;
   display: inline-block;
@@ -295,7 +354,7 @@
 
 .metaLabel {
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 /* ─── Sidebar active jobs ────────────────────────────────────────────────────── */
@@ -373,14 +432,14 @@
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #4a6cf7;
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
 }
 
 .noRuns {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.85rem;
   font-style: italic;
 }
@@ -393,7 +452,7 @@
   gap: 12px;
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .configField {
@@ -405,7 +464,7 @@
 .configLabel {
   font-weight: 600;
   font-size: 0.85rem;
-  color: #555;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -428,20 +487,20 @@
 .configNumberInput {
   width: 60px;
   padding: 4px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
   font-size: 0.85rem;
 }
 
 .configNumberInput:focus {
   outline: none;
-  border-color: #4a6cf7;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
 .configHint {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .runsSection {
@@ -453,7 +512,7 @@
 .runsTitle {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -483,7 +542,7 @@
 }
 
 .detailSection {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   display: flex;
@@ -514,14 +573,14 @@
 .detailSectionFooter {
   flex-shrink: 0;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
 }
 
 .detailSectionTitle {
   font-weight: 600;
   font-size: 0.95rem;
   padding: 0 6px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .cronText {
@@ -538,19 +597,36 @@
 .configTable th {
   text-align: left;
   padding: 8px 12px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
 .configTable td {
   padding: 8px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
 }
 
 .configSummary {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .jobDetailColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    font-size: 0.82rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 8px;
+  }
 }

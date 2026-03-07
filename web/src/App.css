@@ -1,3 +1,55 @@
+:root {
+  --bg-page: #f5f5f5;
+  --bg-surface: #fff;
+  --bg-surface-hover: #f8f9fa;
+  --bg-input: #fff;
+  --bg-badge: #e5e7eb;
+  --bg-success: #d4edda;
+  --bg-error: #f8d7da;
+  --bg-bulk: #eef2ff;
+  --text-primary: #333;
+  --text-secondary: #555;
+  --text-muted: #888;
+  --text-badge: #555;
+  --text-success: #155724;
+  --text-error: #721c24;
+  --border-color: #ddd;
+  --border-light: #eee;
+  --border-input: #ccc;
+  --accent: #4a6cf7;
+  --accent-hover: #3b5de7;
+  --card-poster-bg: #e9ecef;
+  --bulk-border: #c7d2fe;
+  --filter-group-bg: #fafbfc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #121220;
+    --bg-surface: #1e1e2f;
+    --bg-surface-hover: #2a2a3d;
+    --bg-input: #2a2a3d;
+    --bg-badge: #2a2a3d;
+    --bg-success: #1a3a2a;
+    --bg-error: #3a1a1a;
+    --bg-bulk: #1a1a3a;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --text-muted: #888;
+    --text-badge: #ccc;
+    --text-success: #6fcf97;
+    --text-error: #f07070;
+    --border-color: #333;
+    --border-light: #2a2a3d;
+    --border-input: #444;
+    --accent: #6b8cff;
+    --accent-hover: #5a7bf0;
+    --card-poster-bg: #2a2a3d;
+    --bulk-border: #333366;
+    --filter-group-bg: #1a1a2e;
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -8,8 +60,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f5f5f5;
-  color: #333;
+  background: var(--bg-page);
+  color: var(--text-primary);
 }
 
 .layout {
@@ -28,6 +80,7 @@ body {
   height: 100vh;
   position: sticky;
   top: 0;
+  z-index: 50;
 }
 
 .sidebar-title {
@@ -163,7 +216,7 @@ body {
 }
 
 .stream-badge {
-  background: #4a6cf7;
+  background: var(--accent);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -184,8 +237,8 @@ body {
 }
 
 .count-badge {
-  background: #e5e7eb;
-  color: #555;
+  background: var(--bg-badge);
+  color: var(--text-badge);
   font-size: 0.8rem;
   font-weight: 600;
   min-width: 24px;
@@ -198,4 +251,73 @@ body {
   margin-left: 10px;
   vertical-align: middle;
   line-height: 1;
+}
+
+/* ─── Mobile sidebar toggle ─────────────────────────────────────────────── */
+
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 60;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .sidebar-toggle {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    height: 100vh;
+    width: 260px;
+    transition: left 0.25s ease;
+    z-index: 100;
+  }
+
+  .sidebar.sidebar-open {
+    left: 0;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+  }
+
+  .sidebar-overlay.sidebar-overlay-visible {
+    display: block;
+  }
+
+  .content {
+    padding: 60px 16px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 56px 12px 16px;
+  }
 }

@@ -56,6 +56,24 @@ const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(SEERR_FIL
 
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));
 
+const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => string> = {
+  ai_prompt: (c) => `Limit: ${c.limit ?? 8} | Min items: ${c.minItems ?? 15}`,
+  top_rated: (c) => `${c.limit ?? 50} items`,
+  lowest_rated: (c) => `${c.limit ?? 50} items`,
+  imdb_chart: (c) => IMDB_CHART_LABELS[c.chart as string] || (c.chart as string) || "—",
+  imdb_list: (c) => (c.listId as string) || "—",
+  rt_top_rated: (c) => `Top ${c.limit ?? 100} items`,
+  seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
+};
+
+const TYPE_BADGE: Record<string, string> = {
+  ai_prompt: styles.typeAi,
+  imdb_chart: styles.typeImdb,
+  imdb_list: styles.typeImdb,
+  rt_top_rated: styles.typeRt,
+  seerr_requests: styles.typeSeerr,
+};
+
 interface FormState {
   id?: string;
   name: string;
@@ -480,34 +498,11 @@ export default function Rules() {
               let configSummary = "";
               try {
                 const c = JSON.parse(rule.config || "{}");
-                if (rule.type === "ai_prompt") {
-                  configSummary = `Limit: ${c.limit ?? 8} | Min items: ${c.minItems ?? 15}`;
-                } else if (rule.type === "top_rated" || rule.type === "lowest_rated") {
-                  configSummary = `${c.limit ?? 50} items`;
-                } else if (rule.type === "imdb_chart") {
-                  configSummary = IMDB_CHART_LABELS[c.chart] || c.chart || "—";
-                } else if (rule.type === "imdb_list") {
-                  configSummary = c.listId || "—";
-                } else if (rule.type === "rt_top_rated") {
-                  configSummary = `Top ${c.limit ?? 100} items`;
-                } else if (rule.type === "seerr_requests") {
-                  configSummary = `${SEERR_FILTER_LABELS[c.filter] || "All Requests"} | ${c.limit ?? 50} items`;
-                } else {
-                  configSummary = `Max: ${c.limit ?? 10}`;
-                }
+                configSummary = CONFIG_SUMMARY[rule.type]?.(c) ?? `Max: ${c.limit ?? 10}`;
                 if (c.sections?.length) configSummary += ` | Sections: ${c.sections.join(", ")}`;
               } catch {}
 
-              const typeBadge =
-                rule.type === "ai_prompt"
-                  ? styles.typeAi
-                  : rule.type === "imdb_chart" || rule.type === "imdb_list"
-                    ? styles.typeImdb
-                    : rule.type === "rt_top_rated"
-                      ? styles.typeRt
-                      : rule.type === "seerr_requests"
-                        ? styles.typeSeerr
-                        : styles.typeCriteria;
+              const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
               return (
                 <tr key={rule.id}>
                   <td className={styles.checkboxCell} onClick={(e) => handleCheckboxClick(i, e)}>

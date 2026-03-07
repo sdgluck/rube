@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { trpc } from "../trpc";
 import { formatTime } from "../utils";
@@ -41,10 +41,14 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`${styles.badge} ${cls}`}>{status}</span>;
 }
 
+const ERROR_PATTERN = /error|failed|exception|fatal|panic|ENOENT|ECONNREFUSED/i;
+
 export default function JobRun() {
   const { runId } = useParams<{ runId: string }>();
   const logRef = useRef<HTMLPreElement>(null);
   const autoScroll = useRef(true);
+  const [filter, setFilter] = useState("");
+  const [errorsOnly, setErrorsOnly] = useState(false);
 
   const runQuery = trpc.jobs.run.useQuery(
     { runId: runId! },
@@ -60,18 +64,45 @@ export default function JobRun() {
 
   const run = runQuery.data;
 
+  const filteredLog = useMemo(() => {
+    if (!run?.log) return "";
+    if (!filter && !errorsOnly) return run.log;
+    const lines = run.log.split("\n");
+    return lines
+      .filter((line) => {
+        if (errorsOnly && !ERROR_PATTERN.test(line)) return false;
+        if (filter && !line.toLowerCase().includes(filter.toLowerCase())) return false;
+        return true;
+      })
+      .join("\n");
+  }, [run?.log, filter, errorsOnly]);
+
+  const isFiltering = !!(filter || errorsOnly);
+
   // Auto-scroll log
   useEffect(() => {
-    if (autoScroll.current && logRef.current) {
+    if (autoScroll.current && logRef.current && !isFiltering) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
-  }, [run?.log]);
+  }, [run?.log, isFiltering]);
 
   // Track user scroll position
   const handleLogScroll = () => {
     if (!logRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = logRef.current;
     autoScroll.current = scrollHeight - scrollTop - clientHeight < 50;
+  };
+
+  const handleDownload = () => {
+    if (!run?.log) return;
+    const blob = new Blob([run.log], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), {
+      href: url,
+      download: `job-run-${runId}.txt`,
+    });
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (runQuery.isLoading) return <p>Loading...</p>;
@@ -134,14 +165,33 @@ export default function JobRun() {
         </div>
       )}
 
-      <div className={styles.logWrapper}>
+      <div className={styles.logToolbar}>
+        <input
+          type="text"
+          className={styles.logFilterInput}
+          placeholder="Filter log..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+        <label className={styles.logErrorToggle}>
+          <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
+          Errors only
+        </label>
         {run.log && (
-          <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(run.log)}>
-            Copy
-          </button>
+          <>
+            <button className={styles.logToolbarBtn} onClick={() => navigator.clipboard.writeText(run.log)}>
+              Copy
+            </button>
+            <button className={styles.logToolbarBtn} onClick={handleDownload}>
+              Download
+            </button>
+          </>
         )}
+      </div>
+
+      <div className={styles.logWrapper}>
         <pre ref={logRef} className={styles.logViewer} onScroll={handleLogScroll}>
-          {run.log || "(no output yet)"}
+          {filteredLog || (isFiltering ? "(no matching lines)" : "(no output yet)")}
         </pre>
       </div>
     </div>

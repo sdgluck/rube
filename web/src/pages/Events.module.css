@@ -9,20 +9,20 @@
 .table th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
 .table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
 }
 
 .table tbody tr:hover {
-  background: #f9f9fb;
+  background: var(--bg-surface-hover);
 }
 
 /* ─── Type badges ───────────────────────────────────────────────────────────── */
@@ -57,14 +57,14 @@
 }
 
 .badgeDefault {
-  background: #e5e7eb;
-  color: #4b5563;
+  background: var(--bg-badge);
+  color: var(--text-badge);
 }
 
 /* ─── Timestamp ─────────────────────────────────────────────────────────────── */
 
 .timestamp {
-  color: #888;
+  color: var(--text-muted);
   white-space: nowrap;
   font-size: 0.85rem;
 }
@@ -72,7 +72,7 @@
 /* ─── Empty state ──────────────────────────────────────────────────────────── */
 
 .empty {
-  color: #888;
+  color: var(--text-muted);
   font-style: italic;
   padding: 40px 0;
   text-align: center;

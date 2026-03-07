@@ -7,25 +7,129 @@ interface Status {
   msg: string;
 }
 
+interface ServiceConfig {
+  title: string;
+  urlLabel: string;
+  urlPlaceholder: string;
+  urlConfigKey: string;
+  apiKeyConfigKey: string;
+  testMutation:
+    | ReturnType<typeof trpc.testRadarr.useMutation>
+    | ReturnType<typeof trpc.testSonarr.useMutation>
+    | ReturnType<typeof trpc.testSeerr.useMutation>;
+  formatSuccess: (result: { ok: boolean; instanceName?: string; total?: number }) => string;
+  serviceName: string;
+}
+
+function ServiceConfigFieldset({
+  config,
+  configData,
+  saveConfigMutation,
+  utils,
+}: {
+  config: ServiceConfig;
+  configData: Record<string, string>;
+  saveConfigMutation: ReturnType<typeof trpc.config.save.useMutation>;
+  utils: ReturnType<typeof trpc.useUtils>;
+}) {
+  const [url, setUrl] = useState(configData[config.urlConfigKey] || "");
+  const [apiKey, setApiKey] = useState(configData[config.apiKeyConfigKey] || "");
+  const [status, setStatus] = useState<Status | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setUrl(configData[config.urlConfigKey] || "");
+    setApiKey(configData[config.apiKeyConfigKey] || "");
+  }, [configData, config.urlConfigKey, config.apiKeyConfigKey]);
+
+  const runTest = async (testUrl: string, testApiKey: string): Promise<boolean> => {
+    setStatus(null);
+    if (!testUrl || !testApiKey) {
+      setStatus({ type: "error", msg: "Both URL and API key are required" });
+      return false;
+    }
+    setTesting(true);
+    try {
+      const result = await config.testMutation.mutateAsync({ url: testUrl, api_key: testApiKey });
+      if (result.ok) {
+        setStatus({ type: "success", msg: config.formatSuccess(result as never) });
+        return true;
+      }
+      throw "nope";
+    } catch {
+      setStatus({ type: "error", msg: "Connection test failed" });
+      return false;
+    } finally {
+      setTesting(false);
+      utils.health.status.invalidate();
+    }
+  };
+
+  const handleSave = async () => {
+    setStatus(null);
+    setSaving(true);
+    try {
+      const ok = await runTest(url, apiKey);
+      if (!ok) {
+        setStatus({ type: "error", msg: `${config.serviceName} connection failed — settings not saved` });
+        setSaving(false);
+        return;
+      }
+      await saveConfigMutation.mutateAsync({
+        [config.urlConfigKey]: url,
+        [config.apiKeyConfigKey]: apiKey,
+      });
+      setStatus({ type: "success", msg: `${config.serviceName} settings saved` });
+    } catch {
+      setStatus({ type: "error", msg: `Failed to save ${config.serviceName} settings` });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.groupTitle}>{config.title}</legend>
+      <label className={styles.field}>
+        <span className={styles.label}>{config.urlLabel}</span>
+        <input
+          type="text"
+          className={styles.input}
+          placeholder={config.urlPlaceholder}
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+      </label>
+      <label className={styles.field}>
+        <span className={styles.label}>API Key</span>
+        <input
+          type="password"
+          className={styles.input}
+          placeholder="Enter API key"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+      </label>
+      {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
+      <div className={styles.buttons}>
+        <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          className={styles.buttonSecondary}
+          onClick={() => runTest(url, apiKey)}
+          disabled={testing}
+        >
+          {testing ? "Testing..." : "Test Connection"}
+        </button>
+      </div>
+    </fieldset>
+  );
+}
+
 export default function SettingsArrs() {
-  const [radarrUrl, setRadarrUrl] = useState("");
-  const [radarrApiKey, setRadarrApiKey] = useState("");
-  const [radarrStatus, setRadarrStatus] = useState<Status | null>(null);
-  const [testingRadarr, setTestingRadarr] = useState(false);
-  const [savingRadarr, setSavingRadarr] = useState(false);
-
-  const [sonarrUrl, setSonarrUrl] = useState("");
-  const [sonarrApiKey, setSonarrApiKey] = useState("");
-  const [sonarrStatus, setSonarrStatus] = useState<Status | null>(null);
-  const [testingSonarr, setTestingSonarr] = useState(false);
-  const [savingSonarr, setSavingSonarr] = useState(false);
-
-  const [seerrUrl, setSeerrUrl] = useState("");
-  const [seerrApiKey, setSeerrApiKey] = useState("");
-  const [seerrStatus, setSeerrStatus] = useState<Status | null>(null);
-  const [testingSeerr, setTestingSeerr] = useState(false);
-  const [savingSeerr, setSavingSeerr] = useState(false);
-
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
@@ -36,270 +140,55 @@ export default function SettingsArrs() {
   const testSonarrMutation = trpc.testSonarr.useMutation();
   const testSeerrMutation = trpc.testSeerr.useMutation();
 
-  useEffect(() => {
-    if (configQuery.data) {
-      setRadarrUrl(configQuery.data.global_radarr_url || "");
-      setRadarrApiKey(configQuery.data.global_radarr_api_key || "");
-      setSonarrUrl(configQuery.data.global_sonarr_url || "");
-      setSonarrApiKey(configQuery.data.global_sonarr_api_key || "");
-      setSeerrUrl(configQuery.data.global_seerr_url || "");
-      setSeerrApiKey(configQuery.data.global_seerr_api_key || "");
-    }
-  }, [configQuery.data]);
-
-  const runRadarrTest = async (url: string, apiKey: string): Promise<boolean> => {
-    setRadarrStatus(null);
-    if (!url || !apiKey) {
-      setRadarrStatus({ type: "error", msg: "Both URL and API key are required" });
-      return false;
-    }
-    setTestingRadarr(true);
-    try {
-      const result = await testRadarrMutation.mutateAsync({ url, api_key: apiKey });
-      if (result.ok) {
-        setRadarrStatus({ type: "success", msg: `Connected to "${result.instanceName}"` });
-        return true;
-      }
-      throw "nope";
-    } catch {
-      setRadarrStatus({ type: "error", msg: "Connection test failed" });
-      return false;
-    } finally {
-      setTestingRadarr(false);
-      utils.health.status.invalidate();
-    }
-  };
-
-  const handleSaveRadarr = async () => {
-    setRadarrStatus(null);
-    setSavingRadarr(true);
-    try {
-      const ok = await runRadarrTest(radarrUrl, radarrApiKey);
-      if (!ok) {
-        setRadarrStatus({ type: "error", msg: "Radarr connection failed — settings not saved" });
-        setSavingRadarr(false);
-        return;
-      }
-      await saveConfigMutation.mutateAsync({
-        global_radarr_url: radarrUrl,
-        global_radarr_api_key: radarrApiKey,
-      });
-      setRadarrStatus({ type: "success", msg: "Radarr settings saved" });
-    } catch {
-      setRadarrStatus({ type: "error", msg: "Failed to save Radarr settings" });
-    } finally {
-      setSavingRadarr(false);
-    }
-  };
-
-  const runSonarrTest = async (url: string, apiKey: string): Promise<boolean> => {
-    setSonarrStatus(null);
-    if (!url || !apiKey) {
-      setSonarrStatus({ type: "error", msg: "Both URL and API key are required" });
-      return false;
-    }
-    setTestingSonarr(true);
-    try {
-      const result = await testSonarrMutation.mutateAsync({ url, api_key: apiKey });
-      if (result.ok) {
-        setSonarrStatus({ type: "success", msg: `Connected to "${result.instanceName}"` });
-        return true;
-      }
-      throw "nope";
-    } catch {
-      setSonarrStatus({ type: "error", msg: "Connection test failed" });
-      return false;
-    } finally {
-      setTestingSonarr(false);
-      utils.health.status.invalidate();
-    }
-  };
-
-  const handleSaveSonarr = async () => {
-    setSonarrStatus(null);
-    setSavingSonarr(true);
-    try {
-      const ok = await runSonarrTest(sonarrUrl, sonarrApiKey);
-      if (!ok) {
-        setSonarrStatus({ type: "error", msg: "Sonarr connection failed — settings not saved" });
-        setSavingSonarr(false);
-        return;
-      }
-      await saveConfigMutation.mutateAsync({
-        global_sonarr_url: sonarrUrl,
-        global_sonarr_api_key: sonarrApiKey,
-      });
-      setSonarrStatus({ type: "success", msg: "Sonarr settings saved" });
-    } catch {
-      setSonarrStatus({ type: "error", msg: "Failed to save Sonarr settings" });
-    } finally {
-      setSavingSonarr(false);
-    }
-  };
-
-  const runSeerrTest = async (url: string, apiKey: string): Promise<boolean> => {
-    setSeerrStatus(null);
-    if (!url || !apiKey) {
-      setSeerrStatus({ type: "error", msg: "Both URL and API key are required" });
-      return false;
-    }
-    setTestingSeerr(true);
-    try {
-      const result = await testSeerrMutation.mutateAsync({ url, api_key: apiKey });
-      if (result.ok) {
-        setSeerrStatus({ type: "success", msg: `Connected — ${result.total} total requests` });
-        return true;
-      }
-      throw "nope";
-    } catch {
-      setSeerrStatus({ type: "error", msg: "Connection test failed" });
-      return false;
-    } finally {
-      setTestingSeerr(false);
-      utils.health.status.invalidate();
-    }
-  };
-
-  const handleSaveSeerr = async () => {
-    setSeerrStatus(null);
-    setSavingSeerr(true);
-    try {
-      const ok = await runSeerrTest(seerrUrl, seerrApiKey);
-      if (!ok) {
-        setSeerrStatus({ type: "error", msg: "Seerr connection failed — settings not saved" });
-        setSavingSeerr(false);
-        return;
-      }
-      await saveConfigMutation.mutateAsync({
-        global_seerr_url: seerrUrl,
-        global_seerr_api_key: seerrApiKey,
-      });
-      setSeerrStatus({ type: "success", msg: "Seerr settings saved" });
-    } catch {
-      setSeerrStatus({ type: "error", msg: "Failed to save Seerr settings" });
-    } finally {
-      setSavingSeerr(false);
-    }
-  };
-
   if (configQuery.isLoading) return <p>Loading...</p>;
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
+  const configData = (configQuery.data || {}) as Record<string, string>;
+
+  const services: ServiceConfig[] = [
+    {
+      title: "Radarr",
+      urlLabel: "Radarr URL",
+      urlPlaceholder: "http://localhost:7878",
+      urlConfigKey: "global_radarr_url",
+      apiKeyConfigKey: "global_radarr_api_key",
+      testMutation: testRadarrMutation,
+      formatSuccess: (r) => `Connected to "${r.instanceName}"`,
+      serviceName: "Radarr",
+    },
+    {
+      title: "Sonarr",
+      urlLabel: "Sonarr URL",
+      urlPlaceholder: "http://localhost:8989",
+      urlConfigKey: "global_sonarr_url",
+      apiKeyConfigKey: "global_sonarr_api_key",
+      testMutation: testSonarrMutation,
+      formatSuccess: (r) => `Connected to "${r.instanceName}"`,
+      serviceName: "Sonarr",
+    },
+    {
+      title: "Jellyseerr / Overseerr",
+      urlLabel: "Seerr URL",
+      urlPlaceholder: "http://localhost:5055",
+      urlConfigKey: "global_seerr_url",
+      apiKeyConfigKey: "global_seerr_api_key",
+      testMutation: testSeerrMutation,
+      formatSuccess: (r) => `Connected — ${r.total} total requests`,
+      serviceName: "Seerr",
+    },
+  ];
+
   return (
     <div className={styles.form}>
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Radarr</legend>
-        <label className={styles.field}>
-          <span className={styles.label}>Radarr URL</span>
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="http://localhost:7878"
-            value={radarrUrl}
-            onChange={(e) => setRadarrUrl(e.target.value)}
-          />
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>API Key</span>
-          <input
-            type="password"
-            className={styles.input}
-            placeholder="Enter API key"
-            value={radarrApiKey}
-            onChange={(e) => setRadarrApiKey(e.target.value)}
-          />
-        </label>
-        {radarrStatus && <div className={`${styles.toast} ${styles[radarrStatus.type]}`}>{radarrStatus.msg}</div>}
-        <div className={styles.buttons}>
-          <button type="button" className={styles.button} onClick={handleSaveRadarr} disabled={savingRadarr}>
-            {savingRadarr ? "Saving..." : "Save"}
-          </button>
-          <button
-            type="button"
-            className={styles.buttonSecondary}
-            onClick={() => runRadarrTest(radarrUrl, radarrApiKey)}
-            disabled={testingRadarr}
-          >
-            {testingRadarr ? "Testing..." : "Test Connection"}
-          </button>
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Sonarr</legend>
-        <label className={styles.field}>
-          <span className={styles.label}>Sonarr URL</span>
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="http://localhost:8989"
-            value={sonarrUrl}
-            onChange={(e) => setSonarrUrl(e.target.value)}
-          />
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>API Key</span>
-          <input
-            type="password"
-            className={styles.input}
-            placeholder="Enter API key"
-            value={sonarrApiKey}
-            onChange={(e) => setSonarrApiKey(e.target.value)}
-          />
-        </label>
-        {sonarrStatus && <div className={`${styles.toast} ${styles[sonarrStatus.type]}`}>{sonarrStatus.msg}</div>}
-        <div className={styles.buttons}>
-          <button type="button" className={styles.button} onClick={handleSaveSonarr} disabled={savingSonarr}>
-            {savingSonarr ? "Saving..." : "Save"}
-          </button>
-          <button
-            type="button"
-            className={styles.buttonSecondary}
-            onClick={() => runSonarrTest(sonarrUrl, sonarrApiKey)}
-            disabled={testingSonarr}
-          >
-            {testingSonarr ? "Testing..." : "Test Connection"}
-          </button>
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Jellyseerr / Overseerr</legend>
-        <label className={styles.field}>
-          <span className={styles.label}>Seerr URL</span>
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="http://localhost:5055"
-            value={seerrUrl}
-            onChange={(e) => setSeerrUrl(e.target.value)}
-          />
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>API Key</span>
-          <input
-            type="password"
-            className={styles.input}
-            placeholder="Enter API key"
-            value={seerrApiKey}
-            onChange={(e) => setSeerrApiKey(e.target.value)}
-          />
-        </label>
-        {seerrStatus && <div className={`${styles.toast} ${styles[seerrStatus.type]}`}>{seerrStatus.msg}</div>}
-        <div className={styles.buttons}>
-          <button type="button" className={styles.button} onClick={handleSaveSeerr} disabled={savingSeerr}>
-            {savingSeerr ? "Saving..." : "Save"}
-          </button>
-          <button
-            type="button"
-            className={styles.buttonSecondary}
-            onClick={() => runSeerrTest(seerrUrl, seerrApiKey)}
-            disabled={testingSeerr}
-          >
-            {testingSeerr ? "Testing..." : "Test Connection"}
-          </button>
-        </div>
-      </fieldset>
+      {services.map((svc) => (
+        <ServiceConfigFieldset
+          key={svc.urlConfigKey}
+          config={svc}
+          configData={configData}
+          saveConfigMutation={saveConfigMutation}
+          utils={utils}
+        />
+      ))}
     </div>
   );
 }
