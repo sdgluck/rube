@@ -955,6 +955,15 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     });
   }
 
+  async function getFilterFieldValues(sectionId: string, field: string): Promise<{ key: string; title: string }[]> {
+    const data = await request(`/library/sections/${sectionId}/${field}`);
+    const dirs = data?.MediaContainer?.Directory || [];
+    return dirs.map((d: Record<string, unknown>) => ({
+      key: String(d.key ?? d.ratingKey ?? ""),
+      title: String(d.title ?? ""),
+    }));
+  }
+
   // ─── Sessions & recently added ─────────────────────────────────────────────
 
   async function getActiveSessions(): Promise<PlexSession[]> {
@@ -1430,6 +1439,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     removeLabelFromAllItems,
     getSmartCollectionContent,
     updateSmartCollectionContent,
+    getFilterFieldValues,
     getActiveSessions,
     getRecentlyAdded,
     getItems,

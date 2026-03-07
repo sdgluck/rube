@@ -146,6 +146,13 @@ const collectionsRouter = t.router({
     return client.getSmartCollectionContent(input.ratingKey);
   }),
 
+  filterFieldValues: procedure
+    .input(z.object({ sectionId: z.string(), field: z.string() }))
+    .query(async ({ input }) => {
+      const client = getPlexClient();
+      return client.getFilterFieldValues(input.sectionId, input.field);
+    }),
+
   updateSmartFilters: t.procedure
     .input(z.object({ ratingKey: z.string(), contentUri: z.string() }))
     .mutation(async ({ input }) => {

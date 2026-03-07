@@ -454,9 +454,9 @@
 
 .detailLayout {
   display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
+  grid-template-columns: 220px 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
 }
 
 .detailPoster {
@@ -465,20 +465,22 @@
 
 .detailPosterImg {
   width: 100%;
-  border-radius: 8px;
+  border-radius: 10px;
   display: block;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .detailPosterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
   background: var(--card-poster-bg);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
   font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .detailMain {
@@ -486,31 +488,101 @@
 }
 
 .backLink {
-  display: inline-block;
-  margin-bottom: 16px;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 20px;
+  color: var(--text-secondary);
   text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.15s;
 }
 
 .backLink:hover {
-  text-decoration: underline;
+  color: var(--accent);
 }
 
 .detailHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
 .detailHeader .heading {
   margin-bottom: 0;
+  font-size: 1.6rem;
 }
 
 .detailMain .group {
   margin-bottom: 0;
+}
+
+.detailSummary {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.detailSection {
+  margin-bottom: 20px;
+}
+
+.detailSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detailLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.detailLabels .labelEditorInput {
+  max-width: 160px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: 12px;
+}
+
+.detailDivider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 20px 0;
+}
+
+.detailEditCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detailEditHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detailEditTitle {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
 .group {
@@ -590,10 +662,29 @@
 
 .meta {
   display: flex;
-  gap: 16px;
-  font-size: 0.85rem;
+  gap: 6px;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.metaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--bg-badge);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--text-badge);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.metaChipIcon {
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
 
 /* ─── Smart filter editor ─────────────────────────────────────────────────── */
@@ -837,6 +928,15 @@
 
   .detailLayout {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .detailPoster {
+    max-width: 200px;
+  }
+
+  .detailHeader .heading {
+    font-size: 1.3rem;
   }
 
   .grid {

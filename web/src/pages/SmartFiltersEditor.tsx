@@ -17,7 +17,19 @@ const TAG_FIELDS = new Set([
   "collection",
 ]);
 
-const NUMERIC_FIELDS = new Set(["year", "decade", "rating", "audienceRating", "userRating", "duration"]);
+const NUMERIC_FIELDS = new Set([
+  "year",
+  "decade",
+  "rating",
+  "audienceRating",
+  "userRating",
+  "duration",
+  "originallyAvailableAt",
+  "addedAt",
+  "lastViewedAt",
+  "viewCount",
+  "unviewedLeafCount",
+]);
 
 const TAG_OPERATORS = [
   { value: "", label: "is" },
@@ -32,6 +44,36 @@ const NUMERIC_OPERATORS = [
   { value: ">>>", label: ">" },
   { value: "<<<", label: "<" },
 ];
+
+const FIELD_LABELS: Record<string, string> = {
+  label: "Label",
+  genre: "Genre",
+  director: "Director",
+  actor: "Actor",
+  writer: "Writer",
+  studio: "Studio",
+  country: "Country",
+  contentRating: "Content Rating",
+  resolution: "Resolution",
+  collection: "Collection",
+  year: "Year",
+  decade: "Decade",
+  rating: "Rating",
+  audienceRating: "Audience Rating",
+  userRating: "User Rating",
+  duration: "Duration",
+  originallyAvailableAt: "Release Date",
+  addedAt: "Date Added",
+  lastViewedAt: "Last Played",
+  unviewedLeafCount: "Unplayed Episodes",
+  viewCount: "Plays",
+  titleSort: "Title",
+  mediaHeight: "Resolution",
+};
+
+function fieldLabel(field: string): string {
+  return FIELD_LABELS[field] || field.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+}
 
 const ALL_KNOWN_FIELDS = [...TAG_FIELDS, ...NUMERIC_FIELDS].sort();
 
@@ -281,6 +323,11 @@ interface SmartFiltersEditorProps {
   onSave?: () => void;
 }
 
+function extractSectionId(basePath: string): string | null {
+  const match = basePath.match(/\/library\/sections\/(\d+)\//);
+  return match ? match[1] : null;
+}
+
 export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEditorProps) {
   const configQuery = trpc.collections.smartConfig.useQuery({ ratingKey }, { refetchOnWindowFocus: false });
   const updateMutation = trpc.collections.updateSmartFilters.useMutation();
@@ -298,6 +345,8 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
   const updateRoot = useCallback((updater: (root: FilterGroup) => FilterGroup) => {
     setParsed((prev) => (prev ? { ...prev, root: updater(prev.root) } : prev));
   }, []);
+
+  const sectionId = parsed ? extractSectionId(parsed.basePath) : null;
 
   if (configQuery.isLoading) return null;
   if (!configQuery.data?.content || !parsed) return null;
@@ -359,16 +408,22 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
           value={sortField}
           onChange={(e) => setParsed({ ...parsed, sort: `${e.target.value}:${sortDir}` })}
         >
-          <option value="titleSort">Title</option>
-          <option value="originallyAvailableAt">Release Date</option>
-          <option value="year">Year</option>
-          <option value="rating">Rating</option>
-          <option value="audienceRating">Audience Rating</option>
-          <option value="userRating">User Rating</option>
-          <option value="duration">Duration</option>
-          <option value="addedAt">Date Added</option>
-          <option value="lastViewedAt">Last Played</option>
-          <option value="mediaHeight">Resolution</option>
+          {[
+            "titleSort",
+            "originallyAvailableAt",
+            "year",
+            "rating",
+            "audienceRating",
+            "userRating",
+            "duration",
+            "addedAt",
+            "lastViewedAt",
+            "mediaHeight",
+          ].map((f) => (
+            <option key={f} value={f}>
+              {fieldLabel(f)}
+            </option>
+          ))}
         </select>
         <select
           className={styles.filterSelect}
@@ -401,6 +456,7 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
             <RuleRow
               rule={item}
               allFields={allFields}
+              sectionId={sectionId}
               onChange={(updated) => updateRootItem(i, updated)}
               onRemove={() => removeRootItem(i)}
             />
@@ -408,6 +464,7 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
             <GroupBox
               group={item}
               allFields={allFields}
+              sectionId={sectionId}
               onChange={(updated) => updateRootItem(i, updated)}
               onRemove={() => removeRootItem(i)}
             />
@@ -442,24 +499,68 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+function TagValueSelect({
+  field,
+  value,
+  sectionId,
+  onChange,
+}: {
+  field: string;
+  value: string;
+  sectionId: string | null;
+  onChange: (value: string) => void;
+}) {
+  const fieldQuery = trpc.collections.filterFieldValues.useQuery(
+    { sectionId: sectionId!, field },
+    { enabled: !!sectionId && TAG_FIELDS.has(field), staleTime: 5 * 60_000 },
+  );
+
+  const options = fieldQuery.data || [];
+
+  if (options.length === 0) {
+    return (
+      <input type="text" className={styles.filterInput} value={value} onChange={(e) => onChange(e.target.value)} />
+    );
+  }
+
+  return (
+    <select
+      className={styles.filterSelect}
+      style={{ flex: 1 }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {!options.some((o) => o.key === value) && <option value={value}>{value}</option>}
+      {options.map((o) => (
+        <option key={o.key} value={o.key}>
+          {o.title}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function RuleRow({
   rule,
   allFields,
+  sectionId,
   onChange,
   onRemove,
 }: {
   rule: FilterRule;
   allFields: string[];
+  sectionId: string | null;
   onChange: (rule: FilterRule) => void;
   onRemove: () => void;
 }) {
   const operators = getOperatorsForField(rule.field);
+  const isTag = TAG_FIELDS.has(rule.field);
 
   const updateField = (field: string) => {
     const oldIsNumeric = NUMERIC_FIELDS.has(rule.field);
     const newIsNumeric = NUMERIC_FIELDS.has(field);
     const operator = oldIsNumeric !== newIsNumeric ? "" : rule.operator;
-    onChange({ ...rule, field, operator });
+    onChange({ ...rule, field, operator, value: "" });
   };
 
   return (
@@ -467,7 +568,7 @@ function RuleRow({
       <select className={styles.filterSelect} value={rule.field} onChange={(e) => updateField(e.target.value)}>
         {allFields.map((f) => (
           <option key={f} value={f}>
-            {f}
+            {fieldLabel(f)}
           </option>
         ))}
       </select>
@@ -482,12 +583,21 @@ function RuleRow({
           </option>
         ))}
       </select>
-      <input
-        type="text"
-        className={styles.filterInput}
-        value={rule.value}
-        onChange={(e) => onChange({ ...rule, value: e.target.value })}
-      />
+      {isTag ? (
+        <TagValueSelect
+          field={rule.field}
+          value={rule.value}
+          sectionId={sectionId}
+          onChange={(value) => onChange({ ...rule, value })}
+        />
+      ) : (
+        <input
+          type="text"
+          className={styles.filterInput}
+          value={rule.value}
+          onChange={(e) => onChange({ ...rule, value: e.target.value })}
+        />
+      )}
       <button className={styles.filterRemoveBtn} onClick={onRemove} title="Remove filter">
         &times;
       </button>
@@ -498,11 +608,13 @@ function RuleRow({
 function GroupBox({
   group,
   allFields,
+  sectionId,
   onChange,
   onRemove,
 }: {
   group: FilterGroup;
   allFields: string[];
+  sectionId: string | null;
   onChange: (group: FilterGroup) => void;
   onRemove: () => void;
 }) {
@@ -544,6 +656,7 @@ function GroupBox({
             key={i}
             rule={item}
             allFields={allFields}
+            sectionId={sectionId}
             onChange={(updated) => updateItem(i, updated)}
             onRemove={() => removeItem(i)}
           />

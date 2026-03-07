@@ -99,7 +99,7 @@ export default function CollectionDetail() {
           navigate(-1);
         }}
       >
-        &larr; Back to Collections
+        &larr; Collections
       </a>
 
       <div className={styles.detailLayout}>
@@ -124,13 +124,21 @@ export default function CollectionDetail() {
           </div>
 
           <div className={styles.meta}>
-            <span>Section: {collection.sectionTitle}</span>
-            <span>{collection.childCount} items</span>
-            {collection.addedAt && <span>Added: {new Date(collection.addedAt * 1000).toLocaleDateString()}</span>}
+            <span className={styles.metaChip}>{collection.sectionTitle}</span>
+            <span className={styles.metaChip}>{collection.childCount} items</span>
+            {collection.addedAt && (
+              <span className={styles.metaChip}>Added {new Date(collection.addedAt * 1000).toLocaleDateString()}</span>
+            )}
+            {collection.smart === 1 && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
           </div>
 
-          {labels.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
+          {collection.summary && <p className={styles.detailSummary}>{collection.summary}</p>}
+
+          {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
+
+          <div className={styles.detailSection}>
+            <div className={styles.detailSectionTitle}>Labels</div>
+            <div className={styles.detailLabels}>
               {labels.map((label) => (
                 <span
                   key={label}
@@ -163,44 +171,46 @@ export default function CollectionDetail() {
                   </button>
                 </span>
               ))}
+              <input
+                type="text"
+                className={styles.labelEditorInput}
+                placeholder="Add label..."
+                value={labelInput}
+                onChange={(e) => setLabelInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const value = labelInput.trim();
+                    if (!value || !ratingKey) return;
+                    setSavingLabels(true);
+                    setStatus(null);
+                    updateLabelsMutation
+                      .mutateAsync({ ratingKey, labels: [...new Set([...labels, value])] })
+                      .then(() => {
+                        setLabelInput("");
+                        setStatus({ type: "success", msg: `Added label "${value}"` });
+                        collectionQuery.refetch();
+                      })
+                      .catch(() => {
+                        setStatus({ type: "error", msg: `Failed to add label "${value}"` });
+                      })
+                      .finally(() => setSavingLabels(false));
+                  }
+                }}
+                disabled={savingLabels}
+              />
             </div>
-          )}
-
-          <div className={styles.labelEditorRow} style={{ marginBottom: 16 }}>
-            <input
-              type="text"
-              className={styles.labelEditorInput}
-              placeholder="Add label..."
-              value={labelInput}
-              onChange={(e) => setLabelInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  const value = labelInput.trim();
-                  if (!value || !ratingKey) return;
-                  setSavingLabels(true);
-                  setStatus(null);
-                  updateLabelsMutation
-                    .mutateAsync({ ratingKey, labels: [...new Set([...labels, value])] })
-                    .then(() => {
-                      setLabelInput("");
-                      setStatus({ type: "success", msg: `Added label "${value}"` });
-                      collectionQuery.refetch();
-                    })
-                    .catch(() => {
-                      setStatus({ type: "error", msg: `Failed to add label "${value}"` });
-                    })
-                    .finally(() => setSavingLabels(false));
-                }
-              }}
-              disabled={savingLabels}
-            />
           </div>
 
-          {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
+          <div className={styles.detailDivider} />
 
-          <fieldset className={styles.group}>
-            <legend className={styles.groupTitle}>Edit</legend>
+          <div className={styles.detailEditCard}>
+            <div className={styles.detailEditHeader}>
+              <span className={styles.detailEditTitle}>Edit Collection</span>
+              <button className={styles.button} onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
             <label className={styles.field}>
               <span className={styles.fieldLabel}>Title</span>
               <input type="text" className={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -209,20 +219,15 @@ export default function CollectionDetail() {
               <span className={styles.fieldLabel}>Summary</span>
               <textarea className={styles.textarea} value={summary} onChange={(e) => setSummary(e.target.value)} />
             </label>
-            <div className={styles.buttons}>
-              <button className={styles.button} onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </fieldset>
+          </div>
 
           {collection.smart === 1 && <SmartFiltersEditor ratingKey={ratingKey!} onSave={() => itemsQuery.refetch()} />}
         </div>
       </div>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Items ({items.length})</legend>
-        <div className={styles.itemsHeader}>
+      <div className={styles.detailSection}>
+        <div className={styles.detailSectionTitle}>
+          <span>Items ({items.length})</span>
           <div className={styles.viewToggle}>
             <button
               className={`${styles.viewToggleBtn} ${itemsView === "table" ? styles.viewToggleBtnActive : ""}`}
@@ -270,24 +275,26 @@ export default function CollectionDetail() {
             ))}
           </div>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Year</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.ratingKey}>
-                  <td>{item.title}</td>
-                  <td className={styles.itemYear}>{item.year || "—"}</td>
+          <div className="table-scroll">
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Year</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.ratingKey}>
+                    <td>{item.title}</td>
+                    <td className={styles.itemYear}>{item.year || "\u2014"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </fieldset>
+      </div>
 
       {pendingConfirm && (
         <ConfirmModal
