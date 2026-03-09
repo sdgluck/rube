@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { trpc } from "../trpc";
+import { useToast } from "../Toast";
 import styles from "./Collections.module.css";
 
 const SYSTEM_PARAMS = new Set(["type", "sort", "limit", "includeGuids"]);
@@ -334,7 +335,7 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
 
   const [parsed, setParsed] = useState<ParsedContent | null>(null);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (configQuery.data?.content) {
@@ -361,14 +362,13 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
 
   const handleSave = async () => {
     setSaving(true);
-    setStatus(null);
     try {
       const contentUri = buildContentUri(parsed);
       await updateMutation.mutateAsync({ ratingKey, contentUri });
-      setStatus({ type: "success", msg: "Smart filters updated" });
+      addToast("Smart filters updated", "success");
       onSave?.();
     } catch {
-      setStatus({ type: "error", msg: "Failed to update smart filters" });
+      addToast("Failed to update smart filters", "error");
     } finally {
       setSaving(false);
     }
@@ -485,8 +485,6 @@ export default function SmartFiltersEditor({ ratingKey, onSave }: SmartFiltersEd
           + Add group
         </button>
       </div>
-
-      {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
 
       <div className={styles.buttons} style={{ justifyContent: "flex-end" }}>
         <button className={styles.button} onClick={handleSave} disabled={saving}>

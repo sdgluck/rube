@@ -6,6 +6,11 @@
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: backdropIn 200ms ease-out;
+}
+
+.backdropExiting {
+  animation: backdropOut 200ms ease-in forwards;
 }
 
 .modal {
@@ -15,6 +20,11 @@
   max-width: 420px;
   width: 90%;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  animation: modalIn 200ms ease-out;
+}
+
+.modalExiting {
+  animation: modalOut 200ms ease-in forwards;
 }
 
 .message {

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import { formatTime } from "../utils";
+import { DetailSkeleton } from "../Skeleton";
+import useSwipeBack from "../useSwipeBack";
 import styles from "./Jobs.module.css";
 
 function formatDuration(startMs: number, endMs?: number | null): string {
@@ -45,6 +47,8 @@ const ERROR_PATTERN = /error|failed|exception|fatal|panic|ENOENT|ECONNREFUSED/i;
 
 export default function JobRun() {
   const { runId } = useParams<{ runId: string }>();
+  const navigate = useNavigate();
+  const swipeRef = useSwipeBack(navigate);
   const logRef = useRef<HTMLPreElement>(null);
   const autoScroll = useRef(true);
   const [filter, setFilter] = useState("");
@@ -105,12 +109,12 @@ export default function JobRun() {
     URL.revokeObjectURL(url);
   };
 
-  if (runQuery.isLoading) return <p>Loading...</p>;
+  if (runQuery.isLoading) return <DetailSkeleton />;
   if (runQuery.error) return <p>Error: {runQuery.error.message}</p>;
   if (!run) return <p>Run not found</p>;
 
   return (
-    <div className={styles.runDetail}>
+    <div ref={swipeRef} className={styles.runDetail}>
       <Link to={`/jobs/${run.jobId}`} className={styles.backLink}>
         &larr; Back to Job
       </Link>

@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import ConfirmModal from "../ConfirmModal";
+import { DetailSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
+import { useToast } from "../Toast";
+import useSwipeBack from "../useSwipeBack";
 import styles from "./Collections.module.css";
 import SmartFiltersEditor from "./SmartFiltersEditor";
 
@@ -10,16 +14,17 @@ type ViewMode = "table" | "grid";
 export default function CollectionDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
+  const swipeRef = useSwipeBack(navigate);
+  const utils = trpc.useUtils();
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
-  const [savingLabels, setSavingLabels] = useState(false);
   const [labelInput, setLabelInput] = useState("");
   const [itemsView, setItemsView] = useState<ViewMode>(
     () => (localStorage.getItem("collection-items-view") as ViewMode) || "table",
   );
-  const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const { addToast } = useToast();
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const collectionQuery = trpc.collections.get.useQuery(
@@ -33,7 +38,28 @@ export default function CollectionDetail() {
   );
 
   const updateMutation = trpc.collections.update.useMutation();
-  const updateLabelsMutation = trpc.collections.updateLabels.useMutation();
+  const updateLabelsMutation = trpc.collections.updateLabels.useMutation({
+    onMutate: async (input) => {
+      await utils.collections.get.cancel({ ratingKey: input.ratingKey });
+      const prev = utils.collections.get.getData({ ratingKey: input.ratingKey });
+      if (prev) {
+        utils.collections.get.setData(
+          { ratingKey: input.ratingKey },
+          { ...prev, labels: JSON.stringify(input.labels) },
+        );
+      }
+      return { prev };
+    },
+    onError: (_err, input, ctx) => {
+      if (ctx?.prev) {
+        utils.collections.get.setData({ ratingKey: input.ratingKey }, ctx.prev);
+      }
+      addToast("Failed to update labels", "error");
+    },
+    onSettled: (_data, _err, input) => {
+      utils.collections.get.invalidate({ ratingKey: input.ratingKey });
+    },
+  });
   const deleteMutation = trpc.collections.delete.useMutation();
 
   const collection = collectionQuery.data;
@@ -49,13 +75,12 @@ export default function CollectionDetail() {
   const handleSave = async () => {
     if (!ratingKey) return;
     setSaving(true);
-    setStatus(null);
     try {
       await updateMutation.mutateAsync({ ratingKey, title, summary });
-      setStatus({ type: "success", msg: "Collection updated" });
+      addToast("Collection updated", "success");
       collectionQuery.refetch();
     } catch {
-      setStatus({ type: "error", msg: "Failed to update collection" });
+      addToast("Failed to update collection", "error");
     } finally {
       setSaving(false);
     }
@@ -71,13 +96,13 @@ export default function CollectionDetail() {
           await deleteMutation.mutateAsync({ ratingKey });
           navigate("/collections");
         } catch {
-          setStatus({ type: "error", msg: "Failed to delete collection" });
+          addToast("Failed to delete collection", "error");
         }
       },
     });
   };
 
-  if (collectionQuery.isLoading) return <p>Loading...</p>;
+  if (collectionQuery.isLoading) return <DetailSkeleton />;
   if (collectionQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Collection not found</div>;
   if (!collection) return null;
 
@@ -90,7 +115,7 @@ export default function CollectionDetail() {
   })();
 
   return (
-    <div>
+    <div ref={swipeRef}>
       <a
         href="#"
         className={styles.backLink}
@@ -134,8 +159,6 @@ export default function CollectionDetail() {
 
           {collection.summary && <p className={styles.detailSummary}>{collection.summary}</p>}
 
-          {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
-
           <div className={styles.detailSection}>
             <div className={styles.detailSectionTitle}>Labels</div>
             <div className={styles.detailLabels}>
@@ -148,24 +171,13 @@ export default function CollectionDetail() {
                   <button
                     className={styles.labelRemove}
                     title={`Remove "${label}"`}
-                    onClick={async () => {
+                    onClick={() => {
                       if (!ratingKey) return;
-                      setSavingLabels(true);
-                      setStatus(null);
-                      try {
-                        await updateLabelsMutation.mutateAsync({
-                          ratingKey,
-                          labels: labels.filter((l) => l !== label),
-                        });
-                        setStatus({ type: "success", msg: `Removed label "${label}"` });
-                        collectionQuery.refetch();
-                      } catch {
-                        setStatus({ type: "error", msg: `Failed to remove label "${label}"` });
-                      } finally {
-                        setSavingLabels(false);
-                      }
+                      updateLabelsMutation.mutate({
+                        ratingKey,
+                        labels: labels.filter((l) => l !== label),
+                      });
                     }}
-                    disabled={savingLabels}
                   >
                     &times;
                   </button>
@@ -182,22 +194,13 @@ export default function CollectionDetail() {
                     e.preventDefault();
                     const value = labelInput.trim();
                     if (!value || !ratingKey) return;
-                    setSavingLabels(true);
-                    setStatus(null);
-                    updateLabelsMutation
-                      .mutateAsync({ ratingKey, labels: [...new Set([...labels, value])] })
-                      .then(() => {
-                        setLabelInput("");
-                        setStatus({ type: "success", msg: `Added label "${value}"` });
-                        collectionQuery.refetch();
-                      })
-                      .catch(() => {
-                        setStatus({ type: "error", msg: `Failed to add label "${value}"` });
-                      })
-                      .finally(() => setSavingLabels(false));
+                    setLabelInput("");
+                    updateLabelsMutation.mutate({
+                      ratingKey,
+                      labels: [...new Set([...labels, value])],
+                    });
                   }
                 }}
-                disabled={savingLabels}
               />
             </div>
           </div>
@@ -252,7 +255,7 @@ export default function CollectionDetail() {
         {itemsQuery.isLoading ? (
           <p className={styles.hint}>Loading items...</p>
         ) : items.length === 0 ? (
-          <p className={styles.hint}>No items in this collection.</p>
+          <EmptyState icon="film" title="No items in this collection" />
         ) : itemsView === "grid" ? (
           <div className={styles.grid}>
             {items.map((item) => (

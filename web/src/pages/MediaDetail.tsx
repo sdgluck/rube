@@ -1,5 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "../trpc";
+import { DetailSkeleton } from "../Skeleton";
+import useSwipeBack from "../useSwipeBack";
 import styles from "./Collections.module.css";
 import mediaStyles from "./MediaDetail.module.css";
 
@@ -92,20 +94,21 @@ function fileName(path: string | undefined): string {
 export default function MediaDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
+  const swipeRef = useSwipeBack(navigate);
 
   const detailQuery = trpc.media.get.useQuery(
     { ratingKey: ratingKey! },
     { enabled: !!ratingKey, refetchOnWindowFocus: false },
   );
 
-  if (detailQuery.isLoading) return <p>Loading...</p>;
+  if (detailQuery.isLoading) return <DetailSkeleton />;
   if (detailQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media item</div>;
 
   const item = detailQuery.data;
   if (!item) return null;
 
   return (
-    <div>
+    <div ref={swipeRef}>
       <a
         href="#"
         className={styles.backLink}

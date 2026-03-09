@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "../trpc";
 import { describeCron, formatTime } from "../utils";
+import { DetailSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
+import useSwipeBack from "../useSwipeBack";
 import styles from "./Jobs.module.css";
 
 function formatDuration(startMs: number, endMs?: number | null): string {
@@ -30,6 +33,8 @@ function StatusBadge({ status }: { status?: string }) {
 
 export default function JobDetail() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
+  const swipeRef = useSwipeBack(navigate);
   const [editingCron, setEditingCron] = useState<string | undefined>(undefined);
   const [cronError, setCronError] = useState<string | undefined>(undefined);
   const logRef = useRef<HTMLPreElement>(null);
@@ -146,13 +151,13 @@ export default function JobDetail() {
     updateMutation.mutate({ jobId, config }, { onSuccess: () => setConfigDirty(false) });
   }, [jobId, selectedSections, hasLimit, limit, updateMutation]);
 
-  if (jobsQuery.isLoading) return <p>Loading...</p>;
+  if (jobsQuery.isLoading) return <DetailSkeleton />;
   if (!job) return <p>Job not found</p>;
 
   const latestRun = latestRunQuery.data;
 
   return (
-    <div className={styles.jobDetail}>
+    <div ref={swipeRef} className={styles.jobDetail}>
       <Link to="/jobs" className={styles.backLink}>
         &larr; Back to Jobs
       </Link>
@@ -338,7 +343,7 @@ export default function JobDetail() {
               </table>
             </div>
           ) : (
-            <p className={styles.noRuns}>No runs yet</p>
+            <EmptyState icon="list" title="No runs yet" />
           )}
         </fieldset>
       </div>

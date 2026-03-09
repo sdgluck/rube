@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
+import { EventsSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
+import PullToRefresh from "../PullToRefresh";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Events.module.css";
 
@@ -99,95 +102,101 @@ export default function Events() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const eventTypes = typesQuery.data ?? [];
 
-  if (query.isLoading && !query.data) return <p>Loading...</p>;
+  if (query.isLoading && !query.data) return <EventsSkeleton />;
 
   return (
-    <div>
-      <h2 className={sharedStyles.heading}>Events{total > 0 && <span className="count-badge">{total}</span>}</h2>
+    <PullToRefresh
+      onRefresh={() => {
+        query.refetch();
+      }}
+    >
+      <div>
+        <h2 className={sharedStyles.heading}>Events{total > 0 && <span className="count-badge">{total}</span>}</h2>
 
-      <div className={sharedStyles.filters}>
-        <input
-          type="text"
-          className={sharedStyles.searchInput}
-          placeholder="Search events..."
-          value={search}
-          onChange={(e) => setParam("q", e.target.value)}
-        />
-        <select className={sharedStyles.select} value={typeFilter} onChange={(e) => setParam("type", e.target.value)}>
-          <option value="">All types</option>
-          {eventTypes.map((t) => {
-            const badge = BADGE_MAP[t];
-            return (
-              <option key={t} value={t}>
-                {badge ? badge.label : t}
-              </option>
-            );
-          })}
-        </select>
-      </div>
+        <div className={sharedStyles.filters}>
+          <input
+            type="text"
+            className={sharedStyles.searchInput}
+            placeholder="Search events..."
+            value={search}
+            onChange={(e) => setParam("q", e.target.value)}
+          />
+          <select className={sharedStyles.select} value={typeFilter} onChange={(e) => setParam("type", e.target.value)}>
+            <option value="">All types</option>
+            {eventTypes.map((t) => {
+              const badge = BADGE_MAP[t];
+              return (
+                <option key={t} value={t}>
+                  {badge ? badge.label : t}
+                </option>
+              );
+            })}
+          </select>
+        </div>
 
-      {events.length === 0 ? (
-        <div className={styles.empty}>No events found.</div>
-      ) : (
-        <>
-          <div className="table-scroll">
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={sharedStyles.sortable} onClick={() => toggleSort("timestamp")}>
-                    Time{sortIndicator("timestamp")}
-                  </th>
-                  <th className={sharedStyles.sortable} onClick={() => toggleSort("type")}>
-                    Type{sortIndicator("type")}
-                  </th>
-                  <th className={sharedStyles.sortable} onClick={() => toggleSort("message")}>
-                    Message{sortIndicator("message")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => {
-                  const badge = BADGE_MAP[event.type] ?? {
-                    label: event.type,
-                    className: styles.badgeDefault,
-                  };
-                  return (
-                    <tr key={event.id}>
-                      <td className={styles.timestamp}>{formatTimestamp(event.timestamp)}</td>
-                      <td>
-                        <span className={`${styles.badge} ${badge.className}`}>{badge.label}</span>
-                      </td>
-                      <td>{event.message}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {total > PAGE_SIZE && (
-            <div className={sharedStyles.pagination}>
-              <button
-                className={sharedStyles.buttonSecondary}
-                disabled={page <= 1}
-                onClick={() => setParam("page", String(page - 1))}
-              >
-                Previous
-              </button>
-              <span className={sharedStyles.paginationInfo}>
-                Page {page} of {totalPages} ({total} events)
-              </span>
-              <button
-                className={sharedStyles.buttonSecondary}
-                disabled={page >= totalPages}
-                onClick={() => setParam("page", String(page + 1))}
-              >
-                Next
-              </button>
+        {events.length === 0 ? (
+          <EmptyState icon="bell" title="No events found" />
+        ) : (
+          <>
+            <div className="table-scroll">
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={sharedStyles.sortable} onClick={() => toggleSort("timestamp")}>
+                      Time{sortIndicator("timestamp")}
+                    </th>
+                    <th className={sharedStyles.sortable} onClick={() => toggleSort("type")}>
+                      Type{sortIndicator("type")}
+                    </th>
+                    <th className={sharedStyles.sortable} onClick={() => toggleSort("message")}>
+                      Message{sortIndicator("message")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event) => {
+                    const badge = BADGE_MAP[event.type] ?? {
+                      label: event.type,
+                      className: styles.badgeDefault,
+                    };
+                    return (
+                      <tr key={event.id}>
+                        <td className={styles.timestamp}>{formatTimestamp(event.timestamp)}</td>
+                        <td>
+                          <span className={`${styles.badge} ${badge.className}`}>{badge.label}</span>
+                        </td>
+                        <td>{event.message}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
-        </>
-      )}
-    </div>
+
+            {total > PAGE_SIZE && (
+              <div className={sharedStyles.pagination}>
+                <button
+                  className={sharedStyles.buttonSecondary}
+                  disabled={page <= 1}
+                  onClick={() => setParam("page", String(page - 1))}
+                >
+                  Previous
+                </button>
+                <span className={sharedStyles.paginationInfo}>
+                  Page {page} of {totalPages} ({total} events)
+                </span>
+                <button
+                  className={sharedStyles.buttonSecondary}
+                  disabled={page >= totalPages}
+                  onClick={() => setParam("page", String(page + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </PullToRefresh>
   );
 }

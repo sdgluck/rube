@@ -4,6 +4,10 @@ import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "../trpc";
 import ConfirmModal from "../ConfirmModal";
+import { CollectionsSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
+import { useToast } from "../Toast";
+import PullToRefresh from "../PullToRefresh";
 import styles from "./Collections.module.css";
 
 type SortKey = "title" | "sectionTitle" | "childCount" | "smart" | "labels" | "addedAt";
@@ -55,7 +59,7 @@ export default function Collections() {
   const setSearch = useCallback((v: string) => setParam("q", v), [setParam]);
 
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const { addToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
   const [labelEditing, setLabelEditing] = useState(false);
@@ -148,11 +152,11 @@ export default function Collections() {
         setPendingConfirm(null);
         try {
           await deleteMutation.mutateAsync({ ratingKey });
-          setStatus({ type: "success", msg: `Deleted "${title}"` });
+          addToast(`Deleted "${title}"`, "success");
           collectionsQuery.refetch();
           filtersQuery.refetch();
         } catch {
-          setStatus({ type: "error", msg: `Failed to delete "${title}"` });
+          addToast(`Failed to delete "${title}"`, "error");
         }
       },
     });
@@ -165,7 +169,6 @@ export default function Collections() {
       onConfirm: async () => {
         setPendingConfirm(null);
         setBulkProgress({ done: 0, total: count });
-        setStatus(null);
         let deleted = 0;
         let failed = 0;
         await pMap(
@@ -183,10 +186,11 @@ export default function Collections() {
         );
         setSelected(new Set());
         setBulkProgress(null);
-        setStatus({
-          type: failed > 0 ? "error" : "success",
-          msg: failed > 0 ? `Deleted ${deleted}, failed ${failed}` : `Deleted ${deleted} collection(s)`,
-        });
+        if (failed > 0) {
+          addToast(`Deleted ${deleted}, failed ${failed}`, "error");
+        } else {
+          addToast(`Deleted ${deleted} collection(s)`, "success");
+        }
         collectionsQuery.refetch();
         filtersQuery.refetch();
       },
@@ -205,7 +209,6 @@ export default function Collections() {
     const selectedCollections = collections.filter((c) => selected.has(c.plexRatingKey));
     const total = selectedCollections.length;
     setBulkProgress({ done: 0, total, label: "Updating labels" });
-    setStatus(null);
 
     let updated = 0;
     let failed = 0;
@@ -226,10 +229,11 @@ export default function Collections() {
     setLabelEditing(false);
     setLabelsToAdd("");
     setLabelsToRemove(new Set());
-    setStatus({
-      type: failed > 0 ? "error" : "success",
-      msg: failed > 0 ? `Updated ${updated}, failed ${failed}` : `Updated labels on ${updated} collection(s)`,
-    });
+    if (failed > 0) {
+      addToast(`Updated ${updated}, failed ${failed}`, "error");
+    } else {
+      addToast(`Updated labels on ${updated} collection(s)`, "success");
+    }
     collectionsQuery.refetch();
     filtersQuery.refetch();
   };
@@ -267,360 +271,369 @@ export default function Collections() {
     }
   };
 
-  if (collectionsQuery.isLoading && !collectionsQuery.data) return <p>Loading...</p>;
+  if (collectionsQuery.isLoading && !collectionsQuery.data) return <CollectionsSkeleton />;
   if (collectionsQuery.error)
     return <div className={`${styles.toast} ${styles.error}`}>Failed to load collections</div>;
 
   return (
-    <div>
-      <h2 className={styles.heading}>Collections{total > 0 && <span className="count-badge">{total}</span>}</h2>
+    <PullToRefresh
+      onRefresh={() => {
+        collectionsQuery.refetch();
+        filtersQuery.refetch();
+      }}
+    >
+      <div>
+        <h2 className={styles.heading}>Collections{total > 0 && <span className="count-badge">{total}</span>}</h2>
 
-      {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
-
-      {(selected.size > 0 || bulkProgress) && (
-        <>
-          <div
-            className={styles.bulkBar}
-            style={labelEditing ? { borderRadius: "6px 6px 0 0", marginBottom: 0 } : undefined}
-          >
-            {bulkProgress ? (
-              <>
-                <span className={styles.bulkCount}>
-                  {bulkProgress.label || "Deleting"} {bulkProgress.done}/{bulkProgress.total}...
-                </span>
-                <div className={styles.bulkProgressBar}>
-                  <div
-                    className={styles.bulkProgressFill}
-                    style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+        {(selected.size > 0 || bulkProgress) && (
+          <>
+            <div
+              className={styles.bulkBar}
+              style={labelEditing ? { borderRadius: "6px 6px 0 0", marginBottom: 0 } : undefined}
+            >
+              {bulkProgress ? (
+                <>
+                  <span className={styles.bulkCount}>
+                    {bulkProgress.label || "Deleting"} {bulkProgress.done}/{bulkProgress.total}...
+                  </span>
+                  <div className={styles.bulkProgressBar}>
+                    <div
+                      className={styles.bulkProgressFill}
+                      style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className={styles.bulkCount}>{selected.size} selected</span>
+                  <button
+                    className={`${styles.buttonSmall} ${labelEditing ? styles.button : styles.buttonSecondary}`}
+                    onClick={() => {
+                      setLabelEditing(!labelEditing);
+                      setLabelsToAdd("");
+                      setLabelsToRemove(new Set());
+                    }}
+                  >
+                    Edit Labels
+                  </button>
+                  <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
+                    Delete {selected.size}
+                  </button>
+                  <button
+                    className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
+                    onClick={() => {
+                      setSelected(new Set());
+                      setLabelEditing(false);
+                    }}
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
+            {labelEditing && !bulkProgress && (
+              <div className={styles.labelEditor}>
+                <div className={styles.labelEditorRow}>
+                  <label>Add labels:</label>
+                  <input
+                    type="text"
+                    className={styles.labelEditorInput}
+                    placeholder="Label1, Label2, ..."
+                    value={labelsToAdd}
+                    onChange={(e) => setLabelsToAdd(e.target.value)}
                   />
                 </div>
-              </>
-            ) : (
-              <>
-                <span className={styles.bulkCount}>{selected.size} selected</span>
-                <button
-                  className={`${styles.buttonSmall} ${labelEditing ? styles.button : styles.buttonSecondary}`}
-                  onClick={() => {
-                    setLabelEditing(!labelEditing);
-                    setLabelsToAdd("");
-                    setLabelsToRemove(new Set());
-                  }}
-                >
-                  Edit Labels
-                </button>
-                <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
-                  Delete {selected.size}
-                </button>
-                <button
-                  className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
-                  onClick={() => {
-                    setSelected(new Set());
-                    setLabelEditing(false);
-                  }}
-                >
-                  Clear
-                </button>
-              </>
-            )}
-          </div>
-          {labelEditing && !bulkProgress && (
-            <div className={styles.labelEditor}>
-              <div className={styles.labelEditorRow}>
-                <label>Add labels:</label>
-                <input
-                  type="text"
-                  className={styles.labelEditorInput}
-                  placeholder="Label1, Label2, ..."
-                  value={labelsToAdd}
-                  onChange={(e) => setLabelsToAdd(e.target.value)}
-                />
-              </div>
-              {selectedLabels.length > 0 && (
-                <div className={styles.labelEditorRow}>
-                  <label>Remove labels:</label>
-                  <div className={styles.labelCheckboxList}>
-                    {selectedLabels.map((lbl) => (
-                      <span key={lbl} className={styles.labelCheckboxItem}>
-                        <input
-                          type="checkbox"
-                          checked={labelsToRemove.has(lbl)}
-                          onChange={() =>
-                            setLabelsToRemove((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(lbl)) next.delete(lbl);
-                              else next.add(lbl);
-                              return next;
-                            })
-                          }
-                        />
-                        <span
-                          className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(lbl.toLowerCase()) ? styles.labelTinkerbell : lbl.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                        >
-                          {lbl}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className={styles.labelEditorActions}>
-                <button
-                  className={`${styles.button} ${styles.buttonSmall}`}
-                  onClick={handleBulkEditLabels}
-                  disabled={labelsToAdd.trim() === "" && labelsToRemove.size === 0}
-                >
-                  Apply
-                </button>
-                <button
-                  className={`${styles.buttonSecondary} ${styles.buttonSmall}`}
-                  onClick={() => {
-                    setLabelEditing(false);
-                    setLabelsToAdd("");
-                    setLabelsToRemove(new Set());
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {collections.length === 0 && !search && !sectionFilter && !labelFilter ? (
-        <div className={styles.emptyState}>
-          <p>No collections synced yet.</p>
-        </div>
-      ) : collections.length === 0 && (search || sectionFilter || labelFilter) ? (
-        <>
-          <div className={styles.filters}>
-            <input
-              type="text"
-              className={styles.searchInput}
-              placeholder="Search collections..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select className={styles.select} value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
-              <option value="">All sections</option>
-              {sections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title}
-                </option>
-              ))}
-            </select>
-            <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
-              <option value="">All labels</option>
-              {allLabels.map((label) => (
-                <option key={label} value={label}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.emptyState}>
-            <p>No collections match your filters.</p>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className={styles.filters}>
-            <input
-              type="text"
-              className={styles.searchInput}
-              placeholder="Search collections..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select className={styles.select} value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
-              <option value="">All sections</option>
-              {sections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title}
-                </option>
-              ))}
-            </select>
-            <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
-              <option value="">All labels</option>
-              {allLabels.map((label) => (
-                <option key={label} value={label}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <div className={styles.filtersSpacer} />
-            <div className={styles.viewToggle}>
-              <button
-                className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
-                onClick={() => {
-                  setViewMode("table");
-                  localStorage.setItem("collections-view", "table");
-                }}
-              >
-                Table
-              </button>
-              <button
-                className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
-                onClick={() => {
-                  setViewMode("grid");
-                  localStorage.setItem("collections-view", "grid");
-                }}
-              >
-                Grid
-              </button>
-            </div>
-          </div>
-
-          {viewMode === "grid" ? (
-            <div className={styles.grid}>
-              {collections.map((col) => (
-                <div
-                  key={col.plexRatingKey}
-                  className={styles.card}
-                  onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
-                >
-                  {col.thumb ? (
-                    <img
-                      className={styles.cardPoster}
-                      src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
-                      alt={col.title}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className={styles.cardPosterPlaceholder}>No poster</div>
-                  )}
-                  <div className={styles.cardTitle} title={col.title}>
-                    {col.title}
-                  </div>
-                  <div className={styles.cardMeta}>
-                    {col.childCount} item{col.childCount !== 1 ? "s" : ""}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="table-scroll">
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.checkboxCell}>
-                      <input
-                        type="checkbox"
-                        className={styles.checkbox}
-                        checked={collections.length > 0 && selected.size === collections.length}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("title")}>
-                      Title{sortIndicator("title")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
-                      Section{sortIndicator("sectionTitle")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
-                      Items{sortIndicator("childCount")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("smart")}>
-                      Smart{sortIndicator("smart")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("labels")}>
-                      Labels{sortIndicator("labels")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
-                      Added{sortIndicator("addedAt")}
-                    </th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {collections.map((col, i) => {
-                    const labels = parseLabels(col.labels);
-                    return (
-                      <tr
-                        key={col.plexRatingKey}
-                        className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
-                        onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
-                      >
-                        <td
-                          className={styles.checkboxCell}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCheckboxClick(i, e);
-                          }}
-                        >
+                {selectedLabels.length > 0 && (
+                  <div className={styles.labelEditorRow}>
+                    <label>Remove labels:</label>
+                    <div className={styles.labelCheckboxList}>
+                      {selectedLabels.map((lbl) => (
+                        <span key={lbl} className={styles.labelCheckboxItem}>
                           <input
                             type="checkbox"
-                            className={styles.checkbox}
-                            checked={selected.has(col.plexRatingKey)}
-                            readOnly
+                            checked={labelsToRemove.has(lbl)}
+                            onChange={() =>
+                              setLabelsToRemove((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(lbl)) next.delete(lbl);
+                                else next.add(lbl);
+                                return next;
+                              })
+                            }
                           />
-                        </td>
-                        <td>{col.title}</td>
-                        <td>{col.sectionTitle}</td>
-                        <td>{col.childCount}</td>
-                        <td>{col.smart ? "Yes" : "No"}</td>
-                        <td>
-                          {labels.map((label) => (
-                            <span
-                              key={label}
-                              className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </td>
-                        <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
-                        <td>
-                          <button
-                            className={`${styles.buttonDanger} ${styles.buttonSmall}`}
+                          <span
+                            className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(lbl.toLowerCase()) ? styles.labelTinkerbell : lbl.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                          >
+                            {lbl}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className={styles.labelEditorActions}>
+                  <button
+                    className={`${styles.button} ${styles.buttonSmall}`}
+                    onClick={handleBulkEditLabels}
+                    disabled={labelsToAdd.trim() === "" && labelsToRemove.size === 0}
+                  >
+                    Apply
+                  </button>
+                  <button
+                    className={`${styles.buttonSecondary} ${styles.buttonSmall}`}
+                    onClick={() => {
+                      setLabelEditing(false);
+                      setLabelsToAdd("");
+                      setLabelsToRemove(new Set());
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {collections.length === 0 && !search && !sectionFilter && !labelFilter ? (
+          <EmptyState icon="stack" title="No collections synced yet" />
+        ) : collections.length === 0 && (search || sectionFilter || labelFilter) ? (
+          <>
+            <div className={styles.filters}>
+              <input
+                type="text"
+                className={styles.searchInput}
+                placeholder="Search collections..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select
+                className={styles.select}
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+              >
+                <option value="">All sections</option>
+                {sections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+              <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
+                <option value="">All labels</option>
+                {allLabels.map((label) => (
+                  <option key={label} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <EmptyState icon="search" title="No collections match your filters" />
+          </>
+        ) : (
+          <>
+            <div className={styles.filters}>
+              <input
+                type="text"
+                className={styles.searchInput}
+                placeholder="Search collections..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select
+                className={styles.select}
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+              >
+                <option value="">All sections</option>
+                {sections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+              <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
+                <option value="">All labels</option>
+                {allLabels.map((label) => (
+                  <option key={label} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <div className={styles.filtersSpacer} />
+              <div className={styles.viewToggle}>
+                <button
+                  className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+                  onClick={() => {
+                    setViewMode("table");
+                    localStorage.setItem("collections-view", "table");
+                  }}
+                >
+                  Table
+                </button>
+                <button
+                  className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+                  onClick={() => {
+                    setViewMode("grid");
+                    localStorage.setItem("collections-view", "grid");
+                  }}
+                >
+                  Grid
+                </button>
+              </div>
+            </div>
+
+            {viewMode === "grid" ? (
+              <div className={styles.grid}>
+                {collections.map((col) => (
+                  <div
+                    key={col.plexRatingKey}
+                    className={styles.card}
+                    onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
+                  >
+                    {col.thumb ? (
+                      <img
+                        className={styles.cardPoster}
+                        src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                        alt={col.title}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className={styles.cardPosterPlaceholder}>No poster</div>
+                    )}
+                    <div className={styles.cardTitle} title={col.title}>
+                      {col.title}
+                    </div>
+                    <div className={styles.cardMeta}>
+                      {col.childCount} item{col.childCount !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="table-scroll">
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.checkboxCell}>
+                        <input
+                          type="checkbox"
+                          className={styles.checkbox}
+                          checked={collections.length > 0 && selected.size === collections.length}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th className={styles.sortable} onClick={() => toggleSort("title")}>
+                        Title{sortIndicator("title")}
+                      </th>
+                      <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
+                        Section{sortIndicator("sectionTitle")}
+                      </th>
+                      <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
+                        Items{sortIndicator("childCount")}
+                      </th>
+                      <th className={styles.sortable} onClick={() => toggleSort("smart")}>
+                        Smart{sortIndicator("smart")}
+                      </th>
+                      <th className={styles.sortable} onClick={() => toggleSort("labels")}>
+                        Labels{sortIndicator("labels")}
+                      </th>
+                      <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
+                        Added{sortIndicator("addedAt")}
+                      </th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {collections.map((col, i) => {
+                      const labels = parseLabels(col.labels);
+                      return (
+                        <tr
+                          key={col.plexRatingKey}
+                          className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
+                          onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
+                        >
+                          <td
+                            className={styles.checkboxCell}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(col.plexRatingKey, col.title);
+                              handleCheckboxClick(i, e);
                             }}
                           >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                            <input
+                              type="checkbox"
+                              className={styles.checkbox}
+                              checked={selected.has(col.plexRatingKey)}
+                              readOnly
+                            />
+                          </td>
+                          <td>{col.title}</td>
+                          <td>{col.sectionTitle}</td>
+                          <td>{col.childCount}</td>
+                          <td>{col.smart ? "Yes" : "No"}</td>
+                          <td>
+                            {labels.map((label) => (
+                              <span
+                                key={label}
+                                className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </td>
+                          <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
+                          <td>
+                            <button
+                              className={`${styles.buttonDanger} ${styles.buttonSmall}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(col.plexRatingKey, col.title);
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          {total > PAGE_SIZE && (
-            <div className={styles.pagination}>
-              <button
-                className={styles.buttonSecondary}
-                disabled={page <= 1}
-                onClick={() => setParam("page", String(page - 1))}
-              >
-                Previous
-              </button>
-              <span className={styles.paginationInfo}>
-                Page {page} of {totalPages} ({total} items)
-              </span>
-              <button
-                className={styles.buttonSecondary}
-                disabled={page >= totalPages}
-                onClick={() => setParam("page", String(page + 1))}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
-      )}
+            {total > PAGE_SIZE && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.buttonSecondary}
+                  disabled={page <= 1}
+                  onClick={() => setParam("page", String(page - 1))}
+                >
+                  Previous
+                </button>
+                <span className={styles.paginationInfo}>
+                  Page {page} of {totalPages} ({total} items)
+                </span>
+                <button
+                  className={styles.buttonSecondary}
+                  disabled={page >= totalPages}
+                  onClick={() => setParam("page", String(page + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
 
-      {pendingConfirm && (
-        <ConfirmModal
-          message={pendingConfirm.message}
-          confirmLabel="Delete"
-          onConfirm={pendingConfirm.onConfirm}
-          onCancel={() => setPendingConfirm(null)}
-        />
-      )}
-    </div>
+        {pendingConfirm && (
+          <ConfirmModal
+            message={pendingConfirm.message}
+            confirmLabel="Delete"
+            onConfirm={pendingConfirm.onConfirm}
+            onCancel={() => setPendingConfirm(null)}
+          />
+        )}
+      </div>
+    </PullToRefresh>
   );
 }

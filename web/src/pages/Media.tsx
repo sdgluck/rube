@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
+import { MediaSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
 import styles from "./Collections.module.css";
 import mediaStyles from "./Media.module.css";
 
@@ -428,7 +430,7 @@ export default function Media() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const sections = sectionsQuery.data ?? [];
 
-  if (mediaQuery.isLoading && !mediaQuery.data) return <p>Loading...</p>;
+  if (mediaQuery.isLoading && !mediaQuery.data) return <MediaSkeleton />;
   if (mediaQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media</div>;
 
   return (
@@ -578,9 +580,7 @@ export default function Media() {
       )}
 
       {items.length === 0 ? (
-        <div className={styles.emptyState}>
-          <p>No media items found.</p>
-        </div>
+        <EmptyState icon="film" title="No media items found" />
       ) : viewMode === "grid" ? (
         <div className={styles.grid}>
           {items.map((item) => (

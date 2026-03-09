@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import styles from "./ConfirmModal.module.css";
 
 interface ConfirmModalProps {
@@ -17,22 +17,28 @@ export default function ConfirmModal({
   onCancel,
 }: ConfirmModalProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
     confirmRef.current?.focus();
   }, []);
 
+  const handleClose = useCallback(() => {
+    setExiting(true);
+    setTimeout(() => onCancel(), 200);
+  }, [onCancel]);
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") handleClose();
     }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [onCancel]);
+  }, [handleClose]);
 
   return (
-    <div className={styles.backdrop} onClick={onCancel}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div className={`${styles.backdrop} ${exiting ? styles.backdropExiting : ""}`} onClick={handleClose}>
+      <div className={`${styles.modal} ${exiting ? styles.modalExiting : ""}`} onClick={(e) => e.stopPropagation()}>
         <p className={styles.message}>{message}</p>
         <div className={styles.actions}>
           <button
@@ -42,7 +48,7 @@ export default function ConfirmModal({
           >
             {confirmLabel}
           </button>
-          <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={onCancel}>
+          <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={handleClose}>
             Cancel
           </button>
         </div>

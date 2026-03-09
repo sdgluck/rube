@@ -4,6 +4,9 @@ import pMap from "p-map";
 import { trpc } from "../trpc";
 import { describeCron, formatTime } from "../utils";
 import DropdownButton from "../DropdownButton";
+import { JobsSkeleton } from "../Skeleton";
+import { useToast } from "../Toast";
+import PullToRefresh from "../PullToRefresh";
 import styles from "./Jobs.module.css";
 import shared from "./Collections.module.css";
 
@@ -35,9 +38,26 @@ export default function Jobs() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchInterval: 5000 });
-  const updateMutation = trpc.jobs.update.useMutation({ onSuccess: () => utils.jobs.list.invalidate() });
+  const updateMutation = trpc.jobs.update.useMutation({
+    onMutate: async (input) => {
+      await utils.jobs.list.cancel();
+      const prev = utils.jobs.list.getData();
+      if (prev && input.enabled !== undefined) {
+        utils.jobs.list.setData(
+          undefined,
+          prev.map((j) => (j.id === input.jobId ? { ...j, enabled: input.enabled ? 1 : 0 } : j)),
+        );
+      }
+      return { prev };
+    },
+    onError: (_err, _input, ctx) => {
+      if (ctx?.prev) utils.jobs.list.setData(undefined, ctx.prev);
+      addToast("Failed to update job", "error");
+    },
+    onSettled: () => utils.jobs.list.invalidate(),
+  });
 
-  const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
@@ -116,7 +136,7 @@ export default function Jobs() {
 
   async function handleExportClipboard() {
     await navigator.clipboard.writeText(JSON.stringify(getExportData(), null, 2));
-    setImportStatus({ type: "success", message: "Copied jobs to clipboard" });
+    addToast("Copied jobs to clipboard", "success");
   }
 
   async function importJobs(text: string) {
@@ -135,17 +155,14 @@ export default function Jobs() {
       count++;
     }
     utils.jobs.list.invalidate();
-    setImportStatus({ type: "success", message: `Updated ${count} job${count !== 1 ? "s" : ""}` });
+    addToast(`Updated ${count} job${count !== 1 ? "s" : ""}`, "success");
   }
 
   async function handleImportFile(file: File) {
     try {
       await importJobs(await file.text());
     } catch (err) {
-      setImportStatus({
-        type: "error",
-        message: `Import failed: ${err instanceof Error ? err.message : "Unknown error"}`,
-      });
+      addToast(`Import failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -155,10 +172,7 @@ export default function Jobs() {
       const text = await navigator.clipboard.readText();
       await importJobs(text);
     } catch (err) {
-      setImportStatus({
-        type: "error",
-        message: `Import failed: ${err instanceof Error ? err.message : "Unknown error"}`,
-      });
+      addToast(`Import failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     }
   }
 
@@ -213,156 +227,144 @@ export default function Jobs() {
     utils.jobs.list.invalidate();
   }
 
-  if (jobsQuery.isLoading) return <p>Loading...</p>;
+  if (jobsQuery.isLoading) return <JobsSkeleton />;
   if (jobsQuery.error) return <p>Error: {jobsQuery.error.message}</p>;
 
   return (
-    <div>
-      <div className={styles.jobsHeader}>
-        <h1 className={styles.heading}>Jobs{jobs.length > 0 && <span className="count-badge">{jobs.length}</span>}</h1>
-        <div className={shared.headerActions}>
-          <DropdownButton
-            label="Export"
-            className={shared.buttonSecondary}
-            disabled={jobs.length === 0}
-            options={[
-              { label: "File", onClick: handleExportFile },
-              { label: "Clipboard", onClick: handleExportClipboard },
-            ]}
-          />
-          <DropdownButton
-            label="Import"
-            className={shared.buttonSecondary}
-            options={[
-              { label: "File", onClick: () => fileInputRef.current?.click() },
-              { label: "Clipboard", onClick: handleImportClipboard },
-            ]}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            style={{ display: "none" }}
-            onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
-          />
+    <PullToRefresh
+      onRefresh={() => {
+        jobsQuery.refetch();
+      }}
+    >
+      <div>
+        <div className={styles.jobsHeader}>
+          <h1 className={styles.heading}>
+            Jobs{jobs.length > 0 && <span className="count-badge">{jobs.length}</span>}
+          </h1>
+          <div className={shared.headerActions}>
+            <DropdownButton
+              label="Export"
+              className={shared.buttonSecondary}
+              disabled={jobs.length === 0}
+              options={[
+                { label: "File", onClick: handleExportFile },
+                { label: "Clipboard", onClick: handleExportClipboard },
+              ]}
+            />
+            <DropdownButton
+              label="Import"
+              className={shared.buttonSecondary}
+              options={[
+                { label: "File", onClick: () => fileInputRef.current?.click() },
+                { label: "Clipboard", onClick: handleImportClipboard },
+              ]}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              style={{ display: "none" }}
+              onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
+            />
+          </div>
         </div>
-      </div>
-      {importStatus && (
-        <div className={`${shared.toast} ${importStatus.type === "success" ? shared.success : shared.error}`}>
-          {importStatus.message}
-          <button
-            style={{
-              marginLeft: 12,
-              background: "none",
-              border: "1px solid #ccc",
-              borderRadius: 6,
-              padding: "4px 12px",
-              fontSize: "0.85rem",
-              cursor: "pointer",
-            }}
-            onClick={() => setImportStatus(null)}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {selected.size > 0 && (
-        <div className={shared.bulkBar}>
-          {bulkProgress ? (
-            <>
-              <span style={{ fontSize: "0.85rem" }}>
-                {bulkProgress.done}/{bulkProgress.total}
-              </span>
-              <div className={shared.bulkProgressBar}>
-                <div
-                  className={shared.bulkProgressFill}
-                  style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{selected.size} selected</span>
-              <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
-                Enable
-              </button>
-              <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(false)}>
-                Disable
-              </button>
-              <button
-                className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
-                onClick={() => setSelected(new Set())}
-              >
-                Clear
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="table-scroll">
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={shared.checkboxCell}>
-                <input
-                  type="checkbox"
-                  className={shared.checkbox}
-                  checked={jobs.length > 0 && selected.size === jobs.length}
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              <th className={styles.sortable} onClick={() => toggleSort("name")}>
-                Name{sortIndicator("name")}
-              </th>
-              <th className={styles.sortable} onClick={() => toggleSort("schedule")}>
-                Schedule{sortIndicator("schedule")}
-              </th>
-              <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
-                Enabled{sortIndicator("enabled")}
-              </th>
-              <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-                Last Run{sortIndicator("lastRun")}
-              </th>
-              <th className={styles.sortable} onClick={() => toggleSort("lastRunStatus")}>
-                Last Run Status{sortIndicator("lastRunStatus")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((job, i) => (
-              <tr
-                key={job.id}
-                className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-                onClick={() => navigate(`/jobs/${job.id}`)}
-              >
-                <td
-                  className={shared.checkboxCell}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCheckboxClick(i, e);
-                  }}
+        {selected.size > 0 && (
+          <div className={shared.bulkBar}>
+            {bulkProgress ? (
+              <>
+                <span style={{ fontSize: "0.85rem" }}>
+                  {bulkProgress.done}/{bulkProgress.total}
+                </span>
+                <div className={shared.bulkProgressBar}>
+                  <div
+                    className={shared.bulkProgressFill}
+                    style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{selected.size} selected</span>
+                <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
+                  Enable
+                </button>
+                <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(false)}>
+                  Disable
+                </button>
+                <button
+                  className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
+                  onClick={() => setSelected(new Set())}
                 >
-                  <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-                </td>
-                <td>{job.name}</td>
-                <td>
-                  <span className={styles.cronText}>{job.schedule || "—"}</span>
-                  {job.schedule && <div className={styles.cronHint}>{describeCron(job.schedule)}</div>}
-                </td>
-                <td>{job.enabled ? "Yes" : "No"}</td>
-                <td>
-                  <span className={styles.runMeta}>
-                    {job.lastRunStartedAt ? formatTime(job.lastRunStartedAt) : "Never"}
-                  </span>
-                </td>
-                <td>{job.lastRunStatus ? <StatusBadge status={job.lastRunStatus} /> : null}</td>
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="table-scroll">
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={shared.checkboxCell}>
+                  <input
+                    type="checkbox"
+                    className={shared.checkbox}
+                    checked={jobs.length > 0 && selected.size === jobs.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("name")}>
+                  Name{sortIndicator("name")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("schedule")}>
+                  Schedule{sortIndicator("schedule")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
+                  Enabled{sortIndicator("enabled")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+                  Last Run{sortIndicator("lastRun")}
+                </th>
+                <th className={styles.sortable} onClick={() => toggleSort("lastRunStatus")}>
+                  Last Run Status{sortIndicator("lastRunStatus")}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {jobs.map((job, i) => (
+                <tr
+                  key={job.id}
+                  className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                >
+                  <td
+                    className={shared.checkboxCell}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCheckboxClick(i, e);
+                    }}
+                  >
+                    <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                  </td>
+                  <td>{job.name}</td>
+                  <td>
+                    <span className={styles.cronText}>{job.schedule || "—"}</span>
+                    {job.schedule && <div className={styles.cronHint}>{describeCron(job.schedule)}</div>}
+                  </td>
+                  <td>{job.enabled ? "Yes" : "No"}</td>
+                  <td>
+                    <span className={styles.runMeta}>
+                      {job.lastRunStartedAt ? formatTime(job.lastRunStartedAt) : "Never"}
+                    </span>
+                  </td>
+                  <td>{job.lastRunStatus ? <StatusBadge status={job.lastRunStatus} /> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }

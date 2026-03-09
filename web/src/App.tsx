@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useCallback, useEffect } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import ErrorBoundary from "./ErrorBoundary";
+import ScrollRestoration from "./ScrollRestoration";
 import Settings from "./pages/Settings";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
@@ -119,7 +120,11 @@ function SidebarActiveJobs() {
 }
 
 function LazyPage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>;
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <div className="animated-page">{children}</div>
+    </Suspense>
+  );
 }
 
 // "More" pages that live in the bottom sheet rather than the bottom tab bar
@@ -280,6 +285,7 @@ export default function App() {
       </aside>
       <BottomNav />
       <main className="content">
+        <ScrollRestoration />
         <ErrorBoundary>
           <Suspense fallback={<p>Loading...</p>}>
             <Routes>

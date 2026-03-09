@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import DropdownButton from "../DropdownButton";
 import ConfirmModal from "../ConfirmModal";
+import { RulesSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
+import { useToast } from "../Toast";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
 
@@ -142,7 +145,7 @@ export default function Rules() {
   const [isEditing, setIsEditing] = useState(false);
   const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
   const [runningRuleId, setRunningRuleId] = useState<string | null>(null);
-  const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const { addToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -167,7 +170,7 @@ export default function Rules() {
 
   async function handleExportClipboard() {
     await navigator.clipboard.writeText(JSON.stringify(getExportData(), null, 2));
-    setImportStatus({ type: "success", message: "Copied rules to clipboard" });
+    addToast("Copied rules to clipboard", "success");
   }
 
   async function importRules(text: string) {
@@ -190,17 +193,14 @@ export default function Rules() {
       count++;
     }
     utils.rules.list.invalidate();
-    setImportStatus({ type: "success", message: `Imported ${count} rule${count !== 1 ? "s" : ""}` });
+    addToast(`Imported ${count} rule${count !== 1 ? "s" : ""}`, "success");
   }
 
   async function handleImportFile(file: File) {
     try {
       await importRules(await file.text());
     } catch (err) {
-      setImportStatus({
-        type: "error",
-        message: `Import failed: ${err instanceof Error ? err.message : "Unknown error"}`,
-      });
+      addToast(`Import failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -210,10 +210,7 @@ export default function Rules() {
       const text = await navigator.clipboard.readText();
       await importRules(text);
     } catch (err) {
-      setImportStatus({
-        type: "error",
-        message: `Import failed: ${err instanceof Error ? err.message : "Unknown error"}`,
-      });
+      addToast(`Import failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     }
   }
 
@@ -401,7 +398,7 @@ export default function Rules() {
     }
   }, [form?.type, form?.chart, chartSectionType, sections]);
 
-  if (rulesQuery.isLoading) return <p>Loading...</p>;
+  if (rulesQuery.isLoading) return <RulesSkeleton />;
 
   return (
     <div>
@@ -443,19 +440,6 @@ export default function Rules() {
         Rules define how the Generate Collections job creates collections. Each enabled rule runs during generation.
       </p>
 
-      {importStatus && (
-        <div className={`${shared.toast} ${importStatus.type === "success" ? shared.success : shared.error}`}>
-          {importStatus.message}
-          <button
-            className={styles.testPreviewCloseBtn}
-            style={{ marginLeft: 12 }}
-            onClick={() => setImportStatus(null)}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {selected.size > 0 && (
         <div className={styles.bulkBar}>
           <span>
@@ -471,10 +455,7 @@ export default function Rules() {
       )}
 
       {rules.length === 0 && !form ? (
-        <div className={shared.emptyState}>
-          <p>No rules yet.</p>
-          <p className={shared.hint}>Add a rule to start generating collections.</p>
-        </div>
+        <EmptyState icon="cog" title="No rules yet" description="Add a rule to start generating collections." />
       ) : (
         <div className="table-scroll">
           <table className={shared.table}>

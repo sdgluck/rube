@@ -1,0 +1,95 @@
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--card-poster-bg) 25%, var(--bg-surface-hover) 50%, var(--card-poster-bg) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 6px;
+}
+
+.line {
+  composes: skeleton;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.block {
+  composes: skeleton;
+}
+
+.tableRow td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.tableCell {
+  composes: skeleton;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Page-specific compositions */
+
+.collectionsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.collectionsTable th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.jobsRow td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.detailLayout {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.detailPoster {
+  composes: skeleton;
+  width: 200px;
+  height: 300px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.detailBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .detailLayout {
+    flex-direction: column;
+  }
+
+  .detailPoster {
+    width: 140px;
+    height: 210px;
+  }
+}

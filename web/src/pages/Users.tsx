@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
+import { UsersSkeleton } from "../Skeleton";
+import EmptyState from "../EmptyState";
+import { useToast } from "../Toast";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Users.module.css";
 
@@ -10,7 +13,19 @@ const PAGE_SIZE = 50;
 type SortKey = "username" | "name" | "collectionCount" | "lastWatchedAt";
 type SortDir = "asc" | "desc";
 
-function EditableName({ userId, value, onSaved }: { userId: number; value: string | null; onSaved: () => void }) {
+function EditableName({
+  userId,
+  value,
+  onMutate,
+  onError,
+  onSettled,
+}: {
+  userId: number;
+  value: string | null;
+  onMutate: (newName: string | null) => void;
+  onError: () => void;
+  onSettled: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -25,20 +40,14 @@ function EditableName({ userId, value, onSaved }: { userId: number; value: strin
 
   const save = () => {
     const trimmed = draft.trim();
-    const newValue = trimmed || undefined;
+    const newValue = trimmed || null;
     if (trimmed === (value ?? "")) {
       setEditing(false);
       return;
     }
-    mutation.mutate(
-      { userId, name: newValue },
-      {
-        onSuccess: () => {
-          setEditing(false);
-          onSaved();
-        },
-      },
-    );
+    setEditing(false);
+    onMutate(newValue);
+    mutation.mutate({ userId, name: newValue || undefined }, { onError, onSettled });
   };
 
   if (editing) {
@@ -77,6 +86,8 @@ function EditableName({ userId, value, onSaved }: { userId: number; value: strin
 }
 
 export default function Users() {
+  const utils = trpc.useUtils();
+  const { addToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const search = searchParams.get("q") ?? "";
@@ -137,22 +148,24 @@ export default function Users() {
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  const query = trpc.users.list.useQuery(
-    {
-      search: debouncedSearch || undefined,
-      offset,
-      limit: PAGE_SIZE,
-      sort: sortKey,
-      sortDir,
-    },
-    { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
-  );
+  const queryInput = {
+    search: debouncedSearch || undefined,
+    offset,
+    limit: PAGE_SIZE,
+    sort: sortKey as string | undefined,
+    sortDir,
+  };
+
+  const query = trpc.users.list.useQuery(queryInput, {
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  });
 
   const users = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  if (query.isLoading && !query.data) return <p>Loading...</p>;
+  if (query.isLoading && !query.data) return <UsersSkeleton />;
   if (query.error) return <div className={`${sharedStyles.toast} ${sharedStyles.error}`}>Failed to load users</div>;
 
   return (
@@ -160,10 +173,11 @@ export default function Users() {
       <h2 className={sharedStyles.heading}>Users{total > 0 && <span className="count-badge">{total}</span>}</h2>
 
       {users.length === 0 && !search ? (
-        <div className={styles.emptyState}>
-          <p>No shared users found.</p>
-          <p className={styles.hint}>Users will appear here once Plex sharing is configured.</p>
-        </div>
+        <EmptyState
+          icon="person"
+          title="No shared users found"
+          description="Users will appear here once Plex sharing is configured."
+        />
       ) : (
         <>
           <div className={sharedStyles.filters}>
@@ -177,9 +191,7 @@ export default function Users() {
           </div>
 
           {users.length === 0 ? (
-            <div className={styles.emptyState}>
-              <p>No users match your search.</p>
-            </div>
+            <EmptyState icon="search" title="No users match your search" />
           ) : (
             <>
               <div className="table-scroll">
@@ -206,7 +218,25 @@ export default function Users() {
                       <tr key={user.userId}>
                         <td>{user.username}</td>
                         <td>
-                          <EditableName userId={user.userId} value={user.name} onSaved={() => query.refetch()} />
+                          <EditableName
+                            userId={user.userId}
+                            value={user.name}
+                            onMutate={(newName) => {
+                              utils.users.list.cancel(queryInput);
+                              utils.users.list.setData(queryInput, (prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      items: prev.items.map((u) =>
+                                        u.userId === user.userId ? { ...u, name: newName } : u,
+                                      ),
+                                    }
+                                  : prev!,
+                              );
+                            }}
+                            onError={() => addToast("Failed to update name", "error")}
+                            onSettled={() => utils.users.list.invalidate()}
+                          />
                         </td>
                         <td>
                           <span className={`${styles.label} ${styles.labelUser}`}>{user.label}</span>
