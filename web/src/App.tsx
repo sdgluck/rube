@@ -2,6 +2,10 @@ import { lazy, Suspense, useState, useCallback, useEffect } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import ErrorBoundary from "./ErrorBoundary";
 import ScrollRestoration from "./ScrollRestoration";
+import CommandPalette from "./CommandPalette";
+import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
+import useDocumentTitle from "./useDocumentTitle";
+import useKeyboardShortcuts from "./useKeyboardShortcuts";
 import Settings from "./pages/Settings";
 import { trpc } from "./trpc";
 import styles from "./pages/Jobs.module.css";
@@ -240,6 +244,11 @@ function BottomNav() {
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+
+  useDocumentTitle();
+  useKeyboardShortcuts(setShortcutsHelpOpen, setCommandPaletteOpen);
 
   return (
     <div className="layout">
@@ -515,6 +524,8 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </main>
+      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <KeyboardShortcutsHelp open={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
     </div>
   );
 }

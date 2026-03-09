@@ -4,6 +4,8 @@ import { trpc } from "../trpc";
 import ConfirmModal from "../ConfirmModal";
 import { DetailSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
+import FadeImage from "../FadeImage";
+import RelativeTime from "../RelativeTime";
 import { useToast } from "../Toast";
 import useSwipeBack from "../useSwipeBack";
 import styles from "./Collections.module.css";
@@ -130,7 +132,7 @@ export default function CollectionDetail() {
       <div className={styles.detailLayout}>
         <div className={styles.detailPoster}>
           {collection.thumb ? (
-            <img
+            <FadeImage
               className={styles.detailPosterImg}
               src={`/api/plex-image?path=${encodeURIComponent(collection.thumb)}`}
               alt={collection.title}
@@ -152,7 +154,9 @@ export default function CollectionDetail() {
             <span className={styles.metaChip}>{collection.sectionTitle}</span>
             <span className={styles.metaChip}>{collection.childCount} items</span>
             {collection.addedAt && (
-              <span className={styles.metaChip}>Added {new Date(collection.addedAt * 1000).toLocaleDateString()}</span>
+              <span className={styles.metaChip}>
+                Added <RelativeTime timestamp={collection.addedAt} seconds />
+              </span>
             )}
             {collection.smart === 1 && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
           </div>
@@ -261,7 +265,7 @@ export default function CollectionDetail() {
             {items.map((item) => (
               <div key={item.ratingKey} className={styles.card}>
                 {item.thumb ? (
-                  <img
+                  <FadeImage
                     className={styles.cardPoster}
                     src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
                     alt={item.title}

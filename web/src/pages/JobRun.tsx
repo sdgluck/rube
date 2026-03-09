@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
-import { formatTime } from "../utils";
+import RelativeTime from "../RelativeTime";
 import { DetailSkeleton } from "../Skeleton";
 import useSwipeBack from "../useSwipeBack";
 import styles from "./Jobs.module.css";
@@ -135,11 +135,15 @@ export default function JobRun() {
 
       <div className={styles.metaGrid}>
         <span className={styles.metaLabel}>Started</span>
-        <span>{formatTime(run.startedAt)}</span>
+        <span>
+          <RelativeTime timestamp={run.startedAt} />
+        </span>
         {run.finishedAt && (
           <>
             <span className={styles.metaLabel}>Finished</span>
-            <span>{formatTime(run.finishedAt)}</span>
+            <span>
+              <RelativeTime timestamp={run.finishedAt} />
+            </span>
           </>
         )}
         <span className={styles.metaLabel}>Duration</span>

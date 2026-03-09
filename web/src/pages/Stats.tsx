@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "../trpc";
 import EmptyState from "../EmptyState";
+import FadeImage from "../FadeImage";
 import PullToRefresh from "../PullToRefresh";
 import styles from "./Stats.module.css";
 
@@ -368,7 +369,7 @@ export default function Stats() {
                   <div key={i} className={styles.sessionCard}>
                     <div className={styles.sessionThumbCol}>
                       {(isEpisode ? session.parentThumb || session.thumb : session.thumb) ? (
-                        <img
+                        <FadeImage
                           className={styles.sessionThumb}
                           src={`/api/plex-image?path=${encodeURIComponent(isEpisode ? session.parentThumb || session.thumb! : session.thumb!)}`}
                           alt={session.title}
@@ -629,7 +630,7 @@ export default function Stats() {
               {recentQuery.data.items.map((item) => (
                 <div key={item.ratingKey} className={styles.posterCard}>
                   {item.thumb ? (
-                    <img
+                    <FadeImage
                       className={styles.posterImg}
                       src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
                       alt={item.title}
@@ -663,7 +664,7 @@ export default function Stats() {
                     <tr key={item.ratingKey}>
                       <td className={styles.recentThumbCell}>
                         {item.thumb ? (
-                          <img
+                          <FadeImage
                             className={styles.recentThumb}
                             src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
                             alt={item.title}

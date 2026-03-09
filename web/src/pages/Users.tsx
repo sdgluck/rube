@@ -4,6 +4,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
 import { UsersSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
+import RelativeTime from "../RelativeTime";
 import { useToast } from "../Toast";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Users.module.css";
@@ -249,7 +250,7 @@ export default function Users() {
                               {user.lastWatchedAt && (
                                 <span className={styles.hint}>
                                   {" "}
-                                  &middot; {new Date(user.lastWatchedAt * 1000).toLocaleDateString()}
+                                  &middot; <RelativeTime timestamp={user.lastWatchedAt} seconds />
                                 </span>
                               )}
                             </span>

@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "../trpc";
 import { DetailSkeleton } from "../Skeleton";
+import FadeImage from "../FadeImage";
 import useSwipeBack from "../useSwipeBack";
 import styles from "./Collections.module.css";
 import mediaStyles from "./MediaDetail.module.css";
@@ -123,7 +124,7 @@ export default function MediaDetail() {
       <div className={styles.detailLayout}>
         <div className={styles.detailPoster}>
           {item.thumb ? (
-            <img
+            <FadeImage
               className={styles.detailPosterImg}
               src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
               alt={item.title}

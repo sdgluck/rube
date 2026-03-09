@@ -25,7 +25,8 @@
 }
 
 .tableRow td {
-  padding: 10px 12px;
+  padding: 0 12px;
+  height: 44px;
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -50,15 +51,19 @@
 
 .collectionsTable th {
   text-align: left;
-  padding: 10px 12px;
-  border-bottom: 2px solid var(--border-color);
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  padding: 0 12px;
+  height: 32px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .jobsRow td {
-  padding: 10px 12px;
+  padding: 0 12px;
+  height: 44px;
   border-bottom: 1px solid var(--border-light);
 }
 

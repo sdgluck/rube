@@ -1,0 +1,91 @@
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.track {
+  border-radius: 999px;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.track[data-checked="false"] {
+  background: var(--border-input);
+}
+
+.track[data-checked="true"] {
+  background: var(--accent);
+}
+
+.thumb {
+  position: absolute;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Size: sm (32px wide) */
+.sm .track {
+  width: 32px;
+  height: 18px;
+}
+
+.sm .thumb {
+  width: 14px;
+  height: 14px;
+  left: 2px;
+}
+
+.sm .track[data-checked="true"] .thumb {
+  transform: translateX(14px);
+}
+
+.toggle:active .sm .thumb,
+.sm .toggle:active .thumb {
+  width: 16px;
+}
+
+.sm .track[data-checked="true"] .toggle:active .thumb {
+  transform: translateX(12px);
+}
+
+/* Size: md (40px wide) */
+.md .track {
+  width: 40px;
+  height: 22px;
+}
+
+.md .thumb {
+  width: 18px;
+  height: 18px;
+  left: 2px;
+}
+
+.md .track[data-checked="true"] .thumb {
+  transform: translateX(18px);
+}
+
+/* Active squish */
+.toggle:active .thumb {
+  width: calc(100% * 0.65);
+  border-radius: 999px;
+}
+
+.toggle:active .track[data-checked="true"] .thumb {
+  transform: translateX(calc(100% - 100% * 0.65 - 4px));
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

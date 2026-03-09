@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import pMap from "p-map";
 import { trpc } from "../trpc";
-import { describeCron, formatTime } from "../utils";
+import { describeCron } from "../utils";
+import RelativeTime from "../RelativeTime";
 import DropdownButton from "../DropdownButton";
 import { JobsSkeleton } from "../Skeleton";
+import ToggleSwitch from "../ToggleSwitch";
 import { useToast } from "../Toast";
 import PullToRefresh from "../PullToRefresh";
 import styles from "./Jobs.module.css";
@@ -352,10 +354,20 @@ export default function Jobs() {
                     <span className={styles.cronText}>{job.schedule || "—"}</span>
                     {job.schedule && <div className={styles.cronHint}>{describeCron(job.schedule)}</div>}
                   </td>
-                  <td>{job.enabled ? "Yes" : "No"}</td>
+                  <td
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <ToggleSwitch
+                      size="sm"
+                      checked={!!job.enabled}
+                      onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+                    />
+                  </td>
                   <td>
                     <span className={styles.runMeta}>
-                      {job.lastRunStartedAt ? formatTime(job.lastRunStartedAt) : "Never"}
+                      {job.lastRunStartedAt ? <RelativeTime timestamp={job.lastRunStartedAt} /> : "Never"}
                     </span>
                   </td>
                   <td>{job.lastRunStatus ? <StatusBadge status={job.lastRunStatus} /> : null}</td>

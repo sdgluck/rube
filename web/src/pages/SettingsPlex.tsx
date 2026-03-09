@@ -1,21 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "../trpc";
+import { useToast } from "../Toast";
+import UnsavedBanner from "../UnsavedBanner";
+import useUnsavedChanges from "../useUnsavedChanges";
 import styles from "./Settings.module.css";
-
-interface Status {
-  type: "success" | "error";
-  msg: string;
-}
 
 export default function SettingsPlex() {
   const [plexUrl, setPlexUrl] = useState("");
   const [plexToken, setPlexToken] = useState("");
-  const [plexStatus, setPlexStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
   const [savingPlex, setSavingPlex] = useState(false);
   const [selectedLibraries, setSelectedLibraries] = useState<string[]>([]);
-  const [libStatus, setLibStatus] = useState<Status | null>(null);
   const [savingLibs, setSavingLibs] = useState(false);
+
+  const { addToast } = useToast();
 
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -44,25 +42,37 @@ export default function SettingsPlex() {
     }
   }, [configQuery.data]);
 
+  const isDirtyPlex = useMemo(() => {
+    if (!configQuery.data) return false;
+    return (
+      plexUrl !== (configQuery.data.global_plex_url || "") || plexToken !== (configQuery.data.global_plex_token || "")
+    );
+  }, [plexUrl, plexToken, configQuery.data]);
+
+  const isDirtyLibs = useMemo(() => {
+    if (!configQuery.data) return false;
+    const initial = configQuery.data.global_plex_libraries || [];
+    if (initial.length !== selectedLibraries.length) return true;
+    return !initial.every((l: string) => selectedLibraries.includes(l));
+  }, [selectedLibraries, configQuery.data]);
+
+  useUnsavedChanges(isDirtyPlex || isDirtyLibs);
+
   const runPlexTest = async (url: string, token: string): Promise<boolean> => {
-    setPlexStatus(null);
     if (!url || !token) {
-      setPlexStatus({ type: "error", msg: "Both URL and token are required" });
+      addToast("Both URL and token are required", "error");
       return false;
     }
     setTesting(true);
     try {
       const result = await testPlexMutation.mutateAsync({ plex_url: url, plex_token: token });
       if (result.ok) {
-        setPlexStatus({
-          type: "success",
-          msg: `Connected to "${result.serverName}"`,
-        });
+        addToast(`Connected to "${result.serverName}"`, "success");
         return true;
       }
       throw "nope";
     } catch {
-      setPlexStatus({ type: "error", msg: "Connection test failed" });
+      addToast("Connection test failed", "error");
       return false;
     } finally {
       setTesting(false);
@@ -75,13 +85,12 @@ export default function SettingsPlex() {
   };
 
   const handleSaveLibraries = async () => {
-    setLibStatus(null);
     setSavingLibs(true);
     try {
       await saveConfigMutation.mutateAsync({ global_plex_libraries: selectedLibraries });
-      setLibStatus({ type: "success", msg: "Library selections saved" });
+      addToast("Library selections saved", "success");
     } catch {
-      setLibStatus({ type: "error", msg: "Failed to save library selections" });
+      addToast("Failed to save library selections", "error");
     } finally {
       setSavingLibs(false);
     }
@@ -104,15 +113,11 @@ export default function SettingsPlex() {
   };
 
   const handleSavePlex = async () => {
-    setPlexStatus(null);
     setSavingPlex(true);
     try {
       const ok = await runPlexTest(plexUrl, plexToken);
       if (!ok) {
-        setPlexStatus({
-          type: "error",
-          msg: "Plex connection failed — settings not saved",
-        });
+        addToast("Plex connection failed — settings not saved", "error");
         setSavingPlex(false);
         return;
       }
@@ -120,9 +125,9 @@ export default function SettingsPlex() {
         global_plex_url: plexUrl,
         global_plex_token: plexToken,
       });
-      setPlexStatus({ type: "success", msg: "Plex settings saved" });
+      addToast("Plex settings saved", "success");
     } catch {
-      setPlexStatus({ type: "error", msg: "Failed to save Plex settings" });
+      addToast("Failed to save Plex settings", "error");
     } finally {
       setSavingPlex(false);
     }
@@ -157,7 +162,6 @@ export default function SettingsPlex() {
             onChange={(e) => setPlexToken(e.target.value)}
           />
         </label>
-        {plexStatus && <div className={`${styles.toast} ${styles[plexStatus.type]}`}>{plexStatus.msg}</div>}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSavePlex} disabled={savingPlex}>
             {savingPlex ? "Saving..." : "Save"}
@@ -165,6 +169,7 @@ export default function SettingsPlex() {
           <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
             {testing ? "Testing..." : "Test Connection"}
           </button>
+          <UnsavedBanner visible={isDirtyPlex} />
         </div>
       </fieldset>
 
@@ -191,7 +196,6 @@ export default function SettingsPlex() {
                 </label>
               ))}
             </div>
-            {libStatus && <div className={`${styles.toast} ${styles[libStatus.type]}`}>{libStatus.msg}</div>}
             <div className={styles.buttons}>
               <button type="button" className={styles.button} onClick={handleSaveLibraries} disabled={savingLibs}>
                 {savingLibs ? "Saving..." : "Save"}
@@ -204,6 +208,7 @@ export default function SettingsPlex() {
               >
                 {refreshing ? "Refreshing..." : "Refresh"}
               </button>
+              <UnsavedBanner visible={isDirtyLibs} />
             </div>
           </>
         )}

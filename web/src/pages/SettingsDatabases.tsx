@@ -1,22 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "../trpc";
+import { useToast } from "../Toast";
+import UnsavedBanner from "../UnsavedBanner";
+import useUnsavedChanges from "../useUnsavedChanges";
 import styles from "./Settings.module.css";
-
-interface Status {
-  type: "success" | "error";
-  msg: string;
-}
 
 export default function SettingsDatabases() {
   const [omdbApiKey, setOmdbApiKey] = useState("");
-  const [omdbStatus, setOmdbStatus] = useState<Status | null>(null);
   const [savingOmdb, setSavingOmdb] = useState(false);
   const [testingOmdb, setTestingOmdb] = useState(false);
 
   const [mdblistApiKey, setMdblistApiKey] = useState("");
-  const [mdblistStatus, setMdblistStatus] = useState<Status | null>(null);
   const [savingMdblist, setSavingMdblist] = useState(false);
   const [testingMdblist, setTestingMdblist] = useState(false);
+
+  const { addToast } = useToast();
 
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -34,37 +32,47 @@ export default function SettingsDatabases() {
     }
   }, [configQuery.data]);
 
+  const isDirtyOmdb = useMemo(() => {
+    if (!configQuery.data) return false;
+    return omdbApiKey !== (configQuery.data.global_omdb_api_key || "");
+  }, [omdbApiKey, configQuery.data]);
+
+  const isDirtyMdblist = useMemo(() => {
+    if (!configQuery.data) return false;
+    return mdblistApiKey !== (configQuery.data.global_mdblist_api_key || "");
+  }, [mdblistApiKey, configQuery.data]);
+
+  useUnsavedChanges(isDirtyOmdb || isDirtyMdblist);
+
   const handleSaveOmdb = async () => {
-    setOmdbStatus(null);
     setSavingOmdb(true);
     try {
       await saveConfigMutation.mutateAsync({
         global_omdb_api_key: omdbApiKey,
       });
-      setOmdbStatus({ type: "success", msg: "OMDB settings saved" });
+      addToast("OMDB settings saved", "success");
     } catch {
-      setOmdbStatus({ type: "error", msg: "Failed to save OMDB settings" });
+      addToast("Failed to save OMDB settings", "error");
     } finally {
       setSavingOmdb(false);
     }
   };
 
   const handleTestOmdb = async () => {
-    setOmdbStatus(null);
     if (!omdbApiKey) {
-      setOmdbStatus({ type: "error", msg: "API key is required" });
+      addToast("API key is required", "error");
       return;
     }
     setTestingOmdb(true);
     try {
       const result = await testOmdbMutation.mutateAsync({ api_key: omdbApiKey });
       if (result.ok) {
-        setOmdbStatus({ type: "success", msg: `Connected — found "${result.title}"` });
+        addToast(`Connected — found "${result.title}"`, "success");
       } else {
-        setOmdbStatus({ type: "error", msg: result.error || "Connection test failed" });
+        addToast(result.error || "Connection test failed", "error");
       }
     } catch {
-      setOmdbStatus({ type: "error", msg: "Connection test failed" });
+      addToast("Connection test failed", "error");
     } finally {
       setTestingOmdb(false);
       utils.health.status.invalidate();
@@ -72,21 +80,20 @@ export default function SettingsDatabases() {
   };
 
   const handleTestMdblist = async () => {
-    setMdblistStatus(null);
     if (!mdblistApiKey) {
-      setMdblistStatus({ type: "error", msg: "API key is required" });
+      addToast("API key is required", "error");
       return;
     }
     setTestingMdblist(true);
     try {
       const result = await testMdblistMutation.mutateAsync({ api_key: mdblistApiKey });
       if (result.ok) {
-        setMdblistStatus({ type: "success", msg: `Connected — ${result.name}` });
+        addToast(`Connected — ${result.name}`, "success");
       } else {
-        setMdblistStatus({ type: "error", msg: result.error || "Connection test failed" });
+        addToast(result.error || "Connection test failed", "error");
       }
     } catch {
-      setMdblistStatus({ type: "error", msg: "Connection test failed" });
+      addToast("Connection test failed", "error");
     } finally {
       setTestingMdblist(false);
       utils.health.status.invalidate();
@@ -94,15 +101,14 @@ export default function SettingsDatabases() {
   };
 
   const handleSaveMdblist = async () => {
-    setMdblistStatus(null);
     setSavingMdblist(true);
     try {
       await saveConfigMutation.mutateAsync({
         global_mdblist_api_key: mdblistApiKey,
       });
-      setMdblistStatus({ type: "success", msg: "MDBList settings saved" });
+      addToast("MDBList settings saved", "success");
     } catch {
-      setMdblistStatus({ type: "error", msg: "Failed to save MDBList settings" });
+      addToast("Failed to save MDBList settings", "error");
     } finally {
       setSavingMdblist(false);
     }
@@ -126,7 +132,6 @@ export default function SettingsDatabases() {
           />
           <span className={styles.hint}>Free tier: 1,000 requests/day. Get a key at omdbapi.com</span>
         </label>
-        {omdbStatus && <div className={`${styles.toast} ${styles[omdbStatus.type]}`}>{omdbStatus.msg}</div>}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSaveOmdb} disabled={savingOmdb}>
             {savingOmdb ? "Saving..." : "Save"}
@@ -134,6 +139,7 @@ export default function SettingsDatabases() {
           <button type="button" className={styles.buttonSecondary} onClick={handleTestOmdb} disabled={testingOmdb}>
             {testingOmdb ? "Testing..." : "Test Connection"}
           </button>
+          <UnsavedBanner visible={isDirtyOmdb} />
         </div>
       </fieldset>
 
@@ -150,7 +156,6 @@ export default function SettingsDatabases() {
           />
           <span className={styles.hint}>Get a key at mdblist.com/preferences</span>
         </label>
-        {mdblistStatus && <div className={`${styles.toast} ${styles[mdblistStatus.type]}`}>{mdblistStatus.msg}</div>}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSaveMdblist} disabled={savingMdblist}>
             {savingMdblist ? "Saving..." : "Save"}
@@ -163,6 +168,7 @@ export default function SettingsDatabases() {
           >
             {testingMdblist ? "Testing..." : "Test Connection"}
           </button>
+          <UnsavedBanner visible={isDirtyMdblist} />
         </div>
       </fieldset>
     </div>

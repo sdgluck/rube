@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "../trpc";
+import { useToast } from "../Toast";
+import UnsavedBanner from "../UnsavedBanner";
+import useUnsavedChanges from "../useUnsavedChanges";
 import styles from "./Settings.module.css";
-
-interface Status {
-  type: "success" | "error";
-  msg: string;
-}
 
 interface ServiceConfig {
   title: string;
@@ -34,31 +32,37 @@ function ServiceConfigFieldset({
 }) {
   const [url, setUrl] = useState(configData[config.urlConfigKey] || "");
   const [apiKey, setApiKey] = useState(configData[config.apiKeyConfigKey] || "");
-  const [status, setStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const { addToast } = useToast();
 
   useEffect(() => {
     setUrl(configData[config.urlConfigKey] || "");
     setApiKey(configData[config.apiKeyConfigKey] || "");
   }, [configData, config.urlConfigKey, config.apiKeyConfigKey]);
 
+  const isDirty = useMemo(() => {
+    return url !== (configData[config.urlConfigKey] || "") || apiKey !== (configData[config.apiKeyConfigKey] || "");
+  }, [url, apiKey, configData, config.urlConfigKey, config.apiKeyConfigKey]);
+
+  useUnsavedChanges(isDirty);
+
   const runTest = async (testUrl: string, testApiKey: string): Promise<boolean> => {
-    setStatus(null);
     if (!testUrl || !testApiKey) {
-      setStatus({ type: "error", msg: "Both URL and API key are required" });
+      addToast("Both URL and API key are required", "error");
       return false;
     }
     setTesting(true);
     try {
       const result = await config.testMutation.mutateAsync({ url: testUrl, api_key: testApiKey });
       if (result.ok) {
-        setStatus({ type: "success", msg: config.formatSuccess(result as never) });
+        addToast(config.formatSuccess(result as never), "success");
         return true;
       }
       throw "nope";
     } catch {
-      setStatus({ type: "error", msg: "Connection test failed" });
+      addToast("Connection test failed", "error");
       return false;
     } finally {
       setTesting(false);
@@ -67,12 +71,11 @@ function ServiceConfigFieldset({
   };
 
   const handleSave = async () => {
-    setStatus(null);
     setSaving(true);
     try {
       const ok = await runTest(url, apiKey);
       if (!ok) {
-        setStatus({ type: "error", msg: `${config.serviceName} connection failed — settings not saved` });
+        addToast(`${config.serviceName} connection failed — settings not saved`, "error");
         setSaving(false);
         return;
       }
@@ -80,9 +83,9 @@ function ServiceConfigFieldset({
         [config.urlConfigKey]: url,
         [config.apiKeyConfigKey]: apiKey,
       });
-      setStatus({ type: "success", msg: `${config.serviceName} settings saved` });
+      addToast(`${config.serviceName} settings saved`, "success");
     } catch {
-      setStatus({ type: "error", msg: `Failed to save ${config.serviceName} settings` });
+      addToast(`Failed to save ${config.serviceName} settings`, "error");
     } finally {
       setSaving(false);
     }
@@ -111,7 +114,6 @@ function ServiceConfigFieldset({
           onChange={(e) => setApiKey(e.target.value)}
         />
       </label>
-      {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
       <div className={styles.buttons}>
         <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save"}
@@ -124,6 +126,7 @@ function ServiceConfigFieldset({
         >
           {testing ? "Testing..." : "Test Connection"}
         </button>
+        <UnsavedBanner visible={isDirty} />
       </div>
     </fieldset>
   );

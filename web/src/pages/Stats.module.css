@@ -342,19 +342,23 @@
 
 .sessionsTable th {
   text-align: left;
-  padding: 10px 12px;
-  border-bottom: 2px solid var(--border-color);
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  padding: 0 12px;
+  height: 32px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
 .sessionsTable td {
-  padding: 10px 12px;
+  padding: 0 12px;
+  height: 44px;
   border-bottom: 1px solid var(--border-light);
-  font-size: 0.9rem;
   vertical-align: middle;
+  font-size: 0.875rem;
 }
 
 .sessionsTable tr:hover td {
@@ -477,17 +481,22 @@
 
 .table th {
   text-align: left;
-  padding: 10px 12px;
-  border-bottom: 2px solid var(--border-color);
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  padding: 0 12px;
+  height: 32px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .table td {
-  padding: 10px 12px;
+  padding: 0 12px;
+  height: 44px;
   border-bottom: 1px solid var(--border-light);
-  font-size: 0.9rem;
+  vertical-align: middle;
+  font-size: 0.875rem;
 }
 
 .table tr:hover td {
@@ -711,11 +720,32 @@
     grid-template-columns: 1fr;
   }
 
+  /* Hide view toggle on mobile — grid is the native-friendly view */
+  .viewToggle {
+    display: none;
+  }
+
+  /* Sessions table: hide Decision, Quality, Bandwidth, Player (cols 4-6, 8) */
+  .sessionsTable th:nth-child(4),
+  .sessionsTable td:nth-child(4),
+  .sessionsTable th:nth-child(5),
+  .sessionsTable td:nth-child(5),
+  .sessionsTable th:nth-child(6),
+  .sessionsTable td:nth-child(6),
+  .sessionsTable th:nth-child(8),
+  .sessionsTable td:nth-child(8) {
+    display: none;
+  }
+
   .sessionsTable th,
   .sessionsTable td,
   .table th,
   .table td {
-    padding: 8px 8px;
-    font-size: 0.82rem;
+    padding: 0 8px;
+  }
+
+  .sessionsTable td,
+  .table td {
+    height: 40px;
   }
 }

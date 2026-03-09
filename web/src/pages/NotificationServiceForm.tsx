@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { trpc } from "../trpc";
+import { useToast } from "../Toast";
 import styles from "./Settings.module.css";
 
 export interface NotificationField {
@@ -17,17 +18,13 @@ interface Props {
   eventsKey: string;
 }
 
-interface Status {
-  type: "success" | "error";
-  msg: string;
-}
-
 export default function NotificationServiceForm({ service, title, fields, eventsKey }: Props) {
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [enabledEvents, setEnabledEvents] = useState<string[]>([]);
-  const [status, setStatus] = useState<Status | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+
+  const { addToast } = useToast();
 
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const eventTypesQuery = trpc.notificationEventTypes.useQuery(undefined, { refetchOnWindowFocus: false });
@@ -67,22 +64,20 @@ export default function NotificationServiceForm({ service, title, fields, events
   }
 
   const handleSave = async () => {
-    setStatus(null);
     setSaving(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await saveConfigMutation.mutateAsync(buildConfigPayload() as any);
       utils.config.get.invalidate();
-      setStatus({ type: "success", msg: `${title} settings saved` });
+      addToast(`${title} settings saved`, "success");
     } catch {
-      setStatus({ type: "error", msg: `Failed to save ${title} settings` });
+      addToast(`Failed to save ${title} settings`, "error");
     } finally {
       setSaving(false);
     }
   };
 
   const handleTest = async () => {
-    setStatus(null);
     setTesting(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,12 +85,12 @@ export default function NotificationServiceForm({ service, title, fields, events
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await testMutation.mutateAsync({ service: service as any });
       if (result.ok) {
-        setStatus({ type: "success", msg: "Test notification sent" });
+        addToast("Test notification sent", "success");
       } else {
-        setStatus({ type: "error", msg: result.error || "Failed to send test notification" });
+        addToast(result.error || "Failed to send test notification", "error");
       }
     } catch {
-      setStatus({ type: "error", msg: "Failed to send test notification" });
+      addToast("Failed to send test notification", "error");
     } finally {
       setTesting(false);
       utils.health.status.invalidate();
@@ -141,7 +136,6 @@ export default function NotificationServiceForm({ service, title, fields, events
             </label>
           ),
         )}
-        {status && <div className={`${styles.toast} ${styles[status.type]}`}>{status.msg}</div>}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save"}

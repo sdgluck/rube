@@ -4,6 +4,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
 import { MediaSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
+import FadeImage from "../FadeImage";
 import styles from "./Collections.module.css";
 import mediaStyles from "./Media.module.css";
 
@@ -586,7 +587,7 @@ export default function Media() {
           {items.map((item) => (
             <div key={item.ratingKey} className={styles.card} onClick={() => navigate(`/media/${item.ratingKey}`)}>
               {item.thumb ? (
-                <img
+                <FadeImage
                   className={styles.cardPoster}
                   src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
                   alt={item.title}

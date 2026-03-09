@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "../trpc";
+import { useToast } from "../Toast";
+import UnsavedBanner from "../UnsavedBanner";
+import useUnsavedChanges from "../useUnsavedChanges";
 import styles from "./Settings.module.css";
-
-interface Status {
-  type: "success" | "error";
-  msg: string;
-}
 
 export default function SettingsAi() {
   const [anthropicApiKey, setAnthropicApiKey] = useState("");
-  const [aiStatus, setAiStatus] = useState<Status | null>(null);
   const [savingAi, setSavingAi] = useState(false);
+
+  const { addToast } = useToast();
 
   const configQuery = trpc.config.get.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -24,16 +23,22 @@ export default function SettingsAi() {
     }
   }, [configQuery.data]);
 
+  const isDirty = useMemo(() => {
+    if (!configQuery.data) return false;
+    return anthropicApiKey !== (configQuery.data.global_anthropic_api_key || "");
+  }, [anthropicApiKey, configQuery.data]);
+
+  useUnsavedChanges(isDirty);
+
   const handleSaveAi = async () => {
-    setAiStatus(null);
     setSavingAi(true);
     try {
       await saveConfigMutation.mutateAsync({
         global_anthropic_api_key: anthropicApiKey,
       });
-      setAiStatus({ type: "success", msg: "AI settings saved" });
+      addToast("AI settings saved", "success");
     } catch {
-      setAiStatus({ type: "error", msg: "Failed to save AI settings" });
+      addToast("Failed to save AI settings", "error");
     } finally {
       setSavingAi(false);
     }
@@ -56,10 +61,12 @@ export default function SettingsAi() {
             onChange={(e) => setAnthropicApiKey(e.target.value)}
           />
         </label>
-        {aiStatus && <div className={`${styles.toast} ${styles[aiStatus.type]}`}>{aiStatus.msg}</div>}
-        <button type="button" className={styles.button} onClick={handleSaveAi} disabled={savingAi}>
-          {savingAi ? "Saving..." : "Save"}
-        </button>
+        <div className={styles.buttons}>
+          <button type="button" className={styles.button} onClick={handleSaveAi} disabled={savingAi}>
+            {savingAi ? "Saving..." : "Save"}
+          </button>
+          <UnsavedBanner visible={isDirty} />
+        </div>
       </fieldset>
     </div>
   );

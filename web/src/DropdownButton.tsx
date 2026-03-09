@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import styles from "./DropdownButton.module.css";
 
 interface DropdownButtonProps {
@@ -10,31 +10,46 @@ interface DropdownButtonProps {
 
 export default function DropdownButton({ label, options, className, disabled }: DropdownButtonProps) {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  const close = useCallback(() => {
+    setOpen(false);
+    setTimeout(() => setVisible(false), 150);
+  }, []);
+
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
+  }, [visible, close]);
+
+  const toggle = () => {
+    if (open) {
+      close();
+    } else {
+      setVisible(true);
+      setOpen(true);
+    }
+  };
 
   return (
     <div className={styles.wrapper} ref={ref}>
-      <button className={className} onClick={() => setOpen((v) => !v)} disabled={disabled}>
+      <button className={className} onClick={toggle} disabled={disabled}>
         {label} <span className={styles.caret}>&#9662;</span>
       </button>
-      {open && (
-        <div className={styles.menu}>
+      {visible && (
+        <div className={`${styles.menu} ${!open ? styles.menuExiting : ""}`}>
           {options.map((opt) => (
             <button
               key={opt.label}
               className={styles.menuItem}
               disabled={opt.disabled}
               onClick={() => {
-                setOpen(false);
+                close();
                 opt.onClick();
               }}
             >

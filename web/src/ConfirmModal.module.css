@@ -84,3 +84,11 @@
 .btnSecondary:hover {
   background: var(--bg-surface-hover);
 }
+
+.btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+  transition:
+    transform 50ms,
+    opacity 50ms;
+}

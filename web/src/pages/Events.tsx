@@ -5,6 +5,7 @@ import { trpc } from "../trpc";
 import { EventsSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
 import PullToRefresh from "../PullToRefresh";
+import RelativeTime from "../RelativeTime";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Events.module.css";
 
@@ -161,7 +162,9 @@ export default function Events() {
                     };
                     return (
                       <tr key={event.id}>
-                        <td className={styles.timestamp}>{formatTimestamp(event.timestamp)}</td>
+                        <td className={styles.timestamp}>
+                          <RelativeTime timestamp={event.timestamp} />
+                        </td>
                         <td>
                           <span className={`${styles.badge} ${badge.className}`}>{badge.label}</span>
                         </td>

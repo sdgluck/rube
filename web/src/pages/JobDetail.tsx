@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "../trpc";
-import { describeCron, formatTime } from "../utils";
+import { describeCron } from "../utils";
+import RelativeTime from "../RelativeTime";
 import { DetailSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
+import ToggleSwitch from "../ToggleSwitch";
+import UnsavedBanner from "../UnsavedBanner";
+import useUnsavedChanges from "../useUnsavedChanges";
 import useSwipeBack from "../useSwipeBack";
 import styles from "./Jobs.module.css";
 
@@ -69,6 +73,8 @@ export default function JobDetail() {
       setConfigDirty(false);
     }
   }, [job?.config, job?.command]);
+
+  useUnsavedChanges(configDirty);
 
   const hasLimit = job?.command === "because-you-watched";
   const maxLimit = 20;
@@ -138,10 +144,13 @@ export default function JobDetail() {
     );
   }, [editingCron, jobId, updateMutation]);
 
-  const handleToggleEnabled = useCallback(() => {
-    if (!job) return;
-    updateMutation.mutate({ jobId: job.id, enabled: !job.enabled });
-  }, [job, updateMutation]);
+  const handleToggleEnabled = useCallback(
+    (checked: boolean) => {
+      if (!job) return;
+      updateMutation.mutate({ jobId: job.id, enabled: checked });
+    },
+    [job, updateMutation],
+  );
 
   const handleSaveConfig = useCallback(() => {
     if (!jobId) return;
@@ -223,12 +232,7 @@ export default function JobDetail() {
                 <tr>
                   <td>Enabled</td>
                   <td>
-                    <input
-                      type="checkbox"
-                      className={styles.toggle}
-                      checked={!!job.enabled}
-                      onChange={handleToggleEnabled}
-                    />
+                    <ToggleSwitch size="sm" checked={!!job.enabled} onChange={handleToggleEnabled} />
                   </td>
                   <td className={styles.configSummary}>{job.enabled ? "Yes" : "No"}</td>
                 </tr>
@@ -304,6 +308,7 @@ export default function JobDetail() {
               >
                 Save Config
               </button>
+              <UnsavedBanner visible={configDirty} />
             </div>
           )}
         </fieldset>
@@ -330,7 +335,9 @@ export default function JobDetail() {
                       <td>
                         <StatusBadge status={run.status} />
                       </td>
-                      <td className={styles.runMeta}>{formatTime(run.startedAt)}</td>
+                      <td className={styles.runMeta}>
+                        <RelativeTime timestamp={run.startedAt} />
+                      </td>
                       <td className={styles.runMeta}>{formatDuration(run.startedAt, run.finishedAt)}</td>
                       <td>
                         <Link to={`/jobs/runs/${run.id}`} className={styles.runLink}>

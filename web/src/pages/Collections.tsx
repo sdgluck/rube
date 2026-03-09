@@ -6,6 +6,8 @@ import { trpc } from "../trpc";
 import ConfirmModal from "../ConfirmModal";
 import { CollectionsSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
+import FadeImage from "../FadeImage";
+import RelativeTime from "../RelativeTime";
 import { useToast } from "../Toast";
 import PullToRefresh from "../PullToRefresh";
 import styles from "./Collections.module.css";
@@ -492,7 +494,7 @@ export default function Collections() {
                     onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
                   >
                     {col.thumb ? (
-                      <img
+                      <FadeImage
                         className={styles.cardPoster}
                         src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
                         alt={col.title}
@@ -581,7 +583,7 @@ export default function Collections() {
                               </span>
                             ))}
                           </td>
-                          <td>{col.addedAt ? new Date(col.addedAt * 1000).toLocaleDateString() : ""}</td>
+                          <td>{col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : ""}</td>
                           <td>
                             <button
                               className={`${styles.buttonDanger} ${styles.buttonSmall}`}

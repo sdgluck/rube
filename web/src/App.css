@@ -66,7 +66,8 @@ body {
 
 .layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
 }
 
 .sidebar {
@@ -234,6 +235,7 @@ body {
   flex: 1;
   padding: 32px 40px;
   min-width: 0;
+  overflow-y: auto;
 }
 
 /* ─── Table scroll wrapper (global utility) ─────────────────────────────── */
@@ -314,6 +316,7 @@ body {
 
   .content {
     padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 72px);
+    -webkit-overflow-scrolling: touch;
   }
 
   /* ─── Bottom tab bar ─────────────────────────────────────────────────── */
@@ -504,6 +507,18 @@ body {
   to {
     opacity: 0;
   }
+}
+
+/* ─── Tap/press feedback ─────────────────────────────────────────────────── */
+
+button:active:not(:disabled),
+.nav-link:active,
+.bottom-nav-item:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+  transition:
+    transform 50ms,
+    opacity 50ms;
 }
 
 @media (max-width: 480px) {
