@@ -12,7 +12,16 @@ import {
   updateCollectionLabels,
   deleteCollection,
 } from "./collections.ts";
-import { getJobs, getJobRuns, getJobRun, getActiveRuns, updateJob, startJob, cancelRun } from "./jobs.ts";
+import {
+  getJobs,
+  getJobRuns,
+  getJobRun,
+  getActiveRuns,
+  getRecentRuns,
+  updateJob,
+  startJob,
+  cancelRun,
+} from "./jobs.ts";
 import { getRules, getRule, createRule, updateRule, deleteRule } from "./rules.ts";
 import {
   getOverlayConfigs,
@@ -193,6 +202,8 @@ const jobsRouter = t.router({
   }),
 
   activeRuns: procedure.query(() => getActiveRuns()),
+
+  recentRuns: procedure.query(() => getRecentRuns()),
 
   update: t.procedure
     .input(

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Cron } from "croner";
 import pMap from "p-map";
 import { trpc } from "../trpc";
 import { describeCron } from "../utils";
@@ -12,6 +13,8 @@ import PullToRefresh from "../PullToRefresh";
 import styles from "./Jobs.module.css";
 import shared from "./Collections.module.css";
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -20,26 +23,47 @@ function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-  const cls =
-    status === "running"
-      ? styles.badgeRunning
-      : status === "completed"
-        ? styles.badgeCompleted
-        : status === "failed"
-          ? styles.badgeFailed
-          : styles.badgeCancelled;
-  return <span className={`${styles.badge} ${cls}`}>{status}</span>;
+function formatDuration(startMs: number, endMs?: number | null): string {
+  const diff = (endMs || Date.now()) - startMs;
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  if (mins < 60) return `${mins}m ${remSecs}s`;
+  const hours = Math.floor(mins / 60);
+  return `${hours}h ${mins % 60}m`;
+}
+
+function formatTimeUntil(ms: number): string {
+  const diff = ms - Date.now();
+  if (diff < 0) return "now";
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ${mins % 60}m`;
+  return `${Math.floor(hours / 24)}d`;
 }
 
 type SortKey = "name" | "schedule" | "enabled" | "lastRun" | "lastRunStatus";
 type SortDir = "asc" | "desc";
 
+// ─── Main component ─────────────────────────────────────────────────────────
+
 export default function Jobs() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
+  const { addToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const lastClickedIndex = useRef<number | null>(null);
+  const [, setTick] = useState(0);
+
   const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchInterval: 5000 });
+  const recentRunsQuery = trpc.jobs.recentRuns.useQuery(undefined, { refetchInterval: 3000 });
+
   const updateMutation = trpc.jobs.update.useMutation({
     onMutate: async (input) => {
       await utils.jobs.list.cancel();
@@ -59,11 +83,6 @@ export default function Jobs() {
     onSettled: () => utils.jobs.list.invalidate(),
   });
 
-  const { addToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
-  const lastClickedIndex = useRef<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>(() => {
     const stored = localStorage.getItem("jobs-sort-key");
     return stored && ["name", "schedule", "enabled", "lastRun", "lastRunStatus"].includes(stored)
@@ -83,6 +102,12 @@ export default function Jobs() {
       return () => clearInterval(interval);
     }
   }, [hasRunning, utils]);
+
+  // Tick every 30s to update schedule timeline
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -122,6 +147,31 @@ export default function Jobs() {
     return sortDir === "asc" ? cmp : -cmp;
   });
 
+  // ─── Derived stats ──────────────────────────────────────────────────────
+  const enabledCount = rawJobs.filter((j) => j.enabled).length;
+  const runningCount = recentRunsQuery.data?.filter((r) => r.status === "running").length ?? 0;
+  const lastFailure = rawJobs
+    .filter((j) => j.lastRunStatus === "failed" && j.lastRunStartedAt)
+    .sort((a, b) => (b.lastRunStartedAt ?? 0) - (a.lastRunStartedAt ?? 0))[0];
+
+  // ─── Schedule timeline ──────────────────────────────────────────────────
+  const upcoming = useMemo(() => {
+    return rawJobs
+      .filter((j) => j.enabled && j.schedule)
+      .map((j) => {
+        try {
+          const next = new Cron(j.schedule).nextRun();
+          return { name: j.name, jobId: j.id, nextRun: next?.getTime() ?? null };
+        } catch {
+          return { name: j.name, jobId: j.id, nextRun: null };
+        }
+      })
+      .filter((j): j is { name: string; jobId: string; nextRun: number } => j.nextRun != null)
+      .sort((a, b) => a.nextRun - b.nextRun)
+      .slice(0, 8);
+  }, [rawJobs]);
+
+  // ─── Export/Import ──────────────────────────────────────────────────────
   function getExportData() {
     return jobs.map((j) => {
       let config: Record<string, unknown> = {};
@@ -178,17 +228,15 @@ export default function Jobs() {
     }
   }
 
+  // ─── Selection ──────────────────────────────────────────────────────────
   function handleCheckboxClick(index: number, e: React.MouseEvent) {
     const id = jobs[index].id;
-
     if (e.shiftKey && lastClickedIndex.current != null) {
       const from = Math.min(lastClickedIndex.current, index);
       const to = Math.max(lastClickedIndex.current, index);
       setSelected((prev) => {
         const next = new Set(prev);
-        for (let i = from; i <= to; i++) {
-          next.add(jobs[i].id);
-        }
+        for (let i = from; i <= to; i++) next.add(jobs[i].id);
         return next;
       });
     } else {
@@ -199,16 +247,12 @@ export default function Jobs() {
         return next;
       });
     }
-
     lastClickedIndex.current = index;
   }
 
   function toggleSelectAll() {
-    if (selected.size === jobs.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(jobs.map((j) => j.id)));
-    }
+    if (selected.size === jobs.length) setSelected(new Set());
+    else setSelected(new Set(jobs.map((j) => j.id)));
   }
 
   async function bulkSetEnabled(enabled: boolean) {
@@ -229,152 +273,284 @@ export default function Jobs() {
     utils.jobs.list.invalidate();
   }
 
+  const handleRefresh = () => {
+    jobsQuery.refetch();
+    recentRunsQuery.refetch();
+  };
+
   if (jobsQuery.isLoading) return <JobsSkeleton />;
   if (jobsQuery.error) return <p>Error: {jobsQuery.error.message}</p>;
 
   return (
-    <PullToRefresh
-      onRefresh={() => {
-        jobsQuery.refetch();
-      }}
-    >
-      <div>
-        <div className={styles.jobsHeader}>
-          <h1 className={styles.heading}>
-            Jobs{jobs.length > 0 && <span className="count-badge">{jobs.length}</span>}
-          </h1>
-          <div className={shared.headerActions}>
-            <DropdownButton
-              label="Export"
-              className={shared.buttonSecondary}
-              disabled={jobs.length === 0}
-              options={[
-                { label: "File", onClick: handleExportFile },
-                { label: "Clipboard", onClick: handleExportClipboard },
-              ]}
-            />
-            <DropdownButton
-              label="Import"
-              className={shared.buttonSecondary}
-              options={[
-                { label: "File", onClick: () => fileInputRef.current?.click() },
-                { label: "Clipboard", onClick: handleImportClipboard },
-              ]}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              style={{ display: "none" }}
-              onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
-            />
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className={styles.dashboard}>
+        {/* ─── Summary Bar ──────────────────────────────────────────── */}
+        <div className={styles.summaryBar}>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Total</span>
+            <span className={styles.summaryValue}>{rawJobs.length}</span>
+          </div>
+          <div className={styles.summaryDivider} />
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Enabled</span>
+            <span className={styles.summaryValue}>{enabledCount}</span>
+          </div>
+          <div className={styles.summaryDivider} />
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Running</span>
+            <span className={`${styles.summaryValue} ${runningCount > 0 ? styles.summaryAccent : ""}`}>
+              {runningCount}
+            </span>
+          </div>
+          <div className={styles.summaryDivider} />
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Last Failure</span>
+            <span className={`${styles.summaryValue} ${styles.summarySmall}`}>
+              {lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : "—"}
+            </span>
           </div>
         </div>
-        {selected.size > 0 && (
-          <div className={shared.bulkBar}>
-            {bulkProgress ? (
-              <>
-                <span style={{ fontSize: "0.85rem" }}>
-                  {bulkProgress.done}/{bulkProgress.total}
-                </span>
-                <div className={shared.bulkProgressBar}>
-                  <div
-                    className={shared.bulkProgressFill}
-                    style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
-                  />
-                </div>
-              </>
+
+        {/* ─── Two-column grid ──────────────────────────────────────── */}
+        <div className={styles.grid}>
+          {/* ─── Recent Runs ────────────────────────────────────────── */}
+          <div className={styles.panel}>
+            <div className={styles.panelHeader}>Recent Runs</div>
+            {recentRunsQuery.data && recentRunsQuery.data.length > 0 ? (
+              <table className={styles.compactTable}>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Job</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentRunsQuery.data.map((run) => (
+                    <tr key={run.id} className={styles.clickableRow} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
+                      <td>
+                        {run.status === "running" ? (
+                          <span className={styles.spinnerSmall} />
+                        ) : (
+                          <span className={styles.statusDot} data-status={run.status} />
+                        )}
+                      </td>
+                      <td className={styles.nameCell}>
+                        <span className={styles.jobNameText}>{run.jobName}</span>
+                        {run.status === "running" && run.progress > 0 && (
+                          <div className={styles.miniProgress}>
+                            <div
+                              className={styles.miniProgressFill}
+                              style={{ width: `${Math.round(run.progress * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                      </td>
+                      <td className={styles.monoCell}>
+                        <RelativeTime timestamp={run.startedAt} />
+                      </td>
+                      <td className={styles.monoCell}>
+                        {run.status === "running" ? "—" : formatDuration(run.startedAt, run.finishedAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
-              <>
-                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{selected.size} selected</span>
-                <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
-                  Enable
-                </button>
-                <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(false)}>
-                  Disable
-                </button>
-                <button
-                  className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
-                  onClick={() => setSelected(new Set())}
-                >
-                  Clear
-                </button>
-              </>
+              <div className={styles.muted}>No recent runs</div>
             )}
           </div>
-        )}
 
-        <div className="table-scroll">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={shared.checkboxCell}>
-                  <input
-                    type="checkbox"
-                    className={shared.checkbox}
-                    checked={jobs.length > 0 && selected.size === jobs.length}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("name")}>
-                  Name{sortIndicator("name")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("schedule")}>
-                  Schedule{sortIndicator("schedule")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
-                  Enabled{sortIndicator("enabled")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-                  Last Run{sortIndicator("lastRun")}
-                </th>
-                <th className={styles.sortable} onClick={() => toggleSort("lastRunStatus")}>
-                  Last Run Status{sortIndicator("lastRunStatus")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job, i) => (
-                <tr
-                  key={job.id}
-                  className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                >
-                  <td
-                    className={shared.checkboxCell}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCheckboxClick(i, e);
-                    }}
-                  >
-                    <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-                  </td>
-                  <td>{job.name}</td>
-                  <td>
-                    <span className={styles.cronText}>{job.schedule || "—"}</span>
-                    {job.schedule && <div className={styles.cronHint}>{describeCron(job.schedule)}</div>}
-                  </td>
-                  <td
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <ToggleSwitch
-                      size="sm"
-                      checked={!!job.enabled}
-                      onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
-                    />
-                  </td>
-                  <td>
-                    <span className={styles.runMeta}>
-                      {job.lastRunStartedAt ? <RelativeTime timestamp={job.lastRunStartedAt} /> : "Never"}
+          {/* ─── Schedule Timeline ──────────────────────────────────── */}
+          <div className={styles.panel}>
+            <div className={styles.panelHeader}>Upcoming</div>
+            {upcoming.length > 0 ? (
+              <table className={styles.compactTable}>
+                <thead>
+                  <tr>
+                    <th>Job</th>
+                    <th>Next Run</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcoming.map((item) => (
+                    <tr
+                      key={item.jobId}
+                      className={styles.clickableRow}
+                      onClick={() => navigate(`/jobs/${item.jobId}`)}
+                    >
+                      <td className={styles.nameCell}>
+                        <span className={styles.jobNameText}>{item.name}</span>
+                      </td>
+                      <td className={styles.monoCell}>in {formatTimeUntil(item.nextRun)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className={styles.muted}>No scheduled jobs</div>
+            )}
+          </div>
+
+          {/* ─── All Jobs ─────────────────────────────────────────────── */}
+          <div className={styles.panel}>
+            <div className={styles.panelHeaderRow}>
+              <div className={styles.panelHeader}>
+                All Jobs
+                {jobs.length > 0 && <span className={styles.countBadge}>{jobs.length}</span>}
+              </div>
+              <div className={styles.headerActions}>
+                <DropdownButton
+                  label="Export"
+                  className={styles.headerBtn}
+                  disabled={jobs.length === 0}
+                  options={[
+                    { label: "File", onClick: handleExportFile },
+                    { label: "Clipboard", onClick: handleExportClipboard },
+                  ]}
+                />
+                <DropdownButton
+                  label="Import"
+                  className={styles.headerBtn}
+                  options={[
+                    { label: "File", onClick: () => fileInputRef.current?.click() },
+                    { label: "Clipboard", onClick: handleImportClipboard },
+                  ]}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  style={{ display: "none" }}
+                  onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
+                />
+              </div>
+            </div>
+
+            {selected.size > 0 && (
+              <div className={shared.bulkBar}>
+                {bulkProgress ? (
+                  <>
+                    <span style={{ fontSize: "0.8rem" }}>
+                      {bulkProgress.done}/{bulkProgress.total}
                     </span>
-                  </td>
-                  <td>{job.lastRunStatus ? <StatusBadge status={job.lastRunStatus} /> : null}</td>
+                    <div className={shared.bulkProgressBar}>
+                      <div
+                        className={shared.bulkProgressFill}
+                        style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{selected.size} selected</span>
+                    <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
+                      Enable
+                    </button>
+                    <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(false)}>
+                      Disable
+                    </button>
+                    <button
+                      className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
+                      onClick={() => setSelected(new Set())}
+                    >
+                      Clear
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            <table className={styles.compactTable}>
+              <thead>
+                <tr>
+                  <th className={shared.checkboxCell}>
+                    <input
+                      type="checkbox"
+                      className={shared.checkbox}
+                      checked={jobs.length > 0 && selected.size === jobs.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("name")}>
+                    Name{sortIndicator("name")}
+                  </th>
+                  <th className={`${styles.sortable} ${styles.hideOnMobile}`} onClick={() => toggleSort("schedule")}>
+                    Schedule{sortIndicator("schedule")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
+                    On{sortIndicator("enabled")}
+                  </th>
+                  <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+                    Last Run{sortIndicator("lastRun")}
+                  </th>
+                  <th
+                    className={`${styles.sortable} ${styles.hideOnMobile}`}
+                    onClick={() => toggleSort("lastRunStatus")}
+                  >
+                    Status{sortIndicator("lastRunStatus")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {jobs.map((job, i) => (
+                  <tr
+                    key={job.id}
+                    className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                    onClick={() => navigate(`/jobs/${job.id}`)}
+                  >
+                    <td
+                      className={shared.checkboxCell}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCheckboxClick(i, e);
+                      }}
+                    >
+                      <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                    </td>
+                    <td className={styles.nameCell}>
+                      <span className={styles.jobNameText}>{job.name}</span>
+                      <span className={styles.scheduleHintInline}>
+                        {job.schedule ? describeCron(job.schedule) : "Manual"}
+                      </span>
+                    </td>
+                    <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                      <span className={styles.cronText} title={job.schedule || undefined}>
+                        {job.schedule ? describeCron(job.schedule) : "—"}
+                      </span>
+                    </td>
+                    <td
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <ToggleSwitch
+                        size="sm"
+                        checked={!!job.enabled}
+                        onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+                      />
+                    </td>
+                    <td className={styles.monoCell}>
+                      {job.lastRunStartedAt ? (
+                        <RelativeTime timestamp={job.lastRunStartedAt} />
+                      ) : (
+                        <span className={styles.muted}>Never</span>
+                      )}
+                    </td>
+                    <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                      {job.lastRunStatus && (
+                        <span className={styles.statusRow}>
+                          <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                          {job.lastRunStatus}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </PullToRefresh>

@@ -324,6 +324,34 @@ export function getActiveRuns(): Array<{
     .all();
 }
 
+export function getRecentRuns(): Array<{
+  id: string;
+  jobId: string;
+  jobName: string;
+  status: string;
+  progress: number;
+  message: string;
+  startedAt: number;
+  finishedAt: number | null;
+}> {
+  return db
+    .select({
+      id: jobRuns.id,
+      jobId: jobRuns.jobId,
+      jobName: jobs.name,
+      status: jobRuns.status,
+      progress: jobRuns.progress,
+      message: jobRuns.message,
+      startedAt: jobRuns.startedAt,
+      finishedAt: jobRuns.finishedAt,
+    })
+    .from(jobRuns)
+    .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
+    .orderBy(desc(jobRuns.startedAt))
+    .limit(8)
+    .all();
+}
+
 export function updateJob(
   jobId: string,
   updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },

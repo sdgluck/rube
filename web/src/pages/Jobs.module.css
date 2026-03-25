@@ -1,32 +1,161 @@
-.jobsHeader {
+/* ─── Dashboard layout ──────────────────────────────────────────────────── */
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Summary bar ───────────────────────────────────────────────────────── */
+
+.summaryBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-surface);
+}
+
+.summaryItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.summaryLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.summaryValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.summarySmall {
+  font-size: 0.85rem;
+}
+
+.summaryAccent {
+  color: var(--accent);
+}
+
+.summaryDivider {
+  width: 1px;
+  height: 32px;
+  background: var(--border-light);
+  flex-shrink: 0;
+}
+
+/* ─── Grid ──────────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ─── Panel ─────────────────────────────────────────────────────────────── */
+
+.panel {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--bg-surface);
+  min-width: 0;
+}
+
+.panelHeader {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panelHeaderRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 }
 
-.heading {
-  font-size: 1.5rem;
+.panelHeaderRow .panelHeader {
   margin-bottom: 0;
 }
 
-/* ─── Job table ──────────────────────────────────────────────────────────────── */
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
 
-.table {
+.headerActions {
+  display: flex;
+  gap: 6px;
+}
+
+.headerBtn {
+  padding: 4px 10px !important;
+  font-size: 0.75rem !important;
+  border-radius: 4px !important;
+}
+
+/* ─── Compact table ─────────────────────────────────────────────────────── */
+
+.compactTable {
   width: 100%;
   border-collapse: collapse;
 }
 
-.table th {
+.compactTable th {
   text-align: left;
-  padding: 0 12px;
-  height: 32px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 0 8px;
+  height: 24px;
+  font-size: 0.65rem;
   font-weight: 600;
-  color: var(--text-muted);
-  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.compactTable td {
+  padding: 0 8px;
+  height: 32px;
+  font-size: 0.8rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.compactTable tr:last-child td {
+  border-bottom: none;
+}
+
+.compactTable tbody tr:hover {
+  background: var(--bg-surface-hover);
 }
 
 .sortable {
@@ -39,18 +168,6 @@
   color: var(--accent);
 }
 
-.table td {
-  padding: 0 12px;
-  height: 44px;
-  border-bottom: 1px solid var(--border-light);
-  vertical-align: middle;
-  font-size: 0.875rem;
-}
-
-.table tbody tr:hover {
-  background: var(--bg-surface-hover);
-}
-
 .clickableRow {
   cursor: pointer;
 }
@@ -60,13 +177,133 @@
   transition: background 50ms;
 }
 
-/* ─── Status badges ──────────────────────────────────────────────────────────── */
+/* ─── Table cells ───────────────────────────────────────────────────────── */
+
+.nameCell {
+  max-width: 0;
+  width: 100%;
+}
+
+.jobNameText {
+  display: block;
+  font-weight: 600;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduleHintInline {
+  display: none;
+}
+
+.scheduleCell {
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.cronText {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.monoCell {
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.statusCell {
+  white-space: nowrap;
+}
+
+.statusRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+/* ─── Status dot ────────────────────────────────────────────────────────── */
+
+.statusDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #888;
+  flex-shrink: 0;
+}
+
+.statusDot[data-status="running"] {
+  background: #3b82f6;
+}
+
+.statusDot[data-status="completed"] {
+  background: #28a745;
+}
+
+.statusDot[data-status="failed"] {
+  background: #ef4444;
+}
+
+.statusDot[data-status="cancelled"] {
+  background: #888;
+}
+
+/* ─── Mini progress bar ─────────────────────────────────────────────────── */
+
+.miniProgress {
+  height: 3px;
+  background: var(--border-light);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+.miniProgressFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ─── Spinner ───────────────────────────────────────────────────────────── */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinnerSmall {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--border-input);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ─── Muted text ────────────────────────────────────────────────────────── */
+
+.muted {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ─── Status badges (used by JobDetail/JobRun) ──────────────────────────── */
 
 .badge {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: capitalize;
 }
@@ -91,15 +328,15 @@
   color: #4b5563;
 }
 
-/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 
 .button {
   background: var(--accent);
   color: #fff;
-  padding: 6px 16px;
+  padding: 4px 12px;
   border: 1px solid var(--accent);
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
@@ -125,20 +362,11 @@
 }
 
 .buttonSmall {
-  padding: 4px 12px;
-  font-size: 0.8rem;
+  padding: 3px 10px;
+  font-size: 0.7rem;
 }
 
-/* ─── Toggle switch ──────────────────────────────────────────────────────────── */
-
-.toggle {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-/* ─── Cron input ─────────────────────────────────────────────────────────────── */
+/* ─── Cron input (JobDetail) ─────────────────────────────────────────────── */
 
 .cronInput {
   font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
@@ -165,7 +393,7 @@
   color: #dc2626;
 }
 
-/* ─── Run history ────────────────────────────────────────────────────────────── */
+/* ─── Run history (JobDetail) ────────────────────────────────────────────── */
 
 .runsContainer {
   padding: 12px 12px 12px 24px;
@@ -201,7 +429,7 @@
   font-size: 0.8rem;
 }
 
-/* ─── Log viewer ─────────────────────────────────────────────────────────────── */
+/* ─── Log viewer (JobDetail/JobRun) ──────────────────────────────────────── */
 
 .logViewer {
   background: #1a1a2e;
@@ -302,7 +530,7 @@
   color: #fff;
 }
 
-/* ─── Progress bar ───────────────────────────────────────────────────────────── */
+/* ─── Progress bar (JobDetail) ───────────────────────────────────────────── */
 
 .progressBar {
   width: 100%;
@@ -320,7 +548,7 @@
   transition: width 0.3s ease;
 }
 
-/* ─── Run detail page ────────────────────────────────────────────────────────── */
+/* ─── Run detail page (JobRun) ───────────────────────────────────────────── */
 
 .backLink {
   color: var(--accent);
@@ -364,7 +592,7 @@
   color: var(--text-secondary);
 }
 
-/* ─── Sidebar active jobs ────────────────────────────────────────────────────── */
+/* ─── Sidebar active jobs ────────────────────────────────────────────────── */
 
 .sidebarJobs {
   margin-top: auto;
@@ -429,12 +657,6 @@
   color: #ef4444;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .spinner {
   width: 14px;
   height: 14px;
@@ -451,7 +673,7 @@
   font-style: italic;
 }
 
-/* ─── Job config editor ──────────────────────────────────────────────────────── */
+/* ─── Job config editor (JobDetail) ──────────────────────────────────────── */
 
 .configEditor {
   display: flex;
@@ -523,7 +745,12 @@
   margin: 0;
 }
 
-/* ─── Job detail page ───────────────────────────────────────────────────────── */
+/* ─── Job detail page (JobDetail) ────────────────────────────────────────── */
+
+.heading {
+  font-size: 1.5rem;
+  margin-bottom: 0;
+}
 
 .jobDetail {
   display: flex;
@@ -590,11 +817,6 @@
   color: var(--text-secondary);
 }
 
-.cronText {
-  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
-  font-size: 0.85rem;
-}
-
 .configTable {
   width: 100%;
   border-collapse: collapse;
@@ -625,73 +847,51 @@
   font-size: 0.85rem;
 }
 
-/* ─── Responsive ────────────────────────────────────────────────────────────── */
+.hideOnMobile {
+  /* Placeholder for mobile override */
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
+  .summaryBar {
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 10px;
+  }
+
+  .summaryItem {
+    flex-basis: 50%;
+    padding: 6px 0;
+  }
+
+  .summaryDivider {
+    display: none;
+  }
+
+  .summaryValue {
+    font-size: 1.1rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
   .jobDetailColumns {
     grid-template-columns: 1fr;
   }
 
-  /* Card layout for jobs table */
-  .table thead {
+  .hideOnMobile {
     display: none;
   }
 
-  .table tbody tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 2px 8px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-light);
-  }
-
-  .table td {
+  .scheduleHintInline {
     display: block;
-    border: none;
-    height: auto;
-    padding: 0;
-    font-size: 0.875rem;
-  }
-
-  /* Checkbox — hide */
-  .table td:nth-child(1) {
-    display: none;
-  }
-
-  /* Name — full width, bold */
-  .table td:nth-child(2) {
-    grid-column: 1 / -1;
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-
-  /* Schedule — left side */
-  .table td:nth-child(3) {
+    font-size: 0.7rem;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    margin-top: 1px;
   }
 
-  /* Enabled toggle — top right */
-  .table td:nth-child(4) {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-  }
-
-  /* Last run — left, muted */
-  .table td:nth-child(5) {
-    font-size: 0.8rem;
-  }
-
-  /* Status badge — right of last run */
-  .table td:nth-child(6) {
-    grid-row: 3;
-    grid-column: 2;
-    justify-self: end;
-    align-self: center;
-  }
-
-  /* Config table: hide summary column */
   .configTable th:nth-child(3),
   .configTable td:nth-child(3) {
     display: none;
