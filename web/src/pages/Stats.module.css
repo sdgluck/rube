@@ -247,40 +247,6 @@
   background: var(--border-input);
 }
 
-/* ─── Donut (compact) ───────────────────────────────────────────────────── */
-
-.vizRow {
-  margin-bottom: 10px;
-}
-
-.donutWrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.donutLegend {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.donutLegendItem {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.donutLegendDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 /* ─── Health dots ───────────────────────────────────────────────────────── */
 
 .healthRow {

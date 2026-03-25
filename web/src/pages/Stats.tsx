@@ -54,71 +54,6 @@ function formatDuration(ms: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// ─── Donut chart (compact) ──────────────────────────────────────────────────
-
-const DECISION_COLORS: Record<string, string> = {
-  directplay: "#28a745",
-  copy: "#7c4dff",
-  transcode: "#ef4444",
-};
-
-const DECISION_LABELS: Record<string, string> = {
-  directplay: "Direct Play",
-  copy: "Direct Stream",
-  transcode: "Transcode",
-};
-
-function TranscodeDonut({ sessions }: { sessions: { decision: string }[] }) {
-  if (sessions.length === 0) return null;
-
-  const counts: Record<string, number> = {};
-  for (const s of sessions) {
-    const key = s.decision || "directplay";
-    counts[key] = (counts[key] || 0) + 1;
-  }
-
-  const total = sessions.length;
-  const radius = 14;
-  const circumference = 2 * Math.PI * radius;
-  let offset = 0;
-
-  const segments = Object.entries(counts).map(([decision, count]) => {
-    const pct = count / total;
-    const dashLength = pct * circumference;
-    const segment = (
-      <circle
-        key={decision}
-        cx="18"
-        cy="18"
-        r={radius}
-        fill="none"
-        stroke={DECISION_COLORS[decision] || "#888"}
-        strokeWidth="5"
-        strokeDasharray={`${dashLength} ${circumference - dashLength}`}
-        strokeDashoffset={-offset}
-      />
-    );
-    offset += dashLength;
-    return segment;
-  });
-
-  return (
-    <div className={styles.donutWrapper}>
-      <svg width="36" height="36" viewBox="0 0 36 36">
-        {segments}
-      </svg>
-      <div className={styles.donutLegend}>
-        {Object.entries(counts).map(([decision, count]) => (
-          <span key={decision} className={styles.donutLegendItem}>
-            <span className={styles.donutLegendDot} style={{ background: DECISION_COLORS[decision] || "#888" }} />
-            {DECISION_LABELS[decision] || decision} ({count})
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Distribution bar ───────────────────────────────────────────────────────
 
 const RESOLUTION_COLORS: Record<string, string> = {
@@ -253,12 +188,6 @@ export default function Stats() {
               Active Streams
               {sessions.length > 0 && <span className={styles.countBadge}>{sessions.length}</span>}
             </div>
-
-            {sessions.length > 0 && (
-              <div className={styles.vizRow}>
-                <TranscodeDonut sessions={sessions} />
-              </div>
-            )}
 
             {sessionsQuery.isLoading && <div className={styles.muted}>Loading…</div>}
             {sessionsQuery.error && <div className={styles.error}>Failed to load sessions</div>}
@@ -462,24 +391,23 @@ export default function Stats() {
               </table>
             )}
           </div>
-        </div>
-
-        {/* ─── Library Breakdown (full width) ───────────────────────── */}
-        {overviewQuery.data && overviewQuery.data.totalItems > 0 && (
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>Library Breakdown</div>
-            <div className={styles.distRows}>
-              <DistributionBar
-                label="Resolution"
-                items={overviewQuery.data.resolutions}
-                colorMap={RESOLUTION_COLORS}
-                formatLabel={formatResolution}
-              />
-              <DistributionBar label="Video Codec" items={overviewQuery.data.videoCodecs} formatLabel={formatCodec} />
-              <DistributionBar label="Audio Codec" items={overviewQuery.data.audioCodecs} formatLabel={formatCodec} />
+          {/* ─── Library Breakdown ──────────────────────────────────── */}
+          {overviewQuery.data && overviewQuery.data.totalItems > 0 && (
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>Library Breakdown</div>
+              <div className={styles.distRows}>
+                <DistributionBar
+                  label="Resolution"
+                  items={overviewQuery.data.resolutions}
+                  colorMap={RESOLUTION_COLORS}
+                  formatLabel={formatResolution}
+                />
+                <DistributionBar label="Video Codec" items={overviewQuery.data.videoCodecs} formatLabel={formatCodec} />
+                <DistributionBar label="Audio Codec" items={overviewQuery.data.audioCodecs} formatLabel={formatCodec} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </PullToRefresh>
   );
