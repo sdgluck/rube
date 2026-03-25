@@ -73,6 +73,8 @@
   padding: 12px;
   background: var(--bg-surface);
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .panelHeader {
@@ -120,6 +122,62 @@
   padding: 4px 10px !important;
   font-size: 0.75rem !important;
   border-radius: 4px !important;
+}
+
+/* ─── Log tabs header ───────────────────────────────────────────────────── */
+
+.logTabsHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.logTabsHeader .panelHeader {
+  margin-bottom: 0;
+}
+
+/* ─── Log tabs ──────────────────────────────────────────────────────────── */
+
+.logTabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.logTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: none;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.1s,
+    border-color 0.1s,
+    color 0.1s;
+}
+
+.logTab:hover {
+  border-color: var(--border-input);
+  color: var(--text-secondary);
+}
+
+.logTabActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.logTabActive .statusDot {
+  background: rgba(255, 255, 255, 0.6) !important;
 }
 
 /* ─── Compact table ─────────────────────────────────────────────────────── */
@@ -439,14 +497,19 @@
   line-height: 1.5;
   padding: 16px;
   border-radius: 8px;
-  max-height: 600px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
+  flex: 1;
+  min-height: 120px;
 }
 
 .logWrapper {
   position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .logToolbar {

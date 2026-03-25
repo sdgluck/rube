@@ -60,9 +60,18 @@ export default function Jobs() {
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
   const [, setTick] = useState(0);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const logRef = useRef<HTMLPreElement>(null);
 
   const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchInterval: 5000 });
   const recentRunsQuery = trpc.jobs.recentRuns.useQuery(undefined, { refetchInterval: 3000 });
+  const selectedRunQuery = trpc.jobs.run.useQuery(
+    { runId: selectedRunId! },
+    {
+      enabled: !!selectedRunId,
+      refetchInterval: (query) => (query.state.data?.status === "running" ? 1000 : false),
+    },
+  );
 
   const updateMutation = trpc.jobs.update.useMutation({
     onMutate: async (input) => {
@@ -102,6 +111,13 @@ export default function Jobs() {
       return () => clearInterval(interval);
     }
   }, [hasRunning, utils]);
+
+  // Auto-select first run when data loads
+  useEffect(() => {
+    if (!selectedRunId && recentRunsQuery.data && recentRunsQuery.data.length > 0) {
+      setSelectedRunId(recentRunsQuery.data[0].id);
+    }
+  }, [selectedRunId, recentRunsQuery.data]);
 
   // Tick every 30s to update schedule timeline
   useEffect(() => {
@@ -170,6 +186,17 @@ export default function Jobs() {
       .sort((a, b) => a.nextRun - b.nextRun)
       .slice(0, 8);
   }, [rawJobs]);
+
+  // ─── Latest run per job (for log tabs) ─────────────────────────────────
+  const latestRunPerJob = useMemo(() => {
+    const runs = recentRunsQuery.data ?? [];
+    const seen = new Set<string>();
+    return runs.filter((r) => {
+      if (seen.has(r.jobId)) return false;
+      seen.add(r.jobId);
+      return true;
+    });
+  }, [recentRunsQuery.data]);
 
   // ─── Export/Import ──────────────────────────────────────────────────────
   function getExportData() {
@@ -551,6 +578,42 @@ export default function Jobs() {
               </tbody>
             </table>
           </div>
+
+          {/* ─── Recent Logs ──────────────────────────────────────────── */}
+          {latestRunPerJob.length > 0 && (
+            <div className={styles.panel}>
+              <div className={styles.logTabsHeader}>
+                <div className={styles.panelHeader}>Recent Logs</div>
+                <div className={styles.logTabs}>
+                  {latestRunPerJob.map((run) => (
+                    <button
+                      key={run.id}
+                      className={`${styles.logTab} ${selectedRunId === run.id ? styles.logTabActive : ""}`}
+                      onClick={() => setSelectedRunId(run.id)}
+                    >
+                      <span className={styles.statusDot} data-status={run.status} />
+                      {run.jobName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {selectedRunQuery.data ? (
+                <div className={styles.logWrapper}>
+                  <button
+                    className={styles.logCopyBtn}
+                    onClick={() => navigator.clipboard.writeText(selectedRunQuery.data?.log ?? "")}
+                  >
+                    Copy
+                  </button>
+                  <pre ref={logRef} className={styles.logViewer}>
+                    {selectedRunQuery.data.log || "(no output)"}
+                  </pre>
+                </div>
+              ) : selectedRunQuery.isLoading ? (
+                <div className={styles.muted}>Loading log…</div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </PullToRefresh>
