@@ -6,7 +6,7 @@ import { seedDefaultRules } from "./rules.ts";
 import { db } from "./db/index.ts";
 import { jobs, jobRuns } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
-import { pruneHealthChecks } from "./health.ts";
+import { pruneHealthChecks, checkAllConfiguredServices } from "./health.ts";
 import { syncRecentlyAdded, syncMostWatched } from "./stats.ts";
 import { markStaleStressTestsAsFailed } from "./stress-test.ts";
 
@@ -45,6 +45,7 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     enabled: 1,
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
+  { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
 ];
 
 const DEFAULT_CONFIGS: Record<string, string> = {
@@ -77,6 +78,7 @@ const internalJobs: Record<string, () => string | Promise<string>> = {
   },
   "sync-recently-added": () => syncRecentlyAdded(),
   "sync-most-watched": () => syncMostWatched(),
+  healthcheck: () => checkAllConfiguredServices(),
 };
 
 const REMOVED_JOBS = ["sync-sections", "stress-test"];
