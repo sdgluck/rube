@@ -61,13 +61,7 @@ export default function JobDetail() {
   // Sync config state when job data loads
   useEffect(() => {
     if (job) {
-      const parsed = (() => {
-        try {
-          return JSON.parse(job.config || "{}");
-        } catch {
-          return {};
-        }
-      })();
+      const parsed = (job.config ?? {}) as { sections?: string[]; limit?: number };
       setSelectedSections(parsed.sections || []);
       setLimit(parsed.limit ?? 10);
       setConfigDirty(false);

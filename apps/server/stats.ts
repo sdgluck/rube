@@ -15,12 +15,11 @@ import type { PlexRecentItem } from "./plex.ts";
 // ─── Cache helpers ────────────────────────────────────────────────────────────
 
 function writeCache(key: string, data: unknown): void {
-  const json = JSON.stringify(data);
   db.insert(statsCache)
-    .values({ key, data: json, updatedAt: Date.now() })
+    .values({ key, data, updatedAt: Date.now() })
     .onConflictDoUpdate({
       target: statsCache.key,
-      set: { data: json, updatedAt: Date.now() },
+      set: { data, updatedAt: Date.now() },
     })
     .run();
 }
@@ -28,7 +27,7 @@ function writeCache(key: string, data: unknown): void {
 function readCache<T>(key: string): T | null {
   const row = db.select().from(statsCache).where(eq(statsCache.key, key)).get();
   if (!row) return null;
-  return JSON.parse(row.data) as T;
+  return row.data as T;
 }
 
 // ─── Plex client (returns null when not configured) ───────────────────────────

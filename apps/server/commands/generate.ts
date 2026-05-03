@@ -33,11 +33,7 @@ async function fetchImdbListNormalized(id: string): Promise<{ name: string; imdb
 }
 
 function parseRuleConfig(rule: Rule): RuleConfig {
-  try {
-    return JSON.parse(rule.config || "{}");
-  } catch {
-    return {};
-  }
+  return (rule.config ?? {}) as RuleConfig;
 }
 
 function parseJSON(ctx: JobContext, text: string): AiCollection[] {

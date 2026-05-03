@@ -56,16 +56,12 @@ export type ConfigValue<K extends ConfigKey> = z.infer<ConfigSchema>[K];
 
 export function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
   const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
-  if (!row?.value) return undefined;
-  const raw = JSON.parse(row.value);
-  return configSchema.shape[key].parse(raw) as ConfigValue<K>;
+  if (row?.value === undefined || row.value === null) return undefined;
+  return configSchema.shape[key].parse(row.value) as ConfigValue<K>;
 }
 
 export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
-  db.insert(config)
-    .values({ key, value: JSON.stringify(value) })
-    .onConflictDoUpdate({ target: config.key, set: { value: JSON.stringify(value) } })
-    .run();
+  db.insert(config).values({ key, value }).onConflictDoUpdate({ target: config.key, set: { value } }).run();
 }
 
 export function deleteConfig(key: ConfigKey): void {
@@ -77,7 +73,7 @@ export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
   const raw: Record<string, unknown> = {};
   for (const row of rows) {
     if (row.key in configSchema.shape) {
-      raw[row.key] = JSON.parse(row.value!);
+      raw[row.key] = row.value;
     }
   }
   return configSchema.partial().parse(raw);

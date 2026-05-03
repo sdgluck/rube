@@ -48,9 +48,9 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
 ];
 
-const DEFAULT_CONFIGS: Record<string, string> = {
-  "because-you-watched": '{"limit":10}',
-  "overlays-remove": '{"mode":"remove"}',
+const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
+  "because-you-watched": { limit: 10 },
+  "overlays-remove": { mode: "remove" },
 };
 
 function formatDuration(ms: number): string {
@@ -86,10 +86,9 @@ const REMOVED_JOBS = ["sync-sections", "stress-test"];
 function seedDefaultJobs(): void {
   let inserted = 0;
   for (const job of DEFAULT_JOBS) {
-    const configJson = DEFAULT_CONFIGS[job.id] || "{}";
     const result = db
       .insert(jobs)
-      .values({ ...job, config: configJson })
+      .values({ ...job, config: DEFAULT_CONFIGS[job.id] ?? {} })
       .onConflictDoNothing()
       .run();
     if (result.changes > 0) inserted++;
@@ -239,7 +238,7 @@ export async function startJob(jobId: string): Promise<{ runId: string } | null>
   console.log(`[jobs] Enqueueing ${job.name} via Sidequest`);
   const { Sidequest } = await import("sidequest");
   const { CommandJob } = await import("./sidequest-job.ts");
-  await Sidequest.build(CommandJob).enqueue(job.command, runId, job.config || "{}", job.name, job.id);
+  await Sidequest.build(CommandJob).enqueue(job.command, runId, JSON.stringify(job.config ?? {}), job.name, job.id);
 
   return { runId };
 }
@@ -375,10 +374,7 @@ export function updateJob(
   }
 
   if (updates.config !== undefined) {
-    db.update(jobs)
-      .set({ config: JSON.stringify(updates.config) })
-      .where(eq(jobs.id, jobId))
-      .run();
+    db.update(jobs).set({ config: updates.config }).where(eq(jobs.id, jobId)).run();
   }
 
   // Reschedule cron

@@ -2,7 +2,7 @@ import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core
 
 export const config = sqliteTable("config", {
   key: text("key").primaryKey(),
-  value: text("value"),
+  value: text("value", { mode: "json" }).$type<unknown>(),
 });
 
 export const collections = sqliteTable(
@@ -14,7 +14,7 @@ export const collections = sqliteTable(
     title: text("title").notNull(),
     summary: text("summary").notNull().default(""),
     childCount: integer("child_count").notNull().default(0),
-    labels: text("labels").notNull().default("[]"),
+    labels: text("labels", { mode: "json" }).$type<string[]>().notNull().default([]),
     addedAt: integer("added_at"),
     thumb: text("thumb").notNull().default(""),
     smart: integer("smart").notNull().default(0),
@@ -29,7 +29,7 @@ export const jobs = sqliteTable("jobs", {
   command: text("command").notNull(),
   schedule: text("schedule").notNull().default(""),
   enabled: integer("enabled").notNull().default(1),
-  config: text("config").notNull().default("{}"),
+  config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
 });
 
 export const rules = sqliteTable("rules", {
@@ -37,7 +37,7 @@ export const rules = sqliteTable("rules", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   enabled: integer("enabled").notNull().default(1),
-  config: text("config").notNull().default("{}"),
+  config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
   createdAt: integer("created_at").notNull(),
   lastCollectionRatingKey: text("last_collection_rating_key"),
 });
@@ -100,7 +100,7 @@ export const events = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     type: text("type").notNull(),
     message: text("message").notNull(),
-    metadata: text("metadata"),
+    metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
     timestamp: integer("timestamp").notNull(),
   },
   (table) => [index("idx_events_timestamp").on(table.timestamp)],
@@ -145,7 +145,7 @@ export const plexSections = sqliteTable("plex_sections", {
 
 export const statsCache = sqliteTable("stats_cache", {
   key: text("key").primaryKey(),
-  data: text("data").notNull(),
+  data: text("data", { mode: "json" }).$type<unknown>().notNull(),
   updatedAt: integer("updated_at").notNull(),
 });
 
@@ -166,9 +166,9 @@ export const plexUsers = sqliteTable(
 
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
-  config: text("config").notNull(),
+  config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
   maxSessions: integer("max_sessions"),
-  steps: text("steps").notNull().default("[]"),
+  steps: text("steps", { mode: "json" }).$type<unknown[]>().notNull().default([]),
   status: text("status").notNull().default("running"),
   progress: real("progress").notNull().default(0),
   message: text("message").notNull().default(""),
@@ -181,6 +181,6 @@ export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),
   rtRating: text("rt_rating"),
-  response: text("response").notNull(),
+  response: text("response", { mode: "json" }).$type<unknown>().notNull(),
   fetchedAt: integer("fetched_at").notNull(),
 });

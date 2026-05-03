@@ -200,13 +200,13 @@ export default function Jobs() {
 
   // ─── Export/Import ──────────────────────────────────────────────────────
   function getExportData() {
-    return jobs.map((j) => {
-      let config: Record<string, unknown> = {};
-      try {
-        config = JSON.parse(j.config || "{}");
-      } catch {}
-      return { id: j.id, name: j.name, schedule: j.schedule, enabled: !!j.enabled, config };
-    });
+    return jobs.map((j) => ({
+      id: j.id,
+      name: j.name,
+      schedule: j.schedule,
+      enabled: !!j.enabled,
+      config: j.config ?? {},
+    }));
   }
 
   function handleExportFile() {

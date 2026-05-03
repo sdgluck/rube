@@ -17,7 +17,7 @@ export function getEnabledRules(): Rule[] {
   return db.select().from(rules).where(eq(rules.enabled, 1)).orderBy(rules.createdAt).all();
 }
 
-export function createRule(input: { name: string; type: string; config: string }): Rule {
+export function createRule(input: { name: string; type: string; config: Record<string, unknown> }): Rule {
   const id = randomUUID();
   const now = Date.now();
   db.insert(rules).values({ id, name: input.name, type: input.type, config: input.config, createdAt: now }).run();
@@ -32,7 +32,10 @@ export function createRule(input: { name: string; type: string; config: string }
   };
 }
 
-export function updateRule(id: string, updates: { name?: string; enabled?: number; config?: string }): void {
+export function updateRule(
+  id: string,
+  updates: { name?: string; enabled?: number; config?: Record<string, unknown> },
+): void {
   const sets: Record<string, unknown> = {};
   if (updates.name !== undefined) sets.name = updates.name;
   if (updates.enabled !== undefined) sets.enabled = updates.enabled;
@@ -67,7 +70,10 @@ export function seedDefaultRules(): void {
   const existing = db.select({ id: rules.id }).from(rules).limit(1).all();
   if (existing.length > 0) return;
 
-  const config = JSON.stringify({ prompt: DEFAULT_AI_PROMPT, limit: 8 });
-  createRule({ name: "AI Curated Collections", type: "ai_prompt", config });
+  createRule({
+    name: "AI Curated Collections",
+    type: "ai_prompt",
+    config: { prompt: DEFAULT_AI_PROMPT, limit: 8 },
+  });
   console.log("[rules] Seeded default AI prompt rule");
 }

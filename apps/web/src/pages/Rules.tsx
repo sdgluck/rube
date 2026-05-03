@@ -155,13 +155,12 @@ export default function Rules() {
   const sections = sectionsQuery.data || [];
 
   function getExportData() {
-    return rules.map((r) => {
-      let config: Record<string, unknown> = {};
-      try {
-        config = JSON.parse(r.config || "{}");
-      } catch {}
-      return { name: r.name, type: r.type, enabled: !!r.enabled, config };
-    });
+    return rules.map((r) => ({
+      name: r.name,
+      type: r.type,
+      enabled: !!r.enabled,
+      config: r.config ?? {},
+    }));
   }
 
   function handleExportFile() {
@@ -181,7 +180,7 @@ export default function Rules() {
       await createMutation.mutateAsync({
         name: rule.name,
         type: rule.type,
-        config: JSON.stringify(rule.config || {}),
+        config: rule.config ?? {},
       });
       if (rule.enabled === false) {
         const latest = utils.rules.list.getData();
@@ -220,10 +219,7 @@ export default function Rules() {
   }
 
   function startEdit(rule: (typeof rules)[0]) {
-    let config: Record<string, unknown> = {};
-    try {
-      config = JSON.parse(rule.config || "{}");
-    } catch {}
+    const config = rule.config ?? {};
     setForm({
       id: rule.id,
       name: rule.name,
@@ -256,12 +252,11 @@ export default function Rules() {
     if (form.type === "imdb_list") config.listId = form.listId;
     if (form.type === "seerr_requests") config.filter = form.filter;
     if (form.sections.length > 0) config.sections = form.sections;
-    const configStr = JSON.stringify(config);
 
     if (isEditing && form.id) {
-      updateMutation.mutate({ id: form.id, name: form.name, config: configStr }, { onSuccess: () => cancelForm() });
+      updateMutation.mutate({ id: form.id, name: form.name, config }, { onSuccess: () => cancelForm() });
     } else {
-      createMutation.mutate({ name: form.name, type: form.type, config: configStr }, { onSuccess: () => cancelForm() });
+      createMutation.mutate({ name: form.name, type: form.type, config }, { onSuccess: () => cancelForm() });
     }
   }
 
@@ -477,12 +472,10 @@ export default function Rules() {
             </thead>
             <tbody>
               {rules.map((rule, i) => {
-                let configSummary = "";
-                try {
-                  const c = JSON.parse(rule.config || "{}");
-                  configSummary = CONFIG_SUMMARY[rule.type]?.(c) ?? `Max: ${c.limit ?? 10}`;
-                  if (c.sections?.length) configSummary += ` | Sections: ${c.sections.join(", ")}`;
-                } catch {}
+                const c = rule.config ?? {};
+                let configSummary = CONFIG_SUMMARY[rule.type]?.(c) ?? `Max: ${(c as { limit?: number }).limit ?? 10}`;
+                const sections = (c as { sections?: string[] }).sections;
+                if (sections?.length) configSummary += ` | Sections: ${sections.join(", ")}`;
 
                 const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
                 return (

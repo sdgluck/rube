@@ -101,13 +101,7 @@ export default function Collections() {
   const total = collectionsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const parseLabels = (labelsJson: string): string[] => {
-    try {
-      return JSON.parse(labelsJson);
-    } catch {
-      return [];
-    }
-  };
+  const parseLabels = (labels: string[] | null | undefined): string[] => labels ?? [];
 
   // Derive sections and labels from lightweight filters query
   const sections = filtersQuery.data?.sections ?? [];

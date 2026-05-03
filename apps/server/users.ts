@@ -36,8 +36,7 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
   // Build a map of User:{username} → collection count
   const userCollectionCounts = new Map<string, number>();
   for (const col of allCollections) {
-    const labels: string[] = JSON.parse(col.labels);
-    for (const label of labels) {
+    for (const label of col.labels) {
       if (label.startsWith("User:")) {
         userCollectionCounts.set(label, (userCollectionCounts.get(label) || 0) + 1);
       }

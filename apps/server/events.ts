@@ -8,7 +8,7 @@ export function emitEvent(type: string, message: string, metadata?: Record<strin
     .values({
       type,
       message,
-      metadata: metadata ? JSON.stringify(metadata) : null,
+      metadata: metadata ?? null,
       timestamp: Date.now(),
     })
     .run();
@@ -32,7 +32,13 @@ const SORT_COLUMNS = {
 } as const;
 
 export function getEvents(filters: EventFilters): {
-  items: Array<{ id: number; type: string; message: string; metadata: string | null; timestamp: number }>;
+  items: Array<{
+    id: number;
+    type: string;
+    message: string;
+    metadata: Record<string, unknown> | null;
+    timestamp: number;
+  }>;
   total: number;
 } {
   const { limit = 50, offset = 0 } = filters;

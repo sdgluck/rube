@@ -7,8 +7,8 @@
     "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=. --watch server.ts",
     "typecheck": "tsc",
     "test": "node --test commands/shuffle.test.ts",
-    "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

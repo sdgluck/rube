@@ -529,9 +529,9 @@ export function saveStressTestResult(id: string, result: StressTestResult): void
   db.insert(stressTestRuns)
     .values({
       id,
-      config: JSON.stringify(result.config),
+      config: result.config as unknown as Record<string, unknown>,
       maxSessions: result.maxSessions,
-      steps: JSON.stringify(result.steps),
+      steps: result.steps,
       status: "completed",
       startedAt: result.startedAt,
       finishedAt: result.finishedAt,
@@ -539,9 +539,9 @@ export function saveStressTestResult(id: string, result: StressTestResult): void
     .onConflictDoUpdate({
       target: stressTestRuns.id,
       set: {
-        config: JSON.stringify(result.config),
+        config: result.config as unknown as Record<string, unknown>,
         maxSessions: result.maxSessions,
-        steps: JSON.stringify(result.steps),
+        steps: result.steps,
         status: "completed",
         finishedAt: result.finishedAt,
       },
@@ -572,7 +572,7 @@ export function getStressTestRuns(): Array<{
 
   return rows.map((r) => ({
     ...r,
-    config: JSON.parse(r.config) as StressTestConfig,
+    config: r.config as unknown as StressTestConfig,
   }));
 }
 
@@ -589,8 +589,8 @@ export function getStressTestRun(id: string): {
 
   return {
     ...row,
-    config: JSON.parse(row.config) as StressTestConfig,
-    steps: JSON.parse(row.steps) as StressTestStep[],
+    config: row.config as unknown as StressTestConfig,
+    steps: row.steps as unknown as StressTestStep[],
   };
 }
 
@@ -615,9 +615,9 @@ export function startStressTest(config: StressTestConfig): { id: string } {
   db.insert(stressTestRuns)
     .values({
       id,
-      config: JSON.stringify(config),
+      config: config as unknown as Record<string, unknown>,
       maxSessions: null,
-      steps: "[]",
+      steps: [],
       status: "running",
       progress: 0,
       message: "",

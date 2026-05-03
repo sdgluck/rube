@@ -45,7 +45,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
           title: detail.title,
           summary: detail.summary,
           childCount: detail.childCount,
-          labels: JSON.stringify(detail.labels),
+          labels: detail.labels,
           addedAt: detail.addedAt ?? null,
           thumb: detail.thumb,
           smart: detail.smart ? 1 : 0,
@@ -59,7 +59,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
             title: detail.title,
             summary: detail.summary,
             childCount: detail.childCount,
-            labels: JSON.stringify(detail.labels),
+            labels: detail.labels,
             addedAt: detail.addedAt ?? null,
             thumb: detail.thumb,
             smart: detail.smart ? 1 : 0,
@@ -145,12 +145,7 @@ export function getCollectionFilters(): { sections: { id: string; title: string 
 
   for (const row of rows) {
     sectionMap.set(row.sectionId, row.sectionTitle);
-    try {
-      const parsed: string[] = JSON.parse(row.labels);
-      for (const l of parsed) labelSet.add(l);
-    } catch (err) {
-      console.warn(`[collections] Failed to parse labels for section ${row.sectionId}:`, (err as Error).message);
-    }
+    for (const l of row.labels) labelSet.add(l);
   }
 
   const sections = [...sectionMap.entries()]
@@ -183,10 +178,7 @@ export async function updateCollectionLabels(client: PlexClient, ratingKey: stri
   const row = getLocalCollection(ratingKey);
   if (!row) throw new Error(`Collection ${ratingKey} not found`);
   await client.setCollectionLabels(row.sectionId, ratingKey, labels);
-  db.update(collections)
-    .set({ labels: JSON.stringify(labels) })
-    .where(eq(collections.plexRatingKey, ratingKey))
-    .run();
+  db.update(collections).set({ labels }).where(eq(collections.plexRatingKey, ratingKey)).run();
 }
 
 export async function deleteCollection(client: PlexClient, ratingKey: string): Promise<void> {

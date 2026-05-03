@@ -45,10 +45,7 @@ export default function CollectionDetail() {
       await utils.collections.get.cancel({ ratingKey: input.ratingKey });
       const prev = utils.collections.get.getData({ ratingKey: input.ratingKey });
       if (prev) {
-        utils.collections.get.setData(
-          { ratingKey: input.ratingKey },
-          { ...prev, labels: JSON.stringify(input.labels) },
-        );
+        utils.collections.get.setData({ ratingKey: input.ratingKey }, { ...prev, labels: input.labels });
       }
       return { prev };
     },
@@ -108,13 +105,7 @@ export default function CollectionDetail() {
   if (collectionQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Collection not found</div>;
   if (!collection) return null;
 
-  const labels: string[] = (() => {
-    try {
-      return JSON.parse(collection.labels);
-    } catch {
-      return [];
-    }
-  })();
+  const labels: string[] = collection.labels ?? [];
 
   return (
     <div ref={swipeRef}>

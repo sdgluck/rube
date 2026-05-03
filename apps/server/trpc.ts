@@ -302,7 +302,7 @@ const rulesRouter = t.router({
   }),
 
   create: t.procedure
-    .input(z.object({ name: z.string(), type: z.string(), config: z.string() }))
+    .input(z.object({ name: z.string(), type: z.string(), config: z.record(z.string(), z.unknown()) }))
     .mutation(({ input }) => {
       return createRule(input);
     }),
@@ -313,7 +313,7 @@ const rulesRouter = t.router({
         id: z.string(),
         name: z.string().optional(),
         enabled: z.boolean().optional(),
-        config: z.string().optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .mutation(({ input }) => {

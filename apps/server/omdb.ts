@@ -54,7 +54,7 @@ export async function getOmdbRatings(
       imdbId,
       imdbRating,
       rtRating,
-      response: JSON.stringify(data),
+      response: data,
       fetchedAt: Date.now(),
     })
     .onConflictDoNothing()
