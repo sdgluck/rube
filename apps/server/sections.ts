@@ -3,8 +3,7 @@
  */
 
 import { eq } from "drizzle-orm";
-import { db } from "./db/index.ts";
-import { plexSections } from "./db/schema.ts";
+import { db, plexSections } from "@tinkerbell/db";
 import type { PlexClient } from "./plex.ts";
 
 interface SyncStats {

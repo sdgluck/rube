@@ -7,8 +7,10 @@ RUN apk add --no-cache python3 make g++
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
+COPY packages/db/package.json ./packages/db/
 RUN pnpm install --frozen-lockfile
 COPY apps/ ./apps/
+COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile --offline
 RUN pnpm --filter @tinkerbell/web run build
 RUN pnpm --filter=@tinkerbell/server deploy --prod /out

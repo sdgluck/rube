@@ -1,8 +1,7 @@
 import { Job } from "sidequest";
 import { errorMessage } from "./util.ts";
 import { eq } from "drizzle-orm";
-import { db } from "./db/index.ts";
-import { jobRuns } from "./db/schema.ts";
+import { db, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "./events.ts";
 import {
   commonJobConfigSchema,

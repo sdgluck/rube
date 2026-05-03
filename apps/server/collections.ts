@@ -3,8 +3,7 @@
  */
 
 import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
-import { db } from "./db/index.ts";
-import { collections } from "./db/schema.ts";
+import { db, collections } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "./plex.ts";
 
 export type CollectionRow = InferSelectModel<typeof collections>;

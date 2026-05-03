@@ -1,7 +1,6 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "./util.ts";
-import { db } from "./db/index.ts";
-import { healthChecks } from "./db/schema.ts";
+import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "./events.ts";
 import { getAllConfig, configSchema } from "./config.ts";
 import { createPlexClient } from "./plex.ts";

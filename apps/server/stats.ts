@@ -7,8 +7,7 @@
 
 import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "./db/index.ts";
-import { statsCache, jobs, jobRuns, mediaItems, plexUsers } from "./db/schema.ts";
+import { db, statsCache, jobs, jobRuns, mediaItems, plexUsers } from "@tinkerbell/db";
 
 const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "./plex.ts";

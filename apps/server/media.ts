@@ -3,8 +3,7 @@
  */
 
 import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
-import { db } from "./db/index.ts";
-import { mediaItems } from "./db/schema.ts";
+import { db, mediaItems } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "./plex.ts";
 
 export type MediaItemRow = InferSelectModel<typeof mediaItems>;

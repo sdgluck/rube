@@ -3,8 +3,7 @@
  */
 
 import { eq, like, or, asc, desc, sql } from "drizzle-orm";
-import { db } from "./db/index.ts";
-import { plexUsers } from "./db/schema.ts";
+import { db, plexUsers } from "@tinkerbell/db";
 import { getLocalCollections } from "./collections.ts";
 import type { PlexClient } from "./plex.ts";
 

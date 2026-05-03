@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { errorMessage } from "./util.ts";
-import { db } from "./db/index.ts";
-import { omdbCache } from "./db/schema.ts";
+import { db, omdbCache } from "@tinkerbell/db";
 import { getConfig } from "./config.ts";
 import { reportHealth } from "./health.ts";
 

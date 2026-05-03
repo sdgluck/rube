@@ -18,6 +18,8 @@ sqlite.pragma("busy_timeout = 5000");
 
 export const db = drizzle(sqlite, { schema });
 
+export * from "./schema.ts";
+
 const MIGRATIONS_DIR = join(import.meta.dirname, "..", "drizzle");
 bootstrapPushedDatabase();
 migrate(db, { migrationsFolder: MIGRATIONS_DIR });

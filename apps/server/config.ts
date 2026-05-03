@@ -11,8 +11,7 @@
 
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "./db/index.ts";
-import { config } from "./db/schema.ts";
+import { db, config } from "@tinkerbell/db";
 
 export const configSchema = z.object({
   global_plex_url: z.string(),

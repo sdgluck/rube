@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { eq, type InferSelectModel } from "drizzle-orm";
-import { db } from "./db/index.ts";
-import { rules } from "./db/schema.ts";
+import { db, rules } from "@tinkerbell/db";
 
 export type Rule = InferSelectModel<typeof rules>;
 

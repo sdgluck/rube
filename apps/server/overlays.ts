@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import sharp from "sharp";
 import { z } from "zod";
-import { db } from "./db/index.ts";
-import { overlayConfigs, overlayOriginals } from "./db/schema.ts";
+import { db, overlayConfigs, overlayOriginals } from "@tinkerbell/db";
 
 // ─── Overlay types ──────────────────────────────────────────────────────────
 
