@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter } from "./trpc.ts";
+import { appRouter } from "./trpc/index.ts";
 import { initJobs } from "./jobs/runner.ts";
 import { getConfig } from "./lib/config.ts";
 
