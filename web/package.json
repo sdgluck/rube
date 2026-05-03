@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "portless web.tinkerbell vite",
     "build": "vite build"
   },
   "dependencies": {
@@ -20,8 +20,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.0",
+    "portless": "^0.12.0",
     "typescript": "^5.9.3",
-    "vite": "^6.0.0",
-    "vite-plugin-mkcert": "^1.17.9"
+    "vite": "^6.0.0"
   }
 }

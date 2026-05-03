@@ -4,12 +4,12 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,magenta \"node --watch-path=./server --watch-path=./shared --watch server/server.ts\" \"yarn --cwd web dev\"",
+    "dev": "concurrently -n server,web -c blue,magenta \"yarn dev:server\" \"yarn --cwd web dev\"",
+    "dev:server": "portless api.tinkerbell --app-port 3000 node --watch-path=./server --watch-path=./shared --watch server/server.ts",
     "typecheck": "tsc",
     "test": "node --test server/commands/shuffle.test.ts",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "dev:setup": "bash scripts/setup-hosts.sh",
     "prepare": "husky"
   },
   "private": true,
@@ -33,6 +33,7 @@
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.9",
     "husky": "^9.1.7",
+    "portless": "^0.12.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   }

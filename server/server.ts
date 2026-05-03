@@ -129,7 +129,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 });
 
 server.listen(PORT, () => {
-  console.log(`Tinkerbell admin server listening on http://localhost:${PORT}`);
+  console.log(`Tinkerbell admin server listening on port ${PORT} (https://api.tinkerbell.localhost)`);
   initJobs().catch((err) => {
     console.error("[jobs] Init failed:", err);
     process.exit(1);

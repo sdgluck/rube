@@ -32,6 +32,9 @@ export interface PlexSection {
 export interface PlexHub {
   identifier: string;
   title: string;
+  promotedToOwnHome?: number;
+  promotedToRecommendedHome?: number;
+  promotedToSharedHome?: number;
 }
 
 export interface PlexItem {
@@ -400,13 +403,26 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   async function getManagedHubs(sectionId: string): Promise<PlexHub[]> {
     const data = await request(`/hubs/sections/${sectionId}/manage`);
-    return (data && data.MediaContainer && data.MediaContainer.Hub) || [];
+    const hubs: Array<Record<string, unknown>> = (data && data.MediaContainer && data.MediaContainer.Hub) || [];
+    return hubs.map((h) => ({
+      identifier: h.identifier as string,
+      title: h.title as string,
+      promotedToOwnHome: h.promotedToOwnHome != null ? Number(h.promotedToOwnHome) : undefined,
+      promotedToRecommendedHome: h.promotedToRecommendedHome != null ? Number(h.promotedToRecommendedHome) : undefined,
+      promotedToSharedHome: h.promotedToSharedHome != null ? Number(h.promotedToSharedHome) : undefined,
+    }));
   }
 
   async function moveHub(sectionId: string, hubId: string, afterId: string): Promise<void> {
     await request(`/hubs/sections/${sectionId}/manage/${hubId}/move`, {
       method: "PUT",
       params: { after: afterId },
+    });
+  }
+
+  async function unpinFromHomepage(sectionId: string, hubIdentifier: string): Promise<void> {
+    await request(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
+      method: "DELETE",
     });
   }
 
@@ -1416,6 +1432,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     getIdentity,
     getManagedHubs,
     moveHub,
+    unpinFromHomepage,
     fetchAllItems,
     fetchItemsSorted,
     fetchGroupedByField,
