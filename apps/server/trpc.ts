@@ -708,10 +708,12 @@ const eventsRouter = t.router({
 });
 
 const previewRouter = t.router({
-  home: procedure.input(z.object({ userId: z.number().nullable() })).query(async ({ input }) => {
-    const client = getPlexClient();
-    return getPreviewForUser(client, input.userId);
-  }),
+  home: procedure
+    .input(z.object({ userId: z.number().nullable(), sectionId: z.number().nullable().optional() }))
+    .query(async ({ input }) => {
+      const client = getPlexClient();
+      return getPreviewForUser(client, input.userId, input.sectionId ?? null);
+    }),
 
   shuffleHubs: procedure.mutation(async () => {
     const client = getPlexClient();

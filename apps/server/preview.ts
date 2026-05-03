@@ -119,16 +119,26 @@ function toPreviewHub(hub: PlexHomeHub, items: PlexHubItem[]): PreviewHub {
   };
 }
 
-export async function getPreviewForUser(client: PlexClient, userId: number | null): Promise<PreviewResult> {
+function filterItemsBySection(items: PlexHubItem[], sectionId: number | null): PlexHubItem[] {
+  if (sectionId == null) return items;
+  return items.filter((i) => i.librarySectionID === sectionId);
+}
+
+export async function getPreviewForUser(
+  client: PlexClient,
+  userId: number | null,
+  sectionId: number | null = null,
+): Promise<PreviewResult> {
   const warnings: string[] = [];
   const hubs = await client.getHomeHubs({ count: 25 });
 
   if (userId == null) {
-    return {
-      user: null,
-      hubs: hubs.filter((h) => h.items.length > 0).map((h) => toPreviewHub(h, h.items)),
-      warnings,
-    };
+    const out: PreviewHub[] = [];
+    for (const h of hubs) {
+      const items = filterItemsBySection(h.items, sectionId);
+      if (items.length > 0) out.push(toPreviewHub(h, items));
+    }
+    return { user: null, hubs: out, warnings };
   }
 
   const identity = await client.getIdentity();
@@ -140,11 +150,12 @@ export async function getPreviewForUser(client: PlexClient, userId: number | nul
   const sharing = sharings.find((s) => s.userId === userId);
   if (!sharing) {
     warnings.push(`User ${userId} not found in sharings; showing unfiltered hubs.`);
-    return {
-      user: null,
-      hubs: hubs.filter((h) => h.items.length > 0).map((h) => toPreviewHub(h, h.items)),
-      warnings,
-    };
+    const out: PreviewHub[] = [];
+    for (const h of hubs) {
+      const items = filterItemsBySection(h.items, sectionId);
+      if (items.length > 0) out.push(toPreviewHub(h, items));
+    }
+    return { user: null, hubs: out, warnings };
   }
 
   const detail = sharedDetails.find((d) => d.userId === userId);
@@ -163,6 +174,7 @@ export async function getPreviewForUser(client: PlexClient, userId: number | nul
       if (allowedSections && item.librarySectionID != null && !allowedSections.has(item.librarySectionID)) {
         continue;
       }
+      if (sectionId != null && item.librarySectionID !== sectionId) continue;
       const which = itemTypeUsesFilter(item.type);
       const clauses = which === "movies" ? movieClauses : which === "tv" ? tvClauses : [];
       if (!itemPassesLabelFilter(item, clauses)) continue;

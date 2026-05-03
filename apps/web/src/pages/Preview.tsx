@@ -16,9 +16,17 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 const STORAGE_KEY = "preview.userId";
+const SECTION_STORAGE_KEY = "preview.sectionId";
 
 function readStoredUserId(): number | null {
   const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw || raw === "null") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function readStoredSectionId(): number | null {
+  const raw = localStorage.getItem(SECTION_STORAGE_KEY);
   if (!raw || raw === "null") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
@@ -69,11 +77,13 @@ export default function Preview() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const [userId, setUserId] = useState<number | null>(readStoredUserId);
+  const [sectionId, setSectionId] = useState<number | null>(readStoredSectionId);
   const [hubOrder, setHubOrder] = useState<string[] | null>(null);
   const [shuffleStatus, setShuffleStatus] = useState<string | null>(null);
 
   const usersQuery = trpc.users.list.useQuery({ limit: 200, offset: 0 });
-  const previewQuery = trpc.preview.home.useQuery({ userId });
+  const sectionsQuery = trpc.plexSections.useQuery();
+  const previewQuery = trpc.preview.home.useQuery({ userId, sectionId });
   const shuffleMutation = trpc.preview.shuffleHubs.useMutation({
     onSuccess: async (res) => {
       setShuffleStatus(`Shuffled ${res.totalShuffled} hub${res.totalShuffled === 1 ? "" : "s"} on Plex.`);
@@ -88,6 +98,7 @@ export default function Preview() {
   });
 
   const users = usersQuery.data?.items ?? [];
+  const sections = (sectionsQuery.data ?? []).filter((s) => s.type === "movie" || s.type === "show");
 
   const orderedHubs = useMemo(() => {
     const hubs = previewQuery.data?.hubs ?? [];
@@ -119,6 +130,11 @@ export default function Preview() {
   const onPickUser = (next: number | null) => {
     setUserId(next);
     localStorage.setItem(STORAGE_KEY, next == null ? "null" : String(next));
+  };
+
+  const onPickSection = (next: number | null) => {
+    setSectionId(next);
+    localStorage.setItem(SECTION_STORAGE_KEY, next == null ? "null" : String(next));
   };
 
   const onShuffle = () => {
@@ -179,6 +195,20 @@ export default function Preview() {
             {users.map((u) => (
               <option key={u.userId} value={u.userId}>
                 {u.name ? `${u.name} (${u.username})` : u.username}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="preview-section">Library</label>
+          <select
+            id="preview-section"
+            className={styles.userSelect}
+            value={sectionId == null ? "" : String(sectionId)}
+            onChange={(e) => onPickSection(e.target.value === "" ? null : Number(e.target.value))}
+          >
+            <option value="">All libraries</option>
+            {sections.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.title}
               </option>
             ))}
           </select>
