@@ -25,8 +25,6 @@ const OVERLAY_CHIPS = [
   { type: "runtime", label: "Runtime" },
 ] as const;
 
-type OverlayType = (typeof OVERLAY_CHIPS)[number]["type"];
-
 function getBadgeClass(type: string, value: string): string {
   switch (type) {
     case "resolution":

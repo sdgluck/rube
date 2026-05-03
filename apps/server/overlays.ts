@@ -1,8 +1,7 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import sharp from "sharp";
 import { db } from "./db/index.ts";
 import { overlayConfigs, overlayOriginals } from "./db/schema.ts";
-import type { PlexMediaFullDetail } from "./plex.ts";
 
 // ─── Overlay types ──────────────────────────────────────────────────────────
 

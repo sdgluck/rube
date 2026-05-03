@@ -1,4 +1,4 @@
-import { createPlexClient, type PlexHub, type PlexSection } from "../plex.ts";
+import { createPlexClient, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
 import type { JobContext, CommonJobConfig } from "../shared/job-context.ts";
 

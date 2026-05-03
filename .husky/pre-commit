@@ -1,3 +1,1 @@
-pnpm typecheck
-pnpm exec prettier --write --cache .
-git add -u
+pnpm exec lint-staged

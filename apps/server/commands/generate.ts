@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import PQueue from "p-queue";
-import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "../plex.ts";
+import { createPlexClient, type PlexClient, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
 import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../rules.ts";
 import { fetchImdbChart, fetchImdbList } from "../imdb.ts";
@@ -51,7 +51,8 @@ function parseJSON(ctx: JobContext, text: string): AiCollection[] {
       return JSON.parse(match[0]);
     } catch {}
 
-    const cleaned = match[0].replace(/,\s*([}\]])/g, "$1").replace(/[\x00-\x1f]/g, " ");
+    // eslint-disable-next-line no-control-regex
+    const cleaned = match[0].replace(/,\s*([}\]])/g, "$1").replace(/[\u0000-\u001f]/g, " ");
     try {
       return JSON.parse(cleaned);
     } catch {}

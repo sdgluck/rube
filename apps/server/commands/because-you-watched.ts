@@ -323,7 +323,8 @@ function extractJSON(text: string): unknown {
       return JSON.parse(objMatch[0]);
     } catch {}
 
-    const cleaned = objMatch[0].replace(/,\s*([}\]])/g, "$1").replace(/[\x00-\x1f]/g, " ");
+    // eslint-disable-next-line no-control-regex
+    const cleaned = objMatch[0].replace(/,\s*([}\]])/g, "$1").replace(/[\u0000-\u001f]/g, " ");
     try {
       return JSON.parse(cleaned);
     } catch {}

@@ -43,12 +43,6 @@ function formatCodec(codec: string | undefined): string {
   return map[codec.toLowerCase()] || codec.toUpperCase();
 }
 
-function formatResolution(res: string | undefined): string {
-  if (!res) return "";
-  if (res === "4k") return "4K";
-  return res + "p";
-}
-
 function formatChannels(ch: number | undefined): string {
   if (!ch) return "";
   if (ch === 8) return "7.1";

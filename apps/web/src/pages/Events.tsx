@@ -16,10 +16,6 @@ const BADGE_MAP: Record<string, { label: string; className: string }> = {
   "health.recovered": { label: "Health Recovered", className: styles.badgeHealthRecovered },
 };
 
-function formatTimestamp(ts: number): string {
-  return new Date(ts).toLocaleString();
-}
-
 const PAGE_SIZE = 50;
 
 type SortKey = "timestamp" | "type" | "message";

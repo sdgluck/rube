@@ -73,7 +73,6 @@ async function runApply(
 
     const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
 
-    let itemCount = 0;
     const items: Array<{ ratingKey: string; totalSize: number }> = [];
 
     for await (const { item, totalSize } of client.allItems(section.key)) {
@@ -90,7 +89,6 @@ async function runApply(
         // Skip if already overlaid (idempotent)
         const existing = getOriginalPoster(ratingKey);
         if (existing) {
-          itemCount++;
           totalProcessed++;
           ctx.progress(totalProcessed, totalSize * sections.length, `Processing "${section.title}"...`);
           return;
@@ -138,7 +136,6 @@ async function runApply(
           }
 
           if (badges.length === 0) {
-            itemCount++;
             totalProcessed++;
             ctx.progress(totalProcessed, totalSize * sections.length, `Processing "${section.title}"...`);
             return;
@@ -162,7 +159,6 @@ async function runApply(
           ctx.log(`Error processing ${ratingKey}: ${(err as Error).message}`);
         }
 
-        itemCount++;
         totalProcessed++;
         ctx.progress(totalProcessed, totalSize * sections.length, `Processing "${section.title}"...`);
       });
