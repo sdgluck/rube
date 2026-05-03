@@ -86,6 +86,12 @@ function fileName(path: string | undefined): string {
   return parts[parts.length - 1];
 }
 
+function ratingTier(pct: number): "High" | "Mid" | "Low" {
+  if (pct >= 75) return "High";
+  if (pct >= 50) return "Mid";
+  return "Low";
+}
+
 export default function MediaDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
@@ -129,30 +135,42 @@ export default function MediaDetail() {
         </div>
 
         <div className={styles.detailMain}>
-          <h2 className={styles.heading}>{item.title}</h2>
+          <h2 className={`${styles.heading} ${mediaStyles.title}`}>{item.title}</h2>
 
-          <div className={styles.meta}>
-            {item.year && <span>{item.year}</span>}
-            {item.contentRating && <span>{item.contentRating}</span>}
-            {item.duration && <span>{formatDuration(item.duration)}</span>}
-            {item.studio && <span>{item.studio}</span>}
-            <span style={{ textTransform: "capitalize" }}>{item.type}</span>
-            {item.addedAt && <span>Added {new Date(item.addedAt * 1000).toLocaleDateString()}</span>}
+          <div className={mediaStyles.metaLine}>
+            {[
+              item.year && String(item.year),
+              item.contentRating,
+              item.duration && formatDuration(item.duration),
+              item.studio,
+              item.type && item.type[0].toUpperCase() + item.type.slice(1),
+              item.addedAt && `Added ${new Date(item.addedAt * 1000).toLocaleDateString()}`,
+            ]
+              .filter(Boolean)
+              .map((v, i, arr) => (
+                <span key={i}>
+                  {v}
+                  {i < arr.length - 1 && <span className={mediaStyles.metaDot}>·</span>}
+                </span>
+              ))}
           </div>
 
-          {(item.rating != null || item.audienceRating != null) && (
-            <div className={mediaStyles.ratings}>
+          {(item.rating != null || item.audienceRating != null || item.genres.length > 0) && (
+            <div className={mediaStyles.tagRow}>
               {item.rating != null && (
-                <span className={mediaStyles.ratingBadge}>Critics {(item.rating * 10).toFixed(0)}%</span>
+                <span className={`${mediaStyles.ratingBadge} ${mediaStyles[`rating${ratingTier(item.rating * 10)}`]}`}>
+                  <span className={mediaStyles.ratingLabel}>Critics</span>
+                  <span className={mediaStyles.ratingValue}>{Math.round(item.rating * 10)}%</span>
+                </span>
               )}
               {item.audienceRating != null && (
-                <span className={mediaStyles.ratingBadge}>Audience {(item.audienceRating * 10).toFixed(0)}%</span>
+                <span
+                  className={`${mediaStyles.ratingBadge} ${mediaStyles[`rating${ratingTier(item.audienceRating * 10)}`]}`}
+                >
+                  <span className={mediaStyles.ratingLabel}>Audience</span>
+                  <span className={mediaStyles.ratingValue}>{Math.round(item.audienceRating * 10)}%</span>
+                </span>
               )}
-            </div>
-          )}
-
-          {item.genres.length > 0 && (
-            <div className={mediaStyles.genres}>
               {item.genres.map((g) => (
                 <span key={g} className={mediaStyles.genreBadge}>
                   {g}
@@ -165,10 +183,13 @@ export default function MediaDetail() {
 
           {/* Media Files */}
           {item.media.length > 0 && (
-            <fieldset className={styles.group}>
-              <legend className={styles.groupTitle}>
-                Media {item.media.length > 1 ? `(${item.media.length} versions)` : ""}
-              </legend>
+            <section className={mediaStyles.section}>
+              <h3 className={mediaStyles.sectionTitle}>
+                Media
+                {item.media.length > 1 && (
+                  <span className={mediaStyles.sectionCount}>{item.media.length} versions</span>
+                )}
+              </h3>
               {item.media.map((media, mi) => {
                 const part = media.parts[0];
                 const videoStreams = part?.streams.filter((s) => s.streamType === 1) || [];
@@ -253,33 +274,32 @@ export default function MediaDetail() {
                   </div>
                 );
               })}
-            </fieldset>
+            </section>
           )}
 
           {/* Collections */}
-          <fieldset className={styles.group}>
-            <legend className={styles.groupTitle}>Collections ({item.collections.length})</legend>
-            {item.collections.length === 0 ? (
-              <p className={styles.hint}>Not in any collections.</p>
-            ) : (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Section</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {item.collections.map((col) => (
-                    <tr key={col.ratingKey}>
-                      <td>{col.isLocal ? <Link to={`/collections/${col.ratingKey}`}>{col.title}</Link> : col.title}</td>
-                      <td>{col.sectionTitle || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </fieldset>
+          {item.collections.length > 0 && (
+            <section className={mediaStyles.section}>
+              <h3 className={mediaStyles.sectionTitle}>
+                Collections
+                <span className={mediaStyles.sectionCount}>{item.collections.length}</span>
+              </h3>
+              <ul className={mediaStyles.collectionList}>
+                {item.collections.map((col) => (
+                  <li key={col.ratingKey} className={mediaStyles.collectionItem}>
+                    {col.isLocal ? (
+                      <Link to={`/collections/${col.ratingKey}`} className={mediaStyles.collectionLink}>
+                        {col.title}
+                      </Link>
+                    ) : (
+                      <span>{col.title}</span>
+                    )}
+                    {col.sectionTitle && <span className={mediaStyles.collectionSection}>{col.sectionTitle}</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </div>
     </div>

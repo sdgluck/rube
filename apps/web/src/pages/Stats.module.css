@@ -159,6 +159,18 @@
   font-weight: 500;
 }
 
+.titleLink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.titleLink:hover .titleText {
+  color: var(--accent, #4a6cf7);
+  text-decoration: underline;
+}
+
 .epLabel {
   font-weight: 400;
   color: var(--text-muted);

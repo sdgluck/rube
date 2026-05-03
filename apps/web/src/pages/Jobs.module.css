@@ -243,12 +243,27 @@
 }
 
 .jobNameText {
-  display: block;
+  display: inline-block;
   font-weight: 600;
   font-size: 0.8rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.rollupBadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg-badge);
+  color: var(--text-badge);
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
 }
 
 .scheduleHintInline {

@@ -22,9 +22,12 @@ const plexRecentItemSchema = z.object({
   thumb: z.string().optional(),
   type: z.string(),
   addedAt: z.number(),
+  grandparentTitle: z.string().optional(),
+  parentTitle: z.string().optional(),
 });
 
 const mostWatchedItemSchema = z.object({
+  ratingKey: z.string().optional(),
   title: z.string(),
   year: z.number().optional(),
   type: z.string(),
@@ -73,6 +76,7 @@ export async function syncRecentlyAdded(): Promise<string> {
 }
 
 export interface MostWatchedItem {
+  ratingKey?: string;
   title: string;
   year?: number;
   type: string;
@@ -95,6 +99,7 @@ export async function syncMostWatched(): Promise<string> {
       existing.plays++;
     } else {
       counts.set(item.ratingKey, {
+        ratingKey: item.ratingKey,
         title: item.title,
         year: item.year,
         type: item.type,

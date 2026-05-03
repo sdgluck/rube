@@ -24,15 +24,62 @@ function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function formatDuration(startMs: number, endMs?: number | null): string {
-  const diff = (endMs || Date.now()) - startMs;
-  const secs = Math.floor(diff / 1000);
+interface RecentRun {
+  id: string;
+  jobId: string;
+  jobName: string;
+  status: string;
+  progress: number;
+  startedAt: number;
+  finishedAt: number | null;
+}
+
+interface RecentRunGroup {
+  latest: RecentRun;
+  count: number;
+  minDurationMs: number;
+  maxDurationMs: number;
+}
+
+/**
+ * Roll up consecutive runs of the same (jobId, status) into a single group.
+ * The most recent run wins for click navigation; we expose count + duration
+ * range so the row can show "×N" and "1–2s".
+ */
+function rollupRecentRuns(runs: RecentRun[]): RecentRunGroup[] {
+  const out: RecentRunGroup[] = [];
+  for (const run of runs) {
+    const last = out[out.length - 1];
+    const finished = run.status !== "running" && run.finishedAt != null;
+    const dur = finished ? (run.finishedAt as number) - run.startedAt : 0;
+    if (last && last.latest.jobId === run.jobId && last.latest.status === run.status && run.status !== "running") {
+      last.count++;
+      if (finished) {
+        last.minDurationMs = Math.min(last.minDurationMs, dur);
+        last.maxDurationMs = Math.max(last.maxDurationMs, dur);
+      }
+      continue;
+    }
+    out.push({ latest: run, count: 1, minDurationMs: dur, maxDurationMs: dur });
+  }
+  return out;
+}
+
+function formatDurationMs(ms: number): string {
+  const secs = Math.floor(ms / 1000);
   if (secs < 60) return `${secs}s`;
   const mins = Math.floor(secs / 60);
   const remSecs = secs % 60;
   if (mins < 60) return `${mins}m ${remSecs}s`;
   const hours = Math.floor(mins / 60);
   return `${hours}h ${mins % 60}m`;
+}
+
+function formatGroupDuration(group: RecentRunGroup): string {
+  if (group.latest.status === "running") return "—";
+  if (group.count === 1) return formatDurationMs(group.maxDurationMs);
+  if (group.minDurationMs === group.maxDurationMs) return formatDurationMs(group.maxDurationMs);
+  return `${formatDurationMs(group.minDurationMs)}–${formatDurationMs(group.maxDurationMs)}`;
 }
 
 function formatTimeUntil(ms: number): string {
@@ -351,34 +398,36 @@ export default function Jobs() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentRunsQuery.data.map((run) => (
-                    <tr key={run.id} className={styles.clickableRow} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
-                      <td>
-                        {run.status === "running" ? (
-                          <span className={styles.spinnerSmall} />
-                        ) : (
-                          <span className={styles.statusDot} data-status={run.status} />
-                        )}
-                      </td>
-                      <td className={styles.nameCell}>
-                        <span className={styles.jobNameText}>{run.jobName}</span>
-                        {run.status === "running" && run.progress > 0 && (
-                          <div className={styles.miniProgress}>
-                            <div
-                              className={styles.miniProgressFill}
-                              style={{ width: `${Math.round(run.progress * 100)}%` }}
-                            />
-                          </div>
-                        )}
-                      </td>
-                      <td className={styles.monoCell}>
-                        <RelativeTime timestamp={run.startedAt} />
-                      </td>
-                      <td className={styles.monoCell}>
-                        {run.status === "running" ? "—" : formatDuration(run.startedAt, run.finishedAt)}
-                      </td>
-                    </tr>
-                  ))}
+                  {rollupRecentRuns(recentRunsQuery.data).map((group) => {
+                    const run = group.latest;
+                    return (
+                      <tr key={run.id} className={styles.clickableRow} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
+                        <td>
+                          {run.status === "running" ? (
+                            <span className={styles.spinnerSmall} />
+                          ) : (
+                            <span className={styles.statusDot} data-status={run.status} />
+                          )}
+                        </td>
+                        <td className={styles.nameCell}>
+                          <span className={styles.jobNameText}>{run.jobName}</span>
+                          {group.count > 1 && <span className={styles.rollupBadge}>×{group.count}</span>}
+                          {run.status === "running" && run.progress > 0 && (
+                            <div className={styles.miniProgress}>
+                              <div
+                                className={styles.miniProgressFill}
+                                style={{ width: `${Math.round(run.progress * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                        </td>
+                        <td className={styles.monoCell}>
+                          <RelativeTime timestamp={run.startedAt} />
+                        </td>
+                        <td className={styles.monoCell}>{formatGroupDuration(group)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (

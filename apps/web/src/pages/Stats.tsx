@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import PullToRefresh from "../PullToRefresh";
 import RelativeTime from "../RelativeTime";
 import { trpc } from "../trpc";
@@ -346,17 +347,29 @@ export default function Stats() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentQuery.data.items.slice(0, 8).map((item) => (
-                    <tr key={item.ratingKey}>
-                      <td className={styles.titleCell}>
-                        <span className={styles.titleText}>{item.title}</span>
-                      </td>
-                      <td className={styles.monoCell}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</td>
-                      <td className={styles.monoCell}>
-                        <RelativeTime timestamp={item.addedAt} seconds />
-                      </td>
-                    </tr>
-                  ))}
+                  {recentQuery.data.items.slice(0, 8).map((item) => {
+                    const displayTitle =
+                      item.type === "season" && item.parentTitle
+                        ? `${item.parentTitle} — ${item.title}`
+                        : item.type === "season" && item.grandparentTitle
+                          ? `${item.grandparentTitle} — ${item.title}`
+                          : item.type === "episode" && item.grandparentTitle
+                            ? `${item.grandparentTitle} — ${item.title}`
+                            : item.title;
+                    return (
+                      <tr key={item.ratingKey}>
+                        <td className={styles.titleCell}>
+                          <Link to={`/media/${item.ratingKey}`} className={styles.titleLink}>
+                            <span className={styles.titleText}>{displayTitle}</span>
+                          </Link>
+                        </td>
+                        <td className={styles.monoCell}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</td>
+                        <td className={styles.monoCell}>
+                          <RelativeTime timestamp={item.addedAt} seconds />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -383,10 +396,19 @@ export default function Stats() {
                     <tr key={i}>
                       <td className={styles.rankCell}>{i + 1}</td>
                       <td className={styles.titleCell}>
-                        <span className={styles.titleText}>
-                          {item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title}
-                          {item.year ? ` (${item.year})` : ""}
-                        </span>
+                        {item.ratingKey ? (
+                          <Link to={`/media/${item.ratingKey}`} className={styles.titleLink}>
+                            <span className={styles.titleText}>
+                              {item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title}
+                              {item.year ? ` (${item.year})` : ""}
+                            </span>
+                          </Link>
+                        ) : (
+                          <span className={styles.titleText}>
+                            {item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title}
+                            {item.year ? ` (${item.year})` : ""}
+                          </span>
+                        )}
                       </td>
                       <td className={styles.playsCell}>
                         <div className={styles.playsBar}>

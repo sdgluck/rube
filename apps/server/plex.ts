@@ -362,6 +362,8 @@ export interface PlexRecentItem {
   thumb?: string;
   type: string;
   addedAt: number;
+  grandparentTitle?: string;
+  parentTitle?: string;
 }
 
 export interface PlexMediaItem {
@@ -1410,6 +1412,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       thumb: item.thumb,
       type: item.type ?? "",
       addedAt: item.addedAt ?? 0,
+      grandparentTitle: item.grandparentTitle,
+      parentTitle: item.parentTitle,
     }));
   }
 
