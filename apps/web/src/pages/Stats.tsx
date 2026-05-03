@@ -1,6 +1,7 @@
 import PullToRefresh from "../PullToRefresh";
 import RelativeTime from "../RelativeTime";
 import { trpc } from "../trpc";
+import { formatDurationMs, stripDurationFromMessage } from "../utils";
 import styles from "./Stats.module.css";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -311,7 +312,15 @@ export default function Stats() {
                     <span className={styles.eventTime}>
                       <RelativeTime timestamp={event.timestamp} />
                     </span>
-                    <span className={styles.eventMsg}>{event.message}</span>
+                    <span className={styles.eventMsg}>
+                      {event.count > 1 ? <strong>{event.count}× </strong> : null}
+                      {event.count > 1 && event.avgDurationMs != null
+                        ? stripDurationFromMessage(event.message)
+                        : event.message}
+                      {event.count > 1 && event.avgDurationMs != null && (
+                        <span className={styles.muted}> (avg {formatDurationMs(event.avgDurationMs)})</span>
+                      )}
+                    </span>
                   </div>
                 ))
               ) : (

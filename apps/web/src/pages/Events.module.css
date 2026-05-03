@@ -65,6 +65,14 @@
   color: var(--text-badge);
 }
 
+/* ─── Avg duration ─────────────────────────────────────────────────────────── */
+
+.avgDuration {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
 /* ─── Timestamp ─────────────────────────────────────────────────────────────── */
 
 .timestamp {

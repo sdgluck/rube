@@ -6,6 +6,7 @@ import { EventsSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
 import PullToRefresh from "../PullToRefresh";
 import RelativeTime from "../RelativeTime";
+import { formatDurationMs, stripDurationFromMessage } from "../utils";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Events.module.css";
 
@@ -162,9 +163,19 @@ export default function Events() {
                           <RelativeTime timestamp={event.timestamp} />
                         </td>
                         <td>
-                          <span className={`${styles.badge} ${badge.className}`}>{badge.label}</span>
+                          <span className={`${styles.badge} ${badge.className}`}>
+                            {event.count > 1 ? `${event.count}× ` : ""}
+                            {badge.label}
+                          </span>
                         </td>
-                        <td>{event.message}</td>
+                        <td>
+                          {event.count > 1 && event.avgDurationMs != null
+                            ? stripDurationFromMessage(event.message)
+                            : event.message}
+                          {event.count > 1 && event.avgDurationMs != null && (
+                            <span className={styles.avgDuration}> (avg {formatDurationMs(event.avgDurationMs)})</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
