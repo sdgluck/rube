@@ -196,8 +196,9 @@ function suggestName(form: RuleFormState, sections: { title: string }[]): string
 
 type StepId = "type" | "source" | "scope" | "review";
 
-function stepsFor(type: string): { id: StepId; label: string }[] {
-  const steps: { id: StepId; label: string }[] = [{ id: "type", label: "Type" }];
+function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; label: string }[] {
+  const steps: { id: StepId; label: string }[] = [];
+  if (mode === "create") steps.push({ id: "type", label: "Type" });
   if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
   steps.push({ id: "scope", label: "Scope" });
   steps.push({ id: "review", label: "Review" });
@@ -248,7 +249,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   const omdbConfigured = !!configQuery.data?.global_omdb_api_key;
   const seerrConfigured = !!(configQuery.data?.global_seerr_url && configQuery.data?.global_seerr_api_key);
 
-  const steps = useMemo(() => stepsFor(form.type), [form.type]);
+  const steps = useMemo(() => stepsFor(form.type, mode), [form.type, mode]);
   const currentStep = steps[Math.min(stepIdx, steps.length - 1)];
 
   // Reset state when the wizard is freshly opened (initial identity changed).
