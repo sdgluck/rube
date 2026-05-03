@@ -132,16 +132,51 @@ function LazyPage({ children }: { children: React.ReactNode }) {
   );
 }
 
-// "More" pages that live in the bottom sheet rather than the bottom tab bar
-const MORE_PAGES = [
-  { to: "/preview", label: "Preview" },
-  { to: "/media", label: "Media" },
-  { to: "/rules", label: "Rules" },
-  { to: "/overlays", label: "Overlays" },
-  { to: "/users", label: "Users" },
-  { to: "/events", label: "Events" },
-  { to: "/settings", label: "Settings" },
+type NavItem = { to: string; label: string; badge?: "streams" };
+type NavSection = { label: string; items: NavItem[] };
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: "Dashboard",
+    items: [
+      { to: "/stats", label: "Stats", badge: "streams" },
+      { to: "/preview", label: "Preview" },
+    ],
+  },
+  {
+    label: "Library",
+    items: [
+      { to: "/collections", label: "Collections" },
+      { to: "/media", label: "Media" },
+      { to: "/overlays", label: "Overlays" },
+    ],
+  },
+  {
+    label: "Automation",
+    items: [
+      { to: "/rules", label: "Rules" },
+      { to: "/jobs", label: "Jobs" },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { to: "/users", label: "Users" },
+      { to: "/events", label: "Events" },
+      { to: "/settings", label: "Settings" },
+    ],
+  },
 ];
+
+// Routes that live in the bottom tab bar — excluded from the "More" sheet.
+const BOTTOM_TAB_ROUTES = new Set(["/stats", "/collections", "/jobs"]);
+
+const MORE_SECTIONS: NavSection[] = NAV_SECTIONS.map((s) => ({
+  label: s.label,
+  items: s.items.filter((i) => !BOTTOM_TAB_ROUTES.has(i.to)),
+})).filter((s) => s.items.length > 0);
+
+const MORE_PAGES = MORE_SECTIONS.flatMap((s) => s.items);
 
 function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -163,10 +198,15 @@ function BottomNav() {
       <div className={`bottom-sheet ${moreOpen ? "bottom-sheet-open" : ""}`}>
         <div className="bottom-sheet-handle" />
         <nav className="bottom-sheet-nav">
-          {MORE_PAGES.map((p) => (
-            <NavLink key={p.to} to={p.to} className="bottom-sheet-link" onClick={closeMore}>
-              {p.label}
-            </NavLink>
+          {MORE_SECTIONS.map((section) => (
+            <div key={section.label} className="bottom-sheet-section">
+              <div className="nav-section-title">{section.label}</div>
+              {section.items.map((p) => (
+                <NavLink key={p.to} to={p.to} className="bottom-sheet-link" onClick={closeMore}>
+                  {p.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
       </div>
@@ -263,37 +303,22 @@ export default function App() {
           Tinkerbell <SidebarHealthDot />
         </h1>
         <nav>
-          <NavLink to="/stats" className="nav-link nav-link-with-badge" onClick={closeSidebar}>
-            Stats
-            <SidebarStreamCount />
-          </NavLink>
-          <NavLink to="/preview" className="nav-link" onClick={closeSidebar}>
-            Preview
-          </NavLink>
-          <NavLink to="/collections" className="nav-link" onClick={closeSidebar}>
-            Collections
-          </NavLink>
-          <NavLink to="/media" className="nav-link" onClick={closeSidebar}>
-            Media
-          </NavLink>
-          <NavLink to="/rules" className="nav-link" onClick={closeSidebar}>
-            Rules
-          </NavLink>
-          <NavLink to="/overlays" className="nav-link" onClick={closeSidebar}>
-            Overlays
-          </NavLink>
-          <NavLink to="/users" className="nav-link" onClick={closeSidebar}>
-            Users
-          </NavLink>
-          <NavLink to="/jobs" className="nav-link" onClick={closeSidebar}>
-            Jobs
-          </NavLink>
-          <NavLink to="/events" className="nav-link" onClick={closeSidebar}>
-            Events
-          </NavLink>
-          <NavLink to="/settings" className="nav-link" onClick={closeSidebar}>
-            Settings
-          </NavLink>
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.label} className="nav-section">
+              <div className="nav-section-title">{section.label}</div>
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={item.badge ? "nav-link nav-link-with-badge" : "nav-link"}
+                  onClick={closeSidebar}
+                >
+                  {item.label}
+                  {item.badge === "streams" && <SidebarStreamCount />}
+                </NavLink>
+              ))}
+            </div>
+          ))}
         </nav>
         <SidebarActiveJobs />
       </aside>

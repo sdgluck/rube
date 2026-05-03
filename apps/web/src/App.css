@@ -189,6 +189,24 @@ body {
   white-space: nowrap;
 }
 
+.nav-section + .nav-section {
+  margin-top: 18px;
+}
+
+.nav-section-title {
+  padding: 0 12px;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.bottom-sheet-section + .bottom-sheet-section {
+  margin-top: 14px;
+}
+
 .nav-link {
   display: block;
   padding: 10px 12px;
