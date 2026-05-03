@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 
 WORKDIR /app/apps/server
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
-CMD ["node", "server.ts"]
+CMD ["node", "src/server.ts"]

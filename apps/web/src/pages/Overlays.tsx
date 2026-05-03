@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { trpc } from "../trpc";
-import type { OverlayPosition, OverlayType } from "@server/overlays.ts";
+import type { OverlayPosition, OverlayType } from "@server/domains/overlays.ts";
 import styles from "./Overlays.module.css";
 
 const POSITIONS = [

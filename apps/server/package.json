@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=. --watch server.ts",
+    "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=src --watch src/server.ts",
     "typecheck": "tsc",
-    "test": "node --test commands/shuffle.test.ts"
+    "test": "node --test src/clients/plex.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
