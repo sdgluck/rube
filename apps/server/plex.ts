@@ -67,7 +67,7 @@ const plexMediaRawSchema = z
     width: z.number().optional(),
     height: z.number().optional(),
     duration: z.number().optional(),
-    optimizedForStreaming: z.union([z.boolean(), z.number()]).optional(),
+    optimizedForStreaming: z.union([z.boolean(), z.number(), z.string()]).optional(),
     Part: z.array(plexPartRawSchema).optional(),
   })
   .passthrough();
@@ -79,9 +79,9 @@ const plexPlayerRawSchema = z
     product: z.string().optional(),
     platform: z.string().optional(),
     state: z.string().optional(),
-    local: z.union([z.boolean(), z.number()]).optional(),
-    relayed: z.union([z.boolean(), z.number()]).optional(),
-    secure: z.union([z.boolean(), z.number()]).optional(),
+    local: z.union([z.boolean(), z.number(), z.string()]).optional(),
+    relayed: z.union([z.boolean(), z.number(), z.string()]).optional(),
+    secure: z.union([z.boolean(), z.number(), z.string()]).optional(),
     address: z.string().optional(),
   })
   .passthrough();
@@ -106,7 +106,7 @@ const plexTranscodeSessionRawSchema = z
     audioDecision: z.string().optional(),
     speed: z.number().optional(),
     progress: z.number().optional(),
-    transcodeHwEncoding: z.union([z.boolean(), z.number()]).optional(),
+    transcodeHwEncoding: z.union([z.boolean(), z.number(), z.string()]).optional(),
     sourceVideoCodec: z.string().optional(),
     sourceAudioCodec: z.string().optional(),
   })
@@ -1152,7 +1152,8 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       const media = item.Media?.[0];
       const part = media?.Part?.[0];
       const transcode = item.TranscodeSession;
-      const toBool = (v: boolean | number | undefined) => (v === undefined ? undefined : v === true || v === 1);
+      const toBool = (v: boolean | number | string | undefined) =>
+        v === undefined ? undefined : v === true || v === 1 || v === "1" || v === "true";
 
       return {
         title: item.title ?? "",
@@ -1346,7 +1347,11 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         bitrate: m.bitrate,
         width: m.width,
         height: m.height,
-        optimizedForStreaming: m.optimizedForStreaming === 1 || m.optimizedForStreaming === true,
+        optimizedForStreaming:
+          m.optimizedForStreaming === 1 ||
+          m.optimizedForStreaming === true ||
+          m.optimizedForStreaming === "1" ||
+          m.optimizedForStreaming === "true",
         parts,
       };
     });
