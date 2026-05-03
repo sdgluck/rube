@@ -14,19 +14,29 @@ RUN pnpm --filter @tinkerbell/web run build
 RUN pnpm --filter=@tinkerbell/server deploy --prod /out
 
 FROM node:25-alpine
+RUN apk add --no-cache su-exec tini
 WORKDIR /app
 RUN mkdir -p /config
 
 COPY --from=build /out/ ./apps/server/
 COPY --from=build /repo/apps/web/dist ./apps/web/dist/
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV DATA_DIR=/config
 ENV NODE_ENV=production
+ENV PUID=99
+ENV PGID=100
 EXPOSE 3000
 VOLUME /config
+
+LABEL net.unraid.docker.webui="http://[IP]:[PORT:3000]"
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/sdgluck/tinkerbell3/master/icon.png"
+LABEL org.opencontainers.image.source="https://github.com/sdgluck/tinkerbell3"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:3000/ || exit 1
 
 WORKDIR /app/apps/server
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.ts"]
