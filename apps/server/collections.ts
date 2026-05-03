@@ -24,6 +24,29 @@ interface CollectionFilters {
   sortDir?: "asc" | "desc";
 }
 
+export async function upsertCollectionByKey(
+  client: PlexClient,
+  section: PlexSection,
+  ratingKey: string,
+): Promise<void> {
+  const detail = await client.getCollectionDetail(ratingKey);
+  const now = Date.now();
+  const values = {
+    plexRatingKey: ratingKey,
+    sectionId: section.key,
+    sectionTitle: section.title,
+    title: detail.title,
+    summary: detail.summary,
+    childCount: detail.childCount,
+    labels: detail.labels,
+    addedAt: detail.addedAt ?? null,
+    thumb: detail.thumb,
+    smart: detail.smart ? 1 : 0,
+    syncedAt: now,
+  };
+  db.insert(collections).values(values).onConflictDoUpdate({ target: collections.plexRatingKey, set: values }).run();
+}
+
 export async function syncCollections(client: PlexClient, sections: PlexSection[]): Promise<SyncStats> {
   const now = Date.now();
   const seenKeys = new Set<string>();
