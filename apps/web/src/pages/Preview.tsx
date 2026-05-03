@@ -120,13 +120,6 @@ export default function Preview() {
     return out;
   }, [previewQuery.data, hubOrder]);
 
-  const heroItem = useMemo(() => {
-    for (const h of orderedHubs) {
-      if (h.items.length > 0) return h.items[0];
-    }
-    return null;
-  }, [orderedHubs]);
-
   const onPickUser = (next: number | null) => {
     setUserId(next);
     localStorage.setItem(STORAGE_KEY, next == null ? "null" : String(next));
@@ -229,27 +222,6 @@ export default function Preview() {
           {previewQuery.data.warnings.map((w, i) => (
             <div key={i}>{w}</div>
           ))}
-        </div>
-      )}
-
-      {heroItem && (
-        <div className={styles.hero}>
-          {(() => {
-            const art = thumbUrl(heroItem.art || heroItem.thumb);
-            return art ? <FadeImage className={styles.heroArt} src={art} alt="" /> : null;
-          })()}
-          <div className={styles.heroOverlay} />
-          <div className={styles.heroContent}>
-            <div className={styles.heroEyebrow}>
-              {previewQuery.data?.user ? `Home — as ${previewQuery.data.user.username}` : "Home — admin view"}
-            </div>
-            <h2 className={styles.heroTitle}>
-              {heroItem.type === "episode" && heroItem.grandparentTitle ? heroItem.grandparentTitle : heroItem.title}
-            </h2>
-            <div className={styles.heroSub}>
-              {heroItem.type === "episode" && heroItem.title ? heroItem.title : heroItem.year || ""}
-            </div>
-          </div>
         </div>
       )}
 
