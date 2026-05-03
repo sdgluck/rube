@@ -48,6 +48,8 @@ import {
 import { getCachedRecentlyAdded, getCachedMostWatched, getLibraryOverview } from "./stats.ts";
 import { syncSections, getLocalSections } from "./sections.ts";
 import { syncUsers, getLocalUsers, updateUser } from "./users.ts";
+import { getPreviewForUser } from "./preview.ts";
+import { shuffleAllSections } from "./shuffle-hubs.ts";
 import { getEvents, getEventTypes } from "./events.ts";
 import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "./notifications.ts";
 import {
@@ -705,6 +707,25 @@ const eventsRouter = t.router({
   types: procedure.query(() => getEventTypes()),
 });
 
+const previewRouter = t.router({
+  home: procedure.input(z.object({ userId: z.number().nullable() })).query(async ({ input }) => {
+    const client = getPlexClient();
+    return getPreviewForUser(client, input.userId);
+  }),
+
+  shuffleHubs: procedure.mutation(async () => {
+    const client = getPlexClient();
+    let sections = await client.getSections();
+    const configuredLibraries = getConfig("global_plex_libraries");
+    if (configuredLibraries) {
+      sections = sections.filter((s) => configuredLibraries.includes(s.title));
+    }
+    const results = await shuffleAllSections(client, sections);
+    const totalShuffled = results.reduce((sum, r) => sum + r.shuffled, 0);
+    return { results, totalShuffled, sections: sections.length };
+  }),
+});
+
 const stressTestRouter = t.router({
   runs: procedure.query(() => getStressTestRuns()),
   run: procedure.input(z.object({ id: z.string() })).query(({ input }) => getStressTestRun(input.id)),
@@ -739,6 +760,7 @@ export const appRouter = t.router({
   events: eventsRouter,
   health: healthRouter,
   stressTest: stressTestRouter,
+  preview: previewRouter,
 
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();

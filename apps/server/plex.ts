@@ -115,7 +115,7 @@ const plexTranscodeSessionRawSchema = z
 const plexLabelRawSchema = z.object({ tag: z.string() }).passthrough();
 const plexGuidRawSchema = z.object({ id: z.string() }).passthrough();
 const plexGenreRawSchema = z.object({ tag: z.string() }).passthrough();
-const plexCollectionRefRawSchema = z.object({ id: z.number(), tag: z.string() }).passthrough();
+const plexCollectionRefRawSchema = z.object({ id: z.number().optional(), tag: z.string() }).passthrough();
 
 const plexMetadataRawSchema = z
   .object({
@@ -124,7 +124,12 @@ const plexMetadataRawSchema = z
     type: z.string().optional(),
     year: z.number().optional(),
     thumb: z.string().optional(),
+    art: z.string().optional(),
     parentThumb: z.string().optional(),
+    grandparentThumb: z.string().optional(),
+    grandparentArt: z.string().optional(),
+    librarySectionID: z.coerce.number().optional(),
+    librarySectionTitle: z.string().optional(),
     grandparentTitle: z.string().optional(),
     grandparentRatingKey: z.string().optional(),
     parentTitle: z.string().optional(),
@@ -158,6 +163,29 @@ const plexMetadataRawSchema = z
   .passthrough();
 
 type PlexMetadataRaw = z.infer<typeof plexMetadataRawSchema>;
+
+const plexHubRawSchema = z
+  .object({
+    key: z.string().optional(),
+    hubKey: z.string().optional(),
+    hubIdentifier: z.string().optional(),
+    title: z.string().optional(),
+    type: z.string().optional(),
+    context: z.string().optional(),
+    size: z.number().optional(),
+    Metadata: z.array(plexMetadataRawSchema).optional(),
+  })
+  .passthrough();
+
+const plexSharedServerRawSchema = z
+  .object({
+    id: z.number().optional(),
+    userID: z.number().optional(),
+    filterMovies: z.string().optional(),
+    filterTelevision: z.string().optional(),
+    librarySectionIDs: z.string().optional(),
+  })
+  .passthrough();
 
 function parseMetadataArray(raw: unknown): PlexMetadataRaw[] {
   if (!Array.isArray(raw)) return [];
@@ -245,6 +273,46 @@ export interface PlexSharing {
   userId: number;
   username: string;
   machineIdentifier: string;
+}
+
+export interface PlexSharedServerDetail {
+  userId: number;
+  filterMovies: string;
+  filterTelevision: string;
+  librarySectionIds: number[];
+}
+
+export interface PlexHubItem {
+  ratingKey: string;
+  title: string;
+  type: string;
+  year?: number;
+  thumb?: string;
+  art?: string;
+  parentThumb?: string;
+  grandparentThumb?: string;
+  grandparentTitle?: string;
+  parentTitle?: string;
+  parentIndex?: number;
+  index?: number;
+  duration?: number;
+  viewOffset?: number;
+  viewCount?: number;
+  addedAt?: number;
+  contentRating?: string;
+  summary?: string;
+  librarySectionID?: number;
+  librarySectionTitle?: string;
+  labels: string[];
+}
+
+export interface PlexHomeHub {
+  hubKey: string;
+  hubIdentifier: string;
+  title: string;
+  type: string;
+  context?: string;
+  items: PlexHubItem[];
 }
 
 export interface PlexSession {
@@ -370,7 +438,7 @@ export interface PlexMediaDetail extends PlexMediaItem {
   viewCount?: number;
   genres: string[];
   directors: string[];
-  collections: Array<{ id: number; tag: string }>;
+  collections: Array<{ id?: number; tag: string }>;
   media: PlexMediaInfo[];
 }
 
@@ -787,6 +855,140 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         filterTelevision: "",
       },
     });
+  }
+
+  async function getSharedServerDetails(machineIdentifier: string): Promise<PlexSharedServerDetail[]> {
+    const data = await plexTvRequest(`/api/servers/${machineIdentifier}/shared_servers`);
+    const xml: string = data?._raw || "";
+    if (!xml) return [];
+
+    const sharedRegex = /<SharedServer\s([^>]+?)>([\s\S]*?)<\/SharedServer>|<SharedServer\s([^>]+?)\/>/g;
+    const out: PlexSharedServerDetail[] = [];
+    let match;
+    while ((match = sharedRegex.exec(xml)) !== null) {
+      const attrs = match[1] || match[3] || "";
+      const inner = match[2] || "";
+
+      const userID = attrs.match(/\buserID="(\d+)"/)?.[1];
+      const filterMovies = attrs.match(/\bfilterMovies="([^"]*)"/)?.[1] ?? "";
+      const filterTelevision = attrs.match(/\bfilterTelevision="([^"]*)"/)?.[1] ?? "";
+
+      const sectionIds: number[] = [];
+      const sectionRegex = /<Section\s([^>]+?)\/?>/g;
+      let sMatch;
+      while ((sMatch = sectionRegex.exec(inner)) !== null) {
+        const sAttrs = sMatch[1];
+        const shared = sAttrs.match(/\bshared="(\d+)"/)?.[1];
+        if (shared !== "1") continue;
+        const keyAttr = sAttrs.match(/\bkey="(\d+)"/)?.[1];
+        if (keyAttr) sectionIds.push(parseInt(keyAttr, 10));
+      }
+
+      const parsed = plexSharedServerRawSchema.safeParse({
+        userID: userID ? parseInt(userID, 10) : undefined,
+        filterMovies,
+        filterTelevision,
+        librarySectionIDs: sectionIds.join(","),
+      });
+      if (!parsed.success || !parsed.data.userID) continue;
+
+      out.push({
+        userId: parsed.data.userID,
+        filterMovies: parsed.data.filterMovies ?? "",
+        filterTelevision: parsed.data.filterTelevision ?? "",
+        librarySectionIds: sectionIds,
+      });
+    }
+    return out;
+  }
+
+  // ─── Home hubs (preview) ──────────────────────────────────────────────────
+
+  function parseHubArray(raw: unknown): PlexHomeHub[] {
+    if (!Array.isArray(raw)) return [];
+    const hubs: PlexHomeHub[] = [];
+    for (const h of raw) {
+      const parsed = plexHubRawSchema.safeParse(h);
+      if (!parsed.success) {
+        console.warn("[plex] dropping malformed hub:", parsed.error.message);
+        continue;
+      }
+      const hub = parsed.data;
+      const items = parseMetadataArray(hub.Metadata).map((m): PlexHubItem => {
+        const labels = (m.Label || []).map((l) => l.tag);
+        return {
+          ratingKey: m.ratingKey ?? "",
+          title: m.title ?? "",
+          type: m.type ?? "",
+          year: m.year,
+          thumb: m.thumb,
+          art: m.art,
+          parentThumb: m.parentThumb,
+          grandparentThumb: m.grandparentThumb,
+          grandparentTitle: m.grandparentTitle,
+          parentTitle: m.parentTitle,
+          parentIndex: m.parentIndex,
+          index: m.index,
+          duration: m.duration,
+          viewOffset: m.viewOffset,
+          viewCount: m.viewCount,
+          addedAt: m.addedAt,
+          contentRating: m.contentRating,
+          summary: m.summary,
+          librarySectionID: m.librarySectionID,
+          librarySectionTitle: m.librarySectionTitle,
+          labels,
+        };
+      });
+      hubs.push({
+        hubKey: hub.hubKey ?? hub.key ?? "",
+        hubIdentifier: hub.hubIdentifier ?? "",
+        title: hub.title ?? "",
+        type: hub.type ?? "",
+        context: hub.context,
+        items,
+      });
+    }
+    return hubs;
+  }
+
+  async function getHomeHubs(opts: { count?: number } = {}): Promise<PlexHomeHub[]> {
+    const { count = 20 } = opts;
+    const data = await request("/hubs", {
+      params: {
+        count,
+        includeFields: "label,librarySectionID,librarySectionTitle,art,thumb",
+        excludeFields: "summary",
+        includeStations: 1,
+      },
+    });
+    return parseHubArray(data?.MediaContainer?.Hub);
+  }
+
+  async function getRecentlyAddedForSection(sectionId: string, limit = 20): Promise<PlexHubItem[]> {
+    const data = await request(`/library/sections/${sectionId}/recentlyAdded`, {
+      params: {
+        "X-Plex-Container-Size": limit,
+        includeFields: "label",
+      },
+    });
+    return parseMetadataArray(data?.MediaContainer?.Metadata).map((m) => ({
+      ratingKey: m.ratingKey ?? "",
+      title: m.title ?? "",
+      type: m.type ?? "",
+      year: m.year,
+      thumb: m.thumb,
+      art: m.art,
+      parentThumb: m.parentThumb,
+      grandparentThumb: m.grandparentThumb,
+      grandparentTitle: m.grandparentTitle,
+      parentTitle: m.parentTitle,
+      addedAt: m.addedAt,
+      contentRating: m.contentRating,
+      librarySectionID: m.librarySectionID,
+      librarySectionTitle: m.librarySectionTitle,
+      labels: (m.Label || []).map((l) => l.tag),
+    }));
   }
 
   // ─── Watch history & accounts ──────────────────────────────────────────────
@@ -1604,6 +1806,9 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     deleteCollectionsByLabel,
     createCollectionWithLabel,
     getSharings,
+    getSharedServerDetails,
+    getHomeHubs,
+    getRecentlyAddedForSection,
     setSharingRestrictions,
     clearSharingRestrictions,
     setCollectionLabels,

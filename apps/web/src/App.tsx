@@ -37,6 +37,7 @@ const Users = lazy(() => import("./pages/Users"));
 const Overlays = lazy(() => import("./pages/Overlays"));
 const Events = lazy(() => import("./pages/Events"));
 const StressTest = lazy(() => import("./pages/StressTest"));
+const Preview = lazy(() => import("./pages/Preview"));
 
 function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {
@@ -133,6 +134,7 @@ function LazyPage({ children }: { children: React.ReactNode }) {
 
 // "More" pages that live in the bottom sheet rather than the bottom tab bar
 const MORE_PAGES = [
+  { to: "/preview", label: "Preview" },
   { to: "/media", label: "Media" },
   { to: "/rules", label: "Rules" },
   { to: "/overlays", label: "Overlays" },
@@ -265,6 +267,9 @@ export default function App() {
             Stats
             <SidebarStreamCount />
           </NavLink>
+          <NavLink to="/preview" className="nav-link" onClick={closeSidebar}>
+            Preview
+          </NavLink>
           <NavLink to="/collections" className="nav-link" onClick={closeSidebar}>
             Collections
           </NavLink>
@@ -303,6 +308,14 @@ export default function App() {
                 element={
                   <LazyPage>
                     <Stats />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/preview"
+                element={
+                  <LazyPage>
+                    <Preview />
                   </LazyPage>
                 }
               />
