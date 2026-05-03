@@ -468,7 +468,6 @@ async function handleSeerrRequests(
   ruleConfig: RuleConfig,
   labels: string[],
 ): Promise<string | null> {
-  let lastCollectionKey: string | null = null;
   const seerrUrl = getConfig("global_seerr_url");
   const seerrApiKey = getConfig("global_seerr_api_key");
   if (!seerrUrl || !seerrApiKey) {
@@ -478,64 +477,72 @@ async function handleSeerrRequests(
   const limit = Math.min(ruleConfig.limit ?? 50, 200);
   const filter = ruleConfig.filter || "all";
 
-  ctx.log(`[Seerr Requests] Fetching requests (filter: ${filter}, limit: ${limit})...`);
-  const { fetchSeerrRequests } = await import("../seerr.ts");
-  const requests = await fetchSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter, limit });
-  ctx.log(`Fetched ${requests.length} request(s) from Seerr.`);
+  // Seerr requests yield a single collection. Pick the first movie/show
+  // section the user selected as the host (Plex collections are section-scoped).
+  const hostSection = sections.find((s) => s.type === "movie" || s.type === "show");
+  if (!hostSection) {
+    ctx.log(`[Seerr Requests] No movie or show sections selected, skipping.`);
+    return null;
+  }
+  const sectionMediaType = hostSection.type === "movie" ? "movie" : "tv";
+  ctx.log(`[Seerr Requests] Host section: "${hostSection.title}" (${sectionMediaType})`);
 
-  for (const section of sections) {
-    const sectionMediaType = section.type === "movie" ? "movie" : "tv";
-    const sectionRequests = requests.filter((r) => r.media.mediaType === sectionMediaType);
-
-    if (sectionRequests.length === 0) {
-      ctx.log(`[Seerr Requests] No ${sectionMediaType} requests for "${section.title}", skipping.`);
-      continue;
-    }
-
-    ctx.log(`[Seerr Requests] "${section.title}" — matching ${sectionRequests.length} requests against library...`);
-    const items = await client.allItemsWithGuids(section.key);
-
-    const tmdbToRatingKey = new Map<number, string>();
-    for (const item of items) {
-      for (const guid of item.guids) {
-        const match = guid.match(/tmdb:\/\/(\d+)/);
-        if (match) {
-          tmdbToRatingKey.set(parseInt(match[1], 10), item.ratingKey);
-          break;
-        }
+  ctx.log(`[Seerr Requests] Indexing "${hostSection.title}" by TMDB ID...`);
+  const items = await client.allItemsWithGuids(hostSection.key);
+  const tmdbToRatingKey = new Map<number, string>();
+  for (const item of items) {
+    for (const guid of item.guids) {
+      const match = guid.match(/tmdb:\/\/(\d+)/);
+      if (match) {
+        tmdbToRatingKey.set(parseInt(match[1], 10), item.ratingKey);
+        break;
       }
     }
+  }
+  ctx.log(`[Seerr Requests] ${tmdbToRatingKey.size}/${items.length} items have TMDB IDs.`);
 
-    const ratingKeys = sectionRequests.map((r) => tmdbToRatingKey.get(r.media.tmdbId)).filter(Boolean) as string[];
+  ctx.log(`[Seerr Requests] Streaming Seerr requests (filter=${filter}) until ${limit} matches...`);
+  const { iterSeerrRequests } = await import("../seerr.ts");
+  const ratingKeys: string[] = [];
+  const seenRatingKeys = new Set<string>();
+  let scanned = 0;
+  for await (const req of iterSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter })) {
+    scanned++;
+    if (req.media.mediaType !== sectionMediaType) continue;
+    const ratingKey = tmdbToRatingKey.get(req.media.tmdbId);
+    if (!ratingKey || seenRatingKeys.has(ratingKey)) continue;
+    seenRatingKeys.add(ratingKey);
+    ratingKeys.push(ratingKey);
+    if (ratingKeys.length >= limit) break;
+  }
+  ctx.log(`[Seerr Requests] Scanned ${scanned} request(s); matched ${ratingKeys.length}/${limit}.`);
 
-    if (ratingKeys.length === 0) {
-      ctx.log(`No matching items found in "${section.title}", skipping.`);
-      continue;
-    }
-
-    const collectionName = rule.name;
-    ctx.log(`Creating "${collectionName}" (${ratingKeys.length} items)...`);
-    const collectionKey = await client.createCollectionWithLabel(
-      section.key,
-      section.type,
-      machineId,
-      collectionName,
-      ratingKeys,
-      labels,
-    );
-
-    if (collectionKey) {
-      await client.pinToHomepage(section.key, collectionKey, {
-        promotedToOwnHome: 1,
-        promotedToRecommendedHome: 1,
-        promotedToSharedHome: 1,
-      });
-      ctx.log(`Pinned "${collectionName}" to homepage`);
-      lastCollectionKey = collectionKey;
-    }
+  if (ratingKeys.length === 0) {
+    ctx.log(`[Seerr Requests] No matching items in "${hostSection.title}", skipping.`);
+    return null;
   }
 
-  return lastCollectionKey;
+  const collectionName = rule.name;
+  ctx.log(`Creating "${collectionName}" (${ratingKeys.length} items)...`);
+  const collectionKey = await client.createCollectionWithLabel(
+    hostSection.key,
+    hostSection.type,
+    machineId,
+    collectionName,
+    ratingKeys,
+    labels,
+  );
+
+  if (collectionKey) {
+    await client.pinToHomepage(hostSection.key, collectionKey, {
+      promotedToOwnHome: 1,
+      promotedToRecommendedHome: 1,
+      promotedToSharedHome: 1,
+    });
+    ctx.log(`Pinned "${collectionName}" to homepage`);
+  }
+
+  return collectionKey;
 }
 
 // ─── Test / Preview ──────────────────────────────────────────────────────────
@@ -863,39 +870,45 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
       const filter = ruleConfig.filter || "all";
       log(`[seerr_requests] filter=${filter}, limit=${limit}`);
 
-      const { fetchSeerrRequests } = await import("../seerr.ts");
-      const requests = await fetchSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter, limit });
-      log(`[seerr_requests] Fetched ${requests.length} request(s) from Seerr`);
+      const hostSection = sections.find((s) => s.type === "movie" || s.type === "show");
+      if (!hostSection) {
+        log(`[seerr_requests] No movie or show sections selected; nothing to preview.`);
+        break;
+      }
+      const sectionMediaType = hostSection.type === "movie" ? "movie" : "tv";
+      log(`[seerr_requests] Host section "${hostSection.title}" (${sectionMediaType})`);
 
-      for (const section of sections) {
-        const sectionMediaType = section.type === "movie" ? "movie" : "tv";
-        const sectionRequests = requests.filter((r) => r.media.mediaType === sectionMediaType);
-        log(`[seerr_requests] ${sectionRequests.length} ${sectionMediaType} requests for "${section.title}"`);
-
-        if (sectionRequests.length === 0) continue;
-
-        const items = await client.allItemsWithGuids(section.key);
-        log(`[seerr_requests] Fetched ${items.length} items with GUIDs from "${section.title}"`);
-
-        const tmdbToItem = new Map<number, { title: string; year?: number }>();
-        for (const item of items) {
-          for (const guid of item.guids) {
-            const match = guid.match(/tmdb:\/\/(\d+)/);
-            if (match) {
-              tmdbToItem.set(parseInt(match[1], 10), { title: item.title, year: item.year });
-              break;
-            }
+      const items = await client.allItemsWithGuids(hostSection.key);
+      const tmdbToItem = new Map<number, { title: string; year?: number }>();
+      for (const item of items) {
+        for (const guid of item.guids) {
+          const match = guid.match(/tmdb:\/\/(\d+)/);
+          if (match) {
+            tmdbToItem.set(parseInt(match[1], 10), { title: item.title, year: item.year });
+            break;
           }
         }
-        log(`[seerr_requests] ${tmdbToItem.size} items have TMDB IDs in "${section.title}"`);
-
-        const matched = sectionRequests
-          .map((r) => tmdbToItem.get(r.media.tmdbId))
-          .filter((m): m is { title: string; year?: number } => m !== undefined);
-        log(`[seerr_requests] Matched ${matched.length}/${sectionRequests.length} requests in "${section.title}"`);
-        if (matched.length === 0) continue;
-        collections.push({ name: rule.name, sectionTitle: section.title, items: matched });
       }
+      log(`[seerr_requests] ${tmdbToItem.size}/${items.length} items have TMDB IDs in "${hostSection.title}"`);
+
+      const { iterSeerrRequests } = await import("../seerr.ts");
+      const matched: { title: string; year?: number }[] = [];
+      const seenTmdb = new Set<number>();
+      let scanned = 0;
+      for await (const req of iterSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter })) {
+        signal?.throwIfAborted();
+        scanned++;
+        if (req.media.mediaType !== sectionMediaType) continue;
+        if (seenTmdb.has(req.media.tmdbId)) continue;
+        const item = tmdbToItem.get(req.media.tmdbId);
+        if (!item) continue;
+        seenTmdb.add(req.media.tmdbId);
+        matched.push(item);
+        if (matched.length >= limit) break;
+      }
+      log(`[seerr_requests] Scanned ${scanned} requests; matched ${matched.length}/${limit}`);
+      if (matched.length === 0) break;
+      collections.push({ name: rule.name, sectionTitle: hostSection.title, items: matched });
       break;
     }
 

@@ -136,6 +136,7 @@ function typeHasSourceStep(type: string): boolean {
 function limitFieldLabel(type: string): string {
   if (type === "ai_prompt") return "Collections per section";
   if (type === "top_rated" || type === "lowest_rated" || type === "rt_top_rated") return "Items per collection";
+  if (type === "seerr_requests") return "Items in collection";
   return "Max collections";
 }
 
@@ -518,9 +519,11 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             <span className={styles.hint}>
               {sectionsLocked
                 ? `Locked to ${chartSectionType === "movie" ? "Movie" : "TV"} sections by the chosen chart.`
-                : form.sections.length === 0
-                  ? "Default — applies to all sections."
-                  : `${form.sections.length} selected.`}
+                : form.type === "seerr_requests"
+                  ? "Seerr produces a single collection — only the first selected Movie/TV section is used."
+                  : form.sections.length === 0
+                    ? "Default — applies to all sections."
+                    : `${form.sections.length} selected.`}
             </span>
           </div>
         )}
@@ -543,7 +546,11 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 })
               }
             />
-            <span className={styles.hint}>Collections replace those generated in previous runs.</span>
+            <span className={styles.hint}>
+              {form.type === "seerr_requests"
+                ? "We'll fetch as many Seerr requests as needed to fill the collection up to this many items."
+                : "Collections replace those generated in previous runs."}
+            </span>
           </div>
         )}
 

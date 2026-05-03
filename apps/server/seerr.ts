@@ -29,12 +29,31 @@ export async function fetchSeerrRequests(opts: {
   filter?: string;
   limit?: number;
 }): Promise<SeerrRequest[]> {
-  const { url, apiKey, filter, limit = 50 } = opts;
+  const { limit = 50 } = opts;
+  const all: SeerrRequest[] = [];
+  for await (const req of iterSeerrRequests(opts)) {
+    all.push(req);
+    if (all.length >= limit) break;
+  }
+  return all;
+}
+
+/**
+ * Yield Seerr requests page-by-page so the caller can stop as soon as it has
+ * accumulated enough matched items. Used by the seerr_requests rule so the
+ * resulting collection can be filled up to the user's `limit` even when many
+ * requested items aren't present in the matched Plex section.
+ */
+export async function* iterSeerrRequests(opts: {
+  url: string;
+  apiKey: string;
+  filter?: string;
+}): AsyncGenerator<SeerrRequest, void, unknown> {
+  const { url, apiKey, filter } = opts;
   const take = 20;
   let skip = 0;
-  const all: SeerrRequest[] = [];
 
-  while (all.length < limit) {
+  while (true) {
     const reqUrl = new URL("/api/v1/request", url);
     reqUrl.searchParams.set("take", String(take));
     reqUrl.searchParams.set("skip", String(skip));
@@ -49,13 +68,12 @@ export async function fetchSeerrRequests(opts: {
     if (!res.ok) throw new Error(`Seerr API error: ${res.status} ${res.statusText}`);
 
     const data: SeerrRequestResponse = await res.json();
-    all.push(...data.results);
+    for (const r of data.results) yield r;
 
     skip += take;
-    if (skip >= data.pageInfo.results) break;
+    if (skip >= data.pageInfo.results) return;
+    if (data.results.length === 0) return;
   }
-
-  return all.slice(0, limit);
 }
 
 export async function testSeerrConnection(
