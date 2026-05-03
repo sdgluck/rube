@@ -1,4 +1,5 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { errorMessage } from "./util.ts";
 import { db } from "./db/index.ts";
 import { healthChecks } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
@@ -205,8 +206,8 @@ export async function checkAllConfiguredServices(): Promise<string> {
       await checkServiceHealth(svc.service);
       results.push(`${svc.service}: ok`);
     } catch (err) {
-      reportHealth(svc.service, "error", (err as Error).message);
-      results.push(`${svc.service}: error — ${(err as Error).message}`);
+      reportHealth(svc.service, "error", errorMessage(err));
+      results.push(`${svc.service}: error — ${errorMessage(err)}`);
     }
   }
 

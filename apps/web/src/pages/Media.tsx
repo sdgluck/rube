@@ -5,10 +5,12 @@ import { trpc } from "../trpc";
 import { MediaSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
 import FadeImage from "../FadeImage";
+import { readEnumStorage } from "../storage";
 import styles from "./Collections.module.css";
 import mediaStyles from "./Media.module.css";
 
-type ViewMode = "table" | "grid";
+const VIEW_MODES = ["table", "grid"] as const;
+type ViewMode = (typeof VIEW_MODES)[number];
 
 const TYPE_OPTIONS = [
   { value: "", label: "All types" },
@@ -66,18 +68,7 @@ const ADVANCED_FILTER_KEYS = ["res", "vcodec", "acodec", "ach", "container"] as 
 
 const PAGE_SIZE = 50;
 
-type SortKey =
-  | "title"
-  | "section"
-  | "type"
-  | "year"
-  | "resolution"
-  | "videoCodec"
-  | "audioCodec"
-  | "audioChannels"
-  | "container";
-type SortDir = "asc" | "desc";
-const VALID_SORT_KEYS: Set<string> = new Set([
+const SORT_KEYS = [
   "title",
   "section",
   "type",
@@ -87,10 +78,12 @@ const VALID_SORT_KEYS: Set<string> = new Set([
   "audioCodec",
   "audioChannels",
   "container",
-]);
+] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+type SortDir = "asc" | "desc";
 
 interface ColumnDef {
-  id: string;
+  id: SortKey;
   label: string;
   render: (item: MediaItem) => string;
 }
@@ -267,12 +260,9 @@ export default function Media() {
   const typeFilter = searchParams.get("type") ?? "";
   const search = searchParams.get("q") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("media-view") as ViewMode) || "table");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("media-view", VIEW_MODES, "table"));
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    const stored = localStorage.getItem("media-sort-key");
-    return stored && VALID_SORT_KEYS.has(stored) ? (stored as SortKey) : "title";
-  });
+  const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("media-sort-key", SORT_KEYS, "title"));
   const [sortDir, setSortDir] = useState<SortDir>(() => {
     const stored = localStorage.getItem("media-sort-dir");
     return stored === "desc" ? "desc" : "asc";
@@ -609,9 +599,9 @@ export default function Media() {
             <thead>
               <tr>
                 {visibleColumns.map((col) => (
-                  <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id as SortKey)}>
+                  <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id)}>
                     {col.label}
-                    {sortIndicator(col.id as SortKey)}
+                    {sortIndicator(col.id)}
                   </th>
                 ))}
               </tr>

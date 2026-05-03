@@ -40,47 +40,29 @@ export async function syncMedia(
 
   for (const section of sections) {
     for await (const { item, totalSize } of client.allItems(section.key)) {
-      const ratingKey = item.ratingKey as string;
+      const ratingKey = item.ratingKey;
+      if (!ratingKey) continue;
       seenKeys.add(ratingKey);
 
-      const media = (item.Media as Array<Record<string, unknown>>)?.[0];
+      const media = item.Media?.[0];
+      const values = {
+        ratingKey,
+        sectionId: section.key,
+        sectionTitle: section.title,
+        title: item.title ?? "",
+        year: item.year ?? null,
+        thumb: item.thumb ?? null,
+        type: item.type ?? "",
+        addedAt: item.addedAt ?? null,
+        videoResolution: media?.videoResolution ?? null,
+        videoCodec: media?.videoCodec ?? null,
+        audioCodec: media?.audioCodec ?? null,
+        audioChannels: media?.audioChannels ?? null,
+        container: media?.container ?? null,
+        syncedAt: now,
+      };
 
-      db.insert(mediaItems)
-        .values({
-          ratingKey,
-          sectionId: section.key,
-          sectionTitle: section.title,
-          title: item.title as string,
-          year: (item.year as number) ?? null,
-          thumb: (item.thumb as string) ?? null,
-          type: item.type as string,
-          addedAt: (item.addedAt as number) ?? null,
-          videoResolution: (media?.videoResolution as string) ?? null,
-          videoCodec: (media?.videoCodec as string) ?? null,
-          audioCodec: (media?.audioCodec as string) ?? null,
-          audioChannels: (media?.audioChannels as number) ?? null,
-          container: (media?.container as string) ?? null,
-          syncedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: mediaItems.ratingKey,
-          set: {
-            sectionId: section.key,
-            sectionTitle: section.title,
-            title: item.title as string,
-            year: (item.year as number) ?? null,
-            thumb: (item.thumb as string) ?? null,
-            type: item.type as string,
-            addedAt: (item.addedAt as number) ?? null,
-            videoResolution: (media?.videoResolution as string) ?? null,
-            videoCodec: (media?.videoCodec as string) ?? null,
-            audioCodec: (media?.audioCodec as string) ?? null,
-            audioChannels: (media?.audioChannels as number) ?? null,
-            container: (media?.container as string) ?? null,
-            syncedAt: now,
-          },
-        })
-        .run();
+      db.insert(mediaItems).values(values).onConflictDoUpdate({ target: mediaItems.ratingKey, set: values }).run();
       synced++;
 
       if (onProgress) {

@@ -1,4 +1,5 @@
 import PQueue from "p-queue";
+import { errorMessage } from "../util.ts";
 import { createPlexClient } from "../plex.ts";
 import { getConfig } from "../config.ts";
 import {
@@ -10,7 +11,6 @@ import {
   resolveOverlayValue,
   compositeOverlays,
   type Badge,
-  type OverlayType,
 } from "../overlays.ts";
 import { extractImdbId, getOmdbRatings } from "../omdb.ts";
 import type { JobContext, OverlaysJobConfig } from "../shared/job-context.ts";
@@ -110,7 +110,7 @@ async function runApply(
           const badges: Badge[] = [];
           for (const cfg of configs) {
             const value = resolveOverlayValue(
-              cfg.overlayType as OverlayType,
+              cfg.overlayType,
               {
                 videoResolution: mediaInfo.videoResolution,
                 videoCodec: mediaInfo.videoCodec,
@@ -128,8 +128,8 @@ async function runApply(
             );
             if (value) {
               badges.push({
-                position: cfg.position as Badge["position"],
-                type: cfg.overlayType as OverlayType,
+                position: cfg.position,
+                type: cfg.overlayType,
                 value,
               });
             }
@@ -156,7 +156,7 @@ async function runApply(
             totalOverlaid++;
           }
         } catch (err) {
-          ctx.log(`Error processing ${ratingKey}: ${(err as Error).message}`);
+          ctx.log(`Error processing ${ratingKey}: ${errorMessage(err)}`);
         }
 
         totalProcessed++;
@@ -197,7 +197,7 @@ async function runRemove(
           removeOriginalPoster(item.ratingKey);
           totalRestored++;
         } catch (err) {
-          ctx.log(`Error restoring ${item.ratingKey}: ${(err as Error).message}`);
+          ctx.log(`Error restoring ${item.ratingKey}: ${errorMessage(err)}`);
         }
 
         totalProcessed++;

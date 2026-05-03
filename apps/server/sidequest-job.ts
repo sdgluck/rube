@@ -1,14 +1,16 @@
 import { Job } from "sidequest";
+import { errorMessage } from "./util.ts";
 import { eq } from "drizzle-orm";
 import { db } from "./db/index.ts";
 import { jobRuns } from "./db/schema.ts";
 import { emitEvent } from "./events.ts";
-import type {
-  JobContext,
-  CommonJobConfig,
-  GenerateJobConfig,
-  BywJobConfig,
-  OverlaysJobConfig,
+import {
+  commonJobConfigSchema,
+  type JobContext,
+  type CommonJobConfig,
+  type GenerateJobConfig,
+  type BywJobConfig,
+  type OverlaysJobConfig,
 } from "./shared/job-context.ts";
 
 function formatDuration(ms: number): string {
@@ -72,11 +74,17 @@ export class CommandJob extends Job {
       signal: controller.signal,
     };
 
-    let jobConfig: Record<string, unknown> = {};
+    let jobConfig: CommonJobConfig = {};
     try {
-      jobConfig = JSON.parse(configJson);
+      const raw = JSON.parse(configJson);
+      const parsed = commonJobConfigSchema.passthrough().safeParse(raw);
+      if (parsed.success) {
+        jobConfig = parsed.data;
+      } else {
+        console.warn(`[jobs] Invalid config for ${jobName}:`, parsed.error.message);
+      }
     } catch (err) {
-      console.warn(`[jobs] Failed to parse config for ${jobName}:`, (err as Error).message);
+      console.warn(`[jobs] Failed to parse config for ${jobName}:`, errorMessage(err));
     }
 
     // Periodic flush of log/progress to the DB
@@ -104,7 +112,7 @@ export class CommandJob extends Job {
         throw new Error(`Unknown command: ${commandName}`);
       }
 
-      await commandFn(ctx, jobConfig as CommonJobConfig);
+      await commandFn(ctx, jobConfig);
 
       flushLog();
 
@@ -131,7 +139,7 @@ export class CommandJob extends Job {
         return this.complete({ cancelled: true });
       }
 
-      const errorMsg = (err as Error).message;
+      const errorMsg = errorMessage(err);
       logBuffer += `\nError: ${errorMsg}\n`;
       flushLog();
 

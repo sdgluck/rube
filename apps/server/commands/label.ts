@@ -1,4 +1,5 @@
 import { createPlexClient } from "../plex.ts";
+import { errorMessage } from "../util.ts";
 import { getConfig } from "../config.ts";
 import type { JobContext, CommonJobConfig } from "../shared/job-context.ts";
 
@@ -76,7 +77,7 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
       ctx.log(`Set sharing restriction for ${sharing.username}`);
       configured++;
     } catch (err) {
-      ctx.log(`Failed to set restriction for ${sharing.username}: ${(err as Error).message}`);
+      ctx.log(`Failed to set restriction for ${sharing.username}: ${errorMessage(err)}`);
     }
   }
 

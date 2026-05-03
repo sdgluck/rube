@@ -1,41 +1,23 @@
 import { eq } from "drizzle-orm";
 import sharp from "sharp";
+import { z } from "zod";
 import { db } from "./db/index.ts";
 import { overlayConfigs, overlayOriginals } from "./db/schema.ts";
 
 // ─── Overlay types ──────────────────────────────────────────────────────────
 
-export type OverlayPosition =
-  | "top-left"
-  | "top-center"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-center"
-  | "bottom-right";
-
-export type OverlayType =
-  | "resolution"
-  | "video_codec"
-  | "audio_codec"
-  | "content_rating"
-  | "imdb_rating"
-  | "rt_rating"
-  | "hdr"
-  | "audio_channels"
-  | "edition"
-  | "studio"
-  | "runtime";
-
-export const OVERLAY_POSITIONS: OverlayPosition[] = [
+export const overlayPositionSchema = z.enum([
   "top-left",
   "top-center",
   "top-right",
   "bottom-left",
   "bottom-center",
   "bottom-right",
-];
+]);
+export type OverlayPosition = z.infer<typeof overlayPositionSchema>;
+export const OVERLAY_POSITIONS = overlayPositionSchema.options;
 
-export const OVERLAY_TYPES: OverlayType[] = [
+export const overlayTypeSchema = z.enum([
   "resolution",
   "video_codec",
   "audio_codec",
@@ -47,12 +29,34 @@ export const OVERLAY_TYPES: OverlayType[] = [
   "edition",
   "studio",
   "runtime",
-];
+]);
+export type OverlayType = z.infer<typeof overlayTypeSchema>;
+export const OVERLAY_TYPES = overlayTypeSchema.options;
+
+const overlayConfigRowSchema = z.object({
+  id: z.string(),
+  sectionId: z.string(),
+  position: overlayPositionSchema,
+  overlayType: overlayTypeSchema,
+  createdAt: z.number(),
+});
+export type OverlayConfigRow = z.infer<typeof overlayConfigRowSchema>;
+
+function parseOverlayRows(rows: unknown[]): OverlayConfigRow[] {
+  const out: OverlayConfigRow[] = [];
+  for (const r of rows) {
+    const parsed = overlayConfigRowSchema.safeParse(r);
+    if (parsed.success) out.push(parsed.data);
+    else console.warn("[overlays] dropping invalid overlayConfigs row:", parsed.error.message);
+  }
+  return out;
+}
 
 // ─── Config CRUD ────────────────────────────────────────────────────────────
 
-export function getOverlayConfigs(sectionId: string) {
-  return db.select().from(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).all();
+export function getOverlayConfigs(sectionId: string): OverlayConfigRow[] {
+  const rows = db.select().from(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).all();
+  return parseOverlayRows(rows);
 }
 
 export function setOverlayConfig(sectionId: string, position: OverlayPosition, overlayType: OverlayType) {

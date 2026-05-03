@@ -8,10 +8,12 @@ import FadeImage from "../FadeImage";
 import RelativeTime from "../RelativeTime";
 import { useToast } from "../Toast";
 import useSwipeBack from "../useSwipeBack";
+import { readEnumStorage } from "../storage";
 import styles from "./Collections.module.css";
 import SmartFiltersEditor from "./SmartFiltersEditor";
 
-type ViewMode = "table" | "grid";
+const VIEW_MODES = ["table", "grid"] as const;
+type ViewMode = (typeof VIEW_MODES)[number];
 
 export default function CollectionDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
@@ -23,8 +25,8 @@ export default function CollectionDetail() {
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
   const [labelInput, setLabelInput] = useState("");
-  const [itemsView, setItemsView] = useState<ViewMode>(
-    () => (localStorage.getItem("collection-items-view") as ViewMode) || "table",
+  const [itemsView, setItemsView] = useState<ViewMode>(() =>
+    readEnumStorage("collection-items-view", VIEW_MODES, "table"),
   );
   const { addToast } = useToast();
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);

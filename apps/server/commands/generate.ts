@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { errorMessage } from "../util.ts";
 import PQueue from "p-queue";
+import { z } from "zod";
 import { createPlexClient, type PlexClient, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
 import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../rules.ts";
@@ -13,15 +15,16 @@ interface AiCollection {
   items: string[];
 }
 
-interface RuleConfig {
-  prompt?: string;
-  limit?: number;
-  minItems?: number;
-  sections?: string[];
-  chart?: string;
-  listId?: string;
-  filter?: string;
-}
+const ruleConfigSchema = z.object({
+  prompt: z.string().optional(),
+  limit: z.number().optional(),
+  minItems: z.number().optional(),
+  sections: z.array(z.string()).optional(),
+  chart: z.string().optional(),
+  listId: z.string().optional(),
+  filter: z.string().optional(),
+});
+type RuleConfig = z.infer<typeof ruleConfigSchema>;
 
 async function fetchImdbChartNormalized(id: string): Promise<{ name: string; imdbIds: string[] }> {
   return fetchImdbChart(id);
@@ -33,7 +36,12 @@ async function fetchImdbListNormalized(id: string): Promise<{ name: string; imdb
 }
 
 function parseRuleConfig(rule: Rule): RuleConfig {
-  return (rule.config ?? {}) as RuleConfig;
+  const parsed = ruleConfigSchema.safeParse(rule.config ?? {});
+  if (!parsed.success) {
+    console.warn(`[generate] rule "${rule.name}" has invalid config:`, parsed.error.message);
+    return {};
+  }
+  return parsed.data;
 }
 
 function parseJSON(ctx: JobContext, text: string): AiCollection[] {
@@ -136,7 +144,7 @@ ${itemList}`,
         `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
       );
     } catch (err) {
-      reportHealth("Claude AI", "error", (err as Error).message);
+      reportHealth("Claude AI", "error", errorMessage(err));
       throw err;
     }
 
@@ -660,7 +668,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
             `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
           );
         } catch (err) {
-          reportHealth("Claude AI", "error", (err as Error).message);
+          reportHealth("Claude AI", "error", errorMessage(err));
           throw err;
         }
         log(
@@ -780,10 +788,9 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         }
         log(`[${tag}] ${imdbToItem.size} items have IMDb IDs in "${section.title}"`);
 
-        const matched = imdbIds.map((id) => imdbToItem.get(id)).filter(Boolean) as Array<{
-          title: string;
-          year?: number;
-        }>;
+        const matched = imdbIds
+          .map((id) => imdbToItem.get(id))
+          .filter((m): m is { title: string; year?: number } => m !== undefined);
         log(`[${tag}] Matched ${matched.length}/${imdbIds.length} entries in "${section.title}"`);
         if (matched.length === 0) continue;
         collections.push({ name: contentName, sectionTitle: section.title, items: matched });
@@ -882,10 +889,9 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         }
         log(`[seerr_requests] ${tmdbToItem.size} items have TMDB IDs in "${section.title}"`);
 
-        const matched = sectionRequests.map((r) => tmdbToItem.get(r.media.tmdbId)).filter(Boolean) as Array<{
-          title: string;
-          year?: number;
-        }>;
+        const matched = sectionRequests
+          .map((r) => tmdbToItem.get(r.media.tmdbId))
+          .filter((m): m is { title: string; year?: number } => m !== undefined);
         log(`[seerr_requests] Matched ${matched.length}/${sectionRequests.length} requests in "${section.title}"`);
         if (matched.length === 0) continue;
         collections.push({ name: rule.name, sectionTitle: section.title, items: matched });

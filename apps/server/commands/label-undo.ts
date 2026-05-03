@@ -1,4 +1,5 @@
 import { createPlexClient } from "../plex.ts";
+import { errorMessage } from "../util.ts";
 import { getConfig } from "../config.ts";
 import type { JobContext, CommonJobConfig } from "../shared/job-context.ts";
 
@@ -90,7 +91,7 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
       ctx.log(`Cleared sharing restrictions for ${sharing.username}`);
       cleared++;
     } catch (err) {
-      ctx.log(`Failed to clear restrictions for ${sharing.username}: ${(err as Error).message}`);
+      ctx.log(`Failed to clear restrictions for ${sharing.username}: ${errorMessage(err)}`);
     }
   }
 

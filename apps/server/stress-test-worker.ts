@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { errorMessage } from "./util.ts";
 import { db } from "./db/index.ts";
 import { stressTestRuns } from "./db/schema.ts";
 import { createPlexClient } from "./plex.ts";
@@ -108,7 +109,7 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
     clearInterval(flushTimer);
     clearInterval(cancelTimer);
 
-    logBuffer += `\nError: ${(err as Error).message}\n`;
+    logBuffer += `\nError: ${errorMessage(err)}\n`;
     flushToDb();
 
     // Check if cancelled
@@ -119,7 +120,7 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
       .get();
     if (finalRow?.status !== "cancelled") {
       db.update(stressTestRuns)
-        .set({ status: "failed", message: (err as Error).message, finishedAt: Date.now() })
+        .set({ status: "failed", message: errorMessage(err), finishedAt: Date.now() })
         .where(eq(stressTestRuns.id, id))
         .run();
     }

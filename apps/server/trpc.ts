@@ -1,4 +1,5 @@
 import { initTRPC } from "@trpc/server";
+import { errorMessage } from "./util.ts";
 import { z } from "zod";
 import { getAllConfig, getConfig, setConfig, configSchema, type ConfigKey } from "./config.ts";
 import { createPlexClient, type PlexClient } from "./plex.ts";
@@ -31,10 +32,8 @@ import {
   getOverlaidItemCount,
   resolveOverlayValue,
   compositeOverlays,
-  OVERLAY_POSITIONS,
-  OVERLAY_TYPES,
-  type OverlayPosition,
-  type OverlayType,
+  overlayPositionSchema,
+  overlayTypeSchema,
   type Badge,
 } from "./overlays.ts";
 import { extractImdbId, getOmdbRatings } from "./omdb.ts";
@@ -510,19 +509,19 @@ const overlaysRouter = t.router({
     .input(
       z.object({
         sectionId: z.string(),
-        position: z.enum(OVERLAY_POSITIONS as [string, ...string[]]),
-        overlayType: z.enum(OVERLAY_TYPES as [string, ...string[]]),
+        position: overlayPositionSchema,
+        overlayType: overlayTypeSchema,
       }),
     )
     .mutation(({ input }) => {
-      setOverlayConfig(input.sectionId, input.position as OverlayPosition, input.overlayType as OverlayType);
+      setOverlayConfig(input.sectionId, input.position, input.overlayType);
       return { ok: true };
     }),
 
   removeConfig: t.procedure
-    .input(z.object({ sectionId: z.string(), position: z.enum(OVERLAY_POSITIONS as [string, ...string[]]) }))
+    .input(z.object({ sectionId: z.string(), position: overlayPositionSchema }))
     .mutation(({ input }) => {
-      removeOverlayConfig(input.sectionId, input.position as OverlayPosition);
+      removeOverlayConfig(input.sectionId, input.position);
       return { ok: true };
     }),
 
@@ -572,7 +571,7 @@ const overlaysRouter = t.router({
       const values: Record<string, string | null> = {};
       for (const cfg of configs) {
         values[cfg.position] = resolveOverlayValue(
-          cfg.overlayType as OverlayType,
+          cfg.overlayType,
           {
             videoResolution: mediaInfo.videoResolution,
             videoCodec: mediaInfo.videoCodec,
@@ -617,7 +616,7 @@ const overlaysRouter = t.router({
       const badges: Badge[] = [];
       for (const cfg of configs) {
         const value = resolveOverlayValue(
-          cfg.overlayType as OverlayType,
+          cfg.overlayType,
           {
             videoResolution: mediaInfo.videoResolution,
             videoCodec: mediaInfo.videoCodec,
@@ -635,8 +634,8 @@ const overlaysRouter = t.router({
         );
         if (value) {
           badges.push({
-            position: cfg.position as Badge["position"],
-            type: cfg.overlayType as OverlayType,
+            position: cfg.position,
+            type: cfg.overlayType,
             value,
           });
         }
@@ -683,8 +682,8 @@ const healthRouter = t.router({
       await checkServiceHealth(input.service);
       return { ok: true as const };
     } catch (err) {
-      reportHealth(input.service, "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
+      reportHealth(input.service, "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
     }
   }),
 });
@@ -780,8 +779,8 @@ export const appRouter = t.router({
         reportHealth("Plex", "ok", `Connected — ${name}`);
         return { ok: true as const, serverName: name };
       } catch (err) {
-        reportHealth("Plex", "error", (err as Error).message);
-        return { ok: false as const, error: (err as Error).message };
+        reportHealth("Plex", "error", errorMessage(err));
+        return { ok: false as const, error: errorMessage(err) };
       }
     }),
 
@@ -791,8 +790,8 @@ export const appRouter = t.router({
       reportHealth("Radarr", "ok", `Connected — ${instanceName}`);
       return { ok: true as const, instanceName };
     } catch (err) {
-      reportHealth("Radarr", "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
+      reportHealth("Radarr", "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
     }
   }),
 
@@ -802,8 +801,8 @@ export const appRouter = t.router({
       reportHealth("Sonarr", "ok", `Connected — ${instanceName}`);
       return { ok: true as const, instanceName };
     } catch (err) {
-      reportHealth("Sonarr", "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
+      reportHealth("Sonarr", "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
     }
   }),
 
@@ -814,8 +813,8 @@ export const appRouter = t.router({
       reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
       return { ok: true as const, total: data.total };
     } catch (err) {
-      reportHealth("Seerr", "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
+      reportHealth("Seerr", "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
     }
   }),
 
@@ -830,8 +829,8 @@ export const appRouter = t.router({
       reportHealth("OMDB", "ok", `Test query OK — ${data.Title}`);
       return { ok: true as const, title: data.Title as string };
     } catch (err) {
-      reportHealth("OMDB", "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
+      reportHealth("OMDB", "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
     }
   }),
 
@@ -847,15 +846,15 @@ export const appRouter = t.router({
       reportHealth("MDBList", "ok", `Connected — ${name}`);
       return { ok: true as const, name };
     } catch (err) {
-      reportHealth("MDBList", "error", (err as Error).message);
-      return { ok: false as const, error: (err as Error).message };
+      reportHealth("MDBList", "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
     }
   }),
 
   testNotification: procedure
     .input(
       z.object({
-        service: z.enum(NOTIFICATION_SERVICES as unknown as [string, ...string[]]),
+        service: z.enum(NOTIFICATION_SERVICES),
       }),
     )
     .mutation(async ({ input }) => {
@@ -879,8 +878,8 @@ export const appRouter = t.router({
         reportHealth(healthName, "ok", "Test notification sent");
         return { ok: true as const };
       } catch (err) {
-        reportHealth(healthName, "error", (err as Error).message);
-        return { ok: false as const, error: (err as Error).message };
+        reportHealth(healthName, "error", errorMessage(err));
+        return { ok: false as const, error: errorMessage(err) };
       }
     }),
 

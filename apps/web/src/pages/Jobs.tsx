@@ -10,6 +10,7 @@ import { JobsSkeleton } from "../Skeleton";
 import ToggleSwitch from "../ToggleSwitch";
 import { useToast } from "../Toast";
 import PullToRefresh from "../PullToRefresh";
+import { readEnumStorage } from "../storage";
 import styles from "./Jobs.module.css";
 import shared from "./Collections.module.css";
 
@@ -46,7 +47,8 @@ function formatTimeUntil(ms: number): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-type SortKey = "name" | "schedule" | "enabled" | "lastRun" | "lastRunStatus";
+const SORT_KEYS = ["name", "schedule", "enabled", "lastRun", "lastRunStatus"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
 type SortDir = "asc" | "desc";
 
 // ─── Main component ─────────────────────────────────────────────────────────
@@ -92,12 +94,7 @@ export default function Jobs() {
     onSettled: () => utils.jobs.list.invalidate(),
   });
 
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    const stored = localStorage.getItem("jobs-sort-key");
-    return stored && ["name", "schedule", "enabled", "lastRun", "lastRunStatus"].includes(stored)
-      ? (stored as SortKey)
-      : "name";
-  });
+  const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("jobs-sort-key", SORT_KEYS, "name"));
   const [sortDir, setSortDir] = useState<SortDir>(() => {
     const stored = localStorage.getItem("jobs-sort-dir");
     return stored === "desc" ? "desc" : "asc";

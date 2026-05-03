@@ -6,6 +6,7 @@
  */
 
 import { eq, isNotNull, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "./db/index.ts";
 import { statsCache, jobs, mediaItems, plexUsers } from "./db/schema.ts";
 import { createPlexClient } from "./plex.ts";
@@ -13,6 +14,23 @@ import { getConfig } from "./config.ts";
 import type { PlexRecentItem } from "./plex.ts";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
+
+const plexRecentItemSchema = z.object({
+  ratingKey: z.string(),
+  title: z.string(),
+  year: z.number().optional(),
+  thumb: z.string().optional(),
+  type: z.string(),
+  addedAt: z.number(),
+});
+
+const mostWatchedItemSchema = z.object({
+  title: z.string(),
+  year: z.number().optional(),
+  type: z.string(),
+  grandparentTitle: z.string().optional(),
+  plays: z.number(),
+});
 
 function writeCache(key: string, data: unknown): void {
   db.insert(statsCache)
@@ -24,10 +42,15 @@ function writeCache(key: string, data: unknown): void {
     .run();
 }
 
-function readCache<T>(key: string): T | null {
+function readCache<T>(key: string, schema: z.ZodType<T>): T | null {
   const row = db.select().from(statsCache).where(eq(statsCache.key, key)).get();
   if (!row) return null;
-  return row.data as T;
+  const parsed = schema.safeParse(row.data);
+  if (!parsed.success) {
+    console.warn(`[stats] cached "${key}" failed validation:`, parsed.error.message);
+    return null;
+  }
+  return parsed.data;
 }
 
 // ─── Plex client (returns null when not configured) ───────────────────────────
@@ -89,13 +112,13 @@ export async function syncMostWatched(): Promise<string> {
 // ─── Read functions (called by tRPC endpoints) ───────────────────────────────
 
 export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled: boolean } {
-  const items = readCache<PlexRecentItem[]>("recentlyAdded") ?? [];
+  const items = readCache("recentlyAdded", z.array(plexRecentItemSchema)) ?? [];
   const job = db.select({ enabled: jobs.enabled }).from(jobs).where(eq(jobs.id, "sync-recently-added")).get();
   return { items, jobEnabled: job?.enabled === 1 };
 }
 
 export function getCachedMostWatched(): MostWatchedItem[] {
-  return readCache<MostWatchedItem[]>("mostWatched") ?? [];
+  return readCache("mostWatched", z.array(mostWatchedItemSchema)) ?? [];
 }
 
 // ─── Library overview (aggregated from local cache) ─────────────────────────

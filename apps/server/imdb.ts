@@ -1,4 +1,18 @@
+import { z } from "zod";
 import { reportHealth } from "./health.ts";
+import { errorMessage } from "./util.ts";
+
+const itemListBlockSchema = z.object({
+  itemListElement: z
+    .array(
+      z.object({
+        url: z.string().optional(),
+        item: z.object({ url: z.string().optional() }).optional(),
+      }),
+    )
+    .optional(),
+  name: z.string().optional(),
+});
 
 const IMDB_CHARTS: Record<string, { name: string; path: string }> = {
   top_250_movies: { name: "IMDb Top 250 Movies", path: "/chart/top/" },
@@ -28,14 +42,10 @@ function extractJsonLd(html: string): unknown[] {
 function extractImdbIdsFromItemList(jsonLd: unknown[]): string[] {
   const ids: string[] = [];
   for (const block of jsonLd) {
-    if (typeof block !== "object" || block === null) continue;
-    const obj = block as Record<string, unknown>;
-    const elements = obj.itemListElement as Array<Record<string, unknown>> | undefined;
-    if (!Array.isArray(elements)) continue;
-
-    for (const el of elements) {
-      const item = el.item as Record<string, unknown> | undefined;
-      const url = (item?.url as string) || (el.url as string) || "";
+    const parsed = itemListBlockSchema.safeParse(block);
+    if (!parsed.success) continue;
+    for (const el of parsed.data.itemListElement ?? []) {
+      const url = el.item?.url ?? el.url ?? "";
       const idMatch = url.match(/\/title\/(tt\d+)/);
       if (idMatch) ids.push(idMatch[1]);
     }
@@ -53,7 +63,7 @@ export async function fetchImdbChart(chartId: string): Promise<{ name: string; i
       headers: { "User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
     });
   } catch (err) {
-    reportHealth("IMDb", "error", `GET ${chart.path} → ${(err as Error).message}`);
+    reportHealth("IMDb", "error", `GET ${chart.path} → ${errorMessage(err)}`);
     throw err;
   }
   if (!res.ok) {
@@ -88,7 +98,7 @@ export async function fetchImdbList(listIdOrUrl: string): Promise<{ title: strin
       headers: { "User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
     });
   } catch (err) {
-    reportHealth("IMDb", "error", `GET /list/${listId} → ${(err as Error).message}`);
+    reportHealth("IMDb", "error", `GET /list/${listId} → ${errorMessage(err)}`);
     throw err;
   }
   if (!res.ok) {
@@ -104,12 +114,10 @@ export async function fetchImdbList(listIdOrUrl: string): Promise<{ title: strin
   // Extract list title from JSON-LD or <title> tag
   let title = listId;
   for (const block of jsonLd) {
-    if (typeof block === "object" && block !== null) {
-      const name = (block as Record<string, unknown>).name as string | undefined;
-      if (name) {
-        title = name;
-        break;
-      }
+    const parsed = itemListBlockSchema.safeParse(block);
+    if (parsed.success && parsed.data.name) {
+      title = parsed.data.name;
+      break;
     }
   }
 

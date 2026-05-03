@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { errorMessage } from "../util.ts";
 import { createPlexClient, type PlexItem } from "../plex.ts";
 import { getConfig } from "../config.ts";
 import { reportHealth } from "../health.ts";
@@ -155,7 +156,7 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
             aiCollections.push(col);
           }
         } catch (err) {
-          ctx.log(`Failed to generate collection for "${title}": ${(err as Error).message}`);
+          ctx.log(`Failed to generate collection for "${title}": ${errorMessage(err)}`);
         }
       }
       ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
@@ -289,7 +290,7 @@ ${itemList}`,
       `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
     );
   } catch (err) {
-    reportHealth("Claude AI", "error", (err as Error).message);
+    reportHealth("Claude AI", "error", errorMessage(err));
     throw err;
   }
 

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { trpc } from "../trpc";
+import type { OverlayPosition, OverlayType } from "@server/overlays.ts";
 import styles from "./Overlays.module.css";
 
 const POSITIONS = [
@@ -141,7 +142,7 @@ export default function Overlays() {
   const usedTypes = new Set(configs.map((c) => c.overlayType));
 
   const handleDrop = useCallback(
-    (position: string, overlayType: string) => {
+    (position: OverlayPosition, overlayType: OverlayType) => {
       setDragOverPosition(null);
       setConfigMutation.mutate({
         sectionId,
@@ -153,7 +154,7 @@ export default function Overlays() {
   );
 
   const handleRemove = useCallback(
-    (position: string) => {
+    (position: OverlayPosition) => {
       removeConfigMutation.mutate({ sectionId, position });
     },
     [sectionId, removeConfigMutation],
@@ -243,7 +244,8 @@ export default function Overlays() {
                       onDragLeave={() => setDragOverPosition(null)}
                       onDrop={(e) => {
                         e.preventDefault();
-                        const type = e.dataTransfer.getData("text/plain");
+                        const raw = e.dataTransfer.getData("text/plain");
+                        const type = OVERLAY_CHIPS.find((c) => c.type === raw)?.type;
                         if (type) handleDrop(pos.id, type);
                       }}
                     >

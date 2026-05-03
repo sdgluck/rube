@@ -1,27 +1,31 @@
 import { randomUUID } from "node:crypto";
+import { errorMessage } from "./util.ts";
 import { fork, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
 import { eq, desc } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "./db/index.ts";
 import { stressTestRuns } from "./db/schema.ts";
 import type { PlexClient } from "./plex.ts";
 import { getConfig } from "./config.ts";
 import type { JobContext } from "./shared/job-context.ts";
 
-export interface StressTestConfig {
-  mode: "transcode" | "directplay" | "mixed";
-  transcodePct?: number;
-  maxSessions?: number;
-}
+export const stressTestConfigSchema = z.object({
+  mode: z.enum(["transcode", "directplay", "mixed"]),
+  transcodePct: z.number().optional(),
+  maxSessions: z.number().optional(),
+});
+export type StressTestConfig = z.infer<typeof stressTestConfigSchema>;
 
-export interface StressTestStep {
-  step: number;
-  sessions: number;
-  avgTranscodeSpeed: number | null;
-  avgBandwidth: number;
-  errors: number;
-  timestamp: number;
-}
+export const stressTestStepSchema = z.object({
+  step: z.number(),
+  sessions: z.number(),
+  avgTranscodeSpeed: z.number().nullable(),
+  avgBandwidth: z.number(),
+  errors: z.number(),
+  timestamp: z.number(),
+});
+export type StressTestStep = z.infer<typeof stressTestStepSchema>;
 
 export interface StressTestResult {
   config: StressTestConfig;
@@ -393,7 +397,7 @@ export async function runStressTest(
         clients.push(simClient);
         usedRatingKeys.add(ratingKey);
       } catch (err) {
-        ctx.log(`Step ${step}: Failed to start session: ${(err as Error).message}`);
+        ctx.log(`Step ${step}: Failed to start session: ${errorMessage(err)}`);
         steps.push({
           step,
           sessions: clients.length,
@@ -529,7 +533,7 @@ export function saveStressTestResult(id: string, result: StressTestResult): void
   db.insert(stressTestRuns)
     .values({
       id,
-      config: result.config as unknown as Record<string, unknown>,
+      config: result.config,
       maxSessions: result.maxSessions,
       steps: result.steps,
       status: "completed",
@@ -539,7 +543,7 @@ export function saveStressTestResult(id: string, result: StressTestResult): void
     .onConflictDoUpdate({
       target: stressTestRuns.id,
       set: {
-        config: result.config as unknown as Record<string, unknown>,
+        config: result.config,
         maxSessions: result.maxSessions,
         steps: result.steps,
         status: "completed",
@@ -572,7 +576,7 @@ export function getStressTestRuns(): Array<{
 
   return rows.map((r) => ({
     ...r,
-    config: r.config as unknown as StressTestConfig,
+    config: stressTestConfigSchema.parse(r.config),
   }));
 }
 
@@ -589,8 +593,8 @@ export function getStressTestRun(id: string): {
 
   return {
     ...row,
-    config: row.config as unknown as StressTestConfig,
-    steps: row.steps as unknown as StressTestStep[],
+    config: stressTestConfigSchema.parse(row.config),
+    steps: z.array(stressTestStepSchema).parse(row.steps),
   };
 }
 
@@ -615,7 +619,7 @@ export function startStressTest(config: StressTestConfig): { id: string } {
   db.insert(stressTestRuns)
     .values({
       id,
-      config: config as unknown as Record<string, unknown>,
+      config,
       maxSessions: null,
       steps: [],
       status: "running",

@@ -7,9 +7,168 @@
  */
 
 import PQueue from "p-queue";
+import { z } from "zod";
 import { reportHealth } from "./health.ts";
+import { errorMessage } from "./util.ts";
 
 export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
+
+// ─── Plex API response schemas ─────────────────────────────────────────────
+// Permissive: passthrough preserves unknown fields (Plex adds them silently),
+// safeParse drops malformed items with a warning rather than throwing.
+
+const plexStreamRawSchema = z
+  .object({
+    streamType: z.number().optional(),
+    codec: z.string().optional(),
+    displayTitle: z.string().optional(),
+    bitrate: z.number().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    frameRate: z.union([z.number(), z.string()]).optional(),
+    profile: z.string().optional(),
+    level: z.number().optional(),
+    bitDepth: z.number().optional(),
+    chromaSubsampling: z.string().optional(),
+    colorPrimaries: z.string().optional(),
+    colorRange: z.string().optional(),
+    colorSpace: z.string().optional(),
+    scanType: z.string().optional(),
+    channels: z.number().optional(),
+    audioChannelLayout: z.string().optional(),
+    samplingRate: z.number().optional(),
+    language: z.string().optional(),
+    languageCode: z.string().optional(),
+  })
+  .passthrough();
+
+const plexPartRawSchema = z
+  .object({
+    file: z.string().optional(),
+    size: z.number().optional(),
+    container: z.string().optional(),
+    duration: z.number().optional(),
+    decision: z.string().optional(),
+    audioProfile: z.string().optional(),
+    Stream: z.array(plexStreamRawSchema).optional(),
+  })
+  .passthrough();
+
+const plexMediaRawSchema = z
+  .object({
+    videoResolution: z.string().optional(),
+    videoCodec: z.string().optional(),
+    videoFrameRate: z.string().optional(),
+    videoProfile: z.string().optional(),
+    audioCodec: z.string().optional(),
+    audioChannels: z.number().optional(),
+    container: z.string().optional(),
+    bitrate: z.number().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    duration: z.number().optional(),
+    optimizedForStreaming: z.union([z.boolean(), z.number()]).optional(),
+    Part: z.array(plexPartRawSchema).optional(),
+  })
+  .passthrough();
+
+const plexPlayerRawSchema = z
+  .object({
+    title: z.string().optional(),
+    machineIdentifier: z.string().optional(),
+    product: z.string().optional(),
+    platform: z.string().optional(),
+    state: z.string().optional(),
+    local: z.union([z.boolean(), z.number()]).optional(),
+    relayed: z.union([z.boolean(), z.number()]).optional(),
+    secure: z.union([z.boolean(), z.number()]).optional(),
+    address: z.string().optional(),
+  })
+  .passthrough();
+
+const plexUserRawSchema = z
+  .object({
+    title: z.string().optional(),
+    thumb: z.string().optional(),
+  })
+  .passthrough();
+
+const plexSessionRawSchema = z
+  .object({
+    location: z.string().optional(),
+    bandwidth: z.number().optional(),
+  })
+  .passthrough();
+
+const plexTranscodeSessionRawSchema = z
+  .object({
+    videoDecision: z.string().optional(),
+    audioDecision: z.string().optional(),
+    speed: z.number().optional(),
+    progress: z.number().optional(),
+    transcodeHwEncoding: z.union([z.boolean(), z.number()]).optional(),
+    sourceVideoCodec: z.string().optional(),
+    sourceAudioCodec: z.string().optional(),
+  })
+  .passthrough();
+
+const plexLabelRawSchema = z.object({ tag: z.string() }).passthrough();
+const plexGuidRawSchema = z.object({ id: z.string() }).passthrough();
+const plexGenreRawSchema = z.object({ tag: z.string() }).passthrough();
+const plexCollectionRefRawSchema = z.object({ id: z.number(), tag: z.string() }).passthrough();
+
+const plexMetadataRawSchema = z
+  .object({
+    ratingKey: z.string().optional(),
+    title: z.string().optional(),
+    type: z.string().optional(),
+    year: z.number().optional(),
+    thumb: z.string().optional(),
+    parentThumb: z.string().optional(),
+    grandparentTitle: z.string().optional(),
+    grandparentRatingKey: z.string().optional(),
+    parentTitle: z.string().optional(),
+    parentIndex: z.number().optional(),
+    index: z.number().optional(),
+    addedAt: z.number().optional(),
+    summary: z.string().optional(),
+    contentRating: z.string().optional(),
+    duration: z.number().optional(),
+    originallyAvailableAt: z.string().optional(),
+    studio: z.string().optional(),
+    editionTitle: z.string().optional(),
+    rating: z.number().optional(),
+    audienceRating: z.number().optional(),
+    viewOffset: z.number().optional(),
+    viewCount: z.number().optional(),
+    viewedAt: z.number().optional(),
+    accountID: z.number().optional(),
+    leafCount: z.number().optional(),
+    Media: z.array(plexMediaRawSchema).optional(),
+    Player: plexPlayerRawSchema.optional(),
+    User: plexUserRawSchema.optional(),
+    Session: plexSessionRawSchema.optional(),
+    TranscodeSession: plexTranscodeSessionRawSchema.optional(),
+    Label: z.array(plexLabelRawSchema).optional(),
+    Guid: z.array(plexGuidRawSchema).optional(),
+    Genre: z.array(plexGenreRawSchema).optional(),
+    Director: z.array(plexGenreRawSchema).optional(),
+    Collection: z.array(plexCollectionRefRawSchema).optional(),
+  })
+  .passthrough();
+
+type PlexMetadataRaw = z.infer<typeof plexMetadataRawSchema>;
+
+function parseMetadataArray(raw: unknown): PlexMetadataRaw[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PlexMetadataRaw[] = [];
+  for (const item of raw) {
+    const parsed = plexMetadataRawSchema.safeParse(item);
+    if (parsed.success) out.push(parsed.data);
+    else console.warn("[plex] dropping malformed metadata item:", parsed.error.message);
+  }
+  return out;
+}
 
 interface PlexClientOptions {
   url: string;
@@ -333,7 +492,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
           await sleep(retryDelay(attempt));
           continue;
         }
-        reportHealth("Plex", "error", `${method} ${path} → ${(err as Error).message}`);
+        reportHealth("Plex", "error", `${method} ${path} → ${errorMessage(err)}`);
         throw err;
       }
 
@@ -432,9 +591,9 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const items: PlexItem[] = [];
     for await (const { item } of allItems(sectionId)) {
       items.push({
-        ratingKey: item.ratingKey as string,
-        title: item.title as string,
-        year: item.year as number | undefined,
+        ratingKey: item.ratingKey ?? "",
+        title: item.title ?? "",
+        year: item.year,
       });
     }
     return items;
@@ -495,7 +654,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
     await request(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
       method: "PUT",
-      params: opts as unknown as Record<string, number>,
+      params: { ...opts },
     });
     return true;
   }
@@ -523,7 +682,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         },
       });
     } catch (err) {
-      reportHealth("Plex.tv", "error", `${method} ${path} → ${(err as Error).message}`);
+      reportHealth("Plex.tv", "error", `${method} ${path} → ${errorMessage(err)}`);
       throw err;
     }
 
@@ -791,7 +950,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
   async function* allItems(
     sectionId: string,
     opts?: { includeGuids?: boolean },
-  ): AsyncGenerator<{ item: Record<string, unknown>; totalSize: number }> {
+  ): AsyncGenerator<{ item: PlexMetadataRaw; totalSize: number }> {
     const pageSize = 100;
     let offset = 0;
 
@@ -804,8 +963,9 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         },
       });
 
-      const batch = data?.MediaContainer?.Metadata || [];
-      if (batch.length === 0) break;
+      const batch = parseMetadataArray(data?.MediaContainer?.Metadata);
+      const rawLen = Array.isArray(data?.MediaContainer?.Metadata) ? data.MediaContainer.Metadata.length : 0;
+      if (rawLen === 0) break;
 
       const totalSize: number = data?.MediaContainer?.totalSize ?? 0;
 
@@ -813,7 +973,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         yield { item, totalSize };
       }
 
-      offset += batch.length;
+      offset += rawLen;
       if (offset >= totalSize) break;
     }
   }
@@ -829,10 +989,10 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const results: Array<{ ratingKey: string; title: string; year?: number; guids: string[] }> = [];
     for await (const { item } of allItems(sectionId, { includeGuids: true })) {
       results.push({
-        ratingKey: item.ratingKey as string,
-        title: item.title as string,
-        year: item.year as number | undefined,
-        guids: ((item.Guid as Array<{ id: string }>) || []).map((g) => g.id),
+        ratingKey: item.ratingKey ?? "",
+        title: item.title ?? "",
+        year: item.year,
+        guids: (item.Guid ?? []).map((g) => g.id),
       });
     }
     return results;
@@ -854,7 +1014,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     let processed = 0;
 
     for await (const { item, totalSize } of allItems(sectionId)) {
-      const existingLabels: string[] = ((item.Label as PlexLabel[]) || []).map((l) => l.tag);
+      const existingLabels: string[] = (item.Label ?? []).map((l) => l.tag);
 
       if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
         processed++;
@@ -865,7 +1025,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       const newLabels = [...existingLabels, label];
       const labelParams: Record<string, string | number> = {
         type: typeNum,
-        id: item.ratingKey as string,
+        id: item.ratingKey ?? "",
         "label.locked": 1,
       };
       for (let i = 0; i < newLabels.length; i++) {
@@ -877,7 +1037,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
           await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
           updated++;
         } catch (err) {
-          console.warn(`[plex] Failed to add label to item ${item.ratingKey}:`, (err as Error).message);
+          console.warn(`[plex] Failed to add label to item ${item.ratingKey}:`, errorMessage(err));
         }
         processed++;
         if (onProgress) onProgress(processed, totalSize);
@@ -921,7 +1081,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
           const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
           const labelParams: Record<string, string | number> = {
             type: typeNum,
-            id: item.ratingKey as string,
+            id: item.ratingKey ?? "",
             "label.locked": 1,
           };
           for (let i = 0; i < newLabels.length; i++) {
@@ -931,7 +1091,7 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
           await request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
           updated++;
         } catch (err) {
-          console.warn(`[plex] Failed to remove label from item ${item.ratingKey}:`, (err as Error).message);
+          console.warn(`[plex] Failed to remove label from item ${item.ratingKey}:`, errorMessage(err));
         }
         processed++;
         if (onProgress) onProgress(processed, totalSize);
@@ -984,56 +1144,54 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   async function getActiveSessions(): Promise<PlexSession[]> {
     const data = await request("/status/sessions");
-    const metadata = data?.MediaContainer?.Metadata || [];
-    return metadata.map((item: Record<string, unknown>) => {
-      const player = item.Player as Record<string, unknown> | undefined;
-      const user = item.User as Record<string, unknown> | undefined;
-      const session = item.Session as Record<string, unknown> | undefined;
-      const media = (item.Media as Array<Record<string, unknown>>)?.[0];
-      const part = (media?.Part as Array<Record<string, unknown>>)?.[0];
-      const transcode = item.TranscodeSession as Record<string, unknown> | undefined;
+    const items = parseMetadataArray(data?.MediaContainer?.Metadata);
+    return items.map((item) => {
+      const player = item.Player;
+      const user = item.User;
+      const session = item.Session;
+      const media = item.Media?.[0];
+      const part = media?.Part?.[0];
+      const transcode = item.TranscodeSession;
+      const toBool = (v: boolean | number | undefined) => (v === undefined ? undefined : v === true || v === 1);
 
       return {
-        title: item.title as string,
-        type: item.type as string,
-        year: item.year as number | undefined,
-        thumb: item.thumb as string | undefined,
-        parentThumb: item.parentThumb as string | undefined,
-        grandparentTitle: item.grandparentTitle as string | undefined,
-        parentTitle: item.parentTitle as string | undefined,
-        parentIndex: item.parentIndex as number | undefined,
-        index: item.index as number | undefined,
-        duration: (item.duration as number | undefined) ?? (media?.duration as number | undefined),
-        viewOffset: item.viewOffset as number | undefined,
-        user: (user?.title as string) || "Unknown",
-        userThumb: user?.thumb as string | undefined,
-        player: (player?.title as string) || "Unknown",
-        playerMachineId: player?.machineIdentifier as string | undefined,
-        product: player?.product as string | undefined,
-        platform: player?.platform as string | undefined,
-        state: (player?.state as string) || "playing",
-        local: player?.local !== undefined ? player.local === true || player.local === 1 : undefined,
-        relayed: player?.relayed !== undefined ? player.relayed === true || player.relayed === 1 : undefined,
-        secure: player?.secure !== undefined ? player.secure === true || player.secure === 1 : undefined,
-        address: player?.address as string | undefined,
-        location: session?.location as string | undefined,
-        bandwidth: session?.bandwidth as number | undefined,
-        decision: (part?.decision as string) || "directplay",
-        videoResolution: media?.videoResolution as string | undefined,
-        videoCodec: media?.videoCodec as string | undefined,
-        audioCodec: media?.audioCodec as string | undefined,
-        audioChannels: media?.audioChannels as number | undefined,
-        container: media?.container as string | undefined,
-        videoDecision: transcode?.videoDecision as string | undefined,
-        audioDecision: transcode?.audioDecision as string | undefined,
-        transcodeSpeed: transcode?.speed as number | undefined,
-        transcodeProgress: transcode?.progress as number | undefined,
-        transcodeHwEncoding:
-          transcode?.transcodeHwEncoding !== undefined
-            ? transcode.transcodeHwEncoding === true || transcode.transcodeHwEncoding === 1
-            : undefined,
-        sourceVideoCodec: transcode?.sourceVideoCodec as string | undefined,
-        sourceAudioCodec: transcode?.sourceAudioCodec as string | undefined,
+        title: item.title ?? "",
+        type: item.type ?? "",
+        year: item.year,
+        thumb: item.thumb,
+        parentThumb: item.parentThumb,
+        grandparentTitle: item.grandparentTitle,
+        parentTitle: item.parentTitle,
+        parentIndex: item.parentIndex,
+        index: item.index,
+        duration: item.duration ?? media?.duration,
+        viewOffset: item.viewOffset,
+        user: user?.title || "Unknown",
+        userThumb: user?.thumb,
+        player: player?.title || "Unknown",
+        playerMachineId: player?.machineIdentifier,
+        product: player?.product,
+        platform: player?.platform,
+        state: player?.state || "playing",
+        local: toBool(player?.local),
+        relayed: toBool(player?.relayed),
+        secure: toBool(player?.secure),
+        address: player?.address,
+        location: session?.location,
+        bandwidth: session?.bandwidth,
+        decision: part?.decision || "directplay",
+        videoResolution: media?.videoResolution,
+        videoCodec: media?.videoCodec,
+        audioCodec: media?.audioCodec,
+        audioChannels: media?.audioChannels,
+        container: media?.container,
+        videoDecision: transcode?.videoDecision,
+        audioDecision: transcode?.audioDecision,
+        transcodeSpeed: transcode?.speed,
+        transcodeProgress: transcode?.progress,
+        transcodeHwEncoding: toBool(transcode?.transcodeHwEncoding),
+        sourceVideoCodec: transcode?.sourceVideoCodec,
+        sourceAudioCodec: transcode?.sourceAudioCodec,
       };
     });
   }
@@ -1042,14 +1200,13 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     const data = await request("/library/recentlyAdded", {
       params: { "X-Plex-Container-Size": limit },
     });
-    const metadata = data?.MediaContainer?.Metadata || [];
-    return metadata.map((item: Record<string, unknown>) => ({
-      ratingKey: item.ratingKey as string,
-      title: item.title as string,
-      year: item.year as number | undefined,
-      thumb: item.thumb as string | undefined,
-      type: item.type as string,
-      addedAt: item.addedAt as number,
+    return parseMetadataArray(data?.MediaContainer?.Metadata).map((item) => ({
+      ratingKey: item.ratingKey ?? "",
+      title: item.title ?? "",
+      year: item.year,
+      thumb: item.thumb,
+      type: item.type ?? "",
+      addedAt: item.addedAt ?? 0,
     }));
   }
 
@@ -1068,23 +1225,22 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
         ...(type ? { type } : {}),
       },
     });
-    const metadata = data?.MediaContainer?.Metadata || [];
     const total: number = data?.MediaContainer?.totalSize ?? 0;
     return {
-      items: metadata.map((item: Record<string, unknown>) => {
-        const media = (item.Media as Array<Record<string, unknown>>)?.[0];
+      items: parseMetadataArray(data?.MediaContainer?.Metadata).map((item) => {
+        const media = item.Media?.[0];
         return {
-          ratingKey: item.ratingKey as string,
-          title: item.title as string,
-          year: item.year as number | undefined,
-          thumb: item.thumb as string | undefined,
-          type: item.type as string,
-          addedAt: item.addedAt as number | undefined,
-          videoResolution: media?.videoResolution as string | undefined,
-          videoCodec: media?.videoCodec as string | undefined,
-          audioCodec: media?.audioCodec as string | undefined,
-          audioChannels: media?.audioChannels as number | undefined,
-          container: media?.container as string | undefined,
+          ratingKey: item.ratingKey ?? "",
+          title: item.title ?? "",
+          year: item.year,
+          thumb: item.thumb,
+          type: item.type ?? "",
+          addedAt: item.addedAt,
+          videoResolution: media?.videoResolution,
+          videoCodec: media?.videoCodec,
+          audioCodec: media?.audioCodec,
+          audioChannels: media?.audioChannels,
+          container: media?.container,
         };
       }),
       total,
@@ -1103,15 +1259,15 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
     for await (const { item } of allItems(sectionId)) {
       // Type filter
       if (type) {
-        const itemType = SECTION_TYPE_MAP[item.type as string];
+        const itemType = item.type ? SECTION_TYPE_MAP[item.type] : undefined;
         if (itemType && itemType !== type) continue;
       }
 
       // Title filter
-      if (titleLower && !(item.title as string).toLowerCase().includes(titleLower)) continue;
+      if (titleLower && !(item.title ?? "").toLowerCase().includes(titleLower)) continue;
 
       // Media property filters — check Media[0]
-      const media = (item.Media as Array<Record<string, unknown>>)?.[0];
+      const media = item.Media?.[0];
       if (!media) continue;
 
       if (filters.videoResolution && media.videoResolution !== filters.videoResolution) continue;
@@ -1121,17 +1277,17 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       if (filters.container && media.container !== filters.container) continue;
 
       matched.push({
-        ratingKey: item.ratingKey as string,
-        title: item.title as string,
-        year: item.year as number | undefined,
-        thumb: item.thumb as string | undefined,
-        type: item.type as string,
-        addedAt: item.addedAt as number | undefined,
-        videoResolution: media?.videoResolution as string | undefined,
-        videoCodec: media?.videoCodec as string | undefined,
-        audioCodec: media?.audioCodec as string | undefined,
-        audioChannels: media?.audioChannels as number | undefined,
-        container: media?.container as string | undefined,
+        ratingKey: item.ratingKey ?? "",
+        title: item.title ?? "",
+        year: item.year,
+        thumb: item.thumb,
+        type: item.type ?? "",
+        addedAt: item.addedAt,
+        videoResolution: media.videoResolution,
+        videoCodec: media.videoCodec,
+        audioCodec: media.audioCodec,
+        audioChannels: media.audioChannels,
+        container: media.container,
       });
     }
 
@@ -1143,67 +1299,64 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   async function getItemDetail(ratingKey: string): Promise<PlexMediaDetail> {
     const data = await request(`/library/metadata/${ratingKey}`);
-    const meta = data?.MediaContainer?.Metadata?.[0];
-    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    const rawMeta = data?.MediaContainer?.Metadata?.[0];
+    if (!rawMeta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    const meta = plexMetadataRawSchema.parse(rawMeta);
 
-    const media: PlexMediaInfo[] = (meta.Media || []).map((m: Record<string, unknown>) => {
-      const parts: PlexPartInfo[] = ((m.Part as Array<Record<string, unknown>>) || []).map(
-        (p: Record<string, unknown>) => {
-          const streams: PlexStreamInfo[] = ((p.Stream as Array<Record<string, unknown>>) || []).map(
-            (s: Record<string, unknown>) => ({
-              streamType: s.streamType as number,
-              codec: s.codec as string | undefined,
-              displayTitle: s.displayTitle as string | undefined,
-              bitrate: s.bitrate as number | undefined,
-              width: s.width as number | undefined,
-              height: s.height as number | undefined,
-              frameRate: s.frameRate != null ? Number(s.frameRate) : undefined,
-              profile: s.profile as string | undefined,
-              level: s.level as number | undefined,
-              bitDepth: s.bitDepth as number | undefined,
-              chromaSubsampling: s.chromaSubsampling as string | undefined,
-              colorPrimaries: s.colorPrimaries as string | undefined,
-              colorRange: s.colorRange as string | undefined,
-              colorSpace: s.colorSpace as string | undefined,
-              scanType: s.scanType as string | undefined,
-              channels: s.channels as number | undefined,
-              audioChannelLayout: s.audioChannelLayout as string | undefined,
-              samplingRate: s.samplingRate as number | undefined,
-              language: s.language as string | undefined,
-              languageCode: s.languageCode as string | undefined,
-            }),
-          );
-          return {
-            file: p.file as string | undefined,
-            size: p.size as number | undefined,
-            container: p.container as string | undefined,
-            duration: p.duration as number | undefined,
-            streams,
-          };
-        },
-      );
+    const media: PlexMediaInfo[] = (meta.Media ?? []).map((m) => {
+      const parts: PlexPartInfo[] = (m.Part ?? []).map((p) => {
+        const streams: PlexStreamInfo[] = (p.Stream ?? []).map((s) => ({
+          streamType: s.streamType ?? 0,
+          codec: s.codec,
+          displayTitle: s.displayTitle,
+          bitrate: s.bitrate,
+          width: s.width,
+          height: s.height,
+          frameRate: s.frameRate != null ? Number(s.frameRate) : undefined,
+          profile: s.profile,
+          level: s.level,
+          bitDepth: s.bitDepth,
+          chromaSubsampling: s.chromaSubsampling,
+          colorPrimaries: s.colorPrimaries,
+          colorRange: s.colorRange,
+          colorSpace: s.colorSpace,
+          scanType: s.scanType,
+          channels: s.channels,
+          audioChannelLayout: s.audioChannelLayout,
+          samplingRate: s.samplingRate,
+          language: s.language,
+          languageCode: s.languageCode,
+        }));
+        return {
+          file: p.file,
+          size: p.size,
+          container: p.container,
+          duration: p.duration,
+          streams,
+        };
+      });
       return {
-        videoResolution: m.videoResolution as string | undefined,
-        videoCodec: m.videoCodec as string | undefined,
-        videoFrameRate: m.videoFrameRate as string | undefined,
-        videoProfile: m.videoProfile as string | undefined,
-        audioCodec: m.audioCodec as string | undefined,
-        audioChannels: m.audioChannels as number | undefined,
-        container: m.container as string | undefined,
-        bitrate: m.bitrate as number | undefined,
-        width: m.width as number | undefined,
-        height: m.height as number | undefined,
+        videoResolution: m.videoResolution,
+        videoCodec: m.videoCodec,
+        videoFrameRate: m.videoFrameRate,
+        videoProfile: m.videoProfile,
+        audioCodec: m.audioCodec,
+        audioChannels: m.audioChannels,
+        container: m.container,
+        bitrate: m.bitrate,
+        width: m.width,
+        height: m.height,
         optimizedForStreaming: m.optimizedForStreaming === 1 || m.optimizedForStreaming === true,
         parts,
       };
     });
 
     return {
-      ratingKey: meta.ratingKey,
-      title: meta.title,
+      ratingKey: meta.ratingKey ?? "",
+      title: meta.title ?? "",
       year: meta.year,
       thumb: meta.thumb,
-      type: meta.type,
+      type: meta.type ?? "",
       addedAt: meta.addedAt,
       summary: meta.summary || "",
       contentRating: meta.contentRating,
@@ -1212,14 +1365,11 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
       studio: meta.studio,
       rating: meta.rating,
       audienceRating: meta.audienceRating,
-      viewOffset: meta.viewOffset as number | undefined,
-      viewCount: meta.viewCount as number | undefined,
-      genres: (meta.Genre || []).map((g: { tag: string }) => g.tag),
-      directors: (meta.Director || []).map((d: { tag: string }) => d.tag),
-      collections: (meta.Collection || []).map((c: { id: number; tag: string }) => ({
-        id: c.id,
-        tag: c.tag,
-      })),
+      viewOffset: meta.viewOffset,
+      viewCount: meta.viewCount,
+      genres: (meta.Genre ?? []).map((g) => g.tag),
+      directors: (meta.Director ?? []).map((d) => d.tag),
+      collections: (meta.Collection ?? []).map((c) => ({ id: c.id, tag: c.tag })),
       media,
     };
   }
@@ -1228,22 +1378,21 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   async function getMetadataChildren(ratingKey: string): Promise<PlexChildItem[]> {
     const data = await request(`/library/metadata/${ratingKey}/children`);
-    const metadata = data?.MediaContainer?.Metadata || [];
-    return metadata.map((m: Record<string, unknown>) => {
-      const media = (m.Media as Array<Record<string, unknown>>)?.[0];
+    return parseMetadataArray(data?.MediaContainer?.Metadata).map((m) => {
+      const media = m.Media?.[0];
       return {
-        ratingKey: m.ratingKey as string,
-        type: m.type as string,
-        title: m.title as string,
-        index: m.index as number | undefined,
-        thumb: m.thumb as string | undefined,
-        leafCount: m.leafCount as number | undefined,
-        year: m.year as number | undefined,
-        videoResolution: media?.videoResolution as string | undefined,
-        videoCodec: media?.videoCodec as string | undefined,
-        audioCodec: media?.audioCodec as string | undefined,
-        audioChannels: media?.audioChannels as number | undefined,
-        container: media?.container as string | undefined,
+        ratingKey: m.ratingKey ?? "",
+        type: m.type ?? "",
+        title: m.title ?? "",
+        index: m.index,
+        thumb: m.thumb,
+        leafCount: m.leafCount,
+        year: m.year,
+        videoResolution: media?.videoResolution,
+        videoCodec: media?.videoCodec,
+        audioCodec: media?.audioCodec,
+        audioChannels: media?.audioChannels,
+        container: media?.container,
       };
     });
   }
@@ -1252,34 +1401,35 @@ export function createPlexClient({ url, token, signal }: PlexClientOptions) {
 
   async function getItemFullDetail(ratingKey: string): Promise<PlexMediaFullDetail> {
     const data = await request(`/library/metadata/${ratingKey}`);
-    const meta = data?.MediaContainer?.Metadata?.[0];
-    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    const rawMeta = data?.MediaContainer?.Metadata?.[0];
+    if (!rawMeta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    const meta = plexMetadataRawSchema.parse(rawMeta);
 
-    const guids: string[] = (meta.Guid || []).map((g: { id: string }) => g.id);
-    const media: PlexMediaFullDetail["media"] = (meta.Media || []).map((m: Record<string, unknown>) => {
-      const parts = (m.Part as Array<Record<string, unknown>>) || [];
-      const streams = (parts[0]?.Stream as Array<Record<string, unknown>>) || [];
+    const guids: string[] = (meta.Guid ?? []).map((g) => g.id);
+    const media: PlexMediaFullDetail["media"] = (meta.Media ?? []).map((m) => {
+      const parts = m.Part ?? [];
+      const streams = parts[0]?.Stream ?? [];
       const videoStream = streams.find((s) => s.streamType === 1);
       return {
-        videoResolution: m.videoResolution as string | undefined,
-        videoCodec: m.videoCodec as string | undefined,
-        audioCodec: (parts[0]?.audioProfile as string | undefined) ?? (m.audioCodec as string | undefined),
-        audioChannels: m.audioChannels as number | undefined,
-        bitrate: m.bitrate as number | undefined,
-        width: m.width as number | undefined,
-        height: m.height as number | undefined,
-        bitDepth: videoStream?.bitDepth as number | undefined,
-        colorSpace: videoStream?.colorSpace as string | undefined,
-        videoDisplayTitle: videoStream?.displayTitle as string | undefined,
+        videoResolution: m.videoResolution,
+        videoCodec: m.videoCodec,
+        audioCodec: parts[0]?.audioProfile ?? m.audioCodec,
+        audioChannels: m.audioChannels,
+        bitrate: m.bitrate,
+        width: m.width,
+        height: m.height,
+        bitDepth: videoStream?.bitDepth,
+        colorSpace: videoStream?.colorSpace,
+        videoDisplayTitle: videoStream?.displayTitle,
       };
     });
 
     return {
-      ratingKey: meta.ratingKey,
-      title: meta.title,
+      ratingKey: meta.ratingKey ?? "",
+      title: meta.title ?? "",
       year: meta.year,
       thumb: meta.thumb,
-      type: meta.type,
+      type: meta.type ?? "",
       contentRating: meta.contentRating,
       rating: meta.rating,
       audienceRating: meta.audienceRating,

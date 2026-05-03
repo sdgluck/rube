@@ -1,5 +1,20 @@
 import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 
+interface StressTestConfigShape {
+  mode: "transcode" | "directplay" | "mixed";
+  transcodePct?: number;
+  maxSessions?: number;
+}
+
+interface StressTestStepShape {
+  step: number;
+  sessions: number;
+  avgTranscodeSpeed: number | null;
+  avgBandwidth: number;
+  errors: number;
+  timestamp: number;
+}
+
 export const config = sqliteTable("config", {
   key: text("key").primaryKey(),
   value: text("value", { mode: "json" }).$type<unknown>(),
@@ -166,9 +181,9 @@ export const plexUsers = sqliteTable(
 
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
-  config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+  config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),
   maxSessions: integer("max_sessions"),
-  steps: text("steps", { mode: "json" }).$type<unknown[]>().notNull().default([]),
+  steps: text("steps", { mode: "json" }).$type<StressTestStepShape[]>().notNull().default([]),
   status: text("status").notNull().default("running"),
   progress: real("progress").notNull().default(0),
   message: text("message").notNull().default(""),

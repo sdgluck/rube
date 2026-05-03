@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { errorMessage } from "./util.ts";
 import { db } from "./db/index.ts";
 import { omdbCache } from "./db/schema.ts";
 import { getConfig } from "./config.ts";
@@ -28,7 +29,7 @@ export async function getOmdbRatings(
   try {
     res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`);
   } catch (err) {
-    reportHealth("OMDB", "error", (err as Error).message);
+    reportHealth("OMDB", "error", errorMessage(err));
     return null;
   }
   if (!res.ok) {

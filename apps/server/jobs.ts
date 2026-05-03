@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { errorMessage } from "./util.ts";
 import { join } from "node:path";
 import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
@@ -223,7 +224,7 @@ export async function startJob(jobId: string): Promise<{ runId: string } | null>
       emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - now)}`, { jobId: job.id });
       console.log(`[jobs] ${job.name} completed: ${output}`);
     } catch (err) {
-      const msg = (err as Error).message;
+      const msg = errorMessage(err);
       db.update(jobRuns)
         .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
         .where(eq(jobRuns.id, runId))

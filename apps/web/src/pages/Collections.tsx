@@ -10,13 +10,14 @@ import FadeImage from "../FadeImage";
 import RelativeTime from "../RelativeTime";
 import { useToast } from "../Toast";
 import PullToRefresh from "../PullToRefresh";
+import { readEnum, readEnumStorage } from "../storage";
 import styles from "./Collections.module.css";
 
-type SortKey = "title" | "sectionTitle" | "childCount" | "smart" | "labels" | "addedAt";
+const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
 type SortDir = "asc" | "desc";
-type ViewMode = "table" | "grid";
-
-const SORT_KEYS = new Set<string>(["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"]);
+const VIEW_MODES = ["table", "grid"] as const;
+type ViewMode = (typeof VIEW_MODES)[number];
 const PAGE_SIZE = 50;
 
 export default function Collections() {
@@ -26,13 +27,9 @@ export default function Collections() {
   const labelFilter = searchParams.get("label") ?? "";
   const search = searchParams.get("q") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const sortKey: SortKey = SORT_KEYS.has(searchParams.get("sort") ?? "")
-    ? (searchParams.get("sort") as SortKey)
-    : "title";
+  const sortKey: SortKey = readEnum(searchParams.get("sort"), SORT_KEYS, "title");
   const sortDir: SortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
-  const [viewMode, setViewMode] = useState<ViewMode>(
-    () => (localStorage.getItem("collections-view") as ViewMode) || "table",
-  );
+  const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("collections-view", VIEW_MODES, "table"));
 
   const setParam = useCallback(
     (key: string, value: string) => {
