@@ -4,6 +4,7 @@ import PQueue from "p-queue";
 import { z } from "zod";
 import { createPlexClient, type PlexClient, type PlexSection } from "../plex.ts";
 import { getConfig } from "../config.ts";
+import { syncCollections } from "../collections.ts";
 import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../rules.ts";
 import { fetchImdbChart, fetchImdbList } from "../imdb.ts";
 import { extractImdbId, getOmdbRatings } from "../omdb.ts";
@@ -1072,6 +1073,10 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     }
   }
 
+  ctx.log("\nSyncing generated collections to local DB...");
+  const stats = await syncCollections(client, jobSections);
+  ctx.log(`Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);
+
   ctx.log("\nAll done!");
 }
 
@@ -1125,6 +1130,10 @@ export async function runSingleRule(
   if (lastCollectionKey) {
     setRuleLastCollection(rule.id, lastCollectionKey);
   }
+
+  log("Syncing generated collections to local DB...");
+  const stats = await syncCollections(client, sections);
+  log(`Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);
 
   log(`Done — lastCollectionKey: ${lastCollectionKey}`);
   return { lastCollectionKey };
