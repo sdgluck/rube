@@ -124,6 +124,25 @@ function filterItemsBySection(items: PlexHubItem[], sectionId: number | null): P
   return items.filter((i) => i.librarySectionID === sectionId);
 }
 
+function isPersonalProgressHub(hub: PlexHomeHub): boolean {
+  // Continue Watching / On Deck reflect the admin's per-user watch progress,
+  // which can't be reproduced for a shared user without their token.
+  const ctx = (hub.context || "").toLowerCase();
+  const id = (hub.hubIdentifier || "").toLowerCase();
+  const title = (hub.title || "").toLowerCase();
+  return (
+    ctx.includes("continuewatching") ||
+    ctx.includes("ondeck") ||
+    ctx.includes("continue.watching") ||
+    ctx.includes("continue_watching") ||
+    id.includes("continuewatching") ||
+    id.includes("ondeck") ||
+    id.includes("continue.watching") ||
+    title.includes("continue watching") ||
+    title === "on deck"
+  );
+}
+
 export async function getPreviewForUser(
   client: PlexClient,
   userId: number | null,
@@ -168,7 +187,12 @@ export async function getPreviewForUser(
   }
 
   const filteredHubs: PreviewHub[] = [];
+  let hidPersonalHub = false;
   for (const hub of hubs) {
+    if (isPersonalProgressHub(hub)) {
+      hidPersonalHub = true;
+      continue;
+    }
     const kept: PlexHubItem[] = [];
     for (const item of hub.items) {
       if (allowedSections && item.librarySectionID != null && !allowedSections.has(item.librarySectionID)) {
@@ -181,6 +205,10 @@ export async function getPreviewForUser(
       kept.push(item);
     }
     if (kept.length > 0) filteredHubs.push(toPreviewHub(hub, kept));
+  }
+
+  if (hidPersonalHub) {
+    warnings.push("Hiding Continue Watching / On Deck — those reflect the admin's watch progress, not this user's.");
   }
 
   return {
