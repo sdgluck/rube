@@ -115,7 +115,7 @@ const plexTranscodeSessionRawSchema = z
 const plexLabelRawSchema = z.object({ tag: z.string() }).passthrough();
 const plexGuidRawSchema = z.object({ id: z.string() }).passthrough();
 const plexGenreRawSchema = z.object({ tag: z.string() }).passthrough();
-const plexCollectionRefRawSchema = z.object({ id: z.number().optional(), tag: z.string() }).passthrough();
+const plexCollectionRefRawSchema = z.object({ id: z.coerce.number().optional(), tag: z.string() }).passthrough();
 
 const plexMetadataRawSchema = z
   .object({
