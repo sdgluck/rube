@@ -1,9 +1,62 @@
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import PullToRefresh from "../PullToRefresh";
 import RelativeTime from "../RelativeTime";
 import { trpc } from "../trpc";
 import { formatDurationMs, stripDurationFromMessage } from "../utils";
 import styles from "./Stats.module.css";
+
+// ─── Summary tile config ────────────────────────────────────────────────────
+
+const DEFAULT_TILES = ["streams", "bandwidth", "playsToday", "library", "users"];
+const MAX_TILES = 6;
+
+interface TileDef {
+  id: string;
+  label: string;
+  group: string;
+}
+
+const TILE_REGISTRY: TileDef[] = [
+  { id: "streams", label: "Streams", group: "Live" },
+  { id: "transcodes", label: "Transcodes", group: "Live" },
+  { id: "bandwidth", label: "Bandwidth", group: "Live" },
+  { id: "playsToday", label: "Plays Today", group: "Activity" },
+  { id: "playsWeek", label: "Plays (7d)", group: "Activity" },
+  { id: "topUserToday", label: "Top User Today", group: "Activity" },
+  { id: "library", label: "Library", group: "Library" },
+  { id: "addedThisWeek", label: "Added (7d)", group: "Library" },
+  { id: "pct4k", label: "4K Library", group: "Library" },
+  { id: "librarySplit", label: "Movies / Episodes", group: "Library" },
+  { id: "users", label: "Users", group: "Users" },
+  { id: "activeUsers", label: "Active Users (7d)", group: "Users" },
+  { id: "failedJobs", label: "Failed Jobs (24h)", group: "Ops" },
+  { id: "lastSync", label: "Last Sync", group: "Ops" },
+  { id: "uptime", label: "Uptime", group: "Ops" },
+];
+
+function formatUptime(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
+}
+
+function formatRelativeShort(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -124,6 +177,159 @@ function DistributionBar({
   );
 }
 
+// ─── Tile picker ────────────────────────────────────────────────────────────
+
+function TilePicker({ selected, onSave }: { selected: string[]; onSave: (ids: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<string[]>(selected);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setDraft(selected), [selected.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const toggle = (id: string) => {
+    setDraft((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_TILES) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const move = (from: number, to: number) => {
+    setDraft((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
+
+  const dragIndex = useRef<number | null>(null);
+
+  const groups: Record<string, TileDef[]> = {};
+  for (const t of TILE_REGISTRY) {
+    (groups[t.group] ||= []).push(t);
+  }
+
+  return (
+    <div className={styles.tilePicker} ref={ref}>
+      <button
+        className={styles.tilePickerButton}
+        onClick={() => setOpen((v) => !v)}
+        title="Customize tiles"
+        aria-label="Customize tiles"
+      >
+        ⚙
+      </button>
+      {open && (
+        <div className={styles.tilePickerPopover}>
+          <div className={styles.tilePickerHeader}>
+            <span>Choose up to {MAX_TILES} tiles</span>
+            <span className={styles.tilePickerCount}>
+              {draft.length} / {MAX_TILES}
+            </span>
+          </div>
+          {draft.length > 0 && (
+            <div className={styles.tilePickerOrder}>
+              <div className={styles.tilePickerGroupLabel}>Order (drag or use arrows)</div>
+              {draft.map((id, i) => {
+                const def = TILE_REGISTRY.find((t) => t.id === id);
+                if (!def) return null;
+                return (
+                  <div
+                    key={id}
+                    className={styles.tilePickerOrderItem}
+                    draggable
+                    onDragStart={(e) => {
+                      dragIndex.current = i;
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const from = dragIndex.current;
+                      dragIndex.current = null;
+                      if (from == null || from === i) return;
+                      move(from, i);
+                    }}
+                  >
+                    <span className={styles.tilePickerHandle} aria-hidden>
+                      ⋮⋮
+                    </span>
+                    <span className={styles.tilePickerOrderLabel}>{def.label}</span>
+                    <button
+                      className={styles.tilePickerArrow}
+                      onClick={() => move(i, i - 1)}
+                      disabled={i === 0}
+                      aria-label="Move up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className={styles.tilePickerArrow}
+                      onClick={() => move(i, i + 1)}
+                      disabled={i === draft.length - 1}
+                      aria-label="Move down"
+                    >
+                      ↓
+                    </button>
+                    <button className={styles.tilePickerRemove} onClick={() => toggle(id)} aria-label="Remove">
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className={styles.tilePickerList}>
+            {Object.entries(groups).map(([group, items]) => (
+              <div key={group} className={styles.tilePickerGroup}>
+                <div className={styles.tilePickerGroupLabel}>{group}</div>
+                {items.map((t) => {
+                  const isSel = draft.includes(t.id);
+                  const disabled = !isSel && draft.length >= MAX_TILES;
+                  return (
+                    <label
+                      key={t.id}
+                      className={`${styles.tilePickerOption} ${disabled ? styles.tilePickerOptionDisabled : ""}`}
+                    >
+                      <input type="checkbox" checked={isSel} disabled={disabled} onChange={() => toggle(t.id)} />
+                      <span>{t.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <div className={styles.tilePickerActions}>
+            <button
+              className={styles.tilePickerSave}
+              onClick={() => {
+                onSave(draft);
+                setOpen(false);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function Stats() {
@@ -131,21 +337,125 @@ export default function Stats() {
   const recentQuery = trpc.stats.recentlyAdded.useQuery();
   const mostWatchedQuery = trpc.stats.mostWatched.useQuery();
   const overviewQuery = trpc.stats.overview.useQuery();
+  const activityQuery = trpc.stats.activity.useQuery();
+  const opsQuery = trpc.stats.ops.useQuery(undefined, { refetchInterval: 30000 });
   const healthQuery = trpc.health.status.useQuery();
   const activeJobsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 10000 });
   const eventsQuery = trpc.events.list.useQuery({ limit: 5 });
+  const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
+  const utils = trpc.useUtils();
+  const saveConfigMutation = trpc.config.save.useMutation({
+    onSuccess: () => utils.config.get.invalidate(),
+  });
 
   const sessions = sessionsQuery.data ?? [];
   const totalBandwidth = sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
+  const transcodingCount = sessions.filter((s) => s.videoDecision === "transcode").length;
+
+  const selectedTiles =
+    configQuery.data?.stats_summary_tiles && configQuery.data.stats_summary_tiles.length > 0
+      ? configQuery.data.stats_summary_tiles.filter((id) => TILE_REGISTRY.some((t) => t.id === id)).slice(0, MAX_TILES)
+      : DEFAULT_TILES;
 
   const handleRefresh = () => {
     sessionsQuery.refetch();
     recentQuery.refetch();
     mostWatchedQuery.refetch();
     overviewQuery.refetch();
+    activityQuery.refetch();
+    opsQuery.refetch();
     healthQuery.refetch();
     activeJobsQuery.refetch();
     eventsQuery.refetch();
+  };
+
+  const renderTile = (id: string): React.ReactNode => {
+    const def = TILE_REGISTRY.find((t) => t.id === id);
+    if (!def) return null;
+    let value: React.ReactNode = "—";
+    let sub: React.ReactNode = null;
+    switch (id) {
+      case "streams":
+        value = sessionsQuery.isLoading ? "—" : sessions.length;
+        if (transcodingCount > 0) sub = `${transcodingCount} transcoding`;
+        break;
+      case "transcodes":
+        value = sessionsQuery.isLoading ? "—" : transcodingCount;
+        if (sessions.length > 0) sub = `of ${sessions.length}`;
+        break;
+      case "bandwidth":
+        value = sessionsQuery.isLoading ? "—" : totalBandwidth > 0 ? formatBandwidth(totalBandwidth) : "—";
+        break;
+      case "playsToday":
+        value = activityQuery.isLoading ? "—" : (activityQuery.data?.playsToday ?? 0);
+        if (activityQuery.data && activityQuery.data.playsWeek > 0) sub = `${activityQuery.data.playsWeek} this week`;
+        break;
+      case "playsWeek":
+        value = activityQuery.isLoading ? "—" : (activityQuery.data?.playsWeek ?? 0);
+        break;
+      case "topUserToday": {
+        const u = activityQuery.data?.topUserToday;
+        value = u ? u.name : "—";
+        sub = u ? `${u.plays} ${u.plays === 1 ? "play" : "plays"}` : null;
+        break;
+      }
+      case "library":
+        value = overviewQuery.isLoading ? "—" : formatNumber(overviewQuery.data?.totalItems ?? 0);
+        if (overviewQuery.data && overviewQuery.data.addedThisWeek > 0)
+          sub = `+${overviewQuery.data.addedThisWeek} this week`;
+        break;
+      case "addedThisWeek":
+        value = overviewQuery.isLoading ? "—" : (overviewQuery.data?.addedThisWeek ?? 0);
+        break;
+      case "pct4k": {
+        const total = overviewQuery.data?.totalItems ?? 0;
+        const c4k = overviewQuery.data?.count4k ?? 0;
+        value = overviewQuery.isLoading ? "—" : total > 0 ? `${Math.round((c4k / total) * 100)}%` : "—";
+        if (c4k > 0) sub = `${formatNumber(c4k)} items`;
+        break;
+      }
+      case "librarySplit": {
+        const m = overviewQuery.data?.movieCount ?? 0;
+        const e = overviewQuery.data?.episodeCount ?? 0;
+        value = overviewQuery.isLoading ? "—" : `${formatNumber(m)} / ${formatNumber(e)}`;
+        sub = "Movies / Episodes";
+        break;
+      }
+      case "users":
+        value = overviewQuery.isLoading ? "—" : (overviewQuery.data?.userCount ?? 0);
+        if (activityQuery.data && activityQuery.data.activeUsersWeek > 0)
+          sub = `${activityQuery.data.activeUsersWeek} active`;
+        break;
+      case "activeUsers":
+        value = activityQuery.isLoading ? "—" : (activityQuery.data?.activeUsersWeek ?? 0);
+        sub = "this week";
+        break;
+      case "failedJobs": {
+        const n = opsQuery.data?.failedJobs24h ?? 0;
+        value = opsQuery.isLoading ? "—" : n;
+        if (n > 0) sub = "needs attention";
+        break;
+      }
+      case "lastSync":
+        value = opsQuery.data?.lastSyncAt ? formatRelativeShort(opsQuery.data.lastSyncAt) : "—";
+        break;
+      case "uptime":
+        value = opsQuery.data?.uptimeSec != null ? formatUptime(opsQuery.data.uptimeSec) : "—";
+        break;
+    }
+    return (
+      <div className={styles.summaryItem} key={id}>
+        <span className={styles.summaryLabel}>{def.label}</span>
+        <span className={styles.summaryValue}>
+          {value}
+          {sub != null && <span className={styles.summarySub}>{sub}</span>}
+        </span>
+      </div>
+    );
+  };
+
+  const saveTiles = (next: string[]) => {
+    saveConfigMutation.mutate({ stats_summary_tiles: next.slice(0, MAX_TILES) });
   };
 
   const maxPlays = mostWatchedQuery.data?.[0]?.plays ?? 1;
@@ -155,31 +465,13 @@ export default function Stats() {
       <div className={styles.dashboard}>
         {/* ─── Summary Bar ──────────────────────────────────────────── */}
         <div className={styles.summaryBar}>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Streams</span>
-            <span className={styles.summaryValue}>{sessionsQuery.isLoading ? "—" : sessions.length}</span>
-          </div>
-          <div className={styles.summaryDivider} />
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Bandwidth</span>
-            <span className={styles.summaryValue}>
-              {sessionsQuery.isLoading ? "—" : totalBandwidth > 0 ? formatBandwidth(totalBandwidth) : "—"}
-            </span>
-          </div>
-          <div className={styles.summaryDivider} />
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Library</span>
-            <span className={styles.summaryValue}>
-              {overviewQuery.isLoading ? "—" : formatNumber(overviewQuery.data?.totalItems ?? 0)}
-            </span>
-          </div>
-          <div className={styles.summaryDivider} />
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Users</span>
-            <span className={styles.summaryValue}>
-              {overviewQuery.isLoading ? "—" : (overviewQuery.data?.userCount ?? 0)}
-            </span>
-          </div>
+          {selectedTiles.flatMap((id, i) => {
+            const nodes: React.ReactNode[] = [];
+            if (i > 0) nodes.push(<div key={`d-${id}`} className={styles.summaryDivider} />);
+            nodes.push(renderTile(id));
+            return nodes;
+          })}
+          <TilePicker selected={selectedTiles} onSave={saveTiles} />
         </div>
 
         {/* ─── Two-column grid ──────────────────────────────────────── */}
@@ -291,17 +583,21 @@ export default function Stats() {
             {/* Active jobs */}
             <div className={styles.subSection}>
               <div className={styles.subHeader}>Jobs</div>
-              {activeJobsQuery.data && activeJobsQuery.data.length > 0 ? (
-                activeJobsQuery.data.map((run) => (
-                  <div key={run.id} className={styles.jobRow}>
-                    <span className={styles.spinner} />
-                    <span className={styles.jobName}>{run.jobId}</span>
-                    {run.progress > 0 && <span className={styles.jobProgress}>{Math.round(run.progress * 100)}%</span>}
-                  </div>
-                ))
-              ) : (
-                <div className={styles.muted}>No active jobs</div>
-              )}
+              <div className={styles.jobsBody}>
+                {activeJobsQuery.data && activeJobsQuery.data.length > 0 ? (
+                  activeJobsQuery.data.map((run) => (
+                    <div key={run.id} className={styles.jobRow}>
+                      <span className={styles.spinner} />
+                      <span className={styles.jobName}>{run.jobId}</span>
+                      {run.progress > 0 && (
+                        <span className={styles.jobProgress}>{Math.round(run.progress * 100)}%</span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className={`${styles.muted} ${styles.jobsEmpty}`}>No active jobs</div>
+                )}
+              </div>
             </div>
 
             {/* Recent events */}

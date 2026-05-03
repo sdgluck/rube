@@ -45,7 +45,13 @@ import {
   checkServiceHealth,
   testArrConnection,
 } from "./health.ts";
-import { getCachedRecentlyAdded, getCachedMostWatched, getLibraryOverview } from "./stats.ts";
+import {
+  getCachedRecentlyAdded,
+  getCachedMostWatched,
+  getLibraryOverview,
+  getCachedActivitySummary,
+  getOpsSummary,
+} from "./stats.ts";
 import { syncSections, getLocalSections } from "./sections.ts";
 import { syncUsers, getLocalUsers, updateUser } from "./users.ts";
 import { getPreviewForUser } from "./preview.ts";
@@ -242,6 +248,8 @@ const statsRouter = t.router({
   recentlyAdded: procedure.query(() => getCachedRecentlyAdded()),
   mostWatched: procedure.query(() => getCachedMostWatched()),
   overview: procedure.query(() => getLibraryOverview()),
+  activity: procedure.query(() => getCachedActivitySummary()),
+  ops: procedure.query(() => getOpsSummary()),
 });
 
 const usersRouter = t.router({

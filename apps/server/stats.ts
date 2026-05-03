@@ -5,10 +5,12 @@
  * Sessions are fetched real-time (not cached here).
  */
 
-import { eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "./db/index.ts";
-import { statsCache, jobs, mediaItems, plexUsers } from "./db/schema.ts";
+import { statsCache, jobs, jobRuns, mediaItems, plexUsers } from "./db/schema.ts";
+
+const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "./plex.ts";
 import { getConfig } from "./config.ts";
 import type { PlexRecentItem } from "./plex.ts";
@@ -33,6 +35,13 @@ const mostWatchedItemSchema = z.object({
   type: z.string(),
   grandparentTitle: z.string().optional(),
   plays: z.number(),
+});
+
+const activitySummarySchema = z.object({
+  playsToday: z.number(),
+  playsWeek: z.number(),
+  activeUsersWeek: z.number(),
+  topUserToday: z.object({ name: z.string(), plays: z.number() }).nullable().optional(),
 });
 
 function writeCache(key: string, data: unknown): void {
@@ -89,8 +98,42 @@ export async function syncMostWatched(): Promise<string> {
   if (!client) throw new Error("Plex not configured");
 
   const history = await client.getWatchHistory({ limit: 1000 });
-  const cutoff = Math.floor(Date.now() / 1000) - 7 * 86400;
-  const recentHistory = history.filter((item) => (item.viewedAt ?? 0) >= cutoff);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const weekCutoff = nowSec - 7 * 86400;
+  const todayCutoff = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+  const recentHistory = history.filter((item) => (item.viewedAt ?? 0) >= weekCutoff);
+
+  let playsToday = 0;
+  const usersThisWeek = new Set<number>();
+  const playsByUserToday = new Map<number, number>();
+  for (const item of recentHistory) {
+    const isToday = (item.viewedAt ?? 0) >= todayCutoff;
+    if (isToday) {
+      playsToday++;
+      if (item.accountID != null) {
+        playsByUserToday.set(item.accountID, (playsByUserToday.get(item.accountID) ?? 0) + 1);
+      }
+    }
+    if (item.accountID != null) usersThisWeek.add(item.accountID);
+  }
+
+  let topUserToday: { name: string; plays: number } | null = null;
+  if (playsByUserToday.size > 0) {
+    const [topId, topPlays] = [...playsByUserToday.entries()].sort((a, b) => b[1] - a[1])[0];
+    const userRow = db
+      .select({ name: plexUsers.name, username: plexUsers.username })
+      .from(plexUsers)
+      .where(eq(plexUsers.userId, topId))
+      .get();
+    topUserToday = { name: userRow?.name ?? userRow?.username ?? `User ${topId}`, plays: topPlays };
+  }
+
+  writeCache("activitySummary", {
+    playsToday,
+    playsWeek: recentHistory.length,
+    activeUsersWeek: usersThisWeek.size,
+    topUserToday,
+  });
 
   const counts = new Map<string, MostWatchedItem>();
   for (const item of recentHistory) {
@@ -124,6 +167,44 @@ export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled:
 
 export function getCachedMostWatched(): MostWatchedItem[] {
   return readCache("mostWatched", z.array(mostWatchedItemSchema)) ?? [];
+}
+
+export function getCachedActivitySummary(): {
+  playsToday: number;
+  playsWeek: number;
+  activeUsersWeek: number;
+  topUserToday: { name: string; plays: number } | null;
+} {
+  const cached = readCache("activitySummary", activitySummarySchema);
+  return {
+    playsToday: cached?.playsToday ?? 0,
+    playsWeek: cached?.playsWeek ?? 0,
+    activeUsersWeek: cached?.activeUsersWeek ?? 0,
+    topUserToday: cached?.topUserToday ?? null,
+  };
+}
+
+// ─── Operational summary (failed jobs, last sync, uptime) ───────────────────
+
+export function getOpsSummary(): { failedJobs24h: number; lastSyncAt: number | null; uptimeSec: number } {
+  const dayCutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const failedJobs24h =
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(jobRuns)
+      .where(and(eq(jobRuns.status, "failed"), gte(jobRuns.startedAt, dayCutoff)))
+      .get()?.count ?? 0;
+
+  const lastSyncRow = db
+    .select({ updatedAt: sql<number>`max(${statsCache.updatedAt})` })
+    .from(statsCache)
+    .get();
+
+  return {
+    failedJobs24h,
+    lastSyncAt: lastSyncRow?.updatedAt ?? null,
+    uptimeSec: Math.floor((Date.now() - PROCESS_STARTED_AT_MS) / 1000),
+  };
 }
 
 // ─── Library overview (aggregated from local cache) ─────────────────────────
@@ -161,5 +242,40 @@ export function getLibraryOverview() {
     .groupBy(mediaItems.audioCodec)
     .all();
 
-  return { totalItems, userCount, resolutions, videoCodecs, audioCodecs };
+  const weekCutoff = Math.floor(Date.now() / 1000) - 7 * 86400;
+  const addedThisWeek =
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(mediaItems)
+      .where(gte(mediaItems.addedAt, weekCutoff))
+      .get()?.count ?? 0;
+
+  const typeCounts = db
+    .select({ type: mediaItems.type, count: sql<number>`count(*)` })
+    .from(mediaItems)
+    .groupBy(mediaItems.type)
+    .all();
+  const movieCount = typeCounts.find((t) => t.type === "movie")?.count ?? 0;
+  const showCount = typeCounts.find((t) => t.type === "show")?.count ?? 0;
+  const episodeCount = typeCounts.find((t) => t.type === "episode")?.count ?? 0;
+
+  const count4k =
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(mediaItems)
+      .where(eq(mediaItems.videoResolution, "4k"))
+      .get()?.count ?? 0;
+
+  return {
+    totalItems,
+    userCount,
+    resolutions,
+    videoCodecs,
+    audioCodecs,
+    addedThisWeek,
+    movieCount,
+    showCount,
+    episodeCount,
+    count4k,
+  };
 }

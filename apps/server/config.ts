@@ -48,6 +48,7 @@ export const configSchema = z.object({
   global_webhook_url: z.string(),
   global_webhook_events: z.array(z.string()),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
+  stats_summary_tiles: z.array(z.string()).max(6),
 });
 
 export type ConfigSchema = typeof configSchema;
