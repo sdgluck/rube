@@ -99,7 +99,7 @@ export const appRouter = t.router({
 
   testSeerr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
     try {
-      const { testSeerrConnection } = await import("../clients/seerr.ts");
+      const { testSeerrConnection } = await import("@tinkerbell/seerr");
       const data = await testSeerrConnection(input.url, input.api_key);
       reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
       return { ok: true as const, total: data.total };

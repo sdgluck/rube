@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { errorMessage } from "../../lib/util.ts";
 import { db, stressTestRuns } from "@tinkerbell/db";
-import { createPlexClient } from "../../clients/plex/index.ts";
+import { createPlexClient } from "@tinkerbell/plex";
+import { plexHealthCallback } from "../../lib/clients.ts";
 import { getConfig } from "../../lib/config.ts";
 import { runStressTest, type StressTestConfig } from "./index.ts";
 import type { JobContext } from "../../lib/job-context.ts";
@@ -84,7 +85,12 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
       throw new Error("Plex URL and token are not configured");
     }
 
-    const client = createPlexClient({ url: plexUrl, token: plexToken, signal: controller.signal });
+    const client = createPlexClient({
+      url: plexUrl,
+      token: plexToken,
+      signal: controller.signal,
+      onHealth: plexHealthCallback,
+    });
 
     await runStressTest(client, config, ctx, id);
 

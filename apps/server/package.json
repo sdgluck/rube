@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=src --watch src/server.ts",
-    "typecheck": "tsc",
-    "test": "node --test src/clients/plex.test.ts"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@sidequest/sqlite-backend": "^1.14.0",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/imdb": "workspace:*",
+    "@tinkerbell/omdb": "workspace:*",
+    "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/seerr": "workspace:*",
     "@trpc/server": "^11.10.0",
     "croner": "^9.0.0",
     "drizzle-orm": "^0.45.1",

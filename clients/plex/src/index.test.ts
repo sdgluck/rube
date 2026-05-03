@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createPlexClient } from "./plex/index.ts";
+import { createPlexClient } from "./index.ts";
 
 /**
  * Mock Plex server that records requests and returns canned responses.

@@ -1,6 +1,7 @@
 import PQueue from "p-queue";
 import { errorMessage } from "../lib/util.ts";
-import { createPlexClient } from "../clients/plex/index.ts";
+import { createPlexClient } from "@tinkerbell/plex";
+import { plexHealthCallback } from "../lib/clients.ts";
 import { getConfig } from "../lib/config.ts";
 import {
   getOverlayConfigs,
@@ -12,7 +13,8 @@ import {
   compositeOverlays,
   type Badge,
 } from "../domains/overlays.ts";
-import { extractImdbId, getOmdbRatings } from "../clients/omdb.ts";
+import { extractImdbId } from "@tinkerbell/omdb";
+import { getOmdbClient } from "../lib/clients.ts";
 import type { JobContext, OverlaysJobConfig } from "../lib/job-context.ts";
 
 export default async function run(ctx: JobContext, config: OverlaysJobConfig): Promise<void> {
@@ -29,6 +31,7 @@ export default async function run(ctx: JobContext, config: OverlaysJobConfig): P
     url: PLEX_URL,
     token: PLEX_TOKEN,
     signal: ctx.signal,
+    onHealth: plexHealthCallback,
   });
 
   ctx.log(`tinkerbell overlays (${mode})`);
@@ -102,7 +105,7 @@ async function runApply(
           if (needsOmdb) {
             const imdbId = extractImdbId(detail.guids);
             if (imdbId) {
-              const omdb = await getOmdbRatings(imdbId);
+              const omdb = await getOmdbClient().getRatings(imdbId);
               if (omdb) ratings = omdb;
             }
           }

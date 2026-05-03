@@ -1,6 +1,4 @@
-import { reportHealth } from "../../domains/health.ts";
-import { errorMessage } from "../../lib/util.ts";
-import type { PlexClientOptions, RequestOptions } from "./types.ts";
+import type { PlexClientOptions, PlexHealthCallback, RequestOptions } from "./types.ts";
 
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
 const MAX_RETRIES = 3;
@@ -15,15 +13,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return String(err);
+}
+
 export interface PlexHttp {
   url: string;
   token: string;
   signal?: AbortSignal;
+  onHealth?: PlexHealthCallback;
   request: (path: string, opts?: RequestOptions) => Promise<any>;
   requestRaw: (path: string, opts?: RequestOptions) => Promise<Response>;
 }
 
-export function createPlexHttp({ url, token, signal }: PlexClientOptions): PlexHttp {
+export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptions): PlexHttp {
   async function request(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
     const reqUrl = new URL(path, url);
     reqUrl.searchParams.set("X-Plex-Token", token);
@@ -51,7 +56,7 @@ export function createPlexHttp({ url, token, signal }: PlexClientOptions): PlexH
           await sleep(retryDelay(attempt));
           continue;
         }
-        reportHealth("Plex", "error", `${method} ${path} → ${errorMessage(err)}`);
+        onHealth?.("Plex", "error", `${method} ${path} → ${errorMessage(err)}`);
         throw err;
       }
 
@@ -62,11 +67,11 @@ export function createPlexHttp({ url, token, signal }: PlexClientOptions): PlexH
           continue;
         }
         const body = await res.text().catch(() => "");
-        reportHealth("Plex", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
+        onHealth?.("Plex", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
         throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
       }
 
-      reportHealth("Plex", "ok", `${method} ${path} → ${res.status}`);
+      onHealth?.("Plex", "ok", `${method} ${path} → ${res.status}`);
 
       const text = await res.text();
       if (!text) return null;
@@ -107,5 +112,5 @@ export function createPlexHttp({ url, token, signal }: PlexClientOptions): PlexH
     return res;
   }
 
-  return { url, token, signal, request, requestRaw };
+  return { url, token, signal, onHealth, request, requestRaw };
 }

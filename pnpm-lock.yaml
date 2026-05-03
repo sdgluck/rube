@@ -41,6 +41,18 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/imdb':
+        specifier: workspace:*
+        version: link:../../clients/imdb
+      '@tinkerbell/omdb':
+        specifier: workspace:*
+        version: link:../../clients/omdb
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      '@tinkerbell/seerr':
+        specifier: workspace:*
+        version: link:../../clients/seerr
       '@trpc/server':
         specifier: ^11.10.0
         version: 11.17.0(typescript@5.9.3)
@@ -127,6 +139,60 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.2(@types/node@25.6.0)(tsx@4.21.0)(yaml@2.8.4)
+
+  clients/imdb:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  clients/omdb:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  clients/plex:
+    dependencies:
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.2.0
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  clients/seerr:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/db:
     dependencies:

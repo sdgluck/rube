@@ -1,6 +1,11 @@
 import PQueue from "p-queue";
-import { errorMessage } from "../../lib/util.ts";
 import type { PlexHttp } from "./http.ts";
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return String(err);
+}
 import { plexMetadataRawSchema, parseMetadataArray, type PlexMetadataRaw } from "./schemas.ts";
 import {
   SECTION_TYPE_MAP,

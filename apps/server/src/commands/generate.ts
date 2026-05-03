@@ -2,12 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { errorMessage } from "../lib/util.ts";
 import PQueue from "p-queue";
 import { z } from "zod";
-import { createPlexClient, type PlexClient, type PlexSection } from "../clients/plex/index.ts";
+import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "../lib/config.ts";
+import { plexHealthCallback, getOmdbClient, getImdbClient } from "../lib/clients.ts";
 import { upsertCollectionByKey } from "../domains/collections.ts";
 import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../domains/rules.ts";
-import { fetchImdbChart, fetchImdbList } from "../clients/imdb.ts";
-import { extractImdbId, getOmdbRatings } from "../clients/omdb.ts";
+import { extractImdbId } from "@tinkerbell/omdb";
 import { reportHealth } from "../domains/health.ts";
 import type { JobContext, GenerateJobConfig } from "../lib/job-context.ts";
 
@@ -28,11 +28,11 @@ const ruleConfigSchema = z.object({
 type RuleConfig = z.infer<typeof ruleConfigSchema>;
 
 async function fetchImdbChartNormalized(id: string): Promise<{ name: string; imdbIds: string[] }> {
-  return fetchImdbChart(id);
+  return getImdbClient().fetchChart(id);
 }
 
 async function fetchImdbListNormalized(id: string): Promise<{ name: string; imdbIds: string[] }> {
-  const result = await fetchImdbList(id);
+  const result = await getImdbClient().fetchList(id);
   return { name: result.title, imdbIds: result.imdbIds };
 }
 
@@ -408,7 +408,7 @@ async function handleRtTopRated(
       if (!imdbId) continue;
 
       void queue.add(async () => {
-        const ratings = await getOmdbRatings(imdbId);
+        const ratings = await getOmdbClient().getRatings(imdbId);
         fetched++;
         if (fetched % 50 === 0) {
           ctx.log(`OMDB progress: ${fetched} items fetched...`);
@@ -508,7 +508,7 @@ async function handleSeerrRequests(
   ctx.log(`[Seerr Requests] ${tmdbToRatingKey.size}/${items.length} items have TMDB IDs.`);
 
   ctx.log(`[Seerr Requests] Streaming Seerr requests (filter=${filter}) until ${limit} matches...`);
-  const { iterSeerrRequests } = await import("../clients/seerr.ts");
+  const { iterSeerrRequests } = await import("@tinkerbell/seerr");
   const ratingKeys: string[] = [];
   const seenRatingKeys = new Set<string>();
   let scanned = 0;
@@ -588,7 +588,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
   }
 
   log(`Connecting to Plex at ${PLEX_URL}`);
-  const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal });
+  const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal, onHealth: plexHealthCallback });
 
   log("Fetching Plex sections...");
   let allSections = await client.getSections();
@@ -840,7 +840,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
           omdbLookups++;
           void queue.add(async () => {
             signal?.throwIfAborted();
-            const ratings = await getOmdbRatings(imdbId);
+            const ratings = await getOmdbClient().getRatings(imdbId);
             if (ratings?.rtRating) {
               const scoreMatch = ratings.rtRating.match(/(\d+)%/);
               if (scoreMatch) {
@@ -898,7 +898,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
       }
       log(`[seerr_requests] ${tmdbToItem.size}/${items.length} items have TMDB IDs in "${hostSection.title}"`);
 
-      const { iterSeerrRequests } = await import("../clients/seerr.ts");
+      const { iterSeerrRequests } = await import("@tinkerbell/seerr");
       const matched: { title: string; year?: number }[] = [];
       const seenTmdb = new Set<number>();
       let scanned = 0;
@@ -995,6 +995,7 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     url: PLEX_URL,
     token: PLEX_TOKEN,
     signal: ctx.signal,
+    onHealth: plexHealthCallback,
   });
 
   ctx.log(`tinkerbell generate`);
@@ -1096,7 +1097,7 @@ export async function runSingleRule(
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
   if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
 
-  const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal });
+  const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal, onHealth: plexHealthCallback });
   const identity = await client.getIdentity();
   const machineId = identity.machineIdentifier;
 

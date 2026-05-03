@@ -1,6 +1,6 @@
 import { initTRPC } from "@trpc/server";
-import { getConfig } from "../lib/config.ts";
-import { createPlexClient } from "../clients/plex/index.ts";
+
+export { getPlexClient } from "../lib/clients.ts";
 
 export const t = initTRPC.create();
 
@@ -13,12 +13,3 @@ const logDuration = t.middleware(async ({ path, type, next }) => {
 });
 
 export const procedure = t.procedure.use(logDuration);
-
-export function getPlexClient() {
-  const plexUrl = getConfig("global_plex_url");
-  const plexToken = getConfig("global_plex_token");
-  if (!plexUrl || !plexToken) {
-    throw new Error("Plex URL and token are not configured");
-  }
-  return createPlexClient({ url: plexUrl, token: plexToken });
-}

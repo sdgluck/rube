@@ -1,0 +1,25 @@
+{
+  "name": "@tinkerbell/plex",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc",
+    "test": "node --test src/index.test.ts"
+  },
+  "dependencies": {
+    "p-queue": "^9.1.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^5.9.3"
+  }
+}

@@ -10,9 +10,10 @@ import { z } from "zod";
 import { db, statsCache, jobs, jobRuns, mediaItems, plexUsers } from "@tinkerbell/db";
 
 const PROCESS_STARTED_AT_MS = Date.now();
-import { createPlexClient } from "../clients/plex/index.ts";
+import { createPlexClient } from "@tinkerbell/plex";
+import { plexHealthCallback } from "../lib/clients.ts";
 import { getConfig } from "../lib/config.ts";
-import type { PlexRecentItem } from "../clients/plex/index.ts";
+import type { PlexRecentItem } from "@tinkerbell/plex";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ function tryGetPlexClient() {
   const plexUrl = getConfig("global_plex_url");
   const plexToken = getConfig("global_plex_token");
   if (!plexUrl || !plexToken) return null;
-  return createPlexClient({ url: plexUrl, token: plexToken });
+  return createPlexClient({ url: plexUrl, token: plexToken, onHealth: plexHealthCallback });
 }
 
 // ─── Sync functions (called by jobs) ──────────────────────────────────────────

@@ -1,4 +1,5 @@
-import { createPlexClient } from "../clients/plex/index.ts";
+import { createPlexClient } from "@tinkerbell/plex";
+import { plexHealthCallback } from "../lib/clients.ts";
 import { getConfig } from "../lib/config.ts";
 import { syncUsers } from "../domains/users.ts";
 import type { JobContext, CommonJobConfig } from "../lib/job-context.ts";
@@ -15,6 +16,7 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
     url: PLEX_URL,
     token: PLEX_TOKEN,
     signal: ctx.signal,
+    onHealth: plexHealthCallback,
   });
 
   ctx.log(`tinkerbell sync-users`);

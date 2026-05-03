@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { errorMessage } from "../lib/util.ts";
-import { createPlexClient, type PlexItem } from "../clients/plex/index.ts";
+import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
+import { plexHealthCallback } from "../lib/clients.ts";
 import { getConfig } from "../lib/config.ts";
 import { reportHealth } from "../domains/health.ts";
 import { z } from "zod";
@@ -34,6 +35,7 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
     url: PLEX_URL,
     token: PLEX_TOKEN,
     signal: ctx.signal,
+    onHealth: plexHealthCallback,
   });
 
   ctx.log(`tinkerbell because-you-watched`);

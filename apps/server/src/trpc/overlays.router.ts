@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type PlexClient } from "../clients/plex/index.ts";
+import { type PlexClient } from "@tinkerbell/plex";
 import {
   getOverlayConfigs,
   setOverlayConfig,
@@ -12,7 +12,8 @@ import {
   overlayTypeSchema,
   type Badge,
 } from "../domains/overlays.ts";
-import { extractImdbId, getOmdbRatings } from "../clients/omdb.ts";
+import { extractImdbId } from "@tinkerbell/omdb";
+import { getOmdbClient } from "../lib/clients.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 /**
@@ -120,7 +121,7 @@ export const overlaysRouter = t.router({
       if (needsOmdb) {
         const imdbId = extractImdbId(detail.guids);
         if (imdbId) {
-          const omdb = await getOmdbRatings(imdbId);
+          const omdb = await getOmdbClient().getRatings(imdbId);
           if (omdb) ratings = omdb;
         }
       }
@@ -165,7 +166,7 @@ export const overlaysRouter = t.router({
       if (needsOmdb) {
         const imdbId = extractImdbId(detail.guids);
         if (imdbId) {
-          const omdb = await getOmdbRatings(imdbId);
+          const omdb = await getOmdbClient().getRatings(imdbId);
           if (omdb) ratings = omdb;
         }
       }

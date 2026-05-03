@@ -1,9 +1,12 @@
 export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
 
+export type PlexHealthCallback = (service: "Plex" | "Plex.tv", status: "ok" | "error", message: string) => void;
+
 export interface PlexClientOptions {
   url: string;
   token: string;
   signal?: AbortSignal;
+  onHealth?: PlexHealthCallback;
 }
 
 export interface RequestOptions {

@@ -2,7 +2,7 @@
  * Plex API client factory.
  *
  * Usage:
- *   import { createPlexClient, SECTION_TYPE_MAP } from "./plex/index.ts";
+ *   import { createPlexClient, SECTION_TYPE_MAP } from "@tinkerbell/plex";
  *   const client = createPlexClient({ url, token });
  */
 
@@ -43,6 +43,8 @@ export type {
   PlexPoster,
   PlexChildItem,
   MediaFilters,
+  PlexHealthCallback,
+  PlexClientOptions,
 } from "./types.ts";
 
 export function createPlexClient(opts: PlexClientOptions) {

@@ -4,7 +4,7 @@
  * the user's library access and label filters.
  */
 
-import type { PlexClient, PlexHubItem, PlexHomeHub } from "../clients/plex/index.ts";
+import type { PlexClient, PlexHubItem, PlexHomeHub } from "@tinkerbell/plex";
 
 export interface PreviewHubItem {
   ratingKey: string;

@@ -1,6 +1,10 @@
-import { reportHealth } from "../../domains/health.ts";
-import { errorMessage } from "../../lib/util.ts";
 import type { PlexHttp } from "./http.ts";
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return String(err);
+}
 import { plexSharedServerRawSchema } from "./schemas.ts";
 import type {
   PlexAccount,
@@ -33,17 +37,17 @@ export function createSharingModule(http: PlexHttp) {
         },
       });
     } catch (err) {
-      reportHealth("Plex.tv", "error", `${method} ${path} → ${errorMessage(err)}`);
+      http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${errorMessage(err)}`);
       throw err;
     }
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      reportHealth("Plex.tv", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
+      http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
       throw new Error(`Plex.tv API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
     }
 
-    reportHealth("Plex.tv", "ok", `${method} ${path} → ${res.status}`);
+    http.onHealth?.("Plex.tv", "ok", `${method} ${path} → ${res.status}`);
 
     const text = await res.text();
     if (!text) return null;

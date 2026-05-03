@@ -3,7 +3,7 @@ import { errorMessage } from "../lib/util.ts";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "./events.ts";
 import { getAllConfig, configSchema } from "../lib/config.ts";
-import { createPlexClient } from "../clients/plex/index.ts";
+import { createPlexClient } from "@tinkerbell/plex";
 import { z } from "zod";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
@@ -105,7 +105,7 @@ export async function checkServiceHealth(service: string): Promise<void> {
     }
     case "Seerr": {
       if (!cfg.global_seerr_url || !cfg.global_seerr_api_key) throw new Error("Not configured");
-      const { testSeerrConnection } = await import("../clients/seerr.ts");
+      const { testSeerrConnection } = await import("@tinkerbell/seerr");
       const data = await testSeerrConnection(cfg.global_seerr_url, cfg.global_seerr_api_key);
       reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
       break;
