@@ -1,6 +1,6 @@
 import { initTRPC } from "@trpc/server";
 import { getConfig } from "../lib/config.ts";
-import { createPlexClient } from "../clients/plex.ts";
+import { createPlexClient } from "../clients/plex/index.ts";
 
 export const t = initTRPC.create();
 

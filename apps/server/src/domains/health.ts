@@ -3,7 +3,7 @@ import { errorMessage } from "../lib/util.ts";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "./events.ts";
 import { getAllConfig, configSchema } from "../lib/config.ts";
-import { createPlexClient } from "../clients/plex.ts";
+import { createPlexClient } from "../clients/plex/index.ts";
 import { z } from "zod";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;

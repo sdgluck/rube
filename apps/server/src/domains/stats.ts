@@ -10,9 +10,9 @@ import { z } from "zod";
 import { db, statsCache, jobs, jobRuns, mediaItems, plexUsers } from "@tinkerbell/db";
 
 const PROCESS_STARTED_AT_MS = Date.now();
-import { createPlexClient } from "../clients/plex.ts";
+import { createPlexClient } from "../clients/plex/index.ts";
 import { getConfig } from "../lib/config.ts";
-import type { PlexRecentItem } from "../clients/plex.ts";
+import type { PlexRecentItem } from "../clients/plex/index.ts";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
 

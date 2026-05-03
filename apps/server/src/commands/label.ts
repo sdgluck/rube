@@ -1,4 +1,4 @@
-import { createPlexClient } from "../clients/plex.ts";
+import { createPlexClient } from "../clients/plex/index.ts";
 import { errorMessage } from "../lib/util.ts";
 import { getConfig } from "../lib/config.ts";
 import type { JobContext, CommonJobConfig } from "../lib/job-context.ts";

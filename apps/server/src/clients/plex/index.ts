@@ -1,0 +1,62 @@
+/**
+ * Plex API client factory.
+ *
+ * Usage:
+ *   import { createPlexClient, SECTION_TYPE_MAP } from "./plex/index.ts";
+ *   const client = createPlexClient({ url, token });
+ */
+
+import { createPlexHttp } from "./http.ts";
+import { createSectionsModule } from "./sections.ts";
+import { createHubsModule } from "./hubs.ts";
+import { createItemsModule } from "./items.ts";
+import { createCollectionsModule } from "./collections.ts";
+import { createSharingModule } from "./sharing.ts";
+import { createSessionsModule } from "./sessions.ts";
+import { createPostersModule } from "./posters.ts";
+import { createStreamingModule } from "./streaming.ts";
+import type { PlexClientOptions } from "./types.ts";
+
+export { SECTION_TYPE_MAP } from "./types.ts";
+export type {
+  PlexSection,
+  PlexHub,
+  PlexItem,
+  PlexHistoryItem,
+  PlexCollection,
+  PlexCollectionDetail,
+  PlexLabel,
+  PlexAccount,
+  PlexSharing,
+  PlexSharedServerDetail,
+  PlexHubItem,
+  PlexHomeHub,
+  PlexSession,
+  PlexRecentItem,
+  PlexMediaItem,
+  PlexStreamInfo,
+  PlexPartInfo,
+  PlexMediaInfo,
+  PlexMediaDetail,
+  PlexDirectoryEntry,
+  PlexMediaFullDetail,
+  PlexPoster,
+  PlexChildItem,
+  MediaFilters,
+} from "./types.ts";
+
+export function createPlexClient(opts: PlexClientOptions) {
+  const http = createPlexHttp(opts);
+  return {
+    ...createSectionsModule(http),
+    ...createHubsModule(http),
+    ...createItemsModule(http),
+    ...createCollectionsModule(http),
+    ...createSharingModule(http),
+    ...createSessionsModule(http),
+    ...createPostersModule(http),
+    ...createStreamingModule(http),
+  };
+}
+
+export type PlexClient = ReturnType<typeof createPlexClient>;

@@ -4,7 +4,7 @@
 
 import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { db, mediaItems } from "@tinkerbell/db";
-import type { PlexClient, PlexSection } from "../clients/plex.ts";
+import type { PlexClient, PlexSection } from "../clients/plex/index.ts";
 
 export type MediaItemRow = InferSelectModel<typeof mediaItems>;
 

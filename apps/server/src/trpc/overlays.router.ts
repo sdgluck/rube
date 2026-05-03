@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type PlexClient } from "../clients/plex.ts";
+import { type PlexClient } from "../clients/plex/index.ts";
 import {
   getOverlayConfigs,
   setOverlayConfig,

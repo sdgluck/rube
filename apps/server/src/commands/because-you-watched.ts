@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { errorMessage } from "../lib/util.ts";
-import { createPlexClient, type PlexItem } from "../clients/plex.ts";
+import { createPlexClient, type PlexItem } from "../clients/plex/index.ts";
 import { getConfig } from "../lib/config.ts";
 import { reportHealth } from "../domains/health.ts";
 import { z } from "zod";

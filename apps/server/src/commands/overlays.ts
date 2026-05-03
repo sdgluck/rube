@@ -1,6 +1,6 @@
 import PQueue from "p-queue";
 import { errorMessage } from "../lib/util.ts";
-import { createPlexClient } from "../clients/plex.ts";
+import { createPlexClient } from "../clients/plex/index.ts";
 import { getConfig } from "../lib/config.ts";
 import {
   getOverlayConfigs,

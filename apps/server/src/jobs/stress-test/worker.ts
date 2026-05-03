@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { errorMessage } from "../../lib/util.ts";
 import { db, stressTestRuns } from "@tinkerbell/db";
-import { createPlexClient } from "../../clients/plex.ts";
+import { createPlexClient } from "../../clients/plex/index.ts";
 import { getConfig } from "../../lib/config.ts";
 import { runStressTest, type StressTestConfig } from "./index.ts";
 import type { JobContext } from "../../lib/job-context.ts";

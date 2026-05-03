@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import { db, stressTestRuns } from "@tinkerbell/db";
-import type { PlexClient } from "../../clients/plex.ts";
+import type { PlexClient } from "../../clients/plex/index.ts";
 import { getConfig } from "../../lib/config.ts";
 import type { JobContext } from "../../lib/job-context.ts";
 

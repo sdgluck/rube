@@ -4,7 +4,7 @@
 
 import { eq } from "drizzle-orm";
 import { db, plexSections } from "@tinkerbell/db";
-import type { PlexClient } from "../clients/plex.ts";
+import type { PlexClient } from "../clients/plex/index.ts";
 
 interface SyncStats {
   synced: number;

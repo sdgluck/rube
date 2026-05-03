@@ -5,7 +5,7 @@
 import { eq, like, or, asc, desc, sql } from "drizzle-orm";
 import { db, plexUsers } from "@tinkerbell/db";
 import { getLocalCollections } from "./collections.ts";
-import type { PlexClient } from "../clients/plex.ts";
+import type { PlexClient } from "../clients/plex/index.ts";
 
 interface SyncStats {
   synced: number;

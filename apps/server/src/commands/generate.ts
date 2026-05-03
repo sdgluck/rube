@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { errorMessage } from "../lib/util.ts";
 import PQueue from "p-queue";
 import { z } from "zod";
-import { createPlexClient, type PlexClient, type PlexSection } from "../clients/plex.ts";
+import { createPlexClient, type PlexClient, type PlexSection } from "../clients/plex/index.ts";
 import { getConfig } from "../lib/config.ts";
 import { upsertCollectionByKey } from "../domains/collections.ts";
 import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../domains/rules.ts";
