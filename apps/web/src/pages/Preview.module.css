@@ -150,13 +150,61 @@
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .hubMeta {
   font-size: 0.75rem;
   color: var(--text-muted);
-  margin-left: 8px;
   font-weight: 400;
+}
+
+.hubLink {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 4px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  background: var(--bg-input);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.hubLink:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-color);
+}
+
+.hubLink:active {
+  background: var(--bg-surface);
+}
+
+.hubSource {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.hubSourceRule {
+  background: var(--bg-badge);
+  color: var(--text-badge);
+}
+
+.hubSourceUser {
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
 }
 
 .row {

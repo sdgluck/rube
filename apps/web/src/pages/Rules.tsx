@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import DropdownButton from "../DropdownButton";
 import ConfirmModal from "../ConfirmModal";
-import RuleWizard, { type RuleFormState } from "../RuleWizard";
+import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle } from "../RuleWizard";
 import { RulesSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
 import { useToast } from "../Toast";
@@ -52,7 +52,13 @@ const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(SEERR_FIL
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));
 
 const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => string> = {
-  ai_prompt: (c) => `Limit: ${c.limit ?? 8} | Min items: ${c.minItems ?? 15}`,
+  ai_prompt: (c) => {
+    const themes = (c.themes as string[] | undefined) ?? [];
+    const custom = ((c.customThemes as string[] | undefined) ?? []).filter((t) => t.trim().length > 0);
+    const all = [...themes, ...custom];
+    const themeText = all.length === 0 ? "no themes" : `${all.length} theme${all.length !== 1 ? "s" : ""}`;
+    return `${themeText} | Limit: ${c.limit ?? 8} | Min items: ${c.minItems ?? 15}`;
+  },
   top_rated: (c) => `${c.limit ?? 50} items`,
   lowest_rated: (c) => `${c.limit ?? 50} items`,
   imdb_chart: (c) => IMDB_CHART_LABELS[c.chart as string] || (c.chart as string) || "—",
@@ -72,7 +78,10 @@ const TYPE_BADGE: Record<string, string> = {
 const EMPTY_FORM: RuleFormState = {
   name: "",
   type: "ai_prompt",
-  prompt: "",
+  themes: ["Vibes & tone", "Unexpected pairings"],
+  customThemes: [],
+  vibe: "mixed",
+  nameStyle: "short_punchy",
   limit: 8,
   minItems: 15,
   sections: [],
@@ -193,7 +202,10 @@ export default function Rules() {
       id: rule.id,
       name: rule.name,
       type: rule.type,
-      prompt: (config.prompt as string) || "",
+      themes: (config.themes as string[]) || [],
+      customThemes: (config.customThemes as string[]) || [],
+      vibe: ((config.vibe as AiVibe) || "mixed") satisfies AiVibe,
+      nameStyle: ((config.nameStyle as AiNameStyle) || "short_punchy") satisfies AiNameStyle,
       limit: (config.limit as number) ?? defaultLimitForType(rule.type),
       minItems: (config.minItems as number) ?? 15,
       sections: (config.sections as string[]) || [],
@@ -213,7 +225,10 @@ export default function Rules() {
     const config: Record<string, unknown> = {};
     if (typeHasLimit(next.type)) config.limit = next.limit;
     if (next.type === "ai_prompt") {
-      config.prompt = next.prompt;
+      config.themes = next.themes;
+      config.customThemes = next.customThemes.filter((t) => t.trim().length > 0);
+      config.vibe = next.vibe;
+      config.nameStyle = next.nameStyle;
       config.minItems = next.minItems;
     }
     if (next.type === "imdb_chart") config.chart = next.chart;

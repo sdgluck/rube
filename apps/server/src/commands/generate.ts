@@ -7,6 +7,7 @@ import { getConfig } from "../lib/config.ts";
 import { plexHealthCallback, getOmdbClient, getImdbClient } from "../lib/clients.ts";
 import { upsertCollectionByKey } from "../domains/collections.ts";
 import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../domains/rules.ts";
+import { appendHistory, getRecentHistory, type HistoricalCollection } from "../domains/rule-history.ts";
 import { extractImdbId } from "@tinkerbell/omdb";
 import { reportHealth } from "../domains/health.ts";
 import type { JobContext, GenerateJobConfig } from "../lib/job-context.ts";
@@ -18,6 +19,10 @@ interface AiCollection {
 
 const ruleConfigSchema = z.object({
   prompt: z.string().optional(),
+  themes: z.array(z.string()).optional(),
+  customThemes: z.array(z.string()).optional(),
+  vibe: z.enum(["playful", "serious", "mixed"]).optional(),
+  nameStyle: z.enum(["short_punchy", "descriptive"]).optional(),
   limit: z.number().optional(),
   minItems: z.number().optional(),
   sections: z.array(z.string()).optional(),
@@ -26,6 +31,80 @@ const ruleConfigSchema = z.object({
   filter: z.string().optional(),
 });
 type RuleConfig = z.infer<typeof ruleConfigSchema>;
+
+const VIBE_HINTS: Record<NonNullable<RuleConfig["vibe"]>, string> = {
+  playful: "Playful, witty, irreverent — names can be cheeky.",
+  serious: "Serious and considered — names should feel curated and adult.",
+  mixed: "Mix playful and serious tones across the set.",
+};
+
+const NAME_STYLE_HINTS: Record<NonNullable<RuleConfig["nameStyle"]>, string> = {
+  short_punchy: "Names should be short and punchy (1–4 words).",
+  descriptive: "Names can be a bit longer and descriptive (up to ~6 words).",
+};
+
+function buildAiPrompt(args: {
+  sectionTitle: string;
+  limit: number;
+  minItems: number;
+  themes: string[];
+  customThemes: string[];
+  vibe?: RuleConfig["vibe"];
+  nameStyle?: RuleConfig["nameStyle"];
+  history: HistoricalCollection[];
+}): string {
+  const { sectionTitle, limit, minItems, themes, customThemes, vibe, nameStyle, history } = args;
+
+  const allThemes = [...themes, ...customThemes].filter((t) => t.trim().length > 0);
+  const themesBlock =
+    allThemes.length > 0
+      ? `Lean into these angles when forming collections: ${allThemes.map((t) => `"${t}"`).join(", ")}.`
+      : `Use any inventive angle: tonal similarities, visual motifs, narrative parallels, thematic undercurrents, shared vibes.`;
+
+  const vibeLine = vibe ? VIBE_HINTS[vibe] : "";
+  const nameLine = nameStyle ? NAME_STYLE_HINTS[nameStyle] : "";
+
+  const historyBlock =
+    history.length === 0
+      ? "(no prior collections — full creative freedom)"
+      : history
+          .map((c) => {
+            const sample = c.sampleItems.slice(0, 5).join(", ");
+            return `- "${c.name}"${sample ? ` — e.g. ${sample}` : ""}`;
+          })
+          .join("\n");
+
+  return `You are a movie/TV curator. Given a list of items from a Plex "${sectionTitle}" library, create curated themed collections.
+
+Rules:
+- Create exactly ${limit} collections.
+- Each collection MUST have between ${minItems} and 30 items, no fewer than ${minItems}.
+- Each item can appear in multiple collections.
+- Only use titles that exactly match the input list.
+- Collection names must be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format).
+- Be surprising and inventive — avoid obvious genre or decade groupings.
+${vibeLine ? `- ${vibeLine}\n` : ""}${nameLine ? `- ${nameLine}\n` : ""}
+${themesBlock}
+
+Previously generated collections for this library (DO NOT repeat these themes, names, or produce collections whose roster would substantially overlap with these):
+${historyBlock}
+
+Your new collections must explore different angles than anything above.
+
+Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
+[{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]`;
+}
+
+function pickSampleItems(titles: string[], n = 5): string[] {
+  if (titles.length <= n) return [...titles];
+  const copy = [...titles];
+  const out: string[] = [];
+  for (let i = 0; i < n && copy.length > 0; i++) {
+    const idx = Math.floor(Math.random() * copy.length);
+    out.push(copy.splice(idx, 1)[0]);
+  }
+  return out;
+}
 
 async function fetchImdbChartNormalized(id: string): Promise<{ name: string; imdbIds: string[] }> {
   return getImdbClient().fetchChart(id);
@@ -81,9 +160,10 @@ async function handleAiPrompt(
     throw new Error("Anthropic API key is required for AI prompt rules. Configure it in Settings.");
   }
 
-  const promptTemplate = ruleConfig.prompt || "";
   const maxCollections = ruleConfig.limit ?? 8;
   const minItems = ruleConfig.minItems ?? 15;
+  const themes = ruleConfig.themes ?? [];
+  const customThemes = ruleConfig.customThemes ?? [];
 
   if (maxCollections > 10) {
     throw new Error("Limit cannot exceed 10.");
@@ -104,10 +184,21 @@ async function handleAiPrompt(
       continue;
     }
 
-    const prompt = promptTemplate
-      .replace(/\{sectionTitle\}/g, sectionTitle)
-      .replace(/\{limit\}/g, String(maxCollections))
-      .replace(/\{minItems\}/g, String(minItems));
+    const history = getRecentHistory(rule.id, sectionId);
+    if (history.length > 0) {
+      ctx.log(`Loaded ${history.length} prior collection(s) from history to inform prompt.`);
+    }
+
+    const prompt = buildAiPrompt({
+      sectionTitle,
+      limit: maxCollections,
+      minItems,
+      themes,
+      customThemes,
+      vibe: ruleConfig.vibe,
+      nameStyle: ruleConfig.nameStyle,
+      history,
+    });
 
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -162,8 +253,10 @@ ${itemList}`,
     }
 
     let created = 0;
+    const createdForHistory: HistoricalCollection[] = [];
     for (const col of aiCollections) {
-      const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
+      const matchedTitles = col.items.filter((title) => titleMap.has(title));
+      const ratingKeys = matchedTitles.map((title) => titleMap.get(title)!) as string[];
 
       if (ratingKeys.length < minItems) {
         ctx.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least ${minItems}`);
@@ -191,7 +284,13 @@ ${itemList}`,
         await upsertCollectionByKey(client, section, collectionKey);
         lastCollectionKey = collectionKey;
         created++;
+        createdForHistory.push({ name: col.name, sampleItems: pickSampleItems(matchedTitles) });
       }
+    }
+
+    if (createdForHistory.length > 0) {
+      appendHistory(rule.id, sectionId, sectionTitle, createdForHistory);
+      ctx.log(`Recorded ${createdForHistory.length} collection(s) in rule history.`);
     }
 
     ctx.log(`Created and pinned ${created} collection(s) for "${sectionTitle}".`);
@@ -628,10 +727,11 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         throw new Error("Anthropic API key is required for AI prompt rules.");
       }
 
-      const promptTemplate = ruleConfig.prompt || "";
       const maxCollections = ruleConfig.limit ?? 8;
       const minItems = ruleConfig.minItems ?? 15;
-      log(`[ai_prompt] limit=${maxCollections}, minItems=${minItems}, promptLength=${promptTemplate.length}`);
+      const themes = ruleConfig.themes ?? [];
+      const customThemes = ruleConfig.customThemes ?? [];
+      log(`[ai_prompt] limit=${maxCollections}, minItems=${minItems}, themes=${themes.length}+${customThemes.length}`);
       if (maxCollections > 10) throw new Error("Limit cannot exceed 10.");
 
       for (const section of sections) {
@@ -643,10 +743,19 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
           continue;
         }
 
-        const prompt = promptTemplate
-          .replace(/\{sectionTitle\}/g, section.title)
-          .replace(/\{limit\}/g, String(maxCollections))
-          .replace(/\{minItems\}/g, String(minItems));
+        const history = getRecentHistory(rule.id, section.key);
+        log(`[ai_prompt] Loaded ${history.length} historical collection(s)`);
+
+        const prompt = buildAiPrompt({
+          sectionTitle: section.title,
+          limit: maxCollections,
+          minItems,
+          themes,
+          customThemes,
+          vibe: ruleConfig.vibe,
+          nameStyle: ruleConfig.nameStyle,
+          history,
+        });
 
         const shuffled = [...items];
         for (let i = shuffled.length - 1; i > 0; i--) {

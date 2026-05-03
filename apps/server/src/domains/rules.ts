@@ -51,20 +51,6 @@ export function deleteRule(id: string): void {
   db.delete(rules).where(eq(rules.id, id)).run();
 }
 
-const DEFAULT_AI_PROMPT = `You are a movie/TV curator. Given this list of items from a Plex "{sectionTitle}" library, create curated themed collections.
-
-Rules:
-- Create exactly {limit} collections
-- Each collection MUST have between {minItems} and 30 items, no fewer than {minItems}
-- Each item can appear in multiple collections
-- Only use titles that exactly match the input list
-- Collection names should be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format)
-- Be surprising and inventive with your themes — avoid obvious genres or decades groupings
-- Think of unexpected connections between items: tonal similarities, visual motifs, narrative parallels, thematic undercurrents, shared vibes
-
-Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
-[{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]`;
-
 export function seedDefaultRules(): void {
   const existing = db.select({ id: rules.id }).from(rules).limit(1).all();
   if (existing.length > 0) return;
@@ -72,7 +58,14 @@ export function seedDefaultRules(): void {
   createRule({
     name: "AI Curated Collections",
     type: "ai_prompt",
-    config: { prompt: DEFAULT_AI_PROMPT, limit: 8 },
+    config: {
+      themes: ["Vibes & tone", "Visual style & cinematography", "Unexpected pairings", "Moods & atmospheres"],
+      customThemes: [],
+      vibe: "mixed",
+      nameStyle: "short_punchy",
+      limit: 8,
+      minItems: 15,
+    },
   });
   console.log("[rules] Seeded default AI prompt rule");
 }

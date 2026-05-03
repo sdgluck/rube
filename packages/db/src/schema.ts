@@ -57,6 +57,22 @@ export const rules = sqliteTable("rules", {
   lastCollectionRatingKey: text("last_collection_rating_key"),
 });
 
+export const ruleHistory = sqliteTable(
+  "rule_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ruleId: text("rule_id").notNull(),
+    sectionKey: text("section_key").notNull(),
+    sectionTitle: text("section_title").notNull(),
+    runAt: integer("run_at").notNull(),
+    collections: text("collections", { mode: "json" })
+      .$type<{ name: string; sampleItems: string[] }[]>()
+      .notNull()
+      .default([]),
+  },
+  (table) => [index("idx_rule_history_rule_section_run").on(table.ruleId, table.sectionKey, table.runAt)],
+);
+
 export const jobRuns = sqliteTable(
   "job_runs",
   {

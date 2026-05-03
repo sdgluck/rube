@@ -3,11 +3,17 @@ import { trpc } from "./trpc";
 import shared from "./pages/Collections.module.css";
 import styles from "./RuleWizard.module.css";
 
+export type AiVibe = "playful" | "serious" | "mixed";
+export type AiNameStyle = "short_punchy" | "descriptive";
+
 export interface RuleFormState {
   id?: string;
   name: string;
   type: string;
-  prompt: string;
+  themes: string[];
+  customThemes: string[];
+  vibe: AiVibe;
+  nameStyle: AiNameStyle;
   limit: number;
   minItems: number;
   sections: string[];
@@ -15,6 +21,30 @@ export interface RuleFormState {
   listId: string;
   filter: string;
 }
+
+export const PRESET_THEMES = [
+  "Vibes & tone",
+  "Visual style & cinematography",
+  "Narrative parallels",
+  "Decades & eras",
+  "Directors & auteurs",
+  "Subgenres",
+  "Moods & atmospheres",
+  "Unexpected pairings",
+  "Hidden gems",
+  "Soundtrack-driven",
+];
+
+const VIBES: { value: AiVibe; label: string }[] = [
+  { value: "playful", label: "Playful" },
+  { value: "serious", label: "Serious" },
+  { value: "mixed", label: "Mixed" },
+];
+
+const NAME_STYLES: { value: AiNameStyle; label: string }[] = [
+  { value: "short_punchy", label: "Short & punchy" },
+  { value: "descriptive", label: "Descriptive" },
+];
 
 interface RuleWizardProps {
   open: boolean;
@@ -148,8 +178,10 @@ function suggestName(form: RuleFormState, sections: { title: string }[]): string
   }
   if (form.type === "seerr_requests") return `Seerr — ${SEERR_FILTER_LABELS[form.filter] || "Requests"}`;
   if (form.type === "ai_prompt") {
-    const firstLine = form.prompt.split(/\r?\n/)[0]?.trim() || "";
-    return firstLine ? `AI: ${firstLine.slice(0, 40)}` : "AI Prompt";
+    const all = [...form.themes, ...form.customThemes.filter((t) => t.trim().length > 0)];
+    if (all.length === 0) return "AI Curated Collections";
+    const head = all.slice(0, 2).join(" + ");
+    return `AI — ${head}${all.length > 2 ? " +more" : ""}`.slice(0, 60);
   }
   if (form.type === "rt_top_rated") return "Rotten Tomatoes Top Rated";
   if (form.type === "top_rated") return "Top Rated";
@@ -174,10 +206,14 @@ function stepsFor(type: string): { id: StepId; label: string }[] {
 
 // ─── Validation ──────────────────────────────────────────────────────────
 
+function aiHasThemes(form: RuleFormState): boolean {
+  return form.themes.length > 0 || form.customThemes.some((t) => t.trim().length > 0);
+}
+
 function validateStep(step: StepId, form: RuleFormState): string | null {
   if (step === "type") return form.type ? null : "Pick a rule type.";
   if (step === "source") {
-    if (form.type === "ai_prompt" && !form.prompt.trim()) return "Prompt is required.";
+    if (form.type === "ai_prompt" && !aiHasThemes(form)) return "Pick at least one theme (or add a custom one).";
     if (form.type === "imdb_list" && !form.listId.trim()) return "An IMDb list ID or URL is required.";
     return null;
   }
@@ -190,7 +226,7 @@ function isFormValid(form: RuleFormState): boolean {
   return (
     !!form.name.trim() &&
     !!form.type &&
-    (form.type !== "ai_prompt" || !!form.prompt.trim()) &&
+    (form.type !== "ai_prompt" || aiHasThemes(form)) &&
     (form.type !== "imdb_list" || !!form.listId.trim())
   );
 }
@@ -252,7 +288,17 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (suggested && !form.name.trim()) {
       setForm((prev) => ({ ...prev, name: suggested }));
     }
-  }, [currentStep?.id, mode, form.type, form.chart, form.listId, form.filter, form.prompt, sections]);
+  }, [
+    currentStep?.id,
+    mode,
+    form.type,
+    form.chart,
+    form.listId,
+    form.filter,
+    form.themes,
+    form.customThemes,
+    sections,
+  ]);
 
   const handleClose = useCallback(() => {
     setExiting(true);
@@ -350,24 +396,102 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
   function renderSourceStep() {
     if (form.type === "ai_prompt") {
+      const toggleTheme = (t: string) => {
+        const has = form.themes.includes(t);
+        setForm({ ...form, themes: has ? form.themes.filter((x) => x !== t) : [...form.themes, t] });
+      };
+      const updateCustom = (i: number, v: string) => {
+        const next = [...form.customThemes];
+        next[i] = v;
+        setForm({ ...form, customThemes: next });
+      };
+      const addCustom = () => setForm({ ...form, customThemes: [...form.customThemes, ""] });
+      const removeCustom = (i: number) =>
+        setForm({ ...form, customThemes: form.customThemes.filter((_, idx) => idx !== i) });
+
       return (
         <>
-          <h3 className={styles.stepHeading}>Prompt template</h3>
-          <p className={styles.stepSub}>The prompt is sent to your AI provider once per included section.</p>
+          <h3 className={styles.stepHeading}>Themes & style</h3>
+          <p className={styles.stepSub}>
+            Pick the angles the AI should explore. Past collections from this rule are automatically fed back in so it
+            doesn't repeat itself.
+          </p>
+
           <div className={styles.field}>
-            <label htmlFor="rule-prompt">Prompt</label>
-            <textarea
-              id="rule-prompt"
-              className={styles.textarea}
-              value={form.prompt}
-              onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-              placeholder="Generate themed collections for {sectionTitle}..."
-              autoFocus
-            />
-            <span className={styles.hint}>
-              Available placeholders: {"{sectionTitle}"}, {"{limit}"}, {"{minItems}"}
-            </span>
+            <label>Themes</label>
+            <div className={styles.pills}>
+              {PRESET_THEMES.map((t) => {
+                const selected = form.themes.includes(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`${styles.pill} ${selected ? styles.pillSelected : ""}`}
+                    onClick={() => toggleTheme(t)}
+                    aria-pressed={selected}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+            <span className={styles.hint}>Pick one or more. The AI uses these as starting angles.</span>
           </div>
+
+          <div className={styles.field}>
+            <label>Custom themes (optional)</label>
+            {form.customThemes.map((t, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                <input
+                  className={shared.input}
+                  value={t}
+                  onChange={(e) => updateCustom(i, e.target.value)}
+                  placeholder="e.g. Films set during a single night"
+                />
+                <button type="button" className={shared.buttonSecondary} onClick={() => removeCustom(i)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" className={shared.buttonSecondary} onClick={addCustom}>
+              Add custom theme
+            </button>
+          </div>
+
+          <div className={styles.field}>
+            <label>Vibe</label>
+            <div className={styles.pills}>
+              {VIBES.map((v) => (
+                <button
+                  key={v.value}
+                  type="button"
+                  className={`${styles.pill} ${form.vibe === v.value ? styles.pillSelected : ""}`}
+                  onClick={() => setForm({ ...form, vibe: v.value })}
+                  aria-pressed={form.vibe === v.value}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label>Name style</label>
+            <div className={styles.pills}>
+              {NAME_STYLES.map((n) => (
+                <button
+                  key={n.value}
+                  type="button"
+                  className={`${styles.pill} ${form.nameStyle === n.value ? styles.pillSelected : ""}`}
+                  onClick={() => setForm({ ...form, nameStyle: n.value })}
+                  aria-pressed={form.nameStyle === n.value}
+                >
+                  {n.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className={styles.field}>
             <label htmlFor="rule-min-items">Minimum items per collection</label>
             <input
@@ -577,9 +701,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     let sourceLabel: string | null = null;
     let sourceValue: string | null = null;
     if (form.type === "ai_prompt") {
-      sourceLabel = "Prompt";
-      const firstLine = form.prompt.split(/\r?\n/)[0]?.trim() || "";
-      sourceValue = firstLine.length > 80 ? firstLine.slice(0, 77) + "…" : firstLine;
+      sourceLabel = "Themes";
+      const all = [...form.themes, ...form.customThemes.filter((t) => t.trim().length > 0)];
+      sourceValue = all.length === 0 ? "—" : all.join(", ");
     } else if (form.type === "imdb_chart") {
       sourceLabel = "Chart";
       sourceValue = IMDB_CHART_LABELS[form.chart] || form.chart;
