@@ -63,6 +63,15 @@ export function ruleTypeToKometaKind(ruleType: string): KometaPosterSource["kind
       // The posters package treats it as a styled-kind so the default
       // "color" style is applied automatically.
       return "streaming";
+    case "based_on":
+      return "based";
+    case "seasonal":
+      return "seasonal";
+    case "awards":
+      // Kometa nests award imagery under award/<award_type>/ — there's no
+      // single "awards" kind in the posters package. Skip auto-poster for
+      // now; users can set posters manually post-migration.
+      return null;
     default:
       return null;
   }

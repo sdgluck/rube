@@ -228,6 +228,26 @@ const RULE_TYPES: RuleType[] = [
     description: "Subset of the Networks rule limited to major streaming services (Netflix, Disney+, etc.).",
     requires: "tmdb",
   },
+  {
+    value: "based_on",
+    label: "Based On",
+    description: "Group items by source material — novel, comic, true story, video game, play, short story.",
+    requires: "tmdb",
+  },
+  {
+    value: "seasonal",
+    label: "Seasonal",
+    description:
+      "Holiday and season collections (Christmas, Halloween, Valentine's, …) using TMDb keywords + release month.",
+    requires: "tmdb",
+  },
+  {
+    value: "awards",
+    label: "Awards",
+    description:
+      "Award-winners collections (Oscars, BAFTAs, Cannes, Golden Globes). Coverage depends on TMDb keyword tagging.",
+    requires: "tmdb",
+  },
 ];
 
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));

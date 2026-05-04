@@ -23,6 +23,9 @@ const KOMETA_BUCKET_TO_RULE_TYPE: Partial<Record<BucketKind, string>> = {
   subtitle_language: "subtitle_languages",
   video_format: "video_formats",
   streaming: "streaming",
+  based_on: "based_on",
+  seasonal: "seasonal",
+  award: "awards",
 };
 
 export interface KometaScanResult {

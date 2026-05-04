@@ -95,11 +95,15 @@ const collectionResponseSchema = z.object({
 
 const movieKeySampleSchema = z.object({ id: z.number(), title: z.string() });
 
+const keywordsObjSchema = z.object({ keywords: z.array(z.object({ id: z.number() })).default([]) });
+const tvKeywordsObjSchema = z.object({ results: z.array(z.object({ id: z.number() })).default([]) });
+
 const movieDetailsSchema = z.object({
   id: z.number(),
   genres: z.array(genreRawSchema).default([]),
   production_companies: z.array(companyRawSchema).default([]),
   production_countries: z.array(countryRawSchema).default([]),
+  release_date: z.string().optional(),
   credits: z
     .object({
       cast: z.array(castRawSchema).default([]),
@@ -107,6 +111,7 @@ const movieDetailsSchema = z.object({
     })
     .optional(),
   release_dates: z.object({ results: z.array(releaseDateEntrySchema).default([]) }).optional(),
+  keywords: keywordsObjSchema.optional(),
 });
 
 const tvDetailsSchema = z.object({
@@ -116,6 +121,7 @@ const tvDetailsSchema = z.object({
   production_countries: z.array(countryRawSchema).default([]).optional(),
   origin_country: z.array(z.string()).default([]).optional(),
   networks: z.array(networkRawSchema).default([]),
+  first_air_date: z.string().optional(),
   credits: z
     .object({
       cast: z.array(castRawSchema).default([]),
@@ -129,6 +135,7 @@ const tvDetailsSchema = z.object({
     })
     .optional(),
   content_ratings: z.object({ results: z.array(contentRatingEntrySchema).default([]) }).optional(),
+  keywords: tvKeywordsObjSchema.optional(),
 });
 
 // ─── Public types ────────────────────────────────────────────────────────
@@ -179,6 +186,10 @@ export interface TmdbItemDetails {
   directors: Array<{ id: number; name: string }>;
   /** Map of ISO-3166-1 region -> certification. */
   contentRatings: Record<string, string>;
+  /** TMDb keyword IDs assigned to the title. */
+  keywords: number[];
+  /** Calendar month of release / first air date (1–12), undefined when TMDb has no date. */
+  releaseMonth?: number;
 }
 
 // ─── Core fetch helper ───────────────────────────────────────────────────
@@ -214,6 +225,14 @@ function yearFromDate(d?: string): number | undefined {
   if (!d) return undefined;
   const m = d.match(/^(\d{4})/);
   return m ? parseInt(m[1], 10) : undefined;
+}
+
+function monthFromDate(d?: string): number | undefined {
+  if (!d) return undefined;
+  const m = d.match(/^\d{4}-(\d{2})/);
+  if (!m) return undefined;
+  const month = parseInt(m[1], 10);
+  return month >= 1 && month <= 12 ? month : undefined;
 }
 
 function pickMovieCertification(entries: z.infer<typeof releaseDateEntrySchema>[]): Record<string, string> {
@@ -367,7 +386,7 @@ export async function fetchItemDetails(
 ): Promise<TmdbItemDetails> {
   if (mediaType === "movie") {
     const data = await tmdbFetch(cfg, `/movie/${tmdbId}`, movieDetailsSchema, {
-      append_to_response: "credits,release_dates",
+      append_to_response: "credits,release_dates,keywords",
     });
     const cast = (data.credits?.cast ?? [])
       .map((c) => ({ id: c.id, name: c.name, order: c.order }))
@@ -385,11 +404,13 @@ export async function fetchItemDetails(
       cast,
       directors,
       contentRatings: pickMovieCertification(data.release_dates?.results ?? []),
+      keywords: (data.keywords?.keywords ?? []).map((k) => k.id),
+      releaseMonth: monthFromDate(data.release_date),
     };
   }
 
   const data = await tmdbFetch(cfg, `/tv/${tmdbId}`, tvDetailsSchema, {
-    append_to_response: "aggregate_credits,content_ratings",
+    append_to_response: "aggregate_credits,content_ratings,keywords",
   });
   const credits = data.aggregate_credits ?? data.credits ?? { cast: [], crew: [] };
   const cast = credits.cast
@@ -412,5 +433,7 @@ export async function fetchItemDetails(
     cast,
     directors,
     contentRatings: pickTvCertification(data.content_ratings?.results ?? []),
+    keywords: (data.keywords?.results ?? []).map((k) => k.id),
+    releaseMonth: monthFromDate(data.first_air_date),
   };
 }

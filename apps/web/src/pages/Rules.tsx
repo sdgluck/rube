@@ -55,6 +55,9 @@ const RULE_TYPES = [
   { value: "subtitle_languages", label: "Subtitle Languages" },
   { value: "video_formats", label: "Video Formats" },
   { value: "streaming", label: "Streaming" },
+  { value: "based_on", label: "Based On" },
+  { value: "seasonal", label: "Seasonal" },
+  { value: "awards", label: "Awards" },
 ];
 
 const IMDB_CHARTS = [

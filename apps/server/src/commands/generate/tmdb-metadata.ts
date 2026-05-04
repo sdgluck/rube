@@ -22,6 +22,8 @@ function toCached(details: TmdbItemDetails): TmdbCachedDetails {
     cast: details.cast.length > 0 ? details.cast : undefined,
     directors: details.directors.length > 0 ? details.directors : undefined,
     contentRatings: Object.keys(details.contentRatings).length > 0 ? details.contentRatings : undefined,
+    keywords: details.keywords.length > 0 ? details.keywords : undefined,
+    releaseMonth: details.releaseMonth,
   };
 }
 
