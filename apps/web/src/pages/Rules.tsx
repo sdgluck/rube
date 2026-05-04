@@ -130,6 +130,7 @@ const EMPTY_FORM: RuleFormState = {
   chart: "top_250_movies",
   listId: "",
   filter: "all",
+  pinToHomepage: true,
   arr: { ...DEFAULT_ARR_FORM },
 };
 
@@ -572,6 +573,7 @@ export default function Rules() {
       chart: (config.chart as string) || "top_250_movies",
       listId: (config.listId as string) || "",
       filter: (config.filter as string) || "all",
+      pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       arr: {
         ...DEFAULT_ARR_FORM,
         ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
@@ -599,6 +601,7 @@ export default function Rules() {
     if (next.type === "imdb_list") config.listId = next.listId;
     if (next.type === "seerr_requests") config.filter = next.filter;
     if (next.sections.length > 0) config.sections = next.sections;
+    if (!next.pinToHomepage) config.pinToHomepage = false;
     if (next.arr.enabled) config.arr = next.arr;
 
     if (isEditing && next.id) {

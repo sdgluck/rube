@@ -64,7 +64,8 @@ export async function runHandlerWithCommits(
   const handler = handlerForRule(deps.rule.type);
   if (!handler) return { lastCollectionKey: null };
 
-  const { ctx, client, rule } = deps;
+  const { ctx, client, rule, ruleConfig } = deps;
+  const pinToHomepage = ruleConfig.pinToHomepage ?? true;
   let lastCollectionKey: string | null = null;
 
   // ai_prompt history is collected per section and flushed in a `finally`
@@ -85,6 +86,7 @@ export async function runHandlerWithCommits(
         pending.name,
         ratingKeys,
         labels,
+        pinToHomepage,
       );
       if (!collectionKey) continue;
 
