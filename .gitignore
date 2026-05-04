@@ -1,6 +1,12 @@
 node_modules/
-tinkerbell.db*
-sidequest.sqlite*
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
 apps/web/dist
 .turbo
 .claude/
