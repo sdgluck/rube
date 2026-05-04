@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-04
+
+### Added
+
+- Kometa to Tinkerbell migration support (Phase 1)
+- Credits tab in Settings listing open-source dependencies
+- Auto-applied Kometa default posters for collection artwork
+- Per-rule pin-to-homepage option
+
+### Changed
+
+- Concurrent rule executions are now serialized
+- Multi-collection rules now display a filtered collections list in View
+
 ## [0.3.1] - 2026-05-04
 
 ### Added
