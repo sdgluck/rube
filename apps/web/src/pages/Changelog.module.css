@@ -1,0 +1,46 @@
+.page {
+  max-width: 760px;
+}
+
+.heading {
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.versionLine {
+  color: var(--color-muted, #888);
+  margin: 0 0 24px 0;
+  font-size: 0.9rem;
+}
+
+.entry h2 {
+  margin-top: 32px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.entry h3 {
+  margin-top: 20px;
+  font-size: 1rem;
+  color: var(--color-muted, #aaa);
+}
+
+.entry ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.entry li {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.entry p {
+  line-height: 1.6;
+}
+
+.entry a {
+  color: #7fb3ff;
+}

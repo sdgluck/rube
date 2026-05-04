@@ -8,6 +8,7 @@ import useDocumentTitle from "./useDocumentTitle";
 import useKeyboardShortcuts from "./useKeyboardShortcuts";
 import Settings from "./pages/Settings";
 import { trpc } from "./trpc";
+import { VERSION, IS_BETA } from "./version";
 import styles from "./pages/Jobs.module.css";
 
 const Stats = lazy(() => import("./pages/Stats"));
@@ -38,6 +39,8 @@ const Overlays = lazy(() => import("./pages/Overlays"));
 const Events = lazy(() => import("./pages/Events"));
 const StressTest = lazy(() => import("./pages/StressTest"));
 const Preview = lazy(() => import("./pages/Preview"));
+const Changelog = lazy(() => import("./pages/Changelog"));
+const SettingsAbout = lazy(() => import("./pages/SettingsAbout"));
 
 function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {
@@ -164,6 +167,7 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/users", label: "Users" },
       { to: "/events", label: "Events" },
       { to: "/settings", label: "Settings" },
+      { to: "/changelog", label: "Changelog" },
     ],
   },
 ];
@@ -300,8 +304,22 @@ export default function App() {
       <div className={`sidebar-overlay ${sidebarOpen ? "sidebar-overlay-visible" : ""}`} onClick={closeSidebar} />
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <h1 className="sidebar-title">
-          Tinkerbell <SidebarHealthDot />
+          Tinkerbell
+          {IS_BETA && (
+            <Link
+              to="/changelog"
+              className="version-pill"
+              title={`v${VERSION} — view changelog`}
+              onClick={closeSidebar}
+            >
+              beta
+            </Link>
+          )}
+          <SidebarHealthDot />
         </h1>
+        <Link to="/changelog" className="sidebar-version" onClick={closeSidebar}>
+          v{VERSION}
+        </Link>
         <nav>
           {NAV_SECTIONS.map((section) => (
             <div key={section.label} className="nav-section">
@@ -556,7 +574,23 @@ export default function App() {
                     </LazyPage>
                   }
                 />
+                <Route
+                  path="about"
+                  element={
+                    <LazyPage>
+                      <SettingsAbout />
+                    </LazyPage>
+                  }
+                />
               </Route>
+              <Route
+                path="/changelog"
+                element={
+                  <LazyPage>
+                    <Changelog />
+                  </LazyPage>
+                }
+              />
               <Route path="*" element={<Navigate to="/stats" replace />} />
             </Routes>
           </Suspense>

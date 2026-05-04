@@ -39,6 +39,9 @@ export default function Settings() {
         >
           Stress Test
         </NavLink>
+        <NavLink to="/settings/about" className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}>
+          About
+        </NavLink>
       </nav>
       <Outlet />
     </div>

@@ -86,12 +86,41 @@ body {
 
 .sidebar-title {
   font-size: 1.25rem;
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.version-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: #f59e0b;
+  color: #111;
+  border-radius: 999px;
+  text-decoration: none;
+  line-height: 1.4;
+}
+
+.version-pill:hover {
+  background: #fbbf24;
+}
+
+.sidebar-version {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-version:hover {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .health-dot-link {
