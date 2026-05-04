@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-04
+
+### Added
+
+- Drag-to-reorder for stats panels.
+
+### Changed
+
+- Stats panels are now organized into per-component files.
+- Replaced Plex-tag grouped rules with a TMDB-backed handler.
+
 ## [0.2.1] - 2026-05-04
 
 ### Changed
