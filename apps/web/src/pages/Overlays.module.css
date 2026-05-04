@@ -1037,7 +1037,9 @@
 .actionBar {
   position: fixed;
   bottom: 0;
-  left: 0;
+  /* Sidebar is 220px wide on desktop; start the action bar after it so the
+     sidebar's "Running" jobs section stays visible. */
+  left: 220px;
   right: 0;
   display: flex;
   align-items: center;
@@ -1046,7 +1048,15 @@
   background: var(--bg-surface);
   border-top: 1px solid var(--border-color);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
-  z-index: 50;
+  z-index: 49;
+}
+
+@media (max-width: 768px) {
+  /* Mobile uses bottom nav instead of the sidebar — action bar can span
+     full width but should sit above the bottom nav. */
+  .actionBar {
+    left: 0;
+  }
 }
 
 .actionBarStatus {
