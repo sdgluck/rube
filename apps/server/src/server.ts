@@ -5,6 +5,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./trpc/index.ts";
 import { initJobs } from "./jobs/runner.ts";
 import { getConfig } from "./lib/config.ts";
+import { ensureBuiltInPresets } from "./domains/overlays.ts";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
@@ -130,6 +131,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
 server.listen(PORT, () => {
   console.log(`Tinkerbell admin server listening on port ${PORT} (https://api.tinkerbell.localhost)`);
+  try {
+    ensureBuiltInPresets();
+  } catch (err) {
+    console.error("[overlays] failed to seed built-in presets:", err);
+  }
   initJobs().catch((err) => {
     console.error("[jobs] Init failed:", err);
     process.exit(1);

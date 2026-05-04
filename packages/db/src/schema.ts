@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 interface StressTestConfigShape {
   mode: "transcode" | "directplay" | "mixed";
@@ -105,14 +105,29 @@ export const jobRuns = sqliteTable(
 export const overlayConfigs = sqliteTable(
   "overlay_configs",
   {
-    id: text("id").primaryKey(), // "{sectionId}:{position}"
+    id: integer("id").primaryKey({ autoIncrement: true }),
     sectionId: text("section_id").notNull(),
     position: text("position").notNull(),
     overlayType: text("overlay_type").notNull(),
+    order: integer("order").notNull().default(0),
+    style: text("style"), // JSON: BadgeStyle | null
+    rule: text("rule"), // JSON: ConditionalRule | null
     createdAt: integer("created_at").notNull(),
   },
-  (table) => [index("idx_overlay_configs_section").on(table.sectionId)],
+  (table) => [
+    index("idx_overlay_configs_section").on(table.sectionId),
+    uniqueIndex("idx_overlay_configs_section_position_order").on(table.sectionId, table.position, table.order),
+  ],
 );
+
+export const overlayPresets = sqliteTable("overlay_presets", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  builtIn: integer("built_in").notNull().default(0),
+  data: text("data").notNull(), // JSON: PresetData
+  createdAt: integer("created_at").notNull(),
+});
 
 export const overlayOriginals = sqliteTable(
   "overlay_originals",

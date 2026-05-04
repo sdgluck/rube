@@ -33,8 +33,8 @@ EXPOSE 3000
 VOLUME /config
 
 LABEL net.unraid.docker.webui="http://[IP]:[PORT:3000]"
-LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/sdgluck/tinkerbell3/master/icon.png"
-LABEL org.opencontainers.image.source="https://github.com/sdgluck/tinkerbell3"
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/sdgluck/tinkerbell/master/icon.png"
+LABEL org.opencontainers.image.source="https://github.com/sdgluck/tinkerbell"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:3000/ || exit 1

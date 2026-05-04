@@ -1,24 +1,48 @@
 import sharp from "sharp";
-import type { OverlayPosition, OverlayType } from "./schemas.ts";
-import { createBadgeSvg, getBadgeColors } from "./badge.ts";
+import type { BadgeStyle, OverlayPosition, OverlayType } from "./schemas.ts";
+import { createBadgeSvg, createStyledBadgeSvg, getBadgeColors } from "./badge.ts";
 import { calculatePosition } from "./position.ts";
 
 export interface Badge {
   position: OverlayPosition;
   type: OverlayType;
   value: string;
+  /** Optional per-badge styling. Omitted/null produces legacy byte-identical output. */
+  style?: BadgeStyle | null;
+  /** Stack order within the same position (0 is the outermost / closest to corner). */
+  order?: number;
 }
 
 const REF_WIDTH = 600;
+const STACK_GAP = 6; // px between stacked badges, scaled with image
 
 function badgeScale(imgW: number): number {
   return imgW / REF_WIDTH;
 }
 
+function isLegacy(b: Badge): boolean {
+  if (b.style && Object.keys(b.style).length > 0) {
+    // colorPreset=auto with no other fields is still legacy
+    const s = b.style;
+    if (
+      s.customLabel === undefined &&
+      s.fontSize === undefined &&
+      s.shape === undefined &&
+      s.opacity === undefined &&
+      s.customBg === undefined &&
+      s.customText === undefined &&
+      s.showIcon === undefined &&
+      (s.colorPreset === undefined || s.colorPreset === "auto")
+    ) {
+      return true;
+    }
+    return false;
+  }
+  return true;
+}
+
 /**
  * Build the composited sharp pipeline up to (but not including) final encoding.
- * Public callers should prefer {@link compositeOverlays}; tests use this seam
- * to encode as PNG (byte-deterministic) instead of JPEG.
  */
 export async function buildCompositeSharp(posterBuffer: Buffer, badges: Badge[]): Promise<sharp.Sharp> {
   const image = sharp(posterBuffer);
@@ -27,23 +51,54 @@ export async function buildCompositeSharp(posterBuffer: Buffer, badges: Badge[])
   const imgH = metadata.height || 900;
   const scale = badgeScale(imgW);
 
+  // Group badges by position, ordered for stacking.
+  const groups = new Map<OverlayPosition, Badge[]>();
+  for (const b of badges) {
+    const list = groups.get(b.position) ?? [];
+    list.push(b);
+    groups.set(b.position, list);
+  }
+  for (const list of groups.values()) {
+    list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
   const composites: sharp.OverlayOptions[] = [];
 
-  for (const badge of badges) {
-    const colors = getBadgeColors(badge.type, badge.value);
-    const svgBuf = createBadgeSvg(badge.value, colors.bg, colors.text, scale);
+  for (const [position, list] of groups) {
+    // Stack vertically — each subsequent badge offset by previous height + gap.
+    let stackOffset = 0;
+    const gap = Math.round(STACK_GAP * scale);
 
-    const svgMeta = await sharp(svgBuf).metadata();
-    const badgeW = svgMeta.width || 80;
-    const badgeH = svgMeta.height || 26;
+    for (const badge of list) {
+      const labelText = badge.style?.customLabel || badge.value;
+      let svgBuf: Buffer;
+      let badgeW: number;
+      let badgeH: number;
 
-    const pos = calculatePosition(badge.position, imgW, imgH, badgeW, badgeH, scale);
+      if (isLegacy(badge)) {
+        const colors = getBadgeColors(badge.type, badge.value);
+        svgBuf = createBadgeSvg(labelText, colors.bg, colors.text, scale);
+        const meta = await sharp(svgBuf).metadata();
+        badgeW = meta.width || 80;
+        badgeH = meta.height || 26;
+      } else {
+        const out = createStyledBadgeSvg(labelText, badge.type, badge.value, scale, badge.style);
+        svgBuf = out.svg;
+        badgeW = out.width;
+        badgeH = out.height;
+      }
 
-    composites.push({
-      input: svgBuf,
-      left: Math.max(0, pos.left),
-      top: Math.max(0, pos.top),
-    });
+      const pos = calculatePosition(position, imgW, imgH, badgeW, badgeH, scale);
+      const isBottom = position.startsWith("bottom");
+      const top = isBottom ? pos.top - stackOffset : pos.top + stackOffset;
+
+      composites.push({
+        input: svgBuf,
+        left: Math.max(0, pos.left),
+        top: Math.max(0, top),
+      });
+      stackOffset += badgeH + gap;
+    }
   }
 
   return image.composite(composites);
