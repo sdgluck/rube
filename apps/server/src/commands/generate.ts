@@ -672,6 +672,231 @@ async function handleSeerrRequests(
   return collectionKey;
 }
 
+async function handleTmdbPopularPeople(
+  ctx: JobContext,
+  client: PlexClient,
+  sections: PlexSection[],
+  machineId: string,
+  ruleConfig: RuleConfig,
+  labels: string[],
+  role: "cast" | "crew",
+): Promise<string | null> {
+  const apiKey = getConfig("global_tmdb_api_key");
+  if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
+  const { fetchPopularPeople, fetchPersonCredits } = await import("@tinkerbell/tmdb");
+
+  const peopleLimit = Math.min(ruleConfig.limit ?? 10, 50);
+  const department = role === "cast" ? "Acting" : "Directing";
+  const crewJob = role === "crew" ? "Director" : undefined;
+
+  ctx.log(`[tmdb_popular] Fetching ${peopleLimit} popular ${department.toLowerCase()} people...`);
+  const people = await fetchPopularPeople({ apiKey }, { limit: peopleLimit, department });
+  ctx.log(`[tmdb_popular] Got ${people.length} people.`);
+
+  let lastCollectionKey: string | null = null;
+
+  for (const section of sections) {
+    ctx.log(`[tmdb_popular] "${section.title}" — indexing by TMDb ID...`);
+    const items = await client.allItemsWithGuids(section.key);
+    const tmdbToItem = new Map<number, { ratingKey: string; title: string; year?: number }>();
+    for (const item of items) {
+      for (const guid of item.guids) {
+        const m = guid.match(/tmdb:\/\/(\d+)/);
+        if (m) {
+          tmdbToItem.set(parseInt(m[1], 10), { ratingKey: item.ratingKey, title: item.title, year: item.year });
+          break;
+        }
+      }
+    }
+    ctx.log(`[tmdb_popular] ${tmdbToItem.size}/${items.length} items have TMDb IDs in "${section.title}".`);
+
+    const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
+
+    let created = 0;
+    for (const person of people) {
+      const credits = await fetchPersonCredits({ apiKey }, person.id, {
+        role,
+        crewJob,
+        mediaTypes: [sectionMediaType],
+      });
+      const ratingKeys: string[] = [];
+      const seen = new Set<string>();
+      for (const credit of credits) {
+        const item = tmdbToItem.get(credit.id);
+        if (!item || seen.has(item.ratingKey)) continue;
+        seen.add(item.ratingKey);
+        ratingKeys.push(item.ratingKey);
+      }
+      if (ratingKeys.length < 3) {
+        ctx.log(`[tmdb_popular] Skipping "${person.name}" in "${section.title}" — ${ratingKeys.length} item(s).`);
+        continue;
+      }
+
+      ctx.log(`[tmdb_popular] Creating "${person.name}" (${ratingKeys.length} items) in "${section.title}"...`);
+      const collectionKey = await client.createCollectionWithLabel(
+        section.key,
+        section.type,
+        machineId,
+        person.name,
+        ratingKeys,
+        labels,
+      );
+
+      if (collectionKey) {
+        await client.pinToHomepage(section.key, collectionKey, {
+          promotedToOwnHome: 1,
+          promotedToRecommendedHome: 1,
+          promotedToSharedHome: 1,
+        });
+        await upsertCollectionByKey(client, section, collectionKey);
+        lastCollectionKey = collectionKey;
+        created++;
+      }
+    }
+    ctx.log(`[tmdb_popular] Created ${created} collection(s) for "${section.title}".`);
+  }
+
+  return lastCollectionKey;
+}
+
+async function handleTmdbFranchises(
+  ctx: JobContext,
+  client: PlexClient,
+  sections: PlexSection[],
+  machineId: string,
+  ruleConfig: RuleConfig,
+  labels: string[],
+): Promise<string | null> {
+  const apiKey = getConfig("global_tmdb_api_key");
+  if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
+  const { fetchCollection } = await import("@tinkerbell/tmdb");
+
+  // Collect TMDb collection IDs from any movie items that belong to a TMDb
+  // collection. Plex exposes this via the `collection` field on item metadata,
+  // but the simplest reliable path is to use the secondary directory:
+  //   /library/sections/{id}/collection
+  // Plex uses this for both manual collections AND auto-detected TMDb sets.
+  // For franchise gap-filling we want to enumerate the TMDb sets the user
+  // already has at least one item from, then fetch the full membership from
+  // TMDb.
+
+  const minMembersInLibrary = 1;
+  const limitGroups = Math.min(ruleConfig.limit ?? 25, 100);
+
+  let lastCollectionKey: string | null = null;
+
+  for (const section of sections) {
+    if (section.type !== "movie") {
+      ctx.log(`[tmdb_franchises] Skipping non-movie section "${section.title}".`);
+      continue;
+    }
+
+    ctx.log(`[tmdb_franchises] "${section.title}" — fetching items with TMDb IDs...`);
+    const items = await client.allItemsWithGuids(section.key);
+    const tmdbToItem = new Map<number, { ratingKey: string; title: string }>();
+    const ratingKeyToTmdb = new Map<string, number>();
+    for (const item of items) {
+      for (const guid of item.guids) {
+        const m = guid.match(/tmdb:\/\/(\d+)/);
+        if (m) {
+          const tmdbId = parseInt(m[1], 10);
+          tmdbToItem.set(tmdbId, { ratingKey: item.ratingKey, title: item.title });
+          ratingKeyToTmdb.set(item.ratingKey, tmdbId);
+          break;
+        }
+      }
+    }
+
+    // Discover collection IDs by walking the per-item TMDb /movie/{id} response
+    // would be heavy; instead, rely on Plex's grouped `collection` directory.
+    // Each entry's `key` returns the items in that Plex-side collection — but
+    // we need the TMDb collection ID, which Plex doesn't expose. So we sample:
+    // for each entry, fetch the first item's TMDb ID, look up /movie/{id}, and
+    // read its `belongs_to_collection.id`. Cheap enough for the franchise count
+    // we care about.
+    const groups = await client.fetchGroupedByField(section.key, "collection", limitGroups);
+    ctx.log(`[tmdb_franchises] Found ${groups.length} Plex collection group(s) in "${section.title}".`);
+
+    let created = 0;
+    for (const group of groups) {
+      const groupItems = await client.fetchItemsByFilter(group.key);
+      if (groupItems.length < minMembersInLibrary) continue;
+
+      // Find a TMDb ID for any item in the group.
+      let sampleTmdbId: number | null = null;
+      for (const gi of groupItems) {
+        const id = ratingKeyToTmdb.get(gi.ratingKey);
+        if (id) {
+          sampleTmdbId = id;
+          break;
+        }
+      }
+      if (!sampleTmdbId) continue;
+
+      // Look up the TMDb movie to get its collection ID.
+      let collectionId: number | null = null;
+      let collectionName = group.tag;
+      try {
+        const url = `https://api.themoviedb.org/3/movie/${sampleTmdbId}?api_key=${apiKey}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        if (res.ok) {
+          const data = (await res.json()) as { belongs_to_collection?: { id: number; name: string } | null };
+          if (data.belongs_to_collection) {
+            collectionId = data.belongs_to_collection.id;
+            collectionName = data.belongs_to_collection.name;
+          }
+        }
+      } catch (err) {
+        ctx.log(`[tmdb_franchises] TMDb lookup failed for ${sampleTmdbId}: ${errorMessage(err)}`);
+      }
+
+      if (!collectionId) {
+        ctx.log(`[tmdb_franchises] No TMDb collection for "${group.tag}", skipping.`);
+        continue;
+      }
+
+      // Fetch the full TMDb collection and intersect with library.
+      const tmdbCollection = await fetchCollection({ apiKey }, collectionId);
+      const ratingKeys: string[] = [];
+      for (const part of tmdbCollection.parts) {
+        const item = tmdbToItem.get(part.id);
+        if (item) ratingKeys.push(item.ratingKey);
+      }
+
+      if (ratingKeys.length < 2) {
+        ctx.log(`[tmdb_franchises] "${collectionName}" — only ${ratingKeys.length} match(es), skipping.`);
+        continue;
+      }
+
+      ctx.log(
+        `[tmdb_franchises] Creating "${collectionName}" (${ratingKeys.length}/${tmdbCollection.parts.length})...`,
+      );
+      const collectionKey = await client.createCollectionWithLabel(
+        section.key,
+        section.type,
+        machineId,
+        collectionName,
+        ratingKeys,
+        labels,
+      );
+
+      if (collectionKey) {
+        await client.pinToHomepage(section.key, collectionKey, {
+          promotedToOwnHome: 1,
+          promotedToRecommendedHome: 1,
+          promotedToSharedHome: 1,
+        });
+        await upsertCollectionByKey(client, section, collectionKey);
+        lastCollectionKey = collectionKey;
+        created++;
+      }
+    }
+    ctx.log(`[tmdb_franchises] Created ${created} franchise collection(s) for "${section.title}".`);
+  }
+
+  return lastCollectionKey;
+}
+
 // ─── Arr resolver ────────────────────────────────────────────────────────────
 
 interface ArrResolution {
@@ -700,11 +925,15 @@ async function resolveArrAdds(
   if (!arrCfg || !arrCfg.enabled) return { added: 0, skipped: 0, failed: 0 };
 
   // Determine service from rule type. Currently only IMDb-sourced rules
-  // (chart/list) and Seerr requests can produce items not in the library.
-  // AI prompt is explicitly excluded from this codepath.
+  // (chart/list), Seerr requests, TMDb popular-people, and TMDb franchises
+  // can produce items not in the library. AI prompt is explicitly excluded.
   const isImdbSource = rule.type === "imdb_chart" || rule.type === "imdb_list";
   const isSeerrSource = rule.type === "seerr_requests";
-  if (!isImdbSource && !isSeerrSource) return { added: 0, skipped: 0, failed: 0 };
+  const isTmdbPeople = rule.type === "tmdb_popular_actors" || rule.type === "tmdb_popular_directors";
+  const isTmdbFranchises = rule.type === "tmdb_franchises";
+  if (!isImdbSource && !isSeerrSource && !isTmdbPeople && !isTmdbFranchises) {
+    return { added: 0, skipped: 0, failed: 0 };
+  }
 
   const { lookupByExternalId, addItem } = await import("@tinkerbell/arr");
   const { getConfig: getCfg } = await import("../lib/config.ts");
@@ -772,6 +1001,110 @@ async function resolveArrAdds(
         displayName: `tmdb:${req.media.tmdbId}`,
       });
       if (unmatched.length >= arrCfg.maxAddsPerRun * 4) break; // soft cap on iteration
+    }
+  } else if (isTmdbPeople) {
+    const apiKey = getCfg("global_tmdb_api_key");
+    if (!apiKey) return { added: 0, skipped: 0, failed: 0 };
+    const { fetchPopularPeople, fetchPersonCredits } = await import("@tinkerbell/tmdb");
+    const peopleLimit = Math.min(ruleConfig.limit ?? 10, 50);
+    const department = rule.type === "tmdb_popular_actors" ? "Acting" : "Directing";
+    const role: "cast" | "crew" = rule.type === "tmdb_popular_actors" ? "cast" : "crew";
+    const crewJob = role === "crew" ? "Director" : undefined;
+
+    const presentMovie = new Set<number>();
+    const presentTv = new Set<number>();
+    for (const section of sections) {
+      const items = await client.allItemsWithGuids(section.key);
+      const target = section.type === "movie" ? presentMovie : presentTv;
+      for (const item of items) {
+        for (const guid of item.guids) {
+          const m = guid.match(/tmdb:\/\/(\d+)/);
+          if (m) {
+            target.add(parseInt(m[1], 10));
+            break;
+          }
+        }
+      }
+    }
+
+    const sectionMediaTypes = new Set(sections.map((s) => (s.type === "show" ? "tv" : "movie") as "movie" | "tv"));
+    const people = await fetchPopularPeople({ apiKey }, { limit: peopleLimit, department });
+    outer: for (const person of people) {
+      for (const mt of sectionMediaTypes) {
+        const credits = await fetchPersonCredits({ apiKey }, person.id, { role, crewJob, mediaTypes: [mt] });
+        const present = mt === "movie" ? presentMovie : presentTv;
+        for (const c of credits) {
+          if (present.has(c.id)) continue;
+          unmatched.push({
+            externalId: `tmdb:${c.id}`,
+            mediaType: mt,
+            displayName: `${c.title}${c.year ? ` (${c.year})` : ""} — ${person.name}`,
+          });
+          if (unmatched.length >= arrCfg.maxAddsPerRun * 4) break outer;
+        }
+      }
+    }
+  } else if (isTmdbFranchises) {
+    const apiKey = getCfg("global_tmdb_api_key");
+    if (!apiKey) return { added: 0, skipped: 0, failed: 0 };
+    const { fetchCollection } = await import("@tinkerbell/tmdb");
+
+    outerFranchise: for (const section of sections) {
+      if (section.type !== "movie") continue;
+      const items = await client.allItemsWithGuids(section.key);
+      const tmdbPresent = new Set<number>();
+      const ratingKeyToTmdb = new Map<string, number>();
+      for (const item of items) {
+        for (const guid of item.guids) {
+          const m = guid.match(/tmdb:\/\/(\d+)/);
+          if (m) {
+            const id = parseInt(m[1], 10);
+            tmdbPresent.add(id);
+            ratingKeyToTmdb.set(item.ratingKey, id);
+            break;
+          }
+        }
+      }
+
+      const groups = await client.fetchGroupedByField(section.key, "collection", Math.min(ruleConfig.limit ?? 25, 100));
+      const seenCollections = new Set<number>();
+      for (const group of groups) {
+        const groupItems = await client.fetchItemsByFilter(group.key);
+        let sampleTmdbId: number | null = null;
+        for (const gi of groupItems) {
+          const id = ratingKeyToTmdb.get(gi.ratingKey);
+          if (id) {
+            sampleTmdbId = id;
+            break;
+          }
+        }
+        if (!sampleTmdbId) continue;
+
+        let collectionId: number | null = null;
+        try {
+          const url = `https://api.themoviedb.org/3/movie/${sampleTmdbId}?api_key=${apiKey}`;
+          const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+          if (res.ok) {
+            const data = (await res.json()) as { belongs_to_collection?: { id: number; name: string } | null };
+            if (data.belongs_to_collection) collectionId = data.belongs_to_collection.id;
+          }
+        } catch {
+          // ignore lookup failure
+        }
+        if (!collectionId || seenCollections.has(collectionId)) continue;
+        seenCollections.add(collectionId);
+
+        const tmdbCollection = await fetchCollection({ apiKey }, collectionId);
+        for (const part of tmdbCollection.parts) {
+          if (tmdbPresent.has(part.id)) continue;
+          unmatched.push({
+            externalId: `tmdb:${part.id}`,
+            mediaType: "movie",
+            displayName: `${part.title}${part.year ? ` (${part.year})` : ""} — ${tmdbCollection.name}`,
+          });
+          if (unmatched.length >= arrCfg.maxAddsPerRun * 4) break outerFranchise;
+        }
+      }
     }
   }
 
@@ -1252,6 +1585,125 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
       break;
     }
 
+    case "tmdb_popular_actors":
+    case "tmdb_popular_directors": {
+      const apiKey = getConfig("global_tmdb_api_key");
+      if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
+      const { fetchPopularPeople, fetchPersonCredits } = await import("@tinkerbell/tmdb");
+      const peopleLimit = Math.min(ruleConfig.limit ?? 10, 50);
+      const department = rule.type === "tmdb_popular_actors" ? "Acting" : "Directing";
+      const role: "cast" | "crew" = rule.type === "tmdb_popular_actors" ? "cast" : "crew";
+      const crewJob = role === "crew" ? "Director" : undefined;
+      log(`[${rule.type}] Fetching ${peopleLimit} popular ${department.toLowerCase()} people...`);
+      const people = await fetchPopularPeople({ apiKey }, { limit: peopleLimit, department });
+
+      for (const section of sections) {
+        const items = await client.allItemsWithGuids(section.key);
+        const tmdbToItem = new Map<number, { title: string; year?: number }>();
+        for (const item of items) {
+          for (const guid of item.guids) {
+            const m = guid.match(/tmdb:\/\/(\d+)/);
+            if (m) {
+              tmdbToItem.set(parseInt(m[1], 10), { title: item.title, year: item.year });
+              break;
+            }
+          }
+        }
+        const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
+
+        for (const person of people) {
+          signal?.throwIfAborted();
+          const credits = await fetchPersonCredits({ apiKey }, person.id, {
+            role,
+            crewJob,
+            mediaTypes: [sectionMediaType],
+          });
+          const matched: { title: string; year?: number }[] = [];
+          const seen = new Set<string>();
+          for (const c of credits) {
+            const item = tmdbToItem.get(c.id);
+            if (!item) continue;
+            const k = `${item.title}|${item.year ?? ""}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            matched.push(item);
+          }
+          if (matched.length < 3) continue;
+          collections.push({ name: person.name, sectionTitle: section.title, items: matched });
+        }
+      }
+      break;
+    }
+
+    case "tmdb_franchises": {
+      const apiKey = getConfig("global_tmdb_api_key");
+      if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
+      const { fetchCollection } = await import("@tinkerbell/tmdb");
+      const limitGroups = Math.min(ruleConfig.limit ?? 25, 100);
+
+      for (const section of sections) {
+        if (section.type !== "movie") continue;
+        const items = await client.allItemsWithGuids(section.key);
+        const tmdbToItem = new Map<number, { title: string; year?: number }>();
+        const ratingKeyToTmdb = new Map<string, number>();
+        for (const item of items) {
+          for (const guid of item.guids) {
+            const m = guid.match(/tmdb:\/\/(\d+)/);
+            if (m) {
+              const id = parseInt(m[1], 10);
+              tmdbToItem.set(id, { title: item.title, year: item.year });
+              ratingKeyToTmdb.set(item.ratingKey, id);
+              break;
+            }
+          }
+        }
+
+        const groups = await client.fetchGroupedByField(section.key, "collection", limitGroups);
+        const seen = new Set<number>();
+        for (const group of groups) {
+          signal?.throwIfAborted();
+          const groupItems = await client.fetchItemsByFilter(group.key);
+          let sampleTmdbId: number | null = null;
+          for (const gi of groupItems) {
+            const id = ratingKeyToTmdb.get(gi.ratingKey);
+            if (id) {
+              sampleTmdbId = id;
+              break;
+            }
+          }
+          if (!sampleTmdbId) continue;
+
+          let collectionId: number | null = null;
+          let collectionName = group.tag;
+          try {
+            const url = `https://api.themoviedb.org/3/movie/${sampleTmdbId}?api_key=${apiKey}`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+            if (res.ok) {
+              const data = (await res.json()) as { belongs_to_collection?: { id: number; name: string } | null };
+              if (data.belongs_to_collection) {
+                collectionId = data.belongs_to_collection.id;
+                collectionName = data.belongs_to_collection.name;
+              }
+            }
+          } catch {
+            // ignore
+          }
+          if (!collectionId || seen.has(collectionId)) continue;
+          seen.add(collectionId);
+
+          const tmdbCollection = await fetchCollection({ apiKey }, collectionId);
+          const matched: { title: string; year?: number }[] = [];
+          for (const part of tmdbCollection.parts) {
+            const item = tmdbToItem.get(part.id);
+            if (item) matched.push(item);
+          }
+          if (matched.length < 2) continue;
+          collections.push({ name: collectionName, sectionTitle: section.title, items: matched });
+        }
+      }
+      break;
+    }
+
     default:
       log(`Error: Unknown rule type "${rule.type}"`);
       throw new Error(`Unknown rule type: ${rule.type}`);
@@ -1296,6 +1748,12 @@ async function dispatchRule(
     case "countries":
     case "content_ratings":
       return handleGrouped(ctx, client, sections, machineId, GROUPED_FIELD_FOR_TYPE[rule.type], ruleConfig, labels);
+    case "tmdb_popular_actors":
+      return handleTmdbPopularPeople(ctx, client, sections, machineId, ruleConfig, labels, "cast");
+    case "tmdb_popular_directors":
+      return handleTmdbPopularPeople(ctx, client, sections, machineId, ruleConfig, labels, "crew");
+    case "tmdb_franchises":
+      return handleTmdbFranchises(ctx, client, sections, machineId, ruleConfig, labels);
     case "imdb_chart":
       return handleImdbContent(
         ctx,

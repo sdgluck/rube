@@ -18,6 +18,7 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   { service: "Sonarr", configuredFn: (c) => !!(c.global_sonarr_url && c.global_sonarr_api_key) },
   { service: "Seerr", configuredFn: (c) => !!(c.global_seerr_url && c.global_seerr_api_key) },
   { service: "MDBList", configuredFn: (c) => !!c.global_mdblist_api_key },
+  { service: "TMDb", configuredFn: (c) => !!c.global_tmdb_api_key },
   { service: "Pushover", configuredFn: (c) => !!(c.global_pushover_api_key && c.global_pushover_user_key) },
   { service: "Discord", configuredFn: (c) => !!c.global_discord_webhook_url },
   { service: "Gotify", configuredFn: (c) => !!(c.global_gotify_url && c.global_gotify_token) },
@@ -108,6 +109,13 @@ export async function checkServiceHealth(service: string): Promise<void> {
       const { testSeerrConnection } = await import("@tinkerbell/seerr");
       const data = await testSeerrConnection(cfg.global_seerr_url, cfg.global_seerr_api_key);
       reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
+      break;
+    }
+    case "TMDb": {
+      if (!cfg.global_tmdb_api_key) throw new Error("Not configured");
+      const { testTmdbKey } = await import("@tinkerbell/tmdb");
+      const data = await testTmdbKey(cfg.global_tmdb_api_key);
+      reportHealth("TMDb", "ok", `Test query OK — ${data.sample}`);
       break;
     }
     case "MDBList": {

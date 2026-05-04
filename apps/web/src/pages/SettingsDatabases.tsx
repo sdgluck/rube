@@ -15,6 +15,10 @@ export default function SettingsDatabases() {
   const [savingMdblist, setSavingMdblist] = useState(false);
   const [testingMdblist, setTestingMdblist] = useState(false);
 
+  const [tmdbApiKey, setTmdbApiKey] = useState("");
+  const [savingTmdb, setSavingTmdb] = useState(false);
+  const [testingTmdb, setTestingTmdb] = useState(false);
+
   const { addToast } = useToast();
 
   const configQuery = trpc.config.get.useQuery(undefined, {
@@ -25,11 +29,13 @@ export default function SettingsDatabases() {
   const saveConfigMutation = trpc.config.save.useMutation();
   const testOmdbMutation = trpc.testOmdb.useMutation();
   const testMdblistMutation = trpc.testMdblist.useMutation();
+  const testTmdbMutation = trpc.testTmdb.useMutation();
 
   useEffect(() => {
     if (configQuery.data) {
       setOmdbApiKey(configQuery.data.global_omdb_api_key || "");
       setMdblistApiKey(configQuery.data.global_mdblist_api_key || "");
+      setTmdbApiKey(configQuery.data.global_tmdb_api_key || "");
     }
   }, [configQuery.data]);
 
@@ -43,7 +49,12 @@ export default function SettingsDatabases() {
     return mdblistApiKey !== (configQuery.data.global_mdblist_api_key || "");
   }, [mdblistApiKey, configQuery.data]);
 
-  useUnsavedChanges(isDirtyOmdb || isDirtyMdblist);
+  const isDirtyTmdb = useMemo(() => {
+    if (!configQuery.data) return false;
+    return tmdbApiKey !== (configQuery.data.global_tmdb_api_key || "");
+  }, [tmdbApiKey, configQuery.data]);
+
+  useUnsavedChanges(isDirtyOmdb || isDirtyMdblist || isDirtyTmdb);
 
   const handleSaveOmdb = async () => {
     setSavingOmdb(true);
@@ -101,6 +112,41 @@ export default function SettingsDatabases() {
     }
   };
 
+  const handleSaveTmdb = async () => {
+    setSavingTmdb(true);
+    try {
+      await saveConfigMutation.mutateAsync({
+        global_tmdb_api_key: tmdbApiKey,
+      });
+      addToast("TMDb settings saved", "success");
+    } catch {
+      addToast("Failed to save TMDb settings", "error");
+    } finally {
+      setSavingTmdb(false);
+    }
+  };
+
+  const handleTestTmdb = async () => {
+    if (!tmdbApiKey) {
+      addToast("API key is required", "error");
+      return;
+    }
+    setTestingTmdb(true);
+    try {
+      const result = await testTmdbMutation.mutateAsync({ api_key: tmdbApiKey });
+      if (result.ok) {
+        addToast(`Connected — found "${result.sample}"`, "success");
+      } else {
+        addToast(result.error || "Connection test failed", "error");
+      }
+    } catch {
+      addToast("Connection test failed", "error");
+    } finally {
+      setTestingTmdb(false);
+      utils.health.status.invalidate();
+    }
+  };
+
   const handleSaveMdblist = async () => {
     setSavingMdblist(true);
     try {
@@ -141,6 +187,32 @@ export default function SettingsDatabases() {
             {testingOmdb ? "Testing..." : "Test Connection"}
           </button>
           <UnsavedBanner visible={isDirtyOmdb} />
+        </div>
+      </fieldset>
+
+      <fieldset className={styles.group}>
+        <legend className={styles.groupTitle}>TMDb</legend>
+        <label className={styles.field}>
+          <span className={styles.label}>TMDb API Key</span>
+          <input
+            type="password"
+            className={styles.input}
+            placeholder="Enter TMDb v3 API key"
+            value={tmdbApiKey}
+            onChange={(e) => setTmdbApiKey(e.target.value)}
+          />
+          <span className={styles.hint}>
+            Used by Popular Actors/Directors and Franchises rules. Get a key at themoviedb.org/settings/api
+          </span>
+        </label>
+        <div className={styles.buttons}>
+          <button type="button" className={styles.button} onClick={handleSaveTmdb} disabled={savingTmdb}>
+            {savingTmdb ? "Saving..." : "Save"}
+          </button>
+          <button type="button" className={styles.buttonSecondary} onClick={handleTestTmdb} disabled={testingTmdb}>
+            {testingTmdb ? "Testing..." : "Test Connection"}
+          </button>
+          <UnsavedBanner visible={isDirtyTmdb} />
         </div>
       </fieldset>
 

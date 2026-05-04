@@ -26,6 +26,7 @@ export const configSchema = z.object({
   global_seerr_api_key: z.string(),
   global_omdb_api_key: z.string(),
   global_mdblist_api_key: z.string(),
+  global_tmdb_api_key: z.string(),
   global_pushover_api_key: z.string(),
   global_pushover_user_key: z.string(),
   global_pushover_events: z.array(z.string()),

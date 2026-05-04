@@ -80,7 +80,7 @@ interface RuleType {
   value: string;
   label: string;
   description: string;
-  requires?: "omdb" | "seerr";
+  requires?: "omdb" | "seerr" | "tmdb";
   /** Source can produce items not yet in the Plex library (enables arr Actions step). */
   producesExternalItems?: boolean;
 }
@@ -159,6 +159,29 @@ const RULE_TYPES: RuleType[] = [
     label: "Seerr Requests",
     description: "Group items requested via Jellyseerr/Overseerr.",
     requires: "seerr",
+    producesExternalItems: true,
+  },
+  {
+    value: "tmdb_popular_actors",
+    label: "Popular Actors",
+    description: "Build a collection per popular actor (TMDb). Pairs well with the arr action to fill filmographies.",
+    requires: "tmdb",
+    producesExternalItems: true,
+  },
+  {
+    value: "tmdb_popular_directors",
+    label: "Popular Directors",
+    description:
+      "Build a collection per popular director (TMDb). Pairs well with the arr action to fill filmographies.",
+    requires: "tmdb",
+    producesExternalItems: true,
+  },
+  {
+    value: "tmdb_franchises",
+    label: "Franchises",
+    description:
+      "Build a collection per movie franchise (TMDb). Pairs well with the arr action to fill franchise gaps.",
+    requires: "tmdb",
     producesExternalItems: true,
   },
 ];
@@ -260,6 +283,9 @@ function suggestName(form: RuleFormState, sections: { title: string }[]): string
   if (form.type === "genres") return "By Genre";
   if (form.type === "countries") return "By Country";
   if (form.type === "content_ratings") return "By Content Rating";
+  if (form.type === "tmdb_popular_actors") return "Popular Actors";
+  if (form.type === "tmdb_popular_directors") return "Popular Directors";
+  if (form.type === "tmdb_franchises") return "Franchises";
   void sections;
   return "";
 }
@@ -329,6 +355,21 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
   const omdbConfigured = !!configQuery.data?.global_omdb_api_key;
   const seerrConfigured = !!(configQuery.data?.global_seerr_url && configQuery.data?.global_seerr_api_key);
+  const tmdbConfigured = !!configQuery.data?.global_tmdb_api_key;
+
+  // Arr queries — always called (rules of hooks). Only meaningful when the
+  // current rule type has an Actions step.
+  const arrService = arrServiceForType(form.type, form.chart);
+  const arrStatusQuery = trpc.arr.status.useQuery(undefined, { staleTime: 60_000 });
+  const arrConfigured = !!arrStatusQuery.data?.[arrService];
+  const arrProfilesQuery = trpc.arr.qualityProfiles.useQuery(
+    { service: arrService },
+    { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
+  );
+  const arrFoldersQuery = trpc.arr.rootFolders.useQuery(
+    { service: arrService },
+    { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
+  );
 
   const steps = useMemo(() => stepsFor(form.type, mode), [form.type, mode]);
   const currentStep = steps[Math.min(stepIdx, steps.length - 1)];
@@ -452,7 +493,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             const missing = t.requires === "omdb" && !omdbConfigured ? "Requires OMDB API key (Settings → AI)" : null;
             const seerrMissing =
               t.requires === "seerr" && !seerrConfigured ? "Requires Jellyseerr/Overseerr (Settings → Arrs)" : null;
-            const warn = missing || seerrMissing;
+            const tmdbMissing =
+              t.requires === "tmdb" && !tmdbConfigured ? "Requires TMDb API key (Settings → AI)" : null;
+            const warn = missing || seerrMissing || tmdbMissing;
             const disabled = mode === "edit" && t.value !== form.type;
             const selected = form.type === t.value;
             return (
@@ -773,19 +816,11 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   }
 
   function renderActionsStep() {
-    const service = arrServiceForType(form.type, form.chart);
-    const arrStatus = trpc.arr.status.useQuery(undefined, { staleTime: 60_000 });
-    const profilesQuery = trpc.arr.qualityProfiles.useQuery(
-      { service },
-      { enabled: !!arrStatus.data?.[service] && form.arr.enabled, staleTime: 60_000 },
-    );
-    const foldersQuery = trpc.arr.rootFolders.useQuery(
-      { service },
-      { enabled: !!arrStatus.data?.[service] && form.arr.enabled, staleTime: 60_000 },
-    );
+    const service = arrService;
+    const profilesQuery = arrProfilesQuery;
+    const foldersQuery = arrFoldersQuery;
     const profiles = profilesQuery.data?.profiles ?? [];
     const folders = foldersQuery.data?.folders ?? [];
-    const arrConfigured = !!arrStatus.data?.[service];
     const setArr = (patch: Partial<ArrFormState>) => setForm({ ...form, arr: { ...form.arr, ...patch } });
 
     return (
