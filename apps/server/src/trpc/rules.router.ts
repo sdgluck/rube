@@ -24,6 +24,12 @@ import { t, procedure } from "./_base.ts";
 
 const testControllers = new Map<string, AbortController>();
 const runControllers = new Map<string, AbortController>();
+// Tracks the in-flight promise for the most recent run of each rule so a
+// second `run` call serializes after the first instead of racing it. Aborting
+// the old controller alone wasn't enough — abort is async, the old run can
+// still be mid-commit when the new one starts, and Plex permits same-title
+// collections so both end up creating real duplicates.
+const runPromises = new Map<string, Promise<unknown>>();
 
 export const rulesRouter = t.router({
   list: procedure.query(() => {
@@ -123,41 +129,60 @@ export const rulesRouter = t.router({
   }),
 
   run: procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
-    if (runControllers.has(input.id)) {
-      console.log(`[run-rule] Aborting previous run for rule "${input.id}"`);
+    // Wait for any in-flight run of this same rule to fully settle before
+    // starting a new one. Without this serialization two concurrent runs
+    // both pass deleteOldCollections and both call createCollectionWithLabel,
+    // producing duplicate same-title collections in Plex.
+    const prior = runPromises.get(input.id);
+    if (prior) {
+      console.log(`[run-rule] Aborting previous run for rule "${input.id}" and waiting for it to finish`);
       runControllers.get(input.id)?.abort();
+      await prior.catch(() => {});
     }
+
     const controller = new AbortController();
     runControllers.set(input.id, controller);
     const ctx = createTrackedContext(input.id, "run", controller.signal, "[run-rule]");
     const startedAt = Date.now();
-    try {
-      const { runSingleRule } = await import("../commands/generate.ts");
-      const result = await runSingleRule(input.id, controller.signal, ctx);
-      setRuleLastRun(input.id, {
-        status: "ok",
-        durationMs: Date.now() - startedAt,
-        collectionCount: result.collectionCount,
-        itemCount: result.itemCount,
-      });
-      return result;
-    } catch (err) {
-      const aborted = err instanceof Error && err.name === "AbortError";
-      const status = aborted ? "cancelled" : "error";
-      if (aborted) {
-        console.log(`[run-rule] Run for rule "${input.id}" was cancelled`);
-      } else {
-        console.error(`[run-rule] Run for rule "${input.id}" failed:`, errorMessage(err));
+
+    const work = (async () => {
+      try {
+        const { runSingleRule } = await import("../commands/generate.ts");
+        const result = await runSingleRule(input.id, controller.signal, ctx);
+        setRuleLastRun(input.id, {
+          status: "ok",
+          durationMs: Date.now() - startedAt,
+          collectionCount: result.collectionCount,
+          itemCount: result.itemCount,
+        });
+        return result;
+      } catch (err) {
+        const aborted = err instanceof Error && err.name === "AbortError";
+        const status = aborted ? "cancelled" : "error";
+        if (aborted) {
+          console.log(`[run-rule] Run for rule "${input.id}" was cancelled`);
+        } else {
+          console.error(`[run-rule] Run for rule "${input.id}" failed:`, errorMessage(err));
+        }
+        setRuleLastRun(input.id, {
+          status,
+          durationMs: Date.now() - startedAt,
+          error: aborted ? undefined : errorMessage(err),
+        });
+        throw err;
+      } finally {
+        runControllers.delete(input.id);
+        clearProgress(input.id);
       }
-      setRuleLastRun(input.id, {
-        status,
-        durationMs: Date.now() - startedAt,
-        error: aborted ? undefined : errorMessage(err),
-      });
-      throw err;
+    })();
+
+    runPromises.set(input.id, work);
+    try {
+      return await work;
     } finally {
-      runControllers.delete(input.id);
-      clearProgress(input.id);
+      // Clear only if our promise is still the current one — a later run
+      // may have already replaced it via the prior-await branch above.
+      if (runPromises.get(input.id) === work) runPromises.delete(input.id);
     }
   }),
 
