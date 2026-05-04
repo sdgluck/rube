@@ -50,13 +50,21 @@ export default function SettingsAi() {
   return (
     <div className={styles.form}>
       <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>AI</legend>
+        <legend className={styles.groupTitle}>Anthropic</legend>
+        <p className={styles.hint}>
+          Tinkerbell uses the Anthropic Claude API to power the AI rule wizard. Create a key at{" "}
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">
+            console.anthropic.com
+          </a>{" "}
+          and paste it below. Keys typically start with <code>sk-ant-</code>.
+        </p>
         <label className={styles.field}>
-          <span className={styles.label}>AI Token</span>
+          <span className={styles.label}>Anthropic API key</span>
           <input
             type="password"
             className={styles.input}
-            placeholder="Enter API key"
+            placeholder="sk-ant-..."
+            autoComplete="off"
             value={anthropicApiKey}
             onChange={(e) => setAnthropicApiKey(e.target.value)}
           />
