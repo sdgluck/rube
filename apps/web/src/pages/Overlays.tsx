@@ -208,6 +208,11 @@ export default function Overlays() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importMode, setImportMode] = useState<"replace" | "append">("replace");
+  const [importError, setImportError] = useState<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement | null>(null);
   const overflowRef = useRef<HTMLDivElement | null>(null);
 
   const utils = trpc.useUtils();
@@ -294,6 +299,66 @@ export default function Overlays() {
       setConfirmClearOpen(false);
     },
   });
+  const importSectionMutation = trpc.overlays.importSection.useMutation({
+    onSuccess: (data) => {
+      invalidateConfigs();
+      setSelectedConfigId(null);
+      setImportOpen(false);
+      setImportText("");
+      setImportError(null);
+      toast.addToast(`Imported ${data.count} overlay${data.count === 1 ? "" : "s"}`, "success");
+    },
+    onError: (err: { message?: string }) => {
+      setImportError(err?.message ?? "Import failed");
+    },
+  });
+
+  const handleExport = useCallback(async () => {
+    try {
+      const data = await utils.overlays.exportSection.fetch({ sectionId });
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const sectionName = sections.find((s) => s.key === sectionId)?.title ?? sectionId;
+      const safeName = sectionName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `overlays-${safeName}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.addToast(`Exported ${data.configs.length} overlay${data.configs.length === 1 ? "" : "s"}`, "success");
+    } catch (err) {
+      const msg = (err as { message?: string })?.message ?? "Export failed";
+      toast.addToast(msg, "error");
+    }
+  }, [utils, sectionId, sections, toast]);
+
+  const handleImport = useCallback(() => {
+    setImportError(null);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(importText);
+    } catch {
+      setImportError("Not valid JSON");
+      return;
+    }
+    importSectionMutation.mutate({
+      sectionId,
+      mode: importMode,
+      // Server-side Zod schema is the source of truth; we just shovel the
+      // parsed object across and surface validation errors.
+      data: parsed as never,
+    });
+  }, [importText, importMode, sectionId, importSectionMutation]);
+
+  const handleImportFile = useCallback((file: File) => {
+    file.text().then((text) => {
+      setImportText(text);
+      setImportError(null);
+    });
+  }, []);
 
   const configs = configsQuery.data ?? [];
   const previewValues = (previewQuery.data ?? {}) as Record<number, string | null>;
@@ -841,6 +906,30 @@ export default function Overlays() {
                     className={styles.overflowItem}
                     onClick={() => {
                       setOverflowOpen(false);
+                      handleExport();
+                    }}
+                    disabled={configs.length === 0}
+                  >
+                    Export layout…
+                    <span className={styles.overflowItemHint}>Download this section's overlays as JSON</span>
+                  </button>
+                  <button
+                    className={styles.overflowItem}
+                    onClick={() => {
+                      setOverflowOpen(false);
+                      setImportText("");
+                      setImportError(null);
+                      setImportMode("replace");
+                      setImportOpen(true);
+                    }}
+                  >
+                    Import layout…
+                    <span className={styles.overflowItemHint}>Load overlays from a JSON file</span>
+                  </button>
+                  <button
+                    className={styles.overflowItem}
+                    onClick={() => {
+                      setOverflowOpen(false);
                       setConfirmClearOpen(true);
                     }}
                     disabled={configs.length === 0 || clearConfigsMutation.isPending}
@@ -962,6 +1051,93 @@ export default function Overlays() {
                   </>
                 ) : (
                   "Save"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Import layout modal ────────────────────────────────── */}
+      {importOpen && (
+        <div className={styles.modalBackdrop} onClick={() => setImportOpen(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Import layout</h3>
+              <button className={styles.modalClose} onClick={() => setImportOpen(false)}>
+                ×
+              </button>
+            </div>
+            <p className={styles.modalHint} style={{ textAlign: "left" }}>
+              Choose a JSON file exported from this page, or paste its contents.
+            </p>
+            <div>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImportFile(f);
+                  e.target.value = "";
+                }}
+              />
+              <button className={styles.smallBtn} onClick={() => importFileRef.current?.click()}>
+                Choose file…
+              </button>
+            </div>
+            <textarea
+              className={styles.input}
+              value={importText}
+              onChange={(e) => {
+                setImportText(e.target.value);
+                if (importError) setImportError(null);
+              }}
+              placeholder='{"version":1,"configs":[…]}'
+              rows={8}
+              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", resize: "vertical" }}
+            />
+            <div className={styles.checkRow}>
+              <label className={styles.checkLabel}>
+                <input
+                  type="radio"
+                  name="importMode"
+                  checked={importMode === "replace"}
+                  onChange={() => setImportMode("replace")}
+                />
+                Replace ({configs.length} existing will be removed)
+              </label>
+              <label className={styles.checkLabel}>
+                <input
+                  type="radio"
+                  name="importMode"
+                  checked={importMode === "append"}
+                  onChange={() => setImportMode("append")}
+                />
+                Append to existing
+              </label>
+            </div>
+            {importError && (
+              <p className={styles.fieldHint} style={{ color: "#dc3545" }}>
+                {importError}
+              </p>
+            )}
+            <div className={styles.modalActions}>
+              <button className={styles.smallBtn} onClick={() => setImportOpen(false)}>
+                Cancel
+              </button>
+              <button
+                className={styles.actionBtnPrimary}
+                disabled={!importText.trim() || importSectionMutation.isPending}
+                onClick={handleImport}
+              >
+                {importSectionMutation.isPending ? (
+                  <>
+                    <Spinner size="xs" /> Importing…
+                  </>
+                ) : (
+                  "Import"
                 )}
               </button>
             </div>
