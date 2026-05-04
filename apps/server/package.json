@@ -10,6 +10,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@sidequest/sqlite-backend": "^1.14.0",
+    "@tinkerbell/arr": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/imdb": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",

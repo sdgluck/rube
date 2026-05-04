@@ -6,6 +6,16 @@ import styles from "./RuleWizard.module.css";
 export type AiVibe = "playful" | "serious" | "mixed";
 export type AiNameStyle = "short_punchy" | "descriptive";
 
+export interface ArrFormState {
+  enabled: boolean;
+  monitor: boolean;
+  searchOnAdd: boolean;
+  qualityProfileId: number;
+  rootFolderPath: string;
+  maxAddsPerRun: number;
+  dryRun: boolean;
+}
+
 export interface RuleFormState {
   id?: string;
   name: string;
@@ -20,7 +30,18 @@ export interface RuleFormState {
   chart: string;
   listId: string;
   filter: string;
+  arr: ArrFormState;
 }
+
+export const DEFAULT_ARR_FORM: ArrFormState = {
+  enabled: false,
+  monitor: true,
+  searchOnAdd: false,
+  qualityProfileId: 0,
+  rootFolderPath: "",
+  maxAddsPerRun: 25,
+  dryRun: true,
+};
 
 export const PRESET_THEMES = [
   "Vibes & tone",
@@ -60,6 +81,8 @@ interface RuleType {
   label: string;
   description: string;
   requires?: "omdb" | "seerr";
+  /** Source can produce items not yet in the Plex library (enables arr Actions step). */
+  producesExternalItems?: boolean;
 }
 
 const RULE_TYPES: RuleType[] = [
@@ -84,19 +107,46 @@ const RULE_TYPES: RuleType[] = [
     description: "Build a collection per leading actor across your library.",
   },
   {
+    value: "directors",
+    label: "Directors",
+    description: "Build a collection per director.",
+  },
+  {
     value: "studios",
     label: "Studios",
     description: "Build a collection per studio.",
   },
   {
+    value: "networks",
+    label: "Networks",
+    description: "Build a collection per TV network (TV sections only).",
+  },
+  {
+    value: "genres",
+    label: "Genres",
+    description: "Build a collection per genre.",
+  },
+  {
+    value: "countries",
+    label: "Countries",
+    description: "Build a collection per country of origin.",
+  },
+  {
+    value: "content_ratings",
+    label: "Content Ratings",
+    description: "Build a collection per content rating (PG, R, TV-MA, etc.).",
+  },
+  {
     value: "imdb_chart",
     label: "IMDb Chart",
     description: "Pull from IMDb charts like Top 250 Movies or Most Popular TV.",
+    producesExternalItems: true,
   },
   {
     value: "imdb_list",
     label: "IMDb List",
     description: "Use any public IMDb list URL or list ID.",
+    producesExternalItems: true,
   },
   {
     value: "rt_top_rated",
@@ -109,6 +159,7 @@ const RULE_TYPES: RuleType[] = [
     label: "Seerr Requests",
     description: "Group items requested via Jellyseerr/Overseerr.",
     requires: "seerr",
+    producesExternalItems: true,
   },
 ];
 
@@ -163,6 +214,22 @@ function typeHasSourceStep(type: string): boolean {
   return type === "ai_prompt" || type === "imdb_chart" || type === "imdb_list" || type === "seerr_requests";
 }
 
+const TYPE_BY_VALUE: Record<string, RuleType> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t]));
+
+// Whether the wizard shows the arr Actions step.
+function typeHasActionsStep(type: string): boolean {
+  return !!TYPE_BY_VALUE[type]?.producesExternalItems;
+}
+
+// Service that arr actions target for a given type.
+function arrServiceForType(type: string, chart: string): "radarr" | "sonarr" {
+  if (type === "imdb_chart") {
+    return IMDB_CHART_SECTION_TYPE[chart] === "show" ? "sonarr" : "radarr";
+  }
+  // imdb_list and seerr_requests are mixed; default to radarr — user reviews counts before non-dry-run.
+  return "radarr";
+}
+
 function limitFieldLabel(type: string): string {
   if (type === "ai_prompt") return "Collections per section";
   if (type === "top_rated" || type === "lowest_rated" || type === "rt_top_rated") return "Items per collection";
@@ -187,20 +254,26 @@ function suggestName(form: RuleFormState, sections: { title: string }[]): string
   if (form.type === "top_rated") return "Top Rated";
   if (form.type === "lowest_rated") return "Lowest Rated";
   if (form.type === "actors") return "By Actor";
+  if (form.type === "directors") return "By Director";
   if (form.type === "studios") return "By Studio";
+  if (form.type === "networks") return "By Network";
+  if (form.type === "genres") return "By Genre";
+  if (form.type === "countries") return "By Country";
+  if (form.type === "content_ratings") return "By Content Rating";
   void sections;
   return "";
 }
 
 // ─── Step definitions ────────────────────────────────────────────────────
 
-type StepId = "type" | "source" | "scope" | "review";
+type StepId = "type" | "source" | "scope" | "actions" | "review";
 
 function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; label: string }[] {
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
   if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
   steps.push({ id: "scope", label: "Scope" });
+  if (typeHasActionsStep(type)) steps.push({ id: "actions", label: "Actions" });
   steps.push({ id: "review", label: "Review" });
   return steps;
 }
@@ -219,6 +292,13 @@ function validateStep(step: StepId, form: RuleFormState): string | null {
     return null;
   }
   if (step === "scope") return null;
+  if (step === "actions") {
+    if (form.arr.enabled) {
+      if (!form.arr.qualityProfileId) return "Pick a quality profile.";
+      if (!form.arr.rootFolderPath) return "Pick a root folder.";
+    }
+    return null;
+  }
   if (step === "review") return form.name.trim() ? null : "Name is required.";
   return null;
 }
@@ -228,7 +308,8 @@ function isFormValid(form: RuleFormState): boolean {
     !!form.name.trim() &&
     !!form.type &&
     (form.type !== "ai_prompt" || aiHasThemes(form)) &&
-    (form.type !== "imdb_list" || !!form.listId.trim())
+    (form.type !== "imdb_list" || !!form.listId.trim()) &&
+    (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
   );
 }
 
@@ -691,6 +772,149 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (idx >= 0) setStepIdx(idx);
   }
 
+  function renderActionsStep() {
+    const service = arrServiceForType(form.type, form.chart);
+    const arrStatus = trpc.arr.status.useQuery(undefined, { staleTime: 60_000 });
+    const profilesQuery = trpc.arr.qualityProfiles.useQuery(
+      { service },
+      { enabled: !!arrStatus.data?.[service] && form.arr.enabled, staleTime: 60_000 },
+    );
+    const foldersQuery = trpc.arr.rootFolders.useQuery(
+      { service },
+      { enabled: !!arrStatus.data?.[service] && form.arr.enabled, staleTime: 60_000 },
+    );
+    const profiles = profilesQuery.data?.profiles ?? [];
+    const folders = foldersQuery.data?.folders ?? [];
+    const arrConfigured = !!arrStatus.data?.[service];
+    const setArr = (patch: Partial<ArrFormState>) => setForm({ ...form, arr: { ...form.arr, ...patch } });
+
+    return (
+      <>
+        <h3 className={styles.stepHeading}>Send missing items to {service === "radarr" ? "Radarr" : "Sonarr"}</h3>
+        <p className={styles.stepSub}>
+          When this rule runs, items from the source that aren't in your Plex library can be sent to{" "}
+          {service === "radarr" ? "Radarr" : "Sonarr"} for download. Off by default.
+        </p>
+
+        {!arrConfigured && (
+          <p className={styles.hint}>
+            {service === "radarr" ? "Radarr" : "Sonarr"} is not configured in Settings → Arrs.
+          </p>
+        )}
+
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.arr.enabled}
+              onChange={(e) => setArr({ enabled: e.target.checked })}
+              disabled={!arrConfigured}
+            />{" "}
+            Enable
+          </label>
+        </div>
+
+        {form.arr.enabled && (
+          <>
+            <div className={styles.field}>
+              <label htmlFor="arr-quality">Quality profile</label>
+              <select
+                id="arr-quality"
+                className={shared.input}
+                value={form.arr.qualityProfileId}
+                onChange={(e) => setArr({ qualityProfileId: parseInt(e.target.value, 10) || 0 })}
+              >
+                <option value={0}>{profilesQuery.isLoading ? "Loading…" : "— pick a profile —"}</option>
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {profilesQuery.data && !profilesQuery.data.ok && (
+                <span className={styles.hint}>Couldn't load profiles: {profilesQuery.data.error}</span>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="arr-root">Root folder</label>
+              <select
+                id="arr-root"
+                className={shared.input}
+                value={form.arr.rootFolderPath}
+                onChange={(e) => setArr({ rootFolderPath: e.target.value })}
+              >
+                <option value="">{foldersQuery.isLoading ? "Loading…" : "— pick a folder —"}</option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.path}>
+                    {f.path}
+                  </option>
+                ))}
+              </select>
+              {foldersQuery.data && !foldersQuery.data.ok && (
+                <span className={styles.hint}>Couldn't load folders: {foldersQuery.data.error}</span>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.arr.monitor}
+                  onChange={(e) => setArr({ monitor: e.target.checked })}
+                />{" "}
+                Monitor added items
+              </label>
+            </div>
+
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.arr.searchOnAdd}
+                  onChange={(e) => setArr({ searchOnAdd: e.target.checked })}
+                />{" "}
+                Search on add
+              </label>
+              <span className={styles.hint}>
+                If off, items are added but not searched until your next scheduled scan.
+              </span>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="arr-cap">Max adds per run</label>
+              <input
+                id="arr-cap"
+                type="number"
+                className={shared.input}
+                style={{ maxWidth: 140 }}
+                min={1}
+                max={500}
+                value={form.arr.maxAddsPerRun}
+                onChange={(e) =>
+                  setArr({ maxAddsPerRun: Math.max(1, Math.min(500, parseInt(e.target.value, 10) || 1)) })
+                }
+              />
+              <span className={styles.hint}>Safety cap. Extras beyond this number are skipped each run.</span>
+            </div>
+
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.arr.dryRun}
+                  onChange={(e) => setArr({ dryRun: e.target.checked })}
+                />{" "}
+                Dry run (log only — don't actually add)
+              </label>
+              <span className={styles.hint}>Recommended on first save. Disable once the run log looks right.</span>
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
   function renderReviewStep() {
     const sectionsText =
       form.sections.length === 0
@@ -779,6 +1003,19 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </button>
             </div>
           )}
+          {typeHasActionsStep(form.type) && (
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryLabel}>Send to *arr</span>
+              <span className={styles.summaryValue}>
+                {form.arr.enabled
+                  ? `${arrServiceForType(form.type, form.chart)}${form.arr.dryRun ? " (dry run)" : ""}, max ${form.arr.maxAddsPerRun}/run`
+                  : "Off"}
+              </span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("actions")}>
+                Edit
+              </button>
+            </div>
+          )}
         </div>
       </>
     );
@@ -789,6 +1026,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (currentStep.id === "type") return renderTypeStep();
     if (currentStep.id === "source") return renderSourceStep();
     if (currentStep.id === "scope") return renderScopeStep();
+    if (currentStep.id === "actions") return renderActionsStep();
     if (currentStep.id === "review") return renderReviewStep();
     return null;
   }
