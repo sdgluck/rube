@@ -7,6 +7,7 @@ import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle } from ".
 import { RulesSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
 import RelativeTime from "../RelativeTime";
+import ToggleSwitch from "../ToggleSwitch";
 import { useToast } from "../Toast";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
@@ -814,14 +815,31 @@ export default function Rules() {
 
       {allRules.length > 0 && (
         <div className={styles.toolbar}>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className={styles.search}
-            placeholder="Search rules…  (press / to focus)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className={styles.searchWrap}>
+            <span className={styles.searchIcon} aria-hidden="true">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className={styles.search}
+              placeholder="Search rules…  (press / to focus)"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <button
             type="button"
             className={`${styles.filterChip} ${typeFilter === "all" ? styles.filterChipActive : ""}`}
@@ -840,28 +858,29 @@ export default function Rules() {
             </button>
           ))}
           <span className={styles.filterDivider} />
-          <button
-            type="button"
-            className={`${styles.filterChip} ${enabledFilter === "all" ? styles.filterChipActive : ""}`}
-            onClick={() => setEnabledFilter("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterChip} ${enabledFilter === "enabled" ? styles.filterChipActive : ""}`}
-            onClick={() => setEnabledFilter("enabled")}
-          >
-            Enabled
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterChip} ${enabledFilter === "disabled" ? styles.filterChipActive : ""}`}
-            onClick={() => setEnabledFilter("disabled")}
-          >
-            Disabled
-          </button>
-          <span className={styles.filterDivider} />
+          <div className={styles.segmented} role="tablist">
+            <button
+              type="button"
+              className={`${styles.segmentedBtn} ${enabledFilter === "all" ? styles.segmentedBtnActive : ""}`}
+              onClick={() => setEnabledFilter("all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className={`${styles.segmentedBtn} ${enabledFilter === "enabled" ? styles.segmentedBtnActive : ""}`}
+              onClick={() => setEnabledFilter("enabled")}
+            >
+              Enabled
+            </button>
+            <button
+              type="button"
+              className={`${styles.segmentedBtn} ${enabledFilter === "disabled" ? styles.segmentedBtnActive : ""}`}
+              onClick={() => setEnabledFilter("disabled")}
+            >
+              Disabled
+            </button>
+          </div>
           <select
             className={styles.sortSelect}
             value={`${sortKey}:${sortDir}`}
@@ -995,12 +1014,7 @@ export default function Rules() {
                         </span>
                       </td>
                       <td className={styles.toggleCell}>
-                        <input
-                          type="checkbox"
-                          aria-label={rule.enabled ? "Disable rule" : "Enable rule"}
-                          checked={!!rule.enabled}
-                          onChange={() => handleToggle(rule)}
-                        />
+                        <ToggleSwitch checked={!!rule.enabled} onChange={() => handleToggle(rule)} size="sm" />
                       </td>
                       <td className={styles.statusCell}>
                         <StatusCell
@@ -1025,22 +1039,23 @@ export default function Rules() {
                         <div className={styles.actions}>
                           {rule.lastCollectionRatingKey && (
                             <button
-                              className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                              className={styles.actionBtn}
                               onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
+                              title="View last generated collection"
                             >
                               View
                             </button>
                           )}
                           {isRunning ? (
                             <button
-                              className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                              className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                               onClick={handleCancelRun}
                             >
                               Cancel
                             </button>
                           ) : (
                             <button
-                              className={`${shared.button} ${shared.buttonSmall}`}
+                              className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
                               onClick={() => handleRun(rule)}
                               disabled={runMutation.isPending || testMutation.isPending}
                               title={
@@ -1054,14 +1069,14 @@ export default function Rules() {
                           )}
                           {isTesting ? (
                             <button
-                              className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                              className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                               onClick={handleCancelTest}
                             >
                               Cancel
                             </button>
                           ) : (
                             <button
-                              className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                              className={styles.actionBtn}
                               onClick={() => handleTest(rule)}
                               disabled={testMutation.isPending || runMutation.isPending}
                               title={
@@ -1073,16 +1088,19 @@ export default function Rules() {
                               Test
                             </button>
                           )}
+                          <span className={styles.actionsDivider} />
                           <button
-                            className={`${shared.button} ${shared.buttonSmall}`}
+                            className={styles.actionBtn}
                             onClick={() => startEdit(rule)}
                             disabled={!!form}
+                            title="Edit rule"
                           >
                             Edit
                           </button>
                           <button
-                            className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                            className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                             onClick={() => handleDelete(rule)}
+                            title="Delete rule"
                           >
                             Delete
                           </button>
