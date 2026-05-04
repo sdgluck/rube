@@ -16,6 +16,13 @@ const KOMETA_BUCKET_TO_RULE_TYPE: Partial<Record<BucketKind, string>> = {
   director: "directors",
   content_rating: "content_ratings",
   franchise: "tmdb_franchises",
+  decade: "decades",
+  year: "years",
+  resolution: "resolutions",
+  audio_language: "audio_languages",
+  subtitle_language: "subtitle_languages",
+  video_format: "video_formats",
+  streaming: "streaming",
 };
 
 export interface KometaScanResult {
