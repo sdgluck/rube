@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-04
+
+### Changed
+
+- Internal: split `commands/generate.ts` (1961 lines) into a `commands/generate/` directory with one module per concern — handlers as `AsyncGenerator<PendingCollection>`, shared `commitCollection` / GUID-indexing helpers, and a preview path that reuses the same handlers instead of duplicating their logic. No user-visible behaviour change.
+
 ## [0.2.0] - 2026-05-04
 
 ### Added
