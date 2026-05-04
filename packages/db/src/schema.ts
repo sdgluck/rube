@@ -55,6 +55,18 @@ export const rules = sqliteTable("rules", {
   config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
   createdAt: integer("created_at").notNull(),
   lastCollectionRatingKey: text("last_collection_rating_key"),
+  lastRunAt: integer("last_run_at"),
+  lastRunDurationMs: integer("last_run_duration_ms"),
+  lastRunCollectionCount: integer("last_run_collection_count"),
+  lastRunItemCount: integer("last_run_item_count"),
+  lastRunStatus: text("last_run_status"), // "ok" | "error" | "cancelled"
+  lastRunError: text("last_run_error"),
+  lastTestAt: integer("last_test_at"),
+  lastTestDurationMs: integer("last_test_duration_ms"),
+  lastTestCollectionCount: integer("last_test_collection_count"),
+  lastTestItemCount: integer("last_test_item_count"),
+  lastTestStatus: text("last_test_status"),
+  lastTestError: text("last_test_error"),
 });
 
 export const ruleHistory = sqliteTable(

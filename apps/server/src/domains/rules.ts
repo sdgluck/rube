@@ -28,6 +28,18 @@ export function createRule(input: { name: string; type: string; config: Record<s
     config: input.config,
     createdAt: now,
     lastCollectionRatingKey: null,
+    lastRunAt: null,
+    lastRunDurationMs: null,
+    lastRunCollectionCount: null,
+    lastRunItemCount: null,
+    lastRunStatus: null,
+    lastRunError: null,
+    lastTestAt: null,
+    lastTestDurationMs: null,
+    lastTestCollectionCount: null,
+    lastTestItemCount: null,
+    lastTestStatus: null,
+    lastTestError: null,
   };
 }
 
@@ -45,6 +57,42 @@ export function updateRule(
 
 export function setRuleLastCollection(id: string, ratingKey: string): void {
   db.update(rules).set({ lastCollectionRatingKey: ratingKey }).where(eq(rules.id, id)).run();
+}
+
+export interface RuleRunOutcome {
+  status: "ok" | "error" | "cancelled";
+  durationMs: number;
+  collectionCount?: number;
+  itemCount?: number;
+  error?: string;
+}
+
+export function setRuleLastRun(id: string, outcome: RuleRunOutcome): void {
+  db.update(rules)
+    .set({
+      lastRunAt: Date.now(),
+      lastRunDurationMs: outcome.durationMs,
+      lastRunCollectionCount: outcome.collectionCount ?? null,
+      lastRunItemCount: outcome.itemCount ?? null,
+      lastRunStatus: outcome.status,
+      lastRunError: outcome.error ?? null,
+    })
+    .where(eq(rules.id, id))
+    .run();
+}
+
+export function setRuleLastTest(id: string, outcome: RuleRunOutcome): void {
+  db.update(rules)
+    .set({
+      lastTestAt: Date.now(),
+      lastTestDurationMs: outcome.durationMs,
+      lastTestCollectionCount: outcome.collectionCount ?? null,
+      lastTestItemCount: outcome.itemCount ?? null,
+      lastTestStatus: outcome.status,
+      lastTestError: outcome.error ?? null,
+    })
+    .where(eq(rules.id, id))
+    .run();
 }
 
 export function deleteRule(id: string): void {

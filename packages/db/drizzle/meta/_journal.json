@@ -15,6 +15,13 @@
       "when": 1777839718169,
       "tag": "0001_rainy_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777878853953,
+      "tag": "0002_rules_run_history",
+      "breakpoints": true
     }
   ]
 }

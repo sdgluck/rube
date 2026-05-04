@@ -1,12 +1,34 @@
 import { z } from "zod";
-import { getRules, getRule, createRule, updateRule, deleteRule } from "../domains/rules.ts";
+import {
+  getRules,
+  getRule,
+  createRule,
+  updateRule,
+  deleteRule,
+  setRuleLastRun,
+  setRuleLastTest,
+} from "../domains/rules.ts";
+import {
+  getRuleProgress,
+  clearProgress,
+  setLastTestResult,
+  getLastTestResult,
+  clearLastTestResult,
+  hasLastTestResult,
+  createTrackedContext,
+  type RuleProgressState,
+  type PersistedTestResult,
+} from "../domains/rule-progress.ts";
+import { errorMessage } from "../lib/util.ts";
 import { t, procedure } from "./_base.ts";
 
 const testControllers = new Map<string, AbortController>();
 const runControllers = new Map<string, AbortController>();
 
 export const rulesRouter = t.router({
-  list: procedure.query(() => getRules()),
+  list: procedure.query(() => {
+    return getRules().map((r) => ({ ...r, hasTestResult: hasLastTestResult(r.id) }));
+  }),
 
   get: procedure.input(z.object({ id: z.string() })).query(({ input }) => {
     const rule = getRule(input.id);
@@ -50,18 +72,46 @@ export const rulesRouter = t.router({
     }
     const controller = new AbortController();
     testControllers.set(input.id, controller);
+    const ctx = createTrackedContext(input.id, "test", controller.signal, "[test-rule]");
+    const startedAt = Date.now();
     try {
       const { testRule } = await import("../commands/generate.ts");
-      return await testRule(input.id, controller.signal);
+      const result = await testRule(input.id, controller.signal, ctx);
+      const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
+      const persisted: PersistedTestResult = {
+        ruleId: input.id,
+        finishedAt: Date.now(),
+        durationMs: Date.now() - startedAt,
+        status: "ok",
+        collections: result.collections,
+        tokensIn: result.tokensIn,
+        tokensOut: result.tokensOut,
+      };
+      setLastTestResult(persisted);
+      setRuleLastTest(input.id, {
+        status: "ok",
+        durationMs: persisted.durationMs,
+        collectionCount: result.collections.length,
+        itemCount: totalItems,
+      });
+      return result;
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
+      const aborted = err instanceof Error && err.name === "AbortError";
+      const status = aborted ? "cancelled" : "error";
+      if (aborted) {
         console.log(`[test-rule] Test for rule "${input.id}" was cancelled`);
       } else {
-        console.error(`[test-rule] Test for rule "${input.id}" failed:`, err instanceof Error ? err.message : err);
+        console.error(`[test-rule] Test for rule "${input.id}" failed:`, errorMessage(err));
       }
+      setRuleLastTest(input.id, {
+        status,
+        durationMs: Date.now() - startedAt,
+        error: aborted ? undefined : errorMessage(err),
+      });
       throw err;
     } finally {
       testControllers.delete(input.id);
+      clearProgress(input.id);
     }
   }),
 
@@ -79,18 +129,33 @@ export const rulesRouter = t.router({
     }
     const controller = new AbortController();
     runControllers.set(input.id, controller);
+    const ctx = createTrackedContext(input.id, "run", controller.signal, "[run-rule]");
+    const startedAt = Date.now();
     try {
       const { runSingleRule } = await import("../commands/generate.ts");
-      return await runSingleRule(input.id, controller.signal);
+      const result = await runSingleRule(input.id, controller.signal, ctx);
+      setRuleLastRun(input.id, {
+        status: "ok",
+        durationMs: Date.now() - startedAt,
+      });
+      return result;
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
+      const aborted = err instanceof Error && err.name === "AbortError";
+      const status = aborted ? "cancelled" : "error";
+      if (aborted) {
         console.log(`[run-rule] Run for rule "${input.id}" was cancelled`);
       } else {
-        console.error(`[run-rule] Run for rule "${input.id}" failed:`, err instanceof Error ? err.message : err);
+        console.error(`[run-rule] Run for rule "${input.id}" failed:`, errorMessage(err));
       }
+      setRuleLastRun(input.id, {
+        status,
+        durationMs: Date.now() - startedAt,
+        error: aborted ? undefined : errorMessage(err),
+      });
       throw err;
     } finally {
       runControllers.delete(input.id);
+      clearProgress(input.id);
     }
   }),
 
@@ -98,6 +163,19 @@ export const rulesRouter = t.router({
     console.log(`[run-rule] Cancel requested for rule "${input.id}"`);
     runControllers.get(input.id)?.abort();
     runControllers.delete(input.id);
+    return { ok: true };
+  }),
+
+  progress: procedure.input(z.object({ id: z.string() })).query(({ input }): RuleProgressState | null => {
+    return getRuleProgress(input.id) ?? null;
+  }),
+
+  lastTestResult: procedure.input(z.object({ id: z.string() })).query(({ input }): PersistedTestResult | null => {
+    return getLastTestResult(input.id) ?? null;
+  }),
+
+  clearTestResult: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    clearLastTestResult(input.id);
     return { ok: true };
   }),
 });

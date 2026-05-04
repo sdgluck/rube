@@ -178,3 +178,278 @@
   font-size: 0.9rem;
   margin-top: 24px;
 }
+
+/* ─── Toolbar (search + filters) ─────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 340px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.filterChip {
+  padding: 4px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.filterChip:hover {
+  background: var(--bg-surface-hover);
+}
+
+.filterChipActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.filterChipActive:hover {
+  background: var(--accent);
+}
+
+.filterDivider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-light);
+  margin: 0 4px;
+}
+
+.sortSelect {
+  padding: 6px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* ─── Status column ──────────────────────────────────────────────────────── */
+
+.statusCell {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.statusInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusToggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.statusToggle:hover .chevron {
+  color: var(--accent);
+}
+
+.chevron {
+  display: inline-block;
+  width: 10px;
+  color: var(--text-muted);
+  transition: transform 120ms;
+}
+
+.statusOk {
+  color: var(--text-success, #1e8449);
+}
+
+.statusError {
+  color: var(--text-error, #c0392b);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.statusCancelled {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.statusIdle {
+  color: var(--text-muted);
+}
+
+.statusBusy {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ruleSpin 700ms linear infinite;
+}
+
+@keyframes ruleSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Inline detail row (progress / test preview / error) ────────────────── */
+
+.detailRow td {
+  background: var(--bg-surface, transparent);
+  padding: 0;
+}
+
+.detailWrap {
+  padding: 14px 18px 18px;
+  border-top: 1px dashed var(--border-light);
+  background: var(--bg-surface-hover, transparent);
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.detailTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detailMeta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.progressBar {
+  width: 100%;
+  height: 4px;
+  background: var(--border-light);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+
+.progressBarIndeterminate {
+  height: 100%;
+  width: 30%;
+  background: var(--accent);
+  animation: ruleIndeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes ruleIndeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.progressMessage {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.logTail {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 6px 10px;
+  max-height: 130px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.errorBox {
+  padding: 8px 12px;
+  background: var(--bg-error);
+  color: var(--text-error);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* ─── Inline test preview (anchored to row) ──────────────────────────────── */
+
+.detailTestSummary {
+  display: flex;
+  gap: 14px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.detailTestSummary strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ─── Config summary (with hover/click expand) ───────────────────────────── */
+
+.configSummaryWrap {
+  position: relative;
+  cursor: help;
+}
+
+.configDetails {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  max-width: 360px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── Bulk bar extension ─────────────────────────────────────────────────── */
+
+.bulkBar > .bulkSpacer {
+  flex: 1;
+}

@@ -661,12 +661,23 @@ export interface TestCollectionPreview {
 
 export interface TestRuleResult {
   collections: TestCollectionPreview[];
+  tokensIn?: number;
+  tokensOut?: number;
 }
 
-export async function testRule(ruleId: string, signal?: AbortSignal): Promise<TestRuleResult> {
-  const log = (...args: unknown[]) => console.log("[test-rule]", ...args);
+export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: JobContext): Promise<TestRuleResult> {
+  const ctx: JobContext = ctxIn ?? {
+    log: (...args: unknown[]) => console.log("[test-rule]", ...args),
+    progress: () => {},
+    signal: signal || new AbortController().signal,
+  };
+  const log = ctx.log;
+  const progress = ctx.progress;
+  let tokensIn = 0;
+  let tokensOut = 0;
   const startTime = Date.now();
 
+  progress(0, 4, "Starting test…");
   log(`Starting test for rule "${ruleId}"`);
 
   const { getRule } = await import("../domains/rules.ts");
@@ -678,6 +689,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
   }
 
   log(`Rule: "${rule.name}" (type: ${rule.type})`);
+  progress(1, 4, "Connecting to Plex…");
 
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
@@ -701,6 +713,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
 
   const ruleConfig = parseRuleConfig(rule);
   log("Rule config:", JSON.stringify(ruleConfig));
+  progress(2, 4, "Resolving sections…");
 
   let sections: PlexSection[];
   if (ruleConfig.sections && ruleConfig.sections.length > 0) {
@@ -716,6 +729,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
     log(`Using all sections: ${sections.map((s) => s.title).join(", ")}`);
   }
 
+  progress(3, 4, `Processing ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
   const collections: TestCollectionPreview[] = [];
 
   switch (rule.type) {
@@ -734,7 +748,9 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
       log(`[ai_prompt] limit=${maxCollections}, minItems=${minItems}, themes=${themes.length}+${customThemes.length}`);
       if (maxCollections > 10) throw new Error("Limit cannot exceed 10.");
 
-      for (const section of sections) {
+      for (let si = 0; si < sections.length; si++) {
+        const section = sections[si];
+        progress(si, sections.length, `Section ${si + 1}/${sections.length}: ${section.title} — fetching items…`);
         log(`[ai_prompt] Processing section "${section.title}"...`);
         const items = await client.fetchAllItems(section.key);
         log(`[ai_prompt] Fetched ${items.length} items from "${section.title}"`);
@@ -765,6 +781,11 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
         const itemList = shuffled.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
         const seed = Math.floor(Math.random() * 1_000_000);
 
+        progress(
+          si,
+          sections.length,
+          `Section ${si + 1}/${sections.length}: ${section.title} — calling Claude (${items.length} items)…`,
+        );
         log(`[ai_prompt] Sending prompt to Claude (seed=${seed}, ${items.length} items)...`);
         const aiStartTime = Date.now();
         const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
@@ -794,9 +815,12 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
           reportHealth("Claude AI", "error", errorMessage(err));
           throw err;
         }
+        tokensIn += response.usage.input_tokens;
+        tokensOut += response.usage.output_tokens;
         log(
           `[ai_prompt] Claude responded in ${Date.now() - aiStartTime}ms (usage: ${response.usage.input_tokens} in, ${response.usage.output_tokens} out)`,
         );
+        progress(si + 1, sections.length, `Section ${si + 1}/${sections.length}: ${section.title} — parsing response…`);
 
         const text = (response.content[0] as { type: "text"; text: string }).text.trim();
         const noopCtx: JobContext = { log() {}, progress() {}, signal: new AbortController().signal };
@@ -1035,8 +1059,17 @@ export async function testRule(ruleId: string, signal?: AbortSignal): Promise<Te
 
   const totalItems = collections.reduce((sum, c) => sum + c.items.length, 0);
   log(`Test complete in ${Date.now() - startTime}ms — ${collections.length} collection(s), ${totalItems} total items`);
+  progress(
+    4,
+    4,
+    `Done — ${collections.length} collection${collections.length !== 1 ? "s" : ""}, ${totalItems} item${totalItems !== 1 ? "s" : ""}`,
+  );
 
-  return { collections };
+  return {
+    collections,
+    tokensIn: tokensIn || undefined,
+    tokensOut: tokensOut || undefined,
+  };
 }
 
 async function dispatchRule(
@@ -1195,11 +1228,18 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
 export async function runSingleRule(
   ruleId: string,
   signal?: AbortSignal,
+  ctxIn?: JobContext,
 ): Promise<{ lastCollectionKey: string | null }> {
   const rule = getRule(ruleId);
   if (!rule) throw new Error(`Rule "${ruleId}" not found`);
 
-  const log = (...args: unknown[]) => console.log("[run-rule]", ...args);
+  const ctx: JobContext = ctxIn ?? {
+    log: (...args: unknown[]) => console.log("[run-rule]", ...args),
+    progress: () => {},
+    signal: signal || new AbortController().signal,
+  };
+  const log = ctx.log;
+  ctx.progress(0, 4, `Running rule "${rule.name}"…`);
   log(`Running rule "${rule.name}" (${rule.type})`);
 
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
@@ -1235,7 +1275,7 @@ export async function runSingleRule(
   }
 
   const labels = ["Tinkerbell", ruleLabel];
-  const ctx: JobContext = { log, progress: () => {}, signal: signal || new AbortController().signal };
+  ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
 
   const lastCollectionKey = await dispatchRule(ctx, client, sections, machineId, rule, ruleConfig, labels);
 
@@ -1243,6 +1283,7 @@ export async function runSingleRule(
     setRuleLastCollection(rule.id, lastCollectionKey);
   }
 
+  ctx.progress(4, 4, "Done");
   log(`Done — lastCollectionKey: ${lastCollectionKey}`);
   return { lastCollectionKey };
 }

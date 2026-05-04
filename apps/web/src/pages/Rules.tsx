@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import DropdownButton from "../DropdownButton";
@@ -6,6 +6,7 @@ import ConfirmModal from "../ConfirmModal";
 import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle } from "../RuleWizard";
 import { RulesSkeleton } from "../Skeleton";
 import EmptyState from "../EmptyState";
+import RelativeTime from "../RelativeTime";
 import { useToast } from "../Toast";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
@@ -16,6 +17,15 @@ function downloadJson(data: unknown, filename: string) {
   const a = Object.assign(document.createElement("a"), { href: url, download: filename });
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const s = Math.round(ms / 100) / 10;
+  if (s < 60) return `${s}s`;
+  const mins = Math.floor(s / 60);
+  const remSecs = Math.round(s % 60);
+  return `${mins}m ${remSecs}s`;
 }
 
 const RULE_TYPES = [
@@ -67,6 +77,28 @@ const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => string> = {
   seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
 };
 
+const CONFIG_DETAILS: Record<string, (c: Record<string, unknown>) => string> = {
+  ai_prompt: (c) => {
+    const themes = (c.themes as string[] | undefined) ?? [];
+    const custom = ((c.customThemes as string[] | undefined) ?? []).filter((t) => t.trim().length > 0);
+    const all = [...themes, ...custom];
+    const lines = [
+      `Vibe: ${(c.vibe as string) ?? "mixed"}`,
+      `Name style: ${(c.nameStyle as string) ?? "short_punchy"}`,
+      `Collections per section: up to ${c.limit ?? 8}`,
+      `Min items per collection: ${c.minItems ?? 15}`,
+      "",
+      `Themes (${all.length}):`,
+      ...(all.length ? all.map((t) => `  • ${t}`) : ["  (none)"]),
+    ];
+    return lines.join("\n");
+  },
+  imdb_chart: (c) => `Chart: ${IMDB_CHART_LABELS[c.chart as string] || c.chart || "—"}`,
+  imdb_list: (c) => `List ID: ${c.listId || "—"}`,
+  seerr_requests: (c) =>
+    `Filter: ${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"}\nLimit: ${c.limit ?? 50}`,
+};
+
 const TYPE_BADGE: Record<string, string> = {
   ai_prompt: styles.typeAi,
   imdb_chart: styles.typeImdb,
@@ -102,6 +134,263 @@ function typeHasLimit(type: string): boolean {
   return type !== "imdb_chart" && type !== "imdb_list";
 }
 
+type SortKey = "name" | "type" | "lastRun";
+type EnabledFilter = "all" | "enabled" | "disabled";
+
+type RuleRow = {
+  id: string;
+  name: string;
+  type: string;
+  enabled: number;
+  config: Record<string, unknown> | null;
+  createdAt: number;
+  lastCollectionRatingKey: string | null;
+  lastRunAt: number | null;
+  lastRunDurationMs: number | null;
+  lastRunCollectionCount: number | null;
+  lastRunItemCount: number | null;
+  lastRunStatus: string | null;
+  lastRunError: string | null;
+  lastTestAt: number | null;
+  lastTestDurationMs: number | null;
+  lastTestCollectionCount: number | null;
+  lastTestItemCount: number | null;
+  lastTestStatus: string | null;
+  lastTestError: string | null;
+  hasTestResult: boolean;
+};
+
+interface RuleStatusCellProps {
+  rule: RuleRow;
+  isTesting: boolean;
+  isRunning: boolean;
+  expanded: boolean;
+  expandable: boolean;
+  onToggle: () => void;
+}
+
+function StatusCell({ rule, isTesting, isRunning, expanded, expandable, onToggle }: RuleStatusCellProps) {
+  if (isRunning) {
+    return (
+      <span className={`${styles.statusInline} ${styles.statusBusy}`}>
+        <span className={styles.spinner} />
+        Running…
+      </span>
+    );
+  }
+  if (isTesting) {
+    return (
+      <span className={`${styles.statusInline} ${styles.statusBusy}`}>
+        <span className={styles.spinner} />
+        Testing…
+      </span>
+    );
+  }
+
+  // Idle — show most recent of run / test
+  const runAt = rule.lastRunAt ?? 0;
+  const testAt = rule.lastTestAt ?? 0;
+  const useRun = runAt >= testAt;
+  const stamp = useRun ? rule.lastRunAt : rule.lastTestAt;
+  const status = useRun ? rule.lastRunStatus : rule.lastTestStatus;
+  const error = useRun ? rule.lastRunError : rule.lastTestError;
+  const label = useRun ? "Run" : "Test";
+
+  if (!stamp) {
+    return <span className={styles.statusIdle}>—</span>;
+  }
+
+  const summary = useRun
+    ? rule.lastRunStatus === "ok"
+      ? "ok"
+      : rule.lastRunStatus
+    : rule.lastTestStatus === "ok"
+      ? `${rule.lastTestCollectionCount ?? 0} collection${rule.lastTestCollectionCount === 1 ? "" : "s"}`
+      : rule.lastTestStatus;
+
+  let cls = styles.statusOk;
+  if (status === "error") cls = styles.statusError;
+  else if (status === "cancelled") cls = styles.statusCancelled;
+
+  const body = (
+    <span>
+      {label} <RelativeTime timestamp={stamp} /> · {summary}
+    </span>
+  );
+
+  if (!expandable) {
+    return (
+      <span className={`${styles.statusInline} ${cls}`} title={error || undefined}>
+        {body}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`${styles.statusInline} ${styles.statusToggle} ${cls}`}
+      title={error || `${label} — click to ${expanded ? "hide" : "show"} details`}
+      aria-expanded={expanded}
+    >
+      <span className={styles.chevron} aria-hidden="true">
+        {expanded ? "▾" : "▸"}
+      </span>
+      {body}
+    </button>
+  );
+}
+
+interface InlineProgressProps {
+  ruleId: string;
+  phase: "test" | "run";
+}
+
+function InlineProgress({ ruleId, phase }: InlineProgressProps) {
+  const progressQuery = trpc.rules.progress.useQuery({ id: ruleId }, { refetchInterval: 500, enabled: true });
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
+
+  const data = progressQuery.data;
+  const elapsed = data ? now - data.startedAt : 0;
+  const pct = data && data.total > 0 ? Math.min(100, Math.round((data.current / data.total) * 100)) : 0;
+  const indeterminate = !data || data.total === 0 || data.current === 0;
+
+  return (
+    <div>
+      <div className={styles.detailHeader}>
+        <span className={styles.detailTitle}>{phase === "test" ? "Testing" : "Running"}…</span>
+        <span className={styles.detailMeta}>
+          {elapsed > 0 ? `${formatDuration(elapsed)} elapsed` : ""}
+          {data && data.total > 0 ? ` · step ${data.current}/${data.total}` : ""}
+        </span>
+      </div>
+      <div className={styles.progressBar}>
+        {indeterminate ? (
+          <div className={styles.progressBarIndeterminate} />
+        ) : (
+          <div className={styles.progressBarFill} style={{ width: `${pct}%` }} />
+        )}
+      </div>
+      <div className={styles.progressMessage}>{data?.message || "Starting…"}</div>
+      {data && data.recentLogs.length > 0 && (
+        <pre className={styles.logTail}>{data.recentLogs.slice(-8).join("\n")}</pre>
+      )}
+    </div>
+  );
+}
+
+interface RuleDetailRowProps {
+  ruleId: string;
+  isTesting: boolean;
+  isRunning: boolean;
+  errorToShow: string | null;
+  onCleared: () => void;
+}
+
+function RuleDetailRow({ ruleId, isTesting, isRunning, errorToShow, onCleared }: RuleDetailRowProps) {
+  const resultQuery = trpc.rules.lastTestResult.useQuery({ id: ruleId }, { enabled: !isRunning });
+  const hasResult = !!resultQuery.data;
+  const showAnything = isTesting || isRunning || !!errorToShow || hasResult;
+  if (!showAnything) return null;
+
+  return (
+    <tr className={styles.detailRow}>
+      <td colSpan={7}>
+        <div className={styles.detailWrap}>
+          {(isTesting || isRunning) && <InlineProgress ruleId={ruleId} phase={isTesting ? "test" : "run"} />}
+          {!isTesting && !isRunning && errorToShow && (
+            <div style={{ marginBottom: 12 }}>
+              <div className={styles.detailHeader}>
+                <span className={styles.detailTitle}>Last error</span>
+              </div>
+              <div className={styles.errorBox}>{errorToShow}</div>
+            </div>
+          )}
+          {!isRunning && <TestResultsBlock ruleId={ruleId} onCleared={onCleared} />}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+interface TestResultsBlockProps {
+  ruleId: string;
+  onCleared?: () => void;
+}
+
+function TestResultsBlock({ ruleId, onCleared }: TestResultsBlockProps) {
+  const utils = trpc.useUtils();
+  const resultQuery = trpc.rules.lastTestResult.useQuery({ id: ruleId });
+  const clearMutation = trpc.rules.clearTestResult.useMutation({
+    onSuccess: () => {
+      utils.rules.lastTestResult.invalidate({ id: ruleId });
+      utils.rules.list.invalidate();
+      onCleared?.();
+    },
+  });
+  const result = resultQuery.data;
+  if (!result) return null;
+  const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
+
+  return (
+    <div>
+      <div className={styles.detailHeader}>
+        <span className={styles.detailTitle}>Test results</span>
+        <button
+          type="button"
+          className={styles.testPreviewCloseBtn}
+          onClick={() => clearMutation.mutate({ id: ruleId })}
+        >
+          Clear
+        </button>
+      </div>
+      <div className={styles.detailTestSummary}>
+        <span>
+          <strong>{result.collections.length}</strong> collection{result.collections.length !== 1 ? "s" : ""}
+        </span>
+        <span>
+          <strong>{totalItems}</strong> item{totalItems !== 1 ? "s" : ""}
+        </span>
+        <span>
+          <strong>{formatDuration(result.durationMs)}</strong>
+        </span>
+        {(result.tokensIn || result.tokensOut) && (
+          <span>
+            tokens: <strong>{result.tokensIn ?? 0}</strong> in / <strong>{result.tokensOut ?? 0}</strong> out
+          </span>
+        )}
+      </div>
+      {result.collections.length === 0 ? (
+        <div className={styles.testPreviewEmpty}>No collections would be created by this rule.</div>
+      ) : (
+        result.collections.map((col, i) => (
+          <div key={i} className={styles.testPreviewCollection}>
+            <div className={styles.testPreviewCollectionHeader}>
+              <span className={styles.testPreviewCollectionName}>{col.name}</span>
+              <span className={styles.testPreviewCollectionMeta}>
+                {col.sectionTitle} — {col.items.length} item{col.items.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className={styles.testPreviewItems}>
+              {col.items.map((item, j) => (
+                <div key={j} className={styles.testPreviewItem}>
+                  {item.title}
+                  {item.year && <span className={styles.testPreviewItemYear}> ({item.year})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 export default function Rules() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
@@ -114,9 +403,7 @@ export default function Rules() {
   const cancelTestMutation = trpc.rules.cancelTest.useMutation();
   const testingRuleIdRef = useRef<string | null>(null);
 
-  const runMutation = trpc.rules.run.useMutation({
-    onSuccess: () => utils.rules.list.invalidate(),
-  });
+  const runMutation = trpc.rules.run.useMutation();
   const cancelRunMutation = trpc.rules.cancelRun.useMutation();
   const runningRuleIdRef = useRef<string | null>(null);
 
@@ -129,11 +416,48 @@ export default function Rules() {
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastClickedIndex = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const rules = rulesQuery.data || [];
+  // Filters / sort / search
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string | "all">("all");
+  const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // Per-row UI state
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
+
+  const allRules = (rulesQuery.data ?? []) as RuleRow[];
+
+  const presentTypes = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of allRules) s.add(r.type);
+    return Array.from(s);
+  }, [allRules]);
+
+  const rules = useMemo(() => {
+    let out = allRules;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      out = out.filter((r) => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q));
+    }
+    if (typeFilter !== "all") out = out.filter((r) => r.type === typeFilter);
+    if (enabledFilter === "enabled") out = out.filter((r) => !!r.enabled);
+    else if (enabledFilter === "disabled") out = out.filter((r) => !r.enabled);
+    out = [...out].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+      else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
+      else if (sortKey === "lastRun") cmp = (a.lastRunAt ?? 0) - (b.lastRunAt ?? 0);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return out;
+  }, [allRules, search, typeFilter, enabledFilter, sortKey, sortDir]);
 
   function getExportData() {
-    return rules.map((r) => ({
+    return allRules.map((r) => ({
       name: r.name,
       type: r.type,
       enabled: !!r.enabled,
@@ -196,7 +520,7 @@ export default function Rules() {
     setIsEditing(false);
   }
 
-  function startEdit(rule: (typeof rules)[0]) {
+  function startEdit(rule: RuleRow) {
     const config = rule.config ?? {};
     setForm({
       id: rule.id,
@@ -243,11 +567,11 @@ export default function Rules() {
     }
   }
 
-  function handleToggle(rule: (typeof rules)[0]) {
+  function handleToggle(rule: RuleRow) {
     updateMutation.mutate({ id: rule.id, enabled: !rule.enabled });
   }
 
-  function handleDelete(rule: (typeof rules)[0]) {
+  function handleDelete(rule: RuleRow) {
     setPendingConfirm({
       message: `Delete rule "${rule.name}"?`,
       onConfirm: () => {
@@ -257,17 +581,16 @@ export default function Rules() {
     });
   }
 
-  function handleCheckboxClick(index: number, e: React.MouseEvent) {
+  function handleCheckboxClick(index: number, opts: { shiftKey: boolean }) {
     const id = rules[index].id;
+    const isShift = opts.shiftKey;
 
-    if (e.shiftKey && lastClickedIndex.current != null) {
+    if (isShift && lastClickedIndex.current != null) {
       const from = Math.min(lastClickedIndex.current, index);
       const to = Math.max(lastClickedIndex.current, index);
       setSelected((prev) => {
         const next = new Set(prev);
-        for (let i = from; i <= to; i++) {
-          next.add(rules[i].id);
-        }
+        for (let i = from; i <= to; i++) next.add(rules[i].id);
         return next;
       });
     } else {
@@ -283,7 +606,7 @@ export default function Rules() {
   }
 
   function toggleSelectAll() {
-    if (selected.size === rules.length) setSelected(new Set());
+    if (selected.size === rules.length && rules.length > 0) setSelected(new Set());
     else setSelected(new Set(rules.map((r) => r.id)));
   }
 
@@ -302,10 +625,79 @@ export default function Rules() {
     });
   }
 
-  function handleTest(rule: (typeof rules)[0]) {
-    setTestingRuleId(rule.id);
-    testingRuleIdRef.current = rule.id;
-    testMutation.mutate({ id: rule.id });
+  async function handleBulkSetEnabled(enabled: boolean) {
+    for (const id of selected) {
+      await updateMutation.mutateAsync({ id, enabled });
+    }
+    utils.rules.list.invalidate();
+    addToast(`${enabled ? "Enabled" : "Disabled"} ${selected.size} rule${selected.size !== 1 ? "s" : ""}`, "success");
+  }
+
+  async function handleBulkRun() {
+    const ids = Array.from(selected);
+    addToast(`Running ${ids.length} rule${ids.length !== 1 ? "s" : ""} sequentially…`, "info");
+    let okCount = 0;
+    let errCount = 0;
+    for (const id of ids) {
+      try {
+        await runRule(id);
+        okCount++;
+      } catch {
+        errCount++;
+      }
+    }
+    addToast(`Bulk run complete — ${okCount} ok, ${errCount} failed`, errCount === 0 ? "success" : "error");
+  }
+
+  async function handleBulkTest() {
+    const ids = Array.from(selected);
+    for (const id of ids) {
+      try {
+        await testRule(id);
+      } catch {
+        // continue
+      }
+    }
+    addToast(`Tested ${ids.length} rule${ids.length !== 1 ? "s" : ""}`, "info");
+  }
+
+  function testRule(id: string): Promise<unknown> {
+    setTestingRuleId(id);
+    setExpandedRow(id);
+    testingRuleIdRef.current = id;
+    return testMutation.mutateAsync({ id }).finally(() => {
+      testingRuleIdRef.current = null;
+      setTestingRuleId(null);
+      utils.rules.list.invalidate();
+      utils.rules.lastTestResult.invalidate({ id });
+    });
+  }
+
+  function runRule(id: string): Promise<unknown> {
+    setRunningRuleId(id);
+    setExpandedRow(id);
+    runningRuleIdRef.current = id;
+    return runMutation
+      .mutateAsync({ id })
+      .then((result) => {
+        const rule = allRules.find((r) => r.id === id);
+        addToast(
+          `Ran "${rule?.name ?? "rule"}"${(result as { lastCollectionKey?: string | null })?.lastCollectionKey ? "" : " (no collections created)"}`,
+          "success",
+        );
+        return result;
+      })
+      .finally(() => {
+        runningRuleIdRef.current = null;
+        setRunningRuleId(null);
+        utils.rules.list.invalidate();
+      });
+  }
+
+  function handleTest(rule: RuleRow) {
+    void testRule(rule.id).catch(() => {
+      // error captured per-row; mutation state is also reset on next test
+    });
   }
 
   function handleCancelTest() {
@@ -317,24 +709,8 @@ export default function Rules() {
     testMutation.reset();
   }
 
-  function closeTestPreview() {
-    testingRuleIdRef.current = null;
-    setTestingRuleId(null);
-    testMutation.reset();
-  }
-
-  function handleRun(rule: (typeof rules)[0]) {
-    setRunningRuleId(rule.id);
-    runningRuleIdRef.current = rule.id;
-    runMutation.mutate(
-      { id: rule.id },
-      {
-        onSettled: () => {
-          runningRuleIdRef.current = null;
-          setRunningRuleId(null);
-        },
-      },
-    );
+  function handleRun(rule: RuleRow) {
+    void runRule(rule.id).catch(() => {});
   }
 
   function handleCancelRun() {
@@ -346,7 +722,20 @@ export default function Rules() {
     runMutation.reset();
   }
 
-  // Cancel test/run on unmount (e.g. navigation away)
+  function toggleConfigExpand(id: string) {
+    setExpandedConfig((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleRowExpand(id: string) {
+    setExpandedRow((prev) => (prev === id ? null : id));
+  }
+
+  // Cancel test/run on unmount
   useEffect(() => {
     return () => {
       if (testingRuleIdRef.current) {
@@ -356,21 +745,44 @@ export default function Rules() {
         cancelRunMutation.mutate({ id: runningRuleIdRef.current });
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keyboard shortcuts: 'n' opens new-rule wizard
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (document.activeElement?.tagName || "").toUpperCase();
+      const editable =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (document.activeElement as HTMLElement | null)?.isContentEditable;
+      if (editable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "n" && !form) {
+        e.preventDefault();
+        startCreate();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [form]);
+
   if (rulesQuery.isLoading) return <RulesSkeleton />;
+
+  const allSelected = rules.length > 0 && rules.every((r) => selected.has(r.id));
 
   return (
     <div>
       <div className={shared.header}>
         <h2 className={shared.heading}>
-          Rules{rules.length > 0 && <span className="count-badge">{rules.length}</span>}
+          Rules{allRules.length > 0 && <span className="count-badge">{allRules.length}</span>}
         </h2>
         <div className={shared.headerActions}>
           <DropdownButton
             label="Export"
             className={shared.buttonSecondary}
-            disabled={rules.length === 0}
+            disabled={allRules.length === 0}
             options={[
               { label: "File", onClick: handleExportFile },
               { label: "Clipboard", onClick: handleExportClipboard },
@@ -400,22 +812,122 @@ export default function Rules() {
         Rules define how the Generate Collections job creates collections. Each enabled rule runs during generation.
       </p>
 
+      {allRules.length > 0 && (
+        <div className={styles.toolbar}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className={styles.search}
+            placeholder="Search rules…  (press / to focus)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            type="button"
+            className={`${styles.filterChip} ${typeFilter === "all" ? styles.filterChipActive : ""}`}
+            onClick={() => setTypeFilter("all")}
+          >
+            All types
+          </button>
+          {presentTypes.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`${styles.filterChip} ${typeFilter === t ? styles.filterChipActive : ""}`}
+              onClick={() => setTypeFilter(t)}
+            >
+              {TYPE_LABELS[t] || t}
+            </button>
+          ))}
+          <span className={styles.filterDivider} />
+          <button
+            type="button"
+            className={`${styles.filterChip} ${enabledFilter === "all" ? styles.filterChipActive : ""}`}
+            onClick={() => setEnabledFilter("all")}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className={`${styles.filterChip} ${enabledFilter === "enabled" ? styles.filterChipActive : ""}`}
+            onClick={() => setEnabledFilter("enabled")}
+          >
+            Enabled
+          </button>
+          <button
+            type="button"
+            className={`${styles.filterChip} ${enabledFilter === "disabled" ? styles.filterChipActive : ""}`}
+            onClick={() => setEnabledFilter("disabled")}
+          >
+            Disabled
+          </button>
+          <span className={styles.filterDivider} />
+          <select
+            className={styles.sortSelect}
+            value={`${sortKey}:${sortDir}`}
+            onChange={(e) => {
+              const [k, d] = e.target.value.split(":") as [SortKey, "asc" | "desc"];
+              setSortKey(k);
+              setSortDir(d);
+            }}
+            aria-label="Sort rules"
+          >
+            <option value="name:asc">Name (A→Z)</option>
+            <option value="name:desc">Name (Z→A)</option>
+            <option value="type:asc">Type (A→Z)</option>
+            <option value="lastRun:desc">Last run (recent first)</option>
+            <option value="lastRun:asc">Last run (oldest first)</option>
+          </select>
+        </div>
+      )}
+
       {selected.size > 0 && (
         <div className={styles.bulkBar}>
           <span>
             {selected.size} rule{selected.size !== 1 ? "s" : ""} selected
           </span>
-          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleBulkDelete}>
-            Delete selected
+          <button
+            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+            onClick={() => handleBulkSetEnabled(true)}
+            disabled={updateMutation.isPending}
+          >
+            Enable
           </button>
+          <button
+            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+            onClick={() => handleBulkSetEnabled(false)}
+            disabled={updateMutation.isPending}
+          >
+            Disable
+          </button>
+          <button
+            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+            onClick={handleBulkTest}
+            disabled={testMutation.isPending || runMutation.isPending}
+          >
+            Test
+          </button>
+          <button
+            className={`${shared.button} ${shared.buttonSmall}`}
+            onClick={handleBulkRun}
+            disabled={testMutation.isPending || runMutation.isPending}
+          >
+            Run
+          </button>
+          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleBulkDelete}>
+            Delete
+          </button>
+          <span className={styles.bulkSpacer} />
           <button className={`${shared.buttonSecondary} ${shared.buttonSmall}`} onClick={() => setSelected(new Set())}>
             Cancel
           </button>
         </div>
       )}
 
-      {rules.length === 0 && !form ? (
+      {allRules.length === 0 && !form ? (
         <EmptyState icon="cog" title="No rules yet" description="Add a rule to start generating collections." />
+      ) : rules.length === 0 ? (
+        <EmptyState icon="cog" title="No matching rules" description="Try a different search or filter." />
       ) : (
         <div className="table-scroll">
           <table className={shared.table}>
@@ -424,13 +936,15 @@ export default function Rules() {
                 <th className={styles.checkboxCell}>
                   <input
                     type="checkbox"
-                    checked={rules.length > 0 && selected.size === rules.length}
+                    aria-label="Select all rules"
+                    checked={allSelected}
                     onChange={toggleSelectAll}
                   />
                 </th>
                 <th>Name</th>
                 <th>Type</th>
                 <th>Enabled</th>
+                <th>Status</th>
                 <th>Config</th>
                 <th></th>
               </tr>
@@ -443,128 +957,161 @@ export default function Rules() {
                 if (sections?.length) configSummary += ` | Sections: ${sections.join(", ")}`;
 
                 const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
+                const isTesting = testMutation.isPending && testingRuleId === rule.id;
+                const isRunning = runMutation.isPending && runningRuleId === rule.id;
+                const isExpanded = expandedRow === rule.id;
+                const configDetail = CONFIG_DETAILS[rule.type]?.(c);
+                const showConfigDetails = expandedConfig.has(rule.id) && configDetail;
+                const errorToShow =
+                  rule.lastRunAt && rule.lastRunStatus === "error"
+                    ? rule.lastRunError
+                    : rule.lastTestStatus === "error"
+                      ? rule.lastTestError
+                      : null;
+                const expandable = !!errorToShow || rule.hasTestResult;
+                const showDetail = isTesting || isRunning || (isExpanded && expandable);
+
                 return (
-                  <tr key={rule.id}>
-                    <td className={styles.checkboxCell} onClick={(e) => handleCheckboxClick(i, e)}>
-                      <input type="checkbox" checked={selected.has(rule.id)} readOnly />
-                    </td>
-                    <td>{rule.name}</td>
-                    <td>
-                      <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
-                    </td>
-                    <td className={styles.toggleCell}>
-                      <input type="checkbox" checked={!!rule.enabled} onChange={() => handleToggle(rule)} />
-                    </td>
-                    <td>
-                      <span className={styles.configSummary}>{configSummary}</span>
-                    </td>
-                    <td>
-                      <div className={styles.actions}>
-                        {rule.lastCollectionRatingKey && (
-                          <button
-                            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
-                            onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
-                          >
-                            View
-                          </button>
-                        )}
-                        {runMutation.isPending && runningRuleId === rule.id ? (
-                          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelRun}>
-                            Cancel
-                          </button>
-                        ) : (
+                  <Fragment key={rule.id}>
+                    <tr>
+                      <td className={styles.checkboxCell}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${rule.name}`}
+                          checked={selected.has(rule.id)}
+                          onChange={() => handleCheckboxClick(i, { shiftKey: false })}
+                          onClick={(e) => {
+                            if (e.shiftKey) {
+                              e.preventDefault();
+                              handleCheckboxClick(i, { shiftKey: true });
+                            }
+                          }}
+                        />
+                      </td>
+                      <td>{rule.name}</td>
+                      <td>
+                        <span className={`${styles.typeLabel} ${typeBadge}`}>
+                          {TYPE_LABELS[rule.type] || rule.type}
+                        </span>
+                      </td>
+                      <td className={styles.toggleCell}>
+                        <input
+                          type="checkbox"
+                          aria-label={rule.enabled ? "Disable rule" : "Enable rule"}
+                          checked={!!rule.enabled}
+                          onChange={() => handleToggle(rule)}
+                        />
+                      </td>
+                      <td className={styles.statusCell}>
+                        <StatusCell
+                          rule={rule}
+                          isTesting={isTesting}
+                          isRunning={isRunning}
+                          expanded={isExpanded}
+                          expandable={expandable}
+                          onToggle={() => toggleRowExpand(rule.id)}
+                        />
+                      </td>
+                      <td>
+                        <span
+                          className={`${styles.configSummary} ${configDetail ? styles.configSummaryWrap : ""}`}
+                          onClick={() => configDetail && toggleConfigExpand(rule.id)}
+                          title={configDetail ? "Click to expand" : undefined}
+                        >
+                          {configSummary}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={styles.actions}>
+                          {rule.lastCollectionRatingKey && (
+                            <button
+                              className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                              onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
+                            >
+                              View
+                            </button>
+                          )}
+                          {isRunning ? (
+                            <button
+                              className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                              onClick={handleCancelRun}
+                            >
+                              Cancel
+                            </button>
+                          ) : (
+                            <button
+                              className={`${shared.button} ${shared.buttonSmall}`}
+                              onClick={() => handleRun(rule)}
+                              disabled={runMutation.isPending || testMutation.isPending}
+                              title={
+                                runMutation.isPending || testMutation.isPending
+                                  ? "Another rule is running"
+                                  : "Generate collections in Plex"
+                              }
+                            >
+                              Run
+                            </button>
+                          )}
+                          {isTesting ? (
+                            <button
+                              className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                              onClick={handleCancelTest}
+                            >
+                              Cancel
+                            </button>
+                          ) : (
+                            <button
+                              className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+                              onClick={() => handleTest(rule)}
+                              disabled={testMutation.isPending || runMutation.isPending}
+                              title={
+                                testMutation.isPending || runMutation.isPending
+                                  ? "Another rule is running"
+                                  : "Preview without writing to Plex"
+                              }
+                            >
+                              Test
+                            </button>
+                          )}
                           <button
                             className={`${shared.button} ${shared.buttonSmall}`}
-                            onClick={() => handleRun(rule)}
-                            disabled={runMutation.isPending || testMutation.isPending}
+                            onClick={() => startEdit(rule)}
+                            disabled={!!form}
                           >
-                            Run
+                            Edit
                           </button>
-                        )}
-                        {testMutation.isPending && testingRuleId === rule.id ? (
-                          <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={handleCancelTest}>
-                            Cancel
-                          </button>
-                        ) : (
                           <button
-                            className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
-                            onClick={() => handleTest(rule)}
-                            disabled={testMutation.isPending || runMutation.isPending}
+                            className={`${shared.buttonDanger} ${shared.buttonSmall}`}
+                            onClick={() => handleDelete(rule)}
                           >
-                            Test
+                            Delete
                           </button>
-                        )}
-                        <button
-                          className={`${shared.button} ${shared.buttonSmall}`}
-                          onClick={() => startEdit(rule)}
-                          disabled={!!form}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className={`${shared.buttonDanger} ${shared.buttonSmall}`}
-                          onClick={() => handleDelete(rule)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                        </div>
+                      </td>
+                    </tr>
+                    {showConfigDetails && (
+                      <tr>
+                        <td colSpan={7} className={styles.detailRow}>
+                          <div style={{ padding: "0 18px 12px 56px" }}>
+                            <pre className={styles.configDetails}>{configDetail}</pre>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {showDetail && (
+                      <RuleDetailRow
+                        ruleId={rule.id}
+                        isTesting={isTesting}
+                        isRunning={isRunning}
+                        errorToShow={errorToShow}
+                        onCleared={() => setExpandedRow(null)}
+                      />
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {runMutation.isError && (
-        <div className={styles.testPreviewError}>
-          Run failed: {runMutation.error?.message || "Unknown error"}
-          <button className={styles.testPreviewCloseBtn} style={{ marginLeft: 12 }} onClick={() => runMutation.reset()}>
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {testMutation.isError && (
-        <div className={styles.testPreviewError}>
-          Error: {testMutation.error?.message || "Test failed"}
-          <button className={styles.testPreviewCloseBtn} style={{ marginLeft: 12 }} onClick={closeTestPreview}>
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {testMutation.data && (
-        <div className={styles.testPreview}>
-          <div className={styles.testPreviewHeader}>
-            <h3>Test Results — {rules.find((r) => r.id === testingRuleId)?.name || "Rule"}</h3>
-            <button className={styles.testPreviewCloseBtn} onClick={closeTestPreview}>
-              Close
-            </button>
-          </div>
-          {testMutation.data.collections.length === 0 ? (
-            <div className={styles.testPreviewEmpty}>No collections would be created by this rule.</div>
-          ) : (
-            testMutation.data.collections.map((col, i) => (
-              <div key={i} className={styles.testPreviewCollection}>
-                <div className={styles.testPreviewCollectionHeader}>
-                  <span className={styles.testPreviewCollectionName}>{col.name}</span>
-                  <span className={styles.testPreviewCollectionMeta}>
-                    {col.sectionTitle} — {col.items.length} item{col.items.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className={styles.testPreviewItems}>
-                  {col.items.map((item, j) => (
-                    <div key={j} className={styles.testPreviewItem}>
-                      {item.title}
-                      {item.year && <span className={styles.testPreviewItemYear}> ({item.year})</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
         </div>
       )}
 
