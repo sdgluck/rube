@@ -1,7 +1,14 @@
 import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "../../lib/config.ts";
 import { plexHealthCallback } from "../../lib/clients.ts";
-import { getEnabledRules, getRule, setRuleLastCollection, setRuleArrCounts } from "../../domains/rules.ts";
+import {
+  getEnabledRules,
+  getRule,
+  setRuleArrCounts,
+  setRuleLastCollection,
+  setRuleLastRun,
+} from "../../domains/rules.ts";
+import { errorMessage } from "../../lib/util.ts";
 import type { JobContext, GenerateJobConfig } from "../../lib/job-context.ts";
 import { parseRuleConfig } from "./config.ts";
 import { runHandlerWithCommits } from "./dispatch.ts";
@@ -58,16 +65,33 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     await deleteOldCollections(ctx, client, sections, rule.id);
 
     const labels = ["Tinkerbell", `Rule:${rule.id}`];
-    const { lastCollectionKey } = await runHandlerWithCommits(
-      { ctx, client, sections, rule, ruleConfig },
-      machineId,
-      labels,
-    );
-    if (lastCollectionKey) setRuleLastCollection(rule.id, lastCollectionKey);
+    const ruleStartedAt = Date.now();
+    try {
+      const { lastCollectionKey, collectionCount, itemCount } = await runHandlerWithCommits(
+        { ctx, client, sections, rule, ruleConfig },
+        machineId,
+        labels,
+      );
+      if (lastCollectionKey) setRuleLastCollection(rule.id, lastCollectionKey);
 
-    const arrResult = await resolveArrAdds(ctx, client, sections, rule, ruleConfig);
-    if (ruleConfig.arr?.enabled) {
-      setRuleArrCounts(rule.id, arrResult.added, arrResult.skipped, arrResult.failed);
+      const arrResult = await resolveArrAdds(ctx, client, sections, rule, ruleConfig);
+      if (ruleConfig.arr?.enabled) {
+        setRuleArrCounts(rule.id, arrResult.added, arrResult.skipped, arrResult.failed);
+      }
+
+      setRuleLastRun(rule.id, {
+        status: "ok",
+        durationMs: Date.now() - ruleStartedAt,
+        collectionCount,
+        itemCount,
+      });
+    } catch (err) {
+      setRuleLastRun(rule.id, {
+        status: "error",
+        durationMs: Date.now() - ruleStartedAt,
+        error: errorMessage(err),
+      });
+      throw err;
     }
   }
 
@@ -79,7 +103,7 @@ export async function runSingleRule(
   ruleId: string,
   signal?: AbortSignal,
   ctxIn?: JobContext,
-): Promise<{ lastCollectionKey: string | null }> {
+): Promise<{ lastCollectionKey: string | null; collectionCount: number; itemCount: number }> {
   const rule = getRule(ruleId);
   if (!rule) throw new Error(`Rule "${ruleId}" not found`);
 
@@ -103,7 +127,7 @@ export async function runSingleRule(
 
   ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
   const labels = ["Tinkerbell", `Rule:${rule.id}`];
-  const { lastCollectionKey } = await runHandlerWithCommits(
+  const { lastCollectionKey, collectionCount, itemCount } = await runHandlerWithCommits(
     { ctx, client, sections, rule, ruleConfig },
     machineId,
     labels,
@@ -117,7 +141,7 @@ export async function runSingleRule(
 
   ctx.progress(4, 4, "Done");
   ctx.log(`Done — lastCollectionKey: ${lastCollectionKey}`);
-  return { lastCollectionKey };
+  return { lastCollectionKey, collectionCount, itemCount };
 }
 
 /**

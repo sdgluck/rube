@@ -60,13 +60,15 @@ export async function runHandlerWithCommits(
   deps: HandlerDeps,
   machineId: string,
   labels: string[],
-): Promise<{ lastCollectionKey: string | null }> {
+): Promise<{ lastCollectionKey: string | null; collectionCount: number; itemCount: number }> {
   const handler = handlerForRule(deps.rule.type);
-  if (!handler) return { lastCollectionKey: null };
+  if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
 
   const { ctx, client, rule, ruleConfig } = deps;
   const pinToHomepage = ruleConfig.pinToHomepage ?? true;
   let lastCollectionKey: string | null = null;
+  let collectionCount = 0;
+  let itemCount = 0;
 
   // ai_prompt history is collected per section and flushed in a `finally`
   // so partial-success runs still persist the collections that DID make
@@ -92,6 +94,8 @@ export async function runHandlerWithCommits(
       if (!collectionKey) continue;
 
       lastCollectionKey = collectionKey;
+      collectionCount++;
+      itemCount += ratingKeys.length;
 
       if (rule.type === "ai_prompt" && pending.matchedTitles) {
         const bucket = aiHistoryBySection.get(pending.section.key) ?? {
@@ -114,5 +118,5 @@ export async function runHandlerWithCommits(
     }
   }
 
-  return { lastCollectionKey };
+  return { lastCollectionKey, collectionCount, itemCount };
 }
