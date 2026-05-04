@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-04
+
+### Added
+
+- Rule wizards for grouping by director, genre, network, country, and content rating.
+- Popular Actors and Popular Directors rule wizards (TMDb-driven).
+- Franchises rule wizard — auto-generates a collection per movie franchise the library belongs to.
+- Send missing items to Radarr/Sonarr as a per-rule action — applies to any rule whose source can produce items not yet in the library, with dry-run, per-run cap, and live-fetched quality profile + root folder.
+- Per-run \*arr add/skip/fail counts in rule history.
+- TMDb integration with API key configuration, connection test, and health-dashboard status.
+
 ## [0.1.0] - 2026-05-04
 
 First public beta.
