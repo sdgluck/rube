@@ -39,16 +39,6 @@ export const NAME_STYLE_HINTS: Record<NonNullable<RuleConfig["nameStyle"]>, stri
   descriptive: "Names can be a bit longer and descriptive (up to ~6 words).",
 };
 
-export const GROUPED_FIELD_FOR_TYPE: Record<string, string> = {
-  actors: "actor",
-  directors: "director",
-  studios: "studio",
-  networks: "network",
-  genres: "genre",
-  countries: "country",
-  content_ratings: "contentRating",
-};
-
 export function parseRuleConfig(rule: Rule): RuleConfig {
   const parsed = ruleConfigSchema.safeParse(rule.config ?? {});
   if (!parsed.success) {

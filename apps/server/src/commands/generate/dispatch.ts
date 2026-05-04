@@ -1,11 +1,10 @@
 import type { PlexSection } from "@tinkerbell/plex";
 import { appendHistory, type HistoricalCollection } from "../../domains/rule-history.ts";
 import { commitCollection } from "./finalize.ts";
-import { GROUPED_FIELD_FOR_TYPE } from "./config.ts";
 import type { Handler, HandlerDeps } from "./types.ts";
 import { aiPromptHandler } from "./handlers/ai-prompt.ts";
 import { ratedHandler } from "./handlers/rated.ts";
-import { groupedHandler } from "./handlers/grouped.ts";
+import { tmdbGroupedHandler } from "./handlers/tmdb-grouped.ts";
 import { imdbContentHandler } from "./handlers/imdb-content.ts";
 import { rtTopRatedHandler } from "./handlers/rt-top-rated.ts";
 import { seerrRequestsHandler } from "./handlers/seerr-requests.ts";
@@ -32,7 +31,7 @@ export function handlerForRule(ruleType: string): Handler | null {
     case "genres":
     case "countries":
     case "content_ratings":
-      return groupedHandler(GROUPED_FIELD_FOR_TYPE[ruleType]);
+      return tmdbGroupedHandler(ruleType);
     case "tmdb_popular_actors":
       return tmdbPopularPeopleHandler("cast");
     case "tmdb_popular_directors":

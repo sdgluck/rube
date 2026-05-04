@@ -250,3 +250,29 @@ export const omdbCache = sqliteTable("omdb_cache", {
   response: text("response", { mode: "json" }).$type<unknown>().notNull(),
   fetchedAt: integer("fetched_at").notNull(),
 });
+
+export interface TmdbCachedDetails {
+  // Normalized fields used by grouped rule handlers. All optional — TV
+  // entries lack production_companies for many shows; movie entries lack
+  // networks; etc.
+  genres?: Array<{ id: number; name: string }>;
+  productionCompanies?: Array<{ id: number; name: string }>;
+  productionCountries?: Array<{ code: string; name: string }>;
+  networks?: Array<{ id: number; name: string }>;
+  cast?: Array<{ id: number; name: string; order?: number }>;
+  directors?: Array<{ id: number; name: string }>;
+  /** Map of ISO-3166-1 region code -> certification (e.g. "US" -> "PG-13"). */
+  contentRatings?: Record<string, string>;
+}
+
+export const tmdbCache = sqliteTable(
+  "tmdb_cache",
+  {
+    id: text("id").primaryKey(), // "movie:550" | "tv:1399"
+    tmdbId: integer("tmdb_id").notNull(),
+    mediaType: text("media_type").notNull(), // "movie" | "tv"
+    data: text("data", { mode: "json" }).$type<TmdbCachedDetails>().notNull(),
+    fetchedAt: integer("fetched_at").notNull(),
+  },
+  (table) => [index("idx_tmdb_cache_fetched_at").on(table.fetchedAt)],
+);
