@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "../trpc";
+import Spinner from "../Spinner";
 import styles from "./StressTest.module.css";
 import shared from "./Collections.module.css";
 
@@ -126,7 +127,7 @@ export default function StressTest() {
 
       {isRunning && stressTestRun && (
         <div className={styles.activeBanner}>
-          <div className={styles.bannerSpinner} />
+          <Spinner size="sm" />
           <span className={styles.bannerText}>Stress test in progress</span>
           {stressTestRun.progress > 0 && (
             <>

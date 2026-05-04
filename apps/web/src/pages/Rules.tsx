@@ -5,6 +5,7 @@ import DropdownButton from "../DropdownButton";
 import ConfirmModal from "../ConfirmModal";
 import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle } from "../RuleWizard";
 import { RulesSkeleton } from "../Skeleton";
+import Spinner from "../Spinner";
 import EmptyState from "../EmptyState";
 import RelativeTime from "../RelativeTime";
 import ToggleSwitch from "../ToggleSwitch";
@@ -174,7 +175,7 @@ function StatusCell({ rule, isTesting, isRunning, expanded, expandable, onToggle
   if (isRunning) {
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
-        <span className={styles.spinner} />
+        <Spinner size="xs" />
         Running…
       </span>
     );
@@ -182,7 +183,7 @@ function StatusCell({ rule, isTesting, isRunning, expanded, expandable, onToggle
   if (isTesting) {
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
-        <span className={styles.spinner} />
+        <Spinner size="xs" />
         Testing…
       </span>
     );

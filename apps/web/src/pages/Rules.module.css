@@ -489,22 +489,6 @@
   display: none;
 }
 
-.spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--border-light);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: ruleSpin 700ms linear infinite;
-}
-
-@keyframes ruleSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ─── Inline detail row (progress / test preview / error) ────────────────── */
 
 .detailRow td {

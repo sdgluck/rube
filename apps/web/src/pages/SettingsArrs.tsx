@@ -3,6 +3,7 @@ import { trpc } from "../trpc";
 import { useToast } from "../Toast";
 import UnsavedBanner from "../UnsavedBanner";
 import useUnsavedChanges from "../useUnsavedChanges";
+import { FormSkeleton } from "../Skeleton";
 import styles from "./Settings.module.css";
 
 interface ServiceConfig {
@@ -143,7 +144,7 @@ export default function SettingsArrs() {
   const testSonarrMutation = trpc.testSonarr.useMutation();
   const testSeerrMutation = trpc.testSeerr.useMutation();
 
-  if (configQuery.isLoading) return <p>Loading...</p>;
+  if (configQuery.isLoading) return <FormSkeleton rows={6} />;
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const configData = (configQuery.data || {}) as Record<string, string>;

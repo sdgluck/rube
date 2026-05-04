@@ -42,6 +42,19 @@
   gap: 12px;
 }
 
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
 /* Page-specific compositions */
 
 .collectionsTable {

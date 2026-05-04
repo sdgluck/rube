@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "../trpc";
 import { useToast } from "../Toast";
+import { FormSkeleton } from "../Skeleton";
 import styles from "./Settings.module.css";
 
 export interface NotificationField {
@@ -101,7 +102,7 @@ export default function NotificationServiceForm({ service, title, fields, events
     setEnabledEvents((prev) => (prev.includes(eventId) ? prev.filter((e) => e !== eventId) : [...prev, eventId]));
   };
 
-  if (configQuery.isLoading) return <p>Loading...</p>;
+  if (configQuery.isLoading) return <FormSkeleton rows={4} />;
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const eventTypes = eventTypesQuery.data || [];

@@ -3,6 +3,7 @@ import { trpc } from "../trpc";
 import { useToast } from "../Toast";
 import UnsavedBanner from "../UnsavedBanner";
 import useUnsavedChanges from "../useUnsavedChanges";
+import { FormSkeleton } from "../Skeleton";
 import styles from "./Settings.module.css";
 
 export default function SettingsPlex() {
@@ -133,7 +134,7 @@ export default function SettingsPlex() {
     }
   };
 
-  if (configQuery.isLoading) return <p>Loading...</p>;
+  if (configQuery.isLoading) return <FormSkeleton rows={6} />;
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const sections = sectionsQuery.data;

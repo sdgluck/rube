@@ -84,9 +84,9 @@ export const conditionalRuleSchema = z
 export type ConditionalRule = z.infer<typeof conditionalRuleSchema>;
 
 export const FONT_SIZE_SCALE: Record<FontSize, number> = {
-  sm: 0.8,
-  md: 1.0,
-  lg: 1.25,
-  xl: 1.5,
-  xxl: 2.0,
+  sm: 1.2,
+  md: 1.5,
+  lg: 1.875,
+  xl: 2.25,
+  xxl: 3.0,
 };

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "../trpc";
 import { MediaSkeleton } from "../Skeleton";
+import Spinner from "../Spinner";
 import EmptyState from "../EmptyState";
 import FadeImage from "../FadeImage";
 import { readEnumStorage } from "../storage";
@@ -186,7 +187,7 @@ function ChildrenRows({
           colSpan={colSpan}
           className={`${depth === 1 ? mediaStyles.childRowDepth1 : mediaStyles.childRowDepth2} ${mediaStyles.childRowLoading}`}
         >
-          Loading...
+          <Spinner size="xs" />
         </td>
       </tr>
     );
