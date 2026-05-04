@@ -14,6 +14,8 @@ export default function SettingsNotificationsWebhook() {
         },
       ]}
       eventsKey="global_webhook_events"
+      jobsKey="global_webhook_jobs"
+      healthTargetsKey="global_webhook_health_targets"
     />
   );
 }

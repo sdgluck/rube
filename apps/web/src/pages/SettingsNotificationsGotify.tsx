@@ -21,6 +21,8 @@ export default function SettingsNotificationsGotify() {
         },
       ]}
       eventsKey="global_gotify_events"
+      jobsKey="global_gotify_jobs"
+      healthTargetsKey="global_gotify_health_targets"
     />
   );
 }

@@ -22,6 +22,8 @@ export default function SettingsNotificationsPushover() {
         },
       ]}
       eventsKey="global_pushover_events"
+      jobsKey="global_pushover_jobs"
+      healthTargetsKey="global_pushover_health_targets"
     />
   );
 }

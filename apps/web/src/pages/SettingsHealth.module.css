@@ -28,8 +28,8 @@
 }
 
 .serviceList {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -136,7 +136,16 @@
   cursor: not-allowed;
 }
 
+@media (max-width: 1100px) {
+  .serviceList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
+  .serviceList {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .serviceCard {
     flex-wrap: wrap;
     padding: 12px;

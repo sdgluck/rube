@@ -15,6 +15,8 @@ export default function SettingsNotificationsPushbullet() {
         },
       ]}
       eventsKey="global_pushbullet_events"
+      jobsKey="global_pushbullet_jobs"
+      healthTargetsKey="global_pushbullet_health_targets"
     />
   );
 }

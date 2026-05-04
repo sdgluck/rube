@@ -14,6 +14,8 @@ export default function SettingsNotificationsDiscord() {
         },
       ]}
       eventsKey="global_discord_events"
+      jobsKey="global_discord_jobs"
+      healthTargetsKey="global_discord_health_targets"
     />
   );
 }

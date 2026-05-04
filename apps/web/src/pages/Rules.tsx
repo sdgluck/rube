@@ -427,9 +427,34 @@ export default function Rules() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  // Per-row UI state
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [expandedConfig, setExpandedConfig] = useState<Set<string>>(new Set());
+  // Per-row UI state — persisted across refresh in sessionStorage
+  const [expandedRow, setExpandedRow] = useState<string | null>(
+    () => (typeof window !== "undefined" && sessionStorage.getItem("rules-expanded-row")) || null,
+  );
+  const [expandedConfig, setExpandedConfig] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    const raw = sessionStorage.getItem("rules-expanded-config");
+    if (!raw) return new Set();
+    try {
+      const ids = JSON.parse(raw);
+      return Array.isArray(ids) ? new Set(ids) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    if (expandedRow) sessionStorage.setItem("rules-expanded-row", expandedRow);
+    else sessionStorage.removeItem("rules-expanded-row");
+  }, [expandedRow]);
+
+  useEffect(() => {
+    if (expandedConfig.size > 0) {
+      sessionStorage.setItem("rules-expanded-config", JSON.stringify([...expandedConfig]));
+    } else {
+      sessionStorage.removeItem("rules-expanded-config");
+    }
+  }, [expandedConfig]);
 
   const allRules = (rulesQuery.data ?? []) as RuleRow[];
 
