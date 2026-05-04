@@ -161,6 +161,27 @@ export default function Overlays() {
   const [posterNatural, setPosterNatural] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [frameSize, setFrameSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const posterFrameRef = useRef<HTMLDivElement | null>(null);
+  const frameObserverRef = useRef<ResizeObserver | null>(null);
+  // Ref callback fires whenever the node mounts/unmounts, including across the
+  // initial loading→loaded transition where the frame div appears in a later
+  // render. A useEffect with [] deps would only see the ref's first value.
+  const setPosterFrameRef = useCallback((el: HTMLDivElement | null) => {
+    posterFrameRef.current = el;
+    frameObserverRef.current?.disconnect();
+    frameObserverRef.current = null;
+    if (!el) {
+      setFrameSize({ w: 0, h: 0 });
+      return;
+    }
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setFrameSize({ w: rect.width, h: rect.height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    frameObserverRef.current = ro;
+  }, []);
   const [bulkItems, setBulkItems] = useState<Array<{ title: string; ratingKey: string; image: string }>>([]);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -272,20 +293,6 @@ export default function Overlays() {
   useEffect(() => {
     setSelectedConfigId(null);
   }, [sectionId]);
-
-  // Track the rendered poster frame's size so hit boxes scale with it.
-  useEffect(() => {
-    const el = posterFrameRef.current;
-    if (!el) return;
-    const update = () => {
-      const rect = el.getBoundingClientRect();
-      setFrameSize({ w: rect.width, h: rect.height });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   // Keyboard: Delete to remove selected, arrows to nudge between zones.
   useEffect(() => {
@@ -506,7 +513,7 @@ export default function Overlays() {
               </div>
 
               <div
-                ref={posterFrameRef}
+                ref={setPosterFrameRef}
                 className={styles.posterFrame}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={(e) => {
