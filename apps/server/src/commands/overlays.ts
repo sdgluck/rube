@@ -10,6 +10,7 @@ import {
   removeOriginalPoster,
   getOverlaidItems,
   resolveOverlayValue,
+  evaluateRule,
   compositeOverlays,
   type Badge,
 } from "../domains/overlays.ts";
@@ -129,11 +130,14 @@ async function runApply(
               },
               ratings,
             );
+            if (!evaluateRule(cfg.rule, cfg.overlayType, value, ratings)) continue;
             if (value) {
               badges.push({
                 position: cfg.position,
                 type: cfg.overlayType,
                 value,
+                style: cfg.style ?? null,
+                order: cfg.order,
               });
             }
           }

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=src --watch src/server.ts",
+    "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=src --watch-path=../../packages/overlays/src --watch-path=../../packages/db/src --watch src/server.ts",
     "typecheck": "tsc"
   },
   "dependencies": {
