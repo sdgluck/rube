@@ -26,6 +26,8 @@ export default function SettingsNotificationsTelegram() {
         },
       ]}
       eventsKey="global_telegram_events"
+      jobsKey="global_telegram_jobs"
+      healthTargetsKey="global_telegram_health_targets"
     />
   );
 }

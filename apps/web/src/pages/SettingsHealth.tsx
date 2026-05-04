@@ -42,9 +42,10 @@ function Sparkline({ points }: { points: Array<{ status: string; timestamp: numb
 
   return (
     <svg
-      width={SPARKLINE_W}
+      width="100%"
       height={SPARKLINE_H}
       viewBox={`0 0 ${SPARKLINE_W} ${SPARKLINE_H}`}
+      preserveAspectRatio="none"
       className={styles.sparkline}
     >
       {buckets.map((b, i) => {

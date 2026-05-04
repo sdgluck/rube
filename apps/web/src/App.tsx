@@ -169,7 +169,6 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/users", label: "Users" },
       { to: "/events", label: "Events" },
       { to: "/settings", label: "Settings" },
-      { to: "/changelog", label: "Changelog" },
     ],
   },
 ];

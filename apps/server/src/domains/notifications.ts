@@ -182,16 +182,66 @@ type EventsConfigKey = {
 const AGENTS: Array<{
   name: NotificationService;
   eventsKey: EventsConfigKey;
+  jobsKey: EventsConfigKey;
+  healthKey: EventsConfigKey;
   send: (title: string, message: string) => Promise<void>;
 }> = [
-  { name: "pushover", eventsKey: "global_pushover_events", send: sendPushover },
-  { name: "discord", eventsKey: "global_discord_events", send: sendDiscord },
-  { name: "gotify", eventsKey: "global_gotify_events", send: sendGotify },
-  { name: "lunasea", eventsKey: "global_lunasea_events", send: sendLunaSea },
-  { name: "pushbullet", eventsKey: "global_pushbullet_events", send: sendPushbullet },
-  { name: "slack", eventsKey: "global_slack_events", send: sendSlack },
-  { name: "telegram", eventsKey: "global_telegram_events", send: sendTelegram },
-  { name: "webhook", eventsKey: "global_webhook_events", send: sendWebhook },
+  {
+    name: "pushover",
+    eventsKey: "global_pushover_events",
+    jobsKey: "global_pushover_jobs",
+    healthKey: "global_pushover_health_targets",
+    send: sendPushover,
+  },
+  {
+    name: "discord",
+    eventsKey: "global_discord_events",
+    jobsKey: "global_discord_jobs",
+    healthKey: "global_discord_health_targets",
+    send: sendDiscord,
+  },
+  {
+    name: "gotify",
+    eventsKey: "global_gotify_events",
+    jobsKey: "global_gotify_jobs",
+    healthKey: "global_gotify_health_targets",
+    send: sendGotify,
+  },
+  {
+    name: "lunasea",
+    eventsKey: "global_lunasea_events",
+    jobsKey: "global_lunasea_jobs",
+    healthKey: "global_lunasea_health_targets",
+    send: sendLunaSea,
+  },
+  {
+    name: "pushbullet",
+    eventsKey: "global_pushbullet_events",
+    jobsKey: "global_pushbullet_jobs",
+    healthKey: "global_pushbullet_health_targets",
+    send: sendPushbullet,
+  },
+  {
+    name: "slack",
+    eventsKey: "global_slack_events",
+    jobsKey: "global_slack_jobs",
+    healthKey: "global_slack_health_targets",
+    send: sendSlack,
+  },
+  {
+    name: "telegram",
+    eventsKey: "global_telegram_events",
+    jobsKey: "global_telegram_jobs",
+    healthKey: "global_telegram_health_targets",
+    send: sendTelegram,
+  },
+  {
+    name: "webhook",
+    eventsKey: "global_webhook_events",
+    jobsKey: "global_webhook_jobs",
+    healthKey: "global_webhook_health_targets",
+    send: sendWebhook,
+  },
 ];
 
 export function sendNotification(service: NotificationService, title: string, message: string): Promise<void> {
@@ -200,12 +250,24 @@ export function sendNotification(service: NotificationService, title: string, me
   return agent.send(title, message);
 }
 
-export function notifyEvent(type: string, message: string): void {
+export function notifyEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
   const label = EVENT_TYPES.find((e) => e.id === type)?.label ?? type;
+  const jobId = typeof metadata?.jobId === "string" ? metadata.jobId : undefined;
+  const healthService = typeof metadata?.service === "string" ? metadata.service : undefined;
 
   for (const agent of AGENTS) {
     const enabledEvents = getConfig(agent.eventsKey);
     if (!enabledEvents || !enabledEvents.includes(type)) continue;
+
+    if (type.startsWith("job.")) {
+      const jobs = getConfig(agent.jobsKey);
+      if (jobs && jobs.length > 0 && (!jobId || !jobs.includes(jobId))) continue;
+    }
+
+    if (type.startsWith("health.")) {
+      const targets = getConfig(agent.healthKey);
+      if (targets && targets.length > 0 && (!healthService || !targets.includes(healthService))) continue;
+    }
 
     agent.send(label, message).catch((err) => {
       console.error(`[${agent.name}] Error sending notification:`, err);

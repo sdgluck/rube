@@ -14,6 +14,8 @@ export default function SettingsNotificationsLunaSea() {
         },
       ]}
       eventsKey="global_lunasea_events"
+      jobsKey="global_lunasea_jobs"
+      healthTargetsKey="global_lunasea_health_targets"
     />
   );
 }

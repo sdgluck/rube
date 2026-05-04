@@ -14,6 +14,8 @@ export default function SettingsNotificationsSlack() {
         },
       ]}
       eventsKey="global_slack_events"
+      jobsKey="global_slack_jobs"
+      healthTargetsKey="global_slack_health_targets"
     />
   );
 }

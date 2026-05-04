@@ -17,11 +17,26 @@ interface Props {
   title: string;
   fields: NotificationField[];
   eventsKey: string;
+  jobsKey: string;
+  healthTargetsKey: string;
 }
 
-export default function NotificationServiceForm({ service, title, fields, eventsKey }: Props) {
+type FilterMode = "all" | "specific";
+
+export default function NotificationServiceForm({
+  service,
+  title,
+  fields,
+  eventsKey,
+  jobsKey,
+  healthTargetsKey,
+}: Props) {
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [enabledEvents, setEnabledEvents] = useState<string[]>([]);
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const [jobsMode, setJobsMode] = useState<FilterMode>("all");
+  const [selectedHealthTargets, setSelectedHealthTargets] = useState<string[]>([]);
+  const [healthMode, setHealthMode] = useState<FilterMode>("all");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
@@ -29,6 +44,8 @@ export default function NotificationServiceForm({ service, title, fields, events
 
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const eventTypesQuery = trpc.notificationEventTypes.useQuery(undefined, { refetchOnWindowFocus: false });
+  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchOnWindowFocus: false });
+  const healthQuery = trpc.health.status.useQuery(undefined, { refetchOnWindowFocus: false });
   const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation();
   const testMutation = trpc.testNotification.useMutation();
@@ -46,8 +63,14 @@ export default function NotificationServiceForm({ service, title, fields, events
       }
       setValues(vals);
       setEnabledEvents((data[eventsKey] as string[]) ?? []);
+      const jobs = (data[jobsKey] as string[]) ?? [];
+      setSelectedJobs(jobs);
+      setJobsMode(jobs.length > 0 ? "specific" : "all");
+      const targets = (data[healthTargetsKey] as string[]) ?? [];
+      setSelectedHealthTargets(targets);
+      setHealthMode(targets.length > 0 ? "specific" : "all");
     }
-  }, [configQuery.data, eventsKey, fields]);
+  }, [configQuery.data, eventsKey, jobsKey, healthTargetsKey, fields]);
 
   function buildConfigPayload(): Record<string, unknown> {
     const payload: Record<string, unknown> = {};
@@ -61,6 +84,8 @@ export default function NotificationServiceForm({ service, title, fields, events
       }
     }
     payload[eventsKey] = enabledEvents;
+    payload[jobsKey] = jobsMode === "all" ? [] : selectedJobs;
+    payload[healthTargetsKey] = healthMode === "all" ? [] : selectedHealthTargets;
     return payload;
   }
 
@@ -102,10 +127,22 @@ export default function NotificationServiceForm({ service, title, fields, events
     setEnabledEvents((prev) => (prev.includes(eventId) ? prev.filter((e) => e !== eventId) : [...prev, eventId]));
   };
 
+  const toggleJob = (jobId: string) => {
+    setSelectedJobs((prev) => (prev.includes(jobId) ? prev.filter((j) => j !== jobId) : [...prev, jobId]));
+  };
+
+  const toggleHealthTarget = (target: string) => {
+    setSelectedHealthTargets((prev) => (prev.includes(target) ? prev.filter((t) => t !== target) : [...prev, target]));
+  };
+
   if (configQuery.isLoading) return <FormSkeleton rows={4} />;
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const eventTypes = eventTypesQuery.data || [];
+  const jobsList = jobsQuery.data ?? [];
+  const healthList = healthQuery.data ?? [];
+  const hasJobEvents = enabledEvents.some((e) => e.startsWith("job."));
+  const hasHealthEvents = enabledEvents.some((e) => e.startsWith("health."));
 
   return (
     <div className={styles.form}>
@@ -168,6 +205,94 @@ export default function NotificationServiceForm({ service, title, fields, events
           </div>
         )}
       </fieldset>
+
+      {hasJobEvents && (
+        <fieldset className={styles.group}>
+          <legend className={styles.groupTitle}>Jobs</legend>
+          <span className={styles.hint}>Limit job event notifications to specific jobs, or notify on all.</span>
+          <label className={styles.libraryItem}>
+            <input
+              type="radio"
+              name={`${service}-jobs-mode`}
+              checked={jobsMode === "all"}
+              onChange={() => setJobsMode("all")}
+            />
+            <span>All jobs</span>
+          </label>
+          <label className={styles.libraryItem}>
+            <input
+              type="radio"
+              name={`${service}-jobs-mode`}
+              checked={jobsMode === "specific"}
+              onChange={() => setJobsMode("specific")}
+            />
+            <span>Only selected jobs</span>
+          </label>
+          {jobsMode === "specific" && (
+            <div className={styles.libraryList}>
+              {jobsList.length === 0 ? (
+                <p className={styles.hint}>No jobs found.</p>
+              ) : (
+                jobsList.map((job) => (
+                  <label key={job.id} className={styles.libraryItem}>
+                    <input
+                      type="checkbox"
+                      className={styles.toggle}
+                      checked={selectedJobs.includes(job.id)}
+                      onChange={() => toggleJob(job.id)}
+                    />
+                    <span>{job.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+        </fieldset>
+      )}
+
+      {hasHealthEvents && (
+        <fieldset className={styles.group}>
+          <legend className={styles.groupTitle}>Health Check Targets</legend>
+          <span className={styles.hint}>Limit health event notifications to specific targets, or notify on all.</span>
+          <label className={styles.libraryItem}>
+            <input
+              type="radio"
+              name={`${service}-health-mode`}
+              checked={healthMode === "all"}
+              onChange={() => setHealthMode("all")}
+            />
+            <span>All targets</span>
+          </label>
+          <label className={styles.libraryItem}>
+            <input
+              type="radio"
+              name={`${service}-health-mode`}
+              checked={healthMode === "specific"}
+              onChange={() => setHealthMode("specific")}
+            />
+            <span>Only selected targets</span>
+          </label>
+          {healthMode === "specific" && (
+            <div className={styles.libraryList}>
+              {healthList.length === 0 ? (
+                <p className={styles.hint}>No health targets found.</p>
+              ) : (
+                healthList.map((target) => (
+                  <label key={target.service} className={styles.libraryItem}>
+                    <input
+                      type="checkbox"
+                      className={styles.toggle}
+                      checked={selectedHealthTargets.includes(target.service)}
+                      onChange={() => toggleHealthTarget(target.service)}
+                    />
+                    <span>{target.service}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+        </fieldset>
+      )}
     </div>
   );
 }
