@@ -192,6 +192,42 @@ const RULE_TYPES: RuleType[] = [
     requires: "tmdb",
     producesExternalItems: true,
   },
+  {
+    value: "decades",
+    label: "Decades",
+    description: "Build a collection per decade (1990s, 2000s, …) from each item's release year.",
+  },
+  {
+    value: "years",
+    label: "Years",
+    description: "Build a collection per release year. Best paired with a section that has a clear date range.",
+  },
+  {
+    value: "resolutions",
+    label: "Resolutions",
+    description: "Group items by Plex's reported video resolution (4K, 1080p, 720p, SD).",
+  },
+  {
+    value: "audio_languages",
+    label: "Audio Languages",
+    description: "Group items by primary audio stream language, read from Plex media info.",
+  },
+  {
+    value: "subtitle_languages",
+    label: "Subtitle Languages",
+    description: "Group items by available subtitle languages, read from Plex media info.",
+  },
+  {
+    value: "video_formats",
+    label: "Video Formats",
+    description: "Group items by source format (Bluray, WEB-DL, HDTV, …) inferred from Plex media metadata.",
+  },
+  {
+    value: "streaming",
+    label: "Streaming",
+    description: "Subset of the Networks rule limited to major streaming services (Netflix, Disney+, etc.).",
+    requires: "tmdb",
+  },
 ];
 
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));

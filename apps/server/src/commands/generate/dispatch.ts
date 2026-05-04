@@ -10,6 +10,8 @@ import { rtTopRatedHandler } from "./handlers/rt-top-rated.ts";
 import { seerrRequestsHandler } from "./handlers/seerr-requests.ts";
 import { tmdbPopularPeopleHandler } from "./handlers/tmdb-popular-people.ts";
 import { tmdbFranchisesHandler } from "./handlers/tmdb-franchises.ts";
+import { yearGroupedHandler } from "./handlers/year-grouped.ts";
+import { mediaGroupedHandler } from "./handlers/media-grouped.ts";
 
 /**
  * Pick the handler for a given rule type. Returning null is a real case —
@@ -31,7 +33,16 @@ export function handlerForRule(ruleType: string): Handler | null {
     case "genres":
     case "countries":
     case "content_ratings":
+    case "streaming":
       return tmdbGroupedHandler(ruleType);
+    case "decades":
+    case "years":
+      return yearGroupedHandler(ruleType);
+    case "resolutions":
+    case "audio_languages":
+    case "subtitle_languages":
+    case "video_formats":
+      return mediaGroupedHandler(ruleType);
     case "tmdb_popular_actors":
       return tmdbPopularPeopleHandler("cast");
     case "tmdb_popular_directors":

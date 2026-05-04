@@ -19,7 +19,27 @@ export type TmdbGroupedField =
   | "countries"
   | "content_ratings"
   | "actors"
-  | "directors";
+  | "directors"
+  | "streaming";
+
+/**
+ * TMDb network IDs for the major streaming services. Hand-curated; the
+ * streaming rule type filters network membership against this set so a
+ * "Networks" rule and a "Streaming" rule can coexist without producing
+ * the same Netflix/Disney+ collections.
+ */
+const STREAMING_NETWORK_IDS = new Set<number>([
+  213, // Netflix
+  1024, // Amazon
+  2552, // Apple TV+
+  2739, // Disney+
+  453, // Hulu
+  3186, // HBO Max / Max
+  4330, // Paramount+
+  3353, // Peacock
+  4344, // Paramount Network — added since "+ Streaming" sometimes maps here
+  2076, // Crunchyroll
+]);
 
 interface GroupKeyLabel {
   key: string;
@@ -31,6 +51,8 @@ type Extractor = (details: TmdbCachedDetails, region: string) => GroupKeyLabel[]
 const EXTRACTORS: Record<TmdbGroupedField, Extractor> = {
   studios: (d) => (d.productionCompanies ?? []).map((c) => ({ key: `c${c.id}`, label: c.name })),
   networks: (d) => (d.networks ?? []).map((n) => ({ key: `n${n.id}`, label: n.name })),
+  streaming: (d) =>
+    (d.networks ?? []).filter((n) => STREAMING_NETWORK_IDS.has(n.id)).map((n) => ({ key: `s${n.id}`, label: n.name })),
   genres: (d) => (d.genres ?? []).map((g) => ({ key: `g${g.id}`, label: g.name })),
   countries: (d) => (d.productionCountries ?? []).map((c) => ({ key: `co${c.code}`, label: c.name })),
   content_ratings: (d, region) => {
@@ -61,7 +83,8 @@ export function tmdbGroupedHandler(field: TmdbGroupedField) {
     for (const section of sections) {
       ctx.signal?.throwIfAborted();
 
-      // Networks rules only make sense for TV; everything else accepts both.
+      // Networks rules only make sense for TV; streaming applies to both
+      // (Netflix originals are movies + shows). Everything else accepts both.
       if (field === "networks" && section.type !== "show") {
         ctx.log(`[${field}] Skipping "${section.title}" — networks are TV-only.`);
         continue;

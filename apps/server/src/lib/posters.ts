@@ -46,6 +46,23 @@ export function ruleTypeToKometaKind(ruleType: string): KometaPosterSource["kind
       return "director";
     case "tmdb_franchises":
       return "franchise";
+    case "decades":
+      return "decade";
+    case "years":
+      return "year";
+    case "resolutions":
+      return "resolution";
+    case "audio_languages":
+      return "audio_language";
+    case "subtitle_languages":
+      return "subtitle_language";
+    case "video_formats":
+      return "video_format";
+    case "streaming":
+      // Kometa publishes streaming logos under streaming/<style>/<Name>.jpg.
+      // The posters package treats it as a styled-kind so the default
+      // "color" style is applied automatically.
+      return "streaming";
     default:
       return null;
   }

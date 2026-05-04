@@ -48,6 +48,13 @@ const RULE_TYPES = [
   { value: "tmdb_popular_actors", label: "Popular Actors" },
   { value: "tmdb_popular_directors", label: "Popular Directors" },
   { value: "tmdb_franchises", label: "Franchises" },
+  { value: "decades", label: "Decades" },
+  { value: "years", label: "Years" },
+  { value: "resolutions", label: "Resolutions" },
+  { value: "audio_languages", label: "Audio Languages" },
+  { value: "subtitle_languages", label: "Subtitle Languages" },
+  { value: "video_formats", label: "Video Formats" },
+  { value: "streaming", label: "Streaming" },
 ];
 
 const IMDB_CHARTS = [
