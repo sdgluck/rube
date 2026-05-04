@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-04
+
+### Added
+
+- Release script for automating releases
+
+### Changed
+
+- Trimmed changelog page preamble
+
 ## [0.3.0] - 2026-05-04
 
 ### Added
