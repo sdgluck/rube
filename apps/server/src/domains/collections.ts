@@ -2,7 +2,7 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
 import { db, collections } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
@@ -48,7 +48,6 @@ export async function upsertCollectionByKey(
 
 export async function syncCollections(client: PlexClient, sections: PlexSection[]): Promise<SyncStats> {
   const now = Date.now();
-  const seenKeys = new Set<string>();
 
   let synced = 0;
 
@@ -57,7 +56,6 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
 
     for (const col of colls) {
       const detail = await client.getCollectionDetail(col.ratingKey);
-      seenKeys.add(col.ratingKey);
 
       db.insert(collections)
         .values({
@@ -93,16 +91,10 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
     }
   }
 
-  // Remove stale entries
-  const allRows = db.select({ plexRatingKey: collections.plexRatingKey }).from(collections).all();
-
-  let removed = 0;
-  for (const row of allRows) {
-    if (!seenKeys.has(row.plexRatingKey)) {
-      db.delete(collections).where(eq(collections.plexRatingKey, row.plexRatingKey)).run();
-      removed++;
-    }
-  }
+  // Remove stale entries in a single statement to avoid races with
+  // concurrent inserts between SELECT and DELETE.
+  const result = db.delete(collections).where(lt(collections.syncedAt, now)).run();
+  const removed = Number(result.changes ?? 0);
 
   return { synced, removed };
 }

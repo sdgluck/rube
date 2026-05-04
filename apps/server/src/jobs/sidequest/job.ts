@@ -67,7 +67,7 @@ export class CommandJob extends Job {
         if (trimmed) message = trimmed;
       },
       progress: (current: number, total: number, msg: string) => {
-        progress = total > 0 ? (current - 1) / total : 0;
+        progress = total > 0 ? Math.min(current / total, 1) : 0;
         message = msg;
       },
       signal: controller.signal,
