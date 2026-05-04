@@ -19,6 +19,7 @@ import { previewRouter } from "./preview.router.ts";
 import { searchRouter } from "./search.router.ts";
 import { arrRouter } from "./arr.router.ts";
 import { postersRouter } from "./posters.router.ts";
+import { migrationRouter } from "./migration.router.ts";
 
 export const appRouter = t.router({
   config: configRouter,
@@ -36,6 +37,7 @@ export const appRouter = t.router({
   search: searchRouter,
   arr: arrRouter,
   posters: postersRouter,
+  migration: migrationRouter,
 
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();

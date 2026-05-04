@@ -16,15 +16,23 @@ export function getEnabledRules(): Rule[] {
   return db.select().from(rules).where(eq(rules.enabled, 1)).orderBy(rules.createdAt).all();
 }
 
-export function createRule(input: { name: string; type: string; config: Record<string, unknown> }): Rule {
+export function createRule(input: {
+  name: string;
+  type: string;
+  config: Record<string, unknown>;
+  enabled?: boolean;
+}): Rule {
   const id = randomUUID();
   const now = Date.now();
-  db.insert(rules).values({ id, name: input.name, type: input.type, config: input.config, createdAt: now }).run();
+  const enabled = input.enabled === false ? 0 : 1;
+  db.insert(rules)
+    .values({ id, name: input.name, type: input.type, config: input.config, enabled, createdAt: now })
+    .run();
   return {
     id,
     name: input.name,
     type: input.type,
-    enabled: 1,
+    enabled,
     config: input.config,
     createdAt: now,
     lastCollectionRatingKey: null,

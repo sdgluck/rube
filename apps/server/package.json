@@ -13,6 +13,7 @@
     "@tinkerbell/arr": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/imdb": "workspace:*",
+    "@tinkerbell/migrate": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",
     "@tinkerbell/overlays": "workspace:*",
     "@tinkerbell/plex": "workspace:*",

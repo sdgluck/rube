@@ -34,6 +34,12 @@ export default function Settings() {
           Posters
         </NavLink>
         <NavLink
+          to="/settings/migrate"
+          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
+        >
+          Migrate
+        </NavLink>
+        <NavLink
           to="/settings/health"
           className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
         >

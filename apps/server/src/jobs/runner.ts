@@ -53,6 +53,8 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     schedule: "0 4 * * 0",
     enabled: 1,
   },
+  // No schedule — only ever triggered explicitly from Settings → Migrate.
+  { id: "migrate-kometa", name: "Migrate Kometa", command: "migrate-kometa", schedule: "", enabled: 1 },
 ];
 
 const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {

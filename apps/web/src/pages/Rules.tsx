@@ -837,6 +837,7 @@ export default function Rules() {
 
   return (
     <div>
+      <MigrationBanner />
       <div className={shared.header}>
         <h2 className={shared.heading}>
           Rules{allRules.length > 0 && <span className="count-badge">{allRules.length}</span>}
@@ -1231,6 +1232,71 @@ export default function Rules() {
           onCancel={() => setPendingConfirm(null)}
         />
       )}
+    </div>
+  );
+}
+
+function MigrationBanner() {
+  const navigate = useNavigate();
+  const utils = trpc.useUtils();
+  const status = trpc.migration.status.useQuery(undefined, { refetchOnWindowFocus: false });
+  const dismiss = trpc.migration.dismiss.useMutation();
+
+  if (!status.data?.shouldShowBanner) return null;
+  const count = status.data.count;
+
+  const handleDismiss = async () => {
+    await dismiss.mutateAsync();
+    await utils.migration.status.invalidate();
+  };
+
+  return (
+    <div
+      style={{
+        margin: "0 0 16px 0",
+        padding: "12px 16px",
+        background: "rgba(74, 108, 247, 0.08)",
+        border: "1px solid rgba(74, 108, 247, 0.3)",
+        borderRadius: 6,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        lineHeight: 1.5,
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        Tinkerbell can migrate <strong>{count}</strong> Kometa-managed collection{count === 1 ? "" : "s"} into
+        Tinkerbell rules.
+      </div>
+      <button
+        type="button"
+        onClick={() => navigate("/settings/migrate")}
+        style={{
+          padding: "6px 14px",
+          background: "var(--accent)",
+          color: "#fff",
+          border: "1px solid var(--accent)",
+          borderRadius: 6,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Review
+      </button>
+      <button
+        type="button"
+        onClick={handleDismiss}
+        style={{
+          padding: "6px 14px",
+          background: "transparent",
+          color: "var(--color-muted, #888)",
+          border: "1px solid var(--border-input)",
+          borderRadius: 6,
+          cursor: "pointer",
+        }}
+      >
+        Dismiss
+      </button>
     </div>
   );
 }
