@@ -66,7 +66,11 @@ function parse(md: string): Block[] {
 }
 
 export default function Changelog() {
-  const blocks = useMemo(() => parse(CHANGELOG), []);
+  const blocks = useMemo(() => {
+    const all = parse(CHANGELOG);
+    const start = all.findIndex((b) => b.kind === "h2" && b.text !== "[Unreleased]");
+    return start === -1 ? [] : all.slice(start);
+  }, []);
 
   return (
     <div className={styles.page}>
