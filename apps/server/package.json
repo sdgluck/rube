@@ -16,6 +16,7 @@
     "@tinkerbell/omdb": "workspace:*",
     "@tinkerbell/overlays": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/posters": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",
     "@tinkerbell/tmdb": "workspace:*",
     "@trpc/server": "^11.10.0",

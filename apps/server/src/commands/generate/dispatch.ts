@@ -87,6 +87,7 @@ export async function runHandlerWithCommits(
         ratingKeys,
         labels,
         pinToHomepage,
+        rule.type,
       );
       if (!collectionKey) continue;
 

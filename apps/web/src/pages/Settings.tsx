@@ -28,6 +28,12 @@ export default function Settings() {
           Notifications
         </NavLink>
         <NavLink
+          to="/settings/posters"
+          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
+        >
+          Posters
+        </NavLink>
+        <NavLink
           to="/settings/health"
           className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
         >
