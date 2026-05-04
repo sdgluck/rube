@@ -4,6 +4,9 @@ export const overlayPositionSchema = z.enum([
   "top-left",
   "top-center",
   "top-right",
+  "middle-left",
+  "middle-center",
+  "middle-right",
   "bottom-left",
   "bottom-center",
   "bottom-right",
@@ -23,6 +26,7 @@ export const overlayTypeSchema = z.enum([
   "edition",
   "studio",
   "runtime",
+  "show_status",
 ]);
 export type OverlayType = z.infer<typeof overlayTypeSchema>;
 export const OVERLAY_TYPES = overlayTypeSchema.options;

@@ -127,6 +127,7 @@ async function runApply(
                 duration: detail.duration,
                 studio: detail.studio,
                 editionTitle: detail.editionTitle,
+                showStatus: detail.status,
               },
               ratings,
             );

@@ -211,6 +211,7 @@ export const overlaysRouter = t.router({
             duration: detail.duration,
             studio: detail.studio,
             editionTitle: detail.editionTitle,
+            showStatus: detail.status,
           },
           ratings,
         );
@@ -262,6 +263,7 @@ export const overlaysRouter = t.router({
             duration: detail.duration,
             studio: detail.studio,
             editionTitle: detail.editionTitle,
+            showStatus: detail.status,
           },
           ratings,
         );

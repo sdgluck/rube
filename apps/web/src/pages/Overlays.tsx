@@ -14,6 +14,9 @@ const POSITIONS: { id: OverlayPosition; label: string }[] = [
   { id: "top-left", label: "Top Left" },
   { id: "top-center", label: "Top Center" },
   { id: "top-right", label: "Top Right" },
+  { id: "middle-left", label: "Middle Left" },
+  { id: "middle-center", label: "Middle Center" },
+  { id: "middle-right", label: "Middle Right" },
   { id: "bottom-left", label: "Bottom Left" },
   { id: "bottom-center", label: "Bottom Center" },
   { id: "bottom-right", label: "Bottom Right" },
@@ -38,6 +41,7 @@ const OVERLAY_CATALOG: OverlayChip[] = [
   { type: "edition", label: "Edition", group: "Metadata", sample: "Extended" },
   { type: "studio", label: "Studio", group: "Metadata", sample: "A24" },
   { type: "runtime", label: "Runtime", group: "Metadata", sample: "2h 15m" },
+  { type: "show_status", label: "Show Status", group: "Metadata", sample: "Ongoing" },
 ];
 
 interface ColorPresetDef {
@@ -433,20 +437,31 @@ export default function Overlays() {
           moveConfigMutation.mutate({ id: selectedConfigId, position: POSITIONS[next].id, order: 999 });
         }
       } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        // Reorder within the current stack — mirrors the inspector's up/down
-        // buttons. No-op when alone in the stack or already at the boundary.
+        // Step semantics:
+        //   1. If the chip can move within its stack, reorder there first.
+        //   2. Otherwise, jump to the same column in the adjacent row
+        //      (top → middle → bottom on ArrowDown; reverse on ArrowUp).
         const cur = configs.find((c) => c.id === selectedConfigId);
         if (!cur) return;
         const stack = configs.filter((c) => c.position === cur.position).sort((a, b) => a.order - b.order);
         const stackIdx = stack.findIndex((c) => c.id === selectedConfigId);
-        const target = e.key === "ArrowUp" ? stackIdx - 1 : stackIdx + 1;
-        if (stackIdx >= 0 && target >= 0 && target < stack.length) {
+        const stackTarget = e.key === "ArrowUp" ? stackIdx - 1 : stackIdx + 1;
+        if (stackIdx >= 0 && stackTarget >= 0 && stackTarget < stack.length) {
           e.preventDefault();
           moveConfigMutation.mutate({
             id: selectedConfigId,
             position: cur.position as OverlayPosition,
-            order: target,
+            order: stackTarget,
           });
+          return;
+        }
+        // Stack boundary — try a row jump. Positions are laid out 3 per row:
+        //   0..2 top, 3..5 middle, 6..8 bottom. Same column = same idx % 3.
+        const idx = POSITIONS.findIndex((p) => p.id === cur.position);
+        const next = e.key === "ArrowDown" ? idx + 3 : idx - 3;
+        if (idx >= 0 && next >= 0 && next < POSITIONS.length) {
+          e.preventDefault();
+          moveConfigMutation.mutate({ id: selectedConfigId, position: POSITIONS[next].id, order: 999 });
         }
       }
     };
@@ -559,7 +574,6 @@ export default function Overlays() {
               </select>
             )}
           </h2>
-          <p className={styles.subtitle}>Drag overlays onto poster zones. Click any placed overlay to customize it.</p>
         </div>
       </header>
 
@@ -568,47 +582,52 @@ export default function Overlays() {
       ) : (
         <>
           <div className={styles.workspace}>
-            {/* ─── Left: catalog ───────────────────────────────────── */}
-            <aside className={styles.catalog}>
-              <CollapsibleSection title="Overlays" defaultOpen storageKey="ovl.left.overlays">
-                {(["Quality", "Audio", "Ratings", "Metadata"] as const).map((group) => (
-                  <div key={group} className={styles.catalogGroup}>
-                    <div className={styles.catalogGroupLabel}>{group}</div>
-                    <div className={styles.chipList}>
-                      {OVERLAY_CATALOG.filter((c) => c.group === group).map((chip) => (
-                        <div
-                          key={chip.type}
-                          className={styles.catalogChip}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", JSON.stringify({ kind: "new", type: chip.type }));
-                            e.dataTransfer.effectAllowed = "copy";
-                          }}
-                        >
-                          <span className={styles.catalogChipLabel}>{chip.label}</span>
-                          <span
-                            className={styles.catalogChipSample}
-                            style={badgePreviewStyle(chip.type, chip.sample, null, { compact: true })}
+            {/* ─── Left: catalog + presets (separate panels) ────────── */}
+            <div className={styles.catalogColumn}>
+              <aside className={styles.catalog}>
+                <h3 className={styles.paneTitle}>Overlays</h3>
+                <div className={styles.panelBody}>
+                  {(["Quality", "Audio", "Ratings", "Metadata"] as const).map((group) => (
+                    <div key={group} className={styles.catalogGroup}>
+                      <div className={styles.catalogGroupLabel}>{group}</div>
+                      <div className={styles.chipList}>
+                        {OVERLAY_CATALOG.filter((c) => c.group === group).map((chip) => (
+                          <div
+                            key={chip.type}
+                            className={styles.catalogChip}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", JSON.stringify({ kind: "new", type: chip.type }));
+                              e.dataTransfer.effectAllowed = "copy";
+                            }}
                           >
-                            {chip.sample}
-                          </span>
-                        </div>
-                      ))}
+                            <span className={styles.catalogChipLabel}>{chip.label}</span>
+                            <span
+                              className={styles.catalogChipSample}
+                              style={badgePreviewStyle(chip.type, chip.sample, null, { compact: true })}
+                            >
+                              {chip.sample}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </CollapsibleSection>
-
-              <CollapsibleSection title="Presets" defaultOpen={false} storageKey="ovl.left.presets">
-                <PresetList
-                  presets={presetsQuery.data ?? []}
-                  onApply={(id) => applyPresetMutation.mutate({ sectionId, presetId: id })}
-                  onDelete={(id) => deletePresetMutation.mutate({ id })}
-                  onSaveCurrent={() => setSavePresetOpen(true)}
-                  canSave={configs.length > 0}
-                />
-              </CollapsibleSection>
-            </aside>
+                  ))}
+                </div>
+              </aside>
+              <aside className={styles.catalog}>
+                <h3 className={styles.paneTitle}>Presets</h3>
+                <div className={styles.panelBody}>
+                  <PresetList
+                    presets={presetsQuery.data ?? []}
+                    onApply={(id) => applyPresetMutation.mutate({ sectionId, presetId: id })}
+                    onDelete={(id) => deletePresetMutation.mutate({ id })}
+                    onSaveCurrent={() => setSavePresetOpen(true)}
+                    canSave={configs.length > 0}
+                  />
+                </div>
+              </aside>
+            </div>
 
             {/* ─── Center: poster canvas ───────────────────────────── */}
             <div className={styles.canvas}>
@@ -866,7 +885,7 @@ export default function Overlays() {
                 )}
               </aside>
               <div className={styles.shortcutsPanel}>
-                <div className={styles.shortcutsLabel}>Shortcuts</div>
+                <h3 className={styles.paneTitle}>Shortcuts</h3>
                 <div className={styles.shortcutsList}>
                   <span>
                     <kbd>↑↓←→</kbd> move
@@ -1422,49 +1441,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className={styles.section}>
       <div className={styles.sectionTitle}>{title}</div>
       {children}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────── */
-/*                     CollapsibleSection                          */
-/* ─────────────────────────────────────────────────────────────── */
-
-function CollapsibleSection({
-  title,
-  defaultOpen,
-  storageKey,
-  children,
-}: {
-  title: string;
-  defaultOpen: boolean;
-  storageKey?: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState<boolean>(() => {
-    if (storageKey) {
-      const stored = localStorage.getItem(storageKey);
-      if (stored === "1") return true;
-      if (stored === "0") return false;
-    }
-    return defaultOpen;
-  });
-
-  const toggle = () => {
-    setOpen((v) => {
-      const next = !v;
-      if (storageKey) localStorage.setItem(storageKey, next ? "1" : "0");
-      return next;
-    });
-  };
-
-  return (
-    <div className={styles.collapsible}>
-      <button className={styles.collapsibleHeader} onClick={toggle} aria-expanded={open}>
-        <span className={styles.collapsibleChevron}>{open ? "▾" : "▸"}</span>
-        <span>{title}</span>
-      </button>
-      {open && <div className={styles.collapsibleBody}>{children}</div>}
     </div>
   );
 }

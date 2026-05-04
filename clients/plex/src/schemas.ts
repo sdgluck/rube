@@ -126,6 +126,7 @@ export const plexMetadataRawSchema = z
     contentRating: z.string().optional(),
     duration: z.number().optional(),
     originallyAvailableAt: z.string().optional(),
+    status: z.string().optional(), // TV show airing status: "Continuing", "Ended", etc.
     studio: z.string().optional(),
     editionTitle: z.string().optional(),
     rating: z.number().optional(),
