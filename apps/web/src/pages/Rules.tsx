@@ -1099,15 +1099,24 @@ export default function Rules() {
                       </td>
                       <td>
                         <div className={styles.actions}>
-                          {rule.lastCollectionRatingKey && (
-                            <button
-                              className={styles.actionBtn}
-                              onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
-                              title="View last generated collection"
-                            >
-                              View
-                            </button>
-                          )}
+                          {rule.lastCollectionRatingKey &&
+                            ((rule.lastRunCollectionCount ?? 0) > 1 ? (
+                              <button
+                                className={styles.actionBtn}
+                                onClick={() => navigate(`/collections?label=${encodeURIComponent(`Rule:${rule.id}`)}`)}
+                                title={`View ${rule.lastRunCollectionCount} collections from this rule`}
+                              >
+                                View
+                              </button>
+                            ) : (
+                              <button
+                                className={styles.actionBtn}
+                                onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
+                                title="View last generated collection"
+                              >
+                                View
+                              </button>
+                            ))}
                           {isRunning ? (
                             <button
                               className={`${styles.actionBtn} ${styles.actionBtnDanger}`}

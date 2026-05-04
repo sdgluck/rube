@@ -137,6 +137,8 @@ export const rulesRouter = t.router({
       setRuleLastRun(input.id, {
         status: "ok",
         durationMs: Date.now() - startedAt,
+        collectionCount: result.collectionCount,
+        itemCount: result.itemCount,
       });
       return result;
     } catch (err) {
