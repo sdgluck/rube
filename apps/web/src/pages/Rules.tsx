@@ -45,6 +45,9 @@ const RULE_TYPES = [
   { value: "imdb_list", label: "IMDb List" },
   { value: "rt_top_rated", label: "RT Top Rated" },
   { value: "seerr_requests", label: "Seerr Requests" },
+  { value: "tmdb_popular_actors", label: "Popular Actors" },
+  { value: "tmdb_popular_directors", label: "Popular Directors" },
+  { value: "tmdb_franchises", label: "Franchises" },
 ];
 
 const IMDB_CHARTS = [

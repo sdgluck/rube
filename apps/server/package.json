@@ -17,6 +17,7 @@
     "@tinkerbell/overlays": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",
+    "@tinkerbell/tmdb": "workspace:*",
     "@trpc/server": "^11.10.0",
     "croner": "^9.0.0",
     "drizzle-orm": "^0.45.1",

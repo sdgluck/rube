@@ -113,6 +113,18 @@ export const appRouter = t.router({
     }
   }),
 
+  testTmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+    try {
+      const { testTmdbKey } = await import("@tinkerbell/tmdb");
+      const data = await testTmdbKey(input.api_key);
+      reportHealth("TMDb", "ok", `Test query OK — ${data.sample}`);
+      return { ok: true as const, sample: data.sample };
+    } catch (err) {
+      reportHealth("TMDb", "error", errorMessage(err));
+      return { ok: false as const, error: errorMessage(err) };
+    }
+  }),
+
   testOmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
     try {
       const res = await fetch(`https://www.omdbapi.com/?apikey=${input.api_key}&t=Inception`, {
