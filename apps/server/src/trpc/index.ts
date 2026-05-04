@@ -18,6 +18,7 @@ import { stressTestRouter } from "./stress-test.router.ts";
 import { previewRouter } from "./preview.router.ts";
 import { searchRouter } from "./search.router.ts";
 import { arrRouter } from "./arr.router.ts";
+import { postersRouter } from "./posters.router.ts";
 
 export const appRouter = t.router({
   config: configRouter,
@@ -34,6 +35,7 @@ export const appRouter = t.router({
   preview: previewRouter,
   search: searchRouter,
   arr: arrRouter,
+  posters: postersRouter,
 
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();

@@ -30,6 +30,7 @@ const VALID_COMMANDS = new Set([
   "sync-media",
   "overlays",
   "sync-users",
+  "posters-refresh",
 ]);
 
 export class CommandJob extends Job {

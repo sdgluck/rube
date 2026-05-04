@@ -46,6 +46,13 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
+  {
+    id: "posters-refresh",
+    name: "Refresh Poster Cache",
+    command: "posters-refresh",
+    schedule: "0 4 * * 0",
+    enabled: 1,
+  },
 ];
 
 const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {

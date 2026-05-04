@@ -43,6 +43,7 @@ const StressTest = lazy(() => import("./pages/StressTest"));
 const Preview = lazy(() => import("./pages/Preview"));
 const Changelog = lazy(() => import("./pages/Changelog"));
 const SettingsAbout = lazy(() => import("./pages/SettingsAbout"));
+const SettingsPosters = lazy(() => import("./pages/SettingsPosters"));
 
 function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {
@@ -594,6 +595,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <StressTest />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="posters"
+                  element={
+                    <LazyPage>
+                      <SettingsPosters />
                     </LazyPage>
                   }
                 />

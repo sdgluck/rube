@@ -67,6 +67,8 @@ export const configSchema = z.object({
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),
+  posters_kometa_enabled: z.boolean(),
+  posters_kometa_person_style: z.enum(["bw", "rainier", "signature", "diiivoy", "diiivoycolor"]),
 });
 
 export type ConfigSchema = typeof configSchema;

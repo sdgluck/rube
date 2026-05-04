@@ -56,6 +56,9 @@ importers:
       '@tinkerbell/plex':
         specifier: workspace:*
         version: link:../../clients/plex
+      '@tinkerbell/posters':
+        specifier: workspace:*
+        version: link:../../packages/posters
       '@tinkerbell/seerr':
         specifier: workspace:*
         version: link:../../clients/seerr
@@ -280,6 +283,19 @@ importers:
       '@types/sharp':
         specifier: ^0.32.0
         version: 0.32.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/posters:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
