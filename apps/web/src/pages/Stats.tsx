@@ -1,3 +1,4 @@
+import { LayoutGrid } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -228,7 +229,7 @@ function TilePicker({ selected, onSave }: { selected: string[]; onSave: (ids: st
         title="Customize tiles"
         aria-label="Customize tiles"
       >
-        ⚙
+        <LayoutGrid size={16} strokeWidth={2} />
       </button>
       {open && (
         <div className={styles.tilePickerPopover}>
