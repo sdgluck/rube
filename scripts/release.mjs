@@ -68,11 +68,18 @@ Below is the list of commits since the last release. Group them under \`### Adde
 Commits:
 ${log}`;
 
-const claude = spawnSync("claude", ["-p", prompt], {
-  cwd: ROOT,
-  encoding: "utf8",
-  stdio: ["ignore", "pipe", "inherit"],
-});
+const claude = spawnSync(
+  "claude",
+  ["-p", "--output-format", "text", "--model", "claude-haiku-4-5"],
+  {
+    cwd: ROOT,
+    encoding: "utf8",
+    input: prompt,
+    stdio: ["pipe", "pipe", "inherit"],
+    timeout: 180_000,
+  },
+);
+if (claude.signal === "SIGTERM") die("claude timed out after 3min — likely a global hook stalling the subprocess; check ~/.claude/settings.json");
 if (claude.status !== 0) die("claude summarisation failed");
 const sections = claude.stdout.trim();
 if (!sections) die("claude returned empty summary");
@@ -107,7 +114,7 @@ for (const group of ["apps", "packages", "clients"]) {
 
 sh("git", ["add", ...updated]);
 sh("git", ["commit", "-m", `v${next}`]);
-sh("git", ["tag", `v${next}`]);
+sh("git", ["tag", "-a", `v${next}`, "-m", `v${next}`]);
 
 console.error(`\nrelease: committed and tagged v${next}`);
 console.error(`release: review with 'git show v${next}', then 'git push --follow-tags' when ready`);
