@@ -693,6 +693,17 @@
   margin-bottom: 4px;
 }
 
+.inspectorHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.inspectorHeaderActions .iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .iconBtn {
   background: none;
   border: none;
@@ -978,6 +989,30 @@
 }
 
 .actionBtnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtnSecondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.actionBtnSecondary:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent);
+}
+
+.actionBtnSecondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

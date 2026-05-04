@@ -358,18 +358,30 @@ export default function Overlays() {
         e.preventDefault();
         removeConfigMutation.mutate({ id: selectedConfigId });
         setSelectedConfigId(null);
-      } else if (e.key.startsWith("Arrow")) {
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         const cur = configs.find((c) => c.id === selectedConfigId);
         if (!cur) return;
         const idx = POSITIONS.findIndex((p) => p.id === cur.position);
-        let next = idx;
-        if (e.key === "ArrowLeft") next = Math.max(0, idx - 1);
-        else if (e.key === "ArrowRight") next = Math.min(POSITIONS.length - 1, idx + 1);
-        else if (e.key === "ArrowUp") next = idx >= 3 ? idx - 3 : idx;
-        else if (e.key === "ArrowDown") next = idx < 3 ? idx + 3 : idx;
+        const next = e.key === "ArrowLeft" ? Math.max(0, idx - 1) : Math.min(POSITIONS.length - 1, idx + 1);
         if (next !== idx) {
           e.preventDefault();
           moveConfigMutation.mutate({ id: selectedConfigId, position: POSITIONS[next].id, order: 999 });
+        }
+      } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        // Reorder within the current stack — mirrors the inspector's up/down
+        // buttons. No-op when alone in the stack or already at the boundary.
+        const cur = configs.find((c) => c.id === selectedConfigId);
+        if (!cur) return;
+        const stack = configs.filter((c) => c.position === cur.position).sort((a, b) => a.order - b.order);
+        const stackIdx = stack.findIndex((c) => c.id === selectedConfigId);
+        const target = e.key === "ArrowUp" ? stackIdx - 1 : stackIdx + 1;
+        if (stackIdx >= 0 && target >= 0 && target < stack.length) {
+          e.preventDefault();
+          moveConfigMutation.mutate({
+            id: selectedConfigId,
+            position: cur.position as OverlayPosition,
+            order: target,
+          });
         }
       }
     };
@@ -593,16 +605,6 @@ export default function Overlays() {
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </button>
-                  <button
-                    className={styles.smallBtn}
-                    onClick={() => {
-                      setBulkOpen(true);
-                      bulkPreviewMutation.mutate({ sectionId, count: 6 });
-                    }}
-                    disabled={configs.length === 0 || bulkPreviewMutation.isPending}
-                  >
-                    {bulkPreviewMutation.isPending ? <Spinner size="xs" /> : "Bulk Preview"}
-                  </button>
                 </div>
               </div>
 
@@ -727,18 +729,46 @@ export default function Overlays() {
             <div className={styles.inspectorColumn}>
               <aside className={styles.inspector}>
                 {selected ? (
-                  <Inspector
-                    config={selected}
-                    onPatchStyle={(p) => handlePatchStyle(selected.id, p)}
-                    onPatchRule={(p) => handlePatchRule(selected.id, p)}
-                    onResetStyle={() => updateConfigMutation.mutate({ id: selected.id, style: null })}
-                    onResetRule={() => updateConfigMutation.mutate({ id: selected.id, rule: null })}
-                    onRemove={() => {
-                      removeConfigMutation.mutate({ id: selected.id });
-                      setSelectedConfigId(null);
-                    }}
-                    onClose={() => setSelectedConfigId(null)}
-                  />
+                  (() => {
+                    const stack = configsByPosition.get(selected.position as OverlayPosition) ?? [];
+                    const idx = stack.findIndex((c) => c.id === selected.id);
+                    const canUp = idx > 0;
+                    const canDown = idx >= 0 && idx < stack.length - 1;
+                    return (
+                      <Inspector
+                        config={selected}
+                        onPatchStyle={(p) => handlePatchStyle(selected.id, p)}
+                        onPatchRule={(p) => handlePatchRule(selected.id, p)}
+                        onResetStyle={() => updateConfigMutation.mutate({ id: selected.id, style: null })}
+                        onResetRule={() => updateConfigMutation.mutate({ id: selected.id, rule: null })}
+                        onRemove={() => {
+                          removeConfigMutation.mutate({ id: selected.id });
+                          setSelectedConfigId(null);
+                        }}
+                        onClose={() => setSelectedConfigId(null)}
+                        onMoveUp={
+                          canUp
+                            ? () =>
+                                moveConfigMutation.mutate({
+                                  id: selected.id,
+                                  position: selected.position as OverlayPosition,
+                                  order: idx - 1,
+                                })
+                            : null
+                        }
+                        onMoveDown={
+                          canDown
+                            ? () =>
+                                moveConfigMutation.mutate({
+                                  id: selected.id,
+                                  position: selected.position as OverlayPosition,
+                                  order: idx + 1,
+                                })
+                            : null
+                        }
+                      />
+                    );
+                  })()
                 ) : configs.length === 0 && (presetsQuery.data?.length ?? 0) > 0 ? (
                   <div className={styles.inspectorEmpty}>
                     <h3 className={styles.paneTitle}>Quick start</h3>
@@ -798,7 +828,7 @@ export default function Overlays() {
             </span>
             <div className={styles.overflowWrap} ref={overflowRef}>
               <button
-                className={styles.smallBtn}
+                className={styles.actionBtnSecondary}
                 onClick={() => setOverflowOpen((v) => !v)}
                 aria-label="More actions"
                 title="More actions"
@@ -832,6 +862,16 @@ export default function Overlays() {
                 </div>
               )}
             </div>
+            <button
+              className={styles.actionBtnSecondary}
+              onClick={() => {
+                setBulkOpen(true);
+                bulkPreviewMutation.mutate({ sectionId, count: 6 });
+              }}
+              disabled={configs.length === 0 || bulkPreviewMutation.isPending}
+            >
+              {bulkPreviewMutation.isPending ? <Spinner size="xs" /> : "Bulk Preview"}
+            </button>
             <button
               className={styles.actionBtnPrimary}
               onClick={() => startJobMutation.mutate({ jobId: "overlays" })}
@@ -950,6 +990,8 @@ interface InspectorProps {
   onResetRule: () => void;
   onRemove: () => void;
   onClose: () => void;
+  onMoveUp: (() => void) | null;
+  onMoveDown: (() => void) | null;
 }
 
 function Inspector({
@@ -960,6 +1002,8 @@ function Inspector({
   onResetRule,
   onRemove,
   onClose,
+  onMoveUp,
+  onMoveDown,
 }: InspectorProps) {
   const overlay = OVERLAY_CATALOG.find((c) => c.type === config.overlayType);
   const style = config.style ?? {};
@@ -981,9 +1025,29 @@ function Inspector({
     <div className={styles.inspectorBody}>
       <div className={styles.inspectorHeader}>
         <h3 className={styles.paneTitle}>{overlay?.label ?? config.overlayType}</h3>
-        <button className={styles.iconBtn} onClick={onClose} title="Close">
-          ×
-        </button>
+        <div className={styles.inspectorHeaderActions}>
+          <button
+            className={styles.iconBtn}
+            onClick={() => onMoveUp?.()}
+            disabled={!onMoveUp}
+            title="Move up in stack"
+            aria-label="Move up"
+          >
+            ▲
+          </button>
+          <button
+            className={styles.iconBtn}
+            onClick={() => onMoveDown?.()}
+            disabled={!onMoveDown}
+            title="Move down in stack"
+            aria-label="Move down"
+          >
+            ▼
+          </button>
+          <button className={styles.iconBtn} onClick={onClose} title="Close">
+            ×
+          </button>
+        </div>
       </div>
 
       <Section title="Label">
