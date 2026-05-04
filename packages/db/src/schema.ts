@@ -1,5 +1,10 @@
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+// NOTE: FTS5 virtual tables (`*_fts`) and their triggers live in
+// drizzle/0004_fts_search.sql and are NOT represented in this file.
+// drizzle-kit generate will not produce them — hand-audit any generated
+// migration that touches search-related tables before applying.
+
 interface StressTestConfigShape {
   mode: "transcode" | "directplay" | "mixed";
   transcodePct?: number;

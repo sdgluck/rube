@@ -24,7 +24,7 @@ function isInputFocused(): boolean {
 
 export default function useKeyboardShortcuts(
   setShortcutsHelpOpen: (open: boolean) => void,
-  setCommandPaletteOpen: (open: boolean) => void,
+  openCommandPalette: (initialQuery?: string) => void,
 ) {
   const navigate = useNavigate();
   const pendingG = useRef(false);
@@ -43,7 +43,7 @@ export default function useKeyboardShortcuts(
       // Cmd/Ctrl+K: command palette
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setCommandPaletteOpen(true);
+        openCommandPalette();
         return;
       }
 
@@ -56,12 +56,14 @@ export default function useKeyboardShortcuts(
         return;
       }
 
-      // / -> focus first search input
+      // / -> focus first page-level search input, else open palette
       if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
         const input = document.querySelector<HTMLInputElement>('input[type="text"][placeholder*="earch"]');
         if (input) {
-          e.preventDefault();
           input.focus();
+        } else {
+          openCommandPalette();
         }
         return;
       }
@@ -88,5 +90,5 @@ export default function useKeyboardShortcuts(
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [navigate, setShortcutsHelpOpen, setCommandPaletteOpen, clearG]);
+  }, [navigate, setShortcutsHelpOpen, openCommandPalette, clearG]);
 }
