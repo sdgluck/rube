@@ -14,6 +14,7 @@ export async function commitCollection(
   name: string,
   ratingKeys: string[],
   labels: string[],
+  pinToHomepage: boolean,
 ): Promise<string | null> {
   ctx.log(`Creating "${name}" (${ratingKeys.length} items)...`);
 
@@ -27,12 +28,14 @@ export async function commitCollection(
   );
   if (!collectionKey) return null;
 
-  await client.pinToHomepage(section.key, collectionKey, {
-    promotedToOwnHome: 1,
-    promotedToRecommendedHome: 1,
-    promotedToSharedHome: 1,
-  });
-  ctx.log(`Pinned "${name}" to homepage`);
+  if (pinToHomepage) {
+    await client.pinToHomepage(section.key, collectionKey, {
+      promotedToOwnHome: 1,
+      promotedToRecommendedHome: 1,
+      promotedToSharedHome: 1,
+    });
+    ctx.log(`Pinned "${name}" to homepage`);
+  }
 
   await upsertCollectionByKey(client, section, collectionKey);
   return collectionKey;

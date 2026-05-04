@@ -13,6 +13,7 @@ export const ruleConfigSchema = z.object({
   chart: z.string().optional(),
   listId: z.string().optional(),
   filter: z.string().optional(),
+  pinToHomepage: z.boolean().optional(),
   arr: z
     .object({
       enabled: z.boolean(),

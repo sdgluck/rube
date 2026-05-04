@@ -30,6 +30,7 @@ export interface RuleFormState {
   chart: string;
   listId: string;
   filter: string;
+  pinToHomepage: boolean;
   arr: ArrFormState;
 }
 
@@ -848,6 +849,21 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
         {form.type === "rt_top_rated" && !omdbConfigured && (
           <p className={styles.hint}>Heads-up: OMDB API key is not configured in Settings → AI.</p>
         )}
+
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.pinToHomepage}
+              onChange={(e) => setForm({ ...form, pinToHomepage: e.target.checked })}
+            />{" "}
+            Pin generated collections to homepage
+          </label>
+          <span className={styles.hint}>
+            When off, collections are still created in Plex but won't be promoted to the home, recommended, or shared
+            home rows.
+          </span>
+        </div>
       </>
     );
   }
@@ -1080,6 +1096,13 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </button>
             </div>
           )}
+          <div className={styles.summaryRow}>
+            <span className={styles.summaryLabel}>Pin to homepage</span>
+            <span className={styles.summaryValue}>{form.pinToHomepage ? "On" : "Off"}</span>
+            <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
+              Edit
+            </button>
+          </div>
           {typeHasActionsStep(form.type) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Send to *arr</span>
