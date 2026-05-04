@@ -45,6 +45,7 @@ const Changelog = lazy(() => import("./pages/Changelog"));
 const SettingsAbout = lazy(() => import("./pages/SettingsAbout"));
 const SettingsPosters = lazy(() => import("./pages/SettingsPosters"));
 const SettingsCredits = lazy(() => import("./pages/SettingsCredits"));
+const SettingsMigrate = lazy(() => import("./pages/SettingsMigrate"));
 
 function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {
@@ -604,6 +605,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <SettingsPosters />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="migrate"
+                  element={
+                    <LazyPage>
+                      <SettingsMigrate />
                     </LazyPage>
                   }
                 />

@@ -69,6 +69,33 @@ export const configSchema = z.object({
   stats_panel_order: z.array(z.string()).max(20),
   posters_kometa_enabled: z.boolean(),
   posters_kometa_person_style: z.enum(["bw", "rainier", "signature", "diiivoy", "diiivoycolor"]),
+  migration_kometa_state: z.object({
+    count: z.number(),
+    scannedAt: z.number(),
+    bySection: z.array(z.object({ sectionId: z.string(), sectionTitle: z.string(), count: z.number() })),
+  }),
+  migration_kometa_dismissed_at: z.number(),
+  migration_kometa_completed_at: z.number(),
+  /**
+   * Transient slot the Settings → Migrate page writes into right before
+   * kicking off the migrate-kometa command. The command reads it at run
+   * start and clears it on success. Held in config so the Sidequest worker
+   * thread doesn't need any additional plumbing to receive the user's
+   * selection.
+   */
+  migration_kometa_pending_plan: z.object({
+    items: z.array(
+      z.object({
+        ruleType: z.string(),
+        ruleName: z.string(),
+        sectionId: z.string(),
+        ruleConfig: z.record(z.string(), z.unknown()),
+        replacesRatingKeys: z.array(z.string()),
+      }),
+    ),
+    deleteOriginals: z.boolean(),
+    submittedAt: z.number(),
+  }),
 });
 
 export type ConfigSchema = typeof configSchema;

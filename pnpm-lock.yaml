@@ -47,6 +47,9 @@ importers:
       '@tinkerbell/imdb':
         specifier: workspace:*
         version: link:../../clients/imdb
+      '@tinkerbell/migrate':
+        specifier: workspace:*
+        version: link:../../packages/migrate
       '@tinkerbell/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb
@@ -258,6 +261,19 @@ importers:
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.10
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/migrate:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
