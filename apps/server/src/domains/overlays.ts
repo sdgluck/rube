@@ -203,7 +203,10 @@ export function reorderOverlayConfigs(sectionId: string, position: OverlayPositi
   db.transaction((tx) => {
     let tmp = -1;
     for (const id of ids) {
-      tx.update(overlayConfigs).set({ order: tmp-- }).where(eq(overlayConfigs.id, id)).run();
+      tx.update(overlayConfigs)
+        .set({ order: tmp-- })
+        .where(and(eq(overlayConfigs.id, id), eq(overlayConfigs.sectionId, sectionId)))
+        .run();
     }
     ids.forEach((id, i) => {
       tx.update(overlayConfigs)

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { errorMessage } from "../lib/util.ts";
+import { errorMessage, extractClaudeText } from "../lib/util.ts";
 import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
 import { plexHealthCallback } from "../lib/clients.ts";
 import { getConfig } from "../lib/config.ts";
@@ -296,7 +296,7 @@ ${itemList}`,
     throw err;
   }
 
-  const text = (response.content[0] as { type: "text"; text: string }).text.trim();
+  const text = extractClaudeText(response);
   ctx.log("AI response:", text);
 
   const parsed = extractJSON(text);

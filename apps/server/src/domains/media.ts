@@ -2,7 +2,7 @@
  * Media module — sync Plex media items to local SQLite and query them.
  */
 
-import { eq, and, like, asc, desc, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
 import { db, mediaItems } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
@@ -34,14 +34,12 @@ export async function syncMedia(
   onProgress?: (current: number, total: number, message: string) => void,
 ): Promise<SyncStats> {
   const now = Date.now();
-  const seenKeys = new Set<string>();
   let synced = 0;
 
   for (const section of sections) {
     for await (const { item, totalSize } of client.allItems(section.key)) {
       const ratingKey = item.ratingKey;
       if (!ratingKey) continue;
-      seenKeys.add(ratingKey);
 
       const media = item.Media?.[0];
       const values = {
@@ -70,15 +68,10 @@ export async function syncMedia(
     }
   }
 
-  // Remove stale entries not seen in this sync
-  const allRows = db.select({ ratingKey: mediaItems.ratingKey }).from(mediaItems).all();
-  let removed = 0;
-  for (const row of allRows) {
-    if (!seenKeys.has(row.ratingKey)) {
-      db.delete(mediaItems).where(eq(mediaItems.ratingKey, row.ratingKey)).run();
-      removed++;
-    }
-  }
+  // Remove stale entries not seen in this sync. Single statement avoids the
+  // race where a concurrent insert lands between the SELECT and DELETE.
+  const result = db.delete(mediaItems).where(lt(mediaItems.syncedAt, now)).run();
+  const removed = Number(result.changes ?? 0);
 
   return { synced, removed };
 }

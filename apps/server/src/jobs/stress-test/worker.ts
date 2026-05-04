@@ -72,7 +72,7 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
       if (trimmed) currentMessage = trimmed;
     },
     progress: (current: number, total: number, msg: string) => {
-      currentProgress = total > 0 ? (current - 1) / total : 0;
+      currentProgress = total > 0 ? Math.min(current / total, 1) : 0;
       currentMessage = msg;
     },
     signal: controller.signal,

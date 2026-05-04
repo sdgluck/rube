@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { errorMessage } from "../lib/util.ts";
+import { errorMessage, extractClaudeText } from "../lib/util.ts";
 import PQueue from "p-queue";
 import { z } from "zod";
 import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
@@ -240,7 +240,7 @@ ${itemList}`,
       throw err;
     }
 
-    const text = (response.content[0] as { type: "text"; text: string }).text.trim();
+    const text = extractClaudeText(response);
     ctx.log("AI response:", text);
     const aiCollections = parseJSON(ctx, text);
     ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
@@ -822,7 +822,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
         );
         progress(si + 1, sections.length, `Section ${si + 1}/${sections.length}: ${section.title} — parsing response…`);
 
-        const text = (response.content[0] as { type: "text"; text: string }).text.trim();
+        const text = extractClaudeText(response);
         const noopCtx: JobContext = { log() {}, progress() {}, signal: new AbortController().signal };
         const aiCollections = parseJSON(noopCtx, text);
         log(`[ai_prompt] Parsed ${aiCollections.length} collection(s) from AI response`);
