@@ -1,0 +1,91 @@
+import { getRecentHistory } from "../../../domains/rule-history.ts";
+import { buildAiPrompt, pickSampleItems } from "../ai/prompt.ts";
+import { parseAiCollections } from "../ai/parse.ts";
+import { askClaude, shuffled } from "../ai/claude.ts";
+import type { HandlerDeps, PendingCollection } from "../types.ts";
+
+export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<PendingCollection> {
+  const { ctx, client, sections, rule, ruleConfig, onAiUsage } = deps;
+
+  const maxCollections = ruleConfig.limit ?? 8;
+  const minItems = ruleConfig.minItems ?? 15;
+  const themes = ruleConfig.themes ?? [];
+  const customThemes = ruleConfig.customThemes ?? [];
+
+  if (maxCollections > 10) throw new Error("Limit cannot exceed 10.");
+
+  for (const section of sections) {
+    ctx.log(`[AI Prompt] "${section.title}" — starting...`);
+
+    ctx.log(`Fetching library items...`);
+    const items = await client.fetchAllItems(section.key);
+    ctx.log(`Found ${items.length} item(s).`);
+
+    if (items.length < 10) {
+      ctx.log(`Too few items to generate collections, skipping.`);
+      continue;
+    }
+
+    const history = getRecentHistory(rule.id, section.key);
+    if (history.length > 0) {
+      ctx.log(`Loaded ${history.length} prior collection(s) from history to inform prompt.`);
+    }
+
+    const prompt = buildAiPrompt({
+      sectionTitle: section.title,
+      limit: maxCollections,
+      minItems,
+      themes,
+      customThemes,
+      vibe: ruleConfig.vibe,
+      nameStyle: ruleConfig.nameStyle,
+      history,
+    });
+
+    const itemList = shuffled(items)
+      .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
+      .join("\n");
+
+    ctx.log(`Asking Claude for curated collections...`);
+    const { text, tokensIn, tokensOut } = await askClaude(prompt, itemList, ctx.signal);
+    onAiUsage?.(tokensIn, tokensOut);
+    ctx.log("AI response:", text);
+
+    const aiCollections = parseAiCollections(text);
+    ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
+
+    // Build a title→item map. Both "Title (Year)" and bare "Title" forms
+    // map to the same item so we tolerate either shape from the model.
+    const titleMap = new Map<string, { ratingKey: string; title: string; year?: number }>();
+    for (const item of items) {
+      const info = { ratingKey: item.ratingKey, title: item.title, year: item.year };
+      titleMap.set(`${item.title}${item.year ? ` (${item.year})` : ""}`, info);
+      titleMap.set(item.title, info);
+    }
+
+    for (const col of aiCollections) {
+      const matched = col.items
+        .map((title) => titleMap.get(title))
+        .filter((m): m is { ratingKey: string; title: string; year?: number } => m !== undefined);
+
+      if (matched.length < minItems) {
+        ctx.log(`Skipping "${col.name}" — only ${matched.length} matching item(s), need at least ${minItems}`);
+        continue;
+      }
+
+      const matchedTitles = matched.map((m) => `${m.title}${m.year ? ` (${m.year})` : ""}`);
+      yield {
+        name: col.name,
+        section,
+        matched,
+        matchedTitles: pickSampleItems(matchedTitles),
+      };
+    }
+  }
+}
+
+// Re-exported so the dispatch loop can call askClaude → parse to also
+// surface token usage in preview without re-implementing the handler.
+export { askClaude } from "../ai/claude.ts";
+export { parseAiCollections } from "../ai/parse.ts";
+export { buildAiPrompt } from "../ai/prompt.ts";
