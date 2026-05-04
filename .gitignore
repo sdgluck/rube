@@ -3,3 +3,4 @@ tinkerbell.db*
 sidequest.sqlite*
 apps/web/dist
 .turbo
+.claude/
