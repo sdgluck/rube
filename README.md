@@ -2,6 +2,19 @@
 
 A self-hosted Plex companion for automating library curation. Define rules over your Plex media (using metadata from IMDb/OMDb and requests from Overseerr) to drive collections, overlays, and notifications on a schedule.
 
+## Features
+
+- **Rules engine** — define rules that produce Plex collections from your library, refreshed on a schedule with full run history.
+- **Smart filters** — compose criteria over Plex metadata, IMDb ratings, and Overseerr requests; AI-assisted filter generation via Anthropic.
+- **Collections** — auto-managed Plex collections with sort order, pinning, and shuffle hubs for randomised home-screen rotations.
+- **Overlays** — image composition (sharp) to stamp ratings, badges, and labels onto poster artwork.
+- **Because you watched** — generate per-user recommendation collections.
+- **Labels** — bulk apply/undo Plex labels driven by rules, with previewable changes.
+- **Notifications** — Discord, Slack, Telegram, Gotify, Pushbullet, Pushover, LunaSea, and generic webhooks.
+- **Job runner** — Sidequest-backed background jobs with detail views, run logs, and a stress-test harness.
+- **Stats & events** — library stats, activity feed, and changelog UI.
+- **Multi-user** — per-user settings and integrations (Plex, \*Arrs, Overseerr).
+
 ## Stack
 
 - **Monorepo:** pnpm workspaces + Turborepo
