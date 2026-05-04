@@ -267,9 +267,13 @@
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
 
 .grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  column-count: 2;
+  column-gap: 16px;
+}
+
+.grid > * {
+  break-inside: avoid;
+  margin-bottom: 16px;
 }
 
 /* ─── Panel ─────────────────────────────────────────────────────────────── */
@@ -280,6 +284,32 @@
   padding: 12px;
   background: var(--bg-surface);
   min-width: 0;
+  transition: outline-color 120ms ease;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.panel[data-drag-over="true"] {
+  outline-color: var(--accent);
+}
+
+.panelDragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: grab;
+  margin-right: 2px;
+  opacity: 0.6;
+  user-select: none;
+}
+
+.panelDragHandle:hover {
+  opacity: 1;
+}
+
+.panelDragHandle:active {
+  cursor: grabbing;
 }
 
 .panelHeader {
@@ -696,7 +726,7 @@
   }
 
   .grid {
-    grid-template-columns: 1fr;
+    column-count: 1;
   }
 
   .hideOnMobile {
