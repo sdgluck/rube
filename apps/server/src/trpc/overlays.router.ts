@@ -426,4 +426,60 @@ export const overlaysRouter = t.router({
     deletePreset(input.id);
     return { ok: true };
   }),
+
+  /* ─── Import / Export ──────────────────────────────────────────────────── */
+
+  exportSection: t.procedure.input(z.object({ sectionId: z.string() })).query(({ input }) => {
+    const configs = getOverlayConfigs(input.sectionId);
+    return {
+      version: 1 as const,
+      exportedAt: new Date().toISOString(),
+      configs: configs.map((c) => ({
+        position: c.position,
+        overlayType: c.overlayType,
+        style: c.style ?? null,
+        rule: c.rule ?? null,
+        order: c.order,
+      })),
+    };
+  }),
+
+  importSection: t.procedure
+    .input(
+      z.object({
+        sectionId: z.string(),
+        mode: z.enum(["replace", "append"]),
+        // Validate the incoming payload here so a bad import never reaches the
+        // DB. Reuses the preset config shape; we accept (and require) `version`
+        // so we can reject unknown formats up front.
+        data: z.object({
+          version: z.literal(1),
+          exportedAt: z.string().optional(),
+          configs: presetDataSchema.shape.configs,
+        }),
+      }),
+    )
+    .mutation(({ input }) => {
+      const incoming = input.data.configs.map((c) => ({
+        position: c.position,
+        overlayType: c.overlayType,
+        style: c.style ?? null,
+        rule: c.rule ?? null,
+        order: c.order,
+      }));
+      if (input.mode === "replace") {
+        replaceOverlayConfigs(input.sectionId, incoming);
+      } else {
+        for (const c of incoming) {
+          addOverlayConfig({
+            sectionId: input.sectionId,
+            position: c.position,
+            overlayType: c.overlayType,
+            style: c.style,
+            rule: c.rule,
+          });
+        }
+      }
+      return { ok: true, count: incoming.length };
+    }),
 });
