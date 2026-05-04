@@ -292,10 +292,16 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [paletteInitialQuery, setPaletteInitialQuery] = useState<string>("");
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
 
+  const openPalette = useCallback((initialQuery = "") => {
+    setPaletteInitialQuery(initialQuery);
+    setCommandPaletteOpen(true);
+  }, []);
+
   useDocumentTitle();
-  useKeyboardShortcuts(setShortcutsHelpOpen, setCommandPaletteOpen);
+  useKeyboardShortcuts(setShortcutsHelpOpen, openPalette);
 
   return (
     <div className="layout">
@@ -321,6 +327,22 @@ export default function App() {
         <Link to="/changelog" className="sidebar-version" onClick={closeSidebar}>
           v{VERSION}
         </Link>
+        <button
+          type="button"
+          className="sidebar-search"
+          onClick={() => {
+            closeSidebar();
+            openPalette();
+          }}
+          title="Search (⌘K)"
+        >
+          <span className="sidebar-search-icon" aria-hidden="true">
+            ⌕
+          </span>
+          <span className="sidebar-search-label">Search…</span>
+          <span className="sidebar-search-kbd">⌘K</span>
+        </button>
+        <hr className="sidebar-search-divider" />
         <nav>
           {NAV_SECTIONS.map((section) => (
             <div key={section.label} className="nav-section">
@@ -597,7 +619,11 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </main>
-      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <CommandPalette
+        open={commandPaletteOpen}
+        initialQuery={paletteInitialQuery}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
       <KeyboardShortcutsHelp open={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
     </div>
   );

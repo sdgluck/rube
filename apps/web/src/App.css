@@ -114,13 +114,59 @@ body {
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.45);
   text-decoration: none;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .sidebar-version:hover {
   color: rgba(255, 255, 255, 0.8);
+}
+
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  margin: 20px 0 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
+}
+
+.sidebar-search-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin: 20px 0;
+}
+
+.sidebar-search:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-search-icon {
+  font-size: 1rem;
+}
+
+.sidebar-search-label {
+  flex: 1;
+}
+
+.sidebar-search-kbd {
+  font-size: 0.7rem;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 .health-dot-link {

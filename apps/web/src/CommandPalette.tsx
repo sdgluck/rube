@@ -1,37 +1,47 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./CommandPalette.module.css";
+import { useGlobalSearch, type SearchHit } from "./useGlobalSearch";
 
-const COMMANDS = [
-  { label: "Stats", path: "/stats", shortcut: "g s" },
-  { label: "Collections", path: "/collections", shortcut: "g c" },
-  { label: "Media", path: "/media", shortcut: "g m" },
-  { label: "Rules", path: "/rules", shortcut: "g r" },
-  { label: "Overlays", path: "/overlays", shortcut: "g o" },
-  { label: "Users", path: "/users", shortcut: "g u" },
-  { label: "Jobs", path: "/jobs", shortcut: "g j" },
-  { label: "Events", path: "/events", shortcut: "g e" },
-  { label: "Settings: Plex", path: "/settings/plex", shortcut: "g p" },
-  { label: "Settings: AI", path: "/settings/ai" },
-  { label: "Settings: Arrs", path: "/settings/arrs" },
-  { label: "Settings: Databases", path: "/settings/databases" },
-  { label: "Settings: Notifications", path: "/settings/notifications" },
-  { label: "Settings: Health", path: "/settings/health" },
+const NAVIGATION: SearchHit[] = [
+  { kind: "navigation", id: "nav:stats", title: "Stats", subtitle: "g s", href: "/stats" },
+  { kind: "navigation", id: "nav:preview", title: "Preview", href: "/preview" },
+  { kind: "navigation", id: "nav:collections", title: "Collections", subtitle: "g c", href: "/collections" },
+  { kind: "navigation", id: "nav:media", title: "Media", subtitle: "g m", href: "/media" },
+  { kind: "navigation", id: "nav:overlays", title: "Overlays", subtitle: "g o", href: "/overlays" },
+  { kind: "navigation", id: "nav:rules", title: "Rules", subtitle: "g r", href: "/rules" },
+  { kind: "navigation", id: "nav:jobs", title: "Jobs", subtitle: "g j", href: "/jobs" },
+  { kind: "navigation", id: "nav:users", title: "Users", subtitle: "g u", href: "/users" },
+  { kind: "navigation", id: "nav:events", title: "Events", subtitle: "g e", href: "/events" },
+  { kind: "navigation", id: "nav:settings-plex", title: "Settings: Plex", subtitle: "g p", href: "/settings/plex" },
+  { kind: "navigation", id: "nav:settings-ai", title: "Settings: AI", href: "/settings/ai" },
+  { kind: "navigation", id: "nav:settings-arrs", title: "Settings: Arrs", href: "/settings/arrs" },
+  { kind: "navigation", id: "nav:settings-databases", title: "Settings: Databases", href: "/settings/databases" },
+  {
+    kind: "navigation",
+    id: "nav:settings-notifications",
+    title: "Settings: Notifications",
+    href: "/settings/notifications",
+  },
+  { kind: "navigation", id: "nav:settings-health", title: "Settings: Health", href: "/settings/health" },
 ];
 
 interface Props {
   open: boolean;
+  initialQuery?: string;
   onClose: () => void;
 }
 
-export default function CommandPalette({ open, onClose }: Props) {
+export default function CommandPalette({ open, initialQuery, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [exiting, setExiting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const filtered = query ? COMMANDS.filter((c) => c.label.toLowerCase().includes(query.toLowerCase())) : COMMANDS;
+  const { groups, flat, isLoading } = useGlobalSearch(query, { navigation: NAVIGATION, enabled: open });
+
+  const flatHrefs = useMemo(() => flat.map((h) => h.href), [flat]);
 
   const close = useCallback(() => {
     setExiting(true);
@@ -45,13 +55,13 @@ export default function CommandPalette({ open, onClose }: Props) {
 
   const select = useCallback(
     (index: number) => {
-      const cmd = filtered[index];
-      if (cmd) {
-        navigate(cmd.path);
+      const hit = flat[index];
+      if (hit) {
+        navigate(hit.href);
         close();
       }
     },
-    [filtered, navigate, close],
+    [flat, navigate, close],
   );
 
   useEffect(() => {
@@ -60,9 +70,10 @@ export default function CommandPalette({ open, onClose }: Props) {
 
   useEffect(() => {
     if (open) {
+      setQuery(initialQuery ?? "");
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open]);
+  }, [open, initialQuery]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,10 +83,10 @@ export default function CommandPalette({ open, onClose }: Props) {
         close();
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIndex((i) => (i + 1) % filtered.length);
+        setActiveIndex((i) => (flat.length === 0 ? 0 : (i + 1) % flat.length));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length);
+        setActiveIndex((i) => (flat.length === 0 ? 0 : (i - 1 + flat.length) % flat.length));
       } else if (e.key === "Enter") {
         e.preventDefault();
         select(activeIndex);
@@ -83,9 +94,11 @@ export default function CommandPalette({ open, onClose }: Props) {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, close, filtered.length, activeIndex, select]);
+  }, [open, close, flat.length, activeIndex, select]);
 
   if (!open && !exiting) return null;
+
+  let renderedIndex = -1;
 
   return (
     <div className={`${styles.backdrop} ${exiting ? styles.backdropExiting : ""}`} onClick={close}>
@@ -94,24 +107,37 @@ export default function CommandPalette({ open, onClose }: Props) {
           <input
             ref={inputRef}
             className={styles.input}
-            placeholder="Type a command..."
+            placeholder="Search commands, collections, media…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <div className={styles.results}>
-          {filtered.length === 0 ? (
-            <div className={styles.empty}>No results</div>
+          {flat.length === 0 ? (
+            <div className={styles.empty}>{isLoading ? "Searching…" : "No results"}</div>
           ) : (
-            filtered.map((cmd, i) => (
-              <div
-                key={cmd.path}
-                className={`${styles.item} ${i === activeIndex ? styles.itemActive : ""}`}
-                onClick={() => select(i)}
-                onMouseEnter={() => setActiveIndex(i)}
-              >
-                <span className={styles.itemLabel}>{cmd.label}</span>
-                {cmd.shortcut && <span className={styles.itemShortcut}>{cmd.shortcut}</span>}
+            groups.map((group) => (
+              <div key={group.kind}>
+                <div className={styles.sectionLabel}>{group.label}</div>
+                {group.hits.map((hit) => {
+                  renderedIndex += 1;
+                  const idx = renderedIndex;
+                  const href = flatHrefs[idx];
+                  return (
+                    <div
+                      key={`${hit.kind}:${hit.id}`}
+                      className={`${styles.item} ${idx === activeIndex ? styles.itemActive : ""}`}
+                      onClick={() => select(idx)}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      title={href}
+                    >
+                      <div className={styles.itemRow}>
+                        <span className={styles.itemTitle}>{hit.title}</span>
+                        {hit.subtitle && <span className={styles.itemSubtitle}>{hit.subtitle}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))
           )}
