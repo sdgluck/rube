@@ -453,6 +453,7 @@ export function createItemsModule(http: PlexHttp) {
       duration: meta.duration,
       studio: meta.studio,
       editionTitle: meta.editionTitle,
+      status: meta.status,
       guids,
       media,
     };

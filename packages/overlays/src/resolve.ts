@@ -12,6 +12,8 @@ export interface MediaInfo {
   duration?: number;
   studio?: string;
   editionTitle?: string;
+  /** TV show airing status — Plex's `status` field. */
+  showStatus?: string;
 }
 
 export interface Ratings {
@@ -87,6 +89,16 @@ export function resolveOverlayValue(type: OverlayType, mediaInfo: MediaInfo, rat
       const m = totalMin % 60;
       if (h > 0) return `${h}h ${m}m`;
       return `${m}m`;
+    }
+    case "show_status": {
+      // Plex normalizes its TV show status to a few capitalized strings.
+      // Map the common ones to short, viewer-friendly labels; pass others
+      // through unchanged so unusual sources still display sensibly.
+      const s = mediaInfo.showStatus?.toLowerCase().trim();
+      if (!s) return null;
+      if (s === "ended" || s === "canceled" || s === "cancelled") return "Ended";
+      if (s === "continuing" || s === "returning series" || s === "in production" || s === "ongoing") return "Ongoing";
+      return mediaInfo.showStatus ?? null;
     }
   }
 }

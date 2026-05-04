@@ -267,6 +267,8 @@ export interface PlexMediaFullDetail {
   duration?: number;
   studio?: string;
   editionTitle?: string;
+  /** TV show airing status (Plex `status`): typically "Continuing" or "Ended". */
+  status?: string;
   guids: string[];
   media: Array<{
     videoResolution?: string;

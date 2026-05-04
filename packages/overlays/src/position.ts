@@ -16,6 +16,12 @@ export function calculatePosition(
       return { left: Math.round((imgW - badgeW) / 2), top: margin };
     case "top-right":
       return { left: imgW - badgeW - margin, top: margin };
+    case "middle-left":
+      return { left: margin, top: Math.round((imgH - badgeH) / 2) };
+    case "middle-center":
+      return { left: Math.round((imgW - badgeW) / 2), top: Math.round((imgH - badgeH) / 2) };
+    case "middle-right":
+      return { left: imgW - badgeW - margin, top: Math.round((imgH - badgeH) / 2) };
     case "bottom-left":
       return { left: margin, top: imgH - badgeH - margin };
     case "bottom-center":

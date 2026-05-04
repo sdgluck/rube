@@ -3,7 +3,23 @@
 /* ─────────────────────────────────────────────────────────────── */
 
 .root {
-  padding-bottom: 80px; /* room for sticky action bar */
+  /*
+   * Photoshop-style dashed grid background. Negative margins offset the
+   * containing .content's 32px/40px padding so the grid extends edge-to-edge;
+   * we restore equivalent padding inside so child layout is unchanged. The
+   * 80px bottom keeps room for the sticky action bar.
+   */
+  margin: -32px -40px;
+  padding: 32px 40px calc(80px + 32px);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
+  background-position: 0 0;
+  min-height: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  .root {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
+  }
 }
 
 .header {
@@ -59,16 +75,27 @@
   cursor: pointer;
 }
 
+/*
+ * Workspace fits within the viewport: header + action bar reserve ~150px
+ * combined, the rest is split between three columns. Each column is itself
+ * a grid that distributes remaining height between its panels; panels scroll
+ * internally if their content exceeds the slot.
+ */
 .workspace {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
   gap: 24px;
-  align-items: flex-start;
+  align-items: stretch;
+  /* Reserve: page header (~90px) + action bar (~64px) + breathing room. */
+  height: calc(100vh - 180px);
+  min-height: 480px;
 }
 
 @media (max-width: 1100px) {
   .workspace {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
   }
 }
 
@@ -83,15 +110,39 @@
 
 /* ─── Catalog (left) ───────────────────────────────────────────── */
 
+.catalogColumn {
+  display: grid;
+  /* Both panels size to their content; if the combined height exceeds the
+     column, each panel scrolls internally via .panelBody overflow. */
+  grid-template-rows: minmax(0, max-content) minmax(0, max-content);
+  gap: 12px;
+  min-height: 0;
+  align-content: start;
+}
+
 .catalog {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 16px;
-  position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+ * The scrollable region of a panel. Heading sits above (fixed), body fills
+ * the remaining space and scrolls when content overflows.
+ */
+.panelBody {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  /* Bleed scroll area into the panel's padding so the scrollbar sits flush
+     with the panel edge; content keeps its own horizontal padding. */
+  margin-right: -16px;
+  padding-right: 16px;
 }
 
 .catalogGroup {
@@ -167,7 +218,8 @@
   gap: 6px;
   background: none;
   border: none;
-  padding: 10px 0;
+  padding: 0;
+  margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -187,7 +239,16 @@
 }
 
 .collapsibleBody {
-  padding-bottom: 12px;
+  /* Only applies when the section is expanded — keeps the heading flush
+     against the panel's own padding when collapsed. */
+  padding-top: 12px;
+  padding-bottom: 0;
+}
+
+/* Strip trailing margin from the last group/list inside a panel so the
+   panel's own padding-bottom is the only bottom whitespace. */
+.collapsibleBody > .catalogGroup:last-child {
+  margin-bottom: 0;
 }
 
 /* ─── Preset list ──────────────────────────────────────────────── */
@@ -272,7 +333,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .canvasHeader {
@@ -323,7 +387,9 @@
 }
 
 .posterFrame {
-  --poster-width: min(480px, 60vw);
+  /* Width caps at 480px / 60vw, but also derives from available height so
+     the poster shrinks to fit within the viewport-constrained workspace. */
+  --poster-width: min(480px, 60vw, calc((100vh - 240px) * 2 / 3));
   position: relative;
   width: var(--poster-width);
   aspect-ratio: 2/3;
@@ -331,6 +397,8 @@
   overflow: hidden;
   background: var(--card-poster-bg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .posterImage {
@@ -417,6 +485,24 @@
 .pos_top_right {
   top: 10px;
   right: 10px;
+}
+
+.pos_middle_left {
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+}
+
+.pos_middle_center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pos_middle_right {
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
 }
 
 .pos_bottom_left {
@@ -537,12 +623,10 @@
 /* ─── Inspector (right) ────────────────────────────────────────── */
 
 .inspectorColumn {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr auto;
   gap: 12px;
-  position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
+  min-height: 0;
 }
 
 .inspector {
@@ -550,7 +634,6 @@
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 16px;
-  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
 }
