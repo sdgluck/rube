@@ -7,6 +7,8 @@ import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import useDocumentTitle from "./useDocumentTitle";
 import useKeyboardShortcuts from "./useKeyboardShortcuts";
 import Settings from "./pages/Settings";
+import Spinner from "./Spinner";
+import { PageSkeleton } from "./Skeleton";
 import { trpc } from "./trpc";
 import { VERSION, IS_BETA } from "./version";
 import styles from "./pages/Jobs.module.css";
@@ -108,7 +110,7 @@ function SidebarActiveJobs() {
       <div className={styles.sidebarJobsTitle}>Running</div>
       {runs.map((run) => (
         <div key={run.id} className={styles.sidebarJob} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
-          <div className={styles.spinner} />
+          <Spinner size="sm" variant="inverse" />
           <span className={styles.sidebarJobName}>{run.jobName}</span>
           {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
           <button
@@ -129,7 +131,7 @@ function SidebarActiveJobs() {
 
 function LazyPage({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={<p>Loading...</p>}>
+    <Suspense fallback={<PageSkeleton />}>
       <div className="animated-page">{children}</div>
     </Suspense>
   );
@@ -344,7 +346,7 @@ export default function App() {
       <main className="content">
         <ScrollRestoration />
         <ErrorBoundary>
-          <Suspense fallback={<p>Loading...</p>}>
+          <Suspense fallback={<PageSkeleton />}>
             <Routes>
               <Route
                 path="/stats"

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import FadeImage from "../FadeImage";
+import { ListSkeleton } from "../Skeleton";
+import Spinner from "../Spinner";
 import { trpc } from "../trpc";
 import styles from "./Preview.module.css";
 
@@ -192,7 +194,13 @@ export default function Preview() {
             disabled={shuffleMutation.isPending}
             title="Reorder pinned collection hubs on Plex (affects all users)"
           >
-            {shuffleMutation.isPending ? "Shuffling…" : "Shuffle hubs"}
+            {shuffleMutation.isPending ? (
+              <>
+                <Spinner size="xs" /> Shuffling…
+              </>
+            ) : (
+              "Shuffle hubs"
+            )}
           </button>
           <label htmlFor="preview-user">View as</label>
           <select
@@ -227,7 +235,7 @@ export default function Preview() {
 
       {shuffleStatus && <div className={styles.warnings}>{shuffleStatus}</div>}
 
-      {previewQuery.isLoading && <div className={styles.empty}>Loading preview…</div>}
+      {previewQuery.isLoading && <ListSkeleton rows={4} />}
       {previewQuery.error && (
         <div className={styles.warnings}>
           <div>Failed to load preview: {previewQuery.error.message}</div>

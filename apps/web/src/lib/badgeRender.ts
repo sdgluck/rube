@@ -27,11 +27,11 @@ const COLOR_PRESETS: Record<Exclude<ColorPreset, "auto" | "custom">, BadgeColors
 };
 
 const FONT_SIZE_SCALE: Record<NonNullable<BadgeStyle["fontSize"]>, number> = {
-  sm: 0.8,
-  md: 1.0,
-  lg: 1.25,
-  xl: 1.5,
-  xxl: 2.0,
+  sm: 1.2,
+  md: 1.5,
+  lg: 1.875,
+  xl: 2.25,
+  xxl: 3.0,
 };
 
 export function autoBadgeColors(type: OverlayType, value: string): BadgeColors {

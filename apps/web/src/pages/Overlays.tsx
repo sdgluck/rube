@@ -3,6 +3,8 @@ import { trpc } from "../trpc";
 import { useToast } from "../Toast";
 import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "../lib/PosterCanvas";
 import ConfirmModal from "../ConfirmModal";
+import { PageSkeleton } from "../Skeleton";
+import Spinner from "../Spinner";
 import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@server/domains/overlays.ts";
 import styles from "./Overlays.module.css";
 
@@ -38,21 +40,34 @@ const OVERLAY_CATALOG: OverlayChip[] = [
   { type: "runtime", label: "Runtime", group: "Metadata", sample: "2h 15m" },
 ];
 
-const COLOR_PRESETS: { id: ColorPreset; bg: string; text: string; label: string }[] = [
-  { id: "auto", bg: "linear-gradient(135deg,#6b7280 50%,#d4a017 50%)", text: "#fff", label: "Auto" },
-  { id: "gold", bg: "#D4A017", text: "#fff", label: "Gold" },
-  { id: "blue", bg: "#2563EB", text: "#fff", label: "Blue" },
-  { id: "green", bg: "#16A34A", text: "#fff", label: "Green" },
-  { id: "red", bg: "#DC2626", text: "#fff", label: "Red" },
-  { id: "orange", bg: "#EA580C", text: "#fff", label: "Orange" },
-  { id: "purple", bg: "#7C3AED", text: "#fff", label: "Purple" },
-  { id: "teal", bg: "#0D9488", text: "#fff", label: "Teal" },
-  { id: "imdb", bg: "#F5C518", text: "#000", label: "IMDb" },
-  { id: "rt", bg: "#FA320A", text: "#fff", label: "RT" },
-  { id: "plex", bg: "#E5A00D", text: "#1F1F1F", label: "Plex" },
-  { id: "dark", bg: "rgba(0,0,0,0.7)", text: "#fff", label: "Dark" },
-  { id: "light", bg: "#F3F4F6", text: "#111", label: "Light" },
-  { id: "gray", bg: "#6B7280", text: "#fff", label: "Gray" },
+interface ColorPresetDef {
+  id: ColorPreset;
+  bg: string;
+  text: string;
+  label: string;
+  group: "Standard" | "Brand";
+}
+const COLOR_PRESETS: ColorPresetDef[] = [
+  {
+    id: "auto",
+    bg: "linear-gradient(to bottom right,#6b7280 50%,#d4a017 50%)",
+    text: "#fff",
+    label: "Auto",
+    group: "Standard",
+  },
+  { id: "gold", bg: "#D4A017", text: "#fff", label: "Gold", group: "Standard" },
+  { id: "blue", bg: "#2563EB", text: "#fff", label: "Blue", group: "Standard" },
+  { id: "green", bg: "#16A34A", text: "#fff", label: "Green", group: "Standard" },
+  { id: "red", bg: "#DC2626", text: "#fff", label: "Red", group: "Standard" },
+  { id: "orange", bg: "#EA580C", text: "#fff", label: "Orange", group: "Standard" },
+  { id: "purple", bg: "#7C3AED", text: "#fff", label: "Purple", group: "Standard" },
+  { id: "teal", bg: "#0D9488", text: "#fff", label: "Teal", group: "Standard" },
+  { id: "dark", bg: "rgba(0,0,0,0.7)", text: "#fff", label: "Dark", group: "Standard" },
+  { id: "light", bg: "#F3F4F6", text: "#111", label: "Light", group: "Standard" },
+  { id: "gray", bg: "#6B7280", text: "#fff", label: "Gray", group: "Standard" },
+  { id: "imdb", bg: "#F5C518", text: "#000", label: "IMDb", group: "Brand" },
+  { id: "rt", bg: "#FA320A", text: "#fff", label: "RT", group: "Brand" },
+  { id: "plex", bg: "#E5A00D", text: "#1F1F1F", label: "Plex", group: "Brand" },
 ];
 
 const FONT_SIZE_OPTIONS: { id: NonNullable<BadgeStyle["fontSize"]>; label: string }[] = [
@@ -78,6 +93,7 @@ function badgePreviewStyle(
   type: OverlayType,
   value: string,
   style: BadgeStyle | null | undefined,
+  options?: { compact?: boolean },
 ): React.CSSProperties {
   let bg = "#6b7280";
   let text = "#fff";
@@ -115,16 +131,19 @@ function badgePreviewStyle(
     text = style.customText || "#fff";
   }
 
-  const sizeMul =
+  const baseMul =
     style?.fontSize === "sm"
-      ? 0.8
+      ? 1.2
       : style?.fontSize === "lg"
-        ? 1.25
+        ? 1.875
         : style?.fontSize === "xl"
-          ? 1.5
+          ? 2.25
           : style?.fontSize === "xxl"
-            ? 2.0
-            : 1;
+            ? 3.0
+            : 1.5;
+  // Catalog chips show inline as sample swatches; the 1.5x server scale is
+  // too big for that compact context.
+  const sizeMul = options?.compact ? baseMul * 0.6 : baseMul;
   const shape = style?.shape ?? "rounded";
   const radius = shape === "pill" ? "999px" : shape === "rect" ? "0" : "4px";
 
@@ -187,6 +206,9 @@ export default function Overlays() {
   const [presetName, setPresetName] = useState("");
   const [presetDesc, setPresetDesc] = useState("");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement | null>(null);
 
   const utils = trpc.useUtils();
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
@@ -294,13 +316,45 @@ export default function Overlays() {
     setSelectedConfigId(null);
   }, [sectionId]);
 
+  // Track drag state globally so drop zones only render during a drag.
+  useEffect(() => {
+    const onStart = () => setIsDragging(true);
+    const onEnd = () => {
+      setIsDragging(false);
+      setDragOverPosition(null);
+    };
+    window.addEventListener("dragstart", onStart);
+    window.addEventListener("dragend", onEnd);
+    window.addEventListener("drop", onEnd);
+    return () => {
+      window.removeEventListener("dragstart", onStart);
+      window.removeEventListener("dragend", onEnd);
+      window.removeEventListener("drop", onEnd);
+    };
+  }, []);
+
+  // Close overflow menu on outside click.
+  useEffect(() => {
+    if (!overflowOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [overflowOpen]);
+
   // Keyboard: Delete to remove selected, arrows to nudge between zones.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (selectedConfigId == null) return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if (e.key === "Delete" || e.key === "Backspace") {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSelectedConfigId(null);
+      } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         removeConfigMutation.mutate({ id: selectedConfigId });
         setSelectedConfigId(null);
@@ -406,26 +460,30 @@ export default function Overlays() {
 
   const displayRatio = posterNatural.w > 0 && frameSize.w > 0 ? frameSize.w / posterNatural.w : 0;
 
-  if (sectionsQuery.isLoading) return <p>Loading...</p>;
+  if (sectionsQuery.isLoading) return <PageSkeleton />;
 
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>Poster Overlays</h2>
-          <p className={styles.subtitle}>
-            Drag overlays onto poster zones. Click a placed overlay to customize its appearance and visibility rules.
-          </p>
+        <div className={styles.headerMain}>
+          <h2 className={styles.title}>
+            Poster Overlays
+            {sections.length > 1 && (
+              <select
+                className={styles.sectionSelectInline}
+                value={sectionId}
+                onChange={(e) => setActiveSection(e.target.value)}
+              >
+                {sections.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+            )}
+          </h2>
+          <p className={styles.subtitle}>Drag overlays onto poster zones. Click any placed overlay to customize it.</p>
         </div>
-        {sections.length > 1 && (
-          <select className={styles.sectionSelect} value={sectionId} onChange={(e) => setActiveSection(e.target.value)}>
-            {sections.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        )}
       </header>
 
       {sections.length === 0 ? (
@@ -453,7 +511,7 @@ export default function Overlays() {
                           <span className={styles.catalogChipLabel}>{chip.label}</span>
                           <span
                             className={styles.catalogChipSample}
-                            style={badgePreviewStyle(chip.type, chip.sample, null)}
+                            style={badgePreviewStyle(chip.type, chip.sample, null, { compact: true })}
                           >
                             {chip.sample}
                           </span>
@@ -479,16 +537,39 @@ export default function Overlays() {
             <div className={styles.canvas}>
               <div className={styles.canvasHeader}>
                 <span className={styles.canvasTitle}>
-                  {sampleQuery.data
-                    ? `${sampleQuery.data.title}${sampleQuery.data.year ? ` (${sampleQuery.data.year})` : ""}`
-                    : "Loading..."}
+                  {sampleQuery.data ? (
+                    `${sampleQuery.data.title}${sampleQuery.data.year ? ` (${sampleQuery.data.year})` : ""}`
+                  ) : (
+                    <Spinner size="xs" />
+                  )}
                 </span>
                 <div className={styles.canvasActions}>
-                  <button className={styles.smallBtn} onClick={handleShuffle} disabled={sampleQuery.isFetching}>
-                    Shuffle
+                  <button
+                    className={styles.iconActionBtn}
+                    onClick={handleShuffle}
+                    disabled={sampleQuery.isFetching}
+                    title="Shuffle to a different sample poster"
+                    aria-label="Shuffle"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="16 3 21 3 21 8" />
+                      <line x1="4" y1="20" x2="21" y2="3" />
+                      <polyline points="21 16 21 21 16 21" />
+                      <line x1="15" y1="15" x2="21" y2="21" />
+                      <line x1="4" y1="4" x2="9" y2="9" />
+                    </svg>
                   </button>
                   <button
-                    className={styles.smallBtn}
+                    className={styles.iconActionBtn}
                     onMouseDown={() => setHidingBadges(true)}
                     onMouseUp={() => setHidingBadges(false)}
                     onMouseLeave={() => setHidingBadges(false)}
@@ -496,8 +577,21 @@ export default function Overlays() {
                     onTouchEnd={() => setHidingBadges(false)}
                     disabled={canvasBadges.length === 0}
                     title="Hold to see the original poster"
+                    aria-label="Show original"
                   >
-                    Original
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
                   </button>
                   <button
                     className={styles.smallBtn}
@@ -507,7 +601,7 @@ export default function Overlays() {
                     }}
                     disabled={configs.length === 0 || bulkPreviewMutation.isPending}
                   >
-                    {bulkPreviewMutation.isPending ? "Loading..." : "Bulk Preview"}
+                    {bulkPreviewMutation.isPending ? <Spinner size="xs" /> : "Bulk Preview"}
                   </button>
                 </div>
               </div>
@@ -534,15 +628,18 @@ export default function Overlays() {
                   <div className={styles.posterPlaceholder}>No poster</div>
                 )}
 
-                {/* Drop targets at each corner — accept drops; visible only when empty */}
+                {/* Drop targets at each corner. Visually surfaced only during a drag;
+                    occupied zones still receive drops invisibly so users can stack. */}
                 {POSITIONS.map((pos) => {
                   const stack = configsByPosition.get(pos.id) ?? [];
                   const isOver = dragOverPosition === pos.id;
+                  const isEmpty = stack.length === 0;
+                  const showVisual = isDragging && isEmpty;
 
                   return (
                     <div
                       key={pos.id}
-                      className={`${styles.dropZone} ${styles[`pos_${pos.id.replace("-", "_")}`]} ${isOver ? styles.dropZoneOver : ""} ${stack.length === 0 ? styles.dropZoneEmpty : styles.dropZoneOccupied}`}
+                      className={`${styles.dropZone} ${styles[`pos_${pos.id.replace("-", "_")}`]} ${isOver ? styles.dropZoneOver : ""} ${showVisual ? styles.dropZoneEmpty : styles.dropZoneOccupied}`}
                       onDragOver={(e) => {
                         e.preventDefault();
                         setDragOverPosition(pos.id);
@@ -560,7 +657,7 @@ export default function Overlays() {
                         }
                       }}
                     >
-                      {stack.length === 0 && <span className={styles.dropZonePlaceholder}>{pos.label}</span>}
+                      {showVisual && <span className={styles.dropZonePlaceholder}>{pos.label}</span>}
                     </div>
                   );
                 })}
@@ -626,89 +723,121 @@ export default function Overlays() {
               </div>
             </div>
 
-            {/* ─── Right: inspector ────────────────────────────────── */}
-            <aside className={styles.inspector}>
-              {selected ? (
-                <Inspector
-                  config={selected}
-                  onPatchStyle={(p) => handlePatchStyle(selected.id, p)}
-                  onPatchRule={(p) => handlePatchRule(selected.id, p)}
-                  onResetStyle={() => updateConfigMutation.mutate({ id: selected.id, style: null })}
-                  onResetRule={() => updateConfigMutation.mutate({ id: selected.id, rule: null })}
-                  onRemove={() => {
-                    removeConfigMutation.mutate({ id: selected.id });
-                    setSelectedConfigId(null);
-                  }}
-                  onClose={() => setSelectedConfigId(null)}
-                />
-              ) : (
-                <div className={styles.inspectorEmpty}>
-                  <h3 className={styles.paneTitle}>Inspector</h3>
-                  <p className={styles.inspectorEmptyText}>
-                    Click a placed overlay to customize its label, color, font size, shape, opacity, and conditional
-                    visibility rules.
-                  </p>
-                  <div className={styles.statusCard}>
-                    <div className={styles.statusCardLabel}>Library status</div>
-                    <div className={styles.statusCardValue}>
-                      {statusQuery.data
-                        ? `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} overlaid`
-                        : "Loading..."}
+            {/* ─── Right: inspector + shortcuts ─────────────────────── */}
+            <div className={styles.inspectorColumn}>
+              <aside className={styles.inspector}>
+                {selected ? (
+                  <Inspector
+                    config={selected}
+                    onPatchStyle={(p) => handlePatchStyle(selected.id, p)}
+                    onPatchRule={(p) => handlePatchRule(selected.id, p)}
+                    onResetStyle={() => updateConfigMutation.mutate({ id: selected.id, style: null })}
+                    onResetRule={() => updateConfigMutation.mutate({ id: selected.id, rule: null })}
+                    onRemove={() => {
+                      removeConfigMutation.mutate({ id: selected.id });
+                      setSelectedConfigId(null);
+                    }}
+                    onClose={() => setSelectedConfigId(null)}
+                  />
+                ) : configs.length === 0 && (presetsQuery.data?.length ?? 0) > 0 ? (
+                  <div className={styles.inspectorEmpty}>
+                    <h3 className={styles.paneTitle}>Quick start</h3>
+                    <p className={styles.inspectorEmptyText}>
+                      Apply a built-in preset, or drag overlays from the left.
+                    </p>
+                    <div className={styles.presetQuickList}>
+                      {presetsQuery
+                        .data!.filter((p) => p.builtIn)
+                        .map((p) => (
+                          <button
+                            key={p.id}
+                            className={styles.presetQuickItem}
+                            onClick={() => applyPresetMutation.mutate({ sectionId, presetId: p.id })}
+                            disabled={applyPresetMutation.isPending}
+                          >
+                            <span className={styles.presetQuickName}>{p.name}</span>
+                            <span className={styles.presetQuickDesc}>{p.description}</span>
+                          </button>
+                        ))}
                     </div>
                   </div>
-                  {configs.length === 0 && (presetsQuery.data?.length ?? 0) > 0 && (
-                    <div className={styles.startCard}>
-                      <div className={styles.startCardLabel}>Start with a preset</div>
-                      <div className={styles.presetQuickList}>
-                        {presetsQuery
-                          .data!.filter((p) => p.builtIn)
-                          .slice(0, 4)
-                          .map((p) => (
-                            <button
-                              key={p.id}
-                              className={styles.presetQuickItem}
-                              onClick={() => applyPresetMutation.mutate({ sectionId, presetId: p.id })}
-                            >
-                              <span className={styles.presetQuickName}>{p.name}</span>
-                              <span className={styles.presetQuickDesc}>{p.description}</span>
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  )}
+                ) : (
+                  <div className={styles.inspectorEmpty}>
+                    <h3 className={styles.paneTitle}>Inspector</h3>
+                    <p className={styles.inspectorEmptyText}>
+                      Click a placed overlay to customize its label, color, size, shape, opacity, and visibility rules.
+                    </p>
+                  </div>
+                )}
+              </aside>
+              <div className={styles.shortcutsPanel}>
+                <div className={styles.shortcutsLabel}>Shortcuts</div>
+                <div className={styles.shortcutsList}>
+                  <span>
+                    <kbd>↑↓←→</kbd> move
+                  </span>
+                  <span>
+                    <kbd>Del</kbd> remove
+                  </span>
+                  <span>
+                    <kbd>Esc</kbd> deselect
+                  </span>
                 </div>
-              )}
-            </aside>
+              </div>
+            </div>
           </div>
 
           {/* ─── Sticky bottom action bar ─────────────────────────── */}
           <div className={styles.actionBar}>
             <span className={styles.actionBarStatus}>
-              {statusQuery.data
-                ? `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} have overlays applied`
-                : "Loading..."}
+              {statusQuery.data ? (
+                `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} have overlays applied`
+              ) : (
+                <Spinner size="xs" />
+              )}
             </span>
-            <button
-              className={styles.smallBtn}
-              onClick={() => setConfirmClearOpen(true)}
-              disabled={configs.length === 0 || clearConfigsMutation.isPending}
-              title="Remove every overlay from this section's layout (does not change Plex)"
-            >
-              Clear Layout
-            </button>
+            <div className={styles.overflowWrap} ref={overflowRef}>
+              <button
+                className={styles.smallBtn}
+                onClick={() => setOverflowOpen((v) => !v)}
+                aria-label="More actions"
+                title="More actions"
+              >
+                ⋯
+              </button>
+              {overflowOpen && (
+                <div className={styles.overflowMenu} role="menu">
+                  <button
+                    className={styles.overflowItem}
+                    onClick={() => {
+                      setOverflowOpen(false);
+                      setConfirmClearOpen(true);
+                    }}
+                    disabled={configs.length === 0 || clearConfigsMutation.isPending}
+                  >
+                    Clear layout
+                    <span className={styles.overflowItemHint}>Reset this section's overlays</span>
+                  </button>
+                  <button
+                    className={`${styles.overflowItem} ${styles.overflowItemDanger}`}
+                    onClick={() => {
+                      setOverflowOpen(false);
+                      startJobMutation.mutate({ jobId: "overlays-remove" });
+                    }}
+                    disabled={startJobMutation.isPending || (statusQuery.data?.count || 0) === 0}
+                  >
+                    Remove all from Plex
+                    <span className={styles.overflowItemHint}>Strip overlays from every poster</span>
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               className={styles.actionBtnPrimary}
               onClick={() => startJobMutation.mutate({ jobId: "overlays" })}
               disabled={startJobMutation.isPending || configs.length === 0}
             >
               Apply Overlays
-            </button>
-            <button
-              className={styles.actionBtnDanger}
-              onClick={() => startJobMutation.mutate({ jobId: "overlays-remove" })}
-              disabled={startJobMutation.isPending || (statusQuery.data?.count || 0) === 0}
-            >
-              Remove All
             </button>
           </div>
         </>
@@ -787,7 +916,13 @@ export default function Overlays() {
                   savePresetMutation.mutate({ sectionId, name: presetName.trim(), description: presetDesc.trim() })
                 }
               >
-                {savePresetMutation.isPending ? "Saving..." : "Save"}
+                {savePresetMutation.isPending ? (
+                  <>
+                    <Spinner size="xs" /> Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
               </button>
             </div>
           </div>
@@ -842,8 +977,6 @@ function Inspector({
     }
   }, [config.id, style.customLabel]);
 
-  const previewValue = labelDraft || overlay?.sample || "Sample";
-
   return (
     <div className={styles.inspectorBody}>
       <div className={styles.inspectorHeader}>
@@ -851,10 +984,6 @@ function Inspector({
         <button className={styles.iconBtn} onClick={onClose} title="Close">
           ×
         </button>
-      </div>
-
-      <div className={styles.previewBox}>
-        <span style={badgePreviewStyle(config.overlayType, previewValue, style)}>{previewValue}</span>
       </div>
 
       <Section title="Label">
@@ -908,11 +1037,25 @@ function Inspector({
 
       <Section title="Color">
         <div className={styles.colorGrid}>
-          {COLOR_PRESETS.map((c) => (
+          {COLOR_PRESETS.filter((c) => c.group === "Standard").map((c) => (
             <button
               key={c.id}
-              className={`${styles.colorSwatch} ${(style.colorPreset ?? "auto") === c.id ? styles.colorSwatchActive : ""}`}
-              style={{ background: c.bg, color: c.text }}
+              className={`${styles.colorSwatch} ${c.id === "auto" ? styles.colorSwatchAuto : ""} ${(style.colorPreset ?? "auto") === c.id ? styles.colorSwatchActive : ""}`}
+              style={c.id === "auto" ? { color: c.text } : { background: c.bg, color: c.text }}
+              onClick={() => onPatchStyle({ colorPreset: c.id, customBg: undefined, customText: undefined })}
+              title={c.label}
+            >
+              <span>{c.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className={styles.colorBrandLabel}>Brand</div>
+        <div className={styles.colorGrid}>
+          {COLOR_PRESETS.filter((c) => c.group === "Brand").map((c) => (
+            <button
+              key={c.id}
+              className={`${styles.colorSwatch} ${c.id === "auto" ? styles.colorSwatchAuto : ""} ${(style.colorPreset ?? "auto") === c.id ? styles.colorSwatchActive : ""}`}
+              style={c.id === "auto" ? { color: c.text } : { background: c.bg, color: c.text }}
               onClick={() => onPatchStyle({ colorPreset: c.id, customBg: undefined, customText: undefined })}
               title={c.label}
             >

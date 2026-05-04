@@ -7,6 +7,7 @@ import { describeCron } from "../utils";
 import RelativeTime from "../RelativeTime";
 import DropdownButton from "../DropdownButton";
 import { JobsSkeleton } from "../Skeleton";
+import Spinner from "../Spinner";
 import ToggleSwitch from "../ToggleSwitch";
 import { useToast } from "../Toast";
 import PullToRefresh from "../PullToRefresh";
@@ -404,7 +405,7 @@ export default function Jobs() {
                       <tr key={run.id} className={styles.clickableRow} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
                         <td>
                           {run.status === "running" ? (
-                            <span className={styles.spinnerSmall} />
+                            <Spinner size="xs" />
                           ) : (
                             <span className={styles.statusDot} data-status={run.status} />
                           )}

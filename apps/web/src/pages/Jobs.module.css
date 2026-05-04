@@ -344,25 +344,6 @@
   transition: width 0.3s ease;
 }
 
-/* ─── Spinner ───────────────────────────────────────────────────────────── */
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinnerSmall {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border: 1.5px solid var(--border-input);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
-}
-
 /* ─── Muted text ────────────────────────────────────────────────────────── */
 
 .muted {
@@ -733,16 +714,6 @@
 
 .sidebarCancel:hover {
   color: #ef4444;
-}
-
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
 }
 
 .noRuns {

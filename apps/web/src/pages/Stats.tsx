@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import PullToRefresh from "../PullToRefresh";
 import RelativeTime from "../RelativeTime";
+import Spinner from "../Spinner";
+import { ListSkeleton, SkeletonLine } from "../Skeleton";
 import { trpc } from "../trpc";
 import { formatDurationMs, stripDurationFromMessage } from "../utils";
 import styles from "./Stats.module.css";
@@ -377,22 +379,28 @@ export default function Stats() {
     let sub: React.ReactNode = null;
     switch (id) {
       case "streams":
-        value = sessionsQuery.isLoading ? "—" : sessions.length;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : sessions.length;
         if (transcodingCount > 0) sub = `${transcodingCount} transcoding`;
         break;
       case "transcodes":
-        value = sessionsQuery.isLoading ? "—" : transcodingCount;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : transcodingCount;
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
       case "bandwidth":
-        value = sessionsQuery.isLoading ? "—" : totalBandwidth > 0 ? formatBandwidth(totalBandwidth) : "—";
+        value = sessionsQuery.isLoading ? (
+          <SkeletonLine width="40px" />
+        ) : totalBandwidth > 0 ? (
+          formatBandwidth(totalBandwidth)
+        ) : (
+          "—"
+        );
         break;
       case "playsToday":
-        value = activityQuery.isLoading ? "—" : (activityQuery.data?.playsToday ?? 0);
+        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.playsToday ?? 0);
         if (activityQuery.data && activityQuery.data.playsWeek > 0) sub = `${activityQuery.data.playsWeek} this week`;
         break;
       case "playsWeek":
-        value = activityQuery.isLoading ? "—" : (activityQuery.data?.playsWeek ?? 0);
+        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.playsWeek ?? 0);
         break;
       case "topUserToday": {
         const u = activityQuery.data?.topUserToday;
@@ -401,39 +409,49 @@ export default function Stats() {
         break;
       }
       case "library":
-        value = overviewQuery.isLoading ? "—" : formatNumber(overviewQuery.data?.totalItems ?? 0);
+        value = overviewQuery.isLoading ? (
+          <SkeletonLine width="40px" />
+        ) : (
+          formatNumber(overviewQuery.data?.totalItems ?? 0)
+        );
         if (overviewQuery.data && overviewQuery.data.addedThisWeek > 0)
           sub = `+${overviewQuery.data.addedThisWeek} this week`;
         break;
       case "addedThisWeek":
-        value = overviewQuery.isLoading ? "—" : (overviewQuery.data?.addedThisWeek ?? 0);
+        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : (overviewQuery.data?.addedThisWeek ?? 0);
         break;
       case "pct4k": {
         const total = overviewQuery.data?.totalItems ?? 0;
         const c4k = overviewQuery.data?.count4k ?? 0;
-        value = overviewQuery.isLoading ? "—" : total > 0 ? `${Math.round((c4k / total) * 100)}%` : "—";
+        value = overviewQuery.isLoading ? (
+          <SkeletonLine width="40px" />
+        ) : total > 0 ? (
+          `${Math.round((c4k / total) * 100)}%`
+        ) : (
+          "—"
+        );
         if (c4k > 0) sub = `${formatNumber(c4k)} items`;
         break;
       }
       case "librarySplit": {
         const m = overviewQuery.data?.movieCount ?? 0;
         const e = overviewQuery.data?.episodeCount ?? 0;
-        value = overviewQuery.isLoading ? "—" : `${formatNumber(m)} / ${formatNumber(e)}`;
+        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : `${formatNumber(m)} / ${formatNumber(e)}`;
         sub = "Movies / Episodes";
         break;
       }
       case "users":
-        value = overviewQuery.isLoading ? "—" : (overviewQuery.data?.userCount ?? 0);
+        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : (overviewQuery.data?.userCount ?? 0);
         if (activityQuery.data && activityQuery.data.activeUsersWeek > 0)
           sub = `${activityQuery.data.activeUsersWeek} active`;
         break;
       case "activeUsers":
-        value = activityQuery.isLoading ? "—" : (activityQuery.data?.activeUsersWeek ?? 0);
+        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.activeUsersWeek ?? 0);
         sub = "this week";
         break;
       case "failedJobs": {
         const n = opsQuery.data?.failedJobs24h ?? 0;
-        value = opsQuery.isLoading ? "—" : n;
+        value = opsQuery.isLoading ? <SkeletonLine width="40px" /> : n;
         if (n > 0) sub = "needs attention";
         break;
       }
@@ -484,7 +502,7 @@ export default function Stats() {
               {sessions.length > 0 && <span className={styles.countBadge}>{sessions.length}</span>}
             </div>
 
-            {sessionsQuery.isLoading && <div className={styles.muted}>Loading…</div>}
+            {sessionsQuery.isLoading && <ListSkeleton rows={3} />}
             {sessionsQuery.error && <div className={styles.error}>Failed to load sessions</div>}
             {!sessionsQuery.isLoading && sessions.length === 0 && <div className={styles.muted}>No active streams</div>}
 
@@ -588,7 +606,7 @@ export default function Stats() {
                 {activeJobsQuery.data && activeJobsQuery.data.length > 0 ? (
                   activeJobsQuery.data.map((run) => (
                     <div key={run.id} className={styles.jobRow}>
-                      <span className={styles.spinner} />
+                      <Spinner size="xs" />
                       <span className={styles.jobName}>{run.jobId}</span>
                       {run.progress > 0 && (
                         <span className={styles.jobProgress}>{Math.round(run.progress * 100)}%</span>
@@ -630,7 +648,7 @@ export default function Stats() {
           {/* ─── Recently Added ──────────────────────────────────────── */}
           <div className={styles.panel}>
             <div className={styles.panelHeader}>Recently Added</div>
-            {recentQuery.isLoading && <div className={styles.muted}>Loading…</div>}
+            {recentQuery.isLoading && <ListSkeleton rows={3} />}
             {recentQuery.data && recentQuery.data.items.length === 0 && (
               <div className={styles.muted}>No recently added media</div>
             )}
@@ -675,7 +693,7 @@ export default function Stats() {
           {/* ─── Most Watched ────────────────────────────────────────── */}
           <div className={styles.panel}>
             <div className={styles.panelHeader}>Most Watched This Week</div>
-            {mostWatchedQuery.isLoading && <div className={styles.muted}>Loading…</div>}
+            {mostWatchedQuery.isLoading && <ListSkeleton rows={3} />}
             {mostWatchedQuery.data && mostWatchedQuery.data.length === 0 && (
               <div className={styles.muted}>No watch history this week</div>
             )}

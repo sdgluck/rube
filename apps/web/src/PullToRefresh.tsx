@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, ReactNode } from "react";
+import Spinner from "./Spinner";
 import styles from "./PullToRefresh.module.css";
 
 interface PullToRefreshProps {
@@ -72,7 +73,7 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
       {(pullDistance > 0 || refreshing) && (
         <div className={styles.indicator} style={{ transform: `translateX(-50%) translateY(${pullDistance}px)` }}>
           {refreshing ? (
-            <div className={styles.spinner} />
+            <Spinner size="sm" />
           ) : (
             <svg
               className={`${styles.arrow} ${pullDistance >= THRESHOLD ? styles.arrowReady : ""}`}

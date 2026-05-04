@@ -88,6 +88,60 @@ export function RulesSkeleton() {
   );
 }
 
+export function FormSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className={styles.wrapper}>
+      <SkeletonLine width="180px" />
+      <div style={{ height: 8 }} />
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className={styles.formRow}>
+          <SkeletonLine width="120px" />
+          <SkeletonBlock width="100%" height={36} borderRadius={6} />
+        </div>
+      ))}
+      <div style={{ height: 8 }} />
+      <SkeletonBlock width="120px" height={36} borderRadius={6} />
+    </div>
+  );
+}
+
+export function PageSkeleton() {
+  return (
+    <div className={styles.wrapper}>
+      <SkeletonLine width="200px" />
+      <SkeletonLine width="60%" />
+      <div style={{ height: 8 }} />
+      <SkeletonBlock width="100%" height={120} borderRadius={8} />
+      <SkeletonBlock width="100%" height={240} borderRadius={8} />
+    </div>
+  );
+}
+
+export function StatsSkeleton() {
+  return (
+    <div className={styles.wrapper}>
+      <SkeletonLine width="160px" />
+      <div className={styles.statsGrid}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <SkeletonBlock key={i} width="100%" height={92} borderRadius={8} />
+        ))}
+      </div>
+      <SkeletonBlock width="100%" height={220} borderRadius={8} />
+      <SkeletonBlock width="100%" height={220} borderRadius={8} />
+    </div>
+  );
+}
+
+export function ListSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div className={styles.wrapper}>
+      {Array.from({ length: rows }, (_, i) => (
+        <SkeletonBlock key={i} width="100%" height={56} borderRadius={6} />
+      ))}
+    </div>
+  );
+}
+
 export function DetailSkeleton() {
   return (
     <div className={styles.wrapper}>
