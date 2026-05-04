@@ -263,6 +263,10 @@ export interface TmdbCachedDetails {
   directors?: Array<{ id: number; name: string }>;
   /** Map of ISO-3166-1 region code -> certification (e.g. "US" -> "PG-13"). */
   contentRatings?: Record<string, string>;
+  /** TMDb keyword IDs (no names — those are looked up from a static map at use time). */
+  keywords?: number[];
+  /** Calendar month of release_date / first_air_date (1–12). Used by the seasonal rule. */
+  releaseMonth?: number;
 }
 
 export const tmdbCache = sqliteTable(

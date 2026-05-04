@@ -12,6 +12,7 @@ import { tmdbPopularPeopleHandler } from "./handlers/tmdb-popular-people.ts";
 import { tmdbFranchisesHandler } from "./handlers/tmdb-franchises.ts";
 import { yearGroupedHandler } from "./handlers/year-grouped.ts";
 import { mediaGroupedHandler } from "./handlers/media-grouped.ts";
+import { keywordGroupedHandler } from "./handlers/keyword-grouped.ts";
 
 /**
  * Pick the handler for a given rule type. Returning null is a real case —
@@ -43,6 +44,10 @@ export function handlerForRule(ruleType: string): Handler | null {
     case "subtitle_languages":
     case "video_formats":
       return mediaGroupedHandler(ruleType);
+    case "based_on":
+    case "seasonal":
+    case "awards":
+      return keywordGroupedHandler(ruleType);
     case "tmdb_popular_actors":
       return tmdbPopularPeopleHandler("cast");
     case "tmdb_popular_directors":
