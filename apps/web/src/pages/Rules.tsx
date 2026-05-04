@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { trpc } from "../trpc";
 import DropdownButton from "../DropdownButton";
 import ConfirmModal from "../ConfirmModal";
-import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle } from "../RuleWizard";
+import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle, DEFAULT_ARR_FORM } from "../RuleWizard";
 import { RulesSkeleton } from "../Skeleton";
 import Spinner from "../Spinner";
 import EmptyState from "../EmptyState";
@@ -35,7 +35,12 @@ const RULE_TYPES = [
   { value: "top_rated", label: "Top Rated" },
   { value: "lowest_rated", label: "Lowest Rated" },
   { value: "actors", label: "Actors" },
+  { value: "directors", label: "Directors" },
   { value: "studios", label: "Studios" },
+  { value: "networks", label: "Networks" },
+  { value: "genres", label: "Genres" },
+  { value: "countries", label: "Countries" },
+  { value: "content_ratings", label: "Content Ratings" },
   { value: "imdb_chart", label: "IMDb Chart" },
   { value: "imdb_list", label: "IMDb List" },
   { value: "rt_top_rated", label: "RT Top Rated" },
@@ -122,6 +127,7 @@ const EMPTY_FORM: RuleFormState = {
   chart: "top_250_movies",
   listId: "",
   filter: "all",
+  arr: { ...DEFAULT_ARR_FORM },
 };
 
 function defaultLimitForType(type: string): number {
@@ -563,6 +569,10 @@ export default function Rules() {
       chart: (config.chart as string) || "top_250_movies",
       listId: (config.listId as string) || "",
       filter: (config.filter as string) || "all",
+      arr: {
+        ...DEFAULT_ARR_FORM,
+        ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
+      },
     });
     setIsEditing(true);
   }
@@ -586,6 +596,7 @@ export default function Rules() {
     if (next.type === "imdb_list") config.listId = next.listId;
     if (next.type === "seerr_requests") config.filter = next.filter;
     if (next.sections.length > 0) config.sections = next.sections;
+    if (next.arr.enabled) config.arr = next.arr;
 
     if (isEditing && next.id) {
       updateMutation.mutate({ id: next.id, name: next.name, config }, { onSuccess: () => cancelForm() });

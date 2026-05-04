@@ -40,6 +40,9 @@ export function createRule(input: { name: string; type: string; config: Record<s
     lastTestItemCount: null,
     lastTestStatus: null,
     lastTestError: null,
+    lastRunArrAddedCount: null,
+    lastRunArrSkippedCount: null,
+    lastRunArrFailedCount: null,
   };
 }
 
@@ -57,6 +60,17 @@ export function updateRule(
 
 export function setRuleLastCollection(id: string, ratingKey: string): void {
   db.update(rules).set({ lastCollectionRatingKey: ratingKey }).where(eq(rules.id, id)).run();
+}
+
+export function setRuleArrCounts(id: string, added: number, skipped: number, failed: number): void {
+  db.update(rules)
+    .set({
+      lastRunArrAddedCount: added,
+      lastRunArrSkippedCount: skipped,
+      lastRunArrFailedCount: failed,
+    })
+    .where(eq(rules.id, id))
+    .run();
 }
 
 export interface RuleRunOutcome {

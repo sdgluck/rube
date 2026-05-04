@@ -6,7 +6,7 @@ import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell
 import { getConfig } from "../lib/config.ts";
 import { plexHealthCallback, getOmdbClient, getImdbClient } from "../lib/clients.ts";
 import { upsertCollectionByKey } from "../domains/collections.ts";
-import { getEnabledRules, getRule, setRuleLastCollection, type Rule } from "../domains/rules.ts";
+import { getEnabledRules, getRule, setRuleLastCollection, setRuleArrCounts, type Rule } from "../domains/rules.ts";
 import { appendHistory, getRecentHistory, type HistoricalCollection } from "../domains/rule-history.ts";
 import { extractImdbId } from "@tinkerbell/omdb";
 import { reportHealth } from "../domains/health.ts";
@@ -29,6 +29,17 @@ const ruleConfigSchema = z.object({
   chart: z.string().optional(),
   listId: z.string().optional(),
   filter: z.string().optional(),
+  arr: z
+    .object({
+      enabled: z.boolean(),
+      monitor: z.boolean(),
+      searchOnAdd: z.boolean(),
+      qualityProfileId: z.number(),
+      rootFolderPath: z.string(),
+      maxAddsPerRun: z.number(),
+      dryRun: z.boolean(),
+    })
+    .optional(),
 });
 type RuleConfig = z.infer<typeof ruleConfigSchema>;
 
@@ -41,6 +52,16 @@ const VIBE_HINTS: Record<NonNullable<RuleConfig["vibe"]>, string> = {
 const NAME_STYLE_HINTS: Record<NonNullable<RuleConfig["nameStyle"]>, string> = {
   short_punchy: "Names should be short and punchy (1–4 words).",
   descriptive: "Names can be a bit longer and descriptive (up to ~6 words).",
+};
+
+const GROUPED_FIELD_FOR_TYPE: Record<string, string> = {
+  actors: "actor",
+  directors: "director",
+  studios: "studio",
+  networks: "network",
+  genres: "genre",
+  countries: "country",
+  content_ratings: "contentRating",
 };
 
 function buildAiPrompt(args: {
@@ -651,6 +672,180 @@ async function handleSeerrRequests(
   return collectionKey;
 }
 
+// ─── Arr resolver ────────────────────────────────────────────────────────────
+
+interface ArrResolution {
+  added: number;
+  skipped: number;
+  failed: number;
+}
+
+/**
+ * For external-source rules with `arr.enabled`, push items that aren't already
+ * in the Plex library to Radarr/Sonarr. We re-fetch the source rather than
+ * thread unmatched IDs through every handler — cheaper to maintain, and the
+ * source data is already cached by the upstream client where it matters.
+ *
+ * Skipped: rule type doesn't produce external items, arr unconfigured, no
+ * unmatched items, or dryRun.
+ */
+async function resolveArrAdds(
+  ctx: JobContext,
+  client: PlexClient,
+  sections: PlexSection[],
+  rule: Rule,
+  ruleConfig: RuleConfig,
+): Promise<ArrResolution> {
+  const arrCfg = ruleConfig.arr;
+  if (!arrCfg || !arrCfg.enabled) return { added: 0, skipped: 0, failed: 0 };
+
+  // Determine service from rule type. Currently only IMDb-sourced rules
+  // (chart/list) and Seerr requests can produce items not in the library.
+  // AI prompt is explicitly excluded from this codepath.
+  const isImdbSource = rule.type === "imdb_chart" || rule.type === "imdb_list";
+  const isSeerrSource = rule.type === "seerr_requests";
+  if (!isImdbSource && !isSeerrSource) return { added: 0, skipped: 0, failed: 0 };
+
+  const { lookupByExternalId, addItem } = await import("@tinkerbell/arr");
+  const { getConfig: getCfg } = await import("../lib/config.ts");
+
+  // Collect unmatched external IDs.
+  type Unmatched = { externalId: string; mediaType: "movie" | "tv"; displayName: string };
+  const unmatched: Unmatched[] = [];
+
+  if (isImdbSource) {
+    const contentId = rule.type === "imdb_chart" ? ruleConfig.chart : ruleConfig.listId;
+    if (!contentId) return { added: 0, skipped: 0, failed: 0 };
+    const { imdbIds } =
+      rule.type === "imdb_chart" ? await fetchImdbChartNormalized(contentId) : await fetchImdbListNormalized(contentId);
+
+    // Build a union of IMDb IDs already present across all selected sections.
+    const present = new Set<string>();
+    let mediaTypeHint: "movie" | "tv" = "movie";
+    for (const section of sections) {
+      if (section.type === "show") mediaTypeHint = "tv";
+      const items = await client.allItemsWithGuids(section.key);
+      for (const item of items) {
+        for (const guid of item.guids) {
+          const m = guid.match(/imdb:\/\/(tt\d+)/);
+          if (m) {
+            present.add(m[1]);
+            break;
+          }
+        }
+      }
+    }
+
+    for (const id of imdbIds) {
+      if (!present.has(id)) unmatched.push({ externalId: `imdb:${id}`, mediaType: mediaTypeHint, displayName: id });
+    }
+  } else if (isSeerrSource) {
+    const seerrUrl = getCfg("global_seerr_url");
+    const seerrApiKey = getCfg("global_seerr_api_key");
+    if (!seerrUrl || !seerrApiKey) return { added: 0, skipped: 0, failed: 0 };
+    const filter = ruleConfig.filter || "all";
+
+    const presentMovie = new Set<number>();
+    const presentTv = new Set<number>();
+    for (const section of sections) {
+      const items = await client.allItemsWithGuids(section.key);
+      const target = section.type === "movie" ? presentMovie : presentTv;
+      for (const item of items) {
+        for (const guid of item.guids) {
+          const m = guid.match(/tmdb:\/\/(\d+)/);
+          if (m) {
+            target.add(parseInt(m[1], 10));
+            break;
+          }
+        }
+      }
+    }
+
+    const { iterSeerrRequests } = await import("@tinkerbell/seerr");
+    for await (const req of iterSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter })) {
+      const mt = req.media.mediaType;
+      const present = mt === "movie" ? presentMovie : presentTv;
+      if (present.has(req.media.tmdbId)) continue;
+      unmatched.push({
+        externalId: `tmdb:${req.media.tmdbId}`,
+        mediaType: mt,
+        displayName: `tmdb:${req.media.tmdbId}`,
+      });
+      if (unmatched.length >= arrCfg.maxAddsPerRun * 4) break; // soft cap on iteration
+    }
+  }
+
+  if (unmatched.length === 0) {
+    ctx.log(`[arr] No unmatched items — nothing to add.`);
+    return { added: 0, skipped: 0, failed: 0 };
+  }
+
+  // Cap to maxAddsPerRun.
+  const cap = arrCfg.maxAddsPerRun;
+  const slice = unmatched.slice(0, cap);
+  ctx.log(`[arr] ${unmatched.length} unmatched item(s); will process ${slice.length} (cap=${cap}).`);
+
+  if (arrCfg.dryRun) {
+    ctx.log(`[arr] DRY RUN — would add ${slice.length} item(s):`);
+    for (const u of slice) ctx.log(`[arr]   ${u.mediaType}/${u.externalId} (${u.displayName})`);
+    return { added: 0, skipped: slice.length, failed: 0 };
+  }
+
+  // Group by service (movie → radarr, tv → sonarr).
+  const byService: Record<"radarr" | "sonarr", Unmatched[]> = { radarr: [], sonarr: [] };
+  for (const u of slice) byService[u.mediaType === "movie" ? "radarr" : "sonarr"].push(u);
+
+  let added = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const service of ["radarr", "sonarr"] as const) {
+    const items = byService[service];
+    if (items.length === 0) continue;
+    const url = getCfg(service === "radarr" ? "global_radarr_url" : "global_sonarr_url");
+    const apiKey = getCfg(service === "radarr" ? "global_radarr_api_key" : "global_sonarr_api_key");
+    if (!url || !apiKey) {
+      ctx.log(`[arr] ${service} not configured — skipping ${items.length} item(s).`);
+      skipped += items.length;
+      continue;
+    }
+    const arrConfig = { service, url, apiKey };
+
+    for (const u of items) {
+      try {
+        const lookup = await lookupByExternalId(arrConfig, u.externalId);
+        if (!lookup) {
+          ctx.log(`[arr] ${service}: lookup miss for ${u.externalId}`);
+          skipped++;
+          continue;
+        }
+        const result = await addItem(arrConfig, lookup, {
+          qualityProfileId: arrCfg.qualityProfileId,
+          rootFolderPath: arrCfg.rootFolderPath,
+          monitor: arrCfg.monitor,
+          searchOnAdd: arrCfg.searchOnAdd,
+        });
+        if (result.status === "added") {
+          added++;
+          ctx.log(`[arr] ${service}: added "${result.title}" (id=${result.id})`);
+        } else if (result.status === "exists") {
+          skipped++;
+          ctx.log(`[arr] ${service}: "${result.title}" already exists`);
+        } else {
+          failed++;
+          ctx.log(`[arr] ${service}: failed — ${result.error}`);
+        }
+      } catch (err) {
+        failed++;
+        ctx.log(`[arr] ${service}: error for ${u.externalId} — ${errorMessage(err)}`);
+      }
+    }
+  }
+
+  ctx.log(`[arr] Summary: added=${added}, skipped=${skipped}, failed=${failed}`);
+  return { added, skipped, failed };
+}
+
 // ─── Test / Preview ──────────────────────────────────────────────────────────
 
 export interface TestCollectionPreview {
@@ -881,8 +1076,13 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     }
 
     case "actors":
-    case "studios": {
-      const field = rule.type === "actors" ? "actor" : "studio";
+    case "directors":
+    case "studios":
+    case "networks":
+    case "genres":
+    case "countries":
+    case "content_ratings": {
+      const field = GROUPED_FIELD_FOR_TYPE[rule.type];
       const maxCollections_ = ruleConfig.limit ?? 10;
       log(`[${rule.type}] field=${field}, maxCollections=${maxCollections_}`);
 
@@ -1089,9 +1289,13 @@ async function dispatchRule(
     case "lowest_rated":
       return handleRated(ctx, client, sections, machineId, "rating:asc", ruleConfig, labels, "Lowest Rated");
     case "actors":
-      return handleGrouped(ctx, client, sections, machineId, "actor", ruleConfig, labels);
+    case "directors":
     case "studios":
-      return handleGrouped(ctx, client, sections, machineId, "studio", ruleConfig, labels);
+    case "networks":
+    case "genres":
+    case "countries":
+    case "content_ratings":
+      return handleGrouped(ctx, client, sections, machineId, GROUPED_FIELD_FOR_TYPE[rule.type], ruleConfig, labels);
     case "imdb_chart":
       return handleImdbContent(
         ctx,
@@ -1220,6 +1424,11 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     if (lastCollectionKey) {
       setRuleLastCollection(rule.id, lastCollectionKey);
     }
+
+    const arrResult = await resolveArrAdds(ctx, client, sections, rule, ruleConfig);
+    if (ruleConfig.arr?.enabled) {
+      setRuleArrCounts(rule.id, arrResult.added, arrResult.skipped, arrResult.failed);
+    }
   }
 
   ctx.log("\nAll done!");
@@ -1281,6 +1490,11 @@ export async function runSingleRule(
 
   if (lastCollectionKey) {
     setRuleLastCollection(rule.id, lastCollectionKey);
+  }
+
+  const arrResult = await resolveArrAdds(ctx, client, sections, rule, ruleConfig);
+  if (ruleConfig.arr?.enabled) {
+    setRuleArrCounts(rule.id, arrResult.added, arrResult.skipped, arrResult.failed);
   }
 
   ctx.progress(4, 4, "Done");

@@ -72,6 +72,9 @@ export const rules = sqliteTable("rules", {
   lastTestItemCount: integer("last_test_item_count"),
   lastTestStatus: text("last_test_status"),
   lastTestError: text("last_test_error"),
+  lastRunArrAddedCount: integer("last_run_arr_added_count"),
+  lastRunArrSkippedCount: integer("last_run_arr_skipped_count"),
+  lastRunArrFailedCount: integer("last_run_arr_failed_count"),
 });
 
 export const ruleHistory = sqliteTable(
