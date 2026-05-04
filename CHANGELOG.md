@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-04
+
+### Added
+
+- Phase 3 rule types: `based_on`, `seasonal`, and `awards`
+- Phase 2 rule types for Kometa migration parity
+
 ## [0.4.0] - 2026-05-04
 
 ### Added
