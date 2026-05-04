@@ -6,14 +6,14 @@
   /*
    * Photoshop-style dashed grid background. Negative margins offset the
    * containing .content's 32px/40px padding so the grid extends edge-to-edge;
-   * we restore equivalent padding inside so child layout is unchanged. The
-   * 80px bottom keeps room for the sticky action bar.
+   * we restore equivalent padding inside so child layout is unchanged. No
+   * extra bottom padding for the action bar — the workspace's height already
+   * reserves space for it via `calc(100vh - 180px)`.
    */
   margin: -32px -40px;
-  padding: 32px 40px calc(80px + 32px);
+  padding: 32px 40px;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
   background-position: 0 0;
-  min-height: 100%;
 }
 
 @media (prefers-color-scheme: dark) {
