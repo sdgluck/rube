@@ -1,17 +1,137 @@
 /**
- * Minimal TMDb client. Used for popular-people and franchise-collection
- * lookups that aren't covered by the existing IMDb GraphQL client.
+ * Minimal TMDb client. Used for popular-people, franchise-collection, and
+ * grouped-rule (studios/networks/genres/...) lookups.
  *
  * Auth: TMDb supports both v3 API key (?api_key=...) and v4 read-access bearer
  * tokens. We accept the v3 key form to match the rest of Tinkerbell's API-key
  * config style.
+ *
+ * Validation: all responses pass through Zod parsers. The API has a habit of
+ * returning unexpected nulls and occasionally adding fields, so we declare
+ * what we use and let unknown fields fall away.
  */
+
+import { z } from "zod";
 
 const BASE = "https://api.themoviedb.org/3";
 
 export interface TmdbConfig {
   apiKey: string;
 }
+
+// ─── Shared atomic schemas ───────────────────────────────────────────────
+
+const personRawSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  known_for_department: z.string().optional(),
+  popularity: z.number().optional(),
+  profile_path: z.string().nullable().optional(),
+});
+
+const creditRawSchema = z.object({
+  id: z.number(),
+  title: z.string().optional(),
+  name: z.string().optional(),
+  release_date: z.string().optional(),
+  first_air_date: z.string().optional(),
+  character: z.string().optional(),
+  job: z.string().optional(),
+  department: z.string().optional(),
+});
+
+const castRawSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  order: z.number().optional(),
+});
+
+const crewRawSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  job: z.string().optional(),
+});
+
+const genreRawSchema = z.object({ id: z.number(), name: z.string() });
+const companyRawSchema = z.object({ id: z.number(), name: z.string() });
+const networkRawSchema = z.object({ id: z.number(), name: z.string() });
+const countryRawSchema = z.object({ iso_3166_1: z.string(), name: z.string() });
+
+const releaseDateEntrySchema = z.object({
+  iso_3166_1: z.string(),
+  release_dates: z.array(z.object({ certification: z.string().optional() })),
+});
+
+const contentRatingEntrySchema = z.object({
+  iso_3166_1: z.string(),
+  rating: z.string().optional(),
+});
+
+const collectionPartRawSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  release_date: z.string().optional(),
+});
+
+// ─── Response schemas ────────────────────────────────────────────────────
+
+const personPopularResponseSchema = z.object({
+  page: z.number(),
+  total_pages: z.number(),
+  results: z.array(personRawSchema),
+});
+
+const personCreditsResponseSchema = z.object({
+  cast: z.array(creditRawSchema).default([]),
+  crew: z.array(creditRawSchema).default([]),
+});
+
+const collectionResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  overview: z.string(),
+  parts: z.array(collectionPartRawSchema),
+});
+
+const movieKeySampleSchema = z.object({ id: z.number(), title: z.string() });
+
+const movieDetailsSchema = z.object({
+  id: z.number(),
+  genres: z.array(genreRawSchema).default([]),
+  production_companies: z.array(companyRawSchema).default([]),
+  production_countries: z.array(countryRawSchema).default([]),
+  credits: z
+    .object({
+      cast: z.array(castRawSchema).default([]),
+      crew: z.array(crewRawSchema).default([]),
+    })
+    .optional(),
+  release_dates: z.object({ results: z.array(releaseDateEntrySchema).default([]) }).optional(),
+});
+
+const tvDetailsSchema = z.object({
+  id: z.number(),
+  genres: z.array(genreRawSchema).default([]),
+  production_companies: z.array(companyRawSchema).default([]),
+  production_countries: z.array(countryRawSchema).default([]).optional(),
+  origin_country: z.array(z.string()).default([]).optional(),
+  networks: z.array(networkRawSchema).default([]),
+  credits: z
+    .object({
+      cast: z.array(castRawSchema).default([]),
+      crew: z.array(crewRawSchema).default([]),
+    })
+    .optional(),
+  aggregate_credits: z
+    .object({
+      cast: z.array(castRawSchema).default([]),
+      crew: z.array(crewRawSchema).default([]),
+    })
+    .optional(),
+  content_ratings: z.object({ results: z.array(contentRatingEntrySchema).default([]) }).optional(),
+});
+
+// ─── Public types ────────────────────────────────────────────────────────
 
 export interface TmdbPerson {
   id: number;
@@ -45,7 +165,30 @@ export interface TmdbCollection {
   parts: TmdbCollectionPart[];
 }
 
-async function tmdbFetch<T>(cfg: TmdbConfig, path: string, params: Record<string, string> = {}): Promise<T> {
+export interface TmdbItemDetails {
+  id: number;
+  mediaType: "movie" | "tv";
+  genres: Array<{ id: number; name: string }>;
+  productionCompanies: Array<{ id: number; name: string }>;
+  productionCountries: Array<{ code: string; name: string }>;
+  /** TV only. */
+  networks: Array<{ id: number; name: string }>;
+  /** Top-billed cast in cast.order ascending. Movies + TV (movies = full top billing; TV = aggregate). */
+  cast: Array<{ id: number; name: string; order?: number }>;
+  /** Crew with job=Director (movies) or aggregate-credits crew Director (TV). */
+  directors: Array<{ id: number; name: string }>;
+  /** Map of ISO-3166-1 region -> certification. */
+  contentRatings: Record<string, string>;
+}
+
+// ─── Core fetch helper ───────────────────────────────────────────────────
+
+async function tmdbFetch<S extends z.ZodTypeAny>(
+  cfg: TmdbConfig,
+  path: string,
+  schema: S,
+  params: Record<string, string> = {},
+): Promise<z.infer<S>> {
   const url = new URL(`${BASE}${path}`);
   url.searchParams.set("api_key", cfg.apiKey);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
@@ -57,22 +200,70 @@ async function tmdbFetch<T>(cfg: TmdbConfig, path: string, params: Record<string
     const body = await res.text().catch(() => "");
     throw new Error(`TMDb ${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 200)}` : ""}`);
   }
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    throw new Error(`TMDb ${path} response failed validation: ${parsed.error.message}`);
+  }
+  return parsed.data;
 }
 
-interface TmdbPersonRaw {
-  id: number;
-  name: string;
-  known_for_department?: string;
-  popularity?: number;
-  profile_path?: string | null;
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+function yearFromDate(d?: string): number | undefined {
+  if (!d) return undefined;
+  const m = d.match(/^(\d{4})/);
+  return m ? parseInt(m[1], 10) : undefined;
 }
 
-interface TmdbPersonPopularResponse {
-  page: number;
-  total_pages: number;
-  results: TmdbPersonRaw[];
+function pickMovieCertification(entries: z.infer<typeof releaseDateEntrySchema>[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const entry of entries) {
+    const cert = entry.release_dates.find((r) => r.certification && r.certification.trim().length > 0)?.certification;
+    if (cert) out[entry.iso_3166_1] = cert.trim();
+  }
+  return out;
 }
+
+function pickTvCertification(entries: z.infer<typeof contentRatingEntrySchema>[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const entry of entries) {
+    if (entry.rating && entry.rating.trim().length > 0) out[entry.iso_3166_1] = entry.rating.trim();
+  }
+  return out;
+}
+
+/** ISO-3166-1 alpha-2 -> human label (subset; falls back to code). */
+const COUNTRY_LABELS: Record<string, string> = {
+  US: "United States",
+  GB: "United Kingdom",
+  CA: "Canada",
+  AU: "Australia",
+  FR: "France",
+  DE: "Germany",
+  JP: "Japan",
+  KR: "South Korea",
+  CN: "China",
+  IN: "India",
+  IT: "Italy",
+  ES: "Spain",
+  MX: "Mexico",
+  BR: "Brazil",
+  RU: "Russia",
+  IE: "Ireland",
+  NZ: "New Zealand",
+  SE: "Sweden",
+  NO: "Norway",
+  DK: "Denmark",
+  NL: "Netherlands",
+  BE: "Belgium",
+  PL: "Poland",
+  TR: "Turkey",
+  HK: "Hong Kong",
+  TW: "Taiwan",
+};
+
+// ─── Public API ──────────────────────────────────────────────────────────
 
 /**
  * Returns up to `limit` popular people, optionally filtered by their
@@ -88,7 +279,7 @@ export async function fetchPopularPeople(
   const out: TmdbPerson[] = [];
   let page = 1;
   while (out.length < limit && page <= 10) {
-    const data = await tmdbFetch<TmdbPersonPopularResponse>(cfg, "/person/popular", { page: String(page) });
+    const data = await tmdbFetch(cfg, "/person/popular", personPopularResponseSchema, { page: String(page) });
     for (const p of data.results) {
       if (department && p.known_for_department !== department) continue;
       out.push({
@@ -106,38 +297,6 @@ export async function fetchPopularPeople(
   return out;
 }
 
-interface TmdbCreditRaw {
-  id: number;
-  title?: string;
-  name?: string;
-  release_date?: string;
-  first_air_date?: string;
-  character?: string;
-  job?: string;
-  department?: string;
-}
-
-interface TmdbCombinedCreditsResponse {
-  cast: TmdbCreditRaw[];
-  crew: TmdbCreditRaw[];
-}
-
-interface TmdbMovieCreditsResponse {
-  cast: TmdbCreditRaw[];
-  crew: TmdbCreditRaw[];
-}
-
-interface TmdbTvCreditsResponse {
-  cast: TmdbCreditRaw[];
-  crew: TmdbCreditRaw[];
-}
-
-function yearFromDate(d?: string): number | undefined {
-  if (!d) return undefined;
-  const m = d.match(/^(\d{4})/);
-  return m ? parseInt(m[1], 10) : undefined;
-}
-
 /**
  * Fetch a person's filmography. `role` = "cast" (acting credits) or "crew"
  * (with optional `crewJob` filter, e.g. "Director").
@@ -153,7 +312,7 @@ export async function fetchPersonCredits(
 
   for (const mt of mediaTypes) {
     const path = mt === "movie" ? `/person/${personId}/movie_credits` : `/person/${personId}/tv_credits`;
-    const data = await tmdbFetch<TmdbMovieCreditsResponse | TmdbTvCreditsResponse>(cfg, path);
+    const data = await tmdbFetch(cfg, path, personCreditsResponseSchema);
     const list = opts.role === "cast" ? data.cast : data.crew;
     for (const c of list) {
       if (opts.role === "crew" && opts.crewJob && c.job !== opts.crewJob) continue;
@@ -176,21 +335,8 @@ export async function fetchPersonCredits(
   return out;
 }
 
-interface TmdbCollectionPartRaw {
-  id: number;
-  title: string;
-  release_date?: string;
-}
-
-interface TmdbCollectionResponse {
-  id: number;
-  name: string;
-  overview: string;
-  parts: TmdbCollectionPartRaw[];
-}
-
 export async function fetchCollection(cfg: TmdbConfig, collectionId: number): Promise<TmdbCollection> {
-  const data = await tmdbFetch<TmdbCollectionResponse>(cfg, `/collection/${collectionId}`);
+  const data = await tmdbFetch(cfg, `/collection/${collectionId}`, collectionResponseSchema);
   return {
     id: data.id,
     name: data.name,
@@ -205,10 +351,66 @@ export async function fetchCollection(cfg: TmdbConfig, collectionId: number): Pr
 }
 
 export async function testTmdbKey(apiKey: string): Promise<{ ok: true; sample: string }> {
-  const data = await tmdbFetch<{ id: number; title: string }>({ apiKey }, "/movie/550");
+  const data = await tmdbFetch({ apiKey }, "/movie/550", movieKeySampleSchema);
   return { ok: true, sample: data.title };
 }
 
-export async function fetchCombinedCredits(cfg: TmdbConfig, personId: number): Promise<TmdbCombinedCreditsResponse> {
-  return tmdbFetch<TmdbCombinedCreditsResponse>(cfg, `/person/${personId}/combined_credits`);
+/**
+ * Fetch a movie or show with everything needed for grouped collection rules
+ * (genres, companies, countries, networks, top-billed cast, directors,
+ * regional certifications). Single API call per item via append_to_response.
+ */
+export async function fetchItemDetails(
+  cfg: TmdbConfig,
+  tmdbId: number,
+  mediaType: "movie" | "tv",
+): Promise<TmdbItemDetails> {
+  if (mediaType === "movie") {
+    const data = await tmdbFetch(cfg, `/movie/${tmdbId}`, movieDetailsSchema, {
+      append_to_response: "credits,release_dates",
+    });
+    const cast = (data.credits?.cast ?? [])
+      .map((c) => ({ id: c.id, name: c.name, order: c.order }))
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    const directors = (data.credits?.crew ?? [])
+      .filter((c) => c.job === "Director")
+      .map((c) => ({ id: c.id, name: c.name }));
+    return {
+      id: data.id,
+      mediaType: "movie",
+      genres: data.genres,
+      productionCompanies: data.production_companies,
+      productionCountries: data.production_countries.map((c) => ({ code: c.iso_3166_1, name: c.name })),
+      networks: [],
+      cast,
+      directors,
+      contentRatings: pickMovieCertification(data.release_dates?.results ?? []),
+    };
+  }
+
+  const data = await tmdbFetch(cfg, `/tv/${tmdbId}`, tvDetailsSchema, {
+    append_to_response: "aggregate_credits,content_ratings",
+  });
+  const credits = data.aggregate_credits ?? data.credits ?? { cast: [], crew: [] };
+  const cast = credits.cast
+    .map((c) => ({ id: c.id, name: c.name, order: c.order }))
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  const directors = credits.crew
+    .filter((c) => c.job === "Director" || c.job === "Series Director")
+    .map((c) => ({ id: c.id, name: c.name }));
+  const productionCountries =
+    data.production_countries && data.production_countries.length > 0
+      ? data.production_countries.map((c) => ({ code: c.iso_3166_1, name: c.name }))
+      : (data.origin_country ?? []).map((code) => ({ code, name: COUNTRY_LABELS[code] ?? code }));
+  return {
+    id: data.id,
+    mediaType: "tv",
+    genres: data.genres,
+    productionCompanies: data.production_companies,
+    productionCountries,
+    networks: data.networks,
+    cast,
+    directors,
+    contentRatings: pickTvCertification(data.content_ratings?.results ?? []),
+  };
 }

@@ -104,37 +104,44 @@ const RULE_TYPES: RuleType[] = [
   {
     value: "actors",
     label: "Actors",
-    description: "Build a collection per leading actor across your library.",
+    description: "Build a collection per leading actor across your library, using TMDb cast data.",
+    requires: "tmdb",
   },
   {
     value: "directors",
     label: "Directors",
-    description: "Build a collection per director.",
+    description: "Build a collection per director, using TMDb crew data.",
+    requires: "tmdb",
   },
   {
     value: "studios",
     label: "Studios",
-    description: "Build a collection per studio.",
+    description: "Build a collection per production company, using normalized TMDb company data.",
+    requires: "tmdb",
   },
   {
     value: "networks",
     label: "Networks",
-    description: "Build a collection per TV network (TV sections only).",
+    description: "Build a collection per TV network (TV sections only), using TMDb network data.",
+    requires: "tmdb",
   },
   {
     value: "genres",
     label: "Genres",
-    description: "Build a collection per genre.",
+    description: "Build a collection per genre, using TMDb's normalized genre list.",
+    requires: "tmdb",
   },
   {
     value: "countries",
     label: "Countries",
-    description: "Build a collection per country of origin.",
+    description: "Build a collection per country of origin, using TMDb production-country data.",
+    requires: "tmdb",
   },
   {
     value: "content_ratings",
     label: "Content Ratings",
-    description: "Build a collection per content rating (PG, R, TV-MA, etc.).",
+    description: "Build a collection per content rating (PG, R, TV-MA, etc.) using TMDb regional certifications.",
+    requires: "tmdb",
   },
   {
     value: "imdb_chart",
@@ -230,6 +237,15 @@ function maxLimitForType(type: string): number {
 
 function typeHasLimit(type: string): boolean {
   return type !== "imdb_chart" && type !== "imdb_list";
+}
+
+// Section-type constraint for rule types that only make sense for movies or shows.
+// `imdb_chart` is determined by the selected chart; other constraints are intrinsic to the type.
+function requiredSectionTypeForRule(type: string, chart: string): "movie" | "show" | undefined {
+  if (type === "imdb_chart") return IMDB_CHART_SECTION_TYPE[chart] as "movie" | "show" | undefined;
+  if (type === "networks") return "show";
+  if (type === "tmdb_franchises") return "movie";
+  return undefined;
 }
 
 // Whether the wizard has a meaningful "source" step for this type.
@@ -392,15 +408,30 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     setForm((prev) => ({ ...prev, limit: defaultLimitForType(prev.type) }));
   }, [form.type, mode]);
 
-  // Auto-lock sections when imdb_chart's chart implies a section type.
-  const chartSectionType = form.type === "imdb_chart" ? IMDB_CHART_SECTION_TYPE[form.chart] : undefined;
-  const sectionsLocked = !!chartSectionType;
+  // Restrict the Scope step to sections relevant to the chosen rule type.
+  // `imdb_chart` also auto-selects all matching sections and locks the chips.
+  const requiredSectionType = requiredSectionTypeForRule(form.type, form.chart);
+  const availableSections = useMemo(
+    () => (requiredSectionType ? sections.filter((s) => s.type === requiredSectionType) : sections),
+    [sections, requiredSectionType],
+  );
+  const sectionsLocked = form.type === "imdb_chart" && !!requiredSectionType;
 
   useEffect(() => {
-    if (form.type !== "imdb_chart" || !chartSectionType || sections.length === 0) return;
-    const locked = sections.filter((s) => s.type === chartSectionType).map((s) => s.title);
+    if (form.type !== "imdb_chart" || !requiredSectionType || sections.length === 0) return;
+    const locked = sections.filter((s) => s.type === requiredSectionType).map((s) => s.title);
     setForm((prev) => ({ ...prev, sections: locked }));
-  }, [form.type, form.chart, chartSectionType, sections]);
+  }, [form.type, form.chart, requiredSectionType, sections]);
+
+  // For non-imdb_chart constrained types, prune any selected sections that don't match the new constraint.
+  useEffect(() => {
+    if (!requiredSectionType || form.type === "imdb_chart") return;
+    const valid = new Set(availableSections.map((s) => s.title));
+    setForm((prev) => {
+      const next = prev.sections.filter((t) => valid.has(t));
+      return next.length === prev.sections.length ? prev : { ...prev, sections: next };
+    });
+  }, [form.type, requiredSectionType, availableSections]);
 
   // Auto-suggest name on entering review (create mode, untouched).
   useEffect(() => {
@@ -724,7 +755,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           Which Plex sections to apply this rule to{typeHasLimit(form.type) ? ", and how many items to include." : "."}
         </p>
 
-        {sections.length > 0 && (
+        {availableSections.length > 0 ? (
           <div className={styles.field}>
             <div className={styles.sectionsHeader}>
               <label>Sections</label>
@@ -735,16 +766,17 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   onClick={() =>
                     setForm({
                       ...form,
-                      sections: form.sections.length === sections.length ? [] : sections.map((s) => s.title),
+                      sections:
+                        form.sections.length === availableSections.length ? [] : availableSections.map((s) => s.title),
                     })
                   }
                 >
-                  {form.sections.length === sections.length ? "Clear all" : "Select all"}
+                  {form.sections.length === availableSections.length ? "Clear all" : "Select all"}
                 </button>
               )}
             </div>
             <div className={styles.sectionChips}>
-              {sections.map((s) => {
+              {availableSections.map((s) => {
                 const selected = form.sections.includes(s.title);
                 return (
                   <button
@@ -767,15 +799,25 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             </div>
             <span className={styles.hint}>
               {sectionsLocked
-                ? `Locked to ${chartSectionType === "movie" ? "Movie" : "TV"} sections by the chosen chart.`
-                : form.type === "seerr_requests"
-                  ? "Seerr produces a single collection — only the first selected Movie/TV section is used."
-                  : form.sections.length === 0
-                    ? "Default — applies to all sections."
-                    : `${form.sections.length} selected.`}
+                ? `Locked to ${requiredSectionType === "movie" ? "Movie" : "TV"} sections by the chosen chart.`
+                : requiredSectionType
+                  ? `Only ${requiredSectionType === "movie" ? "Movie" : "TV"} sections apply to this rule type.`
+                  : form.type === "seerr_requests"
+                    ? "Seerr produces a single collection — only the first selected Movie/TV section is used."
+                    : form.sections.length === 0
+                      ? "Default — applies to all sections."
+                      : `${form.sections.length} selected.`}
             </span>
           </div>
-        )}
+        ) : requiredSectionType && sections.length > 0 ? (
+          <div className={styles.field}>
+            <label>Sections</label>
+            <span className={styles.hint}>
+              No {requiredSectionType === "movie" ? "Movie" : "TV"} sections found in your Plex library — this rule type
+              won't produce any collections.
+            </span>
+          </div>
+        ) : null}
 
         {typeHasLimit(form.type) && (
           <div className={styles.field}>
@@ -954,7 +996,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     const sectionsText =
       form.sections.length === 0
         ? "All sections"
-        : form.sections.length === sections.length
+        : form.sections.length === availableSections.length
           ? "All sections"
           : form.sections.join(", ");
 

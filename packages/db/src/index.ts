@@ -27,6 +27,12 @@ migrate(db, { migrationsFolder: MIGRATIONS_DIR });
 // One-shot: if this DB was previously managed via `drizzle-kit push` (no
 // `__drizzle_migrations` table) but already has user tables, mark the existing
 // migrations as applied so `migrate()` doesn't try to re-create the schema.
+//
+// Capped at `BOOTSTRAP_BASELINE_IDX` — the last journal entry that was shipped
+// when push-managed deployments were possible. New migrations beyond this idx
+// must run on legacy DBs to actually create their tables; do NOT raise this
+// number when adding a migration (the legacy bootstrap window is closed).
+const BOOTSTRAP_BASELINE_IDX = 5;
 function bootstrapPushedDatabase(): void {
   const migrationsTableExists = sqlite
     .prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'")
@@ -46,11 +52,14 @@ function bootstrapPushedDatabase(): void {
     "CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT NOT NULL, created_at NUMERIC)",
   );
   const insert = sqlite.prepare("INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)");
+  let count = 0;
   for (const entry of journal.entries) {
+    if (entry.idx > BOOTSTRAP_BASELINE_IDX) continue;
     const sqlPath = join(MIGRATIONS_DIR, `${entry.tag}.sql`);
     const sql = readFileSync(sqlPath, "utf8");
     const hash = createHash("sha256").update(sql).digest("hex");
     insert.run(hash, entry.when);
+    count++;
   }
-  console.log(`[db] bootstrapped __drizzle_migrations with ${journal.entries.length} pre-existing migration(s)`);
+  console.log(`[db] bootstrapped __drizzle_migrations with ${count} pre-existing migration(s)`);
 }
