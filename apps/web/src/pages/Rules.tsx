@@ -612,6 +612,25 @@ export default function Rules() {
     updateMutation.mutate({ id: rule.id, enabled: !rule.enabled });
   }
 
+  function handleDuplicate(rule: RuleRow) {
+    const baseName = `${rule.name} (copy)`;
+    const existing = new Set(allRules.map((r) => r.name));
+    let name = baseName;
+    let n = 2;
+    while (existing.has(name)) name = `${baseName} ${n++}`;
+    createMutation.mutate(
+      { name, type: rule.type, config: rule.config ?? {} },
+      {
+        onSuccess: (created) => {
+          if (!rule.enabled && created?.id) {
+            updateMutation.mutate({ id: created.id, enabled: false });
+          }
+          addToast(`Duplicated "${rule.name}"`, "success");
+        },
+      },
+    );
+  }
+
   function handleDelete(rule: RuleRow) {
     setPendingConfirm({
       message: `Delete rule "${rule.name}"?`,
@@ -1136,6 +1155,14 @@ export default function Rules() {
                             title="Edit rule"
                           >
                             Edit
+                          </button>
+                          <button
+                            className={styles.actionBtn}
+                            onClick={() => handleDuplicate(rule)}
+                            disabled={createMutation.isPending}
+                            title="Duplicate rule"
+                          >
+                            Duplicate
                           </button>
                           <button
                             className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
