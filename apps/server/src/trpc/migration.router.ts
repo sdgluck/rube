@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { startJob } from "#jobs/runner.ts";
+import { startJob } from "@tinkerbell/jobs";
 import {
   buildKometaPlan,
   dismissMigrationBanner,

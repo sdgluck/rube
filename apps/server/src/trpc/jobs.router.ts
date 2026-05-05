@@ -10,7 +10,7 @@ import {
   updateJob,
   startJob,
   cancelRun,
-} from "#jobs/runner.ts";
+} from "@tinkerbell/jobs";
 import { t, procedure } from "./_base.ts";
 
 const BYW_LABEL = "BecauseYouWatched";

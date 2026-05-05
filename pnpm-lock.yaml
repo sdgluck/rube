@@ -95,6 +95,9 @@ importers:
       '@tinkerbell/imdb':
         specifier: workspace:*
         version: link:../../clients/imdb
+      '@tinkerbell/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../../packages/llm
@@ -666,6 +669,94 @@ importers:
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.10
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/jobs:
+    dependencies:
+      '@sidequest/sqlite-backend':
+        specifier: ^1.14.0
+        version: 1.15.0
+      '@tinkerbell/arr':
+        specifier: workspace:*
+        version: link:../../clients/arr
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../db
+      '@tinkerbell/domain.collections':
+        specifier: workspace:*
+        version: link:../../domains/collections
+      '@tinkerbell/domain.events':
+        specifier: workspace:*
+        version: link:../../domains/events
+      '@tinkerbell/domain.health':
+        specifier: workspace:*
+        version: link:../../domains/health
+      '@tinkerbell/domain.media':
+        specifier: workspace:*
+        version: link:../../domains/media
+      '@tinkerbell/domain.migration':
+        specifier: workspace:*
+        version: link:../../domains/migration
+      '@tinkerbell/domain.overlays':
+        specifier: workspace:*
+        version: link:../../domains/overlays
+      '@tinkerbell/domain.rule-history':
+        specifier: workspace:*
+        version: link:../../domains/rule-history
+      '@tinkerbell/domain.rules':
+        specifier: workspace:*
+        version: link:../../domains/rules
+      '@tinkerbell/domain.shuffle-hubs':
+        specifier: workspace:*
+        version: link:../../domains/shuffle-hubs
+      '@tinkerbell/domain.stats':
+        specifier: workspace:*
+        version: link:../../domains/stats
+      '@tinkerbell/domain.users':
+        specifier: workspace:*
+        version: link:../../domains/users
+      '@tinkerbell/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@tinkerbell/omdb':
+        specifier: workspace:*
+        version: link:../../clients/omdb
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      '@tinkerbell/seerr':
+        specifier: workspace:*
+        version: link:../../clients/seerr
+      '@tinkerbell/tmdb':
+        specifier: workspace:*
+        version: link:../../clients/tmdb
+      croner:
+        specifier: ^9.0.0
+        version: 9.1.0
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+      p-map:
+        specifier: ^7.0.4
+        version: 7.0.4
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.2.0
+      sidequest:
+        specifier: ^1.14.0
+        version: 1.15.0(better-sqlite3@12.9.0)
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
