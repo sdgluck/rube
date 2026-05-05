@@ -1,4 +1,4 @@
-import type { HistoricalCollection } from "#domains/rule-history.ts";
+import type { HistoricalCollection } from "@tinkerbell/domain.rule-history";
 import { VIBE_HINTS, NAME_STYLE_HINTS, type RuleConfig } from "#commands/generate/config.ts";
 
 export function buildAiPrompt(args: {

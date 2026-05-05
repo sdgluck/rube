@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getEvents, getEventTypes } from "#domains/events.ts";
+import { getEvents, getEventTypes } from "@tinkerbell/domain.events";
 import { t, procedure } from "./_base.ts";
 
 export const eventsRouter = t.router({

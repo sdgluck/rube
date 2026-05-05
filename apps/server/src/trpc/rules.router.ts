@@ -7,7 +7,7 @@ import {
   deleteRule,
   setRuleLastRun,
   setRuleLastTest,
-} from "#domains/rules.ts";
+} from "@tinkerbell/domain.rules";
 import {
   getRuleProgress,
   clearProgress,
@@ -18,7 +18,7 @@ import {
   createTrackedContext,
   type RuleProgressState,
   type PersistedTestResult,
-} from "#domains/rule-progress.ts";
+} from "@tinkerbell/domain.rule-progress";
 import { errorMessage } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 

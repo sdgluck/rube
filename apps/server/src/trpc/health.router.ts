@@ -7,7 +7,7 @@ import {
   getHealthHistory,
   HEALTH_SERVICES,
   checkServiceHealth,
-} from "#domains/health.ts";
+} from "@tinkerbell/domain.health";
 import { t, procedure } from "./_base.ts";
 
 export const healthRouter = t.router({

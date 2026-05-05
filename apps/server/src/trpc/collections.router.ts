@@ -8,7 +8,7 @@ import {
   updateCollection,
   updateCollectionLabels,
   deleteCollection,
-} from "#domains/collections.ts";
+} from "@tinkerbell/domain.collections";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const collectionsRouter = t.router({

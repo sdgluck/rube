@@ -5,8 +5,8 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./trpc/index.ts";
 import { initJobs } from "./jobs/runner.ts";
 import { getConfig, setHealthReporter } from "@tinkerbell/core";
-import { ensureBuiltInPresets } from "./domains/overlays.ts";
-import { reportHealth } from "./domains/health.ts";
+import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
+import { reportHealth } from "@tinkerbell/domain.health";
 
 setHealthReporter(reportHealth);
 

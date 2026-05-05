@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getConfig } from "@tinkerbell/core";
-import { getPreviewForUser } from "#domains/preview.ts";
-import { shuffleAllSections } from "#domains/shuffle-hubs.ts";
+import { getPreviewForUser } from "@tinkerbell/domain.preview";
+import { shuffleAllSections } from "@tinkerbell/domain.shuffle-hubs";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const previewRouter = t.router({

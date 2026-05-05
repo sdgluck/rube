@@ -3,8 +3,8 @@ import { errorMessage } from "@tinkerbell/core";
 import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, getLlmConfig } from "@tinkerbell/core";
-import { reportHealth } from "#domains/health.ts";
-import { upsertCollectionByKey } from "#domains/collections.ts";
+import { reportHealth } from "@tinkerbell/domain.health";
+import { upsertCollectionByKey } from "@tinkerbell/domain.collections";
 import { z } from "zod";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 

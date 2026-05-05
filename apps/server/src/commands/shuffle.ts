@@ -1,7 +1,7 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig } from "@tinkerbell/core";
-import { shuffleSectionHubs } from "#domains/shuffle-hubs.ts";
+import { shuffleSectionHubs } from "@tinkerbell/domain.shuffle-hubs";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {

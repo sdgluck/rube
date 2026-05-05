@@ -1,7 +1,7 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig } from "@tinkerbell/core";
-import { syncMedia } from "#domains/media.ts";
+import { syncMedia } from "@tinkerbell/domain.media";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {

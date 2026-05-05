@@ -44,6 +44,54 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/domain.collections':
+        specifier: workspace:*
+        version: link:../../domains/collections
+      '@tinkerbell/domain.events':
+        specifier: workspace:*
+        version: link:../../domains/events
+      '@tinkerbell/domain.health':
+        specifier: workspace:*
+        version: link:../../domains/health
+      '@tinkerbell/domain.media':
+        specifier: workspace:*
+        version: link:../../domains/media
+      '@tinkerbell/domain.migration':
+        specifier: workspace:*
+        version: link:../../domains/migration
+      '@tinkerbell/domain.notifications':
+        specifier: workspace:*
+        version: link:../../domains/notifications
+      '@tinkerbell/domain.overlays':
+        specifier: workspace:*
+        version: link:../../domains/overlays
+      '@tinkerbell/domain.preview':
+        specifier: workspace:*
+        version: link:../../domains/preview
+      '@tinkerbell/domain.rule-history':
+        specifier: workspace:*
+        version: link:../../domains/rule-history
+      '@tinkerbell/domain.rule-progress':
+        specifier: workspace:*
+        version: link:../../domains/rule-progress
+      '@tinkerbell/domain.rules':
+        specifier: workspace:*
+        version: link:../../domains/rules
+      '@tinkerbell/domain.search':
+        specifier: workspace:*
+        version: link:../../domains/search
+      '@tinkerbell/domain.sections':
+        specifier: workspace:*
+        version: link:../../domains/sections
+      '@tinkerbell/domain.shuffle-hubs':
+        specifier: workspace:*
+        version: link:../../domains/shuffle-hubs
+      '@tinkerbell/domain.stats':
+        specifier: workspace:*
+        version: link:../../domains/stats
+      '@tinkerbell/domain.users':
+        specifier: workspace:*
+        version: link:../../domains/users
       '@tinkerbell/imdb':
         specifier: workspace:*
         version: link:../../clients/imdb
@@ -244,6 +292,310 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/collections:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.migration':
+        specifier: workspace:*
+        version: link:../migration
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/events:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/health:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.events':
+        specifier: workspace:*
+        version: link:../events
+      '@tinkerbell/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      '@tinkerbell/seerr':
+        specifier: workspace:*
+        version: link:../../clients/seerr
+      '@tinkerbell/tmdb':
+        specifier: workspace:*
+        version: link:../../clients/tmdb
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/media:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/migration:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/migrate':
+        specifier: workspace:*
+        version: link:../../packages/migrate
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/notifications:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/overlays:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/overlays':
+        specifier: workspace:*
+        version: link:../../packages/overlays
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/preview:
+    dependencies:
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/rule-history:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/rule-progress:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/rules:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/search:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/sections:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/shuffle-hubs:
+    dependencies:
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/stats:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/users:
+    dependencies:
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.collections':
+        specifier: workspace:*
+        version: link:../collections
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
     devDependencies:
       '@types/node':
         specifier: ^25.2.3

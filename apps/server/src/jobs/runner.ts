@@ -3,11 +3,11 @@ import { errorMessage } from "@tinkerbell/core";
 import { join } from "node:path";
 import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
-import { seedDefaultRules } from "#domains/rules.ts";
+import { seedDefaultRules } from "@tinkerbell/domain.rules";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
-import { emitEvent } from "#domains/events.ts";
-import { pruneHealthChecks, checkAllConfiguredServices } from "#domains/health.ts";
-import { syncRecentlyAdded, syncMostWatched } from "#domains/stats.ts";
+import { emitEvent } from "@tinkerbell/domain.events";
+import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
+import { syncRecentlyAdded, syncMostWatched } from "@tinkerbell/domain.stats";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 
 type Job = InferSelectModel<typeof jobs>;

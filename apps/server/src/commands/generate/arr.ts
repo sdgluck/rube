@@ -2,7 +2,7 @@ import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "@tinkerbell/core";
 import { errorMessage } from "@tinkerbell/core";
 import type { JobContext } from "@tinkerbell/core";
-import type { Rule } from "#domains/rules.ts";
+import type { Rule } from "@tinkerbell/domain.rules";
 import type { RuleConfig } from "./config.ts";
 import { fetchImdbChart, fetchImdbList } from "./sources/imdb.ts";
 import { lookupBelongsToCollection } from "./sources/tmdb.ts";

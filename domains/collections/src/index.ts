@@ -5,7 +5,7 @@
 import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
 import { db, collections } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { scanKometaState } from "./migration.ts";
+import { scanKometaState } from "@tinkerbell/domain.migration";
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 

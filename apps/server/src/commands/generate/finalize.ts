@@ -1,5 +1,5 @@
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { upsertCollectionByKey } from "#domains/collections.ts";
+import { upsertCollectionByKey } from "@tinkerbell/domain.collections";
 import type { JobContext } from "@tinkerbell/core";
 import { fetchAutoPoster } from "@tinkerbell/core";
 
