@@ -1,7 +1,7 @@
 import { getRecentHistory } from "../../../domains/rule-history.ts";
 import { buildAiPrompt, pickSampleItems } from "../ai/prompt.ts";
 import { parseAiCollections } from "../ai/parse.ts";
-import { askClaude, shuffled } from "../ai/claude.ts";
+import { askLlm, shuffled } from "../ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "../types.ts";
 
 export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<PendingCollection> {
@@ -46,8 +46,8 @@ export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<Pendin
       .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
       .join("\n");
 
-    ctx.log(`Asking Claude for curated collections...`);
-    const { text, tokensIn, tokensOut } = await askClaude(prompt, itemList, ctx.signal);
+    ctx.log(`Asking the LLM for curated collections...`);
+    const { text, tokensIn, tokensOut } = await askLlm(prompt, itemList, ctx.signal);
     onAiUsage?.(tokensIn, tokensOut);
     ctx.log("AI response:", text);
 
@@ -84,8 +84,8 @@ export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<Pendin
   }
 }
 
-// Re-exported so the dispatch loop can call askClaude → parse to also
+// Re-exported so the dispatch loop can call askLlm → parse to also
 // surface token usage in preview without re-implementing the handler.
-export { askClaude } from "../ai/claude.ts";
+export { askLlm } from "../ai/llm.ts";
 export { parseAiCollections } from "../ai/parse.ts";
 export { buildAiPrompt } from "../ai/prompt.ts";

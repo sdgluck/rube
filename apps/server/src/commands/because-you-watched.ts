@@ -1,8 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { errorMessage, extractClaudeText } from "../lib/util.ts";
+import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
+import { errorMessage } from "../lib/util.ts";
 import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
 import { plexHealthCallback } from "../lib/clients.ts";
-import { getConfig } from "../lib/config.ts";
+import { getConfig, getLlmConfig } from "../lib/config.ts";
 import { reportHealth } from "../domains/health.ts";
 import { z } from "zod";
 import type { JobContext, BywJobConfig } from "../lib/job-context.ts";
@@ -20,15 +20,15 @@ type AiCollection = z.infer<typeof aiCollectionSchema>;
 export default async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-  const ANTHROPIC_API_KEY = getConfig("global_anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
+  const llmConfig = getLlmConfig();
   const LIMIT = Math.min(config.limit ?? 10, 20);
 
   if (!PLEX_TOKEN) {
     throw new Error("Plex token is required. Configure it in Settings.");
   }
 
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error("Anthropic API key is required. Configure it in Settings.");
+  if (!llmConfig) {
+    throw new Error("LLM provider is not configured. Set one in Settings → AI.");
   }
 
   const client = createPlexClient({
@@ -147,13 +147,13 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
         item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
       );
 
-      ctx.log(`Asking Claude for "Because you watched" collections...`);
+      ctx.log(`Asking the LLM for "Because you watched" collections...`);
       const aiCollections: AiCollection[] = [];
       for (let i = 0; i < watchedTitles.length; i++) {
         const title = watchedTitles[i];
         ctx.log(`[${i + 1}/${watchedTitles.length}] Generating collection for "${title}"...`);
         try {
-          const col = await generateBYWCollection(ANTHROPIC_API_KEY, ctx, title, libraryItems, section.title);
+          const col = await generateBYWCollection(llmConfig, ctx, title, libraryItems, section.title);
           if (col) {
             aiCollections.push(col);
           }
@@ -247,26 +247,15 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
 }
 
 async function generateBYWCollection(
-  apiKey: string,
+  llmConfig: LlmConfig,
   ctx: JobContext,
   watchedTitle: string,
   libraryItems: PlexItem[],
   sectionTitle: string,
 ): Promise<AiCollection | null> {
-  const anthropic = new Anthropic({ apiKey });
-
   const itemList = libraryItems.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
 
-  let response;
-  try {
-    response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1024,
-      temperature: 1,
-      messages: [
-        {
-          role: "user",
-          content: `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
+  const prompt = `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
 
 Recently watched: ${watchedTitle}
 
@@ -282,21 +271,19 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 {"name":"Because you watched ${watchedTitle}","items":["Title (Year)","Title (Year)"]}
 
 Here is the full library:
-${itemList}`,
-        },
-      ],
-    });
-    reportHealth(
-      "Claude AI",
-      "ok",
-      `${response.model} — ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
-    );
+${itemList}`;
+
+  const client = createLlmClient(llmConfig);
+  let text: string;
+  try {
+    const res = await client.complete({ prompt, maxTokens: 1024, signal: ctx.signal });
+    reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
+    text = res.text;
   } catch (err) {
-    reportHealth("Claude AI", "error", errorMessage(err));
+    reportHealth("LLM", "error", errorMessage(err));
     throw err;
   }
 
-  const text = extractClaudeText(response);
   ctx.log("AI response:", text);
 
   const parsed = extractJSON(text);
