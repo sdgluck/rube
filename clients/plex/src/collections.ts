@@ -36,6 +36,7 @@ export function createCollectionsModule(http: PlexHttp) {
       thumb: meta.thumb || "",
       labels: (meta.Label || []).map((l: PlexLabel) => l.tag),
       smart: meta.smart === "1" || meta.smart === 1 || meta.smart === true,
+      content: meta.content || "",
       addedAt: meta.addedAt,
     };
   }
