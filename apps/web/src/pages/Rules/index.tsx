@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import ConfirmModal from "#/ConfirmModal";
-import DropdownButton from "#/DropdownButton";
-import EmptyState from "#/EmptyState";
+import ConfirmModal from "#components/ConfirmModal";
+import DropdownButton from "#components/DropdownButton";
+import EmptyState from "#components/EmptyState";
 import RuleWizard, {
   type AiNameStyle,
   type AiVibe,
   type RuleFormState,
   type SmartFilterGroup,
   DEFAULT_ARR_FORM,
-} from "#/RuleWizard";
-import { RulesSkeleton } from "#/Skeleton";
-import { useToast } from "#/Toast";
+} from "#pages/Rules/RuleWizard";
+import { RulesSkeleton } from "#components/Skeleton";
+import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
-import shared from "../Collections.module.css";
-import MigrationBanner from "../MigrationBanner";
+import shared from "#pages/Collections.module.css";
+import MigrationBanner from "./MigrationBanner";
 import BulkActionsBar from "./BulkActionsBar";
 import BulkEditModal from "./BulkEditModal";
 import { EMPTY_FORM, defaultLimitForType, typeHasLimit } from "./constants";

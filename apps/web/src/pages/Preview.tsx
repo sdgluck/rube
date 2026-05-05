@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import FadeImage from "#/FadeImage";
-import { ListSkeleton } from "#/Skeleton";
-import Spinner from "#/Spinner";
+import FadeImage from "#components/FadeImage";
+import { ListSkeleton } from "#components/Skeleton";
+import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import styles from "./Preview.module.css";
 

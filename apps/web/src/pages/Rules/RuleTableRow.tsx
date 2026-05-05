@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { useNavigate } from "react-router-dom";
-import ToggleSwitch from "#/ToggleSwitch";
+import ToggleSwitch from "#components/ToggleSwitch";
 import { CONFIG_DETAILS, CONFIG_SUMMARY, TYPE_BADGE, TYPE_LABELS } from "./constants";
 import RuleDetailRow from "./DetailRow";
 import StatusCell from "./StatusCell";

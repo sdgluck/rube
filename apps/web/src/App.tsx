@@ -1,310 +1,58 @@
-import { lazy, Suspense, useState, useCallback, useEffect, useRef } from "react";
-import { Routes, Route, NavLink, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
-import ErrorBoundary from "./ErrorBoundary";
-import ScrollRestoration from "./ScrollRestoration";
-import CommandPalette from "./CommandPalette";
-import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
-import useDocumentTitle from "./useDocumentTitle";
-import useKeyboardShortcuts from "./useKeyboardShortcuts";
-import Settings from "./pages/Settings";
-import Spinner from "./Spinner";
-import { PageSkeleton } from "./Skeleton";
-import { trpc } from "./trpc";
-import { VERSION, IS_BETA } from "./version";
-import styles from "./pages/Jobs.module.css";
+import { lazy, Suspense, useState, useCallback } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import ErrorBoundary from "#components/ErrorBoundary";
+import ScrollRestoration from "#layout/ScrollRestoration";
+import CommandPalette from "#components/CommandPalette";
+import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
+import useDocumentTitle from "#hooks/useDocumentTitle";
+import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
+import useMigrationCompletionInvalidator from "#hooks/useMigrationCompletionInvalidator";
+import Settings from "#pages/Settings/Settings";
+import Sidebar from "#layout/Sidebar";
+import BottomNav from "#layout/BottomNav";
+import { PageSkeleton } from "#components/Skeleton";
 
-const Stats = lazy(() => import("./pages/Stats"));
-const SettingsPlex = lazy(() => import("./pages/SettingsPlex"));
-const SettingsAi = lazy(() => import("./pages/SettingsAi"));
-const SettingsArrs = lazy(() => import("./pages/SettingsArrs"));
-const SettingsDatabases = lazy(() => import("./pages/SettingsDatabases"));
-const SettingsNotifications = lazy(() => import("./pages/SettingsNotifications"));
-const SettingsNotificationsDiscord = lazy(() => import("./pages/SettingsNotificationsDiscord"));
-const SettingsNotificationsGotify = lazy(() => import("./pages/SettingsNotificationsGotify"));
-const SettingsNotificationsLunaSea = lazy(() => import("./pages/SettingsNotificationsLunaSea"));
-const SettingsNotificationsPushbullet = lazy(() => import("./pages/SettingsNotificationsPushbullet"));
-const SettingsNotificationsPushover = lazy(() => import("./pages/SettingsNotificationsPushover"));
-const SettingsNotificationsSlack = lazy(() => import("./pages/SettingsNotificationsSlack"));
-const SettingsNotificationsTelegram = lazy(() => import("./pages/SettingsNotificationsTelegram"));
-const SettingsNotificationsWebhook = lazy(() => import("./pages/SettingsNotificationsWebhook"));
-const SettingsHealth = lazy(() => import("./pages/SettingsHealth"));
-const Collections = lazy(() => import("./pages/Collections"));
-const CollectionDetail = lazy(() => import("./pages/CollectionDetail"));
-const Rules = lazy(() => import("./pages/Rules"));
-const Media = lazy(() => import("./pages/Media"));
-const MediaDetail = lazy(() => import("./pages/MediaDetail"));
-const Jobs = lazy(() => import("./pages/Jobs"));
-const JobDetail = lazy(() => import("./pages/jobs/JobDetail"));
-const JobRun = lazy(() => import("./pages/JobRun"));
-const Users = lazy(() => import("./pages/Users"));
-const Overlays = lazy(() => import("./pages/Overlays"));
-const Events = lazy(() => import("./pages/Events"));
-const StressTest = lazy(() => import("./pages/StressTest"));
-const Preview = lazy(() => import("./pages/Preview"));
-const Changelog = lazy(() => import("./pages/Changelog"));
-const SettingsAbout = lazy(() => import("./pages/SettingsAbout"));
-const SettingsPosters = lazy(() => import("./pages/SettingsPosters"));
-const SettingsCredits = lazy(() => import("./pages/SettingsCredits"));
-const SettingsMigrate = lazy(() => import("./pages/SettingsMigrate"));
-
-function SidebarHealthDot() {
-  const query = trpc.health.status.useQuery(undefined, {
-    refetchInterval: 30000,
-    refetchOnWindowFocus: false,
-  });
-
-  const services = query.data;
-  if (!services) return null;
-
-  const configured = services.filter((s) => s.configured);
-  if (configured.length === 0) return null;
-
-  const withStatus = configured.filter((s) => s.status !== null);
-  if (withStatus.length === 0) return null;
-
-  const errorCount = withStatus.filter((s) => s.status === "error").length;
-
-  let colorClass = "health-dot-green";
-  if (errorCount === withStatus.length) {
-    colorClass = "health-dot-red";
-  } else if (errorCount > 0) {
-    colorClass = "health-dot-orange";
-  }
-
-  return (
-    <Link to="/settings/health" className="health-dot-link">
-      <span className={`health-dot ${colorClass}`} />
-      <div className="health-tooltip">
-        <div className="health-tooltip-list">
-          {withStatus.map((s) => (
-            <div key={s.service} className="health-tooltip-row">
-              <span className={`health-tooltip-dot ${s.status === "ok" ? "health-dot-green" : "health-dot-red"}`} />
-              <span className="health-tooltip-name">{s.service}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function SidebarStreamCount() {
-  const sessionsQuery = trpc.stats.sessions.useQuery(undefined, {
-    refetchInterval: 10000,
-    refetchOnWindowFocus: false,
-  });
-  const count = sessionsQuery.data?.length || 0;
-  if (count === 0) return null;
-  return <span className="stream-badge">{count}</span>;
-}
-
-function SidebarActiveJobs() {
-  const navigate = useNavigate();
-  const utils = trpc.useUtils();
-  const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
-  const cancelMutation = trpc.jobs.cancel.useMutation({
-    onSuccess: () => activeRunsQuery.refetch(),
-  });
-
-  const runs = activeRunsQuery.data;
-  const prevMigrateRunIds = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!runs) return;
-    const currentMigrateIds = new Set(runs.filter((r) => r.jobId === "migrate-collections").map((r) => r.id));
-    let completedAny = false;
-    for (const id of prevMigrateRunIds.current) {
-      if (!currentMigrateIds.has(id)) completedAny = true;
-    }
-    if (completedAny) {
-      utils.rules.list.invalidate();
-      utils.migration.status.invalidate();
-    }
-    prevMigrateRunIds.current = currentMigrateIds;
-  }, [runs, utils]);
-
-  if (!runs || runs.length === 0) return null;
-
-  return (
-    <div className={styles.sidebarJobs}>
-      <div className={styles.sidebarJobsTitle}>Running</div>
-      {runs.map((run) => (
-        <div key={run.id} className={styles.sidebarJob} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
-          <Spinner size="sm" variant="inverse" />
-          <span className={styles.sidebarJobName}>{run.jobName}</span>
-          {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
-          <button
-            className={styles.sidebarCancel}
-            onClick={(e) => {
-              e.stopPropagation();
-              cancelMutation.mutate({ runId: run.id });
-            }}
-            title="Cancel"
-          >
-            &times;
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
+const Stats = lazy(() => import("#pages/Stats"));
+const SettingsPlex = lazy(() => import("#pages/Settings/SettingsPlex"));
+const SettingsAi = lazy(() => import("#pages/Settings/SettingsAi"));
+const SettingsArrs = lazy(() => import("#pages/Settings/SettingsArrs"));
+const SettingsDatabases = lazy(() => import("#pages/Settings/SettingsDatabases"));
+const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/SettingsNotifications"));
+const SettingsNotificationsDiscord = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsDiscord"));
+const SettingsNotificationsGotify = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsGotify"));
+const SettingsNotificationsLunaSea = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsLunaSea"));
+const SettingsNotificationsPushbullet = lazy(
+  () => import("#pages/Settings/Notifications/SettingsNotificationsPushbullet"),
+);
+const SettingsNotificationsPushover = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsPushover"));
+const SettingsNotificationsSlack = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsSlack"));
+const SettingsNotificationsTelegram = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsTelegram"));
+const SettingsNotificationsWebhook = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsWebhook"));
+const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
+const Collections = lazy(() => import("#pages/Collections"));
+const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
+const Rules = lazy(() => import("#pages/Rules"));
+const Media = lazy(() => import("#pages/Media"));
+const MediaDetail = lazy(() => import("#pages/MediaDetail"));
+const Jobs = lazy(() => import("#pages/Jobs"));
+const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
+const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
+const Users = lazy(() => import("#pages/Users"));
+const Overlays = lazy(() => import("#pages/Overlays"));
+const Events = lazy(() => import("#pages/Events"));
+const StressTest = lazy(() => import("#pages/StressTest"));
+const Preview = lazy(() => import("#pages/Preview"));
+const Changelog = lazy(() => import("#pages/Changelog"));
+const SettingsAbout = lazy(() => import("#pages/Settings/SettingsAbout"));
+const SettingsPosters = lazy(() => import("#pages/Settings/SettingsPosters"));
+const SettingsCredits = lazy(() => import("#pages/Settings/SettingsCredits"));
+const SettingsMigrate = lazy(() => import("#pages/SettingsMigrate"));
 
 function LazyPage({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <div className="animated-page">{children}</div>
     </Suspense>
-  );
-}
-
-type NavItem = { to: string; label: string; badge?: "streams" };
-type NavSection = { label: string; items: NavItem[] };
-
-const NAV_SECTIONS: NavSection[] = [
-  {
-    label: "Dashboard",
-    items: [
-      { to: "/stats", label: "Stats", badge: "streams" },
-      { to: "/preview", label: "Preview" },
-    ],
-  },
-  {
-    label: "Library",
-    items: [
-      { to: "/collections", label: "Collections" },
-      { to: "/media", label: "Media" },
-      { to: "/overlays", label: "Overlays" },
-    ],
-  },
-  {
-    label: "Automation",
-    items: [
-      { to: "/rules", label: "Rules" },
-      { to: "/jobs", label: "Jobs" },
-    ],
-  },
-  {
-    label: "Admin",
-    items: [
-      { to: "/users", label: "Users" },
-      { to: "/events", label: "Events" },
-      { to: "/settings", label: "Settings" },
-    ],
-  },
-];
-
-// Routes that live in the bottom tab bar — excluded from the "More" sheet.
-const BOTTOM_TAB_ROUTES = new Set(["/stats", "/collections", "/jobs"]);
-
-const MORE_SECTIONS: NavSection[] = NAV_SECTIONS.map((s) => ({
-  label: s.label,
-  items: s.items.filter((i) => !BOTTOM_TAB_ROUTES.has(i.to)),
-})).filter((s) => s.items.length > 0);
-
-const MORE_PAGES = MORE_SECTIONS.flatMap((s) => s.items);
-
-function BottomNav() {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const location = useLocation();
-  const closeMore = useCallback(() => setMoreOpen(false), []);
-
-  // Close sheet on navigation
-  useEffect(() => {
-    setMoreOpen(false);
-  }, [location.pathname]);
-
-  const isMoreActive = MORE_PAGES.some((p) => location.pathname.startsWith(p.to));
-
-  return (
-    <>
-      {/* Bottom sheet overlay */}
-      {moreOpen && <div className="bottom-sheet-overlay" onClick={closeMore} />}
-      {/* Bottom sheet */}
-      <div className={`bottom-sheet ${moreOpen ? "bottom-sheet-open" : ""}`}>
-        <div className="bottom-sheet-handle" />
-        <nav className="bottom-sheet-nav">
-          {MORE_SECTIONS.map((section) => (
-            <div key={section.label} className="bottom-sheet-section">
-              <div className="nav-section-title">{section.label}</div>
-              {section.items.map((p) => (
-                <NavLink key={p.to} to={p.to} className="bottom-sheet-link" onClick={closeMore}>
-                  {p.label}
-                </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
-      </div>
-      {/* Bottom tab bar */}
-      <nav className="bottom-nav">
-        <NavLink to="/stats" className="bottom-nav-item">
-          <svg
-            className="bottom-nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 20V10M12 20V4M6 20v-6" />
-          </svg>
-          <span className="bottom-nav-label">Stats</span>
-          <SidebarStreamCount />
-        </NavLink>
-        <NavLink to="/collections" className="bottom-nav-item">
-          <svg
-            className="bottom-nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
-          <span className="bottom-nav-label">Collections</span>
-        </NavLink>
-        <NavLink to="/jobs" className="bottom-nav-item">
-          <svg
-            className="bottom-nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-          </svg>
-          <span className="bottom-nav-label">Jobs</span>
-        </NavLink>
-        <button
-          className={`bottom-nav-item ${isMoreActive ? "active" : ""}`}
-          onClick={() => setMoreOpen((o) => !o)}
-          type="button"
-        >
-          <svg
-            className="bottom-nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="5" r="1.5" />
-            <circle cx="12" cy="12" r="1.5" />
-            <circle cx="12" cy="19" r="1.5" />
-          </svg>
-          <span className="bottom-nav-label">More</span>
-        </button>
-      </nav>
-    </>
   );
 }
 
@@ -322,67 +70,15 @@ export default function App() {
 
   useDocumentTitle();
   useKeyboardShortcuts(setShortcutsHelpOpen, openPalette);
+  useMigrationCompletionInvalidator();
 
   return (
     <div className="layout">
       <button className="sidebar-toggle" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle menu">
-        {sidebarOpen ? "\u2715" : "\u2630"}
+        {sidebarOpen ? "✕" : "☰"}
       </button>
       <div className={`sidebar-overlay ${sidebarOpen ? "sidebar-overlay-visible" : ""}`} onClick={closeSidebar} />
-      <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <h1 className="sidebar-title">
-          Tinkerbell
-          {IS_BETA && (
-            <Link
-              to="/changelog"
-              className="version-pill"
-              title={`v${VERSION} — view changelog`}
-              onClick={closeSidebar}
-            >
-              beta
-            </Link>
-          )}
-          <SidebarHealthDot />
-        </h1>
-        <Link to="/changelog" className="sidebar-version" onClick={closeSidebar}>
-          v{VERSION}
-        </Link>
-        <button
-          type="button"
-          className="sidebar-search"
-          onClick={() => {
-            closeSidebar();
-            openPalette();
-          }}
-          title="Search (⌘K)"
-        >
-          <span className="sidebar-search-icon" aria-hidden="true">
-            ⌕
-          </span>
-          <span className="sidebar-search-label">Search…</span>
-          <span className="sidebar-search-kbd">⌘K</span>
-        </button>
-        <hr className="sidebar-search-divider" />
-        <nav>
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.label} className="nav-section">
-              <div className="nav-section-title">{section.label}</div>
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={item.badge ? "nav-link nav-link-with-badge" : "nav-link"}
-                  onClick={closeSidebar}
-                >
-                  {item.label}
-                  {item.badge === "streams" && <SidebarStreamCount />}
-                </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <SidebarActiveJobs />
-      </aside>
+      <Sidebar open={sidebarOpen} onClose={closeSidebar} onOpenPalette={openPalette} />
       <BottomNav />
       <main className="content">
         <ScrollRestoration />

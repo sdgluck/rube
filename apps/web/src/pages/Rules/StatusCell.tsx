@@ -1,5 +1,5 @@
-import RelativeTime from "#/RelativeTime";
-import Spinner from "#/Spinner";
+import RelativeTime from "#components/RelativeTime";
+import Spinner from "#components/Spinner";
 import styles from "./Rules.module.css";
 import type { RuleRow } from "./types";
 
@@ -12,7 +12,14 @@ interface RuleStatusCellProps {
   onToggle: () => void;
 }
 
-export default function StatusCell({ rule, isTesting, isRunning, expanded, expandable, onToggle }: RuleStatusCellProps) {
+export default function StatusCell({
+  rule,
+  isTesting,
+  isRunning,
+  expanded,
+  expandable,
+  onToggle,
+}: RuleStatusCellProps) {
   if (isRunning) {
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>

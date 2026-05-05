@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { trpc } from "#/trpc";
-import { useToast } from "#/Toast";
+import { useToast } from "#components/Toast";
 import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "#lib/PosterCanvas";
-import ConfirmModal from "#/ConfirmModal";
-import { PageSkeleton } from "#/Skeleton";
-import Spinner from "#/Spinner";
+import ConfirmModal from "#components/ConfirmModal";
+import { PageSkeleton } from "#components/Skeleton";
+import Spinner from "#components/Spinner";
 import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@tinkerbell/contracts";
 import styles from "./Overlays.module.css";
 

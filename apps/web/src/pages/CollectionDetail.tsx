@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
-import ConfirmModal from "#/ConfirmModal";
-import { DetailSkeleton } from "#/Skeleton";
-import EmptyState from "#/EmptyState";
-import FadeImage from "#/FadeImage";
-import RelativeTime from "#/RelativeTime";
-import { useToast } from "#/Toast";
-import useSwipeBack from "#/useSwipeBack";
+import ConfirmModal from "#components/ConfirmModal";
+import { DetailSkeleton } from "#components/Skeleton";
+import EmptyState from "#components/EmptyState";
+import FadeImage from "#components/FadeImage";
+import RelativeTime from "#components/RelativeTime";
+import { useToast } from "#components/Toast";
+import useSwipeBack from "#hooks/useSwipeBack";
 import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
-import SmartFiltersEditor from "./SmartFiltersEditor";
+import SmartFiltersEditor from "#components/SmartFiltersEditor";
 
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];

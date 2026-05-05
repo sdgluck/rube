@@ -5,7 +5,10 @@
   "imports": {
     "#/*": "./src/*",
     "#pages/*": "./src/pages/*",
-    "#lib/*": "./src/lib/*"
+    "#lib/*": "./src/lib/*",
+    "#components/*": "./src/components/*",
+    "#hooks/*": "./src/hooks/*",
+    "#layout/*": "./src/layout/*"
   },
   "scripts": {
     "dev": "portless web.tinkerbell vite",

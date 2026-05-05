@@ -1,5 +1,5 @@
 import type { SmartFilterGroup, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
-import { type RuleFormState, DEFAULT_ARR_FORM } from "#/RuleWizard";
+import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
 import styles from "./Rules.module.css";
 
 function summarizeFilter(node: SmartFilterNode, isRoot: boolean): string {

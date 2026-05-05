@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import shared from "../Collections.module.css";
-import modalStyles from "#/ConfirmModal.module.css";
+import shared from "#pages/Collections.module.css";
+import modalStyles from "#components/ConfirmModal.module.css";
 
 interface BulkEditModalProps {
   eligibleCount: number;

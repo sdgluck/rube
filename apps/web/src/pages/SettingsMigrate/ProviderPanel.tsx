@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
-import { useToast } from "#/Toast";
-import { FormSkeleton } from "#/Skeleton";
-import RelativeTime from "#/RelativeTime";
-import styles from "../Settings.module.css";
+import { useToast } from "#components/Toast";
+import { FormSkeleton } from "#components/Skeleton";
+import RelativeTime from "#components/RelativeTime";
+import styles from "#pages/Settings/Settings.module.css";
 
 interface ProviderPanelProps {
   providerId: string;

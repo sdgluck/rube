@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
-import { UsersSkeleton } from "#/Skeleton";
-import EmptyState from "#/EmptyState";
-import RelativeTime from "#/RelativeTime";
-import { useToast } from "#/Toast";
+import { UsersSkeleton } from "#components/Skeleton";
+import EmptyState from "#components/EmptyState";
+import RelativeTime from "#components/RelativeTime";
+import { useToast } from "#components/Toast";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Users.module.css";
 

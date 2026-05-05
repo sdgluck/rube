@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "#/trpc";
-import { FormSkeleton } from "#/Skeleton";
-import styles from "../Settings.module.css";
+import { FormSkeleton } from "#components/Skeleton";
+import styles from "#pages/Settings/Settings.module.css";
 import ProviderPanel from "./ProviderPanel.tsx";
 
 /**
