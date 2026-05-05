@@ -13,6 +13,8 @@ import { tmdbFranchisesHandler } from "./handlers/tmdb-franchises.ts";
 import { yearGroupedHandler } from "./handlers/year-grouped.ts";
 import { mediaGroupedHandler } from "./handlers/media-grouped.ts";
 import { keywordGroupedHandler } from "./handlers/keyword-grouped.ts";
+import { listSourceHandler } from "./handlers/list-source.ts";
+import { smartFilterHandler } from "./handlers/smart-filter.ts";
 
 /**
  * Pick the handler for a given rule type. Returning null is a real case —
@@ -62,6 +64,10 @@ export function handlerForRule(ruleType: string): Handler | null {
       return rtTopRatedHandler;
     case "seerr_requests":
       return seerrRequestsHandler;
+    case "list_source":
+      return listSourceHandler;
+    case "smart_filter":
+      return smartFilterHandler;
     default:
       return null;
   }

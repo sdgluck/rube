@@ -5,7 +5,7 @@
 import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
 import { db, collections } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { scanKometaState } from "@tinkerbell/domain.migration";
+import { scanAllProviders } from "@tinkerbell/domain.migration";
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 
@@ -42,6 +42,7 @@ export async function upsertCollectionByKey(
     addedAt: detail.addedAt ?? null,
     thumb: detail.thumb,
     smart: detail.smart ? 1 : 0,
+    smartFilter: detail.smart ? detail.content : "",
     syncedAt: now,
   };
   db.insert(collections).values(values).onConflictDoUpdate({ target: collections.plexRatingKey, set: values }).run();
@@ -58,6 +59,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
     for (const col of colls) {
       const detail = await client.getCollectionDetail(col.ratingKey);
 
+      const smartFilter = detail.smart ? detail.content : "";
       db.insert(collections)
         .values({
           plexRatingKey: col.ratingKey,
@@ -70,6 +72,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
           addedAt: detail.addedAt ?? null,
           thumb: detail.thumb,
           smart: detail.smart ? 1 : 0,
+          smartFilter,
           syncedAt: now,
         })
         .onConflictDoUpdate({
@@ -84,6 +87,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
             addedAt: detail.addedAt ?? null,
             thumb: detail.thumb,
             smart: detail.smart ? 1 : 0,
+            smartFilter,
             syncedAt: now,
           },
         })
@@ -97,13 +101,11 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
   const result = db.delete(collections).where(lt(collections.syncedAt, now)).run();
   const removed = Number(result.changes ?? 0);
 
-  // Refresh the Kometa migration scan so the banner / Settings → Migrate
-  // page reflects the freshly-synced label set without an explicit refetch.
-  try {
-    scanKometaState();
-  } catch (err) {
-    console.warn("[collections] Failed to refresh Kometa migration state:", err);
-  }
+  // Refresh every migration provider's scan so the banner / Settings →
+  // Migrate page reflects the freshly-synced state without an explicit
+  // refetch. Per-provider failures are swallowed inside scanAllProviders;
+  // API-backed providers (MDBList, Trakt) opt out of this auto-scan path.
+  await scanAllProviders();
 
   return { synced, removed };
 }

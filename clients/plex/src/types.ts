@@ -61,6 +61,8 @@ export interface PlexCollectionDetail {
   thumb: string;
   labels: string[];
   smart: boolean;
+  /** Smart-collection filter URI (`/library/sections/N/all?…`). Empty for non-smart collections. */
+  content: string;
   addedAt?: number;
 }
 
