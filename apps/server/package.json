@@ -3,56 +3,20 @@
   "version": "0.4.1",
   "private": true,
   "type": "module",
-  "imports": {
-    "#trpc/*": "./src/trpc/*"
-  },
   "scripts": {
     "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=src --watch-path=../../packages/overlays/src --watch-path=../../packages/db/src --watch src/server.ts",
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@sidequest/sqlite-backend": "^1.14.0",
-    "@tinkerbell/arr": "workspace:*",
-    "@tinkerbell/domain.collections": "workspace:*",
     "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",
-    "@tinkerbell/domain.media": "workspace:*",
-    "@tinkerbell/domain.migration": "workspace:*",
-    "@tinkerbell/domain.notifications": "workspace:*",
     "@tinkerbell/domain.overlays": "workspace:*",
-    "@tinkerbell/domain.preview": "workspace:*",
-    "@tinkerbell/domain.rule-history": "workspace:*",
-    "@tinkerbell/domain.rule-progress": "workspace:*",
-    "@tinkerbell/domain.rules": "workspace:*",
-    "@tinkerbell/domain.search": "workspace:*",
-    "@tinkerbell/domain.sections": "workspace:*",
-    "@tinkerbell/domain.shuffle-hubs": "workspace:*",
-    "@tinkerbell/domain.stats": "workspace:*",
-    "@tinkerbell/domain.users": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/imdb": "workspace:*",
     "@tinkerbell/jobs": "workspace:*",
-    "@tinkerbell/llm": "workspace:*",
-    "@tinkerbell/migrate": "workspace:*",
-    "@tinkerbell/omdb": "workspace:*",
-    "@tinkerbell/overlays": "workspace:*",
-    "@tinkerbell/plex": "workspace:*",
-    "@tinkerbell/posters": "workspace:*",
-    "@tinkerbell/seerr": "workspace:*",
-    "@tinkerbell/tmdb": "workspace:*",
-    "@trpc/server": "^11.10.0",
-    "croner": "^9.0.0",
-    "drizzle-orm": "^0.45.1",
-    "p-map": "^7.0.4",
-    "p-queue": "^9.1.0",
-    "sharp": "^0.34.5",
-    "sidequest": "^1.14.0",
-    "zod": "^4.3.6"
+    "@tinkerbell/trpc": "workspace:*",
+    "@trpc/server": "^11.10.0"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
-    "@types/sharp": "^0.32.0",
     "portless": "^0.12.0",
     "typescript": "^5.9.3"
   }
