@@ -5,8 +5,7 @@
   "imports": {
     "#/*": "./src/*",
     "#pages/*": "./src/pages/*",
-    "#lib/*": "./src/lib/*",
-    "#server/*": "../server/src/*"
+    "#lib/*": "./src/lib/*"
   },
   "scripts": {
     "dev": "portless web.tinkerbell vite",
@@ -17,6 +16,7 @@
     "@tanstack/react-query": "^5.90.21",
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
+    "@tinkerbell/trpc": "workspace:*",
     "@trpc/client": "^11.10.0",
     "@trpc/react-query": "^11.10.0",
     "@trpc/server": "^11.10.0",
