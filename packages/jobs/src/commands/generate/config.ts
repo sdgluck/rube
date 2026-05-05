@@ -12,6 +12,10 @@ export const ruleConfigSchema = z.object({
   sections: z.array(z.string()).optional(),
   chart: z.string().optional(),
   listId: z.string().optional(),
+  /** list_source: which external list provider supplies the items. */
+  listProvider: z.enum(["mdblist", "trakt", "imdb"]).optional(),
+  /** list_source: optional override for the generated collection name. */
+  collectionName: z.string().optional(),
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
   arr: z
