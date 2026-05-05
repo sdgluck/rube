@@ -18,6 +18,14 @@ export const configSchema = z.object({
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
   global_anthropic_api_key: z.string(),
+  global_llm: z.object({
+    provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),
+    model: z.string(),
+    apiKey: z.string().optional(),
+    baseUrl: z.string().url().optional(),
+    maxTokens: z.number().int().positive().optional(),
+    temperature: z.number().min(0).max(2).optional(),
+  }),
   global_radarr_url: z.string(),
   global_radarr_api_key: z.string(),
   global_sonarr_url: z.string(),
@@ -114,6 +122,25 @@ export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): v
 
 export function deleteConfig(key: ConfigKey): void {
   db.delete(config).where(eq(config.key, key)).run();
+}
+
+/**
+ * Resolve the LLM provider config, falling back to the legacy
+ * `global_anthropic_api_key` slot when `global_llm` hasn't been written yet.
+ * Returns undefined when no provider is configured.
+ */
+export function getLlmConfig(): ConfigValue<"global_llm"> | undefined {
+  const explicit = getConfig("global_llm");
+  if (explicit) return explicit;
+  const legacyKey = getConfig("global_anthropic_api_key");
+  if (legacyKey) {
+    return {
+      provider: "anthropic",
+      model: "claude-sonnet-4-5-20250929",
+      apiKey: legacyKey,
+    };
+  }
+  return undefined;
 }
 
 export function getAllConfig(): Partial<z.infer<ConfigSchema>> {

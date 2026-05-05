@@ -2,8 +2,9 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "../lib/util.ts";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "./events.ts";
-import { getAllConfig, configSchema } from "../lib/config.ts";
+import { getAllConfig, getLlmConfig, configSchema } from "../lib/config.ts";
 import { createPlexClient } from "@tinkerbell/plex";
+import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
@@ -11,7 +12,7 @@ type ConfigMap = Partial<z.infer<typeof configSchema>>;
 export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigMap) => boolean }> = [
   { service: "Plex", configuredFn: (c) => !!(c.global_plex_url && c.global_plex_token) },
   { service: "Plex.tv", configuredFn: (c) => !!c.global_plex_token },
-  { service: "Claude AI", configuredFn: (c) => !!c.global_anthropic_api_key },
+  { service: "LLM", configuredFn: (c) => !!c.global_llm || !!c.global_anthropic_api_key },
   { service: "OMDB", configuredFn: (c) => !!c.global_omdb_api_key },
   { service: "IMDb", configuredFn: () => true },
   { service: "Radarr", configuredFn: (c) => !!(c.global_radarr_url && c.global_radarr_api_key) },
@@ -62,16 +63,12 @@ export async function checkServiceHealth(service: string): Promise<void> {
       reportHealth("Plex.tv", "ok", `GET /api/v2/user → ${res.status}`);
       break;
     }
-    case "Claude AI": {
-      if (!cfg.global_anthropic_api_key) throw new Error("Not configured");
-      const { default: Anthropic } = await import("@anthropic-ai/sdk");
-      const anthropic = new Anthropic({ apiKey: cfg.global_anthropic_api_key });
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 1,
-        messages: [{ role: "user", content: "hi" }],
-      });
-      reportHealth("Claude AI", "ok", `${response.model} — health check OK`);
+    case "LLM": {
+      const llm = getLlmConfig();
+      if (!llm) throw new Error("Not configured");
+      const client = createLlmClient(llm);
+      const res = await client.ping();
+      reportHealth("LLM", "ok", `${res.provider}:${res.model} — health check OK`);
       break;
     }
     case "OMDB": {

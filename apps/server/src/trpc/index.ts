@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createLlmClient } from "@tinkerbell/llm";
 import { errorMessage } from "../lib/util.ts";
 import { syncSections, getLocalSections } from "../domains/sections.ts";
 import { reportHealth, testArrConnection } from "../domains/health.ts";
@@ -195,6 +196,27 @@ export const appRouter = t.router({
     }),
 
   notificationEventTypes: procedure.query(() => EVENT_TYPES),
+
+  testLlm: procedure
+    .input(
+      z.object({
+        provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),
+        model: z.string().min(1),
+        apiKey: z.string().optional(),
+        baseUrl: z.string().url().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const client = createLlmClient(input);
+        const res = await client.ping();
+        reportHealth("LLM", "ok", `${res.provider}:${res.model} — test ok`);
+        return { ok: true as const, model: res.model, provider: res.provider };
+      } catch (err) {
+        reportHealth("LLM", "error", errorMessage(err));
+        return { ok: false as const, error: errorMessage(err) };
+      }
+    }),
 });
 
 export type AppRouter = typeof appRouter;
