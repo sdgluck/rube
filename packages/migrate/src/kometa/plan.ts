@@ -32,6 +32,7 @@ const BUCKET_LABEL: Record<BucketKind, string> = {
   seasonal: "Seasonal",
   universe: "Universes",
   award: "Awards",
+  list: "External Lists",
 };
 
 /** Short note shown for buckets we recognize but don't have a rule type for yet. */

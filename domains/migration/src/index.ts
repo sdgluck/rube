@@ -4,25 +4,31 @@ import {
   type BucketKind,
   type CollectionInput,
   type MigrationPlan,
-  type MigrationProvider,
+  type PlanItem,
 } from "@tinkerbell/migrate";
 import { deleteConfig, getConfig, setConfig } from "@tinkerbell/core";
 
 /**
- * Server-side wrapper around a `MigrationProvider`. Adds the bits the pure
- * package can't know about: human label, how to load source data, and the
- * current bucket → Tinkerbell rule type mapping (which depends on which
- * rule types have shipped).
+ * Server-side wrapper around a migration source. Each provider owns its
+ * own scan + plan logic so the registry is just routing — sources whose
+ * data lives in already-synced Plex tables (Kometa) coexist with
+ * sources whose data lives in an external API (MDBList, Trakt) without
+ * forcing one shape on the other.
  */
 export interface ProviderRuntime {
   id: string;
   /** Display label for UI (banner, settings page tab). */
   label: string;
-  provider: MigrationProvider;
-  /** Pull the raw input the provider's `detect` will filter. */
-  loadSource(): CollectionInput[];
-  /** Bucket → Tinkerbell rule type. Anything missing falls into `future`. */
-  supportedRuleTypes: Partial<Record<BucketKind, string>>;
+  /**
+   * True if this provider should be scanned on every collections sync.
+   * Set false for API-backed providers so the cron sync doesn't fan out
+   * to external services on every run.
+   */
+  autoScan: boolean;
+  /** Cheap re-scan: re-counts source items. May be sync or async. */
+  scan(): Promise<ProviderScanResult> | ProviderScanResult;
+  /** Build a fresh migration plan. May be expensive for API providers. */
+  buildPlan(): Promise<MigrationPlan> | MigrationPlan;
 }
 
 export interface ProviderScanResult {
@@ -50,6 +56,8 @@ export interface MigrationStatus {
   shouldShowBanner: boolean;
 }
 
+// ─── Kometa runtime ──────────────────────────────────────────────────────
+
 function loadKometaCollectionInputs(): CollectionInput[] {
   const rows = db
     .select({
@@ -71,11 +79,6 @@ function loadKometaCollectionInputs(): CollectionInput[] {
   }));
 }
 
-/**
- * Phase 1 mapping for the Kometa provider. Buckets not in this map fall
- * through to `future` in the plan and surface in the UI as "supported in a
- * later release". Extend as new rule types land.
- */
 const KOMETA_BUCKET_TO_RULE_TYPE: Partial<Record<BucketKind, string>> = {
   studio: "studios",
   network: "networks",
@@ -100,13 +103,82 @@ const KOMETA_BUCKET_TO_RULE_TYPE: Partial<Record<BucketKind, string>> = {
 const KOMETA_RUNTIME: ProviderRuntime = {
   id: "kometa",
   label: "Kometa",
-  provider: kometaProvider,
-  loadSource: loadKometaCollectionInputs,
-  supportedRuleTypes: KOMETA_BUCKET_TO_RULE_TYPE,
+  // Sourced from already-synced Plex collections — cheap to recount on
+  // every collections sync.
+  autoScan: true,
+  scan(): ProviderScanResult {
+    const detected = kometaProvider.detect(loadKometaCollectionInputs());
+    return summariseBySection(detected);
+  },
+  buildPlan(): MigrationPlan {
+    const all = loadKometaCollectionInputs();
+    const detected = kometaProvider.detect(all);
+    const classified = kometaProvider.classify(detected);
+    return kometaProvider.buildPlan(classified, { supportedRuleTypes: KOMETA_BUCKET_TO_RULE_TYPE });
+  },
 };
+
+// ─── MDBList runtime ─────────────────────────────────────────────────────
+
+interface MdbListUserList {
+  id: number;
+  name: string;
+  /** Owner's username — together with `name` forms the slug fallback. */
+  user_name?: string;
+  /** Item count if the API returned one; we don't fetch list contents here. */
+  items?: number;
+  mediatype?: string;
+}
+
+async function fetchMdbUserLists(): Promise<MdbListUserList[]> {
+  const apiKey = getConfig("global_mdblist_api_key");
+  if (!apiKey) return [];
+  const url = `https://api.mdblist.com/lists/user?apikey=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`MDBList ${res.status} ${res.statusText}`);
+  const data = (await res.json()) as MdbListUserList[] | { error: string };
+  if (!Array.isArray(data)) throw new Error(`MDBList: ${data.error ?? "unexpected response"}`);
+  return data;
+}
+
+const MDBLIST_RUNTIME: ProviderRuntime = {
+  id: "mdblist",
+  label: "MDBList",
+  // Hits the MDBList API — only run on demand from the Settings → Migrate
+  // tab, never from the cron sync hook.
+  autoScan: false,
+  async scan(): Promise<ProviderScanResult> {
+    const lists = await fetchMdbUserLists();
+    return { count: lists.length, scannedAt: Date.now(), bySection: [] };
+  },
+  async buildPlan(): Promise<MigrationPlan> {
+    const lists = await fetchMdbUserLists();
+    const proposed: PlanItem[] = lists.map((list) => ({
+      key: `mdblist::${list.id}`,
+      bucket: "list" as const,
+      ruleType: "list_source",
+      ruleName: list.name,
+      // External lists aren't tied to a Plex section; the user picks which
+      // sections the rule runs against on the Rules page after migration.
+      sectionId: "*",
+      sectionTitle: "All sections",
+      ruleConfig: {
+        listProvider: "mdblist",
+        listId: list.user_name ? `${list.user_name}/${list.name}` : String(list.id),
+      },
+      sampleNames: [list.name],
+      replacesCount: 0,
+      replacesRatingKeys: [],
+    }));
+    return { proposed, future: [], unmappable: [], totalKometaCollections: lists.length };
+  },
+};
+
+// ─── Registry ────────────────────────────────────────────────────────────
 
 const REGISTRY: Record<string, ProviderRuntime> = {
   [KOMETA_RUNTIME.id]: KOMETA_RUNTIME,
+  [MDBLIST_RUNTIME.id]: MDBLIST_RUNTIME,
 };
 
 export function listProviders(): ProviderRuntime[] {
@@ -117,6 +189,19 @@ export function getProvider(id: string): ProviderRuntime {
   const runtime = REGISTRY[id];
   if (!runtime) throw new Error(`Unknown migration provider: ${id}`);
   return runtime;
+}
+
+// ─── Shared helpers ──────────────────────────────────────────────────────
+
+function summariseBySection(items: CollectionInput[]): ProviderScanResult {
+  const sectionMap = new Map<string, { sectionId: string; sectionTitle: string; count: number }>();
+  for (const c of items) {
+    const existing = sectionMap.get(c.sectionId);
+    if (existing) existing.count++;
+    else sectionMap.set(c.sectionId, { sectionId: c.sectionId, sectionTitle: c.sectionTitle, count: 1 });
+  }
+  const bySection = [...sectionMap.values()].sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle));
+  return { count: items.length, scannedAt: Date.now(), bySection };
 }
 
 /**
@@ -161,38 +246,31 @@ function migrateLegacyKometaConfig(): void {
   }
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────
+
 /**
  * Re-scan source data for the given provider and persist the summary in
- * config. Cheap to call from any sync hook.
+ * config. Async because some providers (MDBList, Trakt) hit external APIs.
  */
-export function scanProviderState(providerId: string): ProviderScanResult {
+export async function scanProviderState(providerId: string): Promise<ProviderScanResult> {
   migrateLegacyKometaConfig();
   const runtime = getProvider(providerId);
-  const detected = runtime.provider.detect(runtime.loadSource());
-
-  const sectionMap = new Map<string, { sectionId: string; sectionTitle: string; count: number }>();
-  for (const c of detected) {
-    const existing = sectionMap.get(c.sectionId);
-    if (existing) existing.count++;
-    else sectionMap.set(c.sectionId, { sectionId: c.sectionId, sectionTitle: c.sectionTitle, count: 1 });
-  }
-  const bySection = [...sectionMap.values()].sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle));
-
-  const result: ProviderScanResult = {
-    count: detected.length,
-    scannedAt: Date.now(),
-    bySection,
-  };
+  const result = await runtime.scan();
   const all = getConfig("migration_state") ?? {};
   setConfig("migration_state", { ...all, [providerId]: result });
   return result;
 }
 
-/** Re-scan every registered provider. Called from sync hooks. */
-export function scanAllProviders(): void {
+/**
+ * Re-scan every registered provider that opts into auto-scanning. Called
+ * from sync hooks. Providers whose `scan()` hits external APIs (MDBList,
+ * Trakt) opt out and are only refreshed from explicit Settings actions.
+ */
+export async function scanAllProviders(): Promise<void> {
   for (const runtime of listProviders()) {
+    if (!runtime.autoScan) continue;
     try {
-      scanProviderState(runtime.id);
+      await scanProviderState(runtime.id);
     } catch (err) {
       console.warn(`[migration] Failed to scan provider ${runtime.id}:`, err);
     }
@@ -245,14 +323,6 @@ export function markProviderCompleted(providerId: string): void {
   setConfig("migration_completed_at", { ...all, [providerId]: Date.now() });
 }
 
-/**
- * Build a fresh plan for a provider from its current source data. Pure
- * delegation to the migrate package — the bucket-to-rule-type map is the
- * only piece that lives server-side.
- */
-export function buildProviderPlan(providerId: string): MigrationPlan {
-  const runtime = getProvider(providerId);
-  const detected = runtime.provider.detect(runtime.loadSource());
-  const classified = runtime.provider.classify(detected);
-  return runtime.provider.buildPlan(classified, { supportedRuleTypes: runtime.supportedRuleTypes });
+export async function buildProviderPlan(providerId: string): Promise<MigrationPlan> {
+  return getProvider(providerId).buildPlan();
 }

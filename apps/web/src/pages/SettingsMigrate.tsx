@@ -94,6 +94,12 @@ function ProviderPanel({ providerId, providerLabel }: { providerId: string; prov
     return planQuery.data.proposed.filter((p) => selected.has(p.key)).reduce((sum, p) => sum + p.replacesCount, 0);
   }, [planQuery.data, selected]);
 
+  // Some providers (MDBList, Trakt) don't replace existing Plex collections
+  // — there's nothing to delete, so the toggle is hidden entirely.
+  const planCanDeleteOriginals = useMemo(() => {
+    return planQuery.data?.proposed.some((p) => p.replacesCount > 0) ?? false;
+  }, [planQuery.data]);
+
   const handleScan = async () => {
     setScanning(true);
     try {
@@ -112,8 +118,9 @@ function ProviderPanel({ providerId, providerLabel }: { providerId: string; prov
       addToast("Select at least one rule to migrate", "error");
       return;
     }
+    const willDelete = planCanDeleteOriginals && deleteOriginals;
     if (
-      deleteOriginals &&
+      willDelete &&
       !confirm(
         `Delete ${totalSelectedReplaces} ${providerLabel} collection(s) from Plex after creating the rules? This cannot be undone.`,
       )
@@ -126,7 +133,7 @@ function ProviderPanel({ providerId, providerLabel }: { providerId: string; prov
       const result = await runMutation.mutateAsync({
         providerId,
         selectedKeys: [...selected],
-        deleteOriginals,
+        deleteOriginals: willDelete,
       });
       addToast("Migration started", "success");
       navigate(`/jobs/runs/${result.runId}`);
@@ -266,18 +273,22 @@ function ProviderPanel({ providerId, providerLabel }: { providerId: string; prov
 
       <fieldset className={styles.group}>
         <legend className={styles.groupTitle}>Run migration</legend>
-        <label className={styles.field} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <input type="checkbox" checked={deleteOriginals} onChange={(e) => setDeleteOriginals(e.target.checked)} />
-          <span>
-            Delete the {providerLabel}-managed collections behind the selected rules from Plex after creating them
-          </span>
-        </label>
-        <p className={styles.hint} style={{ color: "var(--color-warn, #c97a00)" }}>
-          Selected rules will replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
-          {deleteOriginals
-            ? " Originals will be deleted from Plex — this cannot be undone."
-            : " Originals will be left in Plex; you can clean them up later."}
-        </p>
+        {planCanDeleteOriginals && (
+          <>
+            <label className={styles.field} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <input type="checkbox" checked={deleteOriginals} onChange={(e) => setDeleteOriginals(e.target.checked)} />
+              <span>
+                Delete the {providerLabel}-managed collections behind the selected rules from Plex after creating them
+              </span>
+            </label>
+            <p className={styles.hint} style={{ color: "var(--color-warn, #c97a00)" }}>
+              Selected rules will replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
+              {deleteOriginals
+                ? " Originals will be deleted from Plex — this cannot be undone."
+                : " Originals will be left in Plex; you can clean them up later."}
+            </p>
+          </>
+        )}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleRun} disabled={running || selected.size === 0}>
             {running ? "Starting..." : `Migrate ${selected.size} rule(s)`}
