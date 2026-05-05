@@ -1,122 +1,87 @@
-import { db, collections } from "@tinkerbell/db";
-import { kometaProvider, type BucketKind, type CollectionInput, type MigrationPlan } from "@tinkerbell/migrate";
 import { getConfig, setConfig } from "@tinkerbell/core";
+import type { MigrationPlan } from "@tinkerbell/migrate";
+import { getProvider, listProviders } from "./registry.ts";
+import { migrateLegacyKometaConfig } from "./legacy-config.ts";
+import type { MigrationStatus, ProviderRuntime, ProviderScanResult, ProviderStatus } from "./runtime.ts";
+
+export type { ProviderRuntime, ProviderScanResult, ProviderStatus, MigrationStatus } from "./runtime.ts";
+export { listProviders, getProvider } from "./registry.ts";
 
 /**
- * Phase 1 mapping. Buckets not in this map fall through to `future` in the
- * plan and surface in the UI as "supported in a later release". Extend as
- * new rule types land.
+ * Re-scan source data for the given provider and persist the summary in
+ * config. Async because some providers (MDBList, Trakt) hit external APIs.
  */
-const KOMETA_BUCKET_TO_RULE_TYPE: Partial<Record<BucketKind, string>> = {
-  studio: "studios",
-  network: "networks",
-  genre: "genres",
-  country: "countries",
-  actor: "actors",
-  director: "directors",
-  content_rating: "content_ratings",
-  franchise: "tmdb_franchises",
-  decade: "decades",
-  year: "years",
-  resolution: "resolutions",
-  audio_language: "audio_languages",
-  subtitle_language: "subtitle_languages",
-  video_format: "video_formats",
-  streaming: "streaming",
-  based_on: "based_on",
-  seasonal: "seasonal",
-  award: "awards",
-};
-
-export interface KometaScanResult {
-  count: number;
-  scannedAt: number;
-  bySection: Array<{ sectionId: string; sectionTitle: string; count: number }>;
-}
-
-export interface MigrationStatus {
-  count: number;
-  scannedAt: number | null;
-  bySection: KometaScanResult["bySection"];
-  dismissedAt: number | null;
-  completedAt: number | null;
-  shouldShowBanner: boolean;
-}
-
-function loadKometaCollectionInputs(): CollectionInput[] {
-  const rows = db
-    .select({
-      ratingKey: collections.plexRatingKey,
-      title: collections.title,
-      labels: collections.labels,
-      sectionId: collections.sectionId,
-      sectionTitle: collections.sectionTitle,
-    })
-    .from(collections)
-    .all();
-
-  return rows.map((r) => ({
-    ratingKey: r.ratingKey,
-    title: r.title,
-    labels: Array.isArray(r.labels) ? r.labels : [],
-    sectionId: r.sectionId,
-    sectionTitle: r.sectionTitle,
-  }));
-}
-
-/**
- * Re-scan local collections for Kometa-labelled entries and persist the
- * summary in config. Cheap to call from any sync hook.
- */
-export function scanKometaState(): KometaScanResult {
-  const all = loadKometaCollectionInputs();
-  const detected = kometaProvider.detect(all);
-
-  const sectionMap = new Map<string, { sectionId: string; sectionTitle: string; count: number }>();
-  for (const c of detected) {
-    const existing = sectionMap.get(c.sectionId);
-    if (existing) existing.count++;
-    else sectionMap.set(c.sectionId, { sectionId: c.sectionId, sectionTitle: c.sectionTitle, count: 1 });
-  }
-  const bySection = [...sectionMap.values()].sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle));
-
-  const result: KometaScanResult = {
-    count: detected.length,
-    scannedAt: Date.now(),
-    bySection,
-  };
-  setConfig("migration_kometa_state", result);
+export async function scanProviderState(providerId: string): Promise<ProviderScanResult> {
+  migrateLegacyKometaConfig();
+  const runtime = getProvider(providerId);
+  const result = await runtime.scan();
+  const all = getConfig("migration_state") ?? {};
+  setConfig("migration_state", { ...all, [providerId]: result });
   return result;
 }
 
-export function getMigrationStatus(): MigrationStatus {
-  const state = getConfig("migration_kometa_state");
-  const dismissedAt = getConfig("migration_kometa_dismissed_at") ?? null;
-  const completedAt = getConfig("migration_kometa_completed_at") ?? null;
+/**
+ * Re-scan every registered provider that opts into auto-scanning. Called
+ * from sync hooks. Providers whose `scan()` hits external APIs (MDBList,
+ * Trakt) opt out and are only refreshed from explicit Settings actions.
+ */
+export async function scanAllProviders(): Promise<void> {
+  for (const runtime of listProviders()) {
+    if (!runtime.autoScan) continue;
+    try {
+      await scanProviderState(runtime.id);
+    } catch (err) {
+      console.warn(`[migration] Failed to scan provider ${runtime.id}:`, err);
+    }
+  }
+}
+
+function buildProviderStatus(runtime: ProviderRuntime): ProviderStatus {
+  const state = getConfig("migration_state")?.[runtime.id];
+  const dismissedAt = getConfig("migration_dismissed_at")?.[runtime.id] ?? null;
+  const completedAt = getConfig("migration_completed_at")?.[runtime.id] ?? null;
   const count = state?.count ?? 0;
   const scannedAt = state?.scannedAt ?? null;
   const bySection = state?.bySection ?? [];
   const shouldShowBanner = count > 0 && completedAt == null && (scannedAt == null || (dismissedAt ?? 0) < scannedAt);
-  return { count, scannedAt, bySection, dismissedAt, completedAt, shouldShowBanner };
+  return {
+    id: runtime.id,
+    label: runtime.label,
+    count,
+    scannedAt,
+    bySection,
+    dismissedAt,
+    completedAt,
+    shouldShowBanner,
+  };
 }
 
-export function dismissMigrationBanner(): void {
-  setConfig("migration_kometa_dismissed_at", Date.now());
+export function getProviderStatus(providerId: string): ProviderStatus {
+  migrateLegacyKometaConfig();
+  return buildProviderStatus(getProvider(providerId));
 }
 
-export function markMigrationCompleted(): void {
-  setConfig("migration_kometa_completed_at", Date.now());
+export function getMigrationStatus(): MigrationStatus {
+  migrateLegacyKometaConfig();
+  const providers = listProviders().map(buildProviderStatus);
+  const totalCount = providers.reduce((sum, p) => sum + p.count, 0);
+  const shouldShowBanner = providers.some((p) => p.shouldShowBanner);
+  return { providers, totalCount, shouldShowBanner };
 }
 
-/**
- * Build a fresh plan from the current local collections. Pure delegation
- * to the migrate package — the bucket-to-rule-type map is the only piece
- * that lives server-side, since it depends on which rule types Tinkerbell
- * has shipped.
- */
-export function buildKometaPlan(): MigrationPlan {
-  const all = loadKometaCollectionInputs();
-  const detected = kometaProvider.detect(all);
-  const classified = kometaProvider.classify(detected);
-  return kometaProvider.buildPlan(classified, { supportedRuleTypes: KOMETA_BUCKET_TO_RULE_TYPE });
+export function dismissProvider(providerId: string): void {
+  // Validate so callers can't silently write garbage provider ids.
+  getProvider(providerId);
+  const all = getConfig("migration_dismissed_at") ?? {};
+  setConfig("migration_dismissed_at", { ...all, [providerId]: Date.now() });
+}
+
+export function markProviderCompleted(providerId: string): void {
+  getProvider(providerId);
+  const all = getConfig("migration_completed_at") ?? {};
+  setConfig("migration_completed_at", { ...all, [providerId]: Date.now() });
+}
+
+export async function buildProviderPlan(providerId: string): Promise<MigrationPlan> {
+  return getProvider(providerId).buildPlan();
 }

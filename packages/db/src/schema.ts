@@ -38,6 +38,13 @@ export const collections = sqliteTable(
     addedAt: integer("added_at"),
     thumb: text("thumb").notNull().default(""),
     smart: integer("smart").notNull().default(0),
+    /**
+     * Plex smart-collection filter URI (e.g. `/library/sections/1/all?…`).
+     * Empty string for non-smart collections; populated by collections sync
+     * for `smart=1` rows so the Plex Smart Collections migration provider
+     * can parse it offline.
+     */
+    smartFilter: text("smart_filter").notNull().default(""),
     syncedAt: integer("synced_at").notNull(),
   },
   (table) => [index("idx_collections_section").on(table.sectionId)],

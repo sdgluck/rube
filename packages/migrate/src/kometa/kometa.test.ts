@@ -148,7 +148,7 @@ test("plan: groups by (bucket, section), one PlanItem per group", () => {
     supportedRuleTypes: { studio: "studios", network: "networks", genre: "genres" },
   });
 
-  assert.equal(plan.totalKometaCollections, 6);
+  assert.equal(plan.totalSourceItems, 6);
 
   // studios — Films (A24 + Marvel Studios), genres — Films (Horror), networks — TV (BBC)
   assert.equal(plan.proposed.length, 3);

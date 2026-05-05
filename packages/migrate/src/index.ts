@@ -10,3 +10,11 @@ export type {
   UnmappableEntry,
 } from "./types.ts";
 export { kometaProvider } from "./kometa/index.ts";
+export {
+  detectSmartCollections,
+  buildPlexSmartPlan,
+  parseSmartFilterUri,
+  type SmartCollectionInput,
+  type ParsedClause,
+  type ParseResult,
+} from "./plex-smart/index.ts";

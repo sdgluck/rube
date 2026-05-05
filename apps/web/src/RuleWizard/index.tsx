@@ -1,72 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { trpc } from "./trpc";
-import shared from "./pages/Collections.module.css";
+import { trpc } from "../trpc";
+import shared from "../pages/Collections.module.css";
 import styles from "./RuleWizard.module.css";
+import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
+import {
+  arrServiceForType,
+  defaultLimitForType,
+  isFormValid,
+  limitFieldLabel,
+  maxLimitForType,
+  requiredSectionTypeForRule,
+  RULE_TYPES,
+  stepsFor,
+  suggestName,
+  TYPE_LABELS,
+  typeHasActionsStep,
+  typeHasLimit,
+  validateStep,
+  type StepId,
+} from "./rule-types.ts";
+import { SOURCE_STEPS } from "./sources/index.ts";
+import type { ArrFormState, RuleFormState } from "./types.ts";
 
-export type AiVibe = "playful" | "serious" | "mixed";
-export type AiNameStyle = "short_punchy" | "descriptive";
-
-export interface ArrFormState {
-  enabled: boolean;
-  monitor: boolean;
-  searchOnAdd: boolean;
-  qualityProfileId: number;
-  rootFolderPath: string;
-  maxAddsPerRun: number;
-  dryRun: boolean;
-}
-
-export interface RuleFormState {
-  id?: string;
-  name: string;
-  type: string;
-  themes: string[];
-  customThemes: string[];
-  vibe: AiVibe;
-  nameStyle: AiNameStyle;
-  limit: number;
-  minItems: number;
-  sections: string[];
-  chart: string;
-  listId: string;
-  filter: string;
-  pinToHomepage: boolean;
-  arr: ArrFormState;
-}
-
-export const DEFAULT_ARR_FORM: ArrFormState = {
-  enabled: false,
-  monitor: true,
-  searchOnAdd: false,
-  qualityProfileId: 0,
-  rootFolderPath: "",
-  maxAddsPerRun: 25,
-  dryRun: true,
-};
-
-export const PRESET_THEMES = [
-  "Vibes & tone",
-  "Visual style & cinematography",
-  "Narrative parallels",
-  "Decades & eras",
-  "Directors & auteurs",
-  "Subgenres",
-  "Moods & atmospheres",
-  "Unexpected pairings",
-  "Hidden gems",
-  "Soundtrack-driven",
-];
-
-const VIBES: { value: AiVibe; label: string }[] = [
-  { value: "playful", label: "Playful" },
-  { value: "serious", label: "Serious" },
-  { value: "mixed", label: "Mixed" },
-];
-
-const NAME_STYLES: { value: AiNameStyle; label: string }[] = [
-  { value: "short_punchy", label: "Short & punchy" },
-  { value: "descriptive", label: "Descriptive" },
-];
+// Re-export the public types so existing `import { ... } from "#/RuleWizard"`
+// call sites keep working.
+export {
+  DEFAULT_ARR_FORM,
+  PRESET_THEMES,
+  type AiNameStyle,
+  type AiVibe,
+  type ArrFormState,
+  type RuleFormState,
+  type SmartFilterClause,
+  type SmartFilterOp,
+} from "./types.ts";
 
 interface RuleWizardProps {
   open: boolean;
@@ -77,346 +44,9 @@ interface RuleWizardProps {
   onCancel: () => void;
 }
 
-interface RuleType {
-  value: string;
-  label: string;
-  description: string;
-  requires?: "omdb" | "seerr" | "tmdb";
-  /** Source can produce items not yet in the Plex library (enables arr Actions step). */
-  producesExternalItems?: boolean;
-}
-
-const RULE_TYPES: RuleType[] = [
-  {
-    value: "ai_prompt",
-    label: "AI Prompt",
-    description: "Generate collections from a custom AI prompt template applied to each section.",
-  },
-  {
-    value: "top_rated",
-    label: "Top Rated",
-    description: "Group your highest-rated items in the library.",
-  },
-  {
-    value: "lowest_rated",
-    label: "Lowest Rated",
-    description: "Group your lowest-rated items — useful as a 'maybe skip' shelf.",
-  },
-  {
-    value: "actors",
-    label: "Actors",
-    description: "Build a collection per leading actor across your library, using TMDb cast data.",
-    requires: "tmdb",
-  },
-  {
-    value: "directors",
-    label: "Directors",
-    description: "Build a collection per director, using TMDb crew data.",
-    requires: "tmdb",
-  },
-  {
-    value: "studios",
-    label: "Studios",
-    description: "Build a collection per production company, using normalized TMDb company data.",
-    requires: "tmdb",
-  },
-  {
-    value: "networks",
-    label: "Networks",
-    description: "Build a collection per TV network (TV sections only), using TMDb network data.",
-    requires: "tmdb",
-  },
-  {
-    value: "genres",
-    label: "Genres",
-    description: "Build a collection per genre, using TMDb's normalized genre list.",
-    requires: "tmdb",
-  },
-  {
-    value: "countries",
-    label: "Countries",
-    description: "Build a collection per country of origin, using TMDb production-country data.",
-    requires: "tmdb",
-  },
-  {
-    value: "content_ratings",
-    label: "Content Ratings",
-    description: "Build a collection per content rating (PG, R, TV-MA, etc.) using TMDb regional certifications.",
-    requires: "tmdb",
-  },
-  {
-    value: "imdb_chart",
-    label: "IMDb Chart",
-    description: "Pull from IMDb charts like Top 250 Movies or Most Popular TV.",
-    producesExternalItems: true,
-  },
-  {
-    value: "imdb_list",
-    label: "IMDb List",
-    description: "Use any public IMDb list URL or list ID.",
-    producesExternalItems: true,
-  },
-  {
-    value: "rt_top_rated",
-    label: "RT Top Rated",
-    description: "Pull from Rotten Tomatoes top-rated items via OMDB.",
-    requires: "omdb",
-  },
-  {
-    value: "seerr_requests",
-    label: "Seerr Requests",
-    description: "Group items requested via Jellyseerr/Overseerr.",
-    requires: "seerr",
-    producesExternalItems: true,
-  },
-  {
-    value: "tmdb_popular_actors",
-    label: "Popular Actors",
-    description: "Build a collection per popular actor (TMDb). Pairs well with the arr action to fill filmographies.",
-    requires: "tmdb",
-    producesExternalItems: true,
-  },
-  {
-    value: "tmdb_popular_directors",
-    label: "Popular Directors",
-    description:
-      "Build a collection per popular director (TMDb). Pairs well with the arr action to fill filmographies.",
-    requires: "tmdb",
-    producesExternalItems: true,
-  },
-  {
-    value: "tmdb_franchises",
-    label: "Franchises",
-    description:
-      "Build a collection per movie franchise (TMDb). Pairs well with the arr action to fill franchise gaps.",
-    requires: "tmdb",
-    producesExternalItems: true,
-  },
-  {
-    value: "decades",
-    label: "Decades",
-    description: "Build a collection per decade (1990s, 2000s, …) from each item's release year.",
-  },
-  {
-    value: "years",
-    label: "Years",
-    description: "Build a collection per release year. Best paired with a section that has a clear date range.",
-  },
-  {
-    value: "resolutions",
-    label: "Resolutions",
-    description: "Group items by Plex's reported video resolution (4K, 1080p, 720p, SD).",
-  },
-  {
-    value: "audio_languages",
-    label: "Audio Languages",
-    description: "Group items by primary audio stream language, read from Plex media info.",
-  },
-  {
-    value: "subtitle_languages",
-    label: "Subtitle Languages",
-    description: "Group items by available subtitle languages, read from Plex media info.",
-  },
-  {
-    value: "video_formats",
-    label: "Video Formats",
-    description: "Group items by source format (Bluray, WEB-DL, HDTV, …) inferred from Plex media metadata.",
-  },
-  {
-    value: "streaming",
-    label: "Streaming",
-    description: "Subset of the Networks rule limited to major streaming services (Netflix, Disney+, etc.).",
-    requires: "tmdb",
-  },
-  {
-    value: "based_on",
-    label: "Based On",
-    description: "Group items by source material — novel, comic, true story, video game, play, short story.",
-    requires: "tmdb",
-  },
-  {
-    value: "seasonal",
-    label: "Seasonal",
-    description:
-      "Holiday and season collections (Christmas, Halloween, Valentine's, …) using TMDb keywords + release month.",
-    requires: "tmdb",
-  },
-  {
-    value: "awards",
-    label: "Awards",
-    description:
-      "Award-winners collections (Oscars, BAFTAs, Cannes, Golden Globes). Coverage depends on TMDb keyword tagging.",
-    requires: "tmdb",
-  },
-];
-
-const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));
-
-const IMDB_CHARTS = [
-  { value: "top_250_movies", label: "Top 250 Movies", sectionType: "movie" as const },
-  { value: "top_250_tv", label: "Top 250 TV Shows", sectionType: "show" as const },
-  { value: "popular_movies", label: "Most Popular Movies", sectionType: "movie" as const },
-  { value: "popular_tv", label: "Most Popular TV Shows", sectionType: "show" as const },
-  { value: "box_office", label: "Box Office", sectionType: "movie" as const },
-];
-
-const IMDB_CHART_LABELS: Record<string, string> = Object.fromEntries(IMDB_CHARTS.map((c) => [c.value, c.label]));
-const IMDB_CHART_SECTION_TYPE: Record<string, string> = Object.fromEntries(
-  IMDB_CHARTS.map((c) => [c.value, c.sectionType]),
-);
-
-const SEERR_FILTERS = [
-  { value: "all", label: "All Requests" },
-  { value: "approved", label: "Approved" },
-  { value: "available", label: "Available" },
-  { value: "pending", label: "Pending" },
-];
-
-const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(SEERR_FILTERS.map((f) => [f.value, f.label]));
-
-// ─── Type-driven config helpers ──────────────────────────────────────────
-
-function defaultLimitForType(type: string): number {
-  if (type === "ai_prompt") return 8;
-  if (type === "top_rated" || type === "lowest_rated") return 50;
-  if (type === "rt_top_rated") return 100;
-  if (type === "seerr_requests") return 50;
-  return 10;
-}
-
-function maxLimitForType(type: string): number {
-  if (type === "ai_prompt") return 10;
-  if (type === "top_rated" || type === "lowest_rated") return 200;
-  if (type === "rt_top_rated") return 200;
-  if (type === "seerr_requests") return 200;
-  return 50;
-}
-
-function typeHasLimit(type: string): boolean {
-  return type !== "imdb_chart" && type !== "imdb_list";
-}
-
-// Section-type constraint for rule types that only make sense for movies or shows.
-// `imdb_chart` is determined by the selected chart; other constraints are intrinsic to the type.
-function requiredSectionTypeForRule(type: string, chart: string): "movie" | "show" | undefined {
-  if (type === "imdb_chart") return IMDB_CHART_SECTION_TYPE[chart] as "movie" | "show" | undefined;
-  if (type === "networks") return "show";
-  if (type === "tmdb_franchises") return "movie";
-  return undefined;
-}
-
-// Whether the wizard has a meaningful "source" step for this type.
-function typeHasSourceStep(type: string): boolean {
-  return type === "ai_prompt" || type === "imdb_chart" || type === "imdb_list" || type === "seerr_requests";
-}
-
-const TYPE_BY_VALUE: Record<string, RuleType> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t]));
-
-// Whether the wizard shows the arr Actions step.
-function typeHasActionsStep(type: string): boolean {
-  return !!TYPE_BY_VALUE[type]?.producesExternalItems;
-}
-
-// Service that arr actions target for a given type.
-function arrServiceForType(type: string, chart: string): "radarr" | "sonarr" {
-  if (type === "imdb_chart") {
-    return IMDB_CHART_SECTION_TYPE[chart] === "show" ? "sonarr" : "radarr";
-  }
-  // imdb_list and seerr_requests are mixed; default to radarr — user reviews counts before non-dry-run.
-  return "radarr";
-}
-
-function limitFieldLabel(type: string): string {
-  if (type === "ai_prompt") return "Collections per section";
-  if (type === "top_rated" || type === "lowest_rated" || type === "rt_top_rated") return "Items per collection";
-  if (type === "seerr_requests") return "Items in collection";
-  return "Max collections";
-}
-
-function suggestName(form: RuleFormState, sections: { title: string }[]): string {
-  if (form.type === "imdb_chart") return IMDB_CHART_LABELS[form.chart] || "IMDb Chart";
-  if (form.type === "imdb_list") {
-    const id = form.listId.match(/ls\d+/i)?.[0] || form.listId;
-    return id ? `IMDb List ${id}` : "IMDb List";
-  }
-  if (form.type === "seerr_requests") return `Seerr — ${SEERR_FILTER_LABELS[form.filter] || "Requests"}`;
-  if (form.type === "ai_prompt") {
-    const all = [...form.themes, ...form.customThemes.filter((t) => t.trim().length > 0)];
-    if (all.length === 0) return "AI Curated Collections";
-    const head = all.slice(0, 2).join(" + ");
-    return `AI — ${head}${all.length > 2 ? " +more" : ""}`.slice(0, 60);
-  }
-  if (form.type === "rt_top_rated") return "Rotten Tomatoes Top Rated";
-  if (form.type === "top_rated") return "Top Rated";
-  if (form.type === "lowest_rated") return "Lowest Rated";
-  if (form.type === "actors") return "By Actor";
-  if (form.type === "directors") return "By Director";
-  if (form.type === "studios") return "By Studio";
-  if (form.type === "networks") return "By Network";
-  if (form.type === "genres") return "By Genre";
-  if (form.type === "countries") return "By Country";
-  if (form.type === "content_ratings") return "By Content Rating";
-  if (form.type === "tmdb_popular_actors") return "Popular Actors";
-  if (form.type === "tmdb_popular_directors") return "Popular Directors";
-  if (form.type === "tmdb_franchises") return "Franchises";
-  void sections;
-  return "";
-}
-
-// ─── Step definitions ────────────────────────────────────────────────────
-
-type StepId = "type" | "source" | "scope" | "actions" | "review";
-
-function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; label: string }[] {
-  const steps: { id: StepId; label: string }[] = [];
-  if (mode === "create") steps.push({ id: "type", label: "Type" });
-  if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
-  steps.push({ id: "scope", label: "Scope" });
-  if (typeHasActionsStep(type)) steps.push({ id: "actions", label: "Actions" });
-  steps.push({ id: "review", label: "Review" });
-  return steps;
-}
-
-// ─── Validation ──────────────────────────────────────────────────────────
-
-function aiHasThemes(form: RuleFormState): boolean {
-  return form.themes.length > 0 || form.customThemes.some((t) => t.trim().length > 0);
-}
-
-function validateStep(step: StepId, form: RuleFormState): string | null {
-  if (step === "type") return form.type ? null : "Pick a rule type.";
-  if (step === "source") {
-    if (form.type === "ai_prompt" && !aiHasThemes(form)) return "Pick at least one theme (or add a custom one).";
-    if (form.type === "imdb_list" && !form.listId.trim()) return "An IMDb list ID or URL is required.";
-    return null;
-  }
-  if (step === "scope") return null;
-  if (step === "actions") {
-    if (form.arr.enabled) {
-      if (!form.arr.qualityProfileId) return "Pick a quality profile.";
-      if (!form.arr.rootFolderPath) return "Pick a root folder.";
-    }
-    return null;
-  }
-  if (step === "review") return form.name.trim() ? null : "Name is required.";
-  return null;
-}
-
-function isFormValid(form: RuleFormState): boolean {
-  return (
-    !!form.name.trim() &&
-    !!form.type &&
-    (form.type !== "ai_prompt" || aiHasThemes(form)) &&
-    (form.type !== "imdb_list" || !!form.listId.trim()) &&
-    (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
-  );
-}
-
-// ─── Component ───────────────────────────────────────────────────────────
-
 export default function RuleWizard({ open, mode, initial, saving, onSave, onCancel }: RuleWizardProps) {
   const [form, setForm] = useState<RuleFormState>(initial);
-  const [stepIdx, setStepIdx] = useState(mode === "edit" ? 0 : 0);
+  const [stepIdx, setStepIdx] = useState(0);
   const [exiting, setExiting] = useState(false);
   const [showError, setShowError] = useState(false);
   const nameTouchedRef = useRef(mode === "edit");
@@ -505,7 +135,10 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     form.type,
     form.chart,
     form.listId,
+    form.listProvider,
+    form.collectionName,
     form.filter,
+    form.filters,
     form.themes,
     form.customThemes,
     sections,
@@ -567,6 +200,11 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   const primaryLabel = isLastStep ? (mode === "edit" ? "Save" : "Create") : "Next";
   const canPrimary = mode === "edit" ? isFormValid(form) : !stepError;
 
+  function jumpTo(id: StepId) {
+    const idx = steps.findIndex((s) => s.id === id);
+    if (idx >= 0) setStepIdx(idx);
+  }
+
   // ─── Step renderers ─────────────────────────────────────────────────────
 
   function renderTypeStep() {
@@ -607,201 +245,16 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     );
   }
 
+  /**
+   * Source step is per-rule-type. Each component lives under
+   * `sources/` and registers itself in `SOURCE_STEPS`. Adding a new
+   * rule type with a Source step is the only edit needed here — the
+   * registry handles dispatch.
+   */
   function renderSourceStep() {
-    if (form.type === "ai_prompt") {
-      const toggleTheme = (t: string) => {
-        const has = form.themes.includes(t);
-        setForm({ ...form, themes: has ? form.themes.filter((x) => x !== t) : [...form.themes, t] });
-      };
-      const updateCustom = (i: number, v: string) => {
-        const next = [...form.customThemes];
-        next[i] = v;
-        setForm({ ...form, customThemes: next });
-      };
-      const addCustom = () => setForm({ ...form, customThemes: [...form.customThemes, ""] });
-      const removeCustom = (i: number) =>
-        setForm({ ...form, customThemes: form.customThemes.filter((_, idx) => idx !== i) });
-
-      return (
-        <>
-          <h3 className={styles.stepHeading}>Themes & style</h3>
-          <p className={styles.stepSub}>
-            Pick the angles the AI should explore. Past collections from this rule are automatically fed back in so it
-            doesn't repeat itself.
-          </p>
-
-          <div className={styles.field}>
-            <label>Themes</label>
-            <div className={styles.pills}>
-              {PRESET_THEMES.map((t) => {
-                const selected = form.themes.includes(t);
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`${styles.pill} ${selected ? styles.pillSelected : ""}`}
-                    onClick={() => toggleTheme(t)}
-                    aria-pressed={selected}
-                  >
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-            <span className={styles.hint}>Pick one or more. The AI uses these as starting angles.</span>
-          </div>
-
-          <div className={styles.field}>
-            <label>Custom themes (optional)</label>
-            {form.customThemes.map((t, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-                <input
-                  className={shared.input}
-                  value={t}
-                  onChange={(e) => updateCustom(i, e.target.value)}
-                  placeholder="e.g. Films set during a single night"
-                />
-                <button type="button" className={shared.buttonSecondary} onClick={() => removeCustom(i)}>
-                  Remove
-                </button>
-              </div>
-            ))}
-            <button type="button" className={shared.buttonSecondary} onClick={addCustom}>
-              Add custom theme
-            </button>
-          </div>
-
-          <div className={styles.field}>
-            <label>Vibe</label>
-            <div className={styles.pills}>
-              {VIBES.map((v) => (
-                <button
-                  key={v.value}
-                  type="button"
-                  className={`${styles.pill} ${form.vibe === v.value ? styles.pillSelected : ""}`}
-                  onClick={() => setForm({ ...form, vibe: v.value })}
-                  aria-pressed={form.vibe === v.value}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label>Name style</label>
-            <div className={styles.pills}>
-              {NAME_STYLES.map((n) => (
-                <button
-                  key={n.value}
-                  type="button"
-                  className={`${styles.pill} ${form.nameStyle === n.value ? styles.pillSelected : ""}`}
-                  onClick={() => setForm({ ...form, nameStyle: n.value })}
-                  aria-pressed={form.nameStyle === n.value}
-                >
-                  {n.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="rule-min-items">Minimum items per collection</label>
-            <input
-              id="rule-min-items"
-              type="number"
-              className={shared.input}
-              style={{ maxWidth: 140 }}
-              min={1}
-              max={100}
-              value={form.minItems}
-              onChange={(e) =>
-                setForm({ ...form, minItems: Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)) })
-              }
-            />
-            <span className={styles.hint}>Collections with fewer matched items are skipped.</span>
-          </div>
-        </>
-      );
-    }
-
-    if (form.type === "imdb_chart") {
-      return (
-        <>
-          <h3 className={styles.stepHeading}>Pick a chart</h3>
-          <p className={styles.stepSub}>The chart's media type also determines which sections are included.</p>
-          <div className={styles.typeGrid}>
-            {IMDB_CHARTS.map((c) => {
-              const selected = form.chart === c.value;
-              return (
-                <button
-                  key={c.value}
-                  type="button"
-                  className={`${styles.typeCard} ${selected ? styles.typeCardSelected : ""}`}
-                  onClick={() => setForm({ ...form, chart: c.value })}
-                  aria-pressed={selected}
-                >
-                  <span className={styles.typeCardName}>{c.label}</span>
-                  <span className={styles.typeCardDesc}>
-                    Targets {c.sectionType === "movie" ? "Movie" : "TV"} sections.
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      );
-    }
-
-    if (form.type === "imdb_list") {
-      return (
-        <>
-          <h3 className={styles.stepHeading}>IMDb list</h3>
-          <p className={styles.stepSub}>Paste a public IMDb list URL or list ID.</p>
-          <div className={styles.field}>
-            <label htmlFor="rule-list-id">List URL or ID</label>
-            <input
-              id="rule-list-id"
-              className={shared.input}
-              value={form.listId}
-              onChange={(e) => setForm({ ...form, listId: e.target.value })}
-              placeholder="ls123456789 or https://www.imdb.com/list/ls123456789/"
-              autoFocus
-            />
-          </div>
-        </>
-      );
-    }
-
-    if (form.type === "seerr_requests") {
-      return (
-        <>
-          <h3 className={styles.stepHeading}>Which requests?</h3>
-          <p className={styles.stepSub}>Filter the request set used to build this collection.</p>
-          <div className={styles.field}>
-            <label>Filter</label>
-            <div className={styles.pills}>
-              {SEERR_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  type="button"
-                  className={`${styles.pill} ${form.filter === f.value ? styles.pillSelected : ""}`}
-                  onClick={() => setForm({ ...form, filter: f.value })}
-                  aria-pressed={form.filter === f.value}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {!seerrConfigured && (
-            <p className={styles.hint}>Heads-up: Jellyseerr/Overseerr is not configured in Settings → Arrs.</p>
-          )}
-        </>
-      );
-    }
-
-    return null;
+    const SourceComponent = SOURCE_STEPS[form.type];
+    if (!SourceComponent) return null;
+    return <SourceComponent form={form} setForm={setForm} config={{ seerrConfigured }} />;
   }
 
   function renderScopeStep() {
@@ -922,11 +375,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
         </div>
       </>
     );
-  }
-
-  function jumpTo(id: StepId) {
-    const idx = steps.findIndex((s) => s.id === id);
-    if (idx >= 0) setStepIdx(idx);
   }
 
   function renderActionsStep() {
@@ -1084,6 +532,14 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     } else if (form.type === "imdb_list") {
       sourceLabel = "List";
       sourceValue = form.listId;
+    } else if (form.type === "list_source") {
+      sourceLabel = "List";
+      const provider = LIST_PROVIDER_LABELS[form.listProvider] ?? form.listProvider;
+      sourceValue = form.listId.trim() ? `${provider} — ${form.listId.trim()}` : provider;
+    } else if (form.type === "smart_filter") {
+      sourceLabel = "Filters";
+      sourceValue =
+        form.filters.length === 0 ? "—" : form.filters.map((f) => `${f.field} ${f.op} ${f.value || "?"}`).join(" AND ");
     } else if (form.type === "seerr_requests") {
       sourceLabel = "Filter";
       sourceValue = SEERR_FILTER_LABELS[form.filter] || form.filter;

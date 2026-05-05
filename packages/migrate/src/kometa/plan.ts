@@ -32,6 +32,8 @@ const BUCKET_LABEL: Record<BucketKind, string> = {
   seasonal: "Seasonal",
   universe: "Universes",
   award: "Awards",
+  list: "External Lists",
+  smart_filter: "Smart Filters",
 };
 
 /** Short note shown for buckets we recognize but don't have a rule type for yet. */
@@ -137,7 +139,7 @@ export function buildPlan(classified: ClassifiedCollection[], opts: PlanOptions)
     proposed,
     future,
     unmappable,
-    totalKometaCollections: classified.length,
+    totalSourceItems: classified.length,
   };
 }
 

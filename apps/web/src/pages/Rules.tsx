@@ -3,13 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import DropdownButton from "#/DropdownButton";
 import ConfirmModal from "#/ConfirmModal";
-import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle, DEFAULT_ARR_FORM } from "#/RuleWizard";
+import RuleWizard, {
+  type RuleFormState,
+  type AiVibe,
+  type AiNameStyle,
+  type SmartFilterClause,
+  DEFAULT_ARR_FORM,
+} from "#/RuleWizard";
 import { RulesSkeleton } from "#/Skeleton";
 import Spinner from "#/Spinner";
 import EmptyState from "#/EmptyState";
 import RelativeTime from "#/RelativeTime";
 import ToggleSwitch from "#/ToggleSwitch";
 import { useToast } from "#/Toast";
+import MigrationBanner from "./MigrationBanner.tsx";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
 
@@ -43,6 +50,8 @@ const RULE_TYPES = [
   { value: "content_ratings", label: "Content Ratings" },
   { value: "imdb_chart", label: "IMDb Chart" },
   { value: "imdb_list", label: "IMDb List" },
+  { value: "list_source", label: "List Source" },
+  { value: "smart_filter", label: "Smart Filter" },
   { value: "rt_top_rated", label: "RT Top Rated" },
   { value: "seerr_requests", label: "Seerr Requests" },
   { value: "tmdb_popular_actors", label: "Popular Actors" },
@@ -93,6 +102,11 @@ const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => string> = {
   lowest_rated: (c) => `${c.limit ?? 50} items`,
   imdb_chart: (c) => IMDB_CHART_LABELS[c.chart as string] || (c.chart as string) || "—",
   imdb_list: (c) => (c.listId as string) || "—",
+  list_source: (c) => `${(c.listProvider as string) || "?"}: ${(c.listId as string) || "—"}`,
+  smart_filter: (c) => {
+    const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
+    return filters.length === 0 ? "no filters" : `${filters.length} clause${filters.length !== 1 ? "s" : ""}`;
+  },
   rt_top_rated: (c) => `Top ${c.limit ?? 100} items`,
   seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
 };
@@ -115,6 +129,23 @@ const CONFIG_DETAILS: Record<string, (c: Record<string, unknown>) => string> = {
   },
   imdb_chart: (c) => `Chart: ${IMDB_CHART_LABELS[c.chart as string] || c.chart || "—"}`,
   imdb_list: (c) => `List ID: ${c.listId || "—"}`,
+  list_source: (c) => {
+    const lines = [`Provider: ${(c.listProvider as string) || "—"}`, `List: ${(c.listId as string) || "—"}`];
+    if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
+    return lines.join("\n");
+  },
+  smart_filter: (c) => {
+    const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
+    const lines: string[] = [];
+    if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
+    if (filters.length === 0) {
+      lines.push("(no filters)");
+    } else {
+      lines.push("Filters (AND):");
+      for (const f of filters) lines.push(`  • ${f.field} ${f.op} ${f.value}`);
+    }
+    return lines.join("\n");
+  },
   seerr_requests: (c) =>
     `Filter: ${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"}\nLimit: ${c.limit ?? 50}`,
 };
@@ -139,6 +170,9 @@ const EMPTY_FORM: RuleFormState = {
   sections: [],
   chart: "top_250_movies",
   listId: "",
+  listProvider: "mdblist",
+  collectionName: "",
+  filters: [],
   filter: "all",
   pinToHomepage: true,
   arr: { ...DEFAULT_ARR_FORM },
@@ -153,7 +187,7 @@ function defaultLimitForType(type: string): number {
 }
 
 function typeHasLimit(type: string): boolean {
-  return type !== "imdb_chart" && type !== "imdb_list";
+  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source" && type !== "smart_filter";
 }
 
 type SortKey = "name" | "type" | "lastRun";
@@ -582,6 +616,10 @@ export default function Rules() {
       sections: (config.sections as string[]) || [],
       chart: (config.chart as string) || "top_250_movies",
       listId: (config.listId as string) || "",
+      listProvider: ((config.listProvider as RuleFormState["listProvider"]) ||
+        "mdblist") satisfies RuleFormState["listProvider"],
+      collectionName: (config.collectionName as string) || "",
+      filters: (config.filters as SmartFilterClause[] | undefined) ?? [],
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       arr: {
@@ -609,6 +647,15 @@ export default function Rules() {
     }
     if (next.type === "imdb_chart") config.chart = next.chart;
     if (next.type === "imdb_list") config.listId = next.listId;
+    if (next.type === "list_source") {
+      config.listProvider = next.listProvider;
+      config.listId = next.listId;
+      if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
+    }
+    if (next.type === "smart_filter") {
+      config.filters = next.filters;
+      if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
+    }
     if (next.type === "seerr_requests") config.filter = next.filter;
     if (next.sections.length > 0) config.sections = next.sections;
     if (!next.pinToHomepage) config.pinToHomepage = false;
@@ -1242,71 +1289,6 @@ export default function Rules() {
           onCancel={() => setPendingConfirm(null)}
         />
       )}
-    </div>
-  );
-}
-
-function MigrationBanner() {
-  const navigate = useNavigate();
-  const utils = trpc.useUtils();
-  const status = trpc.migration.status.useQuery(undefined, { refetchOnWindowFocus: false });
-  const dismiss = trpc.migration.dismiss.useMutation();
-
-  if (!status.data?.shouldShowBanner) return null;
-  const count = status.data.count;
-
-  const handleDismiss = async () => {
-    await dismiss.mutateAsync();
-    await utils.migration.status.invalidate();
-  };
-
-  return (
-    <div
-      style={{
-        margin: "0 0 16px 0",
-        padding: "12px 16px",
-        background: "rgba(74, 108, 247, 0.08)",
-        border: "1px solid rgba(74, 108, 247, 0.3)",
-        borderRadius: 6,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        lineHeight: 1.5,
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        Tinkerbell can migrate <strong>{count}</strong> Kometa-managed collection{count === 1 ? "" : "s"} into
-        Tinkerbell rules.
-      </div>
-      <button
-        type="button"
-        onClick={() => navigate("/settings/migrate")}
-        style={{
-          padding: "6px 14px",
-          background: "var(--accent)",
-          color: "#fff",
-          border: "1px solid var(--accent)",
-          borderRadius: 6,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        Review
-      </button>
-      <button
-        type="button"
-        onClick={handleDismiss}
-        style={{
-          padding: "6px 14px",
-          background: "transparent",
-          color: "var(--color-muted, #888)",
-          border: "1px solid var(--border-input)",
-          borderRadius: 6,
-          cursor: "pointer",
-        }}
-      >
-        Dismiss
-      </button>
     </div>
   );
 }
