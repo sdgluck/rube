@@ -3,7 +3,7 @@
 // pipeline will produce when overlays are actually applied.
 
 import * as opentype from "opentype.js";
-import type { BadgeShape, BadgeStyle, ColorPreset, OverlayPosition, OverlayType } from "#server/domains/overlays.ts";
+import type { BadgeShape, BadgeStyle, ColorPreset, OverlayPosition, OverlayType } from "@tinkerbell/contracts";
 
 export interface BadgeColors {
   bg: string;
