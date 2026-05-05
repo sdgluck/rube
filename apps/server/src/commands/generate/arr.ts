@@ -1,8 +1,8 @@
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { getConfig } from "../../lib/config.ts";
-import { errorMessage } from "../../lib/util.ts";
-import type { JobContext } from "../../lib/job-context.ts";
-import type { Rule } from "../../domains/rules.ts";
+import { getConfig } from "#lib/config.ts";
+import { errorMessage } from "#lib/util.ts";
+import type { JobContext } from "#lib/job-context.ts";
+import type { Rule } from "#domains/rules.ts";
 import type { RuleConfig } from "./config.ts";
 import { fetchImdbChart, fetchImdbList } from "./sources/imdb.ts";
 import { lookupBelongsToCollection } from "./sources/tmdb.ts";

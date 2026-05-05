@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
-import { trpc } from "../trpc";
-import { EventsSkeleton } from "../Skeleton";
-import EmptyState from "../EmptyState";
-import PullToRefresh from "../PullToRefresh";
-import RelativeTime from "../RelativeTime";
-import { formatDurationMs, stripDurationFromMessage } from "../utils";
+import { trpc } from "#/trpc";
+import { EventsSkeleton } from "#/Skeleton";
+import EmptyState from "#/EmptyState";
+import PullToRefresh from "#/PullToRefresh";
+import RelativeTime from "#/RelativeTime";
+import { formatDurationMs, stripDurationFromMessage } from "#/utils";
 import sharedStyles from "./Collections.module.css";
 import styles from "./Events.module.css";
 

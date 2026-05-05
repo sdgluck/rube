@@ -1,4 +1,4 @@
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 /**
  * "Top Rated" / "Lowest Rated" — produces one collection per section,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getQualityProfiles, getRootFolders, type ArrConfig, type ArrService } from "@tinkerbell/arr";
-import { getConfig } from "../lib/config.ts";
-import { errorMessage } from "../lib/util.ts";
+import { getConfig } from "#lib/config.ts";
+import { errorMessage } from "#lib/util.ts";
 import { t, procedure } from "./_base.ts";
 
 function configFor(service: ArrService): ArrConfig | null {

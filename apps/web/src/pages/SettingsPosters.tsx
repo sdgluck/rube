@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { trpc } from "../trpc";
-import { useToast } from "../Toast";
-import ToggleSwitch from "../ToggleSwitch";
-import UnsavedBanner from "../UnsavedBanner";
-import useUnsavedChanges from "../useUnsavedChanges";
-import { FormSkeleton } from "../Skeleton";
+import { trpc } from "#/trpc";
+import { useToast } from "#/Toast";
+import ToggleSwitch from "#/ToggleSwitch";
+import UnsavedBanner from "#/UnsavedBanner";
+import useUnsavedChanges from "#/useUnsavedChanges";
+import { FormSkeleton } from "#/Skeleton";
 import styles from "./Settings.module.css";
 
 const PERSON_STYLES = [

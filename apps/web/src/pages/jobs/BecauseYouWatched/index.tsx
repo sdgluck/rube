@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { trpc } from "#/trpc";
-import { useJobActions } from "../shared/useJobActions";
-import JobPageShell from "../shared/JobPageShell";
-import ConfigPanel from "../shared/ConfigPanel";
-import RunHistoryPanel from "../shared/RunHistoryPanel";
-import LatestRunLogPanel from "../shared/LatestRunLogPanel";
-import ScheduleRow from "../shared/rows/ScheduleRow";
-import EnabledRow from "../shared/rows/EnabledRow";
-import SectionsRow from "../shared/rows/SectionsRow";
+import { useJobActions } from "#pages/jobs/shared/useJobActions";
+import JobPageShell from "#pages/jobs/shared/JobPageShell";
+import ConfigPanel from "#pages/jobs/shared/ConfigPanel";
+import RunHistoryPanel from "#pages/jobs/shared/RunHistoryPanel";
+import LatestRunLogPanel from "#pages/jobs/shared/LatestRunLogPanel";
+import ScheduleRow from "#pages/jobs/shared/rows/ScheduleRow";
+import EnabledRow from "#pages/jobs/shared/rows/EnabledRow";
+import SectionsRow from "#pages/jobs/shared/rows/SectionsRow";
 import styles from "#pages/Jobs.module.css";
-import type { JobPageProps } from "../types";
+import type { JobPageProps } from "#pages/jobs/types";
 import BywConfigRows, { type BywFormState } from "./ConfigRows";
 import GeneratedCollectionsPanel from "./GeneratedCollectionsPanel";
 

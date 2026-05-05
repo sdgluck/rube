@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { trpc } from "../trpc";
+import { trpc } from "#/trpc";
 import styles from "./Settings.module.css";
 
 const TABS = [

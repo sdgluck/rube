@@ -1,5 +1,5 @@
 import type { PlexSection } from "@tinkerbell/plex";
-import { appendHistory, type HistoricalCollection } from "../../domains/rule-history.ts";
+import { appendHistory, type HistoricalCollection } from "#domains/rule-history.ts";
 import { commitCollection } from "./finalize.ts";
 import type { Handler, HandlerDeps } from "./types.ts";
 import { aiPromptHandler } from "./handlers/ai-prompt.ts";

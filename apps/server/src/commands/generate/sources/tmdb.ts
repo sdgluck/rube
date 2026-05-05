@@ -1,4 +1,4 @@
-import { errorMessage } from "../../../lib/util.ts";
+import { errorMessage } from "#lib/util.ts";
 
 /**
  * TMDb exposes a movie's parent collection (franchise) on the /movie/{id}

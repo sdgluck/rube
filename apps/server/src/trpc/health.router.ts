@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { errorMessage } from "../lib/util.ts";
-import { getAllConfig } from "../lib/config.ts";
+import { errorMessage } from "#lib/util.ts";
+import { getAllConfig } from "#lib/config.ts";
 import {
   reportHealth,
   getHealthLatest,
   getHealthHistory,
   HEALTH_SERVICES,
   checkServiceHealth,
-} from "../domains/health.ts";
+} from "#domains/health.ts";
 import { t, procedure } from "./_base.ts";
 
 export const healthRouter = t.router({

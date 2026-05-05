@@ -1,8 +1,8 @@
 import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { getConfig } from "../../lib/config.ts";
-import { plexHealthCallback } from "../../lib/clients.ts";
-import { getRule } from "../../domains/rules.ts";
-import type { JobContext } from "../../lib/job-context.ts";
+import { getConfig } from "#lib/config.ts";
+import { plexHealthCallback } from "#lib/clients.ts";
+import { getRule } from "#domains/rules.ts";
+import type { JobContext } from "#lib/job-context.ts";
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";
 

@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { trpc } from "../trpc";
-import { DetailSkeleton } from "../Skeleton";
-import FadeImage from "../FadeImage";
-import useSwipeBack from "../useSwipeBack";
+import { trpc } from "#/trpc";
+import { DetailSkeleton } from "#/Skeleton";
+import FadeImage from "#/FadeImage";
+import useSwipeBack from "#/useSwipeBack";
 import styles from "./Collections.module.css";
 import mediaStyles from "./MediaDetail.module.css";
 

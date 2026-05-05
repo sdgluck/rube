@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import FadeImage from "../FadeImage";
-import { ListSkeleton } from "../Skeleton";
-import Spinner from "../Spinner";
-import { trpc } from "../trpc";
+import FadeImage from "#/FadeImage";
+import { ListSkeleton } from "#/Skeleton";
+import Spinner from "#/Spinner";
+import { trpc } from "#/trpc";
 import styles from "./Preview.module.css";
 
 const COLLECTION_HUB_PREFIX = "custom.collection.";

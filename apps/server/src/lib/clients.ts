@@ -7,7 +7,7 @@ import { createPlexClient, type PlexHealthCallback } from "@tinkerbell/plex";
 import { createOmdbClient } from "@tinkerbell/omdb";
 import { createImdbClient } from "@tinkerbell/imdb";
 import { getConfig } from "./config.ts";
-import { reportHealth } from "../domains/health.ts";
+import { reportHealth } from "#domains/health.ts";
 
 export const plexHealthCallback: PlexHealthCallback = (service, status, message) =>
   reportHealth(service, status, message);

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { trpc } from "../trpc";
-import Spinner from "../Spinner";
+import { trpc } from "#/trpc";
+import Spinner from "#/Spinner";
 import styles from "./StressTest.module.css";
 import shared from "./Collections.module.css";
 

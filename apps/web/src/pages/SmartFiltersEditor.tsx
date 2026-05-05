@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { trpc } from "../trpc";
-import { useToast } from "../Toast";
+import { trpc } from "#/trpc";
+import { useToast } from "#/Toast";
 import styles from "./Collections.module.css";
 
 const SYSTEM_PARAMS = new Set(["type", "sort", "limit", "includeGuids"]);

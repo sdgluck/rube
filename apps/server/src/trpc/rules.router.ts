@@ -7,7 +7,7 @@ import {
   deleteRule,
   setRuleLastRun,
   setRuleLastTest,
-} from "../domains/rules.ts";
+} from "#domains/rules.ts";
 import {
   getRuleProgress,
   clearProgress,
@@ -18,8 +18,8 @@ import {
   createTrackedContext,
   type RuleProgressState,
   type PersistedTestResult,
-} from "../domains/rule-progress.ts";
-import { errorMessage } from "../lib/util.ts";
+} from "#domains/rule-progress.ts";
+import { errorMessage } from "#lib/util.ts";
 import { t, procedure } from "./_base.ts";
 
 const testControllers = new Map<string, AbortController>();
@@ -81,7 +81,7 @@ export const rulesRouter = t.router({
     const ctx = createTrackedContext(input.id, "test", controller.signal, "[test-rule]");
     const startedAt = Date.now();
     try {
-      const { testRule } = await import("../commands/generate.ts");
+      const { testRule } = await import("#commands/generate.ts");
       const result = await testRule(input.id, controller.signal, ctx);
       const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
       const persisted: PersistedTestResult = {
@@ -147,7 +147,7 @@ export const rulesRouter = t.router({
 
     const work = (async () => {
       try {
-        const { runSingleRule } = await import("../commands/generate.ts");
+        const { runSingleRule } = await import("#commands/generate.ts");
         const result = await runSingleRule(input.id, controller.signal, ctx);
         setRuleLastRun(input.id, {
           status: "ok",

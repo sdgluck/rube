@@ -1,4 +1,4 @@
-import { getConfig, type ConfigValue, type ConfigKey } from "../lib/config.ts";
+import { getConfig, type ConfigValue, type ConfigKey } from "#lib/config.ts";
 
 export const EVENT_TYPES = [
   { id: "job.completed", label: "Job Completed" },

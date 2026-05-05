@@ -1,8 +1,8 @@
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "../lib/clients.ts";
-import { getConfig } from "../lib/config.ts";
-import { syncCollections } from "../domains/collections.ts";
-import type { JobContext, CommonJobConfig } from "../lib/job-context.ts";
+import { plexHealthCallback } from "#lib/clients.ts";
+import { getConfig } from "#lib/config.ts";
+import { syncCollections } from "#domains/collections.ts";
+import type { JobContext, CommonJobConfig } from "#lib/job-context.ts";
 
 export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";

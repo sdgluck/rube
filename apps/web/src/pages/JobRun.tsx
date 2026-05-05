@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { trpc } from "../trpc";
-import RelativeTime from "../RelativeTime";
-import { DetailSkeleton } from "../Skeleton";
-import useSwipeBack from "../useSwipeBack";
+import { trpc } from "#/trpc";
+import RelativeTime from "#/RelativeTime";
+import { DetailSkeleton } from "#/Skeleton";
+import useSwipeBack from "#/useSwipeBack";
 import styles from "./Jobs.module.css";
 
 function formatDuration(startMs: number, endMs?: number | null): string {

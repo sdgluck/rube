@@ -1,4 +1,4 @@
-import { getImdbClient } from "../../../lib/clients.ts";
+import { getImdbClient } from "#lib/clients.ts";
 
 export async function fetchImdbChart(id: string): Promise<{ name: string; imdbIds: string[] }> {
   return getImdbClient().fetchChart(id);

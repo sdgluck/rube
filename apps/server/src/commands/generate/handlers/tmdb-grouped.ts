@@ -1,8 +1,8 @@
 import type { TmdbCachedDetails } from "@tinkerbell/db";
-import { getConfig } from "../../../lib/config.ts";
-import { indexItemsByTmdb } from "../plex-index.ts";
-import { hydrateTmdbDetails } from "../tmdb-metadata.ts";
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import { getConfig } from "#lib/config.ts";
+import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
+import { hydrateTmdbDetails } from "#commands/generate/tmdb-metadata.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 const MIN_ITEMS_PER_GROUP = 3;
 

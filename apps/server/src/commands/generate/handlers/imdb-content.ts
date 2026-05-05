@@ -1,6 +1,6 @@
-import { indexItemsByImdb } from "../plex-index.ts";
-import { fetchImdbChart, fetchImdbList } from "../sources/imdb.ts";
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import { indexItemsByImdb } from "#commands/generate/plex-index.ts";
+import { fetchImdbChart, fetchImdbList } from "#commands/generate/sources/imdb.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 /**
  * IMDb chart or list → one collection per section, named after the chart/
