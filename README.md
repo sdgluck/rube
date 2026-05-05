@@ -28,17 +28,18 @@ Requires Node 25+ and pnpm 9.15.
 
 ```sh
 pnpm install
-pnpm db:migrate
 pnpm dev
 ```
 
-`pnpm dev` runs server (`:3000`) and web (Vite) via Turbo, with `portless` for local hostnames (`api.tinkerbell`, `web.tinkerbell`).
+`pnpm dev` runs `pnpm migrate` first as a discrete step, then starts the apps via Turbo. Migrations are applied at the entrypoint (dev script / Docker entrypoint) — never as part of application boot.
+
+Server runs on `:3000`, web on Vite, with `portless` for local hostnames (`api.tinkerbell`, `web.tinkerbell`).
 
 Database lives at `tinkerbell.db` (SQLite). Schema changes:
 
 ```sh
 pnpm db:generate   # generate migration from schema
-pnpm db:migrate    # apply migrations
+pnpm db:migrate    # apply migrations (also runs automatically as part of `pnpm dev`)
 ```
 
 ## Testing

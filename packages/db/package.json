@@ -13,8 +13,8 @@
   ],
   "scripts": {
     "typecheck": "tsc",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "generate": "drizzle-kit generate",
+    "migrate": "node src/migrate.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",

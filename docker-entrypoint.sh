@@ -13,4 +13,8 @@ fi
 
 chown -R "$PUID:$PGID" /config
 
+# Apply pending DB migrations as a discrete step before the app process
+# starts. Runs as the app user so the DB file picks up the right ownership.
+su-exec "$PUID:$PGID" node node_modules/@tinkerbell/db/src/migrate.ts
+
 exec su-exec "$PUID:$PGID" "$@"
