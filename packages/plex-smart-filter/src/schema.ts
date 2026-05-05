@@ -10,7 +10,7 @@ import type { SmartFilterGroup, SmartFilterNode } from "./parse.ts";
 export const smartFilterLeafSchema = z.object({
   kind: z.literal("leaf"),
   field: z.string().min(1),
-  op: z.enum(["=", "==", "!=", ">=", "<="]),
+  op: z.enum(["=", "==", "!=", ">=", "<=", ">", "<"]),
   value: z.string(),
 });
 

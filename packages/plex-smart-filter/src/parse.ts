@@ -7,7 +7,7 @@
  * uses these shapes (including OR-within-field via repeated equality
  * clauses, and OR groups via push/or/pop blocks) survives migration.
  */
-export type SmartFilterOp = "=" | "==" | "!=" | ">=" | "<=";
+export type SmartFilterOp = "=" | "==" | "!=" | ">=" | "<=" | ">" | "<";
 
 export interface SmartFilterLeaf {
   kind: "leaf";
@@ -34,10 +34,9 @@ export interface ParseResult {
   /** Root node — always a group, even when there's only one leaf. */
   filter: SmartFilterGroup;
   /**
-   * Tokens we couldn't translate (strict gt/lt with no `=`, OR-pipe
-   * values, malformed segments). Surface in the provider's `unmappable`
-   * list when non-empty so the user sees what was skipped instead of a
-   * silently-lossy migration.
+   * Tokens we couldn't translate (OR-pipe values, malformed segments).
+   * Surface in the provider's `unmappable` list when non-empty so the
+   * user sees what was skipped instead of a silently-lossy migration.
    */
   unsupported: string[];
 }
@@ -60,11 +59,11 @@ const X_PLEX_PREFIX = "X-Plex-";
  * MUST be tried first (`>>=` before `>>`, `==` before `=`) — naïve `=`
  * matching would split the wrong way and drop the operator entirely.
  */
-const OP_SUFFIXES: Array<{ suffix: string; op: SmartFilterOp | null }> = [
+const OP_SUFFIXES: Array<{ suffix: string; op: SmartFilterOp }> = [
   { suffix: ">>=", op: ">=" },
   { suffix: "<<=", op: "<=" },
-  { suffix: ">>", op: null }, // strict gt — not modelled by smart_filter ops yet
-  { suffix: "<<", op: null }, // strict lt — same
+  { suffix: ">>", op: ">" },
+  { suffix: "<<", op: "<" },
   { suffix: "!=", op: "!=" },
   { suffix: "==", op: "==" },
   { suffix: "=", op: "=" },
@@ -72,16 +71,15 @@ const OP_SUFFIXES: Array<{ suffix: string; op: SmartFilterOp | null }> = [
 
 interface MatchedSegment {
   field: string;
-  op: SmartFilterOp | null;
+  op: SmartFilterOp;
   value: string;
-  suffix: string;
 }
 
 function matchOperator(raw: string): MatchedSegment | null {
   for (const { suffix, op } of OP_SUFFIXES) {
     const idx = raw.indexOf(suffix);
     if (idx < 0) continue;
-    return { field: raw.slice(0, idx), op, value: raw.slice(idx + suffix.length), suffix };
+    return { field: raw.slice(0, idx), op, value: raw.slice(idx + suffix.length) };
   }
   return null;
 }
@@ -111,7 +109,7 @@ function tokenize(query: string, unsupported: string[]): Token[] {
       continue;
     }
 
-    const { field, value, op, suffix } = matched;
+    const { field, value, op } = matched;
     if (!field) {
       tokens.push({ kind: "unsupported", raw });
       continue;
@@ -143,11 +141,6 @@ function tokenize(query: string, unsupported: string[]): Token[] {
     }
     if (field === "group") {
       unsupported.push(`${field}=${value} (advanced group)`);
-      continue;
-    }
-
-    if (op === null) {
-      unsupported.push(`${field} (strict ${suffix === ">>" ? "gt" : "lt"})`);
       continue;
     }
 

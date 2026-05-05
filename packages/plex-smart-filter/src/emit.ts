@@ -12,6 +12,8 @@ const OP_SUFFIX: Record<SmartFilterOp, string> = {
   "!=": "!=",
   ">=": ">>=",
   "<=": "<<=",
+  ">": ">>",
+  "<": "<<",
 };
 
 /**

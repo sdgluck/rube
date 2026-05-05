@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseSmartFilterUri, type SmartFilterGroup, type SmartFilterNode } from "./parse.ts";
+import { parseSmartFilterUri, type SmartFilterGroup, type SmartFilterNode, type SmartFilterOp } from "./parse.ts";
 
 const root = (combinator: "all" | "any", ...children: SmartFilterNode[]): SmartFilterGroup => ({
   kind: "group",
   combinator,
   children,
 });
-const leaf = (field: string, op: "=" | "==" | "!=" | ">=" | "<=", value: string): SmartFilterNode => ({
+const leaf = (field: string, op: SmartFilterOp, value: string): SmartFilterNode => ({
   kind: "leaf",
   field,
   op,
@@ -52,11 +52,14 @@ test("URL-decodes field and value", () => {
   assert.deepEqual(filter, root("all", leaf("genre", "=", "Sci-Fi & Fantasy")));
 });
 
-test("strict gt/lt surface as unsupported", () => {
-  const { filter, unsupported } = parseSmartFilterUri("/library/sections/1/all?year>>2020");
-  assert.deepEqual(filter, root("all"));
-  assert.equal(unsupported.length, 1);
-  assert.match(unsupported[0], /strict gt/);
+test("strict gt/lt parse as `>` and `<`", () => {
+  const gt = parseSmartFilterUri("/library/sections/1/all?year>>2020");
+  assert.deepEqual(gt.filter, root("all", leaf("year", ">", "2020")));
+  assert.deepEqual(gt.unsupported, []);
+
+  const lt = parseSmartFilterUri("/library/sections/1/all?year<<2000");
+  assert.deepEqual(lt.filter, root("all", leaf("year", "<", "2000")));
+  assert.deepEqual(lt.unsupported, []);
 });
 
 test("X-Plex-* params are ignored", () => {
