@@ -4,61 +4,21 @@ import { trpc } from "#/trpc";
 import { useToast } from "#/Toast";
 import { FormSkeleton } from "#/Skeleton";
 import RelativeTime from "#/RelativeTime";
-import styles from "./Settings.module.css";
+import styles from "../Settings.module.css";
 
-export default function SettingsMigrate() {
-  const providersQuery = trpc.migration.providers.useQuery(undefined, { refetchOnWindowFocus: false });
-
-  const [providerId, setProviderId] = useState<string | null>(null);
-
-  // Default-select the first provider with detected items, otherwise the
-  // first registered provider.
-  const statusQuery = trpc.migration.status.useQuery(undefined, { refetchOnWindowFocus: false });
-  useEffect(() => {
-    if (providerId) return;
-    const providers = providersQuery.data;
-    if (!providers || providers.length === 0) return;
-    const status = statusQuery.data;
-    const firstWithItems = status?.providers.find((p) => p.count > 0)?.id;
-    setProviderId(firstWithItems ?? providers[0].id);
-  }, [providersQuery.data, statusQuery.data, providerId]);
-
-  if (providersQuery.isLoading) return <FormSkeleton rows={5} />;
-  if (providersQuery.error || !providersQuery.data) {
-    return <div className={`${styles.toast} ${styles.error}`}>Failed to load migration providers</div>;
-  }
-  const providers = providersQuery.data;
-  if (providers.length === 0) {
-    return <p className={styles.hint}>No migration providers registered.</p>;
-  }
-
-  return (
-    <div className={styles.form} style={{ maxWidth: 880 }}>
-      {providers.length > 1 && (
-        <div className={styles.buttons} style={{ marginBottom: 8 }}>
-          {providers.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={p.id === providerId ? styles.button : styles.buttonSecondary}
-              onClick={() => setProviderId(p.id)}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {providerId && (
-        <ProviderPanel
-          providerId={providerId}
-          providerLabel={providers.find((p) => p.id === providerId)?.label ?? providerId}
-        />
-      )}
-    </div>
-  );
+interface ProviderPanelProps {
+  providerId: string;
+  providerLabel: string;
 }
 
-function ProviderPanel({ providerId, providerLabel }: { providerId: string; providerLabel: string }) {
+/**
+ * One per-provider tab in Settings → Migrate. Owns its own scan/run
+ * state; the wrapper page just picks which provider to render. The plan
+ * fields (proposed / future / unmappable) come straight from the
+ * migrate package and have the same shape across every provider, so
+ * this component is provider-agnostic.
+ */
+export default function ProviderPanel({ providerId, providerLabel }: ProviderPanelProps) {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const utils = trpc.useUtils();
