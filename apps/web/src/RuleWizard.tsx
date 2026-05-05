@@ -6,6 +6,14 @@ import styles from "./RuleWizard.module.css";
 export type AiVibe = "playful" | "serious" | "mixed";
 export type AiNameStyle = "short_punchy" | "descriptive";
 
+export type SmartFilterOp = "=" | "!=" | ">=" | "<=";
+
+export interface SmartFilterClause {
+  field: string;
+  op: SmartFilterOp;
+  value: string;
+}
+
 export interface ArrFormState {
   enabled: boolean;
   monitor: boolean;
@@ -31,6 +39,7 @@ export interface RuleFormState {
   listId: string;
   listProvider: "mdblist" | "trakt" | "imdb";
   collectionName: string;
+  filters: SmartFilterClause[];
   filter: string;
   pinToHomepage: boolean;
   arr: ArrFormState;
@@ -166,6 +175,12 @@ const RULE_TYPES: RuleType[] = [
     producesExternalItems: true,
   },
   {
+    value: "smart_filter",
+    label: "Smart Filter",
+    description:
+      "Build a single collection by AND'ing Plex filter clauses (genre, year, studio, …). Mirrors a Plex smart collection but materialised as a regular collection on the rule's schedule.",
+  },
+  {
     value: "rt_top_rated",
     label: "RT Top Rated",
     description: "Pull from Rotten Tomatoes top-rated items via OMDB.",
@@ -275,6 +290,31 @@ const IMDB_CHART_SECTION_TYPE: Record<string, string> = Object.fromEntries(
 );
 
 /**
+ * Plex smart-filter fields the wizard exposes. Far from exhaustive — Plex
+ * supports many more — but covers the common 80% and matches what the
+ * Plex Smart Collections importer can round-trip cleanly. New fields can
+ * be added here as the importer's parser learns to handle them.
+ */
+const SMART_FILTER_FIELDS: { value: string; label: string }[] = [
+  { value: "genre", label: "Genre" },
+  { value: "year", label: "Year" },
+  { value: "studio", label: "Studio" },
+  { value: "country", label: "Country" },
+  { value: "contentRating", label: "Content rating" },
+  { value: "actor", label: "Actor" },
+  { value: "director", label: "Director" },
+  { value: "label", label: "Label" },
+  { value: "addedAt", label: "Added at" },
+];
+
+const SMART_FILTER_OPS: { value: SmartFilterOp; label: string }[] = [
+  { value: "=", label: "is" },
+  { value: "!=", label: "is not" },
+  { value: ">=", label: "≥" },
+  { value: "<=", label: "≤" },
+];
+
+/**
  * Available `list_source` providers. Marked `disabled` until their backing
  * source has shipped so the picker reflects what's actually wired up.
  * Trakt arrives in a follow-up phase, IMDb stays on its dedicated rule
@@ -318,7 +358,7 @@ function maxLimitForType(type: string): number {
 }
 
 function typeHasLimit(type: string): boolean {
-  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source";
+  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source" && type !== "smart_filter";
 }
 
 // Section-type constraint for rule types that only make sense for movies or shows.
@@ -337,6 +377,7 @@ function typeHasSourceStep(type: string): boolean {
     type === "imdb_chart" ||
     type === "imdb_list" ||
     type === "list_source" ||
+    type === "smart_filter" ||
     type === "seerr_requests"
   );
 }
@@ -375,6 +416,12 @@ function suggestName(form: RuleFormState, sections: { title: string }[]): string
     const provider = LIST_PROVIDER_LABELS[form.listProvider] ?? form.listProvider;
     const id = form.listId.trim();
     return id ? `${provider}: ${id}` : provider;
+  }
+  if (form.type === "smart_filter") {
+    if (form.collectionName.trim()) return form.collectionName.trim();
+    if (form.filters.length === 0) return "Smart Filter";
+    const head = form.filters[0];
+    return head.value.trim() ? `${head.field}: ${head.value.trim()}` : "Smart Filter";
   }
   if (form.type === "seerr_requests") return `Seerr — ${SEERR_FILTER_LABELS[form.filter] || "Requests"}`;
   if (form.type === "ai_prompt") {
@@ -429,6 +476,10 @@ function validateStep(step: StepId, form: RuleFormState): string | null {
       if (!form.listProvider) return "Pick a list provider.";
       if (!form.listId.trim()) return "A list ID is required.";
     }
+    if (form.type === "smart_filter") {
+      if (form.filters.length === 0) return "Add at least one filter clause.";
+      if (form.filters.some((f) => !f.field || !f.value.trim())) return "Every filter clause needs a field and value.";
+    }
     return null;
   }
   if (step === "scope") return null;
@@ -450,6 +501,8 @@ function isFormValid(form: RuleFormState): boolean {
     (form.type !== "ai_prompt" || aiHasThemes(form)) &&
     (form.type !== "imdb_list" || !!form.listId.trim()) &&
     (form.type !== "list_source" || (!!form.listProvider && !!form.listId.trim())) &&
+    (form.type !== "smart_filter" ||
+      (form.filters.length > 0 && form.filters.every((f) => !!f.field && !!f.value.trim()))) &&
     (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
   );
 }
@@ -550,6 +603,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     form.listProvider,
     form.collectionName,
     form.filter,
+    form.filters,
     form.themes,
     form.customThemes,
     sections,
@@ -872,6 +926,101 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
       );
     }
 
+    if (form.type === "smart_filter") {
+      const updateClause = (i: number, patch: Partial<SmartFilterClause>) => {
+        const next = form.filters.map((c, idx) => (idx === i ? { ...c, ...patch } : c));
+        setForm({ ...form, filters: next });
+      };
+      const removeClause = (i: number) => {
+        setForm({ ...form, filters: form.filters.filter((_, idx) => idx !== i) });
+      };
+      const addClause = () => {
+        setForm({
+          ...form,
+          filters: [...form.filters, { field: "genre", op: "=", value: "" }],
+        });
+      };
+
+      return (
+        <>
+          <h3 className={styles.stepHeading}>Smart filter</h3>
+          <p className={styles.stepSub}>
+            Build the criteria the rule will use to query Plex. Clauses are AND'd together; one collection per section
+            is created from the matching items each time the rule runs.
+          </p>
+          <div className={styles.field}>
+            <label htmlFor="rule-smart-filter-name">Collection name (optional)</label>
+            <input
+              id="rule-smart-filter-name"
+              className={shared.input}
+              value={form.collectionName}
+              onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
+              placeholder="Smart Filter"
+            />
+          </div>
+          <div className={styles.field}>
+            <label>Filters</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {form.filters.map((clause, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    className={shared.input}
+                    style={{ flex: "0 0 140px" }}
+                    value={clause.field}
+                    onChange={(e) => updateClause(i, { field: e.target.value })}
+                    aria-label="Field"
+                  >
+                    {SMART_FILTER_FIELDS.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className={shared.input}
+                    style={{ flex: "0 0 80px" }}
+                    value={clause.op}
+                    onChange={(e) => updateClause(i, { op: e.target.value as SmartFilterOp })}
+                    aria-label="Operator"
+                  >
+                    {SMART_FILTER_OPS.map((op) => (
+                      <option key={op.value} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className={shared.input}
+                    style={{ flex: 1 }}
+                    value={clause.value}
+                    onChange={(e) => updateClause(i, { value: e.target.value })}
+                    placeholder="Value"
+                    aria-label="Value"
+                  />
+                  <button
+                    type="button"
+                    className={styles.summaryEdit}
+                    onClick={() => removeClause(i)}
+                    aria-label={`Remove clause ${i + 1}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className={styles.summaryEdit}
+                onClick={addClause}
+                style={{ alignSelf: "flex-start" }}
+              >
+                + Add clause
+              </button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
     if (form.type === "seerr_requests") {
       return (
         <>
@@ -1187,6 +1336,10 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
       sourceLabel = "List";
       const provider = LIST_PROVIDER_LABELS[form.listProvider] ?? form.listProvider;
       sourceValue = form.listId.trim() ? `${provider} — ${form.listId.trim()}` : provider;
+    } else if (form.type === "smart_filter") {
+      sourceLabel = "Filters";
+      sourceValue =
+        form.filters.length === 0 ? "—" : form.filters.map((f) => `${f.field} ${f.op} ${f.value || "?"}`).join(" AND ");
     } else if (form.type === "seerr_requests") {
       sourceLabel = "Filter";
       sourceValue = SEERR_FILTER_LABELS[form.filter] || form.filter;

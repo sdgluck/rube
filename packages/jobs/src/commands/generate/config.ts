@@ -14,8 +14,18 @@ export const ruleConfigSchema = z.object({
   listId: z.string().optional(),
   /** list_source: which external list provider supplies the items. */
   listProvider: z.enum(["mdblist", "trakt", "imdb"]).optional(),
-  /** list_source: optional override for the generated collection name. */
+  /** list_source / smart_filter: optional override for the generated collection name. */
   collectionName: z.string().optional(),
+  /** smart_filter: AND'd Plex filter clauses translated to a query string at run time. */
+  filters: z
+    .array(
+      z.object({
+        field: z.string().min(1),
+        op: z.enum(["=", "!=", ">=", "<="]),
+        value: z.string(),
+      }),
+    )
+    .optional(),
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
   arr: z
