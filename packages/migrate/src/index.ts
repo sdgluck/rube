@@ -9,7 +9,7 @@ export type {
   PlanOptions,
   UnmappableEntry,
 } from "./types.ts";
-export { kometaProvider } from "./kometa/index.ts";
+export { kometaProvider, isKometaClaimed } from "./kometa/index.ts";
 export {
   detectSmartCollections,
   buildPlexSmartPlan,

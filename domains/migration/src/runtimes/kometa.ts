@@ -1,5 +1,11 @@
 import { db, collections } from "@tinkerbell/db";
-import { kometaProvider, type BucketKind, type CollectionInput, type MigrationPlan } from "@tinkerbell/migrate";
+import {
+  isKometaClaimed,
+  kometaProvider,
+  type BucketKind,
+  type CollectionInput,
+  type MigrationPlan,
+} from "@tinkerbell/migrate";
 import { summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
 
 function loadKometaCollectionInputs(): CollectionInput[] {
@@ -65,4 +71,5 @@ export const KOMETA_RUNTIME: ProviderRuntime = {
     const classified = kometaProvider.classify(detected);
     return kometaProvider.buildPlan(classified, { supportedRuleTypes: KOMETA_BUCKET_TO_RULE_TYPE });
   },
+  claims: isKometaClaimed,
 };

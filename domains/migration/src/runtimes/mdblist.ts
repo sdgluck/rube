@@ -77,4 +77,10 @@ export const MDBLIST_RUNTIME: ProviderRuntime = {
     }));
     return { proposed, future: [], unmappable: [], totalSourceItems: lists.length };
   },
+  // External-list provider: nothing to claim row-wise. MDBList lists live
+  // outside Plex, so they can't conflict with another provider over a
+  // collection row.
+  claims(): boolean {
+    return false;
+  },
 };

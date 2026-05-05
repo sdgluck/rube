@@ -21,6 +21,15 @@ export interface ProviderRuntime {
   scan(): Promise<ProviderScanResult> | ProviderScanResult;
   /** Build a fresh migration plan. May be expensive for API providers. */
   buildPlan(): Promise<MigrationPlan> | MigrationPlan;
+  /**
+   * True if this provider considers `input` its own. Used by less-specific
+   * providers (e.g. Plex Smart) to avoid double-claiming collections that
+   * a more specific provider (Kometa via its label, Trakt, etc.) already
+   * manages. Providers whose source isn't Plex collection rows (MDBList,
+   * Trakt user lists) return `false` — they have nothing to compete over
+   * row-wise.
+   */
+  claims(input: CollectionInput): boolean;
 }
 
 export interface ProviderScanResult {

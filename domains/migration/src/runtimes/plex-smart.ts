@@ -2,9 +2,11 @@ import { db, collections } from "@tinkerbell/db";
 import {
   buildPlexSmartPlan,
   detectSmartCollections,
+  type CollectionInput,
   type MigrationPlan,
   type SmartCollectionInput,
 } from "@tinkerbell/migrate";
+import { listProviders } from "../registry.ts";
 import { summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
 
 function loadPlexSmartCollectionInputs(): SmartCollectionInput[] {
@@ -32,17 +34,33 @@ function loadPlexSmartCollectionInputs(): SmartCollectionInput[] {
   }));
 }
 
+/**
+ * Drop rows that another provider already claims (e.g. Kometa-labeled
+ * smart collections belong to Kometa, not the generic Plex Smart importer).
+ * Keeps Plex Smart as the catch-all for user-authored smart collections
+ * that don't fall under a more specific provider's claim.
+ */
+function rejectClaimedByOthers(inputs: SmartCollectionInput[]): SmartCollectionInput[] {
+  const others = listProviders().filter((p) => p.id !== PLEX_SMART_RUNTIME.id);
+  return inputs.filter((c) => !others.some((p) => p.claims(c)));
+}
+
 export const PLEX_SMART_RUNTIME: ProviderRuntime = {
   id: "plex-smart",
   label: "Plex Smart Collections",
   // Sourced from already-synced Plex collections — same cost as Kometa.
   autoScan: true,
   scan(): ProviderScanResult {
-    const detected = detectSmartCollections(loadPlexSmartCollectionInputs());
+    const detected = detectSmartCollections(rejectClaimedByOthers(loadPlexSmartCollectionInputs()));
     return summariseBySection(detected);
   },
   buildPlan(): MigrationPlan {
-    const detected = detectSmartCollections(loadPlexSmartCollectionInputs());
+    const detected = detectSmartCollections(rejectClaimedByOthers(loadPlexSmartCollectionInputs()));
     return buildPlexSmartPlan(detected);
+  },
+  // Claim every smart collection — symmetric with the other providers'
+  // `claims`, so a future generic provider can know to defer to us.
+  claims(input: CollectionInput): boolean {
+    return (input as Partial<SmartCollectionInput>).smart === true;
   },
 };

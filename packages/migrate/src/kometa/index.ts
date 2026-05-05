@@ -10,6 +10,6 @@ export const kometaProvider: MigrationProvider = {
   buildPlan,
 };
 
-export { detectKometa } from "./detect.ts";
+export { detectKometa, isKometaClaimed } from "./detect.ts";
 export { classifyCollections, classifyOne } from "./classify.ts";
 export { buildPlan, BUCKET_LABEL } from "./plan.ts";
