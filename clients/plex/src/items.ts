@@ -459,6 +459,23 @@ export function createItemsModule(http: PlexHttp) {
     };
   }
 
+  async function getThumbsByRatingKeys(ratingKeys: string[]): Promise<Map<string, string>> {
+    const thumbs = new Map<string, string>();
+    if (ratingKeys.length === 0) return thumbs;
+    // Plex supports comma-separated ratingKeys at /library/metadata/{ids} — one round-trip.
+    // Chunk to avoid pathological URL lengths.
+    const CHUNK = 100;
+    for (let i = 0; i < ratingKeys.length; i += CHUNK) {
+      const chunk = ratingKeys.slice(i, i + CHUNK);
+      const data = await http.request(`/library/metadata/${chunk.join(",")}`);
+      const metas = parseMetadataArray(data?.MediaContainer?.Metadata);
+      for (const m of metas) {
+        if (m.ratingKey && m.thumb) thumbs.set(m.ratingKey, m.thumb);
+      }
+    }
+    return thumbs;
+  }
+
   return {
     allItems,
     fetchAllItems,
@@ -474,5 +491,6 @@ export function createItemsModule(http: PlexHttp) {
     getItemDetail,
     getMetadataChildren,
     getItemFullDetail,
+    getThumbsByRatingKeys,
   };
 }

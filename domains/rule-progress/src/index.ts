@@ -19,6 +19,7 @@ export interface TestPreviewItem {
   ratingKey: string;
   title: string;
   year?: number;
+  thumb?: string;
 }
 
 export interface TestPreviewCollection {

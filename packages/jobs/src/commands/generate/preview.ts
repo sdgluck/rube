@@ -9,7 +9,7 @@ import { handlerForRule } from "./dispatch.ts";
 export interface TestCollectionPreview {
   name: string;
   sectionTitle: string;
-  items: Array<{ ratingKey: string; title: string; year?: number }>;
+  items: Array<{ ratingKey: string; title: string; year?: number; thumb?: string }>;
 }
 
 export interface TestRuleResult {
@@ -101,6 +101,24 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
   }
 
   const totalItems = collections.reduce((sum, c) => sum + c.items.length, 0);
+
+  // Enrich items with thumb paths so the UI can render posters. One batched
+  // request across all collections, then back-fill each item.
+  const allKeys = Array.from(new Set(collections.flatMap((c) => c.items.map((i) => i.ratingKey))));
+  if (allKeys.length > 0) {
+    try {
+      const thumbs = await client.getThumbsByRatingKeys(allKeys);
+      for (const c of collections) {
+        for (const it of c.items) {
+          const t = thumbs.get(it.ratingKey);
+          if (t) it.thumb = t;
+        }
+      }
+    } catch (err) {
+      log(`Warning: failed to fetch thumbs for preview — ${(err as Error).message}`);
+    }
+  }
+
   log(`Test complete in ${Date.now() - startTime}ms — ${collections.length} collection(s), ${totalItems} total items`);
   progress(
     4,

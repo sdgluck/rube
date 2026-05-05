@@ -61,12 +61,14 @@ export default function Rules() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  const [expandedRow, setExpandedRow] = useState<string | null>(
-    () => (typeof window !== "undefined" && sessionStorage.getItem("rules-expanded-row")) || null,
-  );
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
   const togglePreviewExpand = (id: string) => {
-    setExpandedPreview((prev) => (prev === id ? null : id));
+    setExpandedPreview((prev) => {
+      const next = prev === id ? null : id;
+      if (next) setExpandedRow(null);
+      return next;
+    });
   };
   const [expandedConfig, setExpandedConfig] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -81,9 +83,8 @@ export default function Rules() {
   });
 
   useEffect(() => {
-    if (expandedRow) sessionStorage.setItem("rules-expanded-row", expandedRow);
-    else sessionStorage.removeItem("rules-expanded-row");
-  }, [expandedRow]);
+    sessionStorage.removeItem("rules-expanded-row");
+  }, []);
 
   useEffect(() => {
     if (!focusRuleId || rulesQuery.isLoading) return;
@@ -406,6 +407,7 @@ export default function Rules() {
   function testRule(id: string): Promise<unknown> {
     setTestingRuleId(id);
     setExpandedRow(id);
+    setExpandedPreview(null);
     testingRuleIdRef.current = id;
     return testMutation.mutateAsync({ id }).finally(() => {
       testingRuleIdRef.current = null;
@@ -418,6 +420,7 @@ export default function Rules() {
   function runRule(id: string): Promise<unknown> {
     setRunningRuleId(id);
     setExpandedRow(id);
+    setExpandedPreview(null);
     runningRuleIdRef.current = id;
     return runMutation
       .mutateAsync({ id })
@@ -474,7 +477,11 @@ export default function Rules() {
   }
 
   function toggleRowExpand(id: string) {
-    setExpandedRow((prev) => (prev === id ? null : id));
+    setExpandedRow((prev) => {
+      const next = prev === id ? null : id;
+      if (next) setExpandedPreview(null);
+      return next;
+    });
   }
 
   useEffect(() => {

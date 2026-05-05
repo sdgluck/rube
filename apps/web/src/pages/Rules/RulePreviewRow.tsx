@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FadeImage from "#components/FadeImage";
 import Spinner from "#components/Spinner";
@@ -12,20 +12,19 @@ interface RulePreviewRowProps {
 }
 
 export default function RulePreviewRow({ ruleId, fallbackRatingKey }: RulePreviewRowProps) {
-  const tdRef = useRef<HTMLTableCellElement>(null);
+  const [tdEl, setTdEl] = useState<HTMLTableCellElement | null>(null);
   const [wrapperWidth, setWrapperWidth] = useState<number | null>(null);
 
-  useEffect(() => {
-    const td = tdRef.current;
-    if (!td) return;
-    const wrapper = td.closest<HTMLElement>(".table-scroll");
+  useLayoutEffect(() => {
+    if (!tdEl) return;
+    const wrapper = tdEl.closest<HTMLElement>(".table-scroll");
     if (!wrapper) return;
     const update = () => setWrapperWidth(wrapper.clientWidth);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(wrapper);
     return () => ro.disconnect();
-  }, []);
+  }, [tdEl]);
 
   const listQuery = trpc.collections.list.useQuery({ label: `Rule:${ruleId}`, limit: 50 });
 
@@ -36,18 +35,15 @@ export default function RulePreviewRow({ ruleId, fallbackRatingKey }: RulePrevie
 
   return (
     <tr className={styles.detailRow}>
-      <td ref={tdRef} colSpan={7} className={styles.previewBlockCell}>
+      <td ref={setTdEl} colSpan={7} className={styles.previewBlockCell}>
         {listQuery.isLoading ? (
           <div className={styles.detailWrap}>
             <div className={styles.previewLoading}>
               <Spinner size="sm" /> Loading preview…
             </div>
           </div>
-        ) : (
-          <div
-            className={styles.previewStack}
-            style={wrapperWidth ? { width: `${wrapperWidth}px` } : { visibility: "hidden" }}
-          >
+        ) : wrapperWidth == null ? null : (
+          <div className={styles.previewStack} style={{ width: `${wrapperWidth}px` }}>
             {collections.map((c) => (
               <CollectionPreview key={c.ratingKey} ratingKey={c.ratingKey} title={c.title} />
             ))}

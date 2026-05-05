@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FadeImage from "#components/FadeImage";
 import { trpc } from "#/trpc";
@@ -19,26 +19,25 @@ export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToSho
   const resultQuery = trpc.rules.lastTestResult.useQuery({ id: ruleId }, { enabled: !isRunning });
   const hasResult = !!resultQuery.data;
   const showAnything = isTesting || isRunning || !!errorToShow || hasResult;
-  const tdRef = useRef<HTMLTableCellElement>(null);
+  const [tdEl, setTdEl] = useState<HTMLTableCellElement | null>(null);
   const [wrapperWidth, setWrapperWidth] = useState<number | null>(null);
 
-  useEffect(() => {
-    const td = tdRef.current;
-    if (!td) return;
-    const wrapper = td.closest<HTMLElement>(".table-scroll");
+  useLayoutEffect(() => {
+    if (!tdEl) return;
+    const wrapper = tdEl.closest<HTMLElement>(".table-scroll");
     if (!wrapper) return;
     const update = () => setWrapperWidth(wrapper.clientWidth);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(wrapper);
     return () => ro.disconnect();
-  }, []);
+  }, [tdEl]);
 
   if (!showAnything) return null;
 
   return (
     <tr className={styles.detailRow}>
-      <td ref={tdRef} colSpan={7}>
+      <td ref={setTdEl} colSpan={7}>
         <div className={styles.detailWrap}>
           {(isTesting || isRunning) && <InlineProgress ruleId={ruleId} phase={isTesting ? "test" : "run"} />}
           {!isTesting && !isRunning && errorToShow && (
@@ -49,7 +48,9 @@ export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToSho
               <div className={styles.errorBox}>{errorToShow}</div>
             </div>
           )}
-          {!isRunning && <TestResultsBlock ruleId={ruleId} onCleared={onCleared} wrapperWidth={wrapperWidth} />}
+          {!isRunning && !isTesting && (
+            <TestResultsBlock ruleId={ruleId} onCleared={onCleared} wrapperWidth={wrapperWidth} />
+          )}
         </div>
       </td>
     </tr>
@@ -110,11 +111,8 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
       </div>
       {result.collections.length === 0 ? (
         <div className={styles.testPreviewEmpty}>No collections would be created by this rule.</div>
-      ) : (
-        <div
-          className={styles.testPreviewStack}
-          style={stackWidth != null ? { width: `${stackWidth}px` } : { visibility: "hidden" }}
-        >
+      ) : stackWidth == null ? null : (
+        <div className={styles.testPreviewStack} style={{ width: `${stackWidth}px` }}>
           {result.collections.map((col, i) => (
             <div key={i} className={styles.previewBlock}>
               <h4 className={styles.previewBlockTitle}>
@@ -125,9 +123,7 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
               </h4>
               <div className={styles.testPreviewPosterRow}>
                 {col.items.map((item) => {
-                  const src = item.ratingKey
-                    ? `/api/plex-image?path=${encodeURIComponent(`/library/metadata/${item.ratingKey}/thumb`)}`
-                    : null;
+                  const src = item.thumb ? `/api/plex-image?path=${encodeURIComponent(item.thumb)}` : null;
                   return (
                     <div
                       key={item.ratingKey}
