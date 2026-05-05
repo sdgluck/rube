@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { getConfig, setConfig } from "../lib/config.ts";
-import { getLocalMediaItems } from "../domains/media.ts";
-import { getLocalCollection } from "../domains/collections.ts";
+import { getConfig, setConfig } from "#lib/config.ts";
+import { getLocalMediaItems } from "#domains/media.ts";
+import { getLocalCollection } from "#domains/collections.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const mediaRouter = t.router({

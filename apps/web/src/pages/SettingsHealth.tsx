@@ -1,4 +1,4 @@
-import { trpc } from "../trpc";
+import { trpc } from "#/trpc";
 import styles from "./SettingsHealth.module.css";
 
 function timeAgo(timestamp: number): string {

@@ -1,4 +1,4 @@
-import styles from "../Stats.module.css";
+import styles from "#pages/Stats.module.css";
 
 export const RESOLUTION_COLORS: Record<string, string> = {
   "4k": "#7c4dff",

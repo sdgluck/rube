@@ -1,6 +1,6 @@
 import { initTRPC } from "@trpc/server";
 
-export { getPlexClient } from "../lib/clients.ts";
+export { getPlexClient } from "#lib/clients.ts";
 
 export const t = initTRPC.create();
 

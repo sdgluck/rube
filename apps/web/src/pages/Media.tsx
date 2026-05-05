@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
-import { trpc } from "../trpc";
-import { MediaSkeleton } from "../Skeleton";
-import Spinner from "../Spinner";
-import EmptyState from "../EmptyState";
-import FadeImage from "../FadeImage";
-import { readEnumStorage } from "../storage";
+import { trpc } from "#/trpc";
+import { MediaSkeleton } from "#/Skeleton";
+import Spinner from "#/Spinner";
+import EmptyState from "#/EmptyState";
+import FadeImage from "#/FadeImage";
+import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
 import mediaStyles from "./Media.module.css";
 

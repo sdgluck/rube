@@ -1,9 +1,9 @@
 import { LayoutGrid } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import PullToRefresh from "../PullToRefresh";
-import { SkeletonLine } from "../Skeleton";
-import { trpc } from "../trpc";
+import PullToRefresh from "#/PullToRefresh";
+import { SkeletonLine } from "#/Skeleton";
+import { trpc } from "#/trpc";
 import { formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "./stats/format";
 import { DragHandle, type PanelDragProps } from "./stats/PanelShell";
 import { LibraryBreakdownPanel } from "./stats/LibraryBreakdownPanel";

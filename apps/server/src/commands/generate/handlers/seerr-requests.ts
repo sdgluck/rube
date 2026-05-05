@@ -1,6 +1,6 @@
-import { getConfig } from "../../../lib/config.ts";
-import { indexItemsByTmdb } from "../plex-index.ts";
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import { getConfig } from "#lib/config.ts";
+import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 const MAX_LIMIT = 200;
 const DEFAULT_LIMIT = 50;

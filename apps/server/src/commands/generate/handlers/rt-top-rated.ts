@@ -1,8 +1,8 @@
 import PQueue from "p-queue";
 import { extractImdbId } from "@tinkerbell/omdb";
-import { getOmdbClient } from "../../../lib/clients.ts";
-import { getConfig } from "../../../lib/config.ts";
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import { getOmdbClient } from "#lib/clients.ts";
+import { getConfig } from "#lib/config.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 const OMDB_CONCURRENCY = 5;
 const PROGRESS_INTERVAL = 50;

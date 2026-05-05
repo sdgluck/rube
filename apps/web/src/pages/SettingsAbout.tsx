@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { VERSION, IS_BETA } from "../version";
+import { VERSION, IS_BETA } from "#/version";
 
 export default function SettingsAbout() {
   return (

@@ -1,7 +1,7 @@
 import { createLlmClient } from "@tinkerbell/llm";
-import { errorMessage } from "../../../lib/util.ts";
-import { getLlmConfig } from "../../../lib/config.ts";
-import { reportHealth } from "../../../domains/health.ts";
+import { errorMessage } from "#lib/util.ts";
+import { getLlmConfig } from "#lib/config.ts";
+import { reportHealth } from "#domains/health.ts";
 
 export interface LlmCallResult {
   text: string;

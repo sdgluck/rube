@@ -1,7 +1,7 @@
 // In-memory registry of in-flight test/run operations per rule.
 // The web UI polls these to render progress.
 
-import type { JobContext } from "../lib/job-context.ts";
+import type { JobContext } from "#lib/job-context.ts";
 
 export type RulePhase = "test" | "run";
 

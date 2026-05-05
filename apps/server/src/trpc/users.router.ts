@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { syncUsers, getLocalUsers, updateUser } from "../domains/users.ts";
+import { syncUsers, getLocalUsers, updateUser } from "#domains/users.ts";
 import { t, getPlexClient } from "./_base.ts";
 
 export const usersRouter = t.router({

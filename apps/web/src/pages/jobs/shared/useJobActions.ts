@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { trpc } from "#/trpc";
-import type { Job } from "../types";
+import type { Job } from "#pages/jobs/types";
 
 export function useJobActions(job: Job) {
   const utils = trpc.useUtils();

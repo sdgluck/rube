@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { trpc } from "../trpc";
-import { useToast } from "../Toast";
-import { FormSkeleton } from "../Skeleton";
-import RelativeTime from "../RelativeTime";
+import { trpc } from "#/trpc";
+import { useToast } from "#/Toast";
+import { FormSkeleton } from "#/Skeleton";
+import RelativeTime from "#/RelativeTime";
 import styles from "./Settings.module.css";
 
 export default function SettingsMigrate() {

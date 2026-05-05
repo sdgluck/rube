@@ -1,7 +1,7 @@
 import type React from "react";
-import { trpc } from "../../trpc";
+import { trpc } from "#/trpc";
 import { DistributionBar, RESOLUTION_COLORS } from "./DistributionBar";
-import styles from "../Stats.module.css";
+import styles from "#pages/Stats.module.css";
 import { formatCodec, formatResolution } from "./format";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 

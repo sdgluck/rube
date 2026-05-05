@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CHANGELOG, VERSION, IS_BETA } from "../version";
+import { CHANGELOG, VERSION, IS_BETA } from "#/version";
 import styles from "./Changelog.module.css";
 
 type Block =

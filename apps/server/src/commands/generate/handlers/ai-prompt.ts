@@ -1,8 +1,8 @@
-import { getRecentHistory } from "../../../domains/rule-history.ts";
-import { buildAiPrompt, pickSampleItems } from "../ai/prompt.ts";
-import { parseAiCollections } from "../ai/parse.ts";
-import { askLlm, shuffled } from "../ai/llm.ts";
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import { getRecentHistory } from "#domains/rule-history.ts";
+import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
+import { parseAiCollections } from "#commands/generate/ai/parse.ts";
+import { askLlm, shuffled } from "#commands/generate/ai/llm.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<PendingCollection> {
   const { ctx, client, sections, rule, ruleConfig, onAiUsage } = deps;
@@ -86,6 +86,6 @@ export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<Pendin
 
 // Re-exported so the dispatch loop can call askLlm → parse to also
 // surface token usage in preview without re-implementing the handler.
-export { askLlm } from "../ai/llm.ts";
-export { parseAiCollections } from "../ai/parse.ts";
-export { buildAiPrompt } from "../ai/prompt.ts";
+export { askLlm } from "#commands/generate/ai/llm.ts";
+export { parseAiCollections } from "#commands/generate/ai/parse.ts";
+export { buildAiPrompt } from "#commands/generate/ai/prompt.ts";

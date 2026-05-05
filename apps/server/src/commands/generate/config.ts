@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Rule } from "../../domains/rules.ts";
+import type { Rule } from "#domains/rules.ts";
 
 export const ruleConfigSchema = z.object({
   prompt: z.string().optional(),

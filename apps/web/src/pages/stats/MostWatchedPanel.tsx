@@ -1,8 +1,8 @@
 import type React from "react";
 import { Link } from "react-router-dom";
-import { ListSkeleton } from "../../Skeleton";
-import { trpc } from "../../trpc";
-import styles from "../Stats.module.css";
+import { ListSkeleton } from "#/Skeleton";
+import { trpc } from "#/trpc";
+import styles from "#pages/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function MostWatchedPanel({

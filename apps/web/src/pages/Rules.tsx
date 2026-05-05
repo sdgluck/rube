@@ -1,15 +1,15 @@
 import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { trpc } from "../trpc";
-import DropdownButton from "../DropdownButton";
-import ConfirmModal from "../ConfirmModal";
-import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle, DEFAULT_ARR_FORM } from "../RuleWizard";
-import { RulesSkeleton } from "../Skeleton";
-import Spinner from "../Spinner";
-import EmptyState from "../EmptyState";
-import RelativeTime from "../RelativeTime";
-import ToggleSwitch from "../ToggleSwitch";
-import { useToast } from "../Toast";
+import { trpc } from "#/trpc";
+import DropdownButton from "#/DropdownButton";
+import ConfirmModal from "#/ConfirmModal";
+import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle, DEFAULT_ARR_FORM } from "#/RuleWizard";
+import { RulesSkeleton } from "#/Skeleton";
+import Spinner from "#/Spinner";
+import EmptyState from "#/EmptyState";
+import RelativeTime from "#/RelativeTime";
+import ToggleSwitch from "#/ToggleSwitch";
+import { useToast } from "#/Toast";
 import shared from "./Collections.module.css";
 import styles from "./Rules.module.css";
 

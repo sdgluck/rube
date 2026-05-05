@@ -1,9 +1,9 @@
 import type React from "react";
-import RelativeTime from "../../RelativeTime";
-import Spinner from "../../Spinner";
-import { trpc } from "../../trpc";
-import { formatDurationMs, stripDurationFromMessage } from "../../utils";
-import styles from "../Stats.module.css";
+import RelativeTime from "#/RelativeTime";
+import Spinner from "#/Spinner";
+import { trpc } from "#/trpc";
+import { formatDurationMs, stripDurationFromMessage } from "#/utils";
+import styles from "#pages/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function SystemPanel({ dragHandle, dragProps }: { dragHandle: React.ReactNode; dragProps: PanelDragProps }) {

@@ -1,5 +1,5 @@
-import type { HistoricalCollection } from "../../../domains/rule-history.ts";
-import { VIBE_HINTS, NAME_STYLE_HINTS, type RuleConfig } from "../config.ts";
+import type { HistoricalCollection } from "#domains/rule-history.ts";
+import { VIBE_HINTS, NAME_STYLE_HINTS, type RuleConfig } from "#commands/generate/config.ts";
 
 export function buildAiPrompt(args: {
   sectionTitle: string;

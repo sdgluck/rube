@@ -1,6 +1,6 @@
 import { GripVertical } from "lucide-react";
 import type React from "react";
-import styles from "../Stats.module.css";
+import styles from "#pages/Stats.module.css";
 
 export type PanelDragProps = {
   onDragOver: (e: React.DragEvent) => void;

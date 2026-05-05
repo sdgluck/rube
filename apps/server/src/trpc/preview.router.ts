@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { getConfig } from "../lib/config.ts";
-import { getPreviewForUser } from "../domains/preview.ts";
-import { shuffleAllSections } from "../domains/shuffle-hubs.ts";
+import { getConfig } from "#lib/config.ts";
+import { getPreviewForUser } from "#domains/preview.ts";
+import { shuffleAllSections } from "#domains/shuffle-hubs.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const previewRouter = t.router({

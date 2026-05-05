@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getConfig } from "../lib/config.ts";
+import { getConfig } from "#lib/config.ts";
 import {
   syncCollections,
   getLocalCollections,
@@ -8,7 +8,7 @@ import {
   updateCollection,
   updateCollectionLabels,
   deleteCollection,
-} from "../domains/collections.ts";
+} from "#domains/collections.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const collectionsRouter = t.router({

@@ -1,7 +1,7 @@
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { upsertCollectionByKey } from "../../domains/collections.ts";
-import type { JobContext } from "../../lib/job-context.ts";
-import { fetchAutoPoster } from "../../lib/posters.ts";
+import { upsertCollectionByKey } from "#domains/collections.ts";
+import type { JobContext } from "#lib/job-context.ts";
+import { fetchAutoPoster } from "#lib/posters.ts";
 
 /**
  * The full "create + pin + mirror" sequence we want for every generated

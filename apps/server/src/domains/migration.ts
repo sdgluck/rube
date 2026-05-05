@@ -1,6 +1,6 @@
 import { db, collections } from "@tinkerbell/db";
 import { kometaProvider, type BucketKind, type CollectionInput, type MigrationPlan } from "@tinkerbell/migrate";
-import { getConfig, setConfig } from "../lib/config.ts";
+import { getConfig, setConfig } from "#lib/config.ts";
 
 /**
  * Phase 1 mapping. Buckets not in this map fall through to `future` in the

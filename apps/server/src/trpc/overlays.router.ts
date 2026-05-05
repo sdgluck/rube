@@ -22,9 +22,9 @@ import {
   deletePreset,
   presetDataSchema,
   type Badge,
-} from "../domains/overlays.ts";
+} from "#domains/overlays.ts";
 import { extractImdbId } from "@tinkerbell/omdb";
-import { getOmdbClient } from "../lib/clients.ts";
+import { getOmdbClient } from "#lib/clients.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 async function getMediaInfoForItem(

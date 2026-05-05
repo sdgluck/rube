@@ -4,7 +4,7 @@ import {
   getLibraryOverview,
   getCachedActivitySummary,
   getOpsSummary,
-} from "../domains/stats.ts";
+} from "#domains/stats.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const statsRouter = t.router({

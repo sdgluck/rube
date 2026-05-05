@@ -1,7 +1,7 @@
 import type React from "react";
-import { ListSkeleton } from "../../Skeleton";
-import { trpc } from "../../trpc";
-import styles from "../Stats.module.css";
+import { ListSkeleton } from "#/Skeleton";
+import { trpc } from "#/trpc";
+import styles from "#pages/Stats.module.css";
 import { formatBandwidth, formatCodec, formatDuration, formatResolution } from "./format";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 

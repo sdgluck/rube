@@ -1,8 +1,8 @@
 import PQueue from "p-queue";
-import { errorMessage } from "../lib/util.ts";
+import { errorMessage } from "#lib/util.ts";
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "../lib/clients.ts";
-import { getConfig } from "../lib/config.ts";
+import { plexHealthCallback } from "#lib/clients.ts";
+import { getConfig } from "#lib/config.ts";
 import {
   getOverlayConfigs,
   getOriginalPoster,
@@ -13,10 +13,10 @@ import {
   evaluateRule,
   compositeOverlays,
   type Badge,
-} from "../domains/overlays.ts";
+} from "#domains/overlays.ts";
 import { extractImdbId } from "@tinkerbell/omdb";
-import { getOmdbClient } from "../lib/clients.ts";
-import type { JobContext, OverlaysJobConfig } from "../lib/job-context.ts";
+import { getOmdbClient } from "#lib/clients.ts";
+import type { JobContext, OverlaysJobConfig } from "#lib/job-context.ts";
 
 export default async function run(ctx: JobContext, config: OverlaysJobConfig): Promise<void> {
   const mode = config.mode || "apply";

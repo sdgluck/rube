@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { trpc } from "../trpc";
-import { useToast } from "../Toast";
-import UnsavedBanner from "../UnsavedBanner";
-import useUnsavedChanges from "../useUnsavedChanges";
-import { FormSkeleton } from "../Skeleton";
+import { trpc } from "#/trpc";
+import { useToast } from "#/Toast";
+import UnsavedBanner from "#/UnsavedBanner";
+import useUnsavedChanges from "#/useUnsavedChanges";
+import { FormSkeleton } from "#/Skeleton";
 import styles from "./Settings.module.css";
 
 export default function SettingsPlex() {

@@ -1,4 +1,4 @@
-import type { HandlerDeps, PendingCollection } from "../types.ts";
+import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 const MIN_ITEMS_PER_GROUP = 3;
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { trpc } from "../trpc";
-import { useToast } from "../Toast";
-import { FormSkeleton } from "../Skeleton";
+import { trpc } from "#/trpc";
+import { useToast } from "#/Toast";
+import { FormSkeleton } from "#/Skeleton";
 import styles from "./Settings.module.css";
 
 export interface NotificationField {

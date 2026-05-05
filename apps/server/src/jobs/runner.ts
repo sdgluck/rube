@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { errorMessage } from "../lib/util.ts";
+import { errorMessage } from "#lib/util.ts";
 import { join } from "node:path";
 import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
-import { seedDefaultRules } from "../domains/rules.ts";
+import { seedDefaultRules } from "#domains/rules.ts";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
-import { emitEvent } from "../domains/events.ts";
-import { pruneHealthChecks, checkAllConfiguredServices } from "../domains/health.ts";
-import { syncRecentlyAdded, syncMostWatched } from "../domains/stats.ts";
+import { emitEvent } from "#domains/events.ts";
+import { pruneHealthChecks, checkAllConfiguredServices } from "#domains/health.ts";
+import { syncRecentlyAdded, syncMostWatched } from "#domains/stats.ts";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 
 type Job = InferSelectModel<typeof jobs>;

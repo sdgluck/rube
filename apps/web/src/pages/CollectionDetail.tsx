@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { trpc } from "../trpc";
-import ConfirmModal from "../ConfirmModal";
-import { DetailSkeleton } from "../Skeleton";
-import EmptyState from "../EmptyState";
-import FadeImage from "../FadeImage";
-import RelativeTime from "../RelativeTime";
-import { useToast } from "../Toast";
-import useSwipeBack from "../useSwipeBack";
-import { readEnumStorage } from "../storage";
+import { trpc } from "#/trpc";
+import ConfirmModal from "#/ConfirmModal";
+import { DetailSkeleton } from "#/Skeleton";
+import EmptyState from "#/EmptyState";
+import FadeImage from "#/FadeImage";
+import RelativeTime from "#/RelativeTime";
+import { useToast } from "#/Toast";
+import useSwipeBack from "#/useSwipeBack";
+import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
 import SmartFiltersEditor from "./SmartFiltersEditor";
 

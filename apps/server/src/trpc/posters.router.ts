@@ -1,5 +1,5 @@
 import { kometaPosterSourceSchema, resolveKometaUrl } from "@tinkerbell/posters";
-import { posterCache } from "../lib/posters.ts";
+import { posterCache } from "#lib/posters.ts";
 import { procedure, t } from "./_base.ts";
 
 export const postersRouter = t.router({
