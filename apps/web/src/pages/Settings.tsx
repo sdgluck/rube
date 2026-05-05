@@ -1,67 +1,65 @@
 import { NavLink, Outlet } from "react-router-dom";
 import styles from "./Settings.module.css";
 
+const SECTIONS: { heading: string; links: { to: string; label: string }[] }[] = [
+  {
+    heading: "Integrations",
+    links: [
+      { to: "/settings/plex", label: "Plex" },
+      { to: "/settings/ai", label: "AI" },
+      { to: "/settings/arrs", label: "Arrs" },
+      { to: "/settings/databases", label: "Databases" },
+    ],
+  },
+  {
+    heading: "Automation",
+    links: [
+      { to: "/settings/notifications", label: "Notifications" },
+      { to: "/settings/posters", label: "Posters" },
+    ],
+  },
+  {
+    heading: "Tools",
+    links: [
+      { to: "/settings/migrate", label: "Migrate" },
+      { to: "/settings/health", label: "Health" },
+      { to: "/settings/stress-test", label: "Stress Test" },
+    ],
+  },
+  {
+    heading: "About",
+    links: [
+      { to: "/settings/credits", label: "Credits" },
+      { to: "/settings/about", label: "About" },
+    ],
+  },
+];
+
 export default function Settings() {
   return (
     <div>
       <h2 className={styles.heading}>Settings</h2>
-      <nav className={styles.tabs}>
-        <NavLink to="/settings/plex" className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}>
-          Plex
-        </NavLink>
-        <NavLink to="/settings/ai" className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}>
-          AI
-        </NavLink>
-        <NavLink to="/settings/arrs" className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}>
-          Arrs
-        </NavLink>
-        <NavLink
-          to="/settings/databases"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Databases
-        </NavLink>
-        <NavLink
-          to="/settings/notifications"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Notifications
-        </NavLink>
-        <NavLink
-          to="/settings/posters"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Posters
-        </NavLink>
-        <NavLink
-          to="/settings/migrate"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Migrate
-        </NavLink>
-        <NavLink
-          to="/settings/health"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Health
-        </NavLink>
-        <NavLink
-          to="/settings/stress-test"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Stress Test
-        </NavLink>
-        <NavLink
-          to="/settings/credits"
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}
-        >
-          Credits
-        </NavLink>
-        <NavLink to="/settings/about" className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ""}`}>
-          About
-        </NavLink>
-      </nav>
-      <Outlet />
+      <div className={styles.layout}>
+        <aside className={styles.rail}>
+          {SECTIONS.map((section) => (
+            <div key={section.heading} className={styles.railSection}>
+              <div className={styles.railHeading}>{section.heading}</div>
+              {section.links.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  className={({ isActive }) => `${styles.railLink} ${isActive ? styles.railLinkActive : ""}`}
+                >
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </aside>
+        <main className={styles.main}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

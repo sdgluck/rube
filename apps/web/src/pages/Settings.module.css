@@ -19,36 +19,83 @@
   color: var(--text-error);
 }
 
-.tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 24px;
-  flex-wrap: wrap;
+.layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  align-items: start;
 }
 
-.tab {
-  padding: 10px 20px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 0.95rem;
-  font-weight: 600;
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 24px;
+}
+
+.railSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.railHeading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-muted);
-  cursor: pointer;
+  padding: 0 10px 6px;
+}
+
+.railLink {
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
   text-decoration: none;
   transition:
-    color 0.15s,
-    border-color 0.15s;
+    background 0.15s,
+    color 0.15s;
 }
 
-.tab:hover {
+.railLink:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
   color: var(--text-primary);
 }
 
-.tabActive {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+.railLinkActive {
+  background: var(--accent);
+  color: #fff;
+}
+
+.railLinkActive:hover {
+  background: var(--accent-hover, var(--accent));
+  color: #fff;
+}
+
+.main {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .railSection {
+    flex: 1 1 140px;
+  }
 }
 
 .subTabs {
