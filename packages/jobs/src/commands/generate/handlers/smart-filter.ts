@@ -1,58 +1,40 @@
 import { SECTION_TYPE_MAP } from "@tinkerbell/plex";
+import { emitSmartFilterTree, type SmartFilterGroup, type SmartFilterNode } from "@tinkerbell/plex-smart-filter";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 /**
- * One Plex filter clause. Operators map onto Plex's own URI syntax:
- *   `=`   → `field=value`
- *   `!=`  → `field!=value`
- *   `>=`  → `field>>=value`
- *   `<=`  → `field<<=value`
- * which lets us round-trip a smart-collection URI through this rule type
- * without losing fidelity. AND-only for now — OR groups and nesting fall
- * to `unmappable` in the Plex Smart Collections importer.
+ * Convert the filter tree + section context into a Plex query string.
+ * Plex requires the `type` parameter (movie=1, show=2, …) on filtered
+ * `/library/sections/N/all` queries; section type drives that. The
+ * tree-to-fragments work lives in `@tinkerbell/migrate` so the parser
+ * and emitter stay together for round-trip testing.
  */
-export interface SmartFilter {
-  field: string;
-  op: "=" | "!=" | ">=" | "<=";
-  value: string;
-}
-
-const OP_SUFFIX: Record<SmartFilter["op"], string> = {
-  "=": "=",
-  "!=": "!=",
-  ">=": ">>=",
-  "<=": "<<=",
-};
-
-/**
- * Convert filter clauses + section context into the query string that
- * `/library/sections/N/all` accepts. Plex requires the `type` parameter
- * (movie=1, show=2, …) on filtered queries; section type drives that.
- */
-export function filtersToPlexParams(filters: SmartFilter[], sectionType: string): string {
+export function filterTreeToPlexParams(filter: SmartFilterGroup, sectionType: string): string {
   const parts: string[] = [];
   const typeNum = SECTION_TYPE_MAP[sectionType];
   if (typeNum != null) parts.push(`type=${typeNum}`);
-  for (const f of filters) {
-    const suffix = OP_SUFFIX[f.op];
-    parts.push(`${encodeURIComponent(f.field)}${suffix}${encodeURIComponent(f.value)}`);
-  }
+  parts.push(...emitSmartFilterTree(filter));
   return parts.join("&");
+}
+
+function countLeaves(node: SmartFilterNode): number {
+  return node.kind === "leaf" ? 1 : node.children.reduce((sum, c) => sum + countLeaves(c), 0);
 }
 
 export const smartFilterHandler = async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
   const { ctx, client, sections, ruleConfig } = deps;
-  const filters = ruleConfig.filters ?? [];
-  if (filters.length === 0) {
+  const filter = ruleConfig.smartFilter;
+  if (!filter || filter.children.length === 0) {
     throw new Error("Smart filter rule has no filter clauses.");
   }
 
   const collectionName = ruleConfig.collectionName?.trim() || "Smart Filter";
+  const totalLeaves = countLeaves(filter);
 
   for (const section of sections) {
     ctx.signal?.throwIfAborted();
-    const params = filtersToPlexParams(filters, section.type);
-    ctx.log(`[Smart Filter] "${section.title}" — querying Plex with ${filters.length} clause(s)...`);
+    const params = filterTreeToPlexParams(filter, section.type);
+    ctx.log(`[Smart Filter] "${section.title}" — querying Plex with ${totalLeaves} clause(s)...`);
 
     const path = `/library/sections/${section.key}/all?${params}`;
     const matched = await client.fetchItemsByFilter(path);

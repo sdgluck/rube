@@ -1,5 +1,13 @@
+import type { SmartFilterGroup, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#/RuleWizard";
 import styles from "./Rules.module.css";
+
+function summarizeFilter(node: SmartFilterNode, isRoot: boolean): string {
+  if (node.kind === "leaf") return `${node.field} ${node.op} ${node.value}`;
+  const conn = node.combinator === "all" ? " AND " : " OR ";
+  const inside = node.children.map((c) => summarizeFilter(c, false)).join(conn);
+  return isRoot ? inside : `(${inside})`;
+}
 
 export const RULE_TYPES = [
   { value: "ai_prompt", label: "AI Prompt" },
@@ -41,9 +49,7 @@ export const IMDB_CHARTS = [
   { value: "box_office", label: "Box Office" },
 ];
 
-export const IMDB_CHART_LABELS: Record<string, string> = Object.fromEntries(
-  IMDB_CHARTS.map((c) => [c.value, c.label]),
-);
+export const IMDB_CHART_LABELS: Record<string, string> = Object.fromEntries(IMDB_CHARTS.map((c) => [c.value, c.label]));
 
 export const SEERR_FILTERS = [
   { value: "all", label: "All Requests" },
@@ -103,14 +109,13 @@ export const CONFIG_DETAILS: Record<string, (c: Record<string, unknown>) => stri
     return lines.join("\n");
   },
   smart_filter: (c) => {
-    const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
     const lines: string[] = [];
     if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
-    if (filters.length === 0) {
+    const filter = c.smartFilter as SmartFilterGroup | undefined;
+    if (!filter || filter.children.length === 0) {
       lines.push("(no filters)");
     } else {
-      lines.push("Filters (AND):");
-      for (const f of filters) lines.push(`  • ${f.field} ${f.op} ${f.value}`);
+      lines.push(`Filter: ${summarizeFilter(filter, true)}`);
     }
     return lines.join("\n");
   },
@@ -140,7 +145,7 @@ export const EMPTY_FORM: RuleFormState = {
   listId: "",
   listProvider: "mdblist",
   collectionName: "",
-  filters: [],
+  smartFilter: { kind: "group", combinator: "all", children: [] },
   filter: "all",
   pinToHomepage: true,
   arr: { ...DEFAULT_ARR_FORM },

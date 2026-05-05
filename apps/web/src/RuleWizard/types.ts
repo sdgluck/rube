@@ -6,16 +6,12 @@
  * type without losing field values the user already entered.
  */
 
+import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
+
+export type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+
 export type AiVibe = "playful" | "serious" | "mixed";
 export type AiNameStyle = "short_punchy" | "descriptive";
-
-export type SmartFilterOp = "=" | "!=" | ">=" | "<=";
-
-export interface SmartFilterClause {
-  field: string;
-  op: SmartFilterOp;
-  value: string;
-}
 
 export interface ArrFormState {
   enabled: boolean;
@@ -42,7 +38,9 @@ export interface RuleFormState {
   listId: string;
   listProvider: "mdblist" | "trakt" | "imdb";
   collectionName: string;
-  filters: SmartFilterClause[];
+  /** smart_filter rule type: recursive AND/OR tree of clauses. */
+  smartFilter: SmartFilterGroup;
+  /** seerr_requests rule type: status filter ("all" / "approved" / …). */
   filter: string;
   pinToHomepage: boolean;
   arr: ArrFormState;

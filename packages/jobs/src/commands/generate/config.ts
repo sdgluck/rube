@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
 import type { Rule } from "@tinkerbell/domain.rules";
 
 export const ruleConfigSchema = z.object({
@@ -16,16 +17,14 @@ export const ruleConfigSchema = z.object({
   listProvider: z.enum(["mdblist", "trakt", "imdb"]).optional(),
   /** list_source / smart_filter: optional override for the generated collection name. */
   collectionName: z.string().optional(),
-  /** smart_filter: AND'd Plex filter clauses translated to a query string at run time. */
-  filters: z
-    .array(
-      z.object({
-        field: z.string().min(1),
-        op: z.enum(["=", "!=", ">=", "<="]),
-        value: z.string(),
-      }),
-    )
-    .optional(),
+  /**
+   * smart_filter: recursive boolean tree of clauses translated to a Plex
+   * query string at run time. AND/OR groups can nest arbitrarily so any
+   * Plex smart-collection filter (including OR-within-field via repeated
+   * equality and OR groups via push/or/pop) round-trips cleanly.
+   */
+  smartFilter: smartFilterGroupSchema.optional(),
+  /** seerr-requests: status filter ("all" / "approved" / "pending" / …). */
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
   arr: z

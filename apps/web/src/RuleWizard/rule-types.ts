@@ -1,6 +1,30 @@
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import { hasSourceStep } from "./sources/index.ts";
-import type { RuleFormState } from "./types.ts";
+import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
+
+/** First leaf in document order, or null if the tree is empty. Used by the
+ *  wizard's name-suggestion pass to peek at one representative clause. */
+function firstLeaf(node: SmartFilterNode): SmartFilterLeaf | null {
+  if (node.kind === "leaf") return node;
+  for (const c of node.children) {
+    const found = firstLeaf(c);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Flatten every leaf in the tree (in document order). The wizard uses
+ *  this to validate that there's at least one clause and that every leaf
+ *  has a field/value — independent of grouping. */
+function collectLeaves(node: SmartFilterNode): SmartFilterLeaf[] {
+  if (node.kind === "leaf") return [node];
+  return node.children.flatMap(collectLeaves);
+}
+
+function smartFilterIsComplete(group: SmartFilterGroup): boolean {
+  const leaves = collectLeaves(group);
+  return leaves.length > 0 && leaves.every((l) => !!l.field && !!l.value.trim());
+}
 
 export interface RuleType {
   value: string;
@@ -272,8 +296,8 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
   }
   if (form.type === "smart_filter") {
     if (form.collectionName.trim()) return form.collectionName.trim();
-    if (form.filters.length === 0) return "Smart Filter";
-    const head = form.filters[0];
+    const head = firstLeaf(form.smartFilter);
+    if (!head) return "Smart Filter";
     return head.value.trim() ? `${head.field}: ${head.value.trim()}` : "Smart Filter";
   }
   if (form.type === "seerr_requests") return `Seerr — ${SEERR_FILTER_LABELS[form.filter] || "Requests"}`;
@@ -325,8 +349,9 @@ export function validateStep(step: StepId, form: RuleFormState): string | null {
       if (!form.listId.trim()) return "A list ID is required.";
     }
     if (form.type === "smart_filter") {
-      if (form.filters.length === 0) return "Add at least one filter clause.";
-      if (form.filters.some((f) => !f.field || !f.value.trim())) return "Every filter clause needs a field and value.";
+      const leaves = collectLeaves(form.smartFilter);
+      if (leaves.length === 0) return "Add at least one filter clause.";
+      if (leaves.some((f) => !f.field || !f.value.trim())) return "Every filter clause needs a field and value.";
     }
     return null;
   }
@@ -349,8 +374,7 @@ export function isFormValid(form: RuleFormState): boolean {
     (form.type !== "ai_prompt" || aiHasThemes(form)) &&
     (form.type !== "imdb_list" || !!form.listId.trim()) &&
     (form.type !== "list_source" || (!!form.listProvider && !!form.listId.trim())) &&
-    (form.type !== "smart_filter" ||
-      (form.filters.length > 0 && form.filters.every((f) => !!f.field && !!f.value.trim()))) &&
+    (form.type !== "smart_filter" || smartFilterIsComplete(form.smartFilter)) &&
     (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
   );
 }

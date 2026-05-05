@@ -20,7 +20,7 @@ import {
   type StepId,
 } from "./rule-types.ts";
 import { SOURCE_STEPS } from "./sources/index.ts";
-import type { ArrFormState, RuleFormState } from "./types.ts";
+import type { ArrFormState, RuleFormState, SmartFilterGroup, SmartFilterNode } from "./types.ts";
 
 // Re-export the public types so existing `import { ... } from "#/RuleWizard"`
 // call sites keep working.
@@ -31,9 +31,28 @@ export {
   type AiVibe,
   type ArrFormState,
   type RuleFormState,
-  type SmartFilterClause,
+  type SmartFilterGroup,
+  type SmartFilterLeaf,
+  type SmartFilterNode,
   type SmartFilterOp,
 } from "./types.ts";
+
+/**
+ * Render a compact one-line summary of a smart_filter tree for the
+ * review pane. Leaves render as `field op value`; groups join their
+ * children with the appropriate connector and bracket when nested.
+ */
+function summarizeSmartFilter(group: SmartFilterGroup): string {
+  if (group.children.length === 0) return "—";
+  return summarizeNode(group, true);
+}
+
+function summarizeNode(node: SmartFilterNode, isRoot: boolean): string {
+  if (node.kind === "leaf") return `${node.field} ${node.op} ${node.value || "?"}`;
+  const conn = node.combinator === "all" ? " AND " : " OR ";
+  const inside = node.children.map((c) => summarizeNode(c, false)).join(conn);
+  return isRoot ? inside : `(${inside})`;
+}
 
 interface RuleWizardProps {
   open: boolean;
@@ -138,7 +157,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     form.listProvider,
     form.collectionName,
     form.filter,
-    form.filters,
+    form.smartFilter,
     form.themes,
     form.customThemes,
     sections,
@@ -537,9 +556,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
       const provider = LIST_PROVIDER_LABELS[form.listProvider] ?? form.listProvider;
       sourceValue = form.listId.trim() ? `${provider} — ${form.listId.trim()}` : provider;
     } else if (form.type === "smart_filter") {
-      sourceLabel = "Filters";
-      sourceValue =
-        form.filters.length === 0 ? "—" : form.filters.map((f) => `${f.field} ${f.op} ${f.value || "?"}`).join(" AND ");
+      sourceLabel = "Filter";
+      sourceValue = summarizeSmartFilter(form.smartFilter);
     } else if (form.type === "seerr_requests") {
       sourceLabel = "Filter";
       sourceValue = SEERR_FILTER_LABELS[form.filter] || form.filter;

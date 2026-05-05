@@ -35,6 +35,7 @@
     "@tinkerbell/domain.users": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",
+    "@tinkerbell/plex-smart-filter": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",
     "@tinkerbell/tmdb": "workspace:*",

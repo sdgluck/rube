@@ -1,5 +1,5 @@
+import { parseSmartFilterUri } from "@tinkerbell/plex-smart-filter";
 import type { CollectionInput, MigrationPlan, PlanItem, UnmappableEntry } from "../types.ts";
-import { parseSmartFilterUri } from "./parse.ts";
 
 /**
  * `CollectionInput` shape from the migrate package doesn't carry the
@@ -22,23 +22,25 @@ export function detectSmartCollections(collections: SmartCollectionInput[]): Sma
  * smart collection encodes a unique user-defined filter that has to
  * round-trip individually. Each item carries the `smart_filter` bucket
  * kind so downstream code can recognise these as filter-style imports
- * rather than category-grouped ones.
+ * rather than category-grouped ones. The parser/emitter live in
+ * `@tinkerbell/plex-smart-filter` so the same code runs at import,
+ * runtime, and in the rule wizard.
  */
 export function buildPlexSmartPlan(collections: SmartCollectionInput[]): MigrationPlan {
   const proposed: PlanItem[] = [];
   const unmappable: UnmappableEntry[] = [];
 
   for (const c of collections) {
-    const { filters, unsupported } = parseSmartFilterUri(c.smartFilter);
+    const { filter, unsupported } = parseSmartFilterUri(c.smartFilter);
 
-    if (filters.length === 0 || unsupported.length > 0) {
+    if (filter.children.length === 0 || unsupported.length > 0) {
       unmappable.push({
         ratingKey: c.ratingKey,
         title: c.title,
         sectionId: c.sectionId,
         sectionTitle: c.sectionTitle,
         reason:
-          filters.length === 0
+          filter.children.length === 0
             ? "smart filter has no translatable clauses"
             : `unsupported clauses: ${unsupported.join(", ")}`,
       });
@@ -53,7 +55,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
       sectionId: c.sectionId,
       sectionTitle: c.sectionTitle,
       ruleConfig: {
-        filters,
+        smartFilter: filter,
         // Restrict the generated rule to the section the original smart
         // collection lived in — Plex smart filters are section-scoped.
         sections: [c.sectionTitle],
@@ -75,6 +77,3 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
     totalSourceItems: collections.length,
   };
 }
-
-export { parseSmartFilterUri } from "./parse.ts";
-export type { ParsedClause, ParseResult } from "./parse.ts";

@@ -54,7 +54,8 @@ export const SMART_FILTER_FIELDS: { value: string; label: string }[] = [
 ];
 
 export const SMART_FILTER_OPS: { value: SmartFilterOp; label: string }[] = [
-  { value: "=", label: "is" },
+  { value: "=", label: "contains" },
+  { value: "==", label: "is exactly" },
   { value: "!=", label: "is not" },
   { value: ">=", label: "≥" },
   { value: "<=", label: "≤" },

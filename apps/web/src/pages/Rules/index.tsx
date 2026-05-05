@@ -6,7 +6,7 @@ import RuleWizard, {
   type AiNameStyle,
   type AiVibe,
   type RuleFormState,
-  type SmartFilterClause,
+  type SmartFilterGroup,
   DEFAULT_ARR_FORM,
 } from "#/RuleWizard";
 import { RulesSkeleton } from "#/Skeleton";
@@ -191,7 +191,11 @@ export default function Rules() {
       listProvider: ((config.listProvider as RuleFormState["listProvider"]) ||
         "mdblist") satisfies RuleFormState["listProvider"],
       collectionName: (config.collectionName as string) || "",
-      filters: (config.filters as SmartFilterClause[] | undefined) ?? [],
+      smartFilter: (config.smartFilter as SmartFilterGroup | undefined) ?? {
+        kind: "group",
+        combinator: "all",
+        children: [],
+      },
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       arr: {
@@ -225,7 +229,7 @@ export default function Rules() {
       if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
     }
     if (next.type === "smart_filter") {
-      config.filters = next.filters;
+      config.smartFilter = next.smartFilter;
       if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
     }
     if (next.type === "seerr_requests") config.filter = next.filter;
