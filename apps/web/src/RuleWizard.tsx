@@ -29,6 +29,8 @@ export interface RuleFormState {
   sections: string[];
   chart: string;
   listId: string;
+  listProvider: "mdblist" | "trakt" | "imdb";
+  collectionName: string;
   filter: string;
   pinToHomepage: boolean;
   arr: ArrFormState;
@@ -157,6 +159,13 @@ const RULE_TYPES: RuleType[] = [
     producesExternalItems: true,
   },
   {
+    value: "list_source",
+    label: "List Source",
+    description:
+      "Pull items from an external list service (MDBList, more coming soon) and build one collection per section.",
+    producesExternalItems: true,
+  },
+  {
     value: "rt_top_rated",
     label: "RT Top Rated",
     description: "Pull from Rotten Tomatoes top-rated items via OMDB.",
@@ -265,6 +274,22 @@ const IMDB_CHART_SECTION_TYPE: Record<string, string> = Object.fromEntries(
   IMDB_CHARTS.map((c) => [c.value, c.sectionType]),
 );
 
+/**
+ * Available `list_source` providers. Marked `disabled` until their backing
+ * source has shipped so the picker reflects what's actually wired up.
+ * Trakt arrives in a follow-up phase, IMDb stays on its dedicated rule
+ * type for the moment to avoid migration churn for existing rules.
+ */
+const LIST_PROVIDERS: { value: "mdblist" | "trakt" | "imdb"; label: string; disabled?: boolean }[] = [
+  { value: "mdblist", label: "MDBList" },
+  { value: "trakt", label: "Trakt", disabled: true },
+  { value: "imdb", label: "IMDb", disabled: true },
+];
+
+const LIST_PROVIDER_LABELS: Record<"mdblist" | "trakt" | "imdb", string> = Object.fromEntries(
+  LIST_PROVIDERS.map((p) => [p.value, p.label]),
+) as Record<"mdblist" | "trakt" | "imdb", string>;
+
 const SEERR_FILTERS = [
   { value: "all", label: "All Requests" },
   { value: "approved", label: "Approved" },
@@ -293,7 +318,7 @@ function maxLimitForType(type: string): number {
 }
 
 function typeHasLimit(type: string): boolean {
-  return type !== "imdb_chart" && type !== "imdb_list";
+  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source";
 }
 
 // Section-type constraint for rule types that only make sense for movies or shows.
@@ -307,7 +332,13 @@ function requiredSectionTypeForRule(type: string, chart: string): "movie" | "sho
 
 // Whether the wizard has a meaningful "source" step for this type.
 function typeHasSourceStep(type: string): boolean {
-  return type === "ai_prompt" || type === "imdb_chart" || type === "imdb_list" || type === "seerr_requests";
+  return (
+    type === "ai_prompt" ||
+    type === "imdb_chart" ||
+    type === "imdb_list" ||
+    type === "list_source" ||
+    type === "seerr_requests"
+  );
 }
 
 const TYPE_BY_VALUE: Record<string, RuleType> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t]));
@@ -338,6 +369,12 @@ function suggestName(form: RuleFormState, sections: { title: string }[]): string
   if (form.type === "imdb_list") {
     const id = form.listId.match(/ls\d+/i)?.[0] || form.listId;
     return id ? `IMDb List ${id}` : "IMDb List";
+  }
+  if (form.type === "list_source") {
+    if (form.collectionName.trim()) return form.collectionName.trim();
+    const provider = LIST_PROVIDER_LABELS[form.listProvider] ?? form.listProvider;
+    const id = form.listId.trim();
+    return id ? `${provider}: ${id}` : provider;
   }
   if (form.type === "seerr_requests") return `Seerr — ${SEERR_FILTER_LABELS[form.filter] || "Requests"}`;
   if (form.type === "ai_prompt") {
@@ -388,6 +425,10 @@ function validateStep(step: StepId, form: RuleFormState): string | null {
   if (step === "source") {
     if (form.type === "ai_prompt" && !aiHasThemes(form)) return "Pick at least one theme (or add a custom one).";
     if (form.type === "imdb_list" && !form.listId.trim()) return "An IMDb list ID or URL is required.";
+    if (form.type === "list_source") {
+      if (!form.listProvider) return "Pick a list provider.";
+      if (!form.listId.trim()) return "A list ID is required.";
+    }
     return null;
   }
   if (step === "scope") return null;
@@ -408,6 +449,7 @@ function isFormValid(form: RuleFormState): boolean {
     !!form.type &&
     (form.type !== "ai_prompt" || aiHasThemes(form)) &&
     (form.type !== "imdb_list" || !!form.listId.trim()) &&
+    (form.type !== "list_source" || (!!form.listProvider && !!form.listId.trim())) &&
     (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
   );
 }
@@ -505,6 +547,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     form.type,
     form.chart,
     form.listId,
+    form.listProvider,
+    form.collectionName,
     form.filter,
     form.themes,
     form.customThemes,
@@ -767,6 +811,61 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               onChange={(e) => setForm({ ...form, listId: e.target.value })}
               placeholder="ls123456789 or https://www.imdb.com/list/ls123456789/"
               autoFocus
+            />
+          </div>
+        </>
+      );
+    }
+
+    if (form.type === "list_source") {
+      return (
+        <>
+          <h3 className={styles.stepHeading}>List source</h3>
+          <p className={styles.stepSub}>
+            Choose where the list lives, then provide its ID. Each section the rule runs against gets one collection
+            populated with the items it already has.
+          </p>
+          <div className={styles.field}>
+            <label>Provider</label>
+            <div className={styles.pills}>
+              {LIST_PROVIDERS.map((p) => {
+                const selected = form.listProvider === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    type="button"
+                    className={`${styles.pill} ${selected ? styles.pillSelected : ""}`}
+                    onClick={() => !p.disabled && setForm({ ...form, listProvider: p.value })}
+                    disabled={p.disabled}
+                    aria-pressed={selected}
+                    title={p.disabled ? "Coming soon" : undefined}
+                  >
+                    {p.label}
+                    {p.disabled ? " (soon)" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="rule-list-source-id">List ID</label>
+            <input
+              id="rule-list-source-id"
+              className={shared.input}
+              value={form.listId}
+              onChange={(e) => setForm({ ...form, listId: e.target.value })}
+              placeholder={form.listProvider === "mdblist" ? "12345 or username/listname" : "List identifier"}
+              autoFocus
+            />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="rule-list-collection-name">Collection name (optional)</label>
+            <input
+              id="rule-list-collection-name"
+              className={shared.input}
+              value={form.collectionName}
+              onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
+              placeholder="Defaults to the list's name"
             />
           </div>
         </>
@@ -1084,6 +1183,10 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     } else if (form.type === "imdb_list") {
       sourceLabel = "List";
       sourceValue = form.listId;
+    } else if (form.type === "list_source") {
+      sourceLabel = "List";
+      const provider = LIST_PROVIDER_LABELS[form.listProvider] ?? form.listProvider;
+      sourceValue = form.listId.trim() ? `${provider} — ${form.listId.trim()}` : provider;
     } else if (form.type === "seerr_requests") {
       sourceLabel = "Filter";
       sourceValue = SEERR_FILTER_LABELS[form.filter] || form.filter;
