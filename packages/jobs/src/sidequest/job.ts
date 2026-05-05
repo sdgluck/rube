@@ -104,7 +104,7 @@ export class CommandJob extends Job {
     }, 1000);
 
     try {
-      const mod = await import(`../../commands/${commandName}.ts`);
+      const mod = await import(`../commands/${commandName}.ts`);
       const commandFn: (
         ctx: JobContext,
         config: CommonJobConfig | GenerateJobConfig | BywJobConfig | OverlaysJobConfig,
