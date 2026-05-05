@@ -5,7 +5,7 @@ import {
   startStressTest,
   cancelStressTest,
   getActiveStressTest,
-} from "#jobs/stress-test/index.ts";
+} from "@tinkerbell/jobs";
 import { t, procedure } from "./_base.ts";
 
 export const stressTestRouter = t.router({

@@ -81,7 +81,7 @@ export const rulesRouter = t.router({
     const ctx = createTrackedContext(input.id, "test", controller.signal, "[test-rule]");
     const startedAt = Date.now();
     try {
-      const { testRule } = await import("#commands/generate.ts");
+      const { testRule } = await import("@tinkerbell/jobs");
       const result = await testRule(input.id, controller.signal, ctx);
       const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
       const persisted: PersistedTestResult = {
@@ -147,7 +147,7 @@ export const rulesRouter = t.router({
 
     const work = (async () => {
       try {
-        const { runSingleRule } = await import("#commands/generate.ts");
+        const { runSingleRule } = await import("@tinkerbell/jobs");
         const result = await runSingleRule(input.id, controller.signal, ctx);
         setRuleLastRun(input.id, {
           status: "ok",

@@ -3,7 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./trpc/index.ts";
-import { initJobs } from "./jobs/runner.ts";
+import { initJobs } from "@tinkerbell/jobs";
 import { getConfig, setHealthReporter } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
 import { reportHealth } from "@tinkerbell/domain.health";
@@ -146,7 +146,7 @@ server.listen(PORT, () => {
 });
 
 async function shutdown() {
-  const { stopSidequest } = await import("./jobs/runner.ts");
+  const { stopSidequest } = await import("@tinkerbell/jobs");
   await stopSidequest();
   server.close();
   process.exit(0);

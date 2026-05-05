@@ -4,8 +4,6 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#commands/*": "./src/commands/*",
-    "#jobs/*": "./src/jobs/*",
     "#trpc/*": "./src/trpc/*"
   },
   "scripts": {
@@ -34,6 +32,7 @@
     "@tinkerbell/domain.users": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/imdb": "workspace:*",
+    "@tinkerbell/jobs": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/migrate": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",

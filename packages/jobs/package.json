@@ -1,0 +1,52 @@
+{
+  "name": "@tinkerbell/jobs",
+  "version": "0.4.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "imports": {
+    "#commands/*": "./src/commands/*",
+    "#jobs/*": "./src/*"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@sidequest/sqlite-backend": "^1.14.0",
+    "@tinkerbell/arr": "workspace:*",
+    "@tinkerbell/core": "workspace:*",
+    "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.collections": "workspace:*",
+    "@tinkerbell/domain.events": "workspace:*",
+    "@tinkerbell/domain.health": "workspace:*",
+    "@tinkerbell/domain.media": "workspace:*",
+    "@tinkerbell/domain.migration": "workspace:*",
+    "@tinkerbell/domain.overlays": "workspace:*",
+    "@tinkerbell/domain.rule-history": "workspace:*",
+    "@tinkerbell/domain.rules": "workspace:*",
+    "@tinkerbell/domain.shuffle-hubs": "workspace:*",
+    "@tinkerbell/domain.stats": "workspace:*",
+    "@tinkerbell/domain.users": "workspace:*",
+    "@tinkerbell/llm": "workspace:*",
+    "@tinkerbell/omdb": "workspace:*",
+    "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/seerr": "workspace:*",
+    "@tinkerbell/tmdb": "workspace:*",
+    "croner": "^9.0.0",
+    "drizzle-orm": "^0.45.1",
+    "p-map": "^7.0.4",
+    "p-queue": "^9.1.0",
+    "sidequest": "^1.14.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^5.9.3"
+  }
+}
