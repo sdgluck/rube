@@ -87,12 +87,9 @@ export default function RuleTableRow({
             type="checkbox"
             aria-label={`Select ${rule.name}`}
             checked={selected}
-            onChange={() => onCheckboxClick(index, { shiftKey: false })}
+            readOnly
             onClick={(e) => {
-              if (e.shiftKey) {
-                e.preventDefault();
-                onCheckboxClick(index, { shiftKey: true });
-              }
+              onCheckboxClick(index, { shiftKey: e.shiftKey });
             }}
           />
         </td>
