@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useCallback, useEffect } from "react";
+import { lazy, Suspense, useState, useCallback, useEffect, useRef } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import ErrorBoundary from "./ErrorBoundary";
 import ScrollRestoration from "./ScrollRestoration";
@@ -100,12 +100,29 @@ function SidebarStreamCount() {
 
 function SidebarActiveJobs() {
   const navigate = useNavigate();
+  const utils = trpc.useUtils();
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
   const cancelMutation = trpc.jobs.cancel.useMutation({
     onSuccess: () => activeRunsQuery.refetch(),
   });
 
   const runs = activeRunsQuery.data;
+  const prevMigrateRunIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!runs) return;
+    const currentMigrateIds = new Set(runs.filter((r) => r.jobId === "migrate-collections").map((r) => r.id));
+    let completedAny = false;
+    for (const id of prevMigrateRunIds.current) {
+      if (!currentMigrateIds.has(id)) completedAny = true;
+    }
+    if (completedAny) {
+      utils.rules.list.invalidate();
+      utils.migration.status.invalidate();
+    }
+    prevMigrateRunIds.current = currentMigrateIds;
+  }, [runs, utils]);
+
   if (!runs || runs.length === 0) return null;
 
   return (
