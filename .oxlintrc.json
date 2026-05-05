@@ -4,7 +4,11 @@
   "categories": {
     "correctness": "error"
   },
-  "rules": {},
+  "rules": {
+    "typescript/parameter-properties": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-require-imports": "error"
+  },
   "env": {
     "builtin": true
   }
