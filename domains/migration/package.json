@@ -16,7 +16,8 @@
   "dependencies": {
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/migrate": "workspace:*"
+    "@tinkerbell/migrate": "workspace:*",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

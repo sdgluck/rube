@@ -15,16 +15,21 @@ interface MdbListResponse {
 }
 
 /**
- * Resolve an MDBList list reference to its items. Accepts either a numeric
- * list id (`12345`) or a `username/listname` slug (the share-URL form). The
- * MDBList API exposes both via the same path prefix.
+ * Resolve an MDBList list reference to its API path. Accepts either a
+ * numeric list id (`12345`) or a `username/listname` slug (the share-URL
+ * form). Each path segment is URL-encoded individually so a list name
+ * containing spaces, `?`, `#`, or `&` can't break out into the query
+ * string and inject parameters into the upstream request.
  */
 function listPath(idOrSlug: string): string {
   const trimmed = idOrSlug.trim();
-  if (/^\d+$/.test(trimmed)) return `/lists/${trimmed}`;
+  if (/^\d+$/.test(trimmed)) return `/lists/${encodeURIComponent(trimmed)}`;
   // Strip a leading https://mdblist.com/lists/ if a user pasted a URL.
   const slug = trimmed.replace(/^https?:\/\/(www\.)?mdblist\.com\/lists\//i, "").replace(/\/+$/, "");
-  return `/lists/${slug}`;
+  // Encode each segment independently so the `/` separator survives but
+  // unsafe characters in the segments don't.
+  const encoded = slug.split("/").map(encodeURIComponent).join("/");
+  return `/lists/${encoded}`;
 }
 
 async function mdblistFetch(path: string, signal?: AbortSignal): Promise<MdbListResponse> {

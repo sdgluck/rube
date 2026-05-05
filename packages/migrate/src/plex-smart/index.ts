@@ -20,9 +20,9 @@ export function detectSmartCollections(collections: SmartCollectionInput[]): Sma
 /**
  * One PlanItem per smart collection — no bucket-grouping, since each
  * smart collection encodes a unique user-defined filter that has to
- * round-trip individually. `bucket` is set to the synthetic `list` kind
- * because PlanItem requires a BucketKind; nothing downstream
- * distinguishes plex-smart's items from other ungrouped imports.
+ * round-trip individually. Each item carries the `smart_filter` bucket
+ * kind so downstream code can recognise these as filter-style imports
+ * rather than category-grouped ones.
  */
 export function buildPlexSmartPlan(collections: SmartCollectionInput[]): MigrationPlan {
   const proposed: PlanItem[] = [];
@@ -47,7 +47,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
 
     proposed.push({
       key: `plex-smart::${c.ratingKey}`,
-      bucket: "list" as const,
+      bucket: "smart_filter" as const,
       ruleType: "smart_filter",
       ruleName: c.title,
       sectionId: c.sectionId,
@@ -72,7 +72,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
     proposed,
     future: [],
     unmappable,
-    totalKometaCollections: collections.length,
+    totalSourceItems: collections.length,
   };
 }
 

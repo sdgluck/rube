@@ -1295,6 +1295,7 @@ export default function Rules() {
 function MigrationBanner() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
+  const { addToast } = useToast();
   const status = trpc.migration.status.useQuery(undefined, { refetchOnWindowFocus: false });
   const dismiss = trpc.migration.dismiss.useMutation();
 
@@ -1310,8 +1311,12 @@ function MigrationBanner() {
         : `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 
   const handleDismiss = async () => {
-    await Promise.all(actionable.map((p) => dismiss.mutateAsync({ providerId: p.id })));
-    await utils.migration.status.invalidate();
+    try {
+      await Promise.all(actionable.map((p) => dismiss.mutateAsync({ providerId: p.id })));
+      await utils.migration.status.invalidate();
+    } catch (err) {
+      addToast(`Failed to dismiss banner: ${(err as Error).message ?? err}`, "error");
+    }
   };
 
   return (
