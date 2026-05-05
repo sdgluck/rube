@@ -1,0 +1,59 @@
+import shared from "../../pages/Collections.module.css";
+import styles from "../RuleWizard.module.css";
+import { LIST_PROVIDERS } from "../constants.ts";
+import type { SourceStepProps } from "../types.ts";
+
+export default function ListSource({ form, setForm }: SourceStepProps) {
+  return (
+    <>
+      <h3 className={styles.stepHeading}>List source</h3>
+      <p className={styles.stepSub}>
+        Choose where the list lives, then provide its ID. Each section the rule runs against gets one collection
+        populated with the items it already has.
+      </p>
+      <div className={styles.field}>
+        <label>Provider</label>
+        <div className={styles.pills}>
+          {LIST_PROVIDERS.map((p) => {
+            const selected = form.listProvider === p.value;
+            return (
+              <button
+                key={p.value}
+                type="button"
+                className={`${styles.pill} ${selected ? styles.pillSelected : ""}`}
+                onClick={() => !p.disabled && setForm({ ...form, listProvider: p.value })}
+                disabled={p.disabled}
+                aria-pressed={selected}
+                title={p.disabled ? "Coming soon" : undefined}
+              >
+                {p.label}
+                {p.disabled ? " (soon)" : ""}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="rule-list-source-id">List ID</label>
+        <input
+          id="rule-list-source-id"
+          className={shared.input}
+          value={form.listId}
+          onChange={(e) => setForm({ ...form, listId: e.target.value })}
+          placeholder={form.listProvider === "mdblist" ? "12345 or username/listname" : "List identifier"}
+          autoFocus
+        />
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="rule-list-collection-name">Collection name (optional)</label>
+        <input
+          id="rule-list-collection-name"
+          className={shared.input}
+          value={form.collectionName}
+          onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
+          placeholder="Defaults to the list's name"
+        />
+      </div>
+    </>
+  );
+}
