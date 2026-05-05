@@ -42,6 +42,7 @@ export async function upsertCollectionByKey(
     addedAt: detail.addedAt ?? null,
     thumb: detail.thumb,
     smart: detail.smart ? 1 : 0,
+    smartFilter: detail.smart ? detail.content : "",
     syncedAt: now,
   };
   db.insert(collections).values(values).onConflictDoUpdate({ target: collections.plexRatingKey, set: values }).run();
@@ -58,6 +59,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
     for (const col of colls) {
       const detail = await client.getCollectionDetail(col.ratingKey);
 
+      const smartFilter = detail.smart ? detail.content : "";
       db.insert(collections)
         .values({
           plexRatingKey: col.ratingKey,
@@ -70,6 +72,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
           addedAt: detail.addedAt ?? null,
           thumb: detail.thumb,
           smart: detail.smart ? 1 : 0,
+          smartFilter,
           syncedAt: now,
         })
         .onConflictDoUpdate({
@@ -84,6 +87,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
             addedAt: detail.addedAt ?? null,
             thumb: detail.thumb,
             smart: detail.smart ? 1 : 0,
+            smartFilter,
             syncedAt: now,
           },
         })

@@ -1,10 +1,13 @@
 import { db, collections } from "@tinkerbell/db";
 import {
+  buildPlexSmartPlan,
+  detectSmartCollections,
   kometaProvider,
   type BucketKind,
   type CollectionInput,
   type MigrationPlan,
   type PlanItem,
+  type SmartCollectionInput,
 } from "@tinkerbell/migrate";
 import { deleteConfig, getConfig, setConfig } from "@tinkerbell/core";
 
@@ -118,6 +121,48 @@ const KOMETA_RUNTIME: ProviderRuntime = {
   },
 };
 
+// ─── Plex Smart Collections runtime ──────────────────────────────────────
+
+function loadPlexSmartCollectionInputs(): SmartCollectionInput[] {
+  const rows = db
+    .select({
+      ratingKey: collections.plexRatingKey,
+      title: collections.title,
+      labels: collections.labels,
+      sectionId: collections.sectionId,
+      sectionTitle: collections.sectionTitle,
+      smart: collections.smart,
+      smartFilter: collections.smartFilter,
+    })
+    .from(collections)
+    .all();
+
+  return rows.map((r) => ({
+    ratingKey: r.ratingKey,
+    title: r.title,
+    labels: Array.isArray(r.labels) ? r.labels : [],
+    sectionId: r.sectionId,
+    sectionTitle: r.sectionTitle,
+    smart: r.smart === 1,
+    smartFilter: r.smartFilter ?? "",
+  }));
+}
+
+const PLEX_SMART_RUNTIME: ProviderRuntime = {
+  id: "plex-smart",
+  label: "Plex Smart Collections",
+  // Sourced from already-synced Plex collections — same cost as Kometa.
+  autoScan: true,
+  scan(): ProviderScanResult {
+    const detected = detectSmartCollections(loadPlexSmartCollectionInputs());
+    return summariseBySection(detected);
+  },
+  buildPlan(): MigrationPlan {
+    const detected = detectSmartCollections(loadPlexSmartCollectionInputs());
+    return buildPlexSmartPlan(detected);
+  },
+};
+
 // ─── MDBList runtime ─────────────────────────────────────────────────────
 
 interface MdbListUserList {
@@ -178,6 +223,7 @@ const MDBLIST_RUNTIME: ProviderRuntime = {
 
 const REGISTRY: Record<string, ProviderRuntime> = {
   [KOMETA_RUNTIME.id]: KOMETA_RUNTIME,
+  [PLEX_SMART_RUNTIME.id]: PLEX_SMART_RUNTIME,
   [MDBLIST_RUNTIME.id]: MDBLIST_RUNTIME,
 };
 
