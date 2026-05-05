@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import UnsavedBanner from "../../../UnsavedBanner";
-import useUnsavedChanges from "../../../useUnsavedChanges";
-import styles from "../../Jobs.module.css";
+import UnsavedBanner from "#/UnsavedBanner";
+import useUnsavedChanges from "#/useUnsavedChanges";
+import styles from "#pages/Jobs.module.css";
 
 interface Props {
   children: ReactNode;

@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
-import { trpc } from "../../trpc";
-import { DetailSkeleton } from "../../Skeleton";
+import { trpc } from "#/trpc";
+import { DetailSkeleton } from "#/Skeleton";
 import { resolveJobComponent } from "./registry";
 
 export default function JobDetail() {

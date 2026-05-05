@@ -2,6 +2,12 @@
   "name": "@tinkerbell/web",
   "private": true,
   "type": "module",
+  "imports": {
+    "#/*": "./src/*",
+    "#pages/*": "./src/pages/*",
+    "#lib/*": "./src/lib/*",
+    "#server/*": "../server/src/*"
+  },
   "scripts": {
     "dev": "portless web.tinkerbell vite",
     "build": "vite build",

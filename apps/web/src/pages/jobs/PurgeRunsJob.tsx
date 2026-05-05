@@ -5,7 +5,7 @@ import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
 import ScheduleRow from "./shared/rows/ScheduleRow";
 import EnabledRow from "./shared/rows/EnabledRow";
-import styles from "../Jobs.module.css";
+import styles from "#pages/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
 export default function PurgeRunsJob({ job }: JobPageProps) {

@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { trpc } from "../../../trpc";
-import RelativeTime from "../../../RelativeTime";
-import EmptyState from "../../../EmptyState";
-import FadeImage from "../../../FadeImage";
-import styles from "../../Jobs.module.css";
+import { trpc } from "#/trpc";
+import RelativeTime from "#/RelativeTime";
+import EmptyState from "#/EmptyState";
+import FadeImage from "#/FadeImage";
+import styles from "#pages/Jobs.module.css";
 
 export default function GeneratedCollectionsPanel() {
   const utils = trpc.useUtils();

@@ -10,7 +10,10 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "paths": {
-      "@server/*": ["../server/src/*"]
+      "#/*": ["./src/*"],
+      "#pages/*": ["./src/pages/*"],
+      "#lib/*": ["./src/lib/*"],
+      "#server/*": ["../server/src/*"]
     }
   },
   "include": ["src"]

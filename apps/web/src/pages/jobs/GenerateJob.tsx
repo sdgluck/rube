@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { trpc } from "../../trpc";
+import { trpc } from "#/trpc";
 import { useJobActions } from "./shared/useJobActions";
 import JobPageShell from "./shared/JobPageShell";
 import ConfigPanel from "./shared/ConfigPanel";
@@ -9,7 +9,7 @@ import LatestRunLogPanel from "./shared/LatestRunLogPanel";
 import ScheduleRow from "./shared/rows/ScheduleRow";
 import EnabledRow from "./shared/rows/EnabledRow";
 import SectionsRow from "./shared/rows/SectionsRow";
-import styles from "../Jobs.module.css";
+import styles from "#pages/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
 export default function GenerateJob({ job }: JobPageProps) {

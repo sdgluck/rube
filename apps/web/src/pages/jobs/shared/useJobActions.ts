@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { trpc } from "../../../trpc";
+import { trpc } from "#/trpc";
 import type { Job } from "../types";
 
 export function useJobActions(job: Job) {

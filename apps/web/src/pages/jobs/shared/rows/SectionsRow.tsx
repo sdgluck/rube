@@ -1,5 +1,5 @@
-import { trpc } from "../../../../trpc";
-import styles from "../../../Jobs.module.css";
+import { trpc } from "#/trpc";
+import styles from "#pages/Jobs.module.css";
 
 interface Props {
   selected: string[];

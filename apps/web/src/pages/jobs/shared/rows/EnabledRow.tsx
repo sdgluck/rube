@@ -1,6 +1,6 @@
-import { trpc } from "../../../../trpc";
-import ToggleSwitch from "../../../../ToggleSwitch";
-import styles from "../../../Jobs.module.css";
+import { trpc } from "#/trpc";
+import ToggleSwitch from "#/ToggleSwitch";
+import styles from "#pages/Jobs.module.css";
 
 export default function EnabledRow({ jobId, enabled }: { jobId: string; enabled: boolean }) {
   const utils = trpc.useUtils();
