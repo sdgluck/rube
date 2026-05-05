@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { join } from "node:path";
 import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";

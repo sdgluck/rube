@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { fork, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import { db, stressTestRuns } from "@tinkerbell/db";
 import type { PlexClient } from "@tinkerbell/plex";
-import { getConfig } from "#lib/config.ts";
-import type { JobContext } from "#lib/job-context.ts";
+import { getConfig } from "@tinkerbell/core";
+import type { JobContext } from "@tinkerbell/core";
 
 export const stressTestConfigSchema = z.object({
   mode: z.enum(["transcode", "directplay", "mixed"]),

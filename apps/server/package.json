@@ -7,7 +7,6 @@
     "#commands/*": "./src/commands/*",
     "#domains/*": "./src/domains/*",
     "#jobs/*": "./src/jobs/*",
-    "#lib/*": "./src/lib/*",
     "#trpc/*": "./src/trpc/*"
   },
   "scripts": {
@@ -17,6 +16,7 @@
   "dependencies": {
     "@sidequest/sqlite-backend": "^1.14.0",
     "@tinkerbell/arr": "workspace:*",
+    "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/imdb": "workspace:*",
     "@tinkerbell/llm": "workspace:*",

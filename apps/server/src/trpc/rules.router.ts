@@ -19,7 +19,7 @@ import {
   type RuleProgressState,
   type PersistedTestResult,
 } from "#domains/rule-progress.ts";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 
 const testControllers = new Map<string, AbortController>();

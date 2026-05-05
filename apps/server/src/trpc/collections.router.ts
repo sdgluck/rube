@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getConfig } from "#lib/config.ts";
+import { getConfig } from "@tinkerbell/core";
 import {
   syncCollections,
   getLocalCollections,

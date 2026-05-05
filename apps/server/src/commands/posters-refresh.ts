@@ -1,5 +1,5 @@
-import type { CommonJobConfig, JobContext } from "#lib/job-context.ts";
-import { refreshPosterCache } from "#lib/posters.ts";
+import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+import { refreshPosterCache } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
   ctx.log("tinkerbell posters-refresh");

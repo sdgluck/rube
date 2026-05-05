@@ -11,8 +11,8 @@ import { db, statsCache, jobs, jobRuns, mediaItems, plexUsers } from "@tinkerbel
 
 const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "#lib/clients.ts";
-import { getConfig } from "#lib/config.ts";
+import { plexHealthCallback } from "@tinkerbell/core";
+import { getConfig } from "@tinkerbell/core";
 import type { PlexRecentItem } from "@tinkerbell/plex";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────

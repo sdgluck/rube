@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { errorMessage } from "#lib/util.ts";
-import { getAllConfig } from "#lib/config.ts";
+import { errorMessage } from "@tinkerbell/core";
+import { getAllConfig } from "@tinkerbell/core";
 import {
   reportHealth,
   getHealthLatest,

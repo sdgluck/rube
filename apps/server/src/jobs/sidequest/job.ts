@@ -1,5 +1,5 @@
 import { Job } from "sidequest";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { eq } from "drizzle-orm";
 import { db, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "#domains/events.ts";
@@ -10,7 +10,7 @@ import {
   type GenerateJobConfig,
   type BywJobConfig,
   type OverlaysJobConfig,
-} from "#lib/job-context.ts";
+} from "@tinkerbell/core";
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
