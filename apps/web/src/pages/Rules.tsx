@@ -3,7 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import DropdownButton from "#/DropdownButton";
 import ConfirmModal from "#/ConfirmModal";
-import RuleWizard, { type RuleFormState, type AiVibe, type AiNameStyle, DEFAULT_ARR_FORM } from "#/RuleWizard";
+import RuleWizard, {
+  type RuleFormState,
+  type AiVibe,
+  type AiNameStyle,
+  type SmartFilterClause,
+  DEFAULT_ARR_FORM,
+} from "#/RuleWizard";
 import { RulesSkeleton } from "#/Skeleton";
 import Spinner from "#/Spinner";
 import EmptyState from "#/EmptyState";
@@ -44,6 +50,7 @@ const RULE_TYPES = [
   { value: "imdb_chart", label: "IMDb Chart" },
   { value: "imdb_list", label: "IMDb List" },
   { value: "list_source", label: "List Source" },
+  { value: "smart_filter", label: "Smart Filter" },
   { value: "rt_top_rated", label: "RT Top Rated" },
   { value: "seerr_requests", label: "Seerr Requests" },
   { value: "tmdb_popular_actors", label: "Popular Actors" },
@@ -95,6 +102,10 @@ const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => string> = {
   imdb_chart: (c) => IMDB_CHART_LABELS[c.chart as string] || (c.chart as string) || "—",
   imdb_list: (c) => (c.listId as string) || "—",
   list_source: (c) => `${(c.listProvider as string) || "?"}: ${(c.listId as string) || "—"}`,
+  smart_filter: (c) => {
+    const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
+    return filters.length === 0 ? "no filters" : `${filters.length} clause${filters.length !== 1 ? "s" : ""}`;
+  },
   rt_top_rated: (c) => `Top ${c.limit ?? 100} items`,
   seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
 };
@@ -120,6 +131,18 @@ const CONFIG_DETAILS: Record<string, (c: Record<string, unknown>) => string> = {
   list_source: (c) => {
     const lines = [`Provider: ${(c.listProvider as string) || "—"}`, `List: ${(c.listId as string) || "—"}`];
     if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
+    return lines.join("\n");
+  },
+  smart_filter: (c) => {
+    const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
+    const lines: string[] = [];
+    if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
+    if (filters.length === 0) {
+      lines.push("(no filters)");
+    } else {
+      lines.push("Filters (AND):");
+      for (const f of filters) lines.push(`  • ${f.field} ${f.op} ${f.value}`);
+    }
     return lines.join("\n");
   },
   seerr_requests: (c) =>
@@ -148,6 +171,7 @@ const EMPTY_FORM: RuleFormState = {
   listId: "",
   listProvider: "mdblist",
   collectionName: "",
+  filters: [],
   filter: "all",
   pinToHomepage: true,
   arr: { ...DEFAULT_ARR_FORM },
@@ -162,7 +186,7 @@ function defaultLimitForType(type: string): number {
 }
 
 function typeHasLimit(type: string): boolean {
-  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source";
+  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source" && type !== "smart_filter";
 }
 
 type SortKey = "name" | "type" | "lastRun";
@@ -594,6 +618,7 @@ export default function Rules() {
       listProvider: ((config.listProvider as RuleFormState["listProvider"]) ||
         "mdblist") satisfies RuleFormState["listProvider"],
       collectionName: (config.collectionName as string) || "",
+      filters: (config.filters as SmartFilterClause[] | undefined) ?? [],
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       arr: {
@@ -624,6 +649,10 @@ export default function Rules() {
     if (next.type === "list_source") {
       config.listProvider = next.listProvider;
       config.listId = next.listId;
+      if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
+    }
+    if (next.type === "smart_filter") {
+      config.filters = next.filters;
       if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
     }
     if (next.type === "seerr_requests") config.filter = next.filter;
