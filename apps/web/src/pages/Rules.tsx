@@ -1253,10 +1253,18 @@ function MigrationBanner() {
   const dismiss = trpc.migration.dismiss.useMutation();
 
   if (!status.data?.shouldShowBanner) return null;
-  const count = status.data.count;
+  const actionable = status.data.providers.filter((p) => p.shouldShowBanner);
+  const count = actionable.reduce((sum, p) => sum + p.count, 0);
+  const labels = actionable.map((p) => p.label);
+  const labelText =
+    labels.length === 1
+      ? labels[0]
+      : labels.length === 2
+        ? `${labels[0]} and ${labels[1]}`
+        : `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 
   const handleDismiss = async () => {
-    await dismiss.mutateAsync();
+    await Promise.all(actionable.map((p) => dismiss.mutateAsync({ providerId: p.id })));
     await utils.migration.status.invalidate();
   };
 
@@ -1275,7 +1283,7 @@ function MigrationBanner() {
       }}
     >
       <div style={{ flex: 1 }}>
-        Tinkerbell can migrate <strong>{count}</strong> Kometa-managed collection{count === 1 ? "" : "s"} into
+        Tinkerbell can migrate <strong>{count}</strong> {labelText}-managed collection{count === 1 ? "" : "s"} into
         Tinkerbell rules.
       </div>
       <button

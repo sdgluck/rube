@@ -54,7 +54,15 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     enabled: 1,
   },
   // No schedule — only ever triggered explicitly from Settings → Migrate.
-  { id: "migrate-kometa", name: "Migrate Kometa", command: "migrate-kometa", schedule: "", enabled: 1 },
+  // One job covers all migration providers; the providerId is read from
+  // `migration_pending_plan` at run time.
+  {
+    id: "migrate-collections",
+    name: "Migrate Collections",
+    command: "migrate-collections",
+    schedule: "",
+    enabled: 1,
+  },
 ];
 
 const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
@@ -90,7 +98,7 @@ const internalJobs: Record<string, () => string | Promise<string>> = {
   healthcheck: () => checkAllConfiguredServices(),
 };
 
-const REMOVED_JOBS = ["sync-sections", "stress-test"];
+const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa"];
 
 function seedDefaultJobs(): void {
   let inserted = 0;

@@ -5,7 +5,7 @@
 import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
 import { db, collections } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { scanKometaState } from "@tinkerbell/domain.migration";
+import { scanAllProviders } from "@tinkerbell/domain.migration";
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 
@@ -97,13 +97,10 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
   const result = db.delete(collections).where(lt(collections.syncedAt, now)).run();
   const removed = Number(result.changes ?? 0);
 
-  // Refresh the Kometa migration scan so the banner / Settings → Migrate
-  // page reflects the freshly-synced label set without an explicit refetch.
-  try {
-    scanKometaState();
-  } catch (err) {
-    console.warn("[collections] Failed to refresh Kometa migration state:", err);
-  }
+  // Refresh every migration provider's scan so the banner / Settings →
+  // Migrate page reflects the freshly-synced state without an explicit
+  // refetch. Per-provider failures are swallowed inside scanAllProviders.
+  scanAllProviders();
 
   return { synced, removed };
 }

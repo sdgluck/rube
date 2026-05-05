@@ -31,7 +31,7 @@ const VALID_COMMANDS = new Set([
   "overlays",
   "sync-users",
   "posters-refresh",
-  "migrate-kometa",
+  "migrate-collections",
 ]);
 
 export class CommandJob extends Job {
