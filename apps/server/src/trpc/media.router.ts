@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getConfig, setConfig } from "@tinkerbell/core";
-import { getLocalMediaItems } from "#domains/media.ts";
-import { getLocalCollection } from "#domains/collections.ts";
+import { getLocalMediaItems } from "@tinkerbell/domain.media";
+import { getLocalCollection } from "@tinkerbell/domain.collections";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const mediaRouter = t.router({

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { searchAll } from "#domains/search.ts";
+import { searchAll } from "@tinkerbell/domain.search";
 import { t, procedure } from "./_base.ts";
 
 export const searchRouter = t.router({

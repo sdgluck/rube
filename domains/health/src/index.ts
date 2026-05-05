@@ -1,7 +1,7 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
-import { emitEvent } from "./events.ts";
+import { emitEvent } from "@tinkerbell/domain.events";
 import { getAllConfig, getLlmConfig, configSchema } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";

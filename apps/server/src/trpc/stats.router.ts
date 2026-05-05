@@ -4,7 +4,7 @@ import {
   getLibraryOverview,
   getCachedActivitySummary,
   getOpsSummary,
-} from "#domains/stats.ts";
+} from "@tinkerbell/domain.stats";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const statsRouter = t.router({

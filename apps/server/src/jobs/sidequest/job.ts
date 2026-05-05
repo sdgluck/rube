@@ -2,7 +2,7 @@ import { Job } from "sidequest";
 import { errorMessage } from "@tinkerbell/core";
 import { eq } from "drizzle-orm";
 import { db, jobRuns } from "@tinkerbell/db";
-import { emitEvent } from "#domains/events.ts";
+import { emitEvent } from "@tinkerbell/domain.events";
 import {
   commonJobConfigSchema,
   type JobContext,

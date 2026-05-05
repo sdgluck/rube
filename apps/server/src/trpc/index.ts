@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { createLlmClient } from "@tinkerbell/llm";
 import { errorMessage } from "@tinkerbell/core";
-import { syncSections, getLocalSections } from "#domains/sections.ts";
-import { reportHealth, testArrConnection } from "#domains/health.ts";
-import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "#domains/notifications.ts";
+import { syncSections, getLocalSections } from "@tinkerbell/domain.sections";
+import { reportHealth, testArrConnection } from "@tinkerbell/domain.health";
+import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
 import { t, procedure, getPlexClient } from "./_base.ts";
 import { configRouter } from "./config.router.ts";
 import { collectionsRouter } from "./collections.router.ts";

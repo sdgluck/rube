@@ -1,8 +1,8 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, setConfig, deleteConfig } from "@tinkerbell/core";
-import { createRule } from "#domains/rules.ts";
-import { markMigrationCompleted, scanKometaState } from "#domains/migration.ts";
+import { createRule } from "@tinkerbell/domain.rules";
+import { markMigrationCompleted, scanKometaState } from "@tinkerbell/domain.migration";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {

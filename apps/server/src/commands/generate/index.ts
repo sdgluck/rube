@@ -1,7 +1,13 @@
 import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "@tinkerbell/core";
 import { plexHealthCallback } from "@tinkerbell/core";
-import { getEnabledRules, getRule, setRuleArrCounts, setRuleLastCollection, setRuleLastRun } from "#domains/rules.ts";
+import {
+  getEnabledRules,
+  getRule,
+  setRuleArrCounts,
+  setRuleLastCollection,
+  setRuleLastRun,
+} from "@tinkerbell/domain.rules";
 import { errorMessage } from "@tinkerbell/core";
 import type { JobContext, GenerateJobConfig } from "@tinkerbell/core";
 import { parseRuleConfig } from "./config.ts";

@@ -1,7 +1,7 @@
 import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "@tinkerbell/core";
 import { plexHealthCallback } from "@tinkerbell/core";
-import { getRule } from "#domains/rules.ts";
+import { getRule } from "@tinkerbell/domain.rules";
 import type { JobContext } from "@tinkerbell/core";
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";

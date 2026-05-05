@@ -13,7 +13,7 @@ import {
   evaluateRule,
   compositeOverlays,
   type Badge,
-} from "#domains/overlays.ts";
+} from "@tinkerbell/domain.overlays";
 import { extractImdbId } from "@tinkerbell/omdb";
 import { getOmdbClient } from "@tinkerbell/core";
 import type { JobContext, OverlaysJobConfig } from "@tinkerbell/core";

@@ -1,6 +1,6 @@
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import type { JobContext } from "@tinkerbell/core";
-import type { Rule } from "#domains/rules.ts";
+import type { Rule } from "@tinkerbell/domain.rules";
 import type { RuleConfig } from "./config.ts";
 
 /**

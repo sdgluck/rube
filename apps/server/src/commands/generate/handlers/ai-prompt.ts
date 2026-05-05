@@ -1,4 +1,4 @@
-import { getRecentHistory } from "#domains/rule-history.ts";
+import { getRecentHistory } from "@tinkerbell/domain.rule-history";
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
 import { parseAiCollections } from "#commands/generate/ai/parse.ts";
 import { askLlm, shuffled } from "#commands/generate/ai/llm.ts";

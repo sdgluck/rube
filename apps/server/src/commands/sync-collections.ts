@@ -1,7 +1,7 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig } from "@tinkerbell/core";
-import { syncCollections } from "#domains/collections.ts";
+import { syncCollections } from "@tinkerbell/domain.collections";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {

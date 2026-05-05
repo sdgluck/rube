@@ -4,7 +4,7 @@
 
 import { eq, like, or, asc, desc, sql } from "drizzle-orm";
 import { db, plexUsers } from "@tinkerbell/db";
-import { getLocalCollections } from "./collections.ts";
+import { getLocalCollections } from "@tinkerbell/domain.collections";
 import type { PlexClient } from "@tinkerbell/plex";
 
 interface SyncStats {
