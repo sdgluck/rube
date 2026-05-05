@@ -73,7 +73,7 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
 
   // 3. Refresh scan state and mark migration complete so the banner stays
   // dismissed even after future syncs reveal additional collections.
-  scanProviderState(providerId);
+  await scanProviderState(providerId);
   markProviderCompleted(providerId);
   // Setting completed_at suppresses the banner; leftover state in
   // `_pending_plan` is no longer useful.

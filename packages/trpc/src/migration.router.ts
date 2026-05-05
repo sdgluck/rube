@@ -40,7 +40,7 @@ export const migrationRouter = t.router({
     // Validate provider id before doing anything stateful.
     getProvider(input.providerId);
 
-    const plan = buildProviderPlan(input.providerId);
+    const plan = await buildProviderPlan(input.providerId);
     const selected = new Set(input.selectedKeys);
     const items = plan.proposed
       .filter((p) => selected.has(p.key))

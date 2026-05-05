@@ -36,7 +36,9 @@ export type BucketKind =
   | "based_on"
   | "seasonal"
   | "universe"
-  | "award";
+  | "award"
+  /** External list (MDBList, Trakt, …) — items aren't bucketed by category. */
+  | "list";
 
 export interface ClassifiedCollection {
   collection: CollectionInput;

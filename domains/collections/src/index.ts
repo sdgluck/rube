@@ -99,8 +99,9 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
 
   // Refresh every migration provider's scan so the banner / Settings →
   // Migrate page reflects the freshly-synced state without an explicit
-  // refetch. Per-provider failures are swallowed inside scanAllProviders.
-  scanAllProviders();
+  // refetch. Per-provider failures are swallowed inside scanAllProviders;
+  // API-backed providers (MDBList, Trakt) opt out of this auto-scan path.
+  await scanAllProviders();
 
   return { synced, removed };
 }
