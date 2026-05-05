@@ -1,5 +1,5 @@
-import ToggleSwitch from "../../../ToggleSwitch";
-import styles from "../../Jobs.module.css";
+import ToggleSwitch from "#/ToggleSwitch";
+import styles from "#pages/Jobs.module.css";
 
 export interface BywFormState {
   limit: number;

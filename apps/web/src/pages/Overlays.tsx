@@ -5,7 +5,7 @@ import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "../lib/PosterC
 import ConfirmModal from "../ConfirmModal";
 import { PageSkeleton } from "../Skeleton";
 import Spinner from "../Spinner";
-import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@server/domains/overlays.ts";
+import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "#server/domains/overlays.ts";
 import styles from "./Overlays.module.css";
 
 type ColorPreset = NonNullable<BadgeStyle["colorPreset"]>;

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import useSwipeBack from "../../../useSwipeBack";
-import styles from "../../Jobs.module.css";
+import useSwipeBack from "#/useSwipeBack";
+import styles from "#pages/Jobs.module.css";
 import type { Job } from "../types";
 import { useJobActions } from "./useJobActions";
 

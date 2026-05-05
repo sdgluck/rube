@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
-import { trpc } from "../../../../trpc";
-import { describeCron } from "../../../../utils";
-import styles from "../../../Jobs.module.css";
+import { trpc } from "#/trpc";
+import { describeCron } from "#/utils";
+import styles from "#pages/Jobs.module.css";
 
 export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedule: string }) {
   const utils = trpc.useUtils();

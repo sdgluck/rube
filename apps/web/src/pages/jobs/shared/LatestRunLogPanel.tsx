@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import styles from "../../Jobs.module.css";
+import styles from "#pages/Jobs.module.css";
 import type { useJobActions } from "./useJobActions";
 
 interface Props {

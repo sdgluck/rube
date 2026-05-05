@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import RelativeTime from "../../../RelativeTime";
-import EmptyState from "../../../EmptyState";
-import styles from "../../Jobs.module.css";
+import RelativeTime from "#/RelativeTime";
+import EmptyState from "#/EmptyState";
+import styles from "#pages/Jobs.module.css";
 import StatusBadge from "./StatusBadge";
 import { formatDuration } from "./formatDuration";
 import type { useJobActions } from "./useJobActions";

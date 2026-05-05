@@ -3,6 +3,13 @@
   "version": "0.4.1",
   "private": true,
   "type": "module",
+  "imports": {
+    "#commands/*": "./src/commands/*",
+    "#domains/*": "./src/domains/*",
+    "#jobs/*": "./src/jobs/*",
+    "#lib/*": "./src/lib/*",
+    "#trpc/*": "./src/trpc/*"
+  },
   "scripts": {
     "dev": "portless api.tinkerbell --app-port 3000 node --watch-path=src --watch-path=../../packages/overlays/src --watch-path=../../packages/db/src --watch src/server.ts",
     "typecheck": "tsc"

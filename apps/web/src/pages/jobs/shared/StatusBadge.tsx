@@ -1,4 +1,4 @@
-import styles from "../../Jobs.module.css";
+import styles from "#pages/Jobs.module.css";
 
 export default function StatusBadge({ status }: { status?: string }) {
   if (!status) return null;
