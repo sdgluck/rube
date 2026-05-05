@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { db, stressTestRuns } from "@tinkerbell/db";
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "#lib/clients.ts";
-import { getConfig } from "#lib/config.ts";
+import { plexHealthCallback } from "@tinkerbell/core";
+import { getConfig } from "@tinkerbell/core";
 import { runStressTest, type StressTestConfig } from "./index.ts";
-import type { JobContext } from "#lib/job-context.ts";
+import type { JobContext } from "@tinkerbell/core";
 
 interface WorkerMessage {
   id: string;

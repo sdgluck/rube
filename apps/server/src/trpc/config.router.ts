@@ -1,4 +1,4 @@
-import { getAllConfig, setConfig, configSchema, type ConfigKey } from "#lib/config.ts";
+import { getAllConfig, setConfig, configSchema, type ConfigKey } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 
 export const configRouter = t.router({

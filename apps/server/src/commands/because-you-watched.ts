@@ -1,12 +1,12 @@
 import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
-import { plexHealthCallback } from "#lib/clients.ts";
-import { getConfig, getLlmConfig } from "#lib/config.ts";
+import { plexHealthCallback } from "@tinkerbell/core";
+import { getConfig, getLlmConfig } from "@tinkerbell/core";
 import { reportHealth } from "#domains/health.ts";
 import { upsertCollectionByKey } from "#domains/collections.ts";
 import { z } from "zod";
-import type { JobContext, BywJobConfig } from "#lib/job-context.ts";
+import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];

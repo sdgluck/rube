@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { startJob } from "#jobs/runner.ts";
 import { buildKometaPlan, dismissMigrationBanner, getMigrationStatus, scanKometaState } from "#domains/migration.ts";
-import { setConfig } from "#lib/config.ts";
+import { setConfig } from "@tinkerbell/core";
 import { procedure, t } from "./_base.ts";
 
 const runInputSchema = z.object({

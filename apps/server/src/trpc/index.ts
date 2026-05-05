@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createLlmClient } from "@tinkerbell/llm";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { syncSections, getLocalSections } from "#domains/sections.ts";
 import { reportHealth, testArrConnection } from "#domains/health.ts";
 import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "#domains/notifications.ts";

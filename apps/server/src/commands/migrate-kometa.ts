@@ -1,9 +1,9 @@
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "#lib/clients.ts";
-import { getConfig, setConfig, deleteConfig } from "#lib/config.ts";
+import { plexHealthCallback } from "@tinkerbell/core";
+import { getConfig, setConfig, deleteConfig } from "@tinkerbell/core";
 import { createRule } from "#domains/rules.ts";
 import { markMigrationCompleted, scanKometaState } from "#domains/migration.ts";
-import type { CommonJobConfig, JobContext } from "#lib/job-context.ts";
+import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
   ctx.log("tinkerbell migrate-kometa");

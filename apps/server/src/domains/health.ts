@@ -1,8 +1,8 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
-import { errorMessage } from "#lib/util.ts";
+import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "./events.ts";
-import { getAllConfig, getLlmConfig, configSchema } from "#lib/config.ts";
+import { getAllConfig, getLlmConfig, configSchema } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";

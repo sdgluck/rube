@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getConfig } from "#lib/config.ts";
+import { getConfig } from "@tinkerbell/core";
 import { getPreviewForUser } from "#domains/preview.ts";
 import { shuffleAllSections } from "#domains/shuffle-hubs.ts";
 import { t, procedure, getPlexClient } from "./_base.ts";

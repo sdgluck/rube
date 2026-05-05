@@ -1,4 +1,4 @@
-import { getConfig } from "#lib/config.ts";
+import { getConfig } from "@tinkerbell/core";
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { lookupBelongsToCollection } from "#commands/generate/sources/tmdb.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";

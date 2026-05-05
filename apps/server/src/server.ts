@@ -4,8 +4,11 @@ import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./trpc/index.ts";
 import { initJobs } from "./jobs/runner.ts";
-import { getConfig } from "./lib/config.ts";
+import { getConfig, setHealthReporter } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "./domains/overlays.ts";
+import { reportHealth } from "./domains/health.ts";
+
+setHealthReporter(reportHealth);
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
