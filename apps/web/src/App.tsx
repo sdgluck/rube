@@ -34,7 +34,7 @@ const Rules = lazy(() => import("./pages/Rules"));
 const Media = lazy(() => import("./pages/Media"));
 const MediaDetail = lazy(() => import("./pages/MediaDetail"));
 const Jobs = lazy(() => import("./pages/Jobs"));
-const JobDetail = lazy(() => import("./pages/JobDetail"));
+const JobDetail = lazy(() => import("./pages/jobs/JobDetail"));
 const JobRun = lazy(() => import("./pages/JobRun"));
 const Users = lazy(() => import("./pages/Users"));
 const Overlays = lazy(() => import("./pages/Overlays"));
