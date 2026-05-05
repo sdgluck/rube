@@ -1,6 +1,6 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
-import { getConfig, setConfig, deleteConfig } from "@tinkerbell/core";
+import { deleteConfig, getConfig } from "@tinkerbell/core";
 import { createRule } from "@tinkerbell/domain.rules";
 import { markProviderCompleted, scanProviderState } from "@tinkerbell/domain.migration";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
@@ -73,15 +73,11 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
 
   // 3. Refresh scan state and mark migration complete so the banner stays
   // dismissed even after future syncs reveal additional collections.
+  // The banner formula short-circuits on `completedAt != null`, so no
+  // further dismissed_at touch is needed.
   await scanProviderState(providerId);
   markProviderCompleted(providerId);
-  // Setting completed_at suppresses the banner; leftover state in
-  // `_pending_plan` is no longer useful.
   deleteConfig("migration_pending_plan");
-  // Touch dismissed_at too so the banner doesn't briefly reappear if the
-  // next sync increments the count before the user navigates away.
-  const dismissed = getConfig("migration_dismissed_at") ?? {};
-  setConfig("migration_dismissed_at", { ...dismissed, [providerId]: Date.now() });
 
   ctx.log("Migration complete.");
 }

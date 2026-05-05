@@ -21,22 +21,21 @@ export interface ParseResult {
 }
 
 /**
- * Fields that exist purely to control Plex's renderer/query shape rather
- * than express user intent. Stripped from the parsed result.
+ * Pure shape-control fields with no semantic content — strip silently.
+ * `type=N` (section type), `sort=…`, pagination, and the various
+ * `includeFoo` flags fall here.
  */
-const NOISE_FIELDS = new Set([
-  "type",
-  "sort",
-  "push",
-  "pop",
-  "and",
-  "or",
-  "group",
-  "limit",
-  "includeGuids",
-  "includeCollections",
-  "includeAdvanced",
-]);
+const SHAPE_FIELDS = new Set(["type", "sort", "limit", "includeGuids", "includeCollections", "includeAdvanced"]);
+
+/**
+ * Group-control fields. Plex emits these (with non-empty values) to mark
+ * OR groups or nested AND/OR structures: `or=1`, `push=1`, `pop=1`,
+ * `and=1`, `group=…`. The smart_filter rule type doesn't model groups,
+ * so any non-empty group marker disqualifies the whole filter — silently
+ * dropping them turns a real OR query into a contradictory AND chain
+ * that matches nothing in Plex.
+ */
+const GROUP_FIELDS = new Set(["push", "pop", "and", "or", "group"]);
 
 const X_PLEX_PREFIX = "X-Plex-";
 
@@ -99,8 +98,15 @@ export function parseSmartFilterUri(uri: string): ParseResult {
     const field = decodeURIComponent(matched.field);
     const value = decodeURIComponent(matched.value);
 
-    if (NOISE_FIELDS.has(field)) continue;
+    if (SHAPE_FIELDS.has(field)) continue;
     if (field.startsWith(X_PLEX_PREFIX)) continue;
+
+    // Group markers must surface as unsupported. Stripping them silently
+    // turns a real OR query into an AND chain that matches nothing.
+    if (GROUP_FIELDS.has(field)) {
+      unsupported.push(`${field}=${value} (group marker)`);
+      continue;
+    }
 
     if (matched.op === null) {
       unsupported.push(`${field} (strict ${matched.suffix === ">>" ? "gt" : "lt"})`);
@@ -124,5 +130,23 @@ export function parseSmartFilterUri(uri: string): ParseResult {
     filters.push({ field, op: matched.op, value });
   }
 
-  return { filters, unsupported };
+  // Repeated `field=value` clauses are Plex's "in" semantics
+  // (`genre=Action&genre=Comedy` — match items in EITHER). AND'ing both
+  // would produce a contradiction. Range queries that repeat a field
+  // with different operators (`year>>=1990&year<<=1999`) are a legitimate
+  // AND, so only demote duplicates when at least one is the equality op.
+  const eqCounts = new Map<string, number>();
+  for (const f of filters) {
+    if (f.op === "=") eqCounts.set(f.field, (eqCounts.get(f.field) ?? 0) + 1);
+  }
+  const remaining: ParsedClause[] = [];
+  for (const f of filters) {
+    if (f.op === "=" && (eqCounts.get(f.field) ?? 0) > 1) {
+      unsupported.push(`${f.field}=${f.value} (repeated field — Plex 'in' semantics)`);
+    } else {
+      remaining.push(f);
+    }
+  }
+
+  return { filters: remaining, unsupported };
 }

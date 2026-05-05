@@ -8,7 +8,7 @@ import {
   listProviders,
   scanProviderState,
 } from "@tinkerbell/domain.migration";
-import { setConfig } from "@tinkerbell/core";
+import { getConfig, setConfig } from "@tinkerbell/core";
 import { procedure, t } from "./_base.ts";
 
 const providerInput = z.object({ providerId: z.string().min(1) });
@@ -54,6 +54,15 @@ export const migrationRouter = t.router({
 
     if (items.length === 0) {
       throw new Error("No proposed rules selected for migration.");
+    }
+
+    // Guard against concurrent run() calls: the pending-plan slot is a
+    // single-writer handoff to the migrate-collections job. Two near-
+    // simultaneous mutations would clobber each other; the winning job
+    // would then run the loser's selection. Refusing here is safer than
+    // letting the second call silently overwrite.
+    if (getConfig("migration_pending_plan")) {
+      throw new Error("Another migration is already pending. Wait for it to finish before starting a new one.");
     }
 
     setConfig("migration_pending_plan", {

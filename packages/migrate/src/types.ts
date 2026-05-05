@@ -38,7 +38,9 @@ export type BucketKind =
   | "universe"
   | "award"
   /** External list (MDBList, Trakt, …) — items aren't bucketed by category. */
-  | "list";
+  | "list"
+  /** Plex smart-collection filter — one rule per imported collection. */
+  | "smart_filter";
 
 export interface ClassifiedCollection {
   collection: CollectionInput;
@@ -93,7 +95,8 @@ export interface MigrationPlan {
   proposed: PlanItem[];
   future: FuturePlanItem[];
   unmappable: UnmappableEntry[];
-  totalKometaCollections: number;
+  /** Total source items the provider considered (sum of proposed/future/unmappable plus already-supported by other rules). */
+  totalSourceItems: number;
 }
 
 export interface PlanOptions {

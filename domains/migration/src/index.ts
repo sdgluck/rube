@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { db, collections } from "@tinkerbell/db";
 import {
   buildPlexSmartPlan,
@@ -165,15 +166,23 @@ const PLEX_SMART_RUNTIME: ProviderRuntime = {
 
 // ─── MDBList runtime ─────────────────────────────────────────────────────
 
-interface MdbListUserList {
-  id: number;
-  name: string;
-  /** Owner's username — together with `name` forms the slug fallback. */
-  user_name?: string;
-  /** Item count if the API returned one; we don't fetch list contents here. */
-  items?: number;
-  mediatype?: string;
-}
+const mdbListUserListSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  /**
+   * Pre-built URL slug from the API. Preferred over reconstructing
+   * `${user_name}/${name}` because list names can contain spaces and
+   * other characters that would break the upstream URL.
+   */
+  slug: z.string().optional(),
+  user_name: z.string().optional(),
+  items: z.number().optional(),
+  mediatype: z.string().optional(),
+});
+
+type MdbListUserList = z.infer<typeof mdbListUserListSchema>;
+
+const mdbListUserResponseSchema = z.union([z.array(mdbListUserListSchema), z.object({ error: z.string() })]);
 
 async function fetchMdbUserLists(): Promise<MdbListUserList[]> {
   const apiKey = getConfig("global_mdblist_api_key");
@@ -181,9 +190,23 @@ async function fetchMdbUserLists(): Promise<MdbListUserList[]> {
   const url = `https://api.mdblist.com/lists/user?apikey=${encodeURIComponent(apiKey)}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`MDBList ${res.status} ${res.statusText}`);
-  const data = (await res.json()) as MdbListUserList[] | { error: string };
-  if (!Array.isArray(data)) throw new Error(`MDBList: ${data.error ?? "unexpected response"}`);
-  return data;
+  const parsed = mdbListUserResponseSchema.safeParse(await res.json());
+  if (!parsed.success) throw new Error(`MDBList: unexpected response shape`);
+  if (!Array.isArray(parsed.data)) throw new Error(`MDBList: ${parsed.data.error}`);
+  return parsed.data;
+}
+
+/**
+ * Resolve an MDBList list to the slug we hand to the list_source rule.
+ * The API's own `slug` field is preferred since it's already been
+ * sanitised; falls back to the numeric id only when neither slug nor
+ * username are present (a list-name fallback would re-introduce the
+ * URL-encoding hazard the source helper now guards against).
+ */
+function listIdFor(list: MdbListUserList): string {
+  if (list.slug) return list.slug;
+  if (list.user_name) return `${list.user_name}/${list.id}`;
+  return String(list.id);
 }
 
 const MDBLIST_RUNTIME: ProviderRuntime = {
@@ -209,13 +232,13 @@ const MDBLIST_RUNTIME: ProviderRuntime = {
       sectionTitle: "All sections",
       ruleConfig: {
         listProvider: "mdblist",
-        listId: list.user_name ? `${list.user_name}/${list.name}` : String(list.id),
+        listId: listIdFor(list),
       },
       sampleNames: [list.name],
       replacesCount: 0,
       replacesRatingKeys: [],
     }));
-    return { proposed, future: [], unmappable: [], totalKometaCollections: lists.length };
+    return { proposed, future: [], unmappable: [], totalSourceItems: lists.length };
   },
 };
 
@@ -252,10 +275,18 @@ function summariseBySection(items: CollectionInput[]): ProviderScanResult {
 
 /**
  * Fold pre-multi-provider config slots (`migration_kometa_*`) into the new
- * `migration_*` provider-keyed slots on first call. Idempotent — old keys
- * are deleted once read so subsequent calls are no-ops.
+ * `migration_*` provider-keyed slots. Idempotent at the row level (old
+ * keys are deleted once read) but we also gate it behind a module-level
+ * flag so the four `getConfig` lookups don't run on every status fetch.
  */
+let legacyConfigMigrated = false;
 function migrateLegacyKometaConfig(): void {
+  if (legacyConfigMigrated) return;
+  legacyConfigMigrated = true;
+  migrateLegacyKometaConfigInner();
+}
+
+function migrateLegacyKometaConfigInner(): void {
   const legacyState = getConfig("migration_kometa_state");
   if (legacyState) {
     const current = getConfig("migration_state") ?? {};

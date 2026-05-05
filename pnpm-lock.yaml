@@ -315,6 +315,9 @@ importers:
       '@tinkerbell/migrate':
         specifier: workspace:*
         version: link:../../packages/migrate
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
