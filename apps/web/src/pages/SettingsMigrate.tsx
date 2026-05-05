@@ -7,12 +7,64 @@ import RelativeTime from "#/RelativeTime";
 import styles from "./Settings.module.css";
 
 export default function SettingsMigrate() {
+  const providersQuery = trpc.migration.providers.useQuery(undefined, { refetchOnWindowFocus: false });
+
+  const [providerId, setProviderId] = useState<string | null>(null);
+
+  // Default-select the first provider with detected items, otherwise the
+  // first registered provider.
+  const statusQuery = trpc.migration.status.useQuery(undefined, { refetchOnWindowFocus: false });
+  useEffect(() => {
+    if (providerId) return;
+    const providers = providersQuery.data;
+    if (!providers || providers.length === 0) return;
+    const status = statusQuery.data;
+    const firstWithItems = status?.providers.find((p) => p.count > 0)?.id;
+    setProviderId(firstWithItems ?? providers[0].id);
+  }, [providersQuery.data, statusQuery.data, providerId]);
+
+  if (providersQuery.isLoading) return <FormSkeleton rows={5} />;
+  if (providersQuery.error || !providersQuery.data) {
+    return <div className={`${styles.toast} ${styles.error}`}>Failed to load migration providers</div>;
+  }
+  const providers = providersQuery.data;
+  if (providers.length === 0) {
+    return <p className={styles.hint}>No migration providers registered.</p>;
+  }
+
+  return (
+    <div className={styles.form} style={{ maxWidth: 880 }}>
+      {providers.length > 1 && (
+        <div className={styles.buttons} style={{ marginBottom: 8 }}>
+          {providers.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={p.id === providerId ? styles.button : styles.buttonSecondary}
+              onClick={() => setProviderId(p.id)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {providerId && (
+        <ProviderPanel
+          providerId={providerId}
+          providerLabel={providers.find((p) => p.id === providerId)?.label ?? providerId}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProviderPanel({ providerId, providerLabel }: { providerId: string; providerLabel: string }) {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const utils = trpc.useUtils();
 
   const statusQuery = trpc.migration.status.useQuery(undefined, { refetchOnWindowFocus: false });
-  const planQuery = trpc.migration.previewPlan.useQuery(undefined, { refetchOnWindowFocus: false });
+  const planQuery = trpc.migration.previewPlan.useQuery({ providerId }, { refetchOnWindowFocus: false });
 
   const scanMutation = trpc.migration.scan.useMutation();
   const runMutation = trpc.migration.run.useMutation();
@@ -45,9 +97,9 @@ export default function SettingsMigrate() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      await scanMutation.mutateAsync();
-      await Promise.all([utils.migration.status.invalidate(), utils.migration.previewPlan.invalidate()]);
-      addToast("Re-scanned Kometa collections", "success");
+      await scanMutation.mutateAsync({ providerId });
+      await Promise.all([utils.migration.status.invalidate(), utils.migration.previewPlan.invalidate({ providerId })]);
+      addToast(`Re-scanned ${providerLabel} collections`, "success");
     } catch {
       addToast("Failed to re-scan", "error");
     } finally {
@@ -63,7 +115,7 @@ export default function SettingsMigrate() {
     if (
       deleteOriginals &&
       !confirm(
-        `Delete ${totalSelectedReplaces} Kometa collection(s) from Plex after creating the rules? This cannot be undone.`,
+        `Delete ${totalSelectedReplaces} ${providerLabel} collection(s) from Plex after creating the rules? This cannot be undone.`,
       )
     ) {
       return;
@@ -72,6 +124,7 @@ export default function SettingsMigrate() {
     setRunning(true);
     try {
       const result = await runMutation.mutateAsync({
+        providerId,
         selectedKeys: [...selected],
         deleteOriginals,
       });
@@ -88,12 +141,12 @@ export default function SettingsMigrate() {
   if (statusQuery.error || planQuery.error)
     return <div className={`${styles.toast} ${styles.error}`}>Failed to load migration data</div>;
 
-  const status = statusQuery.data;
+  const status = statusQuery.data?.providers.find((p) => p.id === providerId);
   const plan = planQuery.data;
   if (!status || !plan) return null;
 
   return (
-    <div className={styles.form} style={{ maxWidth: 880 }}>
+    <>
       <fieldset className={styles.group}>
         <legend className={styles.groupTitle}>Status</legend>
         {status.completedAt ? (
@@ -103,8 +156,8 @@ export default function SettingsMigrate() {
         ) : (
           <p className={styles.hint}>
             {status.count > 0
-              ? `Found ${status.count} Kometa-labelled collection(s)${status.scannedAt ? ", scanned " : ""}`
-              : "No Kometa-labelled collections detected."}
+              ? `Found ${status.count} ${providerLabel}-managed collection(s)${status.scannedAt ? ", scanned " : ""}`
+              : `No ${providerLabel}-managed collections detected.`}
             {status.scannedAt && status.count > 0 ? <RelativeTime timestamp={status.scannedAt} /> : null}
             {status.scannedAt && status.count > 0 ? "." : null}
           </p>
@@ -129,7 +182,8 @@ export default function SettingsMigrate() {
         <legend className={styles.groupTitle}>Proposed rules ({plan.proposed.length})</legend>
         {plan.proposed.length === 0 ? (
           <p className={styles.hint}>
-            No rules to propose. Either no Kometa collections were found, or none classified into a supported bucket.
+            No rules to propose. Either no {providerLabel} collections were found, or none classified into a supported
+            bucket.
           </p>
         ) : (
           <p className={styles.hint}>
@@ -177,8 +231,8 @@ export default function SettingsMigrate() {
         <fieldset className={styles.group}>
           <legend className={styles.groupTitle}>Recognized but not yet supported ({plan.future.length})</legend>
           <p className={styles.hint}>
-            These Kometa collections classify into known buckets that don't have a Tinkerbell rule type yet. They'll be
-            skipped by this migration; future Tinkerbell releases will add the missing rule types.
+            These {providerLabel} collections classify into known buckets that don't have a Tinkerbell rule type yet.
+            They'll be skipped by this migration; future Tinkerbell releases will add the missing rule types.
           </p>
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
             {plan.future.map((f, i) => (
@@ -195,8 +249,8 @@ export default function SettingsMigrate() {
         <fieldset className={styles.group}>
           <legend className={styles.groupTitle}>Unmappable ({plan.unmappable.length})</legend>
           <p className={styles.hint}>
-            These Kometa-labelled collections didn't classify into any known bucket. They'll be left untouched by the
-            migration.
+            These {providerLabel}-managed collections didn't classify into any known bucket. They'll be left untouched
+            by the migration.
             {deleteOriginals &&
               " Delete-originals only removes collections behind selected proposed rules, so these are safe."}
           </p>
@@ -214,10 +268,12 @@ export default function SettingsMigrate() {
         <legend className={styles.groupTitle}>Run migration</legend>
         <label className={styles.field} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <input type="checkbox" checked={deleteOriginals} onChange={(e) => setDeleteOriginals(e.target.checked)} />
-          <span>Delete the Kometa-labelled collections behind the selected rules from Plex after creating them</span>
+          <span>
+            Delete the {providerLabel}-managed collections behind the selected rules from Plex after creating them
+          </span>
         </label>
         <p className={styles.hint} style={{ color: "var(--color-warn, #c97a00)" }}>
-          Selected rules will replace <strong>{totalSelectedReplaces}</strong> Kometa collection(s).
+          Selected rules will replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
           {deleteOriginals
             ? " Originals will be deleted from Plex — this cannot be undone."
             : " Originals will be left in Plex; you can clean them up later."}
@@ -228,6 +284,6 @@ export default function SettingsMigrate() {
           </button>
         </div>
       </fieldset>
-    </div>
+    </>
   );
 }

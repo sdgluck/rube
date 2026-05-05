@@ -77,6 +77,49 @@ export const configSchema = z.object({
   stats_panel_order: z.array(z.string()).max(20),
   posters_kometa_enabled: z.boolean(),
   posters_kometa_person_style: z.enum(["bw", "rainier", "signature", "diiivoy", "diiivoycolor"]),
+  /**
+   * Per-provider scan results, keyed by provider id (e.g. "kometa"). Each
+   * provider's scan job writes its own slot; the migration domain aggregates
+   * across all of them for the banner / Settings → Migrate UI.
+   */
+  migration_state: z.record(
+    z.string(),
+    z.object({
+      count: z.number(),
+      scannedAt: z.number(),
+      bySection: z.array(z.object({ sectionId: z.string(), sectionTitle: z.string(), count: z.number() })),
+    }),
+  ),
+  migration_dismissed_at: z.record(z.string(), z.number()),
+  migration_completed_at: z.record(z.string(), z.number()),
+  /**
+   * Transient slot the Settings → Migrate page writes into right before
+   * kicking off the migrate-collections command. The command reads it at run
+   * start and clears it on success. Held in config so the Sidequest worker
+   * thread doesn't need any additional plumbing to receive the user's
+   * selection. Only one pending plan exists at a time across all providers
+   * — `providerId` identifies which provider the run belongs to.
+   */
+  migration_pending_plan: z.object({
+    providerId: z.string(),
+    items: z.array(
+      z.object({
+        ruleType: z.string(),
+        ruleName: z.string(),
+        sectionId: z.string(),
+        ruleConfig: z.record(z.string(), z.unknown()),
+        replacesRatingKeys: z.array(z.string()),
+      }),
+    ),
+    deleteOriginals: z.boolean(),
+    submittedAt: z.number(),
+  }),
+  /**
+   * Legacy single-provider slots, kept readable for one release so a
+   * one-shot migration in `domains/migration` can fold them into the
+   * provider-keyed slots above. Safe to remove once shipped users have
+   * upgraded.
+   */
   migration_kometa_state: z.object({
     count: z.number(),
     scannedAt: z.number(),
@@ -84,13 +127,6 @@ export const configSchema = z.object({
   }),
   migration_kometa_dismissed_at: z.number(),
   migration_kometa_completed_at: z.number(),
-  /**
-   * Transient slot the Settings → Migrate page writes into right before
-   * kicking off the migrate-kometa command. The command reads it at run
-   * start and clears it on success. Held in config so the Sidequest worker
-   * thread doesn't need any additional plumbing to receive the user's
-   * selection.
-   */
   migration_kometa_pending_plan: z.object({
     items: z.array(
       z.object({

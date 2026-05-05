@@ -1,34 +1,46 @@
 import { z } from "zod";
 import { startJob } from "@tinkerbell/jobs";
 import {
-  buildKometaPlan,
-  dismissMigrationBanner,
+  buildProviderPlan,
+  dismissProvider,
   getMigrationStatus,
-  scanKometaState,
+  getProvider,
+  listProviders,
+  scanProviderState,
 } from "@tinkerbell/domain.migration";
 import { setConfig } from "@tinkerbell/core";
 import { procedure, t } from "./_base.ts";
 
+const providerInput = z.object({ providerId: z.string().min(1) });
+
 const runInputSchema = z.object({
+  providerId: z.string().min(1),
   /** PlanItem keys (`bucket::sectionId`) the user opted to apply. */
   selectedKeys: z.array(z.string()).min(1),
   deleteOriginals: z.boolean().default(false),
 });
 
 export const migrationRouter = t.router({
+  /** Aggregate status across every registered provider. */
   status: procedure.query(() => getMigrationStatus()),
 
-  scan: procedure.mutation(() => scanKometaState()),
+  /** Static list of registered providers (id + label). For UI tabs. */
+  providers: procedure.query(() => listProviders().map((p) => ({ id: p.id, label: p.label }))),
 
-  dismiss: procedure.mutation(() => {
-    dismissMigrationBanner();
+  scan: procedure.input(providerInput).mutation(({ input }) => scanProviderState(input.providerId)),
+
+  dismiss: procedure.input(providerInput).mutation(({ input }) => {
+    dismissProvider(input.providerId);
     return { ok: true as const };
   }),
 
-  previewPlan: procedure.query(() => buildKometaPlan()),
+  previewPlan: procedure.input(providerInput).query(({ input }) => buildProviderPlan(input.providerId)),
 
   run: procedure.input(runInputSchema).mutation(async ({ input }) => {
-    const plan = buildKometaPlan();
+    // Validate provider id before doing anything stateful.
+    getProvider(input.providerId);
+
+    const plan = buildProviderPlan(input.providerId);
     const selected = new Set(input.selectedKeys);
     const items = plan.proposed
       .filter((p) => selected.has(p.key))
@@ -44,14 +56,15 @@ export const migrationRouter = t.router({
       throw new Error("No proposed rules selected for migration.");
     }
 
-    setConfig("migration_kometa_pending_plan", {
+    setConfig("migration_pending_plan", {
+      providerId: input.providerId,
       items,
       deleteOriginals: input.deleteOriginals,
       submittedAt: Date.now(),
     });
 
-    const result = await startJob("migrate-kometa");
-    if (!result) throw new Error("Failed to start migrate-kometa job.");
+    const result = await startJob("migrate-collections");
+    if (!result) throw new Error("Failed to start migrate-collections job.");
     return { runId: result.runId };
   }),
 });

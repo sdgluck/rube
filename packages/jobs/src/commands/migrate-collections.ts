@@ -2,20 +2,20 @@ import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, setConfig, deleteConfig } from "@tinkerbell/core";
 import { createRule } from "@tinkerbell/domain.rules";
-import { markMigrationCompleted, scanKometaState } from "@tinkerbell/domain.migration";
+import { markProviderCompleted, scanProviderState } from "@tinkerbell/domain.migration";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-  ctx.log("tinkerbell migrate-kometa");
+  ctx.log("tinkerbell migrate-collections");
 
-  const pending = getConfig("migration_kometa_pending_plan");
+  const pending = getConfig("migration_pending_plan");
   if (!pending) {
     ctx.log("No pending migration plan found — aborting.");
     return;
   }
 
-  const { items, deleteOriginals } = pending;
-  ctx.log(`Plan: ${items.length} rule(s) to create, deleteOriginals=${deleteOriginals}`);
+  const { providerId, items, deleteOriginals } = pending;
+  ctx.log(`Plan: provider=${providerId}, ${items.length} rule(s), deleteOriginals=${deleteOriginals}`);
 
   const totalSteps = items.length + (deleteOriginals ? items.length : 0);
   let step = 0;
@@ -34,10 +34,10 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
     ctx.log(`Created rule "${rule.name}" (${rule.type}, id=${rule.id}, disabled).`);
   }
 
-  // 2. Optionally delete the original Kometa-labelled collections this
-  // migration is replacing. We delete the *specific* rating keys the plan
-  // pinned, not a blanket label sweep, so untouched Kometa collections
-  // (e.g. unmappable ones the user kept) survive.
+  // 2. Optionally delete the original Plex collections this migration is
+  // replacing. We delete the *specific* rating keys the plan pinned, not a
+  // blanket label sweep, so untouched collections (e.g. unmappable ones the
+  // user kept) survive.
   if (deleteOriginals) {
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
     const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
@@ -67,20 +67,21 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
           }
         }
       }
-      ctx.log(`Deleted ${deleted} original Kometa collection(s)${failed ? `, ${failed} failed` : ""}.`);
+      ctx.log(`Deleted ${deleted} original collection(s)${failed ? `, ${failed} failed` : ""}.`);
     }
   }
 
   // 3. Refresh scan state and mark migration complete so the banner stays
-  // dismissed even after future syncs reveal additional Kometa collections.
-  scanKometaState();
-  markMigrationCompleted();
+  // dismissed even after future syncs reveal additional collections.
+  scanProviderState(providerId);
+  markProviderCompleted(providerId);
   // Setting completed_at suppresses the banner; leftover state in
   // `_pending_plan` is no longer useful.
-  deleteConfig("migration_kometa_pending_plan");
+  deleteConfig("migration_pending_plan");
   // Touch dismissed_at too so the banner doesn't briefly reappear if the
   // next sync increments the count before the user navigates away.
-  setConfig("migration_kometa_dismissed_at", Date.now());
+  const dismissed = getConfig("migration_dismissed_at") ?? {};
+  setConfig("migration_dismissed_at", { ...dismissed, [providerId]: Date.now() });
 
   ctx.log("Migration complete.");
 }
