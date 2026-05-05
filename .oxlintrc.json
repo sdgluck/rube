@@ -11,5 +11,61 @@
   },
   "env": {
     "builtin": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["apps/web/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@tinkerbell/server", "@tinkerbell/server/*", "**/apps/server/**"],
+                "message": "Cross-app imports are forbidden. Web must consume server code via @tinkerbell/contracts or @tinkerbell/trpc (type only)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/server/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@tinkerbell/web", "@tinkerbell/web/*", "**/apps/web/**"],
+                "message": "Cross-app imports are forbidden. Server must not depend on web."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/**/*.ts", "domains/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@tinkerbell/server",
+                  "@tinkerbell/server/*",
+                  "@tinkerbell/web",
+                  "@tinkerbell/web/*",
+                  "**/apps/**"
+                ],
+                "message": "Packages must not depend on apps. Move shared code into a package or invert the dependency."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
