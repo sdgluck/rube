@@ -171,7 +171,7 @@ test("plan: groups by (bucket, section), one PlanItem per group", () => {
 test("plan: rule config carries section title for downstream filter", () => {
   const classified = classifyCollections([col({ title: "A24", sectionTitle: "Films" })]);
   const plan = buildPlan(classified, { supportedRuleTypes: { studio: "studios" } });
-  assert.deepEqual(plan.proposed[0].ruleConfig, { sections: ["Films"] });
+  assert.deepEqual(plan.proposed[0].ruleConfig, { sections: ["Films"], pinToHomepage: false });
 });
 
 test("plan: stable sort by section then bucket", () => {

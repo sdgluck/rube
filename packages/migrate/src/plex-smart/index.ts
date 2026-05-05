@@ -60,6 +60,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
         // collection lived in — Plex smart filters are section-scoped.
         sections: [c.sectionTitle],
         collectionName: c.title,
+        pinToHomepage: false,
       },
       sampleNames: [c.title],
       replacesCount: 1,

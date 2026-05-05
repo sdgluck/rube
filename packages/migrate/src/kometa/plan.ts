@@ -113,7 +113,7 @@ export function buildPlan(classified: ClassifiedCollection[], opts: PlanOptions)
         ruleName: baseName,
         sectionId: group.sectionId,
         sectionTitle: group.sectionTitle,
-        ruleConfig: { sections: [group.sectionTitle] },
+        ruleConfig: { sections: [group.sectionTitle], pinToHomepage: false },
         sampleNames,
         replacesCount: group.members.length,
         replacesRatingKeys: group.members.map((m) => m.collection.ratingKey),
