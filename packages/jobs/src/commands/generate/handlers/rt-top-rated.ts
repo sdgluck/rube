@@ -33,7 +33,9 @@ export async function* rtTopRatedHandler(deps: HandlerDeps): AsyncGenerator<Pend
       ctx.signal.addEventListener("abort", () => queue.clear(), { once: true });
     }
 
-    let fetched = 0;
+    let processed = 0;
+    let apiCalls = 0;
+    let cacheHits = 0;
     for (const item of items) {
       const imdbId = extractImdbId(item.guids);
       if (!imdbId) continue;
@@ -41,9 +43,11 @@ export async function* rtTopRatedHandler(deps: HandlerDeps): AsyncGenerator<Pend
       void queue.add(async () => {
         ctx.signal?.throwIfAborted();
         const ratings = await getOmdbClient().getRatings(imdbId);
-        fetched++;
-        if (fetched % PROGRESS_INTERVAL === 0) {
-          ctx.log(`OMDB progress: ${fetched} items fetched...`);
+        processed++;
+        if (ratings?.source === "cache") cacheHits++;
+        else if (ratings?.source === "api") apiCalls++;
+        if (processed % PROGRESS_INTERVAL === 0) {
+          ctx.log(`OMDB progress: ${processed} processed (${cacheHits} cached, ${apiCalls} fetched)...`);
         }
         if (!ratings?.rtRating) return;
         const scoreMatch = ratings.rtRating.match(/(\d+)%/);
@@ -59,7 +63,9 @@ export async function* rtTopRatedHandler(deps: HandlerDeps): AsyncGenerator<Pend
 
     await queue.onIdle();
     ctx.signal?.throwIfAborted();
-    ctx.log(`Fetched ratings for ${fetched} item(s), ${scored.length} have RT scores.`);
+    ctx.log(
+      `Processed ${processed} item(s) (${cacheHits} from cache, ${apiCalls} fetched from OMDB), ${scored.length} have RT scores.`,
+    );
 
     if (scored.length === 0) {
       ctx.log(`No items with RT scores in "${section.title}", skipping.`);

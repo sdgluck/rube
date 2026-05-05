@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { CONFIG_DETAILS, CONFIG_SUMMARY, TYPE_BADGE, TYPE_LABELS } from "./constants";
 import RuleDetailRow from "./DetailRow";
+import RulePreviewRow from "./RulePreviewRow";
 import StatusCell from "./StatusCell";
 import styles from "./Rules.module.css";
 import type { RuleRow } from "./types";
@@ -16,9 +17,12 @@ interface RuleTableRowProps {
   isTesting: boolean;
   isRunning: boolean;
   isExpanded: boolean;
+  highlighted?: boolean;
   onToggleRowExpand: () => void;
   configExpanded: boolean;
   onToggleConfigExpand: () => void;
+  previewExpanded: boolean;
+  onTogglePreview: () => void;
   formActive: boolean;
   testPending: boolean;
   runPending: boolean;
@@ -42,9 +46,12 @@ export default function RuleTableRow({
   isTesting,
   isRunning,
   isExpanded,
+  highlighted,
   onToggleRowExpand,
   configExpanded,
   onToggleConfigExpand,
+  previewExpanded,
+  onTogglePreview,
   formActive,
   testPending,
   runPending,
@@ -81,7 +88,7 @@ export default function RuleTableRow({
 
   return (
     <Fragment>
-      <tr>
+      <tr data-rule-id={rule.id} className={highlighted ? styles.rowHighlighted : undefined}>
         <td className={styles.checkboxCell}>
           <input
             type="checkbox"
@@ -121,6 +128,15 @@ export default function RuleTableRow({
         </td>
         <td>
           <div className={styles.actions}>
+            {rule.lastCollectionRatingKey && (
+              <button
+                className={`${styles.actionBtn} ${previewExpanded ? styles.actionBtnActive : ""}`}
+                onClick={onTogglePreview}
+                title={previewExpanded ? "Hide preview" : "Preview last generated collection"}
+              >
+                Preview
+              </button>
+            )}
             {rule.lastCollectionRatingKey &&
               ((rule.lastRunCollectionCount ?? 0) > 1 ? (
                 <button
@@ -197,6 +213,9 @@ export default function RuleTableRow({
           errorToShow={errorToShow}
           onCleared={onDetailCleared}
         />
+      )}
+      {previewExpanded && rule.lastCollectionRatingKey && (
+        <RulePreviewRow ruleId={rule.id} fallbackRatingKey={rule.lastCollectionRatingKey} />
       )}
     </Fragment>
   );

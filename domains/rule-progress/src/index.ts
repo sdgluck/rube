@@ -16,6 +16,7 @@ export interface RuleProgressState {
 }
 
 export interface TestPreviewItem {
+  ratingKey: string;
   title: string;
   year?: number;
 }

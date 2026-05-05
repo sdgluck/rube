@@ -9,7 +9,7 @@ import { handlerForRule } from "./dispatch.ts";
 export interface TestCollectionPreview {
   name: string;
   sectionTitle: string;
-  items: Array<{ title: string; year?: number }>;
+  items: Array<{ ratingKey: string; title: string; year?: number }>;
 }
 
 export interface TestRuleResult {
@@ -96,7 +96,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     collections.push({
       name: pending.name,
       sectionTitle: pending.section.title,
-      items: pending.matched.map(({ title, year }) => ({ title, year })),
+      items: pending.matched.map(({ ratingKey, title, year }) => ({ ratingKey, title, year })),
     });
   }
 

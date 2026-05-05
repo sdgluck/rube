@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import ConfirmModal from "#components/ConfirmModal";
 import DropdownButton from "#components/DropdownButton";
 import EmptyState from "#components/EmptyState";
@@ -50,6 +51,10 @@ export default function Rules() {
   const lastClickedIndex = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusRuleId = searchParams.get("focus");
+  const [highlightedRuleId, setHighlightedRuleId] = useState<string | null>(null);
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | "all">("all");
   const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
@@ -59,6 +64,10 @@ export default function Rules() {
   const [expandedRow, setExpandedRow] = useState<string | null>(
     () => (typeof window !== "undefined" && sessionStorage.getItem("rules-expanded-row")) || null,
   );
+  const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
+  const togglePreviewExpand = (id: string) => {
+    setExpandedPreview((prev) => (prev === id ? null : id));
+  };
   const [expandedConfig, setExpandedConfig] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     const raw = sessionStorage.getItem("rules-expanded-config");
@@ -75,6 +84,27 @@ export default function Rules() {
     if (expandedRow) sessionStorage.setItem("rules-expanded-row", expandedRow);
     else sessionStorage.removeItem("rules-expanded-row");
   }, [expandedRow]);
+
+  useEffect(() => {
+    if (!focusRuleId || rulesQuery.isLoading) return;
+    const exists = (rulesQuery.data ?? []).some((r) => r.id === focusRuleId);
+    if (!exists) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("focus");
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    setHighlightedRuleId(focusRuleId);
+    const node = document.querySelector<HTMLElement>(`[data-rule-id="${focusRuleId}"]`);
+    if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => {
+      setHighlightedRuleId(null);
+      const next = new URLSearchParams(searchParams);
+      next.delete("focus");
+      setSearchParams(next, { replace: true });
+    }, 2400);
+    return () => clearTimeout(t);
+  }, [focusRuleId, rulesQuery.data, rulesQuery.isLoading, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (expandedConfig.size > 0) {
@@ -599,9 +629,12 @@ export default function Rules() {
                     isTesting={isTesting}
                     isRunning={isRunning}
                     isExpanded={expandedRow === rule.id}
+                    highlighted={highlightedRuleId === rule.id}
                     onToggleRowExpand={() => toggleRowExpand(rule.id)}
                     configExpanded={expandedConfig.has(rule.id)}
                     onToggleConfigExpand={() => toggleConfigExpand(rule.id)}
+                    previewExpanded={expandedPreview === rule.id}
+                    onTogglePreview={() => togglePreviewExpand(rule.id)}
                     formActive={!!form}
                     testPending={testMutation.isPending}
                     runPending={runMutation.isPending}

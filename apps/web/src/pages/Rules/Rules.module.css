@@ -19,6 +19,19 @@
   text-align: left;
 }
 
+@keyframes rowHighlightPulse {
+  0% {
+    background: var(--accent-soft, rgba(255, 196, 0, 0.28));
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.rowHighlighted > td {
+  animation: rowHighlightPulse 2.4s ease-out;
+}
+
 .typeLabel {
   display: inline-flex;
   align-items: center;
@@ -120,6 +133,94 @@
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+.actionBtnActive {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.previewBlockCell {
+  padding: 0 !important;
+}
+
+.previewStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 0;
+  box-sizing: border-box;
+  max-height: 580px;
+  overflow-y: auto;
+}
+
+.previewBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.previewBlockTitle {
+  margin: 0;
+  padding: 0 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewBlockMeta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.previewAbsolute {
+  overflow-x: auto;
+  padding: 4px 18px;
+  display: flex;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.testPreviewStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+  max-height: 580px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.testPreviewStack .previewBlockTitle {
+  padding: 0;
+}
+
+.testPreviewPosterRow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  box-sizing: border-box;
+}
+
+.previewLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 8px 18px;
+}
+
+.previewEmpty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 8px 18px;
 }
 
 .actionBtnDanger {

@@ -1,4 +1,8 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import FadeImage from "#components/FadeImage";
 import { trpc } from "#/trpc";
+import previewStyles from "#pages/Preview.module.css";
 import InlineProgress from "./InlineProgress";
 import styles from "./Rules.module.css";
 import { formatDuration } from "./utils";
@@ -15,11 +19,26 @@ export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToSho
   const resultQuery = trpc.rules.lastTestResult.useQuery({ id: ruleId }, { enabled: !isRunning });
   const hasResult = !!resultQuery.data;
   const showAnything = isTesting || isRunning || !!errorToShow || hasResult;
+  const tdRef = useRef<HTMLTableCellElement>(null);
+  const [wrapperWidth, setWrapperWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const td = tdRef.current;
+    if (!td) return;
+    const wrapper = td.closest<HTMLElement>(".table-scroll");
+    if (!wrapper) return;
+    const update = () => setWrapperWidth(wrapper.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(wrapper);
+    return () => ro.disconnect();
+  }, []);
+
   if (!showAnything) return null;
 
   return (
     <tr className={styles.detailRow}>
-      <td colSpan={7}>
+      <td ref={tdRef} colSpan={7}>
         <div className={styles.detailWrap}>
           {(isTesting || isRunning) && <InlineProgress ruleId={ruleId} phase={isTesting ? "test" : "run"} />}
           {!isTesting && !isRunning && errorToShow && (
@@ -30,7 +49,7 @@ export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToSho
               <div className={styles.errorBox}>{errorToShow}</div>
             </div>
           )}
-          {!isRunning && <TestResultsBlock ruleId={ruleId} onCleared={onCleared} />}
+          {!isRunning && <TestResultsBlock ruleId={ruleId} onCleared={onCleared} wrapperWidth={wrapperWidth} />}
         </div>
       </td>
     </tr>
@@ -40,9 +59,11 @@ export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToSho
 interface TestResultsBlockProps {
   ruleId: string;
   onCleared?: () => void;
+  wrapperWidth: number | null;
 }
 
-function TestResultsBlock({ ruleId, onCleared }: TestResultsBlockProps) {
+function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockProps) {
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
   const resultQuery = trpc.rules.lastTestResult.useQuery({ id: ruleId });
   const clearMutation = trpc.rules.clearTestResult.useMutation({
@@ -55,6 +76,9 @@ function TestResultsBlock({ ruleId, onCleared }: TestResultsBlockProps) {
   const result = resultQuery.data;
   if (!result) return null;
   const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
+
+  // Match the .detailWrap inner content area: 18px horizontal padding on each side.
+  const stackWidth = wrapperWidth != null ? wrapperWidth - 36 : null;
 
   return (
     <div>
@@ -87,24 +111,47 @@ function TestResultsBlock({ ruleId, onCleared }: TestResultsBlockProps) {
       {result.collections.length === 0 ? (
         <div className={styles.testPreviewEmpty}>No collections would be created by this rule.</div>
       ) : (
-        result.collections.map((col, i) => (
-          <div key={i} className={styles.testPreviewCollection}>
-            <div className={styles.testPreviewCollectionHeader}>
-              <span className={styles.testPreviewCollectionName}>{col.name}</span>
-              <span className={styles.testPreviewCollectionMeta}>
-                {col.sectionTitle} — {col.items.length} item{col.items.length !== 1 ? "s" : ""}
-              </span>
+        <div
+          className={styles.testPreviewStack}
+          style={stackWidth != null ? { width: `${stackWidth}px` } : { visibility: "hidden" }}
+        >
+          {result.collections.map((col, i) => (
+            <div key={i} className={styles.previewBlock}>
+              <h4 className={styles.previewBlockTitle}>
+                {col.name}
+                <span className={styles.previewBlockMeta}>
+                  {col.sectionTitle} · {col.items.length} item{col.items.length === 1 ? "" : "s"}
+                </span>
+              </h4>
+              <div className={styles.testPreviewPosterRow}>
+                {col.items.map((item) => {
+                  const src = item.ratingKey
+                    ? `/api/plex-image?path=${encodeURIComponent(`/library/metadata/${item.ratingKey}/thumb`)}`
+                    : null;
+                  return (
+                    <div
+                      key={item.ratingKey}
+                      className={previewStyles.card}
+                      onClick={() => navigate(`/media/${item.ratingKey}`)}
+                    >
+                      <div className={previewStyles.posterWrap}>
+                        {src ? (
+                          <FadeImage className={previewStyles.poster} src={src} alt={item.title} loading="lazy" />
+                        ) : (
+                          <div className={previewStyles.posterPlaceholder}>No image</div>
+                        )}
+                      </div>
+                      <div className={previewStyles.cardTitle} title={item.title}>
+                        {item.title}
+                      </div>
+                      {item.year != null && <div className={previewStyles.cardMeta}>{item.year}</div>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className={styles.testPreviewItems}>
-              {col.items.map((item, j) => (
-                <div key={j} className={styles.testPreviewItem}>
-                  {item.title}
-                  {item.year && <span className={styles.testPreviewItemYear}> ({item.year})</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   );

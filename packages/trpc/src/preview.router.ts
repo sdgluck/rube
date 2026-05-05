@@ -12,6 +12,14 @@ export const previewRouter = t.router({
       return getPreviewForUser(client, input.userId, input.sectionId ?? null);
     }),
 
+  unpinCollection: procedure
+    .input(z.object({ sectionId: z.string(), hubIdentifier: z.string() }))
+    .mutation(async ({ input }) => {
+      const client = getPlexClient();
+      await client.unpinFromHomepage(input.sectionId, input.hubIdentifier);
+      return { ok: true };
+    }),
+
   shuffleHubs: procedure.mutation(async () => {
     const client = getPlexClient();
     let sections = await client.getSections();

@@ -25,10 +25,12 @@ function errorMessage(err: unknown): string {
 export function createOmdbClient(opts: OmdbClientOptions) {
   const { apiKey, onHealth } = opts;
 
-  async function getRatings(imdbId: string): Promise<{ imdbRating: string | null; rtRating: string | null } | null> {
+  async function getRatings(
+    imdbId: string,
+  ): Promise<{ imdbRating: string | null; rtRating: string | null; source: "cache" | "api" } | null> {
     const cached = db.select().from(omdbCache).where(eq(omdbCache.imdbId, imdbId)).get();
     if (cached) {
-      return { imdbRating: cached.imdbRating, rtRating: cached.rtRating };
+      return { imdbRating: cached.imdbRating, rtRating: cached.rtRating, source: "cache" };
     }
 
     if (!apiKey) return null;
@@ -68,7 +70,7 @@ export function createOmdbClient(opts: OmdbClientOptions) {
       .onConflictDoNothing()
       .run();
 
-    return { imdbRating, rtRating };
+    return { imdbRating, rtRating, source: "api" };
   }
 
   return { getRatings };
