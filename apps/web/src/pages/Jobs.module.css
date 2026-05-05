@@ -896,6 +896,85 @@
   font-size: 0.85rem;
 }
 
+.bywGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bywGroup {
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.bywGroupHeader {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.bywGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.bywCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-elevated, var(--bg));
+}
+
+.bywCardLink {
+  display: block;
+  aspect-ratio: 2 / 3;
+  background: var(--bg-muted, #222);
+}
+
+.bywCardPoster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bywCardPosterPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.bywCardBody {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bywCardTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bywCardMeta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 .hideOnMobile {
   /* Placeholder for mobile override */
 }

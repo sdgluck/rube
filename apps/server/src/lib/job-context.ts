@@ -15,7 +15,13 @@ export const generateJobConfigSchema = commonJobConfigSchema;
 export type GenerateJobConfig = z.infer<typeof generateJobConfigSchema>;
 
 export const bywJobConfigSchema = commonJobConfigSchema.extend({
-  limit: z.number().optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+  mode: z.enum(["per-user", "server"]).optional(),
+  users: z.array(z.string()).optional(),
+  pinToHomepage: z.boolean().optional(),
+  minItems: z.number().int().min(5).max(50).optional(),
+  maxItems: z.number().int().min(10).max(100).optional(),
+  minLibrarySize: z.number().int().min(1).optional(),
 });
 export type BywJobConfig = z.infer<typeof bywJobConfigSchema>;
 

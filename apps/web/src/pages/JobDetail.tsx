@@ -9,6 +9,7 @@ import ToggleSwitch from "../ToggleSwitch";
 import UnsavedBanner from "../UnsavedBanner";
 import useUnsavedChanges from "../useUnsavedChanges";
 import useSwipeBack from "../useSwipeBack";
+import FadeImage from "../FadeImage";
 import styles from "./Jobs.module.css";
 
 function formatDuration(startMs: number, endMs?: number | null): string {
@@ -56,23 +57,51 @@ export default function JobDetail() {
 
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [limit, setLimit] = useState<number>(10);
+  const [bywMode, setBywMode] = useState<"per-user" | "server">("per-user");
+  const [bywUsers, setBywUsers] = useState<string>("");
+  const [bywPin, setBywPin] = useState<boolean>(true);
+  const [bywMinItems, setBywMinItems] = useState<number>(10);
+  const [bywMaxItems, setBywMaxItems] = useState<number>(30);
+  const [bywMinLib, setBywMinLib] = useState<number>(15);
   const [configDirty, setConfigDirty] = useState(false);
+
+  const isByw = job?.command === "because-you-watched";
 
   // Sync config state when job data loads
   useEffect(() => {
     if (job) {
-      const parsed = (job.config ?? {}) as { sections?: string[]; limit?: number };
+      const parsed = (job.config ?? {}) as {
+        sections?: string[];
+        limit?: number;
+        mode?: "per-user" | "server";
+        users?: string[];
+        pinToHomepage?: boolean;
+        minItems?: number;
+        maxItems?: number;
+        minLibrarySize?: number;
+      };
       setSelectedSections(parsed.sections || []);
       setLimit(parsed.limit ?? 10);
+      setBywMode(parsed.mode ?? "per-user");
+      setBywUsers((parsed.users ?? []).join(", "));
+      setBywPin(parsed.pinToHomepage ?? true);
+      setBywMinItems(parsed.minItems ?? 10);
+      setBywMaxItems(parsed.maxItems ?? 30);
+      setBywMinLib(parsed.minLibrarySize ?? 15);
       setConfigDirty(false);
     }
   }, [job?.config, job?.command]);
 
   useUnsavedChanges(configDirty);
 
-  const hasLimit = job?.command === "because-you-watched";
-  const maxLimit = 20;
+  const hasLimit = isByw;
+  const maxLimit = 50;
   const sections = sectionsQuery.data;
+
+  const bywCollectionsQuery = trpc.jobs.bywCollections.useQuery(undefined, {
+    enabled: isByw,
+    refetchInterval: 10000,
+  });
 
   const latestRunId = runsQuery.data?.[0]?.id;
 
@@ -151,8 +180,39 @@ export default function JobDetail() {
     const config: Record<string, unknown> = {};
     if (selectedSections.length > 0) config.sections = selectedSections;
     if (hasLimit) config.limit = limit;
+    if (isByw) {
+      config.mode = bywMode;
+      const users = bywUsers
+        .split(",")
+        .map((u) => u.trim())
+        .filter(Boolean);
+      if (users.length > 0) config.users = users;
+      config.pinToHomepage = bywPin;
+      config.minItems = bywMinItems;
+      config.maxItems = bywMaxItems;
+      config.minLibrarySize = bywMinLib;
+    }
     updateMutation.mutate({ jobId, config }, { onSuccess: () => setConfigDirty(false) });
-  }, [jobId, selectedSections, hasLimit, limit, updateMutation]);
+  }, [
+    jobId,
+    selectedSections,
+    hasLimit,
+    limit,
+    isByw,
+    bywMode,
+    bywUsers,
+    bywPin,
+    bywMinItems,
+    bywMaxItems,
+    bywMinLib,
+    updateMutation,
+  ]);
+
+  const deleteCollectionMutation = trpc.collections.delete.useMutation({
+    onSuccess: () => {
+      utils.jobs.bywCollections.invalidate();
+    },
+  });
 
   if (jobsQuery.isLoading) return <DetailSkeleton />;
   if (!job) return <p>Job not found</p>;
@@ -286,9 +346,117 @@ export default function JobDetail() {
                       />
                     </td>
                     <td className={styles.configSummary}>
-                      {limit} collection{limit !== 1 ? "s" : ""}
+                      {limit} collection{limit !== 1 ? "s" : ""} per section
                     </td>
                   </tr>
+                )}
+                {isByw && (
+                  <>
+                    <tr>
+                      <td>Mode</td>
+                      <td>
+                        <select
+                          className={styles.configNumberInput}
+                          style={{ width: "auto" }}
+                          value={bywMode}
+                          onChange={(e) => {
+                            setBywMode(e.target.value as "per-user" | "server");
+                            setConfigDirty(true);
+                          }}
+                        >
+                          <option value="per-user">Per user</option>
+                          <option value="server">Server-wide</option>
+                        </select>
+                      </td>
+                      <td className={styles.configSummary}>
+                        {bywMode === "per-user"
+                          ? "One set of collections per Plex user"
+                          : "Single shared set, all users' history"}
+                      </td>
+                    </tr>
+                    {bywMode === "per-user" && (
+                      <tr>
+                        <td>Users</td>
+                        <td>
+                          <input
+                            type="text"
+                            className={styles.configNumberInput}
+                            style={{ width: "100%", maxWidth: 280 }}
+                            placeholder="all users"
+                            value={bywUsers}
+                            onChange={(e) => {
+                              setBywUsers(e.target.value);
+                              setConfigDirty(true);
+                            }}
+                          />
+                        </td>
+                        <td className={styles.configSummary}>
+                          {bywUsers.trim() ? "Comma-separated allowlist" : "All users"}
+                        </td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td>Pin to homepage</td>
+                      <td>
+                        <ToggleSwitch
+                          size="sm"
+                          checked={bywPin}
+                          onChange={(checked) => {
+                            setBywPin(checked);
+                            setConfigDirty(true);
+                          }}
+                        />
+                      </td>
+                      <td className={styles.configSummary}>{bywPin ? "Yes" : "No"}</td>
+                    </tr>
+                    <tr>
+                      <td>Items per collection</td>
+                      <td>
+                        <input
+                          type="number"
+                          className={styles.configNumberInput}
+                          min={5}
+                          max={50}
+                          value={bywMinItems}
+                          onChange={(e) => {
+                            setBywMinItems(Math.max(5, Math.min(50, parseInt(e.target.value, 10) || 10)));
+                            setConfigDirty(true);
+                          }}
+                        />
+                        <span style={{ margin: "0 6px" }}>–</span>
+                        <input
+                          type="number"
+                          className={styles.configNumberInput}
+                          min={10}
+                          max={100}
+                          value={bywMaxItems}
+                          onChange={(e) => {
+                            setBywMaxItems(Math.max(10, Math.min(100, parseInt(e.target.value, 10) || 30)));
+                            setConfigDirty(true);
+                          }}
+                        />
+                      </td>
+                      <td className={styles.configSummary}>
+                        {bywMinItems}–{bywMaxItems} items
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Min library size</td>
+                      <td>
+                        <input
+                          type="number"
+                          className={styles.configNumberInput}
+                          min={1}
+                          value={bywMinLib}
+                          onChange={(e) => {
+                            setBywMinLib(Math.max(1, parseInt(e.target.value, 10) || 15));
+                            setConfigDirty(true);
+                          }}
+                        />
+                      </td>
+                      <td className={styles.configSummary}>Skip sections with fewer items</td>
+                    </tr>
+                  </>
                 )}
               </tbody>
             </table>
@@ -348,6 +516,83 @@ export default function JobDetail() {
           )}
         </fieldset>
       </div>
+
+      {/* Generated collections (byw only) */}
+      {isByw && (
+        <fieldset className={styles.detailSection}>
+          <legend className={styles.detailSectionTitle}>
+            Generated Collections
+            {bywCollectionsQuery.data && (
+              <span className={styles.runMeta}>
+                {" — "}
+                {bywCollectionsQuery.data.reduce((n, g) => n + g.collections.length, 0)} total
+              </span>
+            )}
+          </legend>
+          {bywCollectionsQuery.isLoading ? (
+            <p>Loading...</p>
+          ) : !bywCollectionsQuery.data || bywCollectionsQuery.data.length === 0 ? (
+            <EmptyState
+              icon="list"
+              title="No collections yet"
+              description="Run the job to generate Because You Watched collections."
+            />
+          ) : (
+            <div className={styles.bywGroups}>
+              {bywCollectionsQuery.data.map((group) => (
+                <details key={group.user} open className={styles.bywGroup}>
+                  <summary className={styles.bywGroupHeader}>
+                    {group.user} <span className={styles.runMeta}>({group.collections.length})</span>
+                  </summary>
+                  <div className={styles.bywGrid}>
+                    {group.collections.map((col) => (
+                      <div key={col.plexRatingKey} className={styles.bywCard}>
+                        <Link to={`/collections/${col.plexRatingKey}`} className={styles.bywCardLink}>
+                          {col.thumb ? (
+                            <FadeImage
+                              className={styles.bywCardPoster}
+                              src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                              alt={col.title}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className={styles.bywCardPosterPlaceholder}>No poster</div>
+                          )}
+                        </Link>
+                        <div className={styles.bywCardBody}>
+                          <div className={styles.bywCardTitle} title={col.title}>
+                            {col.title}
+                          </div>
+                          <div className={styles.bywCardMeta}>
+                            {col.sectionTitle} · {col.childCount} item{col.childCount !== 1 ? "s" : ""}
+                            {col.addedAt ? (
+                              <>
+                                {" · "}
+                                <RelativeTime timestamp={col.addedAt * 1000} />
+                              </>
+                            ) : null}
+                          </div>
+                          <button
+                            className={`${styles.button} ${styles.buttonSmall} ${styles.buttonDanger}`}
+                            onClick={() => {
+                              if (confirm(`Delete "${col.title}"?`)) {
+                                deleteCollectionMutation.mutate({ ratingKey: col.plexRatingKey });
+                              }
+                            }}
+                            disabled={deleteCollectionMutation.isPending}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </fieldset>
+      )}
 
       {/* Latest run log section */}
       {latestRun && (
