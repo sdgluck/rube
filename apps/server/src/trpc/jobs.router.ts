@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { like, desc } from "drizzle-orm";
+import { db, collections } from "@tinkerbell/db";
 import {
   getJobs,
   getJobRuns,
@@ -10,6 +12,34 @@ import {
   cancelRun,
 } from "../jobs/runner.ts";
 import { t, procedure } from "./_base.ts";
+
+const BYW_LABEL = "BecauseYouWatched";
+
+function getBywCollectionsGrouped() {
+  const rows = db
+    .select()
+    .from(collections)
+    .where(like(collections.labels, `%"${BYW_LABEL}"%`))
+    .orderBy(desc(collections.addedAt))
+    .all();
+
+  const groups = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const userLabel = row.labels.find((l) => l.startsWith("User:"));
+    const key = userLabel ? userLabel.slice("User:".length) : "Server-wide";
+    const bucket = groups.get(key) ?? [];
+    bucket.push(row);
+    groups.set(key, bucket);
+  }
+
+  return [...groups.entries()]
+    .map(([user, items]) => ({ user, collections: items }))
+    .sort((a, b) => {
+      if (a.user === "Server-wide") return -1;
+      if (b.user === "Server-wide") return 1;
+      return a.user.localeCompare(b.user);
+    });
+}
 
 export const jobsRouter = t.router({
   list: procedure.query(() => getJobs()),
@@ -54,4 +84,6 @@ export const jobsRouter = t.router({
     if (!ok) throw new Error(`Run ${input.runId} is not running`);
     return { ok: true };
   }),
+
+  bywCollections: procedure.query(() => getBywCollectionsGrouped()),
 });
