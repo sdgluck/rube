@@ -7,8 +7,10 @@ interface BulkActionsBarProps {
   onDisable: () => void;
   onTest: () => void;
   onRun: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   onCancel: () => void;
+  editDisabled: boolean;
   updatePending: boolean;
   testPending: boolean;
   runPending: boolean;
@@ -20,8 +22,10 @@ export default function BulkActionsBar({
   onDisable,
   onTest,
   onRun,
+  onEdit,
   onDelete,
   onCancel,
+  editDisabled,
   updatePending,
   testPending,
   runPending,
@@ -31,11 +35,7 @@ export default function BulkActionsBar({
       <span>
         {count} rule{count !== 1 ? "s" : ""} selected
       </span>
-      <button
-        className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
-        onClick={onEnable}
-        disabled={updatePending}
-      >
+      <button className={`${shared.buttonSecondary} ${shared.buttonSmall}`} onClick={onEnable} disabled={updatePending}>
         Enable
       </button>
       <button
@@ -52,12 +52,16 @@ export default function BulkActionsBar({
       >
         Test
       </button>
-      <button
-        className={`${shared.button} ${shared.buttonSmall}`}
-        onClick={onRun}
-        disabled={testPending || runPending}
-      >
+      <button className={`${shared.button} ${shared.buttonSmall}`} onClick={onRun} disabled={testPending || runPending}>
         Run
+      </button>
+      <button
+        className={`${shared.buttonSecondary} ${shared.buttonSmall}`}
+        onClick={onEdit}
+        disabled={editDisabled || updatePending}
+        title={editDisabled ? "None of the selected rules support these options" : "Edit common config options"}
+      >
+        Edit…
       </button>
       <button className={`${shared.buttonDanger} ${shared.buttonSmall}`} onClick={onDelete}>
         Delete

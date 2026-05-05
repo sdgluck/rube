@@ -60,9 +60,12 @@ export default function RuleTableRow({
 }: RuleTableRowProps) {
   const navigate = useNavigate();
   const c = rule.config ?? {};
-  let configSummary = CONFIG_SUMMARY[rule.type]?.(c) ?? `Max: ${(c as { limit?: number }).limit ?? 10}`;
+  const summary = CONFIG_SUMMARY[rule.type]?.(c);
   const sections = (c as { sections?: string[] }).sections;
-  if (sections?.length) configSummary += ` | Sections: ${sections.join(", ")}`;
+  const parts: string[] = [];
+  if (summary) parts.push(summary);
+  if (sections?.length) parts.push(`Sections: ${sections.join(", ")}`);
+  const configSummary = parts.join(" | ") || "—";
 
   const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
   const configDetail = CONFIG_DETAILS[rule.type]?.(c);
@@ -171,19 +174,10 @@ export default function RuleTableRow({
             <button className={styles.actionBtn} onClick={onEdit} disabled={formActive} title="Edit rule">
               Edit
             </button>
-            <button
-              className={styles.actionBtn}
-              onClick={onDuplicate}
-              disabled={createPending}
-              title="Duplicate rule"
-            >
+            <button className={styles.actionBtn} onClick={onDuplicate} disabled={createPending} title="Duplicate rule">
               Duplicate
             </button>
-            <button
-              className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-              onClick={onDelete}
-              title="Delete rule"
-            >
+            <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={onDelete} title="Delete rule">
               Delete
             </button>
           </div>

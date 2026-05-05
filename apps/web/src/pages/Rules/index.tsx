@@ -15,6 +15,7 @@ import { trpc } from "#/trpc";
 import shared from "../Collections.module.css";
 import MigrationBanner from "../MigrationBanner";
 import BulkActionsBar from "./BulkActionsBar";
+import BulkEditModal from "./BulkEditModal";
 import { EMPTY_FORM, defaultLimitForType, typeHasLimit } from "./constants";
 import RuleTableRow from "./RuleTableRow";
 import styles from "./Rules.module.css";
@@ -43,6 +44,7 @@ export default function Rules() {
   const [runningRuleId, setRunningRuleId] = useState<string | null>(null);
   const { addToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastClickedIndex = useRef<number | null>(null);
@@ -321,6 +323,20 @@ export default function Rules() {
     });
   }
 
+  async function handleBulkEditApply(patch: { limit?: number }) {
+    setBulkEditOpen(false);
+    const eligibleRules = allRules.filter((r) => selected.has(r.id) && typeHasLimit(r.type));
+    let updated = 0;
+    for (const rule of eligibleRules) {
+      const config = { ...rule.config };
+      if (patch.limit !== undefined) config.limit = patch.limit;
+      await updateMutation.mutateAsync({ id: rule.id, config });
+      updated++;
+    }
+    utils.rules.list.invalidate();
+    addToast(`Updated ${updated} rule${updated !== 1 ? "s" : ""}`, "success");
+  }
+
   async function handleBulkSetEnabled(enabled: boolean) {
     for (const id of selected) {
       await updateMutation.mutateAsync({ id, enabled });
@@ -533,8 +549,10 @@ export default function Rules() {
           onDisable={() => handleBulkSetEnabled(false)}
           onTest={handleBulkTest}
           onRun={handleBulkRun}
+          onEdit={() => setBulkEditOpen(true)}
           onDelete={handleBulkDelete}
           onCancel={() => setSelected(new Set())}
+          editDisabled={!allRules.some((r) => selected.has(r.id) && typeHasLimit(r.type))}
           updatePending={updateMutation.isPending}
           testPending={testMutation.isPending}
           runPending={runMutation.isPending}
@@ -612,6 +630,15 @@ export default function Rules() {
           saving={createMutation.isPending || updateMutation.isPending}
           onSave={handleSave}
           onCancel={cancelForm}
+        />
+      )}
+
+      {bulkEditOpen && (
+        <BulkEditModal
+          eligibleCount={allRules.filter((r) => selected.has(r.id) && typeHasLimit(r.type)).length}
+          totalSelected={selected.size}
+          onApply={handleBulkEditApply}
+          onCancel={() => setBulkEditOpen(false)}
         />
       )}
 

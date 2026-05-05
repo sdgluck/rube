@@ -8,7 +8,6 @@ import {
   defaultLimitForType,
   isFormValid,
   limitFieldLabel,
-  maxLimitForType,
   requiredSectionTypeForRule,
   RULE_TYPES,
   stepsFor,
@@ -357,12 +356,11 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               className={shared.input}
               style={{ maxWidth: 140 }}
               min={1}
-              max={maxLimitForType(form.type)}
               value={form.limit}
               onChange={(e) =>
                 setForm({
                   ...form,
-                  limit: Math.max(1, Math.min(maxLimitForType(form.type), parseInt(e.target.value, 10) || 1)),
+                  limit: Math.max(1, parseInt(e.target.value, 10) || 1),
                 })
               }
             />

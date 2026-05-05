@@ -225,16 +225,14 @@ export function defaultLimitForType(type: string): number {
   return 10;
 }
 
-export function maxLimitForType(type: string): number {
-  if (type === "ai_prompt") return 10;
-  if (type === "top_rated" || type === "lowest_rated") return 200;
-  if (type === "rt_top_rated") return 200;
-  if (type === "seerr_requests") return 200;
-  return 50;
-}
-
 export function typeHasLimit(type: string): boolean {
-  return type !== "imdb_chart" && type !== "imdb_list" && type !== "list_source" && type !== "smart_filter";
+  return (
+    type === "ai_prompt" ||
+    type === "top_rated" ||
+    type === "lowest_rated" ||
+    type === "rt_top_rated" ||
+    type === "seerr_requests"
+  );
 }
 
 /**
