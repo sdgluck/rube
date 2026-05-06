@@ -2,7 +2,7 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
 import { db, collections } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { scanAllProviders } from "@tinkerbell/domain.migration";
@@ -17,6 +17,14 @@ interface SyncStats {
 interface CollectionFilters {
   sectionId?: string;
   label?: string;
+  /**
+   * Rule id filter: matches collections labeled `Rule:<id>` OR the rating
+   * key recorded as the rule's last-generated collection. The latter
+   * covers smart_filter rules created by migration where the existing
+   * Plex collection wasn't labeled by Tinkerbell.
+   */
+  ruleId?: string;
+  ruleLastRatingKey?: string;
   search?: string;
   offset?: number;
   limit?: number;
@@ -128,6 +136,12 @@ export function getLocalCollections(filters?: CollectionFilters): { items: Colle
 
   if (filters?.label) {
     conditions.push(like(collections.labels, `%${JSON.stringify(filters.label).slice(1, -1)}%`));
+  }
+
+  if (filters?.ruleId) {
+    const labelMatch = like(collections.labels, `%Rule:${filters.ruleId}%`);
+    const ratingKeyMatch = filters.ruleLastRatingKey ? eq(collections.plexRatingKey, filters.ruleLastRatingKey) : null;
+    conditions.push(ratingKeyMatch ? or(labelMatch, ratingKeyMatch)! : labelMatch);
   }
 
   if (filters?.search) {

@@ -129,7 +129,7 @@ export default function RuleTableRow({
               ((rule.lastRunCollectionCount ?? 0) > 1 ? (
                 <button
                   className={styles.actionBtn}
-                  onClick={() => navigate(`/collections?label=${encodeURIComponent(`Rule:${rule.id}`)}`)}
+                  onClick={() => navigate(`/collections?ruleId=${encodeURIComponent(rule.id)}`)}
                   title={`View ${rule.lastRunCollectionCount} collections from this rule`}
                 >
                   View

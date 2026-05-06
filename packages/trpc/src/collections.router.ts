@@ -19,6 +19,7 @@ export const collectionsRouter = t.router({
       z.object({
         sectionId: z.string().optional(),
         label: z.string().optional(),
+        ruleId: z.string().optional(),
         search: z.string().optional(),
         offset: z.number().default(0),
         limit: z.number().default(50),
@@ -27,9 +28,20 @@ export const collectionsRouter = t.router({
       }),
     )
     .query(({ input }) => {
+      let ruleLastRatingKey: string | undefined;
+      if (input.ruleId) {
+        const row = db
+          .select({ key: rules.lastCollectionRatingKey })
+          .from(rules)
+          .where(eq(rules.id, input.ruleId))
+          .get();
+        ruleLastRatingKey = row?.key ?? undefined;
+      }
       return getLocalCollections({
         sectionId: input.sectionId,
         label: input.label,
+        ruleId: input.ruleId,
+        ruleLastRatingKey,
         search: input.search || undefined,
         offset: input.offset,
         limit: input.limit,

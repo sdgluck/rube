@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
+import BulkLabelsModal from "#components/BulkLabelsModal";
 import { CollectionsSkeleton } from "#components/Skeleton";
 import EmptyState from "#components/EmptyState";
 import FadeImage from "#components/FadeImage";
@@ -24,7 +25,10 @@ export default function Collections() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const sectionFilter = searchParams.get("section") ?? "";
-  const labelFilter = searchParams.get("label") ?? "";
+  // Backward-compat: older links used `?label=Rule:<id>` for the rule filter.
+  const rawLabel = searchParams.get("label") ?? "";
+  const labelFilter = rawLabel.startsWith("Rule:") ? "" : rawLabel;
+  const ruleIdFilter = searchParams.get("ruleId") ?? (rawLabel.startsWith("Rule:") ? rawLabel.slice(5) : "");
   const search = searchParams.get("q") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const sortKey: SortKey = readEnum(searchParams.get("sort"), SORT_KEYS, "title");
@@ -54,7 +58,40 @@ export default function Collections() {
   );
 
   const setSectionFilter = useCallback((v: string) => setParam("section", v), [setParam]);
-  const setLabelFilter = useCallback((v: string) => setParam("label", v), [setParam]);
+  const setLabelFilter = useCallback(
+    (v: string) => {
+      // When picking a label, drop any rule-shaped param so filters don't double-up.
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("ruleId");
+          if (v) next.set("label", v);
+          else next.delete("label");
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const setRuleFilter = useCallback(
+    (id: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          // Strip any legacy `label=Rule:*` form too.
+          if (next.get("label")?.startsWith("Rule:")) next.delete("label");
+          if (id) next.set("ruleId", id);
+          else next.delete("ruleId");
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const setSearch = useCallback((v: string) => setParam("q", v), [setParam]);
 
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -62,8 +99,6 @@ export default function Collections() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
   const [labelEditing, setLabelEditing] = useState(false);
-  const [labelsToAdd, setLabelsToAdd] = useState("");
-  const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
   const navigate = useNavigate();
@@ -79,6 +114,7 @@ export default function Collections() {
     {
       sectionId: sectionFilter || undefined,
       label: labelFilter || undefined,
+      ruleId: ruleIdFilter || undefined,
       search: debouncedSearch || undefined,
       offset,
       limit: PAGE_SIZE,
@@ -90,6 +126,7 @@ export default function Collections() {
 
   // Lightweight query for populating filter dropdowns
   const filtersQuery = trpc.collections.filters.useQuery(undefined, { refetchOnWindowFocus: false });
+  const rulesQuery = trpc.rules.list.useQuery(undefined, { refetchOnWindowFocus: false, staleTime: 60_000 });
 
   const deleteMutation = trpc.collections.delete.useMutation();
   const updateLabelsMutation = trpc.collections.updateLabels.useMutation();
@@ -102,7 +139,20 @@ export default function Collections() {
 
   // Derive sections and labels from lightweight filters query
   const sections = filtersQuery.data?.sections ?? [];
-  const allLabels = filtersQuery.data?.labels ?? [];
+  const allLabels = useMemo(
+    () => (filtersQuery.data?.labels ?? []).filter((l) => !l.startsWith("Rule:")),
+    [filtersQuery.data?.labels],
+  );
+  const rules = rulesQuery.data ?? [];
+  const activeRule = ruleIdFilter ? rules.find((r) => r.id === ruleIdFilter) : null;
+  const ruleNameById = useMemo(() => new Map(rules.map((r) => [r.id, r.name])), [rules]);
+
+  const findRuleId = (labels: string[]): string | null => {
+    for (const l of labels) {
+      if (l.startsWith("Rule:")) return l.slice(5);
+    }
+    return null;
+  };
 
   const toggleSort = (key: SortKey) => {
     setSearchParams(
@@ -136,7 +186,7 @@ export default function Collections() {
   useEffect(() => {
     setSelected(new Set());
     setLabelEditing(false);
-  }, [sectionFilter, labelFilter, debouncedSearch]);
+  }, [sectionFilter, labelFilter, ruleIdFilter, debouncedSearch]);
 
   const handleDelete = (ratingKey: string, title: string) => {
     setPendingConfirm({
@@ -190,14 +240,13 @@ export default function Collections() {
     });
   };
 
-  const handleBulkEditLabels = async () => {
-    const addList = labelsToAdd
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const removeSet = labelsToRemove;
+  const handleBulkEditLabels = async (input: { add: string[]; remove: Set<string> }) => {
+    const addList = input.add;
+    const removeSet = input.remove;
 
     if (addList.length === 0 && removeSet.size === 0) return;
+
+    setLabelEditing(false);
 
     const selectedCollections = collections.filter((c) => selected.has(c.plexRatingKey));
     const total = selectedCollections.length;
@@ -219,9 +268,6 @@ export default function Collections() {
 
     setSelected(new Set());
     setBulkProgress(null);
-    setLabelEditing(false);
-    setLabelsToAdd("");
-    setLabelsToRemove(new Set());
     if (failed > 0) {
       addToast(`Updated ${updated}, failed ${failed}`, "error");
     } else {
@@ -279,203 +325,106 @@ export default function Collections() {
         <h2 className={styles.heading}>Collections{total > 0 && <span className="count-badge">{total}</span>}</h2>
 
         {(selected.size > 0 || bulkProgress) && (
-          <>
-            <div
-              className={styles.bulkBar}
-              style={labelEditing ? { borderRadius: "6px 6px 0 0", marginBottom: 0 } : undefined}
-            >
-              {bulkProgress ? (
-                <>
-                  <span className={styles.bulkCount}>
-                    {bulkProgress.label || "Deleting"} {bulkProgress.done}/{bulkProgress.total}...
-                  </span>
-                  <div className={styles.bulkProgressBar}>
-                    <div
-                      className={styles.bulkProgressFill}
-                      style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className={styles.bulkCount}>{selected.size} selected</span>
-                  <button
-                    className={`${styles.buttonSmall} ${labelEditing ? styles.button : styles.buttonSecondary}`}
-                    onClick={() => {
-                      setLabelEditing(!labelEditing);
-                      setLabelsToAdd("");
-                      setLabelsToRemove(new Set());
-                    }}
-                  >
-                    Edit Labels
-                  </button>
-                  <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
-                    Delete {selected.size}
-                  </button>
-                  <button
-                    className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
-                    onClick={() => {
-                      setSelected(new Set());
-                      setLabelEditing(false);
-                    }}
-                  >
-                    Clear
-                  </button>
-                </>
-              )}
-            </div>
-            {labelEditing && !bulkProgress && (
-              <div className={styles.labelEditor}>
-                <div className={styles.labelEditorRow}>
-                  <label>Add labels:</label>
-                  <input
-                    type="text"
-                    className={styles.labelEditorInput}
-                    placeholder="Label1, Label2, ..."
-                    value={labelsToAdd}
-                    onChange={(e) => setLabelsToAdd(e.target.value)}
+          <div className={styles.bulkBar}>
+            {bulkProgress ? (
+              <>
+                <span className={styles.bulkCount}>
+                  {bulkProgress.label || "Deleting"} {bulkProgress.done}/{bulkProgress.total}...
+                </span>
+                <div className={styles.bulkProgressBar}>
+                  <div
+                    className={styles.bulkProgressFill}
+                    style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
                   />
                 </div>
-                {selectedLabels.length > 0 && (
-                  <div className={styles.labelEditorRow}>
-                    <label>Remove labels:</label>
-                    <div className={styles.labelCheckboxList}>
-                      {selectedLabels.map((lbl) => (
-                        <span key={lbl} className={styles.labelCheckboxItem}>
-                          <input
-                            type="checkbox"
-                            checked={labelsToRemove.has(lbl)}
-                            onChange={() =>
-                              setLabelsToRemove((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(lbl)) next.delete(lbl);
-                                else next.add(lbl);
-                                return next;
-                              })
-                            }
-                          />
-                          <span
-                            className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(lbl.toLowerCase()) ? styles.labelTinkerbell : lbl.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                          >
-                            {lbl}
-                          </span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className={styles.labelEditorActions}>
-                  <button
-                    className={`${styles.button} ${styles.buttonSmall}`}
-                    onClick={handleBulkEditLabels}
-                    disabled={labelsToAdd.trim() === "" && labelsToRemove.size === 0}
-                  >
-                    Apply
-                  </button>
-                  <button
-                    className={`${styles.buttonSecondary} ${styles.buttonSmall}`}
-                    onClick={() => {
-                      setLabelEditing(false);
-                      setLabelsToAdd("");
-                      setLabelsToRemove(new Set());
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+              </>
+            ) : (
+              <>
+                <span className={styles.bulkCount}>{selected.size} selected</span>
+                <button
+                  className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
+                  onClick={() => setLabelEditing(true)}
+                >
+                  Edit Labels
+                </button>
+                <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
+                  Delete {selected.size}
+                </button>
+                <button
+                  className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
+                  onClick={() => setSelected(new Set())}
+                >
+                  Clear
+                </button>
+              </>
             )}
-          </>
+          </div>
         )}
 
-        {collections.length === 0 && !search && !sectionFilter && !labelFilter ? (
-          <EmptyState icon="stack" title="No collections synced yet" />
-        ) : collections.length === 0 && (search || sectionFilter || labelFilter) ? (
-          <>
-            <div className={styles.filters}>
-              <input
-                type="text"
-                className={styles.searchInput}
-                placeholder="Search collections..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <select
-                className={styles.select}
-                value={sectionFilter}
-                onChange={(e) => setSectionFilter(e.target.value)}
-              >
-                <option value="">All sections</option>
-                {sections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title}
-                  </option>
-                ))}
-              </select>
-              <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
-                <option value="">All labels</option>
-                {allLabels.map((label) => (
-                  <option key={label} value={label}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className={styles.filters}>
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Search collections..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select className={styles.select} value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
+            <option value="">All sections</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title}
+              </option>
+            ))}
+          </select>
+          <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
+            <option value="">All labels</option>
+            {allLabels.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select className={styles.select} value={ruleIdFilter} onChange={(e) => setRuleFilter(e.target.value)}>
+            <option value="">All rules</option>
+            {rules.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+            {ruleIdFilter && !activeRule && <option value={ruleIdFilter}>Rule {ruleIdFilter} (deleted)</option>}
+          </select>
+          <div className={styles.filtersSpacer} />
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => {
+                setViewMode("table");
+                localStorage.setItem("collections-view", "table");
+              }}
+            >
+              Table
+            </button>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => {
+                setViewMode("grid");
+                localStorage.setItem("collections-view", "grid");
+              }}
+            >
+              Grid
+            </button>
+          </div>
+        </div>
+
+        {collections.length === 0 ? (
+          search || sectionFilter || labelFilter || ruleIdFilter ? (
             <EmptyState icon="search" title="No collections match your filters" />
-          </>
+          ) : (
+            <EmptyState icon="stack" title="No collections synced yet" />
+          )
         ) : (
           <>
-            <div className={styles.filters}>
-              <input
-                type="text"
-                className={styles.searchInput}
-                placeholder="Search collections..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <select
-                className={styles.select}
-                value={sectionFilter}
-                onChange={(e) => setSectionFilter(e.target.value)}
-              >
-                <option value="">All sections</option>
-                {sections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title}
-                  </option>
-                ))}
-              </select>
-              <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
-                <option value="">All labels</option>
-                {allLabels.map((label) => (
-                  <option key={label} value={label}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <div className={styles.filtersSpacer} />
-              <div className={styles.viewToggle}>
-                <button
-                  className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
-                  onClick={() => {
-                    setViewMode("table");
-                    localStorage.setItem("collections-view", "table");
-                  }}
-                >
-                  Table
-                </button>
-                <button
-                  className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
-                  onClick={() => {
-                    setViewMode("grid");
-                    localStorage.setItem("collections-view", "grid");
-                  }}
-                >
-                  Grid
-                </button>
-              </div>
-            </div>
-
             {viewMode === "grid" ? (
               <div className={styles.grid}>
                 {collections.map((col) => (
@@ -531,6 +480,7 @@ export default function Collections() {
                       <th className={styles.sortable} onClick={() => toggleSort("labels")}>
                         Labels{sortIndicator("labels")}
                       </th>
+                      <th>Rule</th>
                       <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
                         Added{sortIndicator("addedAt")}
                       </th>
@@ -565,14 +515,28 @@ export default function Collections() {
                           <td>{col.childCount}</td>
                           <td>{col.smart ? "Yes" : "No"}</td>
                           <td>
-                            {labels.map((label) => (
-                              <span
-                                key={label}
-                                className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                              >
-                                {label}
-                              </span>
-                            ))}
+                            {labels
+                              .filter((l) => !l.startsWith("Rule:"))
+                              .map((label) => (
+                                <span
+                                  key={label}
+                                  className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            {(() => {
+                              const rid = findRuleId(labels);
+                              if (!rid) return <span className={styles.muted}>—</span>;
+                              const name = ruleNameById.get(rid);
+                              return (
+                                <Link to={`/rules?focus=${rid}`} className={styles.ruleLink} title="Open rule">
+                                  {name ?? `Rule ${rid.slice(0, 8)}`}
+                                </Link>
+                              );
+                            })()}
                           </td>
                           <td>{col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : ""}</td>
                           <td>
@@ -624,6 +588,15 @@ export default function Collections() {
             confirmLabel="Delete"
             onConfirm={pendingConfirm.onConfirm}
             onCancel={() => setPendingConfirm(null)}
+          />
+        )}
+
+        {labelEditing && (
+          <BulkLabelsModal
+            count={selected.size}
+            existingLabels={selectedLabels}
+            onApply={handleBulkEditLabels}
+            onCancel={() => setLabelEditing(false)}
           />
         )}
       </div>

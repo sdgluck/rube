@@ -707,6 +707,21 @@
     color 0.15s;
 }
 
+.ruleLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.ruleLink:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
 .metaChipLink:hover {
   background: var(--accent);
   color: #fff;
@@ -1165,7 +1180,7 @@
     height: 40px;
   }
 
-  /* Hide: Checkbox, Smart, Labels, Added, Delete on mobile */
+  /* Hide: Checkbox, Smart, Labels, Rule, Added, Delete on mobile */
   .table th:nth-child(1),
   .table td:nth-child(1),
   .table th:nth-child(5),
@@ -1175,7 +1190,9 @@
   .table th:nth-child(7),
   .table td:nth-child(7),
   .table th:nth-child(8),
-  .table td:nth-child(8) {
+  .table td:nth-child(8),
+  .table th:nth-child(9),
+  .table td:nth-child(9) {
     display: none;
   }
 
