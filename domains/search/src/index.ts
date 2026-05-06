@@ -89,7 +89,7 @@ export function searchAll(query: string, perKindLimit = 8): SearchHit[] {
       id: String(r.id),
       title: r.title,
       subtitle: r.subtitle ?? undefined,
-      href: `/rules?id=${encodeURIComponent(String(r.id))}`,
+      href: `/rules?focus=${encodeURIComponent(String(r.id))}`,
     });
   }
 
