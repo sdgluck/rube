@@ -303,10 +303,59 @@ body {
   font-weight: 600;
 }
 
-.nav-link-with-badge {
+.nav-link-with-badge,
+.nav-link-with-metric {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.nav-link-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-metric {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Reserve space even when there's no value, so labels stay aligned. */
+.nav-metric-placeholder {
+  width: 8px;
+  height: 8px;
+}
+
+.nav-metric-count {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.nav-link:hover .nav-metric-count,
+.nav-link.active .nav-metric-count {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.nav-metric-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.nav-metric-status-ok {
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+.nav-metric-status-error {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
 .stream-badge {

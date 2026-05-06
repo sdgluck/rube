@@ -1,34 +1,39 @@
-export type NavItem = { to: string; label: string; badge?: "streams" };
+export type NavMetric =
+  | { kind: "count"; key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" }
+  | { kind: "status"; key: "overlaysStatus" | "jobsStatus" }
+  | { kind: "streams" };
+
+export type NavItem = { to: string; label: string; metric?: NavMetric };
 export type NavSection = { label: string; items: NavItem[] };
 
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Dashboard",
     items: [
-      { to: "/stats", label: "Stats", badge: "streams" },
+      { to: "/stats", label: "Stats", metric: { kind: "streams" } },
       { to: "/preview", label: "Preview" },
     ],
   },
   {
     label: "Library",
     items: [
-      { to: "/collections", label: "Collections" },
-      { to: "/media", label: "Media" },
-      { to: "/overlays", label: "Overlays" },
+      { to: "/collections", label: "Collections", metric: { kind: "count", key: "collections" } },
+      { to: "/media", label: "Media", metric: { kind: "count", key: "media" } },
+      { to: "/overlays", label: "Overlays", metric: { kind: "status", key: "overlaysStatus" } },
     ],
   },
   {
     label: "Automation",
     items: [
-      { to: "/rules", label: "Rules" },
-      { to: "/jobs", label: "Jobs" },
+      { to: "/rules", label: "Rules", metric: { kind: "count", key: "rules" } },
+      { to: "/jobs", label: "Jobs", metric: { kind: "status", key: "jobsStatus" } },
     ],
   },
   {
     label: "Admin",
     items: [
-      { to: "/users", label: "Users" },
-      { to: "/events", label: "Events" },
+      { to: "/users", label: "Users", metric: { kind: "count", key: "users" } },
+      { to: "/events", label: "Events", metric: { kind: "count", key: "eventsErrors24h" } },
       { to: "/settings", label: "Settings" },
     ],
   },

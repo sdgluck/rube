@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA } from "#/version";
-import { NAV_SECTIONS } from "#/nav";
+import { NAV_SECTIONS, type NavMetric } from "#/nav";
 import styles from "#pages/Jobs/Jobs.module.css";
 
 export function SidebarHealthDot() {
@@ -56,6 +56,40 @@ export function SidebarStreamCount() {
   return <span className="stream-badge">{count}</span>;
 }
 
+type NavMetrics = {
+  collections: number;
+  media: number;
+  rules: number;
+  users: number;
+  eventsErrors24h: number;
+  overlaysStatus: "ok" | "error" | null;
+  jobsStatus: "ok" | "error" | null;
+};
+
+function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMetrics | undefined }) {
+  if (metric.kind === "streams") return <SidebarStreamCount />;
+  if (!metrics) return <span className="nav-metric nav-metric-placeholder" aria-hidden="true" />;
+  if (metric.kind === "count") {
+    const value = metrics[metric.key];
+    if (!value) return <span className="nav-metric nav-metric-placeholder" aria-hidden="true" />;
+    return (
+      <span className="nav-metric nav-metric-count" title={`${value}`}>
+        {value > 999 ? `${Math.floor(value / 1000)}k` : value}
+      </span>
+    );
+  }
+  // status
+  const value = metrics[metric.key];
+  if (!value) return <span className="nav-metric nav-metric-placeholder" aria-hidden="true" />;
+  return (
+    <span
+      className={`nav-metric nav-metric-status nav-metric-status-${value}`}
+      title={`Last run: ${value}`}
+      aria-label={`Last run: ${value}`}
+    />
+  );
+}
+
 function SidebarActiveJobs() {
   const navigate = useNavigate();
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
@@ -97,6 +131,13 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) {
+  const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
+  const metrics = metricsQuery.data;
+
   return (
     <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
       <h1 className="sidebar-title">
@@ -135,11 +176,11 @@ export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) 
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={item.badge ? "nav-link nav-link-with-badge" : "nav-link"}
+                className={item.metric ? "nav-link nav-link-with-metric" : "nav-link"}
                 onClick={onClose}
               >
-                {item.label}
-                {item.badge === "streams" && <SidebarStreamCount />}
+                <span className="nav-link-label">{item.label}</span>
+                {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}
               </NavLink>
             ))}
           </div>
