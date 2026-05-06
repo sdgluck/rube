@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "#components/ToggleSwitch";
-import { CONFIG_DETAILS, CONFIG_SUMMARY, TYPE_BADGE, TYPE_LABELS } from "./constants";
+import { CONFIG_SUMMARY, TYPE_BADGE, TYPE_LABELS } from "./constants";
 import RuleDetailRow from "./DetailRow";
 import RulePreviewRow from "./RulePreviewRow";
 import StatusCell from "./StatusCell";
@@ -19,8 +19,6 @@ interface RuleTableRowProps {
   isExpanded: boolean;
   highlighted?: boolean;
   onToggleRowExpand: () => void;
-  configExpanded: boolean;
-  onToggleConfigExpand: () => void;
   previewExpanded: boolean;
   onTogglePreview: () => void;
   formActive: boolean;
@@ -48,8 +46,6 @@ export default function RuleTableRow({
   isExpanded,
   highlighted,
   onToggleRowExpand,
-  configExpanded,
-  onToggleConfigExpand,
   previewExpanded,
   onTogglePreview,
   formActive,
@@ -75,8 +71,6 @@ export default function RuleTableRow({
   const configSummary = parts.join(" | ") || "—";
 
   const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
-  const configDetail = CONFIG_DETAILS[rule.type]?.(c);
-  const showConfigDetails = configExpanded && configDetail;
   const errorToShow =
     rule.lastRunAt && rule.lastRunStatus === "error"
       ? rule.lastRunError
@@ -118,13 +112,7 @@ export default function RuleTableRow({
           />
         </td>
         <td>
-          <span
-            className={`${styles.configSummary} ${configDetail ? styles.configSummaryWrap : ""}`}
-            onClick={() => configDetail && onToggleConfigExpand()}
-            title={configDetail ? "Click to expand" : undefined}
-          >
-            {configSummary}
-          </span>
+          <span className={styles.configSummary}>{configSummary}</span>
         </td>
         <td>
           <div className={styles.actions}>
@@ -196,15 +184,6 @@ export default function RuleTableRow({
           </div>
         </td>
       </tr>
-      {showConfigDetails && (
-        <tr>
-          <td colSpan={7} className={styles.detailRow}>
-            <div style={{ padding: "0 18px 12px 56px" }}>
-              <pre className={styles.configDetails}>{configDetail}</pre>
-            </div>
-          </td>
-        </tr>
-      )}
       {showDetail && (
         <RuleDetailRow
           ruleId={rule.id}

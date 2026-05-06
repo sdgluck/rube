@@ -697,140 +697,342 @@
   opacity: 0.7;
 }
 
-/* ─── Smart filter editor ─────────────────────────────────────────────────── */
-
-.sortRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.metaChipLink {
+  text-decoration: none;
+  color: var(--accent);
+  background: rgba(74, 108, 247, 0.08);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
-.filterRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.metaChipLink:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
-.filterSelect {
-  padding: 8px 12px;
+/* ─── Inline title / summary ─────────────────────────────────────────────── */
+
+.titleInput {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.titleInput:hover {
+  border-color: var(--border-light);
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.12);
+}
+
+.detailHeaderActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.summaryInput {
+  width: 100%;
+  padding: 8px 10px;
   border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 0.9rem;
   background: var(--bg-input);
   color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+  margin-bottom: 16px;
 }
 
-.filterSelect:focus {
+.summaryInput:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
-.filterInput {
-  padding: 8px 12px;
-  border: 1px solid var(--border-input);
+.summaryAdd {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+
+.summaryAdd:hover {
+  color: var(--accent);
+}
+
+/* ─── Smart filter editor ─────────────────────────────────────────────────── */
+
+.smartSection {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.smartSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.smartToolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.smartLabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.smartMatchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.smartRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.smartGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-light);
+}
+
+.smartNestedGroup {
+  position: relative;
+  padding: 8px 0 4px;
+}
+
+.smartNestedGroupHeader {
+  position: absolute;
+  top: 6px;
+  right: 0;
+}
+
+.smartRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
   border-radius: 6px;
-  font-size: 0.9rem;
-  background: var(--bg-input);
+}
+
+.smartRow:hover {
+  background: var(--bg-surface-hover);
+}
+
+.smartSelect {
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 0.875rem;
+  background: transparent;
   color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.smartSelect:hover {
+  border-color: var(--border-input);
+  background: var(--bg-input);
+}
+
+.smartSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}
+
+.smartSelectGrow {
   flex: 1;
 }
 
-.filterInput:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+.smartInput {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 0.875rem;
+  background: transparent;
+  color: var(--text-primary);
 }
 
-.filterRemoveBtn {
+.smartInput:hover {
+  border-color: var(--border-input);
+  background: var(--bg-input);
+}
+
+.smartInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}
+
+.smartChipField {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+
+.smartChipField:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}
+
+.smartChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 8px;
+  background: var(--bg-badge);
+  color: var(--text-badge, var(--text-secondary));
+  border-radius: 12px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.smartChipRemove {
   background: none;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  font-size: 1.1rem;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0 4px;
+  opacity: 0.55;
+  border-radius: 50%;
+}
+
+.smartChipRemove:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.smartChipAdd {
+  background: none;
+  border: 1px dashed var(--border-input);
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smartChipAdd:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.smartChipPicker {
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  min-width: 120px;
+}
+
+.smartChipPicker:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.smartRemoveBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   line-height: 1;
+  opacity: 0;
+  transition: opacity 0.1s;
 }
 
-.filterRemoveBtn:hover {
-  background: #dc3545;
-  color: #fff;
+.smartRow:hover .smartRemoveBtn,
+.smartRemoveBtn:focus {
+  opacity: 1;
 }
 
-.filterAddBtn {
+.smartRemoveBtn:hover {
+  background: var(--bg-error, rgba(220, 53, 69, 0.1));
+  color: #dc3545;
+}
+
+.smartActions {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.smartLinkBtn {
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
 }
 
-.filterAddBtn:hover {
+.smartLinkBtn:hover {
   text-decoration: underline;
-}
-
-.filterActions {
-  display: flex;
-  gap: 16px;
-}
-
-.combinerRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.combinerLabel {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.combinerDivider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0;
-}
-
-.combinerDivider::before,
-.combinerDivider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border-color);
-}
-
-.combinerDividerText {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.filterGroupBox {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: var(--filter-group-bg);
-}
-
-.filterGroupHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /* ─── Advanced filters ───────────────────────────────────────────────────── */

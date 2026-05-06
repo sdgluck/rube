@@ -70,22 +70,6 @@ export default function Rules() {
       return next;
     });
   };
-  const [expandedConfig, setExpandedConfig] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set();
-    const raw = sessionStorage.getItem("rules-expanded-config");
-    if (!raw) return new Set();
-    try {
-      const ids = JSON.parse(raw);
-      return Array.isArray(ids) ? new Set(ids) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  useEffect(() => {
-    sessionStorage.removeItem("rules-expanded-row");
-  }, []);
-
   useEffect(() => {
     if (!focusRuleId || rulesQuery.isLoading) return;
     const exists = (rulesQuery.data ?? []).some((r) => r.id === focusRuleId);
@@ -106,14 +90,6 @@ export default function Rules() {
     }, 2400);
     return () => clearTimeout(t);
   }, [focusRuleId, rulesQuery.data, rulesQuery.isLoading, searchParams, setSearchParams]);
-
-  useEffect(() => {
-    if (expandedConfig.size > 0) {
-      sessionStorage.setItem("rules-expanded-config", JSON.stringify([...expandedConfig]));
-    } else {
-      sessionStorage.removeItem("rules-expanded-config");
-    }
-  }, [expandedConfig]);
 
   const allRules = (rulesQuery.data ?? []) as RuleRow[];
 
@@ -467,15 +443,6 @@ export default function Rules() {
     runMutation.reset();
   }
 
-  function toggleConfigExpand(id: string) {
-    setExpandedConfig((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   function toggleRowExpand(id: string) {
     setExpandedRow((prev) => {
       const next = prev === id ? null : id;
@@ -638,8 +605,6 @@ export default function Rules() {
                     isExpanded={expandedRow === rule.id}
                     highlighted={highlightedRuleId === rule.id}
                     onToggleRowExpand={() => toggleRowExpand(rule.id)}
-                    configExpanded={expandedConfig.has(rule.id)}
-                    onToggleConfigExpand={() => toggleConfigExpand(rule.id)}
                     previewExpanded={expandedPreview === rule.id}
                     onTogglePreview={() => togglePreviewExpand(rule.id)}
                     formActive={!!form}

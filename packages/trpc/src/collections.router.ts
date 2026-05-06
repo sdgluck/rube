@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { db, rules } from "@tinkerbell/db";
 import { getConfig } from "@tinkerbell/core";
 import {
   syncCollections,
@@ -77,6 +79,15 @@ export const collectionsRouter = t.router({
   smartConfig: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
     const client = getPlexClient();
     return client.getSmartCollectionContent(input.ratingKey);
+  }),
+
+  owningRule: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
+    const row = db
+      .select({ id: rules.id, name: rules.name, type: rules.type })
+      .from(rules)
+      .where(eq(rules.lastCollectionRatingKey, input.ratingKey))
+      .get();
+    return row ?? null;
   }),
 
   filterFieldValues: procedure

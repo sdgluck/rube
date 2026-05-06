@@ -1,12 +1,16 @@
-import type { SmartFilterGroup, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
 import styles from "./Rules.module.css";
 
-function summarizeFilter(node: SmartFilterNode, isRoot: boolean): string {
-  if (node.kind === "leaf") return `${node.field} ${node.op} ${node.value}`;
-  const conn = node.combinator === "all" ? " AND " : " OR ";
-  const inside = node.children.map((c) => summarizeFilter(c, false)).join(conn);
-  return isRoot ? inside : `(${inside})`;
+function listSlug(listId: unknown): string {
+  const raw = typeof listId === "string" ? listId.trim() : "";
+  if (!raw) return "—";
+  try {
+    const url = new URL(raw);
+    const parts = url.pathname.split("/").filter(Boolean);
+    return parts[parts.length - 1] || raw;
+  } catch {
+    return raw;
+  }
 }
 
 export const RULE_TYPES = [
@@ -76,51 +80,13 @@ export const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => stri
   lowest_rated: (c) => `${c.limit ?? 50} items`,
   imdb_chart: (c) => IMDB_CHART_LABELS[c.chart as string] || (c.chart as string) || "—",
   imdb_list: (c) => (c.listId as string) || "—",
-  list_source: (c) => `${(c.listProvider as string) || "?"}: ${(c.listId as string) || "—"}`,
+  list_source: (c) => `List: ${listSlug(c.listId)}`,
   smart_filter: (c) => {
     const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
     return filters.length === 0 ? "no filters" : `${filters.length} clause${filters.length !== 1 ? "s" : ""}`;
   },
   rt_top_rated: (c) => `Top ${c.limit ?? 100} items`,
   seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
-};
-
-export const CONFIG_DETAILS: Record<string, (c: Record<string, unknown>) => string> = {
-  ai_prompt: (c) => {
-    const themes = (c.themes as string[] | undefined) ?? [];
-    const custom = ((c.customThemes as string[] | undefined) ?? []).filter((t) => t.trim().length > 0);
-    const all = [...themes, ...custom];
-    const lines = [
-      `Vibe: ${(c.vibe as string) ?? "mixed"}`,
-      `Name style: ${(c.nameStyle as string) ?? "short_punchy"}`,
-      `Collections per section: up to ${c.limit ?? 8}`,
-      `Min items per collection: ${c.minItems ?? 15}`,
-      "",
-      `Themes (${all.length}):`,
-      ...(all.length ? all.map((t) => `  • ${t}`) : ["  (none)"]),
-    ];
-    return lines.join("\n");
-  },
-  imdb_chart: (c) => `Chart: ${IMDB_CHART_LABELS[c.chart as string] || c.chart || "—"}`,
-  imdb_list: (c) => `List ID: ${c.listId || "—"}`,
-  list_source: (c) => {
-    const lines = [`Provider: ${(c.listProvider as string) || "—"}`, `List: ${(c.listId as string) || "—"}`];
-    if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
-    return lines.join("\n");
-  },
-  smart_filter: (c) => {
-    const lines: string[] = [];
-    if (c.collectionName) lines.push(`Name: ${c.collectionName as string}`);
-    const filter = c.smartFilter as SmartFilterGroup | undefined;
-    if (!filter || filter.children.length === 0) {
-      lines.push("(no filters)");
-    } else {
-      lines.push(`Filter: ${summarizeFilter(filter, true)}`);
-    }
-    return lines.join("\n");
-  },
-  seerr_requests: (c) =>
-    `Filter: ${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"}\nLimit: ${c.limit ?? 50}`,
 };
 
 export const TYPE_BADGE: Record<string, string> = {

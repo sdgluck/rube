@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
 import { DetailSkeleton } from "#components/Skeleton";
@@ -10,7 +10,7 @@ import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
 import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
-import SmartFiltersEditor from "#components/SmartFiltersEditor";
+import SmartFiltersEditor, { type SmartFiltersEditorHandle } from "#components/SmartFiltersEditor";
 
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -23,13 +23,16 @@ export default function CollectionDetail() {
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [labelInput, setLabelInput] = useState("");
+  const [filtersDirty, setFiltersDirty] = useState(false);
   const [itemsView, setItemsView] = useState<ViewMode>(() =>
     readEnumStorage("collection-items-view", VIEW_MODES, "table"),
   );
   const { addToast } = useToast();
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const filtersRef = useRef<SmartFiltersEditorHandle | null>(null);
 
   const collectionQuery = trpc.collections.get.useQuery(
     { ratingKey: ratingKey! },
@@ -39,6 +42,11 @@ export default function CollectionDetail() {
   const itemsQuery = trpc.collections.items.useQuery(
     { ratingKey: ratingKey! },
     { enabled: !!ratingKey, refetchOnWindowFocus: false },
+  );
+
+  const owningRuleQuery = trpc.collections.owningRule.useQuery(
+    { ratingKey: ratingKey! },
+    { enabled: !!ratingKey, refetchOnWindowFocus: false, staleTime: 60_000 },
   );
 
   const updateMutation = trpc.collections.update.useMutation();
@@ -70,16 +78,28 @@ export default function CollectionDetail() {
     if (collection) {
       setTitle(collection.title);
       setSummary(collection.summary);
+      setSummaryOpen(!!collection.summary);
     }
   }, [collection]);
 
+  const headerDirty = useMemo(() => {
+    if (!collection) return false;
+    return title !== collection.title || summary !== (collection.summary || "");
+  }, [title, summary, collection]);
+
+  const isDirty = headerDirty || filtersDirty;
+
   const handleSave = async () => {
-    if (!ratingKey) return;
+    if (!ratingKey || !isDirty) return;
     setSaving(true);
     try {
-      await updateMutation.mutateAsync({ ratingKey, title, summary });
+      const tasks: Promise<unknown>[] = [];
+      if (headerDirty) tasks.push(updateMutation.mutateAsync({ ratingKey, title, summary }));
+      if (filtersDirty && filtersRef.current) tasks.push(filtersRef.current.save());
+      await Promise.all(tasks);
       addToast("Collection updated", "success");
       collectionQuery.refetch();
+      itemsQuery.refetch();
     } catch {
       addToast("Failed to update collection", "error");
     } finally {
@@ -137,10 +157,26 @@ export default function CollectionDetail() {
 
         <div className={styles.detailMain}>
           <div className={styles.detailHeader}>
-            <h2 className={styles.heading}>{collection.title}</h2>
-            <button className={styles.buttonDanger} onClick={handleDelete}>
-              Delete
-            </button>
+            <input
+              className={styles.titleInput}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              aria-label="Collection title"
+              spellCheck={false}
+            />
+            <div className={styles.detailHeaderActions}>
+              <button
+                className={styles.button}
+                onClick={handleSave}
+                disabled={!isDirty || saving}
+                title={isDirty ? "Save changes" : "No changes to save"}
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button className={styles.buttonDanger} onClick={handleDelete}>
+                Delete
+              </button>
+            </div>
           </div>
 
           <div className={styles.meta}>
@@ -152,76 +188,84 @@ export default function CollectionDetail() {
               </span>
             )}
             {collection.smart === 1 && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
+            {owningRuleQuery.data && (
+              <Link
+                to={`/rules?focus=${owningRuleQuery.data.id}`}
+                className={`${styles.metaChip} ${styles.metaChipLink}`}
+                title="Open generating rule"
+              >
+                Rule: {owningRuleQuery.data.name}
+              </Link>
+            )}
           </div>
 
-          {collection.summary && <p className={styles.detailSummary}>{collection.summary}</p>}
-
-          <div className={styles.detailSection}>
-            <div className={styles.detailSectionTitle}>Labels</div>
-            <div className={styles.detailLabels}>
-              {labels.map((label) => (
-                <span
-                  key={label}
-                  className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                >
-                  {label}
-                  <button
-                    className={styles.labelRemove}
-                    title={`Remove "${label}"`}
-                    onClick={() => {
-                      if (!ratingKey) return;
-                      updateLabelsMutation.mutate({
-                        ratingKey,
-                        labels: labels.filter((l) => l !== label),
-                      });
-                    }}
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-              <input
-                type="text"
-                className={styles.labelEditorInput}
-                placeholder="Add label..."
-                value={labelInput}
-                onChange={(e) => setLabelInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const value = labelInput.trim();
-                    if (!value || !ratingKey) return;
-                    setLabelInput("");
+          <div className={styles.detailLabels}>
+            {labels.map((label) => (
+              <span
+                key={label}
+                className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+              >
+                {label}
+                <button
+                  className={styles.labelRemove}
+                  title={`Remove "${label}"`}
+                  onClick={() => {
+                    if (!ratingKey) return;
                     updateLabelsMutation.mutate({
                       ratingKey,
-                      labels: [...new Set([...labels, value])],
+                      labels: labels.filter((l) => l !== label),
                     });
-                  }
-                }}
-              />
-            </div>
+                  }}
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              className={styles.labelEditorInput}
+              placeholder="Add label..."
+              value={labelInput}
+              onChange={(e) => setLabelInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const value = labelInput.trim();
+                  if (!value || !ratingKey) return;
+                  setLabelInput("");
+                  updateLabelsMutation.mutate({
+                    ratingKey,
+                    labels: [...new Set([...labels, value])],
+                  });
+                }
+              }}
+            />
           </div>
 
-          <div className={styles.detailDivider} />
+          {summaryOpen ? (
+            <textarea
+              className={styles.summaryInput}
+              value={summary}
+              placeholder="Summary"
+              onChange={(e) => setSummary(e.target.value)}
+              onBlur={() => {
+                if (!summary.trim()) setSummaryOpen(false);
+              }}
+            />
+          ) : (
+            <button type="button" className={styles.summaryAdd} onClick={() => setSummaryOpen(true)}>
+              + Add summary
+            </button>
+          )}
 
-          <div className={styles.detailEditCard}>
-            <div className={styles.detailEditHeader}>
-              <span className={styles.detailEditTitle}>Edit Collection</span>
-              <button className={styles.button} onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
-              </button>
-            </div>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Title</span>
-              <input type="text" className={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Summary</span>
-              <textarea className={styles.textarea} value={summary} onChange={(e) => setSummary(e.target.value)} />
-            </label>
-          </div>
-
-          {collection.smart === 1 && <SmartFiltersEditor ratingKey={ratingKey!} onSave={() => itemsQuery.refetch()} />}
+          {collection.smart === 1 && (
+            <SmartFiltersEditor
+              ref={filtersRef}
+              ratingKey={ratingKey!}
+              onSaved={() => itemsQuery.refetch()}
+              onDirtyChange={setFiltersDirty}
+            />
+          )}
         </div>
       </div>
 
@@ -287,7 +331,7 @@ export default function CollectionDetail() {
                 {items.map((item) => (
                   <tr key={item.ratingKey}>
                     <td>{item.title}</td>
-                    <td className={styles.itemYear}>{item.year || "\u2014"}</td>
+                    <td className={styles.itemYear}>{item.year || "—"}</td>
                   </tr>
                 ))}
               </tbody>
