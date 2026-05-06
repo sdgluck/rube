@@ -6,6 +6,13 @@ import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
+function formatFileSize(bytes: number | undefined): string {
+  if (!bytes) return "—";
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  return `${(bytes / 1e3).toFixed(0)} KB`;
+}
+
 export function RecentlyAddedPanel({
   dragHandle,
   dragProps,
@@ -27,6 +34,9 @@ export function RecentlyAddedPanel({
             <tr>
               <th>Title</th>
               <th>Type</th>
+              <th>Format</th>
+              <th>Resolution</th>
+              <th>Size</th>
               <th>Added</th>
             </tr>
           </thead>
@@ -48,6 +58,9 @@ export function RecentlyAddedPanel({
                     </Link>
                   </td>
                   <td className={styles.monoCell}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</td>
+                  <td className={styles.monoCell}>{item.container?.toUpperCase() || "—"}</td>
+                  <td className={styles.monoCell}>{item.videoResolution?.toUpperCase() || "—"}</td>
+                  <td className={styles.monoCell}>{formatFileSize(item.fileSize)}</td>
                   <td className={styles.monoCell}>
                     <RelativeTime timestamp={item.addedAt} seconds />
                   </td>

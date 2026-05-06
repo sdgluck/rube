@@ -26,6 +26,9 @@ const plexRecentItemSchema = z.object({
   addedAt: z.number(),
   grandparentTitle: z.string().optional(),
   parentTitle: z.string().optional(),
+  container: z.string().optional(),
+  videoResolution: z.string().optional(),
+  fileSize: z.number().optional(),
 });
 
 const mostWatchedItemSchema = z.object({

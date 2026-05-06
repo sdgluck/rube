@@ -171,6 +171,9 @@ export interface PlexRecentItem {
   addedAt: number;
   grandparentTitle?: string;
   parentTitle?: string;
+  container?: string;
+  videoResolution?: string;
+  fileSize?: number;
 }
 
 export interface PlexMediaItem {

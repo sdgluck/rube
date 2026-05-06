@@ -62,16 +62,23 @@ export function createSessionsModule(http: PlexHttp) {
     const data = await http.request("/library/recentlyAdded", {
       params: { "X-Plex-Container-Size": limit },
     });
-    return parseMetadataArray(data?.MediaContainer?.Metadata).map((item) => ({
-      ratingKey: item.ratingKey ?? "",
-      title: item.title ?? "",
-      year: item.year,
-      thumb: item.thumb,
-      type: item.type ?? "",
-      addedAt: item.addedAt ?? 0,
-      grandparentTitle: item.grandparentTitle,
-      parentTitle: item.parentTitle,
-    }));
+    return parseMetadataArray(data?.MediaContainer?.Metadata).map((item) => {
+      const media = item.Media?.[0];
+      const part = media?.Part?.[0];
+      return {
+        ratingKey: item.ratingKey ?? "",
+        title: item.title ?? "",
+        year: item.year,
+        thumb: item.thumb,
+        type: item.type ?? "",
+        addedAt: item.addedAt ?? 0,
+        grandparentTitle: item.grandparentTitle,
+        parentTitle: item.parentTitle,
+        container: media?.container,
+        videoResolution: media?.videoResolution,
+        fileSize: part?.size,
+      };
+    });
   }
 
   return { getActiveSessions, getRecentlyAdded };
