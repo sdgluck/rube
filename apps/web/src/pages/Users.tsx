@@ -162,6 +162,14 @@ export default function Users() {
     placeholderData: keepPreviousData,
   });
 
+  const syncMutation = trpc.users.sync.useMutation({
+    onSuccess: () => {
+      utils.users.list.invalidate();
+      addToast("Users refreshed", "success");
+    },
+    onError: () => addToast("Failed to refresh users", "error"),
+  });
+
   const users = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -189,6 +197,13 @@ export default function Users() {
               value={search}
               onChange={(e) => setParam("q", e.target.value)}
             />
+            <button
+              className={sharedStyles.buttonSecondary}
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+            >
+              {syncMutation.isPending ? "Refreshing..." : "Refresh"}
+            </button>
           </div>
 
           {users.length === 0 ? (

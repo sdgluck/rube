@@ -46,4 +46,9 @@ export const usersRouter = t.router({
     updateUser(input.userId, { name: input.name || null });
     return { ok: true };
   }),
+
+  sync: t.procedure.mutation(async () => {
+    const client = getPlexClient();
+    return syncUsers(client);
+  }),
 });

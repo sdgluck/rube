@@ -24,11 +24,12 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
   const now = Date.now();
   const identity = await client.getIdentity();
 
-  const [sharings, allCollectionsResult, accounts, history] = await Promise.all([
+  const [sharings, allCollectionsResult, accounts, history, owner] = await Promise.all([
     client.getSharings(identity.machineIdentifier),
     Promise.resolve(getLocalCollections()),
     client.getAccounts(),
     client.getWatchHistory({ limit: 500 }),
+    client.getOwner(),
   ]);
   const allCollections = allCollectionsResult.items;
 
@@ -59,7 +60,13 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
   const seenIds = new Set<number>();
   let synced = 0;
 
-  for (const s of sharings) {
+  const allUsers: Array<{ userId: number; username: string }> = sharings.map((s) => ({
+    userId: s.userId,
+    username: s.username,
+  }));
+  if (owner) allUsers.unshift({ userId: owner.id, username: owner.username });
+
+  for (const s of allUsers) {
     const userLabel = `User:${s.username}`;
     const account = accountById.get(s.userId) || accountByName.get(s.username.toLowerCase());
     const lastWatched = account ? lastWatchedByAccount.get(Number(account.id)) : undefined;

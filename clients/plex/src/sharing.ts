@@ -217,6 +217,21 @@ export function createSharingModule(http: PlexHttp) {
     return data?.MediaContainer?.Account || [];
   }
 
+  async function getOwner(): Promise<{ id: number; username: string; title: string } | null> {
+    try {
+      const data = await plexTvRequest("/api/v2/user");
+      if (!data || typeof data !== "object") return null;
+      const id = Number(data.id);
+      if (!Number.isFinite(id) || id <= 0) return null;
+      const username = (data.username || data.title || data.friendlyName || "").toString();
+      const title = (data.title || data.friendlyName || username).toString();
+      if (!username) return null;
+      return { id, username, title };
+    } catch {
+      return null;
+    }
+  }
+
   return {
     getSharings,
     setSharingRestrictions,
@@ -224,5 +239,6 @@ export function createSharingModule(http: PlexHttp) {
     getSharedServerDetails,
     getWatchHistory,
     getAccounts,
+    getOwner,
   };
 }
