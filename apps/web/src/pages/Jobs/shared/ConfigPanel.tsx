@@ -17,13 +17,6 @@ export default function ConfigPanel({ children, save }: Props) {
       <legend className={styles.detailSectionTitle}>Configuration</legend>
       <div className={styles.detailSectionScroll}>
         <table className={styles.configTable}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Input</th>
-              <th>Summary</th>
-            </tr>
-          </thead>
           <tbody>{children}</tbody>
         </table>
       </div>

@@ -5,13 +5,12 @@ import JobPageShell from "#pages/Jobs/shared/JobPageShell";
 import ConfigPanel from "#pages/Jobs/shared/ConfigPanel";
 import RunHistoryPanel from "#pages/Jobs/shared/RunHistoryPanel";
 import LatestRunLogPanel from "#pages/Jobs/shared/LatestRunLogPanel";
-import ScheduleRow from "#pages/Jobs/shared/rows/ScheduleRow";
-import EnabledRow from "#pages/Jobs/shared/rows/EnabledRow";
-import SectionsRow from "#pages/Jobs/shared/rows/SectionsRow";
+import JobConfigRows from "#pages/Jobs/shared/JobConfigRows";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "#pages/Jobs/types";
 import BywConfigRows, { type BywFormState } from "./ConfigRows";
 import GeneratedCollectionsPanel from "./GeneratedCollectionsPanel";
+import SharingRestrictionsPanel from "./SharingRestrictionsPanel";
 
 const DEFAULTS: BywFormState = {
   limit: 10,
@@ -79,13 +78,14 @@ export default function BecauseYouWatchedJob({ job }: JobPageProps) {
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
         <ConfigPanel save={{ dirty, onSave: handleSave }}>
-          <ScheduleRow jobId={job.id} schedule={job.schedule} />
-          <EnabledRow jobId={job.id} enabled={!!job.enabled} />
-          <SectionsRow
-            selected={sections}
-            onChange={(next) => {
-              setSections(next);
-              setDirty(true);
+          <JobConfigRows
+            job={job}
+            sections={{
+              value: sections,
+              onChange: (next) => {
+                setSections(next);
+                setDirty(true);
+              },
             }}
           />
           <BywConfigRows
@@ -98,6 +98,7 @@ export default function BecauseYouWatchedJob({ job }: JobPageProps) {
         </ConfigPanel>
         <RunHistoryPanel runsQuery={actions.runsQuery} />
       </div>
+      <SharingRestrictionsPanel />
       <GeneratedCollectionsPanel />
       <LatestRunLogPanel latestRun={actions.latestRun} />
     </JobPageShell>

@@ -10,7 +10,7 @@ export default function EnabledRow({ jobId, enabled }: { jobId: string; enabled:
 
   return (
     <tr>
-      <td>Enabled</td>
+      <td className={styles.fieldLabel}>Enabled</td>
       <td>
         <ToggleSwitch
           size="sm"
@@ -18,7 +18,6 @@ export default function EnabledRow({ jobId, enabled }: { jobId: string; enabled:
           onChange={(checked) => updateMutation.mutate({ jobId, enabled: checked })}
         />
       </td>
-      <td className={styles.configSummary}>{enabled ? "Yes" : "No"}</td>
     </tr>
   );
 }

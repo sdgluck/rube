@@ -27,14 +27,16 @@ export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedu
   }, [editing, jobId, updateMutation]);
 
   const value = editing ?? schedule;
+  const help = error ?? describeCron(value) ?? "";
 
   return (
     <tr>
-      <td>Schedule</td>
+      <td className={styles.fieldLabel}>Schedule</td>
       <td>
         <input
           className={styles.cronInput}
           value={value}
+          placeholder="manual only"
           onChange={(e) => {
             setEditing(e.target.value);
             setError(undefined);
@@ -44,11 +46,7 @@ export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedu
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
         />
-      </td>
-      <td>
-        <span className={error ? styles.cronError : styles.configSummary}>
-          {error || describeCron(value) || "No schedule"}
-        </span>
+        {help && <div className={error ? styles.fieldHelpError : styles.fieldHelp}>{help}</div>}
       </td>
     </tr>
   );

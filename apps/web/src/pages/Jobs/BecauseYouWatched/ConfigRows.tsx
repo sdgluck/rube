@@ -22,7 +22,7 @@ export default function BywConfigRows({ state, onChange }: Props) {
   return (
     <>
       <tr>
-        <td>Limit</td>
+        <td className={styles.fieldLabel}>Limit</td>
         <td>
           <input
             type="number"
@@ -32,13 +32,13 @@ export default function BywConfigRows({ state, onChange }: Props) {
             value={state.limit}
             onChange={(e) => set("limit", Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
           />
-        </td>
-        <td className={styles.configSummary}>
-          {state.limit} collection{state.limit !== 1 ? "s" : ""} per section
+          <div className={styles.fieldHelp}>
+            {state.limit} collection{state.limit !== 1 ? "s" : ""} per section
+          </div>
         </td>
       </tr>
       <tr>
-        <td>Mode</td>
+        <td className={styles.fieldLabel}>Mode</td>
         <td>
           <select
             className={styles.configNumberInput}
@@ -49,14 +49,16 @@ export default function BywConfigRows({ state, onChange }: Props) {
             <option value="per-user">Per user</option>
             <option value="server">Server-wide</option>
           </select>
-        </td>
-        <td className={styles.configSummary}>
-          {state.mode === "per-user" ? "One set of collections per Plex user" : "Single shared set, all users' history"}
+          <div className={styles.fieldHelp}>
+            {state.mode === "per-user"
+              ? "One set of collections per Plex user"
+              : "Single shared set, all users' history"}
+          </div>
         </td>
       </tr>
       {state.mode === "per-user" && (
         <tr>
-          <td>Users</td>
+          <td className={styles.fieldLabel}>Users</td>
           <td>
             <input
               type="text"
@@ -66,19 +68,18 @@ export default function BywConfigRows({ state, onChange }: Props) {
               value={state.users}
               onChange={(e) => set("users", e.target.value)}
             />
+            <div className={styles.fieldHelp}>{state.users.trim() ? "Comma-separated allowlist" : "All users"}</div>
           </td>
-          <td className={styles.configSummary}>{state.users.trim() ? "Comma-separated allowlist" : "All users"}</td>
         </tr>
       )}
       <tr>
-        <td>Pin to homepage</td>
+        <td className={styles.fieldLabel}>Pin to homepage</td>
         <td>
           <ToggleSwitch size="sm" checked={state.pin} onChange={(checked) => set("pin", checked)} />
         </td>
-        <td className={styles.configSummary}>{state.pin ? "Yes" : "No"}</td>
       </tr>
       <tr>
-        <td>Items per collection</td>
+        <td className={styles.fieldLabel}>Items per collection</td>
         <td>
           <input
             type="number"
@@ -97,13 +98,13 @@ export default function BywConfigRows({ state, onChange }: Props) {
             value={state.maxItems}
             onChange={(e) => set("maxItems", Math.max(10, Math.min(100, parseInt(e.target.value, 10) || 30)))}
           />
-        </td>
-        <td className={styles.configSummary}>
-          {state.minItems}–{state.maxItems} items
+          <div className={styles.fieldHelp}>
+            {state.minItems}–{state.maxItems} items
+          </div>
         </td>
       </tr>
       <tr>
-        <td>Min library size</td>
+        <td className={styles.fieldLabel}>Min library size</td>
         <td>
           <input
             type="number"
@@ -112,8 +113,8 @@ export default function BywConfigRows({ state, onChange }: Props) {
             value={state.minLib}
             onChange={(e) => set("minLib", Math.max(1, parseInt(e.target.value, 10) || 15))}
           />
+          <div className={styles.fieldHelp}>Skip sections with fewer items</div>
         </td>
-        <td className={styles.configSummary}>Skip sections with fewer items</td>
       </tr>
     </>
   );

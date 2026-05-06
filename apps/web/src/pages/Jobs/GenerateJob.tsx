@@ -6,9 +6,7 @@ import JobPageShell from "./shared/JobPageShell";
 import ConfigPanel from "./shared/ConfigPanel";
 import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
-import ScheduleRow from "./shared/rows/ScheduleRow";
-import EnabledRow from "./shared/rows/EnabledRow";
-import SectionsRow from "./shared/rows/SectionsRow";
+import JobConfigRows from "./shared/JobConfigRows";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
@@ -38,18 +36,19 @@ export default function GenerateJob({ job }: JobPageProps) {
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
         <ConfigPanel save={{ dirty, onSave: handleSave }}>
-          <ScheduleRow jobId={job.id} schedule={job.schedule} />
-          <EnabledRow jobId={job.id} enabled={!!job.enabled} />
-          <SectionsRow
-            selected={sections}
-            onChange={(next) => {
-              setSections(next);
-              setDirty(true);
+          <JobConfigRows
+            job={job}
+            sections={{
+              value: sections,
+              onChange: (next) => {
+                setSections(next);
+                setDirty(true);
+              },
             }}
           />
           <tr>
-            <td>Rules</td>
-            <td colSpan={2}>
+            <td className={styles.fieldLabel}>Rules</td>
+            <td>
               <Link to="/rules">Manage rules &rarr;</Link>
             </td>
           </tr>

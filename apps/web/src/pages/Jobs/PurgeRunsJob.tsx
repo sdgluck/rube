@@ -3,8 +3,7 @@ import JobPageShell from "./shared/JobPageShell";
 import ConfigPanel from "./shared/ConfigPanel";
 import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
-import ScheduleRow from "./shared/rows/ScheduleRow";
-import EnabledRow from "./shared/rows/EnabledRow";
+import JobConfigRows from "./shared/JobConfigRows";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
@@ -15,8 +14,7 @@ export default function PurgeRunsJob({ job }: JobPageProps) {
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
         <ConfigPanel>
-          <ScheduleRow jobId={job.id} schedule={job.schedule} />
-          <EnabledRow jobId={job.id} enabled={!!job.enabled} />
+          <JobConfigRows job={job} />
         </ConfigPanel>
         <RunHistoryPanel runsQuery={actions.runsQuery} />
       </div>

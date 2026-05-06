@@ -26,8 +26,8 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   },
   { id: "shuffle", name: "Shuffle Hubs", command: "shuffle", schedule: "*/30 * * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
-  { id: "label", name: "Sync Labels", command: "label", schedule: "", enabled: 1 },
-  { id: "label-undo", name: "Undo Labels", command: "label-undo", schedule: "", enabled: 1 },
+  { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
+  { id: "label-undo", name: "Clear Collection Restrictions", command: "label-undo", schedule: "", enabled: 1 },
   { id: "overlays", name: "Apply Overlays", command: "overlays", schedule: "", enabled: 1 },
   { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
   {

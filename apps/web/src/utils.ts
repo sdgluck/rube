@@ -4,6 +4,7 @@ export function describeCron(expr: string): string {
   if (parts.length !== 5) return expr;
   const [min, hour, dom, mon, dow] = parts;
 
+  if (min === "*" && hour === "*" && dom === "*" && mon === "*" && dow === "*") return "Every minute";
   if (min.startsWith("*/")) return `Every ${min.slice(2)} minutes`;
   if (dom === "*" && mon === "*" && dow === "*") {
     if (hour === "*" && min === "0") return "Every hour";

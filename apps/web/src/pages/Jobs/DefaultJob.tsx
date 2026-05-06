@@ -5,15 +5,15 @@ import JobPageShell from "./shared/JobPageShell";
 import ConfigPanel from "./shared/ConfigPanel";
 import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
-import ScheduleRow from "./shared/rows/ScheduleRow";
-import EnabledRow from "./shared/rows/EnabledRow";
-import SectionsRow from "./shared/rows/SectionsRow";
+import JobConfigRows from "./shared/JobConfigRows";
+import { getJobFields } from "./fields";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
 export default function DefaultJob({ job }: JobPageProps) {
   const utils = trpc.useUtils();
   const actions = useJobActions(job);
+  const fields = getJobFields(job.id);
   const [sections, setSections] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
 
@@ -33,19 +33,21 @@ export default function DefaultJob({ job }: JobPageProps) {
     updateMutation.mutate({ jobId: job.id, config }, { onSuccess: () => setDirty(false) });
   };
 
+  const sectionsBinding = fields.sections
+    ? {
+        value: sections,
+        onChange: (next: string[]) => {
+          setSections(next);
+          setDirty(true);
+        },
+      }
+    : undefined;
+
   return (
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
-        <ConfigPanel save={{ dirty, onSave: handleSave }}>
-          <ScheduleRow jobId={job.id} schedule={job.schedule} />
-          <EnabledRow jobId={job.id} enabled={!!job.enabled} />
-          <SectionsRow
-            selected={sections}
-            onChange={(next) => {
-              setSections(next);
-              setDirty(true);
-            }}
-          />
+        <ConfigPanel save={fields.sections ? { dirty, onSave: handleSave } : undefined}>
+          <JobConfigRows job={job} sections={sectionsBinding} />
         </ConfigPanel>
         <RunHistoryPanel runsQuery={actions.runsQuery} />
       </div>

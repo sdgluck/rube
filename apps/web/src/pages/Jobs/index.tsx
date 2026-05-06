@@ -14,6 +14,7 @@ import PullToRefresh from "#components/PullToRefresh";
 import { readEnumStorage } from "#/storage";
 import styles from "./Jobs.module.css";
 import shared from "#pages/Collections.module.css";
+import { JOB_GROUPS, getGroupForMember } from "./groups";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export default function Jobs() {
   const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
   const rawJobs = jobsQuery.data ?? [];
-  const jobs = [...rawJobs].sort((a, b) => {
+  const sortedJobs = [...rawJobs].sort((a, b) => {
     let cmp = 0;
     switch (sortKey) {
       case "name":
@@ -207,6 +208,24 @@ export default function Jobs() {
     }
     return sortDir === "asc" ? cmp : -cmp;
   });
+
+  // When sorted by name, hoist group members directly after their primary so
+  // related jobs (e.g. Apply/Clear Collection Restrictions under Because You
+  // Watched) read as a cluster rather than scattered alphabetically.
+  const jobs = useMemo(() => {
+    if (sortKey !== "name") return sortedJobs;
+    const memberIds = new Set(JOB_GROUPS.flatMap((g) => g.members.map((m) => m.id)));
+    const remaining = sortedJobs.filter((j) => !memberIds.has(j.id));
+    const out: typeof sortedJobs = [];
+    for (const job of remaining) {
+      out.push(job);
+      const group = JOB_GROUPS.find((g) => g.primary === job.id);
+      if (!group) continue;
+      const groupMembers = sortedJobs.filter((j) => group.members.some((m) => m.id === j.id));
+      out.push(...groupMembers);
+    }
+    return out;
+  }, [sortedJobs, sortKey]);
 
   // ─── Derived stats ──────────────────────────────────────────────────────
   const enabledCount = rawJobs.filter((j) => j.enabled).length;
@@ -568,60 +587,63 @@ export default function Jobs() {
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job, i) => (
-                  <tr
-                    key={job.id}
-                    className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                  >
-                    <td
-                      className={shared.checkboxCell}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCheckboxClick(i, e);
-                      }}
+                {jobs.map((job, i) => {
+                  const grouped = sortKey === "name" ? getGroupForMember(job.id) : undefined;
+                  return (
+                    <tr
+                      key={job.id}
+                      className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
                     >
-                      <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-                    </td>
-                    <td className={styles.nameCell}>
-                      <span className={styles.jobNameText}>{job.name}</span>
-                      <span className={styles.scheduleHintInline}>
-                        {job.schedule ? describeCron(job.schedule) : "Manual"}
-                      </span>
-                    </td>
-                    <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
-                      <span className={styles.cronText} title={job.schedule || undefined}>
-                        {job.schedule ? describeCron(job.schedule) : "—"}
-                      </span>
-                    </td>
-                    <td
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <ToggleSwitch
-                        size="sm"
-                        checked={!!job.enabled}
-                        onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
-                      />
-                    </td>
-                    <td className={styles.monoCell}>
-                      {job.lastRunStartedAt ? (
-                        <RelativeTime timestamp={job.lastRunStartedAt} />
-                      ) : (
-                        <span className={styles.muted}>Never</span>
-                      )}
-                    </td>
-                    <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
-                      {job.lastRunStatus && (
-                        <span className={styles.statusRow}>
-                          <span className={styles.statusDot} data-status={job.lastRunStatus} />
-                          {job.lastRunStatus}
+                      <td
+                        className={shared.checkboxCell}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCheckboxClick(i, e);
+                        }}
+                      >
+                        <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                      </td>
+                      <td className={`${styles.nameCell} ${grouped ? styles.groupedRowName : ""}`}>
+                        <span className={styles.jobNameText}>{job.name}</span>
+                        <span className={styles.scheduleHintInline}>
+                          {job.schedule ? describeCron(job.schedule) : "Manual"}
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                        <span className={styles.cronText} title={job.schedule || undefined}>
+                          {job.schedule ? describeCron(job.schedule) : "—"}
+                        </span>
+                      </td>
+                      <td
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <ToggleSwitch
+                          size="sm"
+                          checked={!!job.enabled}
+                          onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+                        />
+                      </td>
+                      <td className={styles.monoCell}>
+                        {job.lastRunStartedAt ? (
+                          <RelativeTime timestamp={job.lastRunStartedAt} />
+                        ) : (
+                          <span className={styles.muted}>Never</span>
+                        )}
+                      </td>
+                      <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                        {job.lastRunStatus && (
+                          <span className={styles.statusRow}>
+                            <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                            {job.lastRunStatus}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
