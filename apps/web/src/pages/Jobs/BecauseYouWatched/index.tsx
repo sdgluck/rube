@@ -10,7 +10,6 @@ import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "#pages/Jobs/types";
 import BywConfigRows, { type BywFormState } from "./ConfigRows";
 import GeneratedCollectionsPanel from "./GeneratedCollectionsPanel";
-import SharingRestrictionsPanel from "./SharingRestrictionsPanel";
 
 const DEFAULTS: BywFormState = {
   limit: 10,
@@ -98,7 +97,6 @@ export default function BecauseYouWatchedJob({ job }: JobPageProps) {
         </ConfigPanel>
         <RunHistoryPanel runsQuery={actions.runsQuery} />
       </div>
-      <SharingRestrictionsPanel />
       <GeneratedCollectionsPanel />
       <LatestRunLogPanel latestRun={actions.latestRun} />
     </JobPageShell>

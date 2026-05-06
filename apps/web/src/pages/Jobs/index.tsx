@@ -14,7 +14,8 @@ import PullToRefresh from "#components/PullToRefresh";
 import { readEnumStorage } from "#/storage";
 import styles from "./Jobs.module.css";
 import shared from "#pages/Collections.module.css";
-import { JOB_GROUPS, getGroupForMember } from "./groups";
+import { getJobFields } from "./fields";
+import FeatureWizard from "./FeatureWizard";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ export default function Jobs() {
   const lastClickedIndex = useRef<number | null>(null);
   const [, setTick] = useState(0);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const logRef = useRef<HTMLPreElement>(null);
 
   const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchInterval: 5000 });
@@ -186,7 +188,7 @@ export default function Jobs() {
 
   const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
-  const rawJobs = jobsQuery.data ?? [];
+  const rawJobs = (jobsQuery.data ?? []).filter((j) => getJobFields(j.id).kind !== "hidden");
   const sortedJobs = [...rawJobs].sort((a, b) => {
     let cmp = 0;
     switch (sortKey) {
@@ -209,23 +211,10 @@ export default function Jobs() {
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  // When sorted by name, hoist group members directly after their primary so
-  // related jobs (e.g. Apply/Clear Collection Restrictions under Because You
-  // Watched) read as a cluster rather than scattered alphabetically.
-  const jobs = useMemo(() => {
-    if (sortKey !== "name") return sortedJobs;
-    const memberIds = new Set(JOB_GROUPS.flatMap((g) => g.members.map((m) => m.id)));
-    const remaining = sortedJobs.filter((j) => !memberIds.has(j.id));
-    const out: typeof sortedJobs = [];
-    for (const job of remaining) {
-      out.push(job);
-      const group = JOB_GROUPS.find((g) => g.primary === job.id);
-      if (!group) continue;
-      const groupMembers = sortedJobs.filter((j) => group.members.some((m) => m.id === j.id));
-      out.push(...groupMembers);
-    }
-    return out;
-  }, [sortedJobs, sortKey]);
+  // System Tasks vs Features split — kind comes from fields.ts.
+  const systemJobs = sortedJobs.filter((j) => getJobFields(j.id).kind === "system");
+  const featureJobs = sortedJobs.filter((j) => getJobFields(j.id).kind === "feature");
+  const jobs = sortedJobs;
 
   // ─── Derived stats ──────────────────────────────────────────────────────
   const enabledCount = rawJobs.filter((j) => j.enabled).length;
@@ -319,15 +308,15 @@ export default function Jobs() {
     }
   }
 
-  // ─── Selection ──────────────────────────────────────────────────────────
+  // ─── Selection (features only — system tasks aren't selectable) ─────────
   function handleCheckboxClick(index: number, e: React.MouseEvent) {
-    const id = jobs[index].id;
+    const id = featureJobs[index].id;
     if (e.shiftKey && lastClickedIndex.current != null) {
       const from = Math.min(lastClickedIndex.current, index);
       const to = Math.max(lastClickedIndex.current, index);
       setSelected((prev) => {
         const next = new Set(prev);
-        for (let i = from; i <= to; i++) next.add(jobs[i].id);
+        for (let i = from; i <= to; i++) next.add(featureJobs[i].id);
         return next;
       });
     } else {
@@ -342,8 +331,8 @@ export default function Jobs() {
   }
 
   function toggleSelectAll() {
-    if (selected.size === jobs.length) setSelected(new Set());
-    else setSelected(new Set(jobs.map((j) => j.id)));
+    if (featureJobs.length > 0 && featureJobs.every((j) => selected.has(j.id))) setSelected(new Set());
+    else setSelected(new Set(featureJobs.map((j) => j.id)));
   }
 
   async function bulkSetEnabled(enabled: boolean) {
@@ -486,14 +475,96 @@ export default function Jobs() {
             )}
           </div>
 
-          {/* ─── All Jobs ─────────────────────────────────────────────── */}
+          {/* ─── System Tasks ────────────────────────────────────────── */}
+          {systemJobs.length > 0 && (
+            <div className={styles.panel}>
+              <div className={styles.panelHeaderRow}>
+                <div className={styles.panelHeader}>
+                  System Tasks
+                  <span className={styles.countBadge}>{systemJobs.length}</span>
+                </div>
+              </div>
+              <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
+                Infrastructure that keeps Tinkerbell in sync with Plex. Always on; schedules are tweakable.
+              </p>
+              <table className={styles.compactTable}>
+                <thead>
+                  <tr>
+                    <th className={styles.sortable} onClick={() => toggleSort("name")}>
+                      Name{sortIndicator("name")}
+                    </th>
+                    <th className={`${styles.sortable} ${styles.hideOnMobile}`} onClick={() => toggleSort("schedule")}>
+                      Schedule{sortIndicator("schedule")}
+                    </th>
+                    <th>On</th>
+                    <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+                      Last Run{sortIndicator("lastRun")}
+                    </th>
+                    <th
+                      className={`${styles.sortable} ${styles.hideOnMobile}`}
+                      onClick={() => toggleSort("lastRunStatus")}
+                    >
+                      Status{sortIndicator("lastRunStatus")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {systemJobs.map((job) => {
+                    const isHealth = job.id === "healthcheck";
+                    return (
+                      <tr
+                        key={job.id}
+                        className={styles.clickableRow}
+                        onClick={() => navigate(isHealth ? "/settings/health" : `/jobs/${job.id}`)}
+                      >
+                        <td className={styles.nameCell}>
+                          <span className={styles.jobNameText}>{job.name}</span>
+                          <span className={styles.scheduleHintInline}>
+                            {job.schedule ? describeCron(job.schedule) : "Manual"}
+                          </span>
+                        </td>
+                        <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                          <span className={styles.cronText} title={job.schedule || undefined}>
+                            {job.schedule ? describeCron(job.schedule) : "—"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={styles.requiredPill}>Required</span>
+                        </td>
+                        <td className={styles.monoCell}>
+                          {job.lastRunStartedAt ? (
+                            <RelativeTime timestamp={job.lastRunStartedAt} />
+                          ) : (
+                            <span className={styles.muted}>Never</span>
+                          )}
+                        </td>
+                        <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                          {job.lastRunStatus && (
+                            <span className={styles.statusRow}>
+                              <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                              {job.lastRunStatus}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ─── Your Features ────────────────────────────────────────── */}
           <div className={styles.panel}>
             <div className={styles.panelHeaderRow}>
               <div className={styles.panelHeader}>
-                All Jobs
-                {jobs.length > 0 && <span className={styles.countBadge}>{jobs.length}</span>}
+                Your Features
+                {featureJobs.length > 0 && <span className={styles.countBadge}>{featureJobs.length}</span>}
               </div>
               <div className={styles.headerActions}>
+                <button type="button" className={styles.headerBtn} onClick={() => setWizardOpen(true)}>
+                  + Add Feature
+                </button>
                 <DropdownButton
                   label="Export"
                   className={styles.headerBtn}
@@ -520,6 +591,14 @@ export default function Jobs() {
                 />
               </div>
             </div>
+            <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
+              Optional capabilities you've installed. Toggle off to pause; remove anytime from each feature's page.
+            </p>
+            {featureJobs.length === 0 && (
+              <p className={styles.muted} style={{ padding: "16px 0" }}>
+                No features installed yet. Click <strong>+ Add Feature</strong> to pick one.
+              </p>
+            )}
 
             {selected.size > 0 && (
               <div className={shared.bulkBar}>
@@ -562,7 +641,7 @@ export default function Jobs() {
                     <input
                       type="checkbox"
                       className={shared.checkbox}
-                      checked={jobs.length > 0 && selected.size === jobs.length}
+                      checked={featureJobs.length > 0 && featureJobs.every((j) => selected.has(j.id))}
                       onChange={toggleSelectAll}
                     />
                   </th>
@@ -587,63 +666,60 @@ export default function Jobs() {
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job, i) => {
-                  const grouped = sortKey === "name" ? getGroupForMember(job.id) : undefined;
-                  return (
-                    <tr
-                      key={job.id}
-                      className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
+                {featureJobs.map((job, i) => (
+                  <tr
+                    key={job.id}
+                    className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                    onClick={() => navigate(`/jobs/${job.id}`)}
+                  >
+                    <td
+                      className={shared.checkboxCell}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCheckboxClick(i, e);
+                      }}
                     >
-                      <td
-                        className={shared.checkboxCell}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCheckboxClick(i, e);
-                        }}
-                      >
-                        <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-                      </td>
-                      <td className={`${styles.nameCell} ${grouped ? styles.groupedRowName : ""}`}>
-                        <span className={styles.jobNameText}>{job.name}</span>
-                        <span className={styles.scheduleHintInline}>
-                          {job.schedule ? describeCron(job.schedule) : "Manual"}
+                      <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                    </td>
+                    <td className={styles.nameCell}>
+                      <span className={styles.jobNameText}>{job.name}</span>
+                      <span className={styles.scheduleHintInline}>
+                        {job.schedule ? describeCron(job.schedule) : "Manual"}
+                      </span>
+                    </td>
+                    <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                      <span className={styles.cronText} title={job.schedule || undefined}>
+                        {job.schedule ? describeCron(job.schedule) : "—"}
+                      </span>
+                    </td>
+                    <td
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <ToggleSwitch
+                        size="sm"
+                        checked={!!job.enabled}
+                        onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+                      />
+                    </td>
+                    <td className={styles.monoCell}>
+                      {job.lastRunStartedAt ? (
+                        <RelativeTime timestamp={job.lastRunStartedAt} />
+                      ) : (
+                        <span className={styles.muted}>Never</span>
+                      )}
+                    </td>
+                    <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                      {job.lastRunStatus && (
+                        <span className={styles.statusRow}>
+                          <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                          {job.lastRunStatus}
                         </span>
-                      </td>
-                      <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
-                        <span className={styles.cronText} title={job.schedule || undefined}>
-                          {job.schedule ? describeCron(job.schedule) : "—"}
-                        </span>
-                      </td>
-                      <td
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <ToggleSwitch
-                          size="sm"
-                          checked={!!job.enabled}
-                          onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
-                        />
-                      </td>
-                      <td className={styles.monoCell}>
-                        {job.lastRunStartedAt ? (
-                          <RelativeTime timestamp={job.lastRunStartedAt} />
-                        ) : (
-                          <span className={styles.muted}>Never</span>
-                        )}
-                      </td>
-                      <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
-                        {job.lastRunStatus && (
-                          <span className={styles.statusRow}>
-                            <span className={styles.statusDot} data-status={job.lastRunStatus} />
-                            {job.lastRunStatus}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -685,6 +761,7 @@ export default function Jobs() {
           )}
         </div>
       </div>
+      {wizardOpen && <FeatureWizard onClose={() => setWizardOpen(false)} />}
     </PullToRefresh>
   );
 }

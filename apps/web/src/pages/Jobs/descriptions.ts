@@ -9,7 +9,9 @@ const descriptions: Record<string, string> = {
   label:
     "Labels managed items and configures Plex sharing so each user only sees the collections they're permitted to.",
   "label-undo":
-    "Removes the Tinkerbell labels and the matching Plex sharing restrictions applied by Apply Collection Restrictions.",
+    "Removes the Tinkerbell label from items and strips per-user labels from collections. Does not change sharing restrictions.",
+  "byw-remove":
+    "Tears down Because You Watched: deletes its collections from Plex and clears every shared user's sharing restrictions. Item-level Tinkerbell labels are left intact.",
   overlays: "Renders configured overlays onto poster artwork and uploads the composited posters to Plex.",
   "overlays-remove": "Restores original poster artwork by removing previously applied overlays.",
   "sync-recently-added": "Refreshes the cached “Recently Added” stats shown on the dashboard.",

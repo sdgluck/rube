@@ -9,6 +9,12 @@ export {
   getActiveRuns,
   getRecentRuns,
   updateJob,
+  installFeature,
+  uninstallFeature,
+  listFeatureCatalog,
+  FEATURE_TEMPLATES,
+  type FeatureTemplate,
+  type FeatureCatalogEntry,
 } from "./runner.ts";
 export {
   markStaleStressTestsAsFailed,

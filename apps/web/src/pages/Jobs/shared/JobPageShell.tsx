@@ -1,12 +1,13 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import useSwipeBack from "#hooks/useSwipeBack";
 import RelativeTime from "#components/RelativeTime";
+import ConfirmModal from "#components/ConfirmModal";
+import { useToast } from "#components/Toast";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { Job } from "#pages/Jobs/types";
 import { getJobDescription } from "#pages/Jobs/descriptions";
-import { getGroupForMember } from "#pages/Jobs/groups";
 import { getJobFields } from "#pages/Jobs/fields";
 import { useJobActions } from "./useJobActions";
 import { formatDuration } from "./formatDuration";
@@ -30,12 +31,17 @@ export default function JobPageShell({ job, actions, children }: Props) {
   const { isRunning, latestRun, start, starting, cancel, cancelling } = actions;
   const description = getJobDescription(job.id);
   const fields = getJobFields(job.id);
-
-  const membership = getGroupForMember(job.id);
-  const jobsList = trpc.jobs.list.useQuery(undefined, { enabled: !!membership });
-  const primary = membership ? jobsList.data?.find((j) => j.id === membership.group.primary) : undefined;
-  const primaryDisabled = !!membership && primary != null && !primary.enabled;
-  const runDisabledByGroup = !!membership && membership.member.requiresPrimary && primaryDisabled;
+  const { addToast } = useToast();
+  const utils = trpc.useUtils();
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const uninstallMutation = trpc.jobs.uninstall.useMutation({
+    onSuccess: () => {
+      utils.jobs.list.invalidate();
+      addToast(`${job.name} removed`, "success");
+      navigate("/jobs");
+    },
+    onError: (err) => addToast(err.message, "error"),
+  });
 
   const status = job.lastRunStatus;
   const lastDuration =
@@ -65,6 +71,16 @@ export default function JobPageShell({ job, actions, children }: Props) {
           {fields.enabled === "required" && <span className={styles.alwaysOnPill}>Always on</span>}
         </div>
         <div className={styles.jobDetailActions}>
+          {fields.kind === "feature" && (
+            <button
+              type="button"
+              className={`${styles.button} ${styles.buttonDanger}`}
+              onClick={() => setConfirmRemove(true)}
+              disabled={uninstallMutation.isPending}
+            >
+              Remove
+            </button>
+          )}
           {isRunning && latestRun && (
             <button
               className={`${styles.button} ${styles.buttonDanger}`}
@@ -74,12 +90,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
               Cancel
             </button>
           )}
-          <button
-            className={styles.button}
-            disabled={isRunning || starting || runDisabledByGroup}
-            onClick={start}
-            title={runDisabledByGroup ? `Enable ${membership?.group.primaryName} first` : undefined}
-          >
+          <button className={styles.button} disabled={isRunning || starting} onClick={start}>
             {isRunning ? "Running…" : "Run Now"}
           </button>
         </div>
@@ -87,23 +98,23 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
       {description && <p className={styles.jobDescription}>{description}</p>}
 
-      {membership && (
-        <div className={primaryDisabled ? styles.jobNoticeWarning : styles.jobNotice}>
-          <strong>Linked to {membership.group.primaryName}.</strong> {membership.member.summary}{" "}
-          {primaryDisabled && (
-            <>
-              {membership.member.requiresPrimary
-                ? `${membership.group.primaryName} is currently disabled — running this job now would have no effect.`
-                : `${membership.group.primaryName} is currently disabled.`}{" "}
-            </>
-          )}
-          <Link to={`/jobs/${membership.group.primary}`} className={styles.jobNoticeLink}>
-            Open {membership.group.primaryName} →
-          </Link>
-        </div>
-      )}
-
       {children}
+
+      {confirmRemove && (
+        <ConfirmModal
+          message={
+            job.id === "because-you-watched"
+              ? `Remove ${job.name}? This will delete its config, run history, and every Because You Watched collection from Plex, then clear every shared user's sharing restrictions. Item-level Tinkerbell labels are kept (use Settings → Maintenance to clear those).`
+              : `Remove ${job.name}? This will delete its config and run history. You can re-install it later from the Jobs page.`
+          }
+          confirmLabel="Remove"
+          onConfirm={() => {
+            setConfirmRemove(false);
+            uninstallMutation.mutate({ featureId: job.id });
+          }}
+          onCancel={() => setConfirmRemove(false)}
+        />
+      )}
     </div>
   );
 }

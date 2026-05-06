@@ -10,6 +10,9 @@ import {
   updateJob,
   startJob,
   cancelRun,
+  installFeature,
+  uninstallFeature,
+  listFeatureCatalog,
 } from "@tinkerbell/jobs";
 import { t, procedure } from "./_base.ts";
 
@@ -86,4 +89,24 @@ export const jobsRouter = t.router({
   }),
 
   bywCollections: procedure.query(() => getBywCollectionsGrouped()),
+
+  featureCatalog: procedure.query(() => listFeatureCatalog()),
+
+  install: t.procedure
+    .input(
+      z.object({
+        featureId: z.string(),
+        schedule: z.string().optional(),
+        config: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .mutation(({ input }) => {
+      installFeature(input.featureId, { schedule: input.schedule, config: input.config });
+      return { ok: true };
+    }),
+
+  uninstall: t.procedure.input(z.object({ featureId: z.string() })).mutation(async ({ input }) => {
+    await uninstallFeature(input.featureId);
+    return { ok: true };
+  }),
 });

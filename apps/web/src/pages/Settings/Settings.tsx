@@ -22,6 +22,7 @@ const SECTIONS: { heading: string; links: { to: string; label: string }[] }[] = 
     heading: "Tools",
     links: [
       { to: "/settings/migrate", label: "Migrate" },
+      { to: "/settings/maintenance", label: "Maintenance" },
       { to: "/settings/health", label: "Health" },
       { to: "/settings/stress-test", label: "Stress Test" },
     ],

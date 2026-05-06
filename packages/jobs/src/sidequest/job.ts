@@ -27,6 +27,7 @@ const VALID_COMMANDS = new Set([
   "sync-collections",
   "label",
   "label-undo",
+  "byw-remove",
   "sync-media",
   "overlays",
   "sync-users",

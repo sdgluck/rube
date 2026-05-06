@@ -1,9 +1,14 @@
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "@tinkerbell/core";
-import { errorMessage } from "@tinkerbell/core";
-import { getConfig } from "@tinkerbell/core";
+import { plexHealthCallback, getConfig } from "@tinkerbell/core";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
+/**
+ * Pure label hygiene: removes the `Tinkerbell` label from every item in the
+ * configured sections and strips `User:*` labels from any collection.
+ *
+ * Does NOT touch sharing restrictions — those are managed by the BYW
+ * lifecycle (the byw-remove job clears them on uninstall).
+ */
 export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
@@ -22,23 +27,19 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   ctx.log(`tinkerbell label-undo`);
   ctx.log(`Server: ${PLEX_URL}`);
 
-  let machineId: string;
   const identity = await client.getIdentity();
-  machineId = identity.machineIdentifier;
   ctx.log(`Server name: ${identity.friendlyName}`);
 
-  // Get configured library sections
   let sections = await client.getSections();
   const configuredLibraries = getConfig("global_plex_libraries");
   if (configuredLibraries) {
     sections = sections.filter((s) => configuredLibraries.includes(s.title));
   }
-
   if (config.sections && config.sections.length > 0) {
     sections = sections.filter((s) => config.sections!.includes(s.title));
   }
 
-  // Phase 1: Remove "Tinkerbell" label from all media items
+  // Phase 1: remove "Tinkerbell" label from all media items.
   ctx.log(`Removing "Tinkerbell" label from all media items...`);
   let totalUpdated = 0;
   for (const section of sections) {
@@ -51,7 +52,7 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   }
   ctx.log(`Total items unlabelled: ${totalUpdated}`);
 
-  // Phase 2: Remove "User:" labels from collections
+  // Phase 2: strip "User:" labels from collections.
   ctx.log(`Removing "User:" labels from collections...`);
   let collectionsUpdated = 0;
   for (const section of sections) {
@@ -68,36 +69,7 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   }
   ctx.log(`Removed User labels from ${collectionsUpdated} collection(s)`);
 
-  // Phase 3: Clear user sharing restrictions
-  ctx.log(`Fetching shared users from plex.tv...`);
-  const sharings = await client.getSharings(machineId);
-
-  if (sharings.length === 0) {
-    ctx.log(`No shared users found for this server.`);
-    ctx.log(`Done — removed labels from ${totalUpdated} item(s), no users to update.`);
-    return;
-  }
-
-  ctx.log(`Found ${sharings.length} shared user(s):`);
-  for (const sharing of sharings) {
-    ctx.log(`  ${sharing.username} (ID: ${sharing.userId})`);
-  }
-
-  let cleared = 0;
-  for (const sharing of sharings) {
-    ctx.progress(sharings.indexOf(sharing) + 1, sharings.length, `Clearing restrictions for "${sharing.username}"...`);
-    ctx.log(`Clearing restrictions for ${sharing.username}...`);
-
-    try {
-      await client.clearSharingRestrictions(sharing.id);
-      ctx.log(`Cleared sharing restrictions for ${sharing.username}`);
-      cleared++;
-    } catch (err) {
-      ctx.log(`Failed to clear restrictions for ${sharing.username}: ${errorMessage(err)}`);
-    }
-  }
-
   ctx.log(
-    `Done — removed labels from ${totalUpdated} item(s), removed User labels from ${collectionsUpdated} collection(s), cleared restrictions for ${cleared}/${sharings.length} user(s).`,
+    `Done — removed labels from ${totalUpdated} item(s) and User labels from ${collectionsUpdated} collection(s).`,
   );
 }

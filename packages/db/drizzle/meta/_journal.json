@@ -64,6 +64,13 @@
       "when": 1780100000000,
       "tag": "0008_rename_label_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1780200000000,
+      "tag": "0009_rename_label_undo",
+      "breakpoints": true
     }
   ]
 }

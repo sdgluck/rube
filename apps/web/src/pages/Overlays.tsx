@@ -3,6 +3,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "#lib/PosterCanvas";
 import ConfirmModal from "#components/ConfirmModal";
+import FeatureStatusBanner from "#components/FeatureStatusBanner";
 import { PageSkeleton } from "#components/Skeleton";
 import Spinner from "#components/Spinner";
 import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@tinkerbell/contracts";
@@ -576,6 +577,8 @@ export default function Overlays() {
           </h2>
         </div>
       </header>
+
+      <FeatureStatusBanner featureId="overlays" />
 
       {sections.length === 0 ? (
         <p>No movie or TV libraries found. Configure your Plex libraries in Settings.</p>

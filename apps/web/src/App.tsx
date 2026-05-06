@@ -29,6 +29,7 @@ const SettingsNotificationsSlack = lazy(() => import("#pages/Settings/Notificati
 const SettingsNotificationsTelegram = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsTelegram"));
 const SettingsNotificationsWebhook = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsWebhook"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
+const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
 const Collections = lazy(() => import("#pages/Collections"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const Rules = lazy(() => import("#pages/Rules"));
@@ -302,6 +303,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <SettingsHealth />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="maintenance"
+                  element={
+                    <LazyPage>
+                      <SettingsMaintenance />
                     </LazyPage>
                   }
                 />

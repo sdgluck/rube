@@ -13,23 +13,14 @@ import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
 
+// System + always-seeded background/escape-hatch jobs. Features are NOT here
+// — they're created on demand via installFeature(). See FEATURE_TEMPLATES.
 const DEFAULT_JOBS: Omit<Job, "config">[] = [
+  // ── System (infrastructure) ─────────────────────────────────────────────
   { id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "0 0 * * *", enabled: 1 },
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
-  {
-    id: "because-you-watched",
-    name: "Because You Watched",
-    command: "because-you-watched",
-    schedule: "0 2 * * *",
-    enabled: 1,
-  },
-  { id: "shuffle", name: "Shuffle Hubs", command: "shuffle", schedule: "*/30 * * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
-  { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
-  { id: "label-undo", name: "Clear Collection Restrictions", command: "label-undo", schedule: "", enabled: 1 },
-  { id: "overlays", name: "Apply Overlays", command: "overlays", schedule: "", enabled: 1 },
-  { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
   {
     id: "sync-recently-added",
     name: "Sync Recently Added",
@@ -53,6 +44,11 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     schedule: "0 4 * * 0",
     enabled: 1,
   },
+  // ── Background / escape-hatch (hidden from UI, invoked via Settings or BYW lifecycle) ──
+  { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
+  { id: "label-undo", name: "Clear Tinkerbell Labels", command: "label-undo", schedule: "", enabled: 1 },
+  { id: "byw-remove", name: "Remove Because You Watched", command: "byw-remove", schedule: "", enabled: 1 },
+  { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
   // No schedule — only ever triggered explicitly from Settings → Migrate.
   // One job covers all migration providers; the providerId is read from
   // `migration_pending_plan` at run time.
@@ -66,9 +62,46 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
 ];
 
 const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
-  "because-you-watched": { limit: 10 },
   "overlays-remove": { mode: "remove" },
 };
+
+// Features are user-installed. Templates describe defaults the install
+// mutation uses to create the row (or restore one whose config was wiped).
+export interface FeatureTemplate {
+  id: string;
+  name: string;
+  command: string;
+  defaultSchedule: string;
+  defaultConfig: Record<string, unknown>;
+}
+
+export const FEATURE_TEMPLATES: FeatureTemplate[] = [
+  {
+    id: "because-you-watched",
+    name: "Because You Watched",
+    command: "because-you-watched",
+    defaultSchedule: "0 2 * * *",
+    defaultConfig: { limit: 10 },
+  },
+  {
+    id: "shuffle",
+    name: "Shuffle Hubs",
+    command: "shuffle",
+    defaultSchedule: "*/30 * * * *",
+    defaultConfig: {},
+  },
+  {
+    id: "overlays",
+    name: "Apply Overlays",
+    command: "overlays",
+    defaultSchedule: "",
+    defaultConfig: {},
+  },
+];
+
+function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {
+  return FEATURE_TEMPLATES.find((f) => f.id === featureId);
+}
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -396,6 +429,90 @@ export function updateJob(
 
   // Reschedule cron
   scheduleCron(job);
+}
+
+export interface FeatureCatalogEntry {
+  id: string;
+  name: string;
+  installed: boolean;
+}
+
+export function listFeatureCatalog(): FeatureCatalogEntry[] {
+  const installedIds = new Set(
+    db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .all()
+      .map((r) => r.id),
+  );
+  return FEATURE_TEMPLATES.map((t) => ({ id: t.id, name: t.name, installed: installedIds.has(t.id) }));
+}
+
+export function installFeature(
+  featureId: string,
+  opts: { schedule?: string; config?: Record<string, unknown> } = {},
+): void {
+  const template = getFeatureTemplate(featureId);
+  if (!template) throw new Error(`Unknown feature "${featureId}"`);
+
+  const schedule = opts.schedule ?? template.defaultSchedule;
+  if (schedule) new Cron(schedule); // validate
+  const config = opts.config ?? template.defaultConfig;
+
+  const existing = db.select().from(jobs).where(eq(jobs.id, featureId)).get();
+  if (existing) {
+    db.update(jobs).set({ schedule, enabled: 1, config }).where(eq(jobs.id, featureId)).run();
+  } else {
+    db.insert(jobs)
+      .values({
+        id: template.id,
+        name: template.name,
+        command: template.command,
+        schedule,
+        enabled: 1,
+        config,
+      })
+      .run();
+  }
+
+  scheduleCron({ id: template.id, name: template.name, enabled: 1, schedule });
+}
+
+export async function uninstallFeature(featureId: string): Promise<void> {
+  const template = getFeatureTemplate(featureId);
+  if (!template) throw new Error(`Unknown feature "${featureId}"`);
+
+  // Stop any cron schedule first.
+  const cron = cronJobs.get(featureId);
+  if (cron) {
+    cron.stop();
+    cronJobs.delete(featureId);
+  }
+
+  // Delete run history then the row itself (FK constraint).
+  db.delete(jobRuns).where(eq(jobRuns.jobId, featureId)).run();
+  db.delete(jobs).where(eq(jobs.id, featureId)).run();
+
+  // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
+  // collections on the Plex server — fire byw-remove so removing the feature
+  // actually undoes those side-effects. Item-level Tinkerbell labels are NOT
+  // touched here; users can clean those up via Settings → Maintenance.
+  if (featureId === "because-you-watched") {
+    // Cancel any in-flight BYW run first so we don't race with the cleanup.
+    const active = db
+      .select({ id: jobRuns.id })
+      .from(jobRuns)
+      .where(and(eq(jobRuns.jobId, "because-you-watched"), eq(jobRuns.status, "running")))
+      .all();
+    for (const run of active) {
+      cancelRun(run.id);
+    }
+    try {
+      await startJob("byw-remove");
+    } catch (err) {
+      console.error(`[jobs] BYW uninstall: failed to start byw-remove:`, err);
+    }
+  }
 }
 
 export async function initJobs(): Promise<void> {

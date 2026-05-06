@@ -1,8 +1,18 @@
 /**
- * Per-job declaration of which standard config fields apply.
- * Default (omitted entries) is `{}` — no Sections, schedule editable, enabled toggleable.
+ * Per-job declaration of which standard config fields apply,
+ * plus its classification in the Jobs UI.
+ *
+ * Default (omitted entries) is `kind: "feature"` with no Sections,
+ * schedule editable, enabled toggleable.
  */
 export interface JobFieldsConfig {
+  /**
+   * UI classification:
+   *  - "system" → infrastructure (always installed, locked toggle), shown in System Tasks.
+   *  - "feature" → user-opt-in capability, shown in Features section.
+   *  - "hidden" → not rendered in the Jobs index (still reachable by direct URL).
+   */
+  kind?: "system" | "feature" | "hidden";
   /** "hidden" hides the row entirely. Default: editable. */
   schedule?: "editable" | "hidden";
   /** "required" pins the job to always-on (no toggle, row hidden). Default: toggleable. */
@@ -12,16 +22,31 @@ export interface JobFieldsConfig {
 }
 
 const fields: Record<string, JobFieldsConfig> = {
-  "sync-media": { sections: true },
-  "sync-collections": { sections: true },
-  generate: { sections: true },
-  "because-you-watched": { sections: true },
-  label: { sections: true },
-  "label-undo": { sections: true },
-  overlays: { sections: true },
-  "overlays-remove": { sections: true },
-  "posters-refresh": { sections: true },
-  healthcheck: { enabled: "required" },
+  // ── System tasks ─────────────────────────────────────────────────────────
+  "sync-media": { kind: "system", enabled: "required", sections: true },
+  "sync-collections": { kind: "system", enabled: "required", sections: true },
+  "sync-users": { kind: "system", enabled: "required" },
+  "sync-recently-added": { kind: "system", enabled: "required" },
+  "sync-most-watched": { kind: "system", enabled: "required" },
+  "purge-runs": { kind: "system", enabled: "required" },
+  "posters-refresh": { kind: "system", enabled: "required", sections: true },
+  generate: { kind: "system", enabled: "required", sections: true },
+  healthcheck: { kind: "system", enabled: "required" },
+
+  // ── Features (opt-in) ────────────────────────────────────────────────────
+  "because-you-watched": { kind: "feature", sections: true },
+  shuffle: { kind: "feature" },
+  overlays: { kind: "feature", sections: true },
+
+  // ── Hidden from the index (background / one-shot / settings-driven) ──────
+  // Apply Sharing Restrictions runs behind the scenes alongside BYW; users
+  // shouldn't toggle it. Clear / Remove variants will surface as Settings
+  // escape hatches in a later phase. Migrate Collections is driven from Settings.
+  label: { kind: "hidden", enabled: "required", sections: true },
+  "label-undo": { kind: "hidden", sections: true },
+  "byw-remove": { kind: "hidden", enabled: "required", sections: true },
+  "overlays-remove": { kind: "hidden", sections: true },
+  "migrate-collections": { kind: "hidden" },
 };
 
 const DEFAULTS: JobFieldsConfig = {};
@@ -29,6 +54,7 @@ const DEFAULTS: JobFieldsConfig = {};
 export function getJobFields(jobId: string): Required<JobFieldsConfig> {
   const cfg = fields[jobId] ?? DEFAULTS;
   return {
+    kind: cfg.kind ?? "feature",
     schedule: cfg.schedule ?? "editable",
     enabled: cfg.enabled ?? "toggleable",
     sections: cfg.sections ?? false,
