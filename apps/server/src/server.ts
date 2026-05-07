@@ -152,17 +152,29 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   await serveStatic(res, join(DIST_DIR, "index.html"));
 });
 
-server.listen(PORT, () => {
-  console.log(`Tinkerbell admin server listening on port ${PORT} (https://api.tinkerbell.localhost)`);
+async function main() {
+  // Finish boot before we accept any traffic. If init fails we want clean
+  // "connection refused" rather than half-initialised tRPC handlers, and a
+  // crash should happen before the port opens.
   try {
     ensureBuiltInPresets();
   } catch (err) {
     console.error("[overlays] failed to seed built-in presets:", err);
   }
-  initJobs().catch((err) => {
+  try {
+    await initJobs();
+  } catch (err) {
     console.error("[jobs] Init failed:", err);
     process.exit(1);
+  }
+  server.listen(PORT, () => {
+    console.log(`Tinkerbell admin server listening on port ${PORT} (https://api.tinkerbell.localhost)`);
   });
+}
+
+main().catch((err) => {
+  console.error("[boot] Unhandled error during startup:", err);
+  process.exit(1);
 });
 
 async function shutdown() {
