@@ -48,7 +48,7 @@ export const jobsRouter = t.router({
   list: procedure.query(() => getJobs()),
 
   runs: t.procedure
-    .input(z.object({ jobId: z.string(), limit: z.number().optional() }))
+    .input(z.object({ jobId: z.string(), limit: z.number().int().min(1).max(500).optional() }))
     .query(({ input }) => getJobRuns(input.jobId, input.limit)),
 
   run: procedure.input(z.object({ runId: z.string() })).query(({ input }) => {

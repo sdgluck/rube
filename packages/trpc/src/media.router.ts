@@ -3,16 +3,15 @@ import { getConfig, setConfig } from "@tinkerbell/core";
 import { getLocalMediaItems } from "@tinkerbell/domain.media";
 import { getCollectionsForItem } from "@tinkerbell/domain.collections";
 import { t, procedure, getPlexClient } from "./_base.ts";
+import { paginationInput } from "./_pagination.ts";
 
 export const mediaRouter = t.router({
   list: t.procedure
     .input(
-      z.object({
+      paginationInput.extend({
         sectionId: z.string().optional(),
         type: z.string().optional(),
         search: z.string().optional(),
-        offset: z.number().default(0),
-        limit: z.number().default(50),
         videoResolution: z.string().optional(),
         videoCodec: z.string().optional(),
         audioCodec: z.string().optional(),

@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { syncUsers, getLocalUsers, updateUser } from "@tinkerbell/domain.users";
 import { t, getPlexClient } from "./_base.ts";
+import { paginationInput } from "./_pagination.ts";
 
 export const usersRouter = t.router({
   list: t.procedure
     .input(
-      z.object({
+      paginationInput.extend({
         search: z.string().optional(),
-        offset: z.number().default(0),
-        limit: z.number().default(50),
         sort: z.string().optional(),
         sortDir: z.enum(["asc", "desc"]).default("asc"),
       }),

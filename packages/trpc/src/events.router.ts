@@ -1,13 +1,12 @@
 import { z } from "zod";
 import { getEvents, getEventTypes } from "@tinkerbell/domain.events";
 import { t, procedure } from "./_base.ts";
+import { paginationInput } from "./_pagination.ts";
 
 export const eventsRouter = t.router({
   list: t.procedure
     .input(
-      z.object({
-        limit: z.number().default(50),
-        offset: z.number().default(0),
+      paginationInput.extend({
         type: z.string().optional(),
         search: z.string().optional(),
         sort: z.string().optional(),
