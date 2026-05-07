@@ -46,8 +46,9 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
   ctx.log(`Syncing collections...`);
 
-  ctx.progress(1, 1, `Syncing ${sections.length} section(s)...`);
-  const stats = await syncCollections(client, sections);
+  const stats = await syncCollections(client, sections, (current, total, message) => {
+    ctx.progress(current, total, message);
+  });
 
   ctx.log(`Done! Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);
 }

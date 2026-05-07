@@ -89,14 +89,25 @@ export function getCollectionsForItem(itemRatingKey: string): CollectionRow[] {
     .all();
 }
 
-export async function syncCollections(client: PlexClient, sections: PlexSection[]): Promise<SyncStats> {
+export async function syncCollections(
+  client: PlexClient,
+  sections: PlexSection[],
+  onProgress?: (current: number, total: number, message: string) => void,
+): Promise<SyncStats> {
   const now = Date.now();
 
   let synced = 0;
 
+  const sectionCollections: Array<{ section: PlexSection; colls: Awaited<ReturnType<PlexClient["getCollections"]>> }> =
+    [];
   for (const section of sections) {
     const colls = await client.getCollections(section.key);
+    sectionCollections.push({ section, colls });
+  }
+  const total = sectionCollections.reduce((sum, s) => sum + s.colls.length, 0);
+  onProgress?.(0, total, `Syncing ${total} collection(s) across ${sections.length} section(s)...`);
 
+  for (const { section, colls } of sectionCollections) {
     for (const col of colls) {
       const detail = await client.getCollectionDetail(col.ratingKey);
 
@@ -143,6 +154,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
       }
 
       synced++;
+      onProgress?.(synced, total, `Synced ${detail.title}`);
     }
   }
 
