@@ -62,6 +62,9 @@ export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptio
     try {
       return JSON.parse(text);
     } catch {
+      // Some Plex endpoints return XML even when we ask for JSON
+      // (e.g. legacy /sharing); callers tolerate `null` by treating it as
+      // "no parsed payload" and falling back to status-only behaviour.
       return null;
     }
   }

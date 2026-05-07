@@ -15,18 +15,25 @@ const CONTROL_CHARS = new RegExp("[\\u0000-\\u001f]", "g");
 export function parseAiCollections(text: string): AiCollection[] {
   try {
     return JSON.parse(text) as AiCollection[];
-  } catch {}
+  } catch {
+    // Strict parse failed; fall through to the bracket-extraction path.
+  }
 
   const match = text.match(/\[[\s\S]*\]/);
   if (match) {
     try {
       return JSON.parse(match[0]) as AiCollection[];
-    } catch {}
+    } catch {
+      // Extracted-array parse failed; fall through to the cleaned variant.
+    }
 
     const cleaned = match[0].replace(/,\s*([}\]])/g, "$1").replace(CONTROL_CHARS, " ");
     try {
       return JSON.parse(cleaned) as AiCollection[];
-    } catch {}
+    } catch {
+      // Cleaned parse also failed; fall through to the throw below so the
+      // caller logs the raw text.
+    }
   }
 
   throw new Error(`Failed to parse AI response as JSON:\n${text}`);

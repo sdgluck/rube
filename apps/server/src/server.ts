@@ -42,6 +42,9 @@ async function serveStatic(res: ServerResponse, filePath: string): Promise<boole
     res.end(content);
     return true;
   } catch {
+    // ENOENT, EACCES, EISDIR — caller treats `false` as "didn't serve" and
+    // falls back to the SPA index. Headers haven't been written yet when
+    // we hit this path so the fallback can still write a 200.
     return false;
   }
 }

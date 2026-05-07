@@ -340,29 +340,43 @@ ${itemList}`;
   return result.data;
 }
 
+/**
+ * Best-effort JSON extraction for LLM responses. Tries strict parse, then
+ * the first bracketed object, then a cleaned variant (no trailing commas /
+ * control chars), then the first bracketed array. Returns null when none
+ * succeed; each catch is an intentional "try the next fallback".
+ */
 function extractJSON(text: string): unknown {
   try {
     return JSON.parse(text);
-  } catch {}
+  } catch {
+    // fall through to bracketed-object extraction
+  }
 
   const objMatch = text.match(/\{[\s\S]*\}/);
   if (objMatch) {
     try {
       return JSON.parse(objMatch[0]);
-    } catch {}
+    } catch {
+      // fall through to cleaned variant
+    }
 
     // eslint-disable-next-line no-control-regex
     const cleaned = objMatch[0].replace(/,\s*([}\]])/g, "$1").replace(/[\u0000-\u001f]/g, " ");
     try {
       return JSON.parse(cleaned);
-    } catch {}
+    } catch {
+      // fall through to bracketed-array extraction
+    }
   }
 
   const arrMatch = text.match(/\[[\s\S]*\]/);
   if (arrMatch) {
     try {
       return JSON.parse(arrMatch[0]);
-    } catch {}
+    } catch {
+      // exhausted fallbacks; caller treats `null` as "couldn't parse"
+    }
   }
 
   return null;

@@ -362,6 +362,8 @@ export default function Rules() {
         await runRule(id);
         okCount++;
       } catch {
+        // Per-rule failure is non-fatal — keep running the rest of the
+        // selection. The aggregate counts surface in the toast below.
         errCount++;
       }
     }
@@ -370,12 +372,20 @@ export default function Rules() {
 
   async function handleBulkTest() {
     const ids = Array.from(selected);
+    let okCount = 0;
+    let errCount = 0;
     for (const id of ids) {
       try {
         await testRule(id);
+        okCount++;
       } catch {
-        // continue
+        // Per-rule failure is non-fatal — keep running the rest of the
+        // selection. Aggregate counts surface in the toast below.
+        errCount++;
       }
+    }
+    if (errCount > 0) {
+      addToast(`Bulk test — ${okCount} ok, ${errCount} failed`, "error");
     }
     addToast(`Tested ${ids.length} rule${ids.length !== 1 ? "s" : ""}`, "info");
   }
