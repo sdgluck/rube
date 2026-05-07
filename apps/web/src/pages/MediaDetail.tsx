@@ -287,13 +287,9 @@ export default function MediaDetail() {
               <ul className={mediaStyles.collectionList}>
                 {item.collections.map((col) => (
                   <li key={col.ratingKey} className={mediaStyles.collectionItem}>
-                    {col.isLocal ? (
-                      <Link to={`/collections/${col.ratingKey}`} className={mediaStyles.collectionLink}>
-                        {col.title}
-                      </Link>
-                    ) : (
-                      <span>{col.title}</span>
-                    )}
+                    <Link to={`/collections/${col.ratingKey}`} className={mediaStyles.collectionLink}>
+                      {col.title}
+                    </Link>
                     {col.sectionTitle && <span className={mediaStyles.collectionSection}>{col.sectionTitle}</span>}
                   </li>
                 ))}
