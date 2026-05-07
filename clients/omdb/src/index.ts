@@ -35,9 +35,16 @@ export function createOmdbClient(opts: OmdbClientOptions) {
 
     if (!apiKey) return null;
 
+    // OMDb only supports key-as-query-param. We don't have the option to move it
+    // to a header, so make sure the URL never appears in error messages —
+    // `errorMessage()` already returns just the message string (no cause chain
+    // with URL), and we only log status codes on non-ok responses.
+    const url = new URL("https://www.omdbapi.com/");
+    url.searchParams.set("i", imdbId);
+    url.searchParams.set("apikey", apiKey);
     let res: Response;
     try {
-      res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`);
+      res = await fetch(url);
     } catch (err) {
       onHealth?.("error", errorMessage(err));
       return null;

@@ -2,9 +2,10 @@
  * Minimal TMDb client. Used for popular-people, franchise-collection, and
  * grouped-rule (studios/networks/genres/...) lookups.
  *
- * Auth: TMDb supports both v3 API key (?api_key=...) and v4 read-access bearer
- * tokens. We accept the v3 key form to match the rest of Tinkerbell's API-key
- * config style.
+ * Auth: TMDb's /3 endpoints accept the API key as either `?api_key=…` or
+ * `Authorization: Bearer …`. We use the header form so the key never lands
+ * in HTTP access logs / proxy logs / browser history. Both v3 (32-hex) keys
+ * and v4 read-access tokens work over Bearer.
  *
  * Validation: all responses pass through Zod parsers. The API has a habit of
  * returning unexpected nulls and occasionally adding fields, so we declare
@@ -201,10 +202,12 @@ async function tmdbFetch<S extends z.ZodTypeAny>(
   params: Record<string, string> = {},
 ): Promise<z.infer<S>> {
   const url = new URL(`${BASE}${path}`);
-  url.searchParams.set("api_key", cfg.apiKey);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = await fetch(url.toString(), {
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${cfg.apiKey}`,
+    },
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) {

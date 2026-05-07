@@ -149,7 +149,10 @@ export const appRouter = t.router({
   testOmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
     const api_key = unredact(input.api_key, "global_omdb_api_key");
     try {
-      const res = await fetch(`https://www.omdbapi.com/?apikey=${encodeURIComponent(api_key)}&t=Inception`, {
+      const omdbUrl = new URL("https://www.omdbapi.com/");
+      omdbUrl.searchParams.set("apikey", api_key);
+      omdbUrl.searchParams.set("t", "Inception");
+      const res = await fetch(omdbUrl, {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -166,7 +169,9 @@ export const appRouter = t.router({
   testMdblist: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
     const api_key = unredact(input.api_key, "global_mdblist_api_key");
     try {
-      const res = await fetch(`https://mdblist.com/api/user/?apikey=${encodeURIComponent(api_key)}`, {
+      const mdblistUrl = new URL("https://mdblist.com/api/user/");
+      mdblistUrl.searchParams.set("apikey", api_key);
+      const res = await fetch(mdblistUrl, {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);

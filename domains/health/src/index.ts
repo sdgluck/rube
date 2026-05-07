@@ -73,7 +73,10 @@ export async function checkServiceHealth(service: string): Promise<void> {
     }
     case "OMDB": {
       if (!cfg.global_omdb_api_key) throw new Error("Not configured");
-      const res = await fetch(`https://www.omdbapi.com/?apikey=${cfg.global_omdb_api_key}&t=test`, {
+      const omdbUrl = new URL("https://www.omdbapi.com/");
+      omdbUrl.searchParams.set("apikey", cfg.global_omdb_api_key);
+      omdbUrl.searchParams.set("t", "test");
+      const res = await fetch(omdbUrl, {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -117,7 +120,9 @@ export async function checkServiceHealth(service: string): Promise<void> {
     }
     case "MDBList": {
       if (!cfg.global_mdblist_api_key) throw new Error("Not configured");
-      const res = await fetch(`https://mdblist.com/api/user/?apikey=${cfg.global_mdblist_api_key}`, {
+      const mdblistUrl = new URL("https://mdblist.com/api/user/");
+      mdblistUrl.searchParams.set("apikey", cfg.global_mdblist_api_key);
+      const res = await fetch(mdblistUrl, {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
