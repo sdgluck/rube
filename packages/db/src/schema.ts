@@ -1,9 +1,51 @@
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-// NOTE: FTS5 virtual tables (`*_fts`) and their triggers live in
-// drizzle/0004_fts_search.sql and are NOT represented in this file.
-// drizzle-kit generate will not produce them — hand-audit any generated
-// migration that touches search-related tables before applying.
+// ─────────────────────────────────────────────────────────────────────────────
+// FTS5 coupling
+//
+// The base tables below have a corresponding `<name>_fts` virtual table plus
+// AFTER INSERT/DELETE/UPDATE triggers defined in
+// `drizzle/0004_fts_search.sql`. Drizzle does not model FTS5 virtual tables,
+// so they live ONLY in that hand-written migration:
+//
+//   collections      → collections_fts
+//   media_items      → media_items_fts
+//   rules            → rules_fts
+//   jobs             → jobs_fts
+//   overlay_presets  → overlay_presets_fts
+//   events           → events_fts
+//   plex_users       → plex_users_fts
+//   plex_sections    → plex_sections_fts
+//
+// Rules for changes:
+//
+//  • If you add or rename a column on any of the above tables that is also
+//    indexed by its FTS variant (title/summary/labels/section_title etc.),
+//    write a NEW migration that drops + recreates the FTS table and triggers.
+//    `drizzle-kit generate` will NOT do this for you.
+//
+//  • If you add a NEW table that needs full-text search, declare it here and
+//    write a migration that mirrors the pattern in 0004 (CREATE VIRTUAL TABLE,
+//    seed via INSERT … SELECT, then 3 triggers).
+//
+//  • Always hand-audit any auto-generated migration that touches the tables
+//    listed above before applying — drizzle-kit may suggest column changes
+//    that silently break the FTS triggers' column lists.
+//
+// The `FTS_TABLES` constant below is exported for any job/migration tooling
+// that wants to rebuild indexes wholesale (e.g. after a schema migration).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const FTS_TABLES = [
+  { base: "collections", fts: "collections_fts" },
+  { base: "media_items", fts: "media_items_fts" },
+  { base: "rules", fts: "rules_fts" },
+  { base: "jobs", fts: "jobs_fts" },
+  { base: "overlay_presets", fts: "overlay_presets_fts" },
+  { base: "events", fts: "events_fts" },
+  { base: "plex_users", fts: "plex_users_fts" },
+  { base: "plex_sections", fts: "plex_sections_fts" },
+] as const;
 
 interface StressTestConfigShape {
   mode: "transcode" | "directplay" | "mixed";
