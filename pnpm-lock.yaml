@@ -38,6 +38,9 @@ importers:
       '@tinkerbell/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
+      '@tinkerbell/domain.migration':
+        specifier: workspace:*
+        version: link:../../domains/migration
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
@@ -232,12 +235,12 @@ importers:
 
   domains/collections:
     dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.migration':
-        specifier: workspace:*
-        version: link:../migration
       '@tinkerbell/plex':
         specifier: workspace:*
         version: link:../../clients/plex

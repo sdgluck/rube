@@ -14,8 +14,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/domain.migration": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },

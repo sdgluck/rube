@@ -4,8 +4,8 @@
 
 import { eq, and, or, like, asc, desc, lt, sql, inArray, type InferSelectModel } from "drizzle-orm";
 import { db, collections, collectionItems } from "@tinkerbell/db";
+import { runPostCollectionSyncHook } from "@tinkerbell/core";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { scanAllProviders } from "@tinkerbell/domain.migration";
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 
@@ -170,9 +170,9 @@ export async function syncCollections(
 
   // Refresh every migration provider's scan so the banner / Settings →
   // Migrate page reflects the freshly-synced state without an explicit
-  // refetch. Per-provider failures are swallowed inside scanAllProviders;
-  // API-backed providers (MDBList, Trakt) opt out of this auto-scan path.
-  await scanAllProviders();
+  // refetch. Wired via a core hook (registered by `domains/migration` at
+  // startup) so this domain doesn't have to import the migration domain.
+  await runPostCollectionSyncHook();
 
   return { synced, removed };
 }

@@ -4,12 +4,17 @@ import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
-import { getConfig, setHealthReporter } from "@tinkerbell/core";
+import { getConfig, setHealthReporter, setPostCollectionSyncHook } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
 import { reportHealth } from "@tinkerbell/domain.health";
+import { scanAllProviders } from "@tinkerbell/domain.migration";
 import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
 
 setHealthReporter(reportHealth);
+// `domains/collections` calls this at the end of `syncCollections`.
+// Wired here at boot so the collections domain doesn't have to import
+// the migration domain (avoiding the near-cycle the audit flagged).
+setPostCollectionSyncHook(scanAllProviders);
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
