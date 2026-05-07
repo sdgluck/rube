@@ -50,6 +50,18 @@ export const collections = sqliteTable(
   (table) => [index("idx_collections_section").on(table.sectionId)],
 );
 
+export const collectionItems = sqliteTable(
+  "collection_items",
+  {
+    collectionRatingKey: text("collection_rating_key").notNull(),
+    itemRatingKey: text("item_rating_key").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_collection_items_pk").on(table.collectionRatingKey, table.itemRatingKey),
+    index("idx_collection_items_item").on(table.itemRatingKey),
+  ],
+);
+
 export const jobs = sqliteTable("jobs", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

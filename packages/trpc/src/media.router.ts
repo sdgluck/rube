@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getConfig, setConfig } from "@tinkerbell/core";
 import { getLocalMediaItems } from "@tinkerbell/domain.media";
-import { getLocalCollection } from "@tinkerbell/domain.collections";
+import { getCollectionsForItem } from "@tinkerbell/domain.collections";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
 export const mediaRouter = t.router({
@@ -43,17 +43,14 @@ export const mediaRouter = t.router({
     const client = getPlexClient();
     const detail = await client.getItemDetail(input.ratingKey);
 
-    const enrichedCollections = detail.collections.flatMap((col) => {
-      const local = getLocalCollection(String(col.id));
-      if (!local) return [];
-      return [
-        {
-          ratingKey: String(col.id),
-          title: col.tag,
-          sectionTitle: local.sectionTitle,
-        },
-      ];
-    });
+    // Use the local membership index instead of the Plex item's `Collection`
+    // refs: the latter only covers static collections, while the index also
+    // captures smart-collection membership (populated during sync).
+    const enrichedCollections = getCollectionsForItem(input.ratingKey).map((row) => ({
+      ratingKey: row.plexRatingKey,
+      title: row.title,
+      sectionTitle: row.sectionTitle,
+    }));
 
     return {
       ...detail,

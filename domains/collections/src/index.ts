@@ -2,8 +2,8 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import { eq, and, or, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
-import { db, collections } from "@tinkerbell/db";
+import { eq, and, or, like, asc, desc, lt, sql, inArray, type InferSelectModel } from "drizzle-orm";
+import { db, collections, collectionItems } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { scanAllProviders } from "@tinkerbell/domain.migration";
 
@@ -54,6 +54,39 @@ export async function upsertCollectionByKey(
     syncedAt: now,
   };
   db.insert(collections).values(values).onConflictDoUpdate({ target: collections.plexRatingKey, set: values }).run();
+  await syncCollectionMembership(client, ratingKey);
+}
+
+async function syncCollectionMembership(client: PlexClient, collectionRatingKey: string): Promise<void> {
+  const children = await client.getCollectionChildren(collectionRatingKey);
+  db.transaction((tx) => {
+    tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, collectionRatingKey)).run();
+    if (children.length > 0) {
+      tx.insert(collectionItems)
+        .values(children.map((c) => ({ collectionRatingKey, itemRatingKey: c.ratingKey })))
+        .run();
+    }
+  });
+}
+
+/** Returns the collections (local rows) that contain the given media item. */
+export function getCollectionsForItem(itemRatingKey: string): CollectionRow[] {
+  const memberships = db
+    .select({ key: collectionItems.collectionRatingKey })
+    .from(collectionItems)
+    .where(eq(collectionItems.itemRatingKey, itemRatingKey))
+    .all();
+  if (memberships.length === 0) return [];
+  return db
+    .select()
+    .from(collections)
+    .where(
+      inArray(
+        collections.plexRatingKey,
+        memberships.map((m) => m.key),
+      ),
+    )
+    .all();
 }
 
 export async function syncCollections(client: PlexClient, sections: PlexSection[]): Promise<SyncStats> {
@@ -100,6 +133,15 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
           },
         })
         .run();
+
+      try {
+        await syncCollectionMembership(client, col.ratingKey);
+      } catch {
+        // Membership refresh is best-effort — a single Plex error here
+        // shouldn't fail the whole sync. Leaves the prior membership rows
+        // (or none) in place for this collection.
+      }
+
       synced++;
     }
   }
@@ -108,6 +150,11 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
   // concurrent inserts between SELECT and DELETE.
   const result = db.delete(collections).where(lt(collections.syncedAt, now)).run();
   const removed = Number(result.changes ?? 0);
+
+  // Drop membership rows for collections that no longer exist locally.
+  db.run(
+    sql`DELETE FROM ${collectionItems} WHERE ${collectionItems.collectionRatingKey} NOT IN (SELECT ${collections.plexRatingKey} FROM ${collections})`,
+  );
 
   // Refresh every migration provider's scan so the banner / Settings →
   // Migrate page reflects the freshly-synced state without an explicit
@@ -222,5 +269,8 @@ export async function updateCollectionLabels(client: PlexClient, ratingKey: stri
 
 export async function deleteCollection(client: PlexClient, ratingKey: string): Promise<void> {
   await client.deleteItem(ratingKey);
-  db.delete(collections).where(eq(collections.plexRatingKey, ratingKey)).run();
+  db.transaction((tx) => {
+    tx.delete(collections).where(eq(collections.plexRatingKey, ratingKey)).run();
+    tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, ratingKey)).run();
+  });
 }
