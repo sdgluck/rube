@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { httpRequest, HttpError } from "@tinkerbell/http";
 
 const BASE = "https://api.themoviedb.org/3";
 
@@ -203,16 +204,21 @@ async function tmdbFetch<S extends z.ZodTypeAny>(
 ): Promise<z.infer<S>> {
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url.toString(), {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${cfg.apiKey}`,
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`TMDb ${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 200)}` : ""}`);
+  let res: Response;
+  try {
+    res = await httpRequest({
+      url,
+      timeoutMs: 15_000,
+      init: {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${cfg.apiKey}`,
+        },
+      },
+    });
+  } catch (err) {
+    if (err instanceof HttpError) throw new Error(`TMDb ${err.message}`);
+    throw err;
   }
   const json = await res.json();
   const parsed = schema.safeParse(json);

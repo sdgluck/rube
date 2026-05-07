@@ -135,6 +135,10 @@ importers:
         version: 6.4.2(@types/node@25.6.0)(tsx@4.21.0)(yaml@2.8.4)
 
   clients/arr:
+    dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -198,6 +202,10 @@ importers:
         version: 5.9.3
 
   clients/seerr:
+    dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -208,6 +216,9 @@ importers:
 
   clients/tmdb:
     dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       zod:
         specifier: ^4.3.6
         version: 4.4.2

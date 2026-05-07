@@ -1,3 +1,5 @@
+import { httpRequest, HttpError } from "@tinkerbell/http";
+
 export type ArrService = "radarr" | "sonarr";
 
 export interface ArrConfig {
@@ -39,22 +41,28 @@ export interface ArrAddResult {
 
 async function arrFetch(cfg: ArrConfig, path: string, init?: RequestInit): Promise<unknown> {
   const url = new URL(path, cfg.url);
-  const res = await fetch(url.toString(), {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Api-Key": cfg.apiKey,
-      ...init?.headers,
-    },
-    signal: init?.signal ?? AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`${cfg.service} ${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 200)}` : ""}`);
+  try {
+    const res = await httpRequest({
+      url,
+      timeoutMs: 15_000,
+      init: {
+        ...init,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Api-Key": cfg.apiKey,
+          ...init?.headers,
+        },
+      },
+    });
+    if (res.status === 204) return null;
+    return await res.json();
+  } catch (err) {
+    if (err instanceof HttpError) {
+      throw new Error(`${cfg.service} ${err.message}`);
+    }
+    throw err;
   }
-  if (res.status === 204) return null;
-  return res.json();
 }
 
 export async function getQualityProfiles(cfg: ArrConfig): Promise<QualityProfile[]> {
@@ -125,6 +133,9 @@ export async function addItem(cfg: ArrConfig, lookup: ArrLookupResult, opts: Add
   };
 
   const url = new URL(path, cfg.url);
+  // `addItem` does its own status branching so we use raw fetch here rather
+  // than `httpRequest` (which would throw on the 400-already-exists path
+  // we want to translate into `status: "exists"`).
   const res = await fetch(url.toString(), {
     method: "POST",
     headers: {
@@ -133,7 +144,7 @@ export async function addItem(cfg: ArrConfig, lookup: ArrLookupResult, opts: Add
       "X-Api-Key": cfg.apiKey,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(20_000),
   });
 
   if (res.ok) {

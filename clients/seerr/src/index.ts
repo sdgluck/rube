@@ -1,3 +1,5 @@
+import { httpRequest, HttpError } from "@tinkerbell/http";
+
 export interface SeerrRequest {
   id: number;
   media: {
@@ -61,11 +63,17 @@ export async function* iterSeerrRequests(opts: {
       reqUrl.searchParams.set("filter", filter);
     }
 
-    const res = await fetch(reqUrl.toString(), {
-      headers: { "X-Api-Key": apiKey, Accept: "application/json" },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) throw new Error(`Seerr API error: ${res.status} ${res.statusText}`);
+    let res: Response;
+    try {
+      res = await httpRequest({
+        url: reqUrl,
+        timeoutMs: 15_000,
+        init: { headers: { "X-Api-Key": apiKey, Accept: "application/json" } },
+      });
+    } catch (err) {
+      if (err instanceof HttpError) throw new Error(`Seerr API error: ${err.message}`);
+      throw err;
+    }
 
     const data: SeerrRequestResponse = await res.json();
     for (const r of data.results) yield r;
@@ -81,11 +89,17 @@ export async function testSeerrConnection(
   apiKey: string,
 ): Promise<{ total: number; movie: number; tv: number }> {
   const reqUrl = new URL("/api/v1/request/count", url);
-  const res = await fetch(reqUrl.toString(), {
-    headers: { "X-Api-Key": apiKey, Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error(`Seerr API error: ${res.status} ${res.statusText}`);
+  let res: Response;
+  try {
+    res = await httpRequest({
+      url: reqUrl,
+      timeoutMs: 10_000,
+      init: { headers: { "X-Api-Key": apiKey, Accept: "application/json" } },
+    });
+  } catch (err) {
+    if (err instanceof HttpError) throw new Error(`Seerr API error: ${err.message}`);
+    throw err;
+  }
   const data = await res.json();
   return { total: data.total ?? 0, movie: data.movie ?? 0, tv: data.tv ?? 0 };
 }

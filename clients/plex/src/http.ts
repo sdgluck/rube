@@ -1,17 +1,5 @@
+import { httpRequest, HttpError } from "@tinkerbell/http";
 import type { PlexClientOptions, PlexHealthCallback, RequestOptions } from "./types.ts";
-
-const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 1000;
-const MAX_DELAY_MS = 10_000;
-
-function retryDelay(attempt: number): number {
-  return Math.min(BASE_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -28,58 +16,53 @@ export interface PlexHttp {
   requestRaw: (path: string, opts?: RequestOptions) => Promise<Response>;
 }
 
+const PLEX_HEADERS = {
+  "X-Plex-Client-Identifier": "tinkerbell",
+  "X-Plex-Product": "tinkerbell",
+  "X-Plex-Version": "1.0.0",
+};
+
 export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptions): PlexHttp {
-  async function request(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
+  function buildUrl(path: string, params: RequestOptions["params"]): URL {
     const reqUrl = new URL(path, url);
     reqUrl.searchParams.set("X-Plex-Token", token);
-    for (const [k, v] of Object.entries(params)) {
+    for (const [k, v] of Object.entries(params ?? {})) {
       if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
     }
+    return reqUrl;
+  }
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      let res: Response;
-      try {
-        res = await fetch(reqUrl.toString(), {
+  async function request(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
+    const reqUrl = buildUrl(path, params);
+    let res: Response;
+    try {
+      res = await httpRequest({
+        url: reqUrl,
+        retries: 3,
+        timeoutMs: 30_000,
+        init: {
           method,
           signal,
-          headers: {
-            Accept: "application/json",
-            "X-Plex-Client-Identifier": "tinkerbell",
-            "X-Plex-Product": "tinkerbell",
-            "X-Plex-Version": "1.0.0",
-            ...headers,
-          },
-        });
-      } catch (err) {
-        if (attempt < MAX_RETRIES) {
-          console.warn(`[plex] ${method} ${path} network error, retrying (${attempt + 1}/${MAX_RETRIES})...`);
-          await sleep(retryDelay(attempt));
-          continue;
-        }
-        onHealth?.("Plex", "error", `${method} ${path} → ${errorMessage(err)}`);
-        throw err;
+          headers: { Accept: "application/json", ...PLEX_HEADERS, ...headers },
+        },
+      });
+    } catch (err) {
+      if (err instanceof HttpError) {
+        onHealth?.("Plex", "error", `${method} ${path} → ${err.status} ${err.message}`);
+        throw new Error(`Plex API ${method} ${path} → ${err.message}`);
       }
+      onHealth?.("Plex", "error", `${method} ${path} → ${errorMessage(err)}`);
+      throw err;
+    }
 
-      if (!res.ok) {
-        if (RETRYABLE_STATUS_CODES.has(res.status) && attempt < MAX_RETRIES) {
-          console.warn(`[plex] ${method} ${path} → ${res.status}, retrying (${attempt + 1}/${MAX_RETRIES})...`);
-          await sleep(retryDelay(attempt));
-          continue;
-        }
-        const body = await res.text().catch(() => "");
-        onHealth?.("Plex", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
-        throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
-      }
+    onHealth?.("Plex", "ok", `${method} ${path} → ${res.status}`);
 
-      onHealth?.("Plex", "ok", `${method} ${path} → ${res.status}`);
-
-      const text = await res.text();
-      if (!text) return null;
-      try {
-        return JSON.parse(text);
-      } catch {
-        return null;
-      }
+    const text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
     }
   }
 
@@ -87,29 +70,24 @@ export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptio
     path: string,
     { method = "GET", params = {}, headers = {} }: RequestOptions = {},
   ): Promise<Response> {
-    const reqUrl = new URL(path, url);
-    reqUrl.searchParams.set("X-Plex-Token", token);
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
+    const reqUrl = buildUrl(path, params);
+    try {
+      return await httpRequest({
+        url: reqUrl,
+        retries: 3,
+        timeoutMs: 30_000,
+        init: {
+          method,
+          signal,
+          headers: { ...PLEX_HEADERS, ...headers },
+        },
+      });
+    } catch (err) {
+      if (err instanceof HttpError) {
+        throw new Error(`Plex API ${method} ${path} → ${err.message}`);
+      }
+      throw err;
     }
-
-    const res = await fetch(reqUrl.toString(), {
-      method,
-      signal,
-      headers: {
-        "X-Plex-Client-Identifier": "tinkerbell",
-        "X-Plex-Product": "tinkerbell",
-        "X-Plex-Version": "1.0.0",
-        ...headers,
-      },
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Plex API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
-    }
-
-    return res;
   }
 
   return { url, token, signal, onHealth, request, requestRaw };
