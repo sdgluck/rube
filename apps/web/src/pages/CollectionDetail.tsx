@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
@@ -10,7 +10,7 @@ import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
 import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
-import SmartFiltersEditor, { type SmartFiltersEditorHandle } from "#components/SmartFiltersEditor";
+import { SmartFiltersDrawer, summarizeSmartContent } from "#components/SmartFiltersEditor";
 
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -23,16 +23,16 @@ export default function CollectionDetail() {
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryEditing, setSummaryEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [labelInput, setLabelInput] = useState("");
-  const [filtersDirty, setFiltersDirty] = useState(false);
+  const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const [itemsView, setItemsView] = useState<ViewMode>(() =>
-    readEnumStorage("collection-items-view", VIEW_MODES, "table"),
+    readEnumStorage("collection-items-view", VIEW_MODES, "grid"),
   );
+  const [itemSearch, setItemSearch] = useState("");
   const { addToast } = useToast();
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const filtersRef = useRef<SmartFiltersEditorHandle | null>(null);
 
   const collectionQuery = trpc.collections.get.useQuery(
     { ratingKey: ratingKey! },
@@ -47,6 +47,14 @@ export default function CollectionDetail() {
   const owningRuleQuery = trpc.collections.owningRule.useQuery(
     { ratingKey: ratingKey! },
     { enabled: !!ratingKey, refetchOnWindowFocus: false, staleTime: 60_000 },
+  );
+
+  const collection = collectionQuery.data;
+  const isSmart = collection?.smart === 1;
+
+  const smartConfigQuery = trpc.collections.smartConfig.useQuery(
+    { ratingKey: ratingKey! },
+    { enabled: !!ratingKey && isSmart, refetchOnWindowFocus: false },
   );
 
   const updateMutation = trpc.collections.update.useMutation();
@@ -71,14 +79,12 @@ export default function CollectionDetail() {
   });
   const deleteMutation = trpc.collections.delete.useMutation();
 
-  const collection = collectionQuery.data;
   const items = itemsQuery.data || [];
 
   useEffect(() => {
     if (collection) {
       setTitle(collection.title);
-      setSummary(collection.summary);
-      setSummaryOpen(!!collection.summary);
+      setSummary(collection.summary || "");
     }
   }, [collection]);
 
@@ -87,24 +93,38 @@ export default function CollectionDetail() {
     return title !== collection.title || summary !== (collection.summary || "");
   }, [title, summary, collection]);
 
-  const isDirty = headerDirty || filtersDirty;
+  const isDirty = headerDirty;
+
+  const smartSummary = useMemo(() => {
+    if (!isSmart || !smartConfigQuery.data?.content) return null;
+    return summarizeSmartContent(smartConfigQuery.data.content);
+  }, [isSmart, smartConfigQuery.data]);
+
+  const filteredItems = useMemo(() => {
+    const q = itemSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((i) => i.title.toLowerCase().includes(q));
+  }, [items, itemSearch]);
 
   const handleSave = async () => {
     if (!ratingKey || !isDirty) return;
     setSaving(true);
     try {
-      const tasks: Promise<unknown>[] = [];
-      if (headerDirty) tasks.push(updateMutation.mutateAsync({ ratingKey, title, summary }));
-      if (filtersDirty && filtersRef.current) tasks.push(filtersRef.current.save());
-      await Promise.all(tasks);
+      await updateMutation.mutateAsync({ ratingKey, title, summary });
       addToast("Collection updated", "success");
       collectionQuery.refetch();
-      itemsQuery.refetch();
     } catch {
       addToast("Failed to update collection", "error");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDiscard = () => {
+    if (!collection) return;
+    setTitle(collection.title);
+    setSummary(collection.summary || "");
+    setSummaryEditing(false);
   };
 
   const handleDelete = () => {
@@ -121,6 +141,11 @@ export default function CollectionDetail() {
         }
       },
     });
+  };
+
+  const setItemsViewPersisted = (mode: ViewMode) => {
+    setItemsView(mode);
+    localStorage.setItem("collection-items-view", mode);
   };
 
   if (collectionQuery.isLoading) return <DetailSkeleton />;
@@ -165,21 +190,13 @@ export default function CollectionDetail() {
               spellCheck={false}
             />
             <div className={styles.detailHeaderActions}>
-              <button
-                className={styles.button}
-                onClick={handleSave}
-                disabled={!isDirty || saving}
-                title={isDirty ? "Save changes" : "No changes to save"}
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
               <button className={styles.buttonDanger} onClick={handleDelete}>
                 Delete
               </button>
             </div>
           </div>
 
-          <div className={styles.meta}>
+          <div className={styles.detailMetaRow}>
             <span className={styles.metaChip}>{collection.sectionTitle}</span>
             <span className={styles.metaChip}>{collection.childCount} items</span>
             {collection.addedAt && (
@@ -187,7 +204,7 @@ export default function CollectionDetail() {
                 Added <RelativeTime timestamp={collection.addedAt} seconds />
               </span>
             )}
-            {collection.smart === 1 && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
+            {isSmart && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
             {owningRuleQuery.data && (
               <Link
                 to={`/rules?focus=${owningRuleQuery.data.id}`}
@@ -197,9 +214,6 @@ export default function CollectionDetail() {
                 Rule: {owningRuleQuery.data.name}
               </Link>
             )}
-          </div>
-
-          <div className={styles.detailLabels}>
             {labels.map((label) => (
               <span
                 key={label}
@@ -242,52 +256,76 @@ export default function CollectionDetail() {
             />
           </div>
 
-          {summaryOpen ? (
-            <textarea
-              className={styles.summaryInput}
-              value={summary}
-              placeholder="Summary"
-              onChange={(e) => setSummary(e.target.value)}
-              onBlur={() => {
-                if (!summary.trim()) setSummaryOpen(false);
-              }}
-            />
-          ) : (
-            <button type="button" className={styles.summaryAdd} onClick={() => setSummaryOpen(true)}>
-              + Add summary
-            </button>
-          )}
+          <div className={styles.summaryRow}>
+            {summaryEditing || summary ? (
+              <textarea
+                className={styles.summaryInput}
+                value={summary}
+                placeholder="Summary"
+                onChange={(e) => setSummary(e.target.value)}
+                onFocus={() => setSummaryEditing(true)}
+                onBlur={() => {
+                  if (!summary.trim()) setSummaryEditing(false);
+                }}
+              />
+            ) : (
+              <button type="button" className={styles.summaryAdd} onClick={() => setSummaryEditing(true)}>
+                + Add summary
+              </button>
+            )}
+          </div>
 
-          {collection.smart === 1 && (
-            <SmartFiltersEditor
-              ref={filtersRef}
-              ratingKey={ratingKey!}
-              onSaved={() => itemsQuery.refetch()}
-              onDirtyChange={setFiltersDirty}
-            />
+          {isSmart && smartSummary && (
+            <div className={styles.smartSummary}>
+              <span className={styles.smartSummaryLabel}>Filters</span>
+              <span className={`${styles.smartSummaryChip} ${styles.smartSummarySort}`} title="Sort">
+                {smartSummary.sortLabel} {smartSummary.sortDir === "desc" ? "↓" : "↑"}
+              </span>
+              {smartSummary.conditions.length === 0 ? (
+                <span className={styles.smartSummaryChip}>No conditions</span>
+              ) : (
+                smartSummary.conditions.slice(0, 4).map((c, i) => (
+                  <span key={i} className={styles.smartSummaryChip} title={c.text}>
+                    {c.text}
+                  </span>
+                ))
+              )}
+              {smartSummary.conditions.length > 4 && (
+                <span className={styles.smartSummaryChip}>+{smartSummary.conditions.length - 4} more</span>
+              )}
+              <span className={styles.smartSummarySpacer} />
+              <button className={styles.smartSummaryEdit} onClick={() => setFiltersDrawerOpen(true)}>
+                Edit filters
+              </button>
+            </div>
           )}
         </div>
       </div>
 
       <div className={styles.detailSection}>
-        <div className={styles.detailSectionTitle}>
-          <span>Items ({items.length})</span>
+        <div className={styles.itemsToolbar}>
+          <span className={styles.itemsToolbarTitle}>
+            Items ({filteredItems.length}
+            {filteredItems.length !== items.length ? ` of ${items.length}` : ""})
+          </span>
+          <span className={styles.itemsToolbarSpacer} />
+          <input
+            type="text"
+            className={styles.itemSearch}
+            placeholder="Search items..."
+            value={itemSearch}
+            onChange={(e) => setItemSearch(e.target.value)}
+          />
           <div className={styles.viewToggle}>
             <button
               className={`${styles.viewToggleBtn} ${itemsView === "table" ? styles.viewToggleBtnActive : ""}`}
-              onClick={() => {
-                setItemsView("table");
-                localStorage.setItem("collection-items-view", "table");
-              }}
+              onClick={() => setItemsViewPersisted("table")}
             >
               Table
             </button>
             <button
               className={`${styles.viewToggleBtn} ${itemsView === "grid" ? styles.viewToggleBtnActive : ""}`}
-              onClick={() => {
-                setItemsView("grid");
-                localStorage.setItem("collection-items-view", "grid");
-              }}
+              onClick={() => setItemsViewPersisted("grid")}
             >
               Grid
             </button>
@@ -297,10 +335,19 @@ export default function CollectionDetail() {
           <p className={styles.hint}>Loading items...</p>
         ) : items.length === 0 ? (
           <EmptyState icon="film" title="No items in this collection" />
+        ) : filteredItems.length === 0 ? (
+          <p className={styles.hint}>No items match "{itemSearch}".</p>
         ) : itemsView === "grid" ? (
-          <div className={styles.grid}>
-            {items.map((item) => (
-              <div key={item.ratingKey} className={styles.card} onClick={() => navigate(`/media/${item.ratingKey}`)}>
+          <div className={styles.gridDense}>
+            {filteredItems.map((item) => (
+              <div
+                key={item.ratingKey}
+                className={styles.cardDense}
+                onClick={() => navigate(`/media/${item.ratingKey}`)}
+                tabIndex={0}
+                role="button"
+                aria-label={item.title}
+              >
                 {item.thumb ? (
                   <FadeImage
                     className={styles.cardPoster}
@@ -311,10 +358,10 @@ export default function CollectionDetail() {
                 ) : (
                   <div className={styles.cardPosterPlaceholder}>No poster</div>
                 )}
-                <div className={styles.cardTitle} title={item.title}>
-                  {item.title}
+                <div className={styles.cardOverlay}>
+                  <div className={styles.cardOverlayTitle}>{item.title}</div>
+                  {item.year && <div className={styles.cardOverlayMeta}>{item.year}</div>}
                 </div>
-                {item.year && <div className={styles.cardMeta}>{item.year}</div>}
               </div>
             ))}
           </div>
@@ -328,7 +375,7 @@ export default function CollectionDetail() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                   <tr
                     key={item.ratingKey}
                     className={styles.clickableRow}
@@ -343,6 +390,30 @@ export default function CollectionDetail() {
           </div>
         )}
       </div>
+
+      {isDirty && (
+        <div className={styles.stickySaveBar}>
+          <span className={styles.stickySaveLabel}>Unsaved changes</span>
+          <button className={styles.buttonSecondary} onClick={handleDiscard} disabled={saving}>
+            Discard
+          </button>
+          <button className={styles.button} onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      )}
+
+      {isSmart && (
+        <SmartFiltersDrawer
+          open={filtersDrawerOpen}
+          ratingKey={ratingKey!}
+          onClose={() => setFiltersDrawerOpen(false)}
+          onSaved={() => {
+            itemsQuery.refetch();
+            smartConfigQuery.refetch();
+          }}
+        />
+      )}
 
       {pendingConfirm && (
         <ConfirmModal
