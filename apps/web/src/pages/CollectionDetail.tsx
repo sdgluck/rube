@@ -198,7 +198,9 @@ export default function CollectionDetail() {
 
           <div className={styles.detailMetaRow}>
             <span className={styles.metaChip}>{collection.sectionTitle}</span>
-            <span className={styles.metaChip}>{collection.childCount} items</span>
+            <span className={styles.metaChip}>
+              {(itemsQuery.data ? itemsQuery.data.length : collection.childCount).toLocaleString()} items
+            </span>
             {collection.addedAt && (
               <span className={styles.metaChip}>
                 Added <RelativeTime timestamp={collection.addedAt} seconds />
