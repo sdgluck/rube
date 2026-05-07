@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { createLlmClient } from "@tinkerbell/llm";
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage, getConfig, REDACTED_SECRET, type ConfigKey } from "@tinkerbell/core";
+
+// Test-connection endpoints accept secrets as input. If the form rendered the
+// redaction sentinel (because the user didn't retype the stored value), swap
+// it for the value already in the config so "Test" still works.
+function unredact(value: string, storedKey: ConfigKey): string {
+  if (value !== REDACTED_SECRET) return value;
+  const stored = getConfig(storedKey);
+  return typeof stored === "string" ? stored : "";
+}
 import { syncSections, getLocalSections } from "@tinkerbell/domain.sections";
 import { reportHealth, testArrConnection } from "@tinkerbell/domain.health";
 import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
@@ -63,9 +72,10 @@ export const appRouter = t.router({
   testPlex: t.procedure
     .input(z.object({ plex_url: z.string(), plex_token: z.string() }))
     .mutation(async ({ input }) => {
+      const plex_token = unredact(input.plex_token, "global_plex_token");
       try {
         const testUrl = new URL("/", input.plex_url);
-        testUrl.searchParams.set("X-Plex-Token", input.plex_token);
+        testUrl.searchParams.set("X-Plex-Token", plex_token);
         const pRes = await fetch(testUrl.toString(), {
           headers: { Accept: "application/json" },
           signal: AbortSignal.timeout(10000),
@@ -87,8 +97,9 @@ export const appRouter = t.router({
     }),
 
   testRadarr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+    const api_key = unredact(input.api_key, "global_radarr_api_key");
     try {
-      const instanceName = await testArrConnection(input.url, input.api_key);
+      const instanceName = await testArrConnection(input.url, api_key);
       reportHealth("Radarr", "ok", `Connected — ${instanceName}`);
       return { ok: true as const, instanceName };
     } catch (err) {
@@ -98,8 +109,9 @@ export const appRouter = t.router({
   }),
 
   testSonarr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+    const api_key = unredact(input.api_key, "global_sonarr_api_key");
     try {
-      const instanceName = await testArrConnection(input.url, input.api_key);
+      const instanceName = await testArrConnection(input.url, api_key);
       reportHealth("Sonarr", "ok", `Connected — ${instanceName}`);
       return { ok: true as const, instanceName };
     } catch (err) {
@@ -109,9 +121,10 @@ export const appRouter = t.router({
   }),
 
   testSeerr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
+    const api_key = unredact(input.api_key, "global_seerr_api_key");
     try {
       const { testSeerrConnection } = await import("@tinkerbell/seerr");
-      const data = await testSeerrConnection(input.url, input.api_key);
+      const data = await testSeerrConnection(input.url, api_key);
       reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
       return { ok: true as const, total: data.total };
     } catch (err) {
@@ -121,9 +134,10 @@ export const appRouter = t.router({
   }),
 
   testTmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+    const api_key = unredact(input.api_key, "global_tmdb_api_key");
     try {
       const { testTmdbKey } = await import("@tinkerbell/tmdb");
-      const data = await testTmdbKey(input.api_key);
+      const data = await testTmdbKey(api_key);
       reportHealth("TMDb", "ok", `Test query OK — ${data.sample}`);
       return { ok: true as const, sample: data.sample };
     } catch (err) {
@@ -133,8 +147,9 @@ export const appRouter = t.router({
   }),
 
   testOmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+    const api_key = unredact(input.api_key, "global_omdb_api_key");
     try {
-      const res = await fetch(`https://www.omdbapi.com/?apikey=${input.api_key}&t=Inception`, {
+      const res = await fetch(`https://www.omdbapi.com/?apikey=${encodeURIComponent(api_key)}&t=Inception`, {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -149,8 +164,9 @@ export const appRouter = t.router({
   }),
 
   testMdblist: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+    const api_key = unredact(input.api_key, "global_mdblist_api_key");
     try {
-      const res = await fetch(`https://mdblist.com/api/user/?apikey=${input.api_key}`, {
+      const res = await fetch(`https://mdblist.com/api/user/?apikey=${encodeURIComponent(api_key)}`, {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -209,8 +225,13 @@ export const appRouter = t.router({
       }),
     )
     .mutation(async ({ input }) => {
+      let apiKey = input.apiKey;
+      if (apiKey === REDACTED_SECRET) {
+        apiKey = getConfig("global_llm")?.apiKey ?? getConfig("global_anthropic_api_key") ?? "";
+      }
+      const cfg = { ...input, apiKey };
       try {
-        const client = createLlmClient(input);
+        const client = createLlmClient(cfg);
         const res = await client.ping();
         reportHealth("LLM", "ok", `${res.provider}:${res.model} — test ok`);
         return { ok: true as const, model: res.model, provider: res.provider };

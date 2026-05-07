@@ -146,6 +146,39 @@ export type ConfigSchema = typeof configSchema;
 export type ConfigKey = keyof z.infer<ConfigSchema>;
 export type ConfigValue<K extends ConfigKey> = z.infer<ConfigSchema>[K];
 
+/**
+ * Sent in place of a stored secret when the value is shipped to the browser.
+ * `setConfig` (and the config.save tRPC mutation) treat this sentinel as
+ * "keep the existing value" so the form can round-trip without erasing.
+ */
+export const REDACTED_SECRET = "__redacted__";
+
+/**
+ * Top-level config keys whose values must never be sent to the browser.
+ * Webhook URLs are included because they typically contain bearer tokens.
+ * `global_llm.apiKey` is a nested secret handled separately in
+ * `getAllConfigForClient`.
+ */
+export const SECRET_KEYS = new Set<ConfigKey>([
+  "global_plex_token",
+  "global_anthropic_api_key",
+  "global_radarr_api_key",
+  "global_sonarr_api_key",
+  "global_seerr_api_key",
+  "global_omdb_api_key",
+  "global_mdblist_api_key",
+  "global_tmdb_api_key",
+  "global_pushover_api_key",
+  "global_pushover_user_key",
+  "global_gotify_token",
+  "global_pushbullet_token",
+  "global_telegram_bot_token",
+  "global_discord_webhook_url",
+  "global_lunasea_webhook_url",
+  "global_slack_webhook_url",
+  "global_webhook_url",
+]);
+
 export function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
   const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
   if (row?.value === undefined || row.value === null) return undefined;
@@ -188,4 +221,21 @@ export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
     }
   }
   return configSchema.partial().parse(raw);
+}
+
+/**
+ * Browser-safe variant of `getAllConfig`: keys in `SECRET_KEYS` that are
+ * stored come back as `REDACTED_SECRET`; unset keys are omitted as usual.
+ * `global_llm.apiKey` is a nested secret and is redacted in place.
+ */
+export function getAllConfigForClient(): Partial<z.infer<ConfigSchema>> {
+  const all = getAllConfig() as Record<string, unknown>;
+  for (const key of SECRET_KEYS) {
+    if (typeof all[key] === "string" && all[key] !== "") all[key] = REDACTED_SECRET;
+  }
+  const llm = all["global_llm"] as ConfigValue<"global_llm"> | undefined;
+  if (llm && typeof llm.apiKey === "string" && llm.apiKey !== "") {
+    all["global_llm"] = { ...llm, apiKey: REDACTED_SECRET };
+  }
+  return all as Partial<z.infer<ConfigSchema>>;
 }
