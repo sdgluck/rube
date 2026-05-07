@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
-import { join, extname } from "node:path";
+import { join, extname, resolve, sep } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
@@ -124,9 +124,13 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     return;
   }
 
-  // Static files
-  const filePath = join(DIST_DIR, path === "/" ? "index.html" : path);
-  if (await serveStatic(res, filePath)) return;
+  // Static files — guard against path traversal: `path.join(DIST_DIR, "/../etc/x")`
+  // normalises `..` away and escapes the dist root.
+  const requestedPath = path === "/" ? "index.html" : decodeURIComponent(path);
+  const resolved = resolve(DIST_DIR, "." + (requestedPath.startsWith("/") ? requestedPath : "/" + requestedPath));
+  if (resolved === DIST_DIR || resolved.startsWith(DIST_DIR + sep)) {
+    if (await serveStatic(res, resolved)) return;
+  }
 
   // SPA fallback
   await serveStatic(res, join(DIST_DIR, "index.html"));
