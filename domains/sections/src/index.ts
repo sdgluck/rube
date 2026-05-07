@@ -2,7 +2,7 @@
  * Sections module — sync Plex sections to local SQLite and query them.
  */
 
-import { eq } from "drizzle-orm";
+import { lt } from "drizzle-orm";
 import { db, plexSections } from "@tinkerbell/db";
 import type { PlexClient } from "@tinkerbell/plex";
 
@@ -14,10 +14,8 @@ interface SyncStats {
 export async function syncSections(client: PlexClient): Promise<SyncStats> {
   const now = Date.now();
   const sections = await client.getSections();
-  const seenKeys = new Set<string>();
 
   for (const section of sections) {
-    seenKeys.add(section.key);
     db.insert(plexSections)
       .values({
         key: section.key,
@@ -36,15 +34,12 @@ export async function syncSections(client: PlexClient): Promise<SyncStats> {
       .run();
   }
 
-  // Remove stale entries
-  const allRows = db.select({ key: plexSections.key }).from(plexSections).all();
-  let removed = 0;
-  for (const row of allRows) {
-    if (!seenKeys.has(row.key)) {
-      db.delete(plexSections).where(eq(plexSections.key, row.key)).run();
-      removed++;
-    }
-  }
+  // Single bulk delete for any row not refreshed in this pass — matches the
+  // pattern in domains/collections and domains/media. Avoids the previous
+  // SELECT + per-row DELETE loop, which was racy under concurrent inserts
+  // and slow on large libraries.
+  const result = db.delete(plexSections).where(lt(plexSections.syncedAt, now)).run();
+  const removed = Number(result.changes ?? 0);
 
   return { synced: sections.length, removed };
 }

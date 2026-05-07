@@ -2,7 +2,7 @@
  * Users module — sync Plex shared users to local SQLite and query them.
  */
 
-import { eq, like, or, asc, desc, sql } from "drizzle-orm";
+import { eq, like, or, asc, desc, lt, sql } from "drizzle-orm";
 import { db, plexUsers } from "@tinkerbell/db";
 import { getLocalCollections } from "@tinkerbell/domain.collections";
 import type { PlexClient } from "@tinkerbell/plex";
@@ -57,7 +57,6 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
   const accountById = new Map(accounts.map((a) => [Number(a.id), a]));
   const accountByName = new Map(accounts.map((a) => [a.name?.toLowerCase(), a]));
 
-  const seenIds = new Set<number>();
   let synced = 0;
 
   const allUsers: Array<{ userId: number; username: string }> = sharings.map((s) => ({
@@ -70,8 +69,6 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
     const userLabel = `User:${s.username}`;
     const account = accountById.get(s.userId) || accountByName.get(s.username.toLowerCase());
     const lastWatched = account ? lastWatchedByAccount.get(Number(account.id)) : undefined;
-
-    seenIds.add(s.userId);
 
     db.insert(plexUsers)
       .values({
@@ -99,15 +96,10 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
     synced++;
   }
 
-  // Remove stale entries not seen in sync
-  const allRows = db.select({ userId: plexUsers.userId }).from(plexUsers).all();
-  let removed = 0;
-  for (const row of allRows) {
-    if (!seenIds.has(row.userId)) {
-      db.delete(plexUsers).where(eq(plexUsers.userId, row.userId)).run();
-      removed++;
-    }
-  }
+  // Single bulk delete — matches the pattern in domains/collections and
+  // domains/media. Avoids a SELECT + per-row DELETE loop.
+  const result = db.delete(plexUsers).where(lt(plexUsers.syncedAt, now)).run();
+  const removed = Number(result.changes ?? 0);
 
   return { synced, removed };
 }
