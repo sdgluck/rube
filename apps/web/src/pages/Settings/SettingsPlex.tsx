@@ -67,13 +67,10 @@ export default function SettingsPlex() {
     setTesting(true);
     try {
       const result = await testPlexMutation.mutateAsync({ plex_url: url, plex_token: token });
-      if (result.ok) {
-        addToast(`Connected to "${result.serverName}"`, "success");
-        return true;
-      }
-      throw "nope";
-    } catch {
-      addToast("Connection test failed", "error");
+      addToast(`Connected to "${result.serverName}"`, "success");
+      return true;
+    } catch (err) {
+      addToast(`Connection test failed: ${(err as Error).message}`, "error");
       return false;
     } finally {
       setTesting(false);

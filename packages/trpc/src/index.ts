@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createLlmClient } from "@tinkerbell/llm";
 import { errorMessage, getConfig, REDACTED_SECRET, type ConfigKey } from "@tinkerbell/core";
 
@@ -10,6 +11,7 @@ function unredact(value: string, storedKey: ConfigKey): string {
   const stored = getConfig(storedKey);
   return typeof stored === "string" ? stored : "";
 }
+
 import { syncSections, getLocalSections } from "@tinkerbell/domain.sections";
 import { reportHealth, testArrConnection } from "@tinkerbell/domain.health";
 import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
@@ -69,6 +71,13 @@ export const appRouter = t.router({
     return { sections, synced: stats.synced, removed: stats.removed };
   }),
 
+  // ─── Connection probes ──────────────────────────────────────────────────
+  // Each `test*` procedure either returns the success payload or throws a
+  // `TRPCError` (BAD_GATEWAY for upstream failures). UI consumers read the
+  // success path from `mutateAsync`'s resolved value and the failure
+  // message from the rejection's `.message`. This matches the contract
+  // used by every other router in the app (SDG-18).
+
   testPlex: t.procedure
     .input(z.object({ plex_url: z.string(), plex_token: z.string() }))
     .mutation(async ({ input }) => {
@@ -80,19 +89,15 @@ export const appRouter = t.router({
           headers: { Accept: "application/json" },
           signal: AbortSignal.timeout(10000),
         });
-        if (!pRes.ok) {
-          return {
-            ok: false as const,
-            error: `Plex returned ${pRes.status} ${pRes.statusText}`,
-          };
-        }
+        if (!pRes.ok) throw new Error(`Plex returned ${pRes.status} ${pRes.statusText}`);
         const data = await pRes.json();
         const name = data?.MediaContainer?.friendlyName || "Unknown";
         reportHealth("Plex", "ok", `Connected — ${name}`);
-        return { ok: true as const, serverName: name };
+        return { serverName: name as string };
       } catch (err) {
-        reportHealth("Plex", "error", errorMessage(err));
-        return { ok: false as const, error: errorMessage(err) };
+        const message = errorMessage(err);
+        reportHealth("Plex", "error", message);
+        throw new TRPCError({ code: "BAD_GATEWAY", message });
       }
     }),
 
@@ -101,10 +106,11 @@ export const appRouter = t.router({
     try {
       const instanceName = await testArrConnection(input.url, api_key);
       reportHealth("Radarr", "ok", `Connected — ${instanceName}`);
-      return { ok: true as const, instanceName };
+      return { instanceName };
     } catch (err) {
-      reportHealth("Radarr", "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth("Radarr", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 
@@ -113,10 +119,11 @@ export const appRouter = t.router({
     try {
       const instanceName = await testArrConnection(input.url, api_key);
       reportHealth("Sonarr", "ok", `Connected — ${instanceName}`);
-      return { ok: true as const, instanceName };
+      return { instanceName };
     } catch (err) {
-      reportHealth("Sonarr", "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth("Sonarr", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 
@@ -126,10 +133,11 @@ export const appRouter = t.router({
       const { testSeerrConnection } = await import("@tinkerbell/seerr");
       const data = await testSeerrConnection(input.url, api_key);
       reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
-      return { ok: true as const, total: data.total };
+      return { total: data.total };
     } catch (err) {
-      reportHealth("Seerr", "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth("Seerr", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 
@@ -139,10 +147,11 @@ export const appRouter = t.router({
       const { testTmdbKey } = await import("@tinkerbell/tmdb");
       const data = await testTmdbKey(api_key);
       reportHealth("TMDb", "ok", `Test query OK — ${data.sample}`);
-      return { ok: true as const, sample: data.sample };
+      return { sample: data.sample };
     } catch (err) {
-      reportHealth("TMDb", "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth("TMDb", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 
@@ -152,17 +161,16 @@ export const appRouter = t.router({
       const omdbUrl = new URL("https://www.omdbapi.com/");
       omdbUrl.searchParams.set("apikey", api_key);
       omdbUrl.searchParams.set("t", "Inception");
-      const res = await fetch(omdbUrl, {
-        signal: AbortSignal.timeout(10000),
-      });
+      const res = await fetch(omdbUrl, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
       if (data.Response === "False") throw new Error(data.Error || "Invalid API key");
       reportHealth("OMDB", "ok", `Test query OK — ${data.Title}`);
-      return { ok: true as const, title: data.Title as string };
+      return { title: data.Title as string };
     } catch (err) {
-      reportHealth("OMDB", "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth("OMDB", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 
@@ -171,27 +179,22 @@ export const appRouter = t.router({
     try {
       const mdblistUrl = new URL("https://mdblist.com/api/user/");
       mdblistUrl.searchParams.set("apikey", api_key);
-      const res = await fetch(mdblistUrl, {
-        signal: AbortSignal.timeout(10000),
-      });
+      const res = await fetch(mdblistUrl, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const name = (data.name || data.username || "OK") as string;
       reportHealth("MDBList", "ok", `Connected — ${name}`);
-      return { ok: true as const, name };
+      return { name };
     } catch (err) {
-      reportHealth("MDBList", "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth("MDBList", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 
   testNotification: procedure
-    .input(
-      z.object({
-        service: z.enum(NOTIFICATION_SERVICES),
-      }),
-    )
+    .input(z.object({ service: z.enum(NOTIFICATION_SERVICES) }))
     .mutation(async ({ input }) => {
       const HEALTH_NAMES: Record<string, string> = {
         pushover: "Pushover",
@@ -211,10 +214,11 @@ export const appRouter = t.router({
           "Test notification from Tinkerbell",
         );
         reportHealth(healthName, "ok", "Test notification sent");
-        return { ok: true as const };
+        return { sent: true as const };
       } catch (err) {
-        reportHealth(healthName, "error", errorMessage(err));
-        return { ok: false as const, error: errorMessage(err) };
+        const message = errorMessage(err);
+        reportHealth(healthName, "error", message);
+        throw new TRPCError({ code: "BAD_GATEWAY", message });
       }
     }),
 
@@ -239,10 +243,11 @@ export const appRouter = t.router({
         const client = createLlmClient(cfg);
         const res = await client.ping();
         reportHealth("LLM", "ok", `${res.provider}:${res.model} — test ok`);
-        return { ok: true as const, model: res.model, provider: res.provider };
+        return { model: res.model, provider: res.provider };
       } catch (err) {
-        reportHealth("LLM", "error", errorMessage(err));
-        return { ok: false as const, error: errorMessage(err) };
+        const message = errorMessage(err);
+        reportHealth("LLM", "error", message);
+        throw new TRPCError({ code: "BAD_GATEWAY", message });
       }
     }),
 });

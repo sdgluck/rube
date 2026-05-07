@@ -109,14 +109,10 @@ export default function NotificationServiceForm({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await saveConfigMutation.mutateAsync(buildConfigPayload() as any);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await testMutation.mutateAsync({ service: service as any });
-      if (result.ok) {
-        addToast("Test notification sent", "success");
-      } else {
-        addToast(result.error || "Failed to send test notification", "error");
-      }
-    } catch {
-      addToast("Failed to send test notification", "error");
+      await testMutation.mutateAsync({ service: service as any });
+      addToast("Test notification sent", "success");
+    } catch (err) {
+      addToast(`Failed to send test notification: ${(err as Error).message}`, "error");
     } finally {
       setTesting(false);
       utils.health.status.invalidate();

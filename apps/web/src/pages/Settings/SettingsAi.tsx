@@ -70,13 +70,9 @@ export default function SettingsAi() {
     setTesting(true);
     try {
       const result = await testLlmMutation.mutateAsync(normalize(llm));
-      if (result.ok) {
-        addToast(`Connected — ${result.provider}:${result.model}`, "success");
-      } else {
-        addToast(result.error || "Connection test failed", "error");
-      }
-    } catch {
-      addToast("Connection test failed", "error");
+      addToast(`Connected — ${result.provider}:${result.model}`, "success");
+    } catch (err) {
+      addToast(`Connection test failed: ${(err as Error).message}`, "error");
     } finally {
       setTesting(false);
     }

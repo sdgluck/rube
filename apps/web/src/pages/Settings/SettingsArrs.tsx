@@ -16,7 +16,7 @@ interface ServiceConfig {
     | ReturnType<typeof trpc.testRadarr.useMutation>
     | ReturnType<typeof trpc.testSonarr.useMutation>
     | ReturnType<typeof trpc.testSeerr.useMutation>;
-  formatSuccess: (result: { ok: boolean; instanceName?: string; total?: number }) => string;
+  formatSuccess: (result: { instanceName?: string; total?: number }) => string;
   serviceName: string;
 }
 
@@ -57,13 +57,10 @@ function ServiceConfigFieldset({
     setTesting(true);
     try {
       const result = await config.testMutation.mutateAsync({ url: testUrl, api_key: testApiKey });
-      if (result.ok) {
-        addToast(config.formatSuccess(result as never), "success");
-        return true;
-      }
-      throw "nope";
-    } catch {
-      addToast("Connection test failed", "error");
+      addToast(config.formatSuccess(result as never), "success");
+      return true;
+    } catch (err) {
+      addToast(`Connection test failed: ${(err as Error).message}`, "error");
       return false;
     } finally {
       setTesting(false);

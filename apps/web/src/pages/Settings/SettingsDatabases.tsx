@@ -78,13 +78,9 @@ export default function SettingsDatabases() {
     setTestingOmdb(true);
     try {
       const result = await testOmdbMutation.mutateAsync({ api_key: omdbApiKey });
-      if (result.ok) {
-        addToast(`Connected — found "${result.title}"`, "success");
-      } else {
-        addToast(result.error || "Connection test failed", "error");
-      }
-    } catch {
-      addToast("Connection test failed", "error");
+      addToast(`Connected — found "${result.title}"`, "success");
+    } catch (err) {
+      addToast(`Connection test failed: ${(err as Error).message}`, "error");
     } finally {
       setTestingOmdb(false);
       utils.health.status.invalidate();
@@ -99,13 +95,9 @@ export default function SettingsDatabases() {
     setTestingMdblist(true);
     try {
       const result = await testMdblistMutation.mutateAsync({ api_key: mdblistApiKey });
-      if (result.ok) {
-        addToast(`Connected — ${result.name}`, "success");
-      } else {
-        addToast(result.error || "Connection test failed", "error");
-      }
-    } catch {
-      addToast("Connection test failed", "error");
+      addToast(`Connected — ${result.name}`, "success");
+    } catch (err) {
+      addToast(`Connection test failed: ${(err as Error).message}`, "error");
     } finally {
       setTestingMdblist(false);
       utils.health.status.invalidate();
@@ -134,13 +126,9 @@ export default function SettingsDatabases() {
     setTestingTmdb(true);
     try {
       const result = await testTmdbMutation.mutateAsync({ api_key: tmdbApiKey });
-      if (result.ok) {
-        addToast(`Connected — found "${result.sample}"`, "success");
-      } else {
-        addToast(result.error || "Connection test failed", "error");
-      }
-    } catch {
-      addToast("Connection test failed", "error");
+      addToast(`Connected — found "${result.sample}"`, "success");
+    } catch (err) {
+      addToast(`Connection test failed: ${(err as Error).message}`, "error");
     } finally {
       setTestingTmdb(false);
       utils.health.status.invalidate();
