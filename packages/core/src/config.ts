@@ -224,12 +224,12 @@ export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
 }
 
 /**
- * Browser-safe variant of `getAllConfig`: keys in `SECRET_KEYS` that are
- * stored come back as `REDACTED_SECRET`; unset keys are omitted as usual.
- * `global_llm.apiKey` is a nested secret and is redacted in place.
+ * Pure transform: take a config blob and replace every secret value with
+ * `REDACTED_SECRET`. Extracted from `getAllConfigForClient` so it can be
+ * exercised by unit tests without standing up a SQLite instance.
  */
-export function getAllConfigForClient(): Partial<z.infer<ConfigSchema>> {
-  const all = getAllConfig() as Record<string, unknown>;
+export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.infer<ConfigSchema>> {
+  const all = { ...input } as Record<string, unknown>;
   for (const key of SECRET_KEYS) {
     if (typeof all[key] === "string" && all[key] !== "") all[key] = REDACTED_SECRET;
   }
@@ -238,4 +238,13 @@ export function getAllConfigForClient(): Partial<z.infer<ConfigSchema>> {
     all["global_llm"] = { ...llm, apiKey: REDACTED_SECRET };
   }
   return all as Partial<z.infer<ConfigSchema>>;
+}
+
+/**
+ * Browser-safe variant of `getAllConfig`: keys in `SECRET_KEYS` that are
+ * stored come back as `REDACTED_SECRET`; unset keys are omitted as usual.
+ * `global_llm.apiKey` is a nested secret and is redacted in place.
+ */
+export function getAllConfigForClient(): Partial<z.infer<ConfigSchema>> {
+  return redactSecrets(getAllConfig());
 }

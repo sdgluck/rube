@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "portless api.tinkerbell --app-port 3000 node --watch src/server.ts",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "node --test src/security.test.ts"
   },
   "dependencies": {
     "@tinkerbell/core": "workspace:*",

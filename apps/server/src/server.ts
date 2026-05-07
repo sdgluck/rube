@@ -1,12 +1,13 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
-import { join, extname, resolve, sep } from "node:path";
+import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
 import { getConfig, setHealthReporter } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
 import { reportHealth } from "@tinkerbell/domain.health";
+import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
 
 setHealthReporter(reportHealth);
 
@@ -76,33 +77,17 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // Plex image proxy
   if (path === "/api/plex-image") {
-    const thumbPath = url.searchParams.get("path");
-    const plexUrl = getConfig("global_plex_url");
-    const plexToken = getConfig("global_plex_token");
-    // Reject anything that could resolve to a different origin: protocol-relative
-    // (`//evil.com/x`), absolute (`http://evil.com`), or backslash-prefixed.
-    if (
-      !thumbPath ||
-      !thumbPath.startsWith("/") ||
-      thumbPath.startsWith("//") ||
-      thumbPath.startsWith("/\\") ||
-      thumbPath.includes("://") ||
-      !plexUrl ||
-      !plexToken
-    ) {
+    const imageUrl = buildPlexImageUrl({
+      thumbPath: url.searchParams.get("path"),
+      plexUrl: getConfig("global_plex_url"),
+      plexToken: getConfig("global_plex_token"),
+    });
+    if (!imageUrl) {
       res.writeHead(400);
       res.end();
       return;
     }
     try {
-      const plexOrigin = new URL(plexUrl).origin;
-      const imageUrl = new URL(thumbPath, plexUrl);
-      if (imageUrl.origin !== plexOrigin) {
-        res.writeHead(400);
-        res.end();
-        return;
-      }
-      imageUrl.searchParams.set("X-Plex-Token", plexToken);
       const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
       if (!pRes.ok || !pRes.body) {
         res.writeHead(pRes.status);
@@ -140,13 +125,9 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     return;
   }
 
-  // Static files — guard against path traversal: `path.join(DIST_DIR, "/../etc/x")`
-  // normalises `..` away and escapes the dist root.
-  const requestedPath = path === "/" ? "index.html" : decodeURIComponent(path);
-  const resolved = resolve(DIST_DIR, "." + (requestedPath.startsWith("/") ? requestedPath : "/" + requestedPath));
-  if (resolved === DIST_DIR || resolved.startsWith(DIST_DIR + sep)) {
-    if (await serveStatic(res, resolved)) return;
-  }
+  // Static files — `resolveStaticPath` rejects `..`-traversal attempts.
+  const resolved = resolveStaticPath(DIST_DIR, path);
+  if (resolved && (await serveStatic(res, resolved))) return;
 
   // SPA fallback
   await serveStatic(res, join(DIST_DIR, "index.html"));

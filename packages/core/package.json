@@ -11,7 +11,8 @@
     "src"
   ],
   "scripts": {
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "node --test src/config.test.ts"
   },
   "dependencies": {
     "@tinkerbell/db": "workspace:*",
