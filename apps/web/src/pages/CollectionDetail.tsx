@@ -10,7 +10,7 @@ import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
 import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
-import { SmartFiltersDrawer, summarizeSmartContent } from "#components/SmartFiltersEditor";
+import { SmartFiltersDrawer, SmartFilterSummary } from "#components/SmartFiltersEditor";
 
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -94,11 +94,6 @@ export default function CollectionDetail() {
   }, [title, summary, collection]);
 
   const isDirty = headerDirty;
-
-  const smartSummary = useMemo(() => {
-    if (!isSmart || !smartConfigQuery.data?.content) return null;
-    return summarizeSmartContent(smartConfigQuery.data.content);
-  }, [isSmart, smartConfigQuery.data]);
 
   const filteredItems = useMemo(() => {
     const q = itemSearch.trim().toLowerCase();
@@ -277,29 +272,8 @@ export default function CollectionDetail() {
             )}
           </div>
 
-          {isSmart && smartSummary && (
-            <div className={styles.smartSummary}>
-              <span className={styles.smartSummaryLabel}>Filters</span>
-              <span className={`${styles.smartSummaryChip} ${styles.smartSummarySort}`} title="Sort">
-                {smartSummary.sortLabel} {smartSummary.sortDir === "desc" ? "↓" : "↑"}
-              </span>
-              {smartSummary.conditions.length === 0 ? (
-                <span className={styles.smartSummaryChip}>No conditions</span>
-              ) : (
-                smartSummary.conditions.slice(0, 4).map((c, i) => (
-                  <span key={i} className={styles.smartSummaryChip} title={c.text}>
-                    {c.text}
-                  </span>
-                ))
-              )}
-              {smartSummary.conditions.length > 4 && (
-                <span className={styles.smartSummaryChip}>+{smartSummary.conditions.length - 4} more</span>
-              )}
-              <span className={styles.smartSummarySpacer} />
-              <button className={styles.smartSummaryEdit} onClick={() => setFiltersDrawerOpen(true)}>
-                Edit filters
-              </button>
-            </div>
+          {isSmart && smartConfigQuery.data?.content && (
+            <SmartFilterSummary content={smartConfigQuery.data.content} onEdit={() => setFiltersDrawerOpen(true)} />
           )}
         </div>
       </div>
