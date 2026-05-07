@@ -18,16 +18,7 @@ const SettingsAi = lazy(() => import("#pages/Settings/SettingsAi"));
 const SettingsArrs = lazy(() => import("#pages/Settings/SettingsArrs"));
 const SettingsDatabases = lazy(() => import("#pages/Settings/SettingsDatabases"));
 const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/SettingsNotifications"));
-const SettingsNotificationsDiscord = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsDiscord"));
-const SettingsNotificationsGotify = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsGotify"));
-const SettingsNotificationsLunaSea = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsLunaSea"));
-const SettingsNotificationsPushbullet = lazy(
-  () => import("#pages/Settings/Notifications/SettingsNotificationsPushbullet"),
-);
-const SettingsNotificationsPushover = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsPushover"));
-const SettingsNotificationsSlack = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsSlack"));
-const SettingsNotificationsTelegram = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsTelegram"));
-const SettingsNotificationsWebhook = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsWebhook"));
+const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsService"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
 const Collections = lazy(() => import("#pages/Collections"));
@@ -234,66 +225,10 @@ export default function App() {
                 >
                   <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
                   <Route
-                    path="discord"
+                    path=":service"
                     element={
                       <LazyPage>
-                        <SettingsNotificationsDiscord />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="gotify"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsGotify />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="lunasea"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsLunaSea />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="pushbullet"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsPushbullet />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="pushover"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsPushover />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="slack"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsSlack />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="telegram"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsTelegram />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="webhook"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsWebhook />
+                        <SettingsNotificationsService />
                       </LazyPage>
                     }
                   />
