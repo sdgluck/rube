@@ -6,6 +6,7 @@ import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig } from "@tinkerbell/core";
 import { runStressTest, type StressTestConfig } from "./index.ts";
 import type { JobContext } from "@tinkerbell/core";
+import { JOB_CANCEL_POLL_INTERVAL_MS, JOB_LOG_FLUSH_INTERVAL_MS } from "../limits.ts";
 
 interface WorkerMessage {
   id: string;
@@ -46,7 +47,7 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
     }
   }
 
-  const flushTimer = setInterval(flushToDb, 500);
+  const flushTimer = setInterval(flushToDb, JOB_LOG_FLUSH_INTERVAL_MS);
 
   // Poll for cancellation by checking DB status
   const cancelTimer = setInterval(() => {
@@ -62,7 +63,7 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
     } catch {
       // DB may be closed
     }
-  }, 1000);
+  }, JOB_CANCEL_POLL_INTERVAL_MS);
 
   const ctx: JobContext = {
     log: (...args: unknown[]) => {

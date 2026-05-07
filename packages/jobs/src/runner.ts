@@ -9,6 +9,7 @@ import { emitEvent } from "@tinkerbell/domain.events";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { syncRecentlyAdded, syncMostWatched } from "@tinkerbell/domain.stats";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
+import { DEFAULT_JOB_RUN_LIMIT, JOB_RUN_KEEP_PER_JOB, JOB_RUN_RETENTION_MS } from "./limits.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -81,7 +82,7 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     name: "Because You Watched",
     command: "because-you-watched",
     defaultSchedule: "0 2 * * *",
-    defaultConfig: { limit: 10 },
+    defaultConfig: { limit: DEFAULT_JOB_RUN_LIMIT },
   },
   {
     id: "shuffle",
@@ -113,12 +114,10 @@ function formatDuration(ms: number): string {
 
 const cronJobs = new Map<string, Cron>();
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
 // Internal jobs run in-process without the command pattern
 const internalJobs: Record<string, () => string | Promise<string>> = {
   "purge-runs": () => {
-    const cutoff = Date.now() - SEVEN_DAYS_MS;
+    const cutoff = Date.now() - JOB_RUN_RETENTION_MS;
     const result = db
       .delete(jobRuns)
       .where(and(ne(jobRuns.status, "running"), lt(jobRuns.startedAt, cutoff)))
@@ -236,17 +235,17 @@ export async function startJob(jobId: string): Promise<{ runId: string } | null>
   `);
   if (result.changes === 0) return null;
 
-  // Clean up old runs (keep last 50)
+  // Clean up old runs (keep last JOB_RUN_KEEP_PER_JOB)
   const keepIds = db
     .select({ id: jobRuns.id })
     .from(jobRuns)
     .where(eq(jobRuns.jobId, jobId))
     .orderBy(desc(jobRuns.startedAt))
-    .limit(50)
+    .limit(JOB_RUN_KEEP_PER_JOB)
     .all()
     .map((r) => r.id);
 
-  if (keepIds.length >= 50) {
+  if (keepIds.length >= JOB_RUN_KEEP_PER_JOB) {
     db.delete(jobRuns)
       .where(
         and(

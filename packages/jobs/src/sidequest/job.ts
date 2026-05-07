@@ -11,6 +11,7 @@ import {
   type BywJobConfig,
   type OverlaysJobConfig,
 } from "@tinkerbell/core";
+import { JOB_CANCEL_POLL_INTERVAL_MS, JOB_LOG_FLUSH_INTERVAL_MS } from "../limits.ts";
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -90,7 +91,7 @@ export class CommandJob extends Job {
     }
 
     // Periodic flush of log/progress to the DB
-    const flushTimer = setInterval(flushLog, 500);
+    const flushTimer = setInterval(flushLog, JOB_LOG_FLUSH_INTERVAL_MS);
 
     // Poll for cancellation by checking jobRuns.status
     const cancelTimer = setInterval(() => {
@@ -102,7 +103,7 @@ export class CommandJob extends Job {
       } catch {
         // DB may be closed
       }
-    }, 1000);
+    }, JOB_CANCEL_POLL_INTERVAL_MS);
 
     try {
       const mod = await import(`../commands/${commandName}.ts`);
