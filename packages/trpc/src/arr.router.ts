@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { getQualityProfiles, getRootFolders, type ArrConfig, type ArrService } from "@tinkerbell/arr";
-import { getConfig } from "@tinkerbell/core";
-import { errorMessage } from "@tinkerbell/core";
+import { getConfig, errorMessage } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 
 function configFor(service: ArrService): ArrConfig | null {
@@ -29,23 +29,31 @@ export const arrRouter = t.router({
 
   qualityProfiles: procedure.input(serviceInput).query(async ({ input }) => {
     const cfg = configFor(input.service);
-    if (!cfg) return { ok: false as const, error: `${input.service} is not configured`, profiles: [] };
+    if (!cfg) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: `${input.service} is not configured`,
+      });
+    }
     try {
-      const profiles = await getQualityProfiles(cfg);
-      return { ok: true as const, profiles };
+      return await getQualityProfiles(cfg);
     } catch (err) {
-      return { ok: false as const, error: errorMessage(err), profiles: [] };
+      throw new TRPCError({ code: "BAD_GATEWAY", message: errorMessage(err) });
     }
   }),
 
   rootFolders: procedure.input(serviceInput).query(async ({ input }) => {
     const cfg = configFor(input.service);
-    if (!cfg) return { ok: false as const, error: `${input.service} is not configured`, folders: [] };
+    if (!cfg) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: `${input.service} is not configured`,
+      });
+    }
     try {
-      const folders = await getRootFolders(cfg);
-      return { ok: true as const, folders };
+      return await getRootFolders(cfg);
     } catch (err) {
-      return { ok: false as const, error: errorMessage(err), folders: [] };
+      throw new TRPCError({ code: "BAD_GATEWAY", message: errorMessage(err) });
     }
   }),
 });

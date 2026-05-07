@@ -274,3 +274,35 @@ export async function deleteCollection(client: PlexClient, ratingKey: string): P
     tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, ratingKey)).run();
   });
 }
+
+/**
+ * Group collections labelled by the Because-You-Watched job by user. Used by
+ * the jobs UI to render BYW output per Plex user. Keeps the LIKE-on-JSON
+ * shape pinned in one place.
+ */
+export function getBywCollectionsGroupedByUser(): Array<{ user: string; collections: CollectionRow[] }> {
+  const BYW_LABEL = "BecauseYouWatched";
+  const rows = db
+    .select()
+    .from(collections)
+    .where(like(collections.labels, `%"${BYW_LABEL}"%`))
+    .orderBy(desc(collections.addedAt))
+    .all();
+
+  const groups = new Map<string, CollectionRow[]>();
+  for (const row of rows) {
+    const userLabel = row.labels.find((l) => l.startsWith("User:"));
+    const key = userLabel ? userLabel.slice("User:".length) : "Server-wide";
+    const bucket = groups.get(key) ?? [];
+    bucket.push(row);
+    groups.set(key, bucket);
+  }
+
+  return [...groups.entries()]
+    .map(([user, items]) => ({ user, collections: items }))
+    .sort((a, b) => {
+      if (a.user === "Server-wide") return -1;
+      if (b.user === "Server-wide") return 1;
+      return a.user.localeCompare(b.user);
+    });
+}

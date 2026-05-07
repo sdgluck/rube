@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { like, desc } from "drizzle-orm";
-import { db, collections } from "@tinkerbell/db";
+import { TRPCError } from "@trpc/server";
 import {
   getJobs,
   getJobRuns,
@@ -14,35 +13,8 @@ import {
   uninstallFeature,
   listFeatureCatalog,
 } from "@tinkerbell/jobs";
+import { getBywCollectionsGroupedByUser } from "@tinkerbell/domain.collections";
 import { t, procedure } from "./_base.ts";
-
-const BYW_LABEL = "BecauseYouWatched";
-
-function getBywCollectionsGrouped() {
-  const rows = db
-    .select()
-    .from(collections)
-    .where(like(collections.labels, `%"${BYW_LABEL}"%`))
-    .orderBy(desc(collections.addedAt))
-    .all();
-
-  const groups = new Map<string, typeof rows>();
-  for (const row of rows) {
-    const userLabel = row.labels.find((l) => l.startsWith("User:"));
-    const key = userLabel ? userLabel.slice("User:".length) : "Server-wide";
-    const bucket = groups.get(key) ?? [];
-    bucket.push(row);
-    groups.set(key, bucket);
-  }
-
-  return [...groups.entries()]
-    .map(([user, items]) => ({ user, collections: items }))
-    .sort((a, b) => {
-      if (a.user === "Server-wide") return -1;
-      if (b.user === "Server-wide") return 1;
-      return a.user.localeCompare(b.user);
-    });
-}
 
 export const jobsRouter = t.router({
   list: procedure.query(() => getJobs()),
@@ -53,7 +25,7 @@ export const jobsRouter = t.router({
 
   run: procedure.input(z.object({ runId: z.string() })).query(({ input }) => {
     const run = getJobRun(input.runId);
-    if (!run) throw new Error(`Run ${input.runId} not found`);
+    if (!run) throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.runId} not found` });
     return run;
   }),
 
@@ -78,17 +50,24 @@ export const jobsRouter = t.router({
 
   start: procedure.input(z.object({ jobId: z.string() })).mutation(async ({ input }) => {
     const result = await startJob(input.jobId);
-    if (!result) throw new Error(`Job ${input.jobId} is already running or not found`);
+    if (!result) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: `Job ${input.jobId} is already running or not found`,
+      });
+    }
     return { runId: result.runId };
   }),
 
   cancel: procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
     const ok = cancelRun(input.runId);
-    if (!ok) throw new Error(`Run ${input.runId} is not running`);
+    if (!ok) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: `Run ${input.runId} is not running` });
+    }
     return { ok: true };
   }),
 
-  bywCollections: procedure.query(() => getBywCollectionsGrouped()),
+  bywCollections: procedure.query(() => getBywCollectionsGroupedByUser()),
 
   featureCatalog: procedure.query(() => listFeatureCatalog()),
 

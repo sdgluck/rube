@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { errorMessage } from "@tinkerbell/core";
-import { getAllConfig } from "@tinkerbell/core";
+import { TRPCError } from "@trpc/server";
+import { errorMessage, getAllConfig } from "@tinkerbell/core";
 import {
   reportHealth,
   getHealthLatest,
@@ -40,10 +40,11 @@ export const healthRouter = t.router({
   check: procedure.input(z.object({ service: z.string() })).mutation(async ({ input }) => {
     try {
       await checkServiceHealth(input.service);
-      return { ok: true as const };
+      return { ok: true };
     } catch (err) {
-      reportHealth(input.service, "error", errorMessage(err));
-      return { ok: false as const, error: errorMessage(err) };
+      const message = errorMessage(err);
+      reportHealth(input.service, "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
     }
   }),
 });

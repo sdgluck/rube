@@ -398,8 +398,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     const service = arrService;
     const profilesQuery = arrProfilesQuery;
     const foldersQuery = arrFoldersQuery;
-    const profiles = profilesQuery.data?.profiles ?? [];
-    const folders = foldersQuery.data?.folders ?? [];
+    const profiles = profilesQuery.data ?? [];
+    const folders = foldersQuery.data ?? [];
     const setArr = (patch: Partial<ArrFormState>) => setForm({ ...form, arr: { ...form.arr, ...patch } });
 
     return (
@@ -445,8 +445,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   </option>
                 ))}
               </select>
-              {profilesQuery.data && !profilesQuery.data.ok && (
-                <span className={styles.hint}>Couldn't load profiles: {profilesQuery.data.error}</span>
+              {profilesQuery.error && (
+                <span className={styles.hint}>Couldn't load profiles: {profilesQuery.error.message}</span>
               )}
             </div>
 
@@ -465,8 +465,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   </option>
                 ))}
               </select>
-              {foldersQuery.data && !foldersQuery.data.ok && (
-                <span className={styles.hint}>Couldn't load folders: {foldersQuery.data.error}</span>
+              {foldersQuery.error && (
+                <span className={styles.hint}>Couldn't load folders: {foldersQuery.error.message}</span>
               )}
             </div>
 
