@@ -300,7 +300,7 @@ export default function CollectionDetail() {
         ) : itemsView === "grid" ? (
           <div className={styles.grid}>
             {items.map((item) => (
-              <div key={item.ratingKey} className={styles.card}>
+              <div key={item.ratingKey} className={styles.card} onClick={() => navigate(`/media/${item.ratingKey}`)}>
                 {item.thumb ? (
                   <FadeImage
                     className={styles.cardPoster}
@@ -329,7 +329,11 @@ export default function CollectionDetail() {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.ratingKey}>
+                  <tr
+                    key={item.ratingKey}
+                    className={styles.clickableRow}
+                    onClick={() => navigate(`/media/${item.ratingKey}`)}
+                  >
                     <td>{item.title}</td>
                     <td className={styles.itemYear}>{item.year || "—"}</td>
                   </tr>
