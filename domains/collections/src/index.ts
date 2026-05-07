@@ -153,7 +153,7 @@ export async function syncCollections(client: PlexClient, sections: PlexSection[
 
   // Drop membership rows for collections that no longer exist locally.
   db.run(
-    sql`DELETE FROM ${collectionItems} WHERE ${collectionItems.collectionRatingKey} NOT IN (SELECT ${collections.plexRatingKey} FROM ${collections})`,
+    sql`DELETE FROM collection_items WHERE collection_rating_key NOT IN (SELECT plex_rating_key FROM collections)`,
   );
 
   // Refresh every migration provider's scan so the banner / Settings →
