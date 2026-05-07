@@ -10,8 +10,12 @@ import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "
 import styles from "./Overlays.module.css";
 import { Inspector } from "./Overlays/Inspector";
 import { PresetList } from "./Overlays/PresetList";
-import { OVERLAY_CATALOG, POSITIONS } from "./Overlays/constants";
-import { badgePreviewStyle, getPlaceholderValue } from "./Overlays/helpers";
+import { Catalog } from "./Overlays/Catalog";
+import { BulkPreviewModal } from "./Overlays/BulkPreviewModal";
+import { SavePresetModal } from "./Overlays/SavePresetModal";
+import { ImportLayoutModal } from "./Overlays/ImportLayoutModal";
+import { POSITIONS } from "./Overlays/constants";
+import { getPlaceholderValue } from "./Overlays/helpers";
 
 export default function Overlays() {
   const toast = useToast();
@@ -56,7 +60,6 @@ export default function Overlays() {
   const [importText, setImportText] = useState("");
   const [importMode, setImportMode] = useState<"replace" | "append">("replace");
   const [importError, setImportError] = useState<string | null>(null);
-  const importFileRef = useRef<HTMLInputElement | null>(null);
   const overflowRef = useRef<HTMLDivElement | null>(null);
 
   const utils = trpc.useUtils();
@@ -426,37 +429,7 @@ export default function Overlays() {
           <div className={styles.workspace}>
             {/* ─── Left: catalog + presets (separate panels) ────────── */}
             <div className={styles.catalogColumn}>
-              <aside className={styles.catalog}>
-                <h3 className={styles.paneTitle}>Overlays</h3>
-                <div className={styles.panelBody}>
-                  {(["Quality", "Audio", "Ratings", "Metadata"] as const).map((group) => (
-                    <div key={group} className={styles.catalogGroup}>
-                      <div className={styles.catalogGroupLabel}>{group}</div>
-                      <div className={styles.chipList}>
-                        {OVERLAY_CATALOG.filter((c) => c.group === group).map((chip) => (
-                          <div
-                            key={chip.type}
-                            className={styles.catalogChip}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData("text/plain", JSON.stringify({ kind: "new", type: chip.type }));
-                              e.dataTransfer.effectAllowed = "copy";
-                            }}
-                          >
-                            <span className={styles.catalogChipLabel}>{chip.label}</span>
-                            <span
-                              className={styles.catalogChipSample}
-                              style={badgePreviewStyle(chip.type, chip.sample, null, { compact: true })}
-                            >
-                              {chip.sample}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </aside>
+              <Catalog />
               <aside className={styles.catalog}>
                 <h3 className={styles.paneTitle}>Presets</h3>
                 <div className={styles.panelBody}>
@@ -833,32 +806,12 @@ export default function Overlays() {
         </>
       )}
 
-      {/* ─── Bulk preview modal ─────────────────────────────────── */}
-      {bulkOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setBulkOpen(false)}>
-          <div className={styles.modalLg} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Bulk Preview</h3>
-              <button className={styles.modalClose} onClick={() => setBulkOpen(false)}>
-                ×
-              </button>
-            </div>
-            {bulkPreviewMutation.isPending ? (
-              <p className={styles.modalHint}>Rendering 6 random posters…</p>
-            ) : (
-              <div className={styles.bulkGrid}>
-                {bulkItems.map((it) => (
-                  <div key={it.ratingKey} className={styles.bulkCell}>
-                    <img src={`data:image/jpeg;base64,${it.image}`} alt={it.title} />
-                    <span>{it.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className={styles.modalHint}>Preview only — no changes have been made in Plex.</p>
-          </div>
-        </div>
-      )}
+      <BulkPreviewModal
+        open={bulkOpen}
+        loading={bulkPreviewMutation.isPending}
+        items={bulkItems}
+        onClose={() => setBulkOpen(false)}
+      />
 
       {confirmClearOpen && (
         <ConfirmModal
@@ -870,141 +823,33 @@ export default function Overlays() {
         />
       )}
 
-      {/* ─── Save preset modal ──────────────────────────────────── */}
-      {savePresetOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setSavePresetOpen(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Save preset</h3>
-              <button className={styles.modalClose} onClick={() => setSavePresetOpen(false)}>
-                ×
-              </button>
-            </div>
-            <label className={styles.fieldLabel}>Name</label>
-            <input
-              className={styles.input}
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
-              placeholder="My overlay style"
-              autoFocus
-            />
-            <label className={styles.fieldLabel}>Description</label>
-            <input
-              className={styles.input}
-              value={presetDesc}
-              onChange={(e) => setPresetDesc(e.target.value)}
-              placeholder="Optional"
-            />
-            <div className={styles.modalActions}>
-              <button className={styles.smallBtn} onClick={() => setSavePresetOpen(false)}>
-                Cancel
-              </button>
-              <button
-                className={styles.actionBtnPrimary}
-                disabled={!presetName.trim() || savePresetMutation.isPending}
-                onClick={() =>
-                  savePresetMutation.mutate({ sectionId, name: presetName.trim(), description: presetDesc.trim() })
-                }
-              >
-                {savePresetMutation.isPending ? (
-                  <>
-                    <Spinner size="xs" /> Saving…
-                  </>
-                ) : (
-                  "Save"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SavePresetModal
+        open={savePresetOpen}
+        name={presetName}
+        description={presetDesc}
+        saving={savePresetMutation.isPending}
+        onNameChange={setPresetName}
+        onDescriptionChange={setPresetDesc}
+        onClose={() => setSavePresetOpen(false)}
+        onSave={() => savePresetMutation.mutate({ sectionId, name: presetName.trim(), description: presetDesc.trim() })}
+      />
 
-      {/* ─── Import layout modal ────────────────────────────────── */}
-      {importOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setImportOpen(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Import layout</h3>
-              <button className={styles.modalClose} onClick={() => setImportOpen(false)}>
-                ×
-              </button>
-            </div>
-            <p className={styles.modalHint} style={{ textAlign: "left" }}>
-              Choose a JSON file exported from this page, or paste its contents.
-            </p>
-            <div>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept="application/json,.json"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleImportFile(f);
-                  e.target.value = "";
-                }}
-              />
-              <button className={styles.smallBtn} onClick={() => importFileRef.current?.click()}>
-                Choose file…
-              </button>
-            </div>
-            <textarea
-              className={styles.input}
-              value={importText}
-              onChange={(e) => {
-                setImportText(e.target.value);
-                if (importError) setImportError(null);
-              }}
-              placeholder='{"version":1,"configs":[…]}'
-              rows={8}
-              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", resize: "vertical" }}
-            />
-            <div className={styles.checkRow}>
-              <label className={styles.checkLabel}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "replace"}
-                  onChange={() => setImportMode("replace")}
-                />
-                Replace ({configs.length} existing will be removed)
-              </label>
-              <label className={styles.checkLabel}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "append"}
-                  onChange={() => setImportMode("append")}
-                />
-                Append to existing
-              </label>
-            </div>
-            {importError && (
-              <p className={styles.fieldHint} style={{ color: "#dc3545" }}>
-                {importError}
-              </p>
-            )}
-            <div className={styles.modalActions}>
-              <button className={styles.smallBtn} onClick={() => setImportOpen(false)}>
-                Cancel
-              </button>
-              <button
-                className={styles.actionBtnPrimary}
-                disabled={!importText.trim() || importSectionMutation.isPending}
-                onClick={handleImport}
-              >
-                {importSectionMutation.isPending ? (
-                  <>
-                    <Spinner size="xs" /> Importing…
-                  </>
-                ) : (
-                  "Import"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImportLayoutModal
+        open={importOpen}
+        text={importText}
+        mode={importMode}
+        error={importError}
+        importing={importSectionMutation.isPending}
+        existingCount={configs.length}
+        onTextChange={(v) => {
+          setImportText(v);
+          if (importError) setImportError(null);
+        }}
+        onModeChange={setImportMode}
+        onPickFile={handleImportFile}
+        onClose={() => setImportOpen(false)}
+        onImport={handleImport}
+      />
     </div>
   );
 }
