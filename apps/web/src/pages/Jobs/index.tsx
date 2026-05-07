@@ -16,6 +16,7 @@ import styles from "./Jobs.module.css";
 import shared from "#pages/Collections.module.css";
 import { getJobFields } from "./fields";
 import FeatureWizard from "./FeatureWizard";
+import { getFeatureCatalogEntry } from "./FeatureWizard/feature-catalog";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -145,6 +146,8 @@ export default function Jobs() {
     onSettled: () => utils.jobs.list.invalidate(),
   });
 
+  const installMutation = trpc.jobs.install.useMutation();
+
   const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("jobs-sort-key", SORT_KEYS, "name"));
   const [sortDir, setSortDir] = useState<SortDir>(() => {
     const stored = localStorage.getItem("jobs-sort-dir");
@@ -251,9 +254,9 @@ export default function Jobs() {
     });
   }, [recentRunsQuery.data]);
 
-  // ─── Export/Import ──────────────────────────────────────────────────────
+  // ─── Export/Import (Your Features only) ─────────────────────────────────
   function getExportData() {
-    return jobs.map((j) => ({
+    return featureJobs.map((j) => ({
       id: j.id,
       name: j.name,
       schedule: j.schedule,
@@ -263,31 +266,58 @@ export default function Jobs() {
   }
 
   function handleExportFile() {
-    downloadJson(getExportData(), "tinkerbell-jobs.json");
+    downloadJson(getExportData(), "tinkerbell-features.json");
   }
 
   async function handleExportClipboard() {
     await navigator.clipboard.writeText(JSON.stringify(getExportData(), null, 2));
-    addToast("Copied jobs to clipboard", "success");
+    addToast("Copied features to clipboard", "success");
   }
 
   async function importJobs(text: string) {
     const data = JSON.parse(text);
-    if (!Array.isArray(data)) throw new Error("Expected an array of jobs");
-    let count = 0;
+    if (!Array.isArray(data)) throw new Error("Expected an array of features");
+
+    const installedIds = new Set(featureJobs.map((j) => j.id));
+    let installed = 0;
+    let updated = 0;
+    const unknown: string[] = [];
+
     for (const item of data) {
-      const existing = jobs.find((j) => j.id === item.id);
-      if (!existing) continue;
-      await updateMutation.mutateAsync({
-        jobId: item.id,
-        schedule: item.schedule,
-        enabled: item.enabled,
-        config: item.config,
-      });
-      count++;
+      if (!item || typeof item.id !== "string") continue;
+      if (!getFeatureCatalogEntry(item.id)) {
+        unknown.push(item.id);
+        continue;
+      }
+      if (installedIds.has(item.id)) {
+        await updateMutation.mutateAsync({
+          jobId: item.id,
+          schedule: item.schedule,
+          enabled: item.enabled,
+          config: item.config,
+        });
+        updated++;
+      } else {
+        await installMutation.mutateAsync({
+          featureId: item.id,
+          schedule: item.schedule,
+          config: item.config,
+        });
+        // installFeature always sets enabled=1; respect explicit `enabled: false` from import.
+        if (item.enabled === false) {
+          await updateMutation.mutateAsync({ jobId: item.id, enabled: false });
+        }
+        installed++;
+      }
     }
+
     utils.jobs.list.invalidate();
-    addToast(`Updated ${count} job${count !== 1 ? "s" : ""}`, "success");
+
+    const parts: string[] = [];
+    if (installed) parts.push(`installed ${installed}`);
+    if (updated) parts.push(`updated ${updated}`);
+    if (unknown.length) parts.push(`skipped ${unknown.length} unknown (${unknown.join(", ")})`);
+    addToast(parts.length ? `Import: ${parts.join(", ")}` : "Nothing to import", parts.length ? "success" : "info");
   }
 
   async function handleImportFile(file: File) {
