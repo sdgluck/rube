@@ -123,6 +123,9 @@ export interface PlexHomeHub {
 }
 
 export interface PlexSession {
+  ratingKey?: string;
+  parentRatingKey?: string;
+  grandparentRatingKey?: string;
   title: string;
   type: string;
   year?: number;

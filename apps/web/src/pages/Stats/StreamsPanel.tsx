@@ -1,4 +1,5 @@
 import type React from "react";
+import { Link } from "react-router-dom";
 import { ListSkeleton } from "#components/Skeleton";
 import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
@@ -59,10 +60,24 @@ export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.Reac
                     <span className={styles.statusDot} data-state={session.state} title={session.state} />
                   </td>
                   <td className={styles.titleCell}>
-                    <span className={styles.titleText}>
-                      {title}
-                      {epInfo && <span className={styles.epLabel}> · {epInfo}</span>}
-                    </span>
+                    {(() => {
+                      const linkKey = isEpisode
+                        ? (session.grandparentRatingKey ?? session.ratingKey)
+                        : session.ratingKey;
+                      const inner = (
+                        <span className={styles.titleText}>
+                          {title}
+                          {epInfo && <span className={styles.epLabel}> · {epInfo}</span>}
+                        </span>
+                      );
+                      return linkKey ? (
+                        <Link to={`/media/${linkKey}`} className={styles.titleLink}>
+                          {inner}
+                        </Link>
+                      ) : (
+                        inner
+                      );
+                    })()}
                   </td>
                   <td className={styles.userCell}>{session.user}</td>
                   <td className={`${styles.monoCell} ${styles.hideOnMobile}`}>{qualityParts.join(" ")}</td>

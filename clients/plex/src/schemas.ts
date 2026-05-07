@@ -118,6 +118,7 @@ export const plexMetadataRawSchema = z
     librarySectionTitle: z.string().optional(),
     grandparentTitle: z.string().optional(),
     grandparentRatingKey: z.string().optional(),
+    parentRatingKey: z.string().optional(),
     parentTitle: z.string().optional(),
     parentIndex: z.number().optional(),
     index: z.number().optional(),

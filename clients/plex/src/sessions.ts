@@ -17,6 +17,9 @@ export function createSessionsModule(http: PlexHttp) {
         v === undefined ? undefined : v === true || v === 1 || v === "1" || v === "true";
 
       return {
+        ratingKey: item.ratingKey,
+        parentRatingKey: item.parentRatingKey,
+        grandparentRatingKey: item.grandparentRatingKey,
         title: item.title ?? "",
         type: item.type ?? "",
         year: item.year,
