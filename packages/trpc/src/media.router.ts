@@ -43,14 +43,16 @@ export const mediaRouter = t.router({
     const client = getPlexClient();
     const detail = await client.getItemDetail(input.ratingKey);
 
-    const enrichedCollections = detail.collections.map((col) => {
+    const enrichedCollections = detail.collections.flatMap((col) => {
       const local = getLocalCollection(String(col.id));
-      return {
-        ratingKey: String(col.id),
-        title: col.tag,
-        isLocal: !!local,
-        sectionTitle: local?.sectionTitle,
-      };
+      if (!local) return [];
+      return [
+        {
+          ratingKey: String(col.id),
+          title: col.tag,
+          sectionTitle: local.sectionTitle,
+        },
+      ];
     });
 
     return {
