@@ -1,3 +1,4 @@
+import { httpRequest, HttpError } from "@tinkerbell/http";
 import type { PlexHttp } from "./http.ts";
 
 function errorMessage(err: unknown): string {
@@ -25,26 +26,29 @@ export function createSharingModule(http: PlexHttp) {
 
     let res: Response;
     try {
-      res = await fetch(reqUrl.toString(), {
-        method,
-        signal: http.signal,
-        headers: {
-          Accept: "application/json",
-          "X-Plex-Client-Identifier": "tinkerbell",
-          "X-Plex-Product": "tinkerbell",
-          "X-Plex-Version": "1.0.0",
-          ...headers,
+      res = await httpRequest({
+        url: reqUrl,
+        retries: 3,
+        timeoutMs: 15_000,
+        init: {
+          method,
+          signal: http.signal,
+          headers: {
+            Accept: "application/json",
+            "X-Plex-Client-Identifier": "tinkerbell",
+            "X-Plex-Product": "tinkerbell",
+            "X-Plex-Version": "1.0.0",
+            ...headers,
+          },
         },
       });
     } catch (err) {
+      if (err instanceof HttpError) {
+        http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${err.status}`);
+        throw new Error(`Plex.tv API ${method} ${path} → ${err.message}`);
+      }
       http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${errorMessage(err)}`);
       throw err;
-    }
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${res.status} ${res.statusText}`);
-      throw new Error(`Plex.tv API ${method} ${path} → ${res.status} ${res.statusText}\n${body}`);
     }
 
     http.onHealth?.("Plex.tv", "ok", `${method} ${path} → ${res.status}`);

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/http": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {

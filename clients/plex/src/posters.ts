@@ -1,3 +1,4 @@
+import { httpRequest } from "@tinkerbell/http";
 import type { PlexHttp } from "./http.ts";
 import type { PlexPoster } from "./types.ts";
 
@@ -12,22 +13,23 @@ export function createPostersModule(http: PlexHttp) {
     const reqUrl = new URL(`/library/metadata/${ratingKey}/posters`, http.url);
     reqUrl.searchParams.set("X-Plex-Token", http.token);
 
-    const res = await fetch(reqUrl.toString(), {
-      method: "POST",
-      signal: http.signal,
-      headers: {
-        "Content-Type": "image/jpeg",
-        "X-Plex-Client-Identifier": "tinkerbell",
-        "X-Plex-Product": "tinkerbell",
-        "X-Plex-Version": "1.0.0",
+    // Posters can be a few MB. 60s ceiling on the upload itself, regardless of
+    // the per-call signal, so a stuck connection doesn't hang the job runner.
+    await httpRequest({
+      url: reqUrl,
+      timeoutMs: 60_000,
+      init: {
+        method: "POST",
+        signal: http.signal,
+        headers: {
+          "Content-Type": "image/jpeg",
+          "X-Plex-Client-Identifier": "tinkerbell",
+          "X-Plex-Product": "tinkerbell",
+          "X-Plex-Version": "1.0.0",
+        },
+        body: new Uint8Array(imageBuffer),
       },
-      body: new Uint8Array(imageBuffer),
     });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Plex API POST /library/metadata/${ratingKey}/posters → ${res.status}\n${body}`);
-    }
   }
 
   async function getPosters(ratingKey: string): Promise<PlexPoster[]> {

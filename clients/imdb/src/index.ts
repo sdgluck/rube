@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpRequest, HttpError } from "@tinkerbell/http";
 
 /**
  * IMDb chart and list fetching, via the public (anonymous, undocumented)
@@ -134,18 +135,18 @@ export function createImdbClient(opts: ImdbClientOptions = {}) {
   ): Promise<unknown> {
     let res: Response;
     try {
-      res = await fetch(GRAPHQL_URL, {
-        method: "POST",
-        headers: REQUEST_HEADERS,
-        body: JSON.stringify(body),
+      res = await httpRequest({
+        url: GRAPHQL_URL,
+        timeoutMs: 15_000,
+        init: { method: "POST", headers: REQUEST_HEADERS, body: JSON.stringify(body) },
       });
     } catch (err) {
+      if (err instanceof HttpError) {
+        onHealth?.("error", `${label} → ${err.status}`);
+        throw new Error(`IMDb GraphQL ${label} → ${err.status}`);
+      }
       onHealth?.("error", `${label} → ${errorMessage(err)}`);
       throw err;
-    }
-    if (!res.ok) {
-      onHealth?.("error", `${label} → ${res.status}`);
-      throw new Error(`IMDb GraphQL ${label} → ${res.status}`);
     }
     onHealth?.("ok", `${label} → ${res.status}`);
     return res.json();

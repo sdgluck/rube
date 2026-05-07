@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, omdbCache } from "@tinkerbell/db";
+import { httpRequest, HttpError } from "@tinkerbell/http";
 
 export type OmdbHealthCallback = (status: "ok" | "error", message: string) => void;
 
@@ -35,22 +36,22 @@ export function createOmdbClient(opts: OmdbClientOptions) {
 
     if (!apiKey) return null;
 
-    // OMDb only supports key-as-query-param. We don't have the option to move it
-    // to a header, so make sure the URL never appears in error messages —
-    // `errorMessage()` already returns just the message string (no cause chain
-    // with URL), and we only log status codes on non-ok responses.
+    // OMDb only supports key-as-query-param — no header alternative. We
+    // construct the URL via `URL` (proper encoding) and route through the
+    // shared http helper, which carries a 15s timeout and surfaces only
+    // status codes on non-ok responses (never the URL).
     const url = new URL("https://www.omdbapi.com/");
     url.searchParams.set("i", imdbId);
     url.searchParams.set("apikey", apiKey);
     let res: Response;
     try {
-      res = await fetch(url);
+      res = await httpRequest({ url, timeoutMs: 10_000 });
     } catch (err) {
-      onHealth?.("error", errorMessage(err));
-      return null;
-    }
-    if (!res.ok) {
-      onHealth?.("error", `${res.status} ${res.statusText}`);
+      if (err instanceof HttpError) {
+        onHealth?.("error", `${err.status} ${err.message}`);
+      } else {
+        onHealth?.("error", errorMessage(err));
+      }
       return null;
     }
     onHealth?.("ok", `GET /?i=${imdbId} → ${res.status}`);

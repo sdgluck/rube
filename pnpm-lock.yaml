@@ -145,6 +145,9 @@ importers:
 
   clients/imdb:
     dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       zod:
         specifier: ^4.3.6
         version: 4.4.2
@@ -161,6 +164,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(knex@3.2.10(better-sqlite3@12.9.0))
@@ -174,6 +180,9 @@ importers:
 
   clients/plex:
     dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       p-queue:
         specifier: ^9.1.0
         version: 9.2.0
@@ -579,6 +588,15 @@ importers:
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.10
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/http:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.6.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
