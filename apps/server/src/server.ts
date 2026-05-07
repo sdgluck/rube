@@ -79,13 +79,29 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     const thumbPath = url.searchParams.get("path");
     const plexUrl = getConfig("global_plex_url");
     const plexToken = getConfig("global_plex_token");
-    if (!thumbPath || !thumbPath.startsWith("/") || !plexUrl || !plexToken) {
+    // Reject anything that could resolve to a different origin: protocol-relative
+    // (`//evil.com/x`), absolute (`http://evil.com`), or backslash-prefixed.
+    if (
+      !thumbPath ||
+      !thumbPath.startsWith("/") ||
+      thumbPath.startsWith("//") ||
+      thumbPath.startsWith("/\\") ||
+      thumbPath.includes("://") ||
+      !plexUrl ||
+      !plexToken
+    ) {
       res.writeHead(400);
       res.end();
       return;
     }
     try {
+      const plexOrigin = new URL(plexUrl).origin;
       const imageUrl = new URL(thumbPath, plexUrl);
+      if (imageUrl.origin !== plexOrigin) {
+        res.writeHead(400);
+        res.end();
+        return;
+      }
       imageUrl.searchParams.set("X-Plex-Token", plexToken);
       const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
       if (!pRes.ok || !pRes.body) {
