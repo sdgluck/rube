@@ -8,5 +8,7 @@
  */
 export { parseSmartFilterUri } from "./parse.ts";
 export { emitSmartFilterTree } from "./emit.ts";
+export { splitSmartFilterContent, restoreSmartFilterContent } from "./envelope.ts";
+export type { SmartFilterEnvelope } from "./envelope.ts";
 export { smartFilterLeafSchema, smartFilterGroupSchema, smartFilterNodeSchema } from "./schema.ts";
 export type { ParseResult, SmartFilterLeaf, SmartFilterGroup, SmartFilterNode, SmartFilterOp } from "./parse.ts";
