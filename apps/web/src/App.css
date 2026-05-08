@@ -21,6 +21,25 @@
   --card-poster-bg: #e9ecef;
   --bulk-border: #c7d2fe;
   --filter-group-bg: #fafbfc;
+
+  /* ─── Form-control tokens (used by styles/controls.module.css) ─── */
+  --btn-radius: 6px;
+  --btn-pad-y: 8px;
+  --btn-pad-x: 16px;
+  --btn-pad-y-sm: 5px;
+  --btn-pad-x-sm: 11px;
+  --btn-font-size: 0.9rem;
+  --btn-font-size-sm: 0.78rem;
+  --btn-font-weight: 600;
+
+  --input-radius: 6px;
+  --input-pad-y: 9px;
+  --input-pad-x: 12px;
+  --input-font-size: 0.9rem;
+  --input-focus-ring: 0 0 0 3px rgba(74, 108, 247, 0.2);
+
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +66,10 @@
     --card-poster-bg: #2a2a3d;
     --bulk-border: #333366;
     --filter-group-bg: #1a1a2e;
+
+    --input-focus-ring: 0 0 0 3px rgba(107, 140, 255, 0.25);
+    --danger: #f07070;
+    --danger-hover: #e05a5a;
   }
 }
 

@@ -220,19 +220,7 @@
 }
 
 .cancelButton {
-  background: none;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.cancelButton:hover {
-  background: #dc3545;
-  color: #fff;
+  composes: btn btnDangerOutline btnSm from "../styles/controls.module.css";
 }
 
 .logViewer {

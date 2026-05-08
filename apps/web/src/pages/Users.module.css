@@ -74,19 +74,10 @@
 }
 
 .nameInput {
-  padding: 4px 8px;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  composes: input inputSm from "../styles/controls.module.css";
+  border-color: var(--accent);
   width: 100%;
   box-sizing: border-box;
-}
-
-.nameInput:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
 }
 
 /* ─── Responsive ────────────────────────────────────────────────────────────── */

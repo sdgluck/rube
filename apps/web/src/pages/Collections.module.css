@@ -34,73 +34,19 @@
 }
 
 .button {
-  background: var(--accent);
-  color: #fff;
-  padding: 10px 24px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.button:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  composes: btn btnPrimary from "../styles/controls.module.css";
 }
 
 .buttonSecondary {
-  background: var(--bg-surface);
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  padding: 10px 24px;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.buttonSecondary:hover:not(:disabled) {
-  background: var(--accent);
-  color: #fff;
-}
-
-.buttonSecondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  composes: btn btnSecondary from "../styles/controls.module.css";
 }
 
 .buttonDanger {
-  background: var(--bg-surface);
-  color: #dc3545;
-  border: 1px solid #dc3545;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.buttonDanger:hover:not(:disabled) {
-  background: #dc3545;
-  color: #fff;
-}
-
-.buttonDanger:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  composes: btn btnDangerOutline btnSm from "../styles/controls.module.css";
 }
 
 .buttonSmall {
-  padding: 6px 14px;
-  font-size: 0.85rem;
+  composes: btnSm from "../styles/controls.module.css";
 }
 
 .filters {
@@ -116,30 +62,13 @@
 }
 
 .select {
-  padding: 8px 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  composes: select from "../styles/controls.module.css";
 }
 
 .searchInput {
-  padding: 8px 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  composes: input from "../styles/controls.module.css";
   flex: 1;
   max-width: 300px;
-}
-
-.searchInput:focus,
-.select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
 .table {
@@ -968,36 +897,11 @@
 }
 
 .input {
-  padding: 10px 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  composes: input from "../styles/controls.module.css";
 }
 
 .textarea {
-  padding: 10px 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  resize: vertical;
-  min-height: 80px;
-  font-family: inherit;
-}
-
-.textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  composes: textarea from "../styles/controls.module.css";
 }
 
 .buttons {

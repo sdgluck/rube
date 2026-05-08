@@ -174,18 +174,7 @@
 }
 
 .input {
-  padding: 10px 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  composes: input from "../../styles/controls.module.css";
 }
 
 .buttons {
@@ -195,48 +184,13 @@
 }
 
 .button {
-  background: var(--accent);
-  color: #fff;
+  composes: btn btnPrimary from "../../styles/controls.module.css";
   align-self: flex-start;
-  padding: 10px 24px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.button:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .buttonSecondary {
-  background: var(--bg-surface);
-  color: var(--accent);
-  border: 1px solid var(--accent);
+  composes: btn btnSecondary from "../../styles/controls.module.css";
   align-self: flex-start;
-  padding: 10px 24px;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.buttonSecondary:hover:not(:disabled) {
-  background: var(--accent);
-  color: #fff;
-}
-
-.buttonSecondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .hint {

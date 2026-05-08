@@ -1,0 +1,192 @@
+/* ─── Form-control primitives ─────────────────────────────────────────────
+ *
+ * Composed via `composes:` from page/component CSS modules so that local class
+ * names (e.g. .submitBtn) keep working unchanged in JSX.
+ *
+ * Tokens live in App.css (--btn-*, --input-*).
+ *
+ *   composes: btn btnPrimary from "../../styles/controls.module.css";
+ */
+
+/* ─── Buttons ─────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  border: 1px solid transparent;
+  border-radius: var(--btn-radius);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Variants — colors only. Geometry is on .btn. */
+
+.btnPrimary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btnSecondary {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-color: var(--border-input);
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-muted);
+}
+
+.btnGhost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-input);
+}
+
+.btnGhost:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-muted);
+}
+
+.btnDanger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+.btnDangerOutline {
+  background: var(--bg-input);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btnDangerOutline:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Size modifier */
+
+.btnSm {
+  padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+  font-size: var(--btn-font-size-sm);
+}
+
+/* Press feedback — overrides global button:active scale, kept consistent. */
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.9;
+  transition:
+    transform 50ms,
+    opacity 50ms;
+}
+
+/* ─── Inputs ──────────────────────────────────────────────────────────── */
+
+.input,
+.select,
+.textarea {
+  padding: var(--input-pad-y) var(--input-pad-x);
+  border: 1px solid var(--border-input);
+  border-radius: var(--input-radius);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--input-font-size);
+  font-family: inherit;
+  line-height: 1.4;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.input:hover:not(:disabled):not(:focus),
+.select:hover:not(:disabled):not(:focus),
+.textarea:hover:not(:disabled):not(:focus) {
+  border-color: var(--text-muted);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--input-focus-ring);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+/* Select chevron */
+
+.select {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 9px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+/* Size modifier */
+
+.inputSm,
+.selectSm {
+  padding: 5px 10px;
+  font-size: var(--btn-font-size-sm);
+}
+
+.selectSm {
+  padding-right: 26px;
+  background-position:
+    calc(100% - 12px) 50%,
+    calc(100% - 7px) 50%;
+}

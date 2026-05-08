@@ -41,54 +41,17 @@
 }
 
 .btn {
-  padding: 8px 20px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 0.15s;
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.btnDanger {
-  background: #ef4444;
-  color: #fff;
-  border-color: #ef4444;
-}
-
-.btnDanger:hover {
-  background: #dc2626;
+  composes: btn from "../styles/controls.module.css";
 }
 
 .btnPrimary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.btnPrimary:hover {
-  background: var(--accent-hover);
+  composes: btn btnPrimary from "../styles/controls.module.css";
 }
 
 .btnSecondary {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border-color: var(--border-input);
+  composes: btn btnSecondary from "../styles/controls.module.css";
 }
 
-.btnSecondary:hover {
-  background: var(--bg-surface-hover);
-}
-
-.btn:active {
-  transform: scale(0.97);
-  opacity: 0.85;
-  transition:
-    transform 50ms,
-    opacity 50ms;
+.btnDanger {
+  composes: btn btnDanger from "../styles/controls.module.css";
 }

@@ -114,6 +114,7 @@ export default function FeatureWizard({ onClose }: Props) {
                 <span className={styles.fieldLabel}>Schedule (cron)</span>
                 <input
                   type="text"
+                  className={styles.input}
                   value={schedule}
                   onChange={(e) => setSchedule(e.target.value)}
                   placeholder="e.g. 0 2 * * *"
@@ -143,7 +144,7 @@ export default function FeatureWizard({ onClose }: Props) {
           <div className={styles.footerSpacer} />
           {step === "configure" && (
             <>
-              <button type="button" onClick={() => setStep("pick")}>
+              <button type="button" className={styles.secondaryBtn} onClick={() => setStep("pick")}>
                 Back
               </button>
               <button type="button" className={styles.primaryBtn} onClick={() => setStep("review")}>
@@ -153,7 +154,7 @@ export default function FeatureWizard({ onClose }: Props) {
           )}
           {step === "review" && (
             <>
-              <button type="button" onClick={() => setStep("configure")}>
+              <button type="button" className={styles.secondaryBtn} onClick={() => setStep("configure")}>
                 Back
               </button>
               <button

@@ -253,21 +253,10 @@
 }
 
 .textarea {
-  padding: 10px 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.85rem;
+  composes: textarea from "../../../styles/controls.module.css";
   font-family: monospace;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  resize: vertical;
+  font-size: 0.85rem;
   min-height: 180px;
-}
-
-.textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
 /* Pills (filter / chart-section indicator) */

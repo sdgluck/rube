@@ -124,7 +124,11 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+
+.input {
+  composes: input from "../../../styles/controls.module.css";
 }
 
 .fieldLabel {
@@ -169,19 +173,18 @@
   gap: 8px;
   padding: 12px 20px;
   border-top: 1px solid var(--border-color);
+  background: var(--bg-surface);
 }
 
 .footerSpacer {
   flex: 1;
 }
 
-.cancelBtn {
-  background: none;
-  border: 1px solid var(--border-color);
+.cancelBtn,
+.secondaryBtn {
+  composes: btn btnSecondary from "../../../styles/controls.module.css";
 }
 
 .primaryBtn {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  composes: btn btnPrimary from "../../../styles/controls.module.css";
 }

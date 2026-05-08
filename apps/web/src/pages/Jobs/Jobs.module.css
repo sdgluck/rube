@@ -119,9 +119,7 @@
 }
 
 .headerBtn {
-  padding: 4px 10px !important;
-  font-size: 0.75rem !important;
-  border-radius: 4px !important;
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
 }
 
 /* ─── Log tabs header ───────────────────────────────────────────────────── */
@@ -385,56 +383,23 @@
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
 
 .button {
-  background: var(--accent);
-  color: #fff;
-  padding: 4px 12px;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-
-.button:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  composes: btn btnPrimary btnSm from "../../styles/controls.module.css";
 }
 
 .buttonDanger {
-  background: #ef4444;
-  border-color: #ef4444;
-}
-
-.buttonDanger:hover:not(:disabled) {
-  background: #dc2626;
+  composes: btn btnDanger btnSm from "../../styles/controls.module.css";
 }
 
 .buttonSmall {
-  padding: 3px 10px;
-  font-size: 0.7rem;
+  composes: btnSm from "../../styles/controls.module.css";
 }
 
 /* ─── Cron input (JobDetail) ─────────────────────────────────────────────── */
 
 .cronInput {
+  composes: input inputSm from "../../styles/controls.module.css";
   font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
-  font-size: 0.85rem;
-  padding: 4px 8px;
-  border: 1px solid var(--border-input);
-  border-radius: 4px;
   width: 140px;
-}
-
-.cronInput:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
 .cronHint {

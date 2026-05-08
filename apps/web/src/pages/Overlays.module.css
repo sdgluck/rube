@@ -46,14 +46,8 @@
 }
 
 .sectionSelectInline {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.85rem;
+  composes: select selectSm from "../styles/controls.module.css";
   font-weight: 600;
-  cursor: pointer;
 }
 
 .subtitle {
@@ -65,14 +59,8 @@
 }
 
 .sectionSelect {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
+  composes: select from "../styles/controls.module.css";
   font-weight: 600;
-  cursor: pointer;
 }
 
 /*
@@ -363,27 +351,7 @@
 }
 
 .smallBtn {
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 5px 11px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.smallBtn:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  color: var(--text-primary);
-}
-
-.smallBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
 }
 
 .posterFrame {
