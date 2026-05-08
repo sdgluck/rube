@@ -1,8 +1,31 @@
+/* ─── Preview page — styled to closely mirror the Plex web app ───────────── */
+
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 36px;
+  color: #eee;
+  /* Soft gradient fade from the sidebar's near-black into the Plex canvas,
+     plus a hairline separator on the very edge so the boundary reads cleanly
+     without a harsh white line. */
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0, transparent 44px), #1f1f1f;
+  border-left: 1px solid rgba(255, 255, 255, 0.13);
+  /* Bleed past the surrounding .content padding (32px 40px desktop) so the
+     dark Plex canvas reaches the viewport edges. */
+  margin: -32px -40px;
+  padding: 32px 40px;
+  min-height: calc(100% + 64px);
+  font-family:
+    "Plex Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ─── Header ──────────────────────────────────────────────────────────────── */
 
 .header {
   display: flex;
@@ -10,6 +33,8 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .headerLeft {
@@ -20,136 +45,130 @@
 
 .title {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
 }
 
 .badge {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  font-weight: 600;
   padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--bg-badge);
-  color: var(--text-badge);
+  border-radius: 3px;
+  background: rgba(229, 160, 13, 0.15);
+  color: #e5a00d;
+  border: 1px solid rgba(229, 160, 13, 0.3);
 }
 
 .userPicker {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.userPicker label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .shuffleBtn {
-  padding: 6px 14px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: 0.9rem;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #eee;
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .shuffleBtn:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
+  background: rgba(229, 160, 13, 0.12);
+  border-color: rgba(229, 160, 13, 0.5);
+  color: #e5a00d;
 }
 
 .shuffleBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: progress;
 }
 
 .userSelect {
-  padding: 6px 10px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  min-width: 220px;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background:
+    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.5) 50%) calc(100% - 12px) calc(50% - 2px) / 5px 5px
+      no-repeat,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5) 50%, transparent 50%) calc(100% - 7px) calc(50% - 2px) / 5px 5px
+      no-repeat,
+    rgba(255, 255, 255, 0.04);
+  color: #eee;
+  font-size: 0.85rem;
+  min-width: 200px;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
+
+.userSelect:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.userSelect:focus {
+  outline: none;
+  border-color: #e5a00d;
+}
+
+.userSelect option {
+  background: #1f1f1f;
+  color: #eee;
+}
+
+/* ─── Warnings / status ───────────────────────────────────────────────────── */
 
 .warnings {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
-  background: var(--bg-surface);
-  color: var(--text-secondary);
+  padding: 12px 14px;
+  border: 1px solid rgba(229, 160, 13, 0.25);
+  border-left: 3px solid #e5a00d;
+  border-radius: 4px;
+  background: rgba(229, 160, 13, 0.06);
+  color: #ddd;
   font-size: 0.85rem;
 }
 
-/* ─── Hero backdrop ────────────────────────────────────────────────────── */
-
-.hero {
-  position: relative;
-  height: 280px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--card-poster-bg);
-  isolation: isolate;
-}
-
-.heroArt {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: brightness(0.6);
-}
-
-.heroOverlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.65) 100%);
-}
-
-.heroContent {
-  position: absolute;
-  left: 24px;
-  bottom: 20px;
-  right: 24px;
-  color: #fff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-}
-
-.heroEyebrow {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.85;
-  margin-bottom: 6px;
-}
-
-.heroTitle {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.heroSub {
-  margin-top: 4px;
-  font-size: 0.95rem;
-  opacity: 0.85;
-}
-
-/* ─── Hub rows ─────────────────────────────────────────────────────────── */
+/* ─── Hub rows ────────────────────────────────────────────────────────────── */
 
 .hub {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
 }
 
 .hubTitle {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.005em;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -157,24 +176,26 @@
 }
 
 .hubMeta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 400;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .hubChip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   font-weight: 600;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  padding: 2px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
   background: transparent;
   line-height: 1.4;
   cursor: pointer;
@@ -186,13 +207,13 @@
 
 a.hubChip:hover,
 button.hubChip:hover:not(:disabled) {
-  color: var(--text-primary);
-  border-color: var(--border-color);
-  background: var(--bg-surface-hover);
+  color: #e5a00d;
+  border-color: rgba(229, 160, 13, 0.5);
+  background: rgba(229, 160, 13, 0.08);
 }
 
 .hubChip:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: progress;
 }
 
@@ -201,48 +222,75 @@ button.hubChip:hover:not(:disabled) {
 }
 
 .hubChipDanger:hover:not(:disabled) {
-  color: var(--text-danger, #c0392b);
-  border-color: var(--text-danger, #c0392b);
-  background: transparent;
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.08);
 }
+
+/* ─── Card row ────────────────────────────────────────────────────────────── */
 
 .row {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
-  padding-bottom: 6px;
-  scrollbar-width: thin;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Slight negative margin so first/last cards can sit flush with the page edge
+     while still allowing room for the hover scale to bleed without clipping. */
+  margin: 0 -4px;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .row::-webkit-scrollbar {
-  height: 6px;
+  display: none;
 }
 
-.row::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
+/* ─── Card ────────────────────────────────────────────────────────────────── */
 
 .card {
   flex: 0 0 auto;
-  width: 140px;
+  width: 150px;
   cursor: pointer;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  transition: transform 0.18s ease;
 }
 
 .card.cardWide {
-  width: 240px;
+  width: 280px;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.posterWrap {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #2a2a2a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition:
+    box-shadow 0.18s ease,
+    outline-color 0.18s ease;
+  outline: 2px solid transparent;
+  outline-offset: 0;
+}
+
+.card:hover .posterWrap {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  outline-color: #e5a00d;
 }
 
 .poster {
   width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: 6px;
-  background: var(--card-poster-bg);
+  background: #2a2a2a;
   object-fit: cover;
   display: block;
 }
@@ -254,21 +302,18 @@ button.hubChip:hover:not(:disabled) {
 .posterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: 6px;
-  background: var(--card-poster-bg);
+  background: #2a2a2a;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .cardWide .posterPlaceholder {
   aspect-ratio: 16 / 9;
-}
-
-.posterWrap {
-  position: relative;
 }
 
 .progressTrack {
@@ -277,35 +322,57 @@ button.hubChip:hover:not(:disabled) {
   right: 0;
   bottom: 0;
   height: 3px;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
-  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+  z-index: 1;
 }
 
 .progressFill {
   height: 100%;
-  background: var(--accent);
+  background: #e5a00d;
+  box-shadow: 0 0 6px rgba(229, 160, 13, 0.6);
 }
 
 .cardTitle {
-  font-size: 0.8rem;
-  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #eee;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .cardMeta {
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .empty {
-  padding: 32px;
+  padding: 48px;
   text-align: center;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9rem;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .page {
+    gap: 28px;
+    margin: -16px -16px calc(-1 * (env(safe-area-inset-bottom, 0px) + 72px));
+    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 72px);
+  }
+  .card {
+    width: 120px;
+  }
+  .card.cardWide {
+    width: 220px;
+  }
+  .userSelect {
+    min-width: 150px;
+  }
 }
