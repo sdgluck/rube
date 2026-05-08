@@ -1,8 +1,9 @@
 .container {
   position: fixed;
-  /* Clear sticky bottom action bars (e.g. Overlays page). Pages can override
-     by setting --toast-bottom on a wrapping element. */
-  bottom: var(--toast-bottom, 80px);
+  /* Default sits close to the viewport edge. Pages with sticky bottom UI
+     (e.g. Overlays' action bar) override by setting --toast-bottom on a
+     wrapping element so the toast clears that UI. */
+  bottom: var(--toast-bottom, 24px);
   right: 24px;
   z-index: 300;
   display: flex;
@@ -104,6 +105,7 @@
 @media (max-width: 768px) {
   .container {
     bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, 80px));
+    /* Mobile keeps an 80px default to clear the bottom nav. */
     right: 16px;
     left: 16px;
     align-items: center;

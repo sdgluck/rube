@@ -19,6 +19,15 @@ import { getPlaceholderValue } from "./Overlays/helpers";
 
 export default function Overlays() {
   const toast = useToast();
+  // The sticky action bar at the bottom of this page covers the toast's
+  // default 24px offset, so push the toast up while Overlays is mounted.
+  // Toasts portal to document.body, so the variable lives there.
+  useEffect(() => {
+    document.body.style.setProperty("--toast-bottom", "80px");
+    return () => {
+      document.body.style.removeProperty("--toast-bottom");
+    };
+  }, []);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<OverlayPosition | null>(null);
   const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
