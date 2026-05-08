@@ -59,10 +59,16 @@
 
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
 
+/* Masonry-style two-column flow: each panel is sized to its own content
+ * rather than stretched to match a row peer. Mirrors the Stats grid. */
 .grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  column-count: 2;
+  column-gap: 16px;
+}
+
+.grid > * {
+  break-inside: avoid;
+  margin-bottom: 16px;
 }
 
 /* ─── Panel ─────────────────────────────────────────────────────────────── */
@@ -1109,7 +1115,7 @@
   }
 
   .grid {
-    grid-template-columns: 1fr;
+    column-count: 1;
   }
 
   .jobDetailColumns {
