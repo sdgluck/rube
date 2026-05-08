@@ -2,6 +2,15 @@ import type { PlexHttp } from "./http.ts";
 import { plexHubRawSchema, parseMetadataArray } from "./schemas.ts";
 import type { PlexHub, PlexHomeHub, PlexHubItem, PinOptions } from "./types.ts";
 
+const MANAGE_HUB_PREFIX = "custom.collection.";
+
+function normalizeManageHubIdentifier(id: string): string {
+  if (!id.startsWith(MANAGE_HUB_PREFIX)) return id;
+  const segments = id.slice(MANAGE_HUB_PREFIX.length).split(".");
+  if (segments.length <= 2) return id;
+  return `${MANAGE_HUB_PREFIX}${segments[0]}.${segments[1]}`;
+}
+
 function parseHubArray(raw: unknown): PlexHomeHub[] {
   if (!Array.isArray(raw)) return [];
   const hubs: PlexHomeHub[] = [];
@@ -71,7 +80,13 @@ export function createHubsModule(http: PlexHttp) {
   }
 
   async function unpinFromHomepage(sectionId: string, hubIdentifier: string): Promise<void> {
-    await http.request(`/hubs/sections/${sectionId}/manage/${hubIdentifier}`, {
+    // Plex's `/hubs` (home) endpoint returns collection-hub identifiers shaped
+    //   custom.collection.{sectionId}.{ratingKey}.{ratingKey}
+    // but the manage endpoint only accepts the canonical 2-segment form
+    //   custom.collection.{sectionId}.{ratingKey}
+    // Normalize so callers can pass identifiers from either source.
+    const normalized = normalizeManageHubIdentifier(hubIdentifier);
+    await http.request(`/hubs/sections/${sectionId}/manage/${normalized}`, {
       method: "DELETE",
     });
   }

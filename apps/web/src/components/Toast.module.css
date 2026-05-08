@@ -41,11 +41,25 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   animation: toastSlideIn 250ms ease-out;
   pointer-events: auto;
-  max-width: 380px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   line-height: 1.4;
+}
+
+.toast > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  /* Cap very long error blobs (e.g. raw HTML responses) so the toast stays
+     readable; the user can still get full details from logs. */
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .toastExiting {

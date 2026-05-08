@@ -19,11 +19,15 @@ function parseCollectionRatingKey(hubIdentifier: string): string | null {
 }
 
 function parseCollectionSectionId(hubIdentifier: string): string | null {
+  // Plex hub identifiers are shaped `custom.collection.{sectionId}.{ratingKey}…`
+  // — the library-section key is the FIRST segment after the prefix, not
+  // everything-before-the-last-dot (some identifiers carry trailing segments
+  // and the section key is always a bare integer).
   if (!hubIdentifier.startsWith(COLLECTION_HUB_PREFIX)) return null;
   const rest = hubIdentifier.slice(COLLECTION_HUB_PREFIX.length);
-  const lastDot = rest.lastIndexOf(".");
-  if (lastDot <= 0) return null;
-  return rest.slice(0, lastDot) || null;
+  const firstDot = rest.indexOf(".");
+  if (firstDot <= 0) return null;
+  return rest.slice(0, firstDot) || null;
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
