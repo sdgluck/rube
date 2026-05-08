@@ -147,9 +147,13 @@ export async function getPreviewForUser(
   client: PlexClient,
   userId: number | null,
   sectionId: number | null = null,
+  count: number = 12,
 ): Promise<PreviewResult> {
   const warnings: string[] = [];
-  const hubs = await client.getHomeHubs({ count: 25 });
+  // Per-hub item count caps Plex's response size. 12 fills the visible row at
+  // typical viewport widths and is fast; the page issues a follow-up call with
+  // a larger count to fill in items further down each row.
+  const hubs = await client.getHomeHubs({ count });
 
   if (userId == null) {
     const out: PreviewHub[] = [];

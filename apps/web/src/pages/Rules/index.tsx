@@ -392,19 +392,31 @@ export default function Rules() {
 
   function testRule(id: string): Promise<unknown> {
     setTestingRuleId(id);
+    // expandedRow drives both the in-flight log view and the post-completion
+    // test-results preview, so we leave it set on success.
     setExpandedRow(id);
     setExpandedPreview(null);
     testingRuleIdRef.current = id;
-    return testMutation.mutateAsync({ id }).finally(() => {
-      testingRuleIdRef.current = null;
-      setTestingRuleId(null);
-      utils.rules.list.invalidate();
-      utils.rules.lastTestResult.invalidate({ id });
-    });
+    return testMutation
+      .mutateAsync({ id })
+      .catch((err) => {
+        // On error/cancel collapse — the status cell tooltip carries the message.
+        setExpandedRow(null);
+        throw err;
+      })
+      .finally(() => {
+        testingRuleIdRef.current = null;
+        setTestingRuleId(null);
+        utils.rules.list.invalidate();
+        utils.rules.lastTestResult.invalidate({ id });
+      });
   }
 
   function runRule(id: string): Promise<unknown> {
     setRunningRuleId(id);
+    // While the run is in-flight, expandedRow drives the inline log view.
+    // After completion we collapse it and (if a collection was produced)
+    // open the Plex-style preview row instead — see `.then` below.
     setExpandedRow(id);
     setExpandedPreview(null);
     runningRuleIdRef.current = id;
@@ -412,11 +424,19 @@ export default function Rules() {
       .mutateAsync({ id })
       .then((result) => {
         const rule = allRules.find((r) => r.id === id);
-        addToast(
-          `Ran "${rule?.name ?? "rule"}"${(result as { lastCollectionKey?: string | null })?.lastCollectionKey ? "" : " (no collections created)"}`,
-          "success",
-        );
+        const lastCollectionKey = (result as { lastCollectionKey?: string | null })?.lastCollectionKey;
+        addToast(`Ran "${rule?.name ?? "rule"}"${lastCollectionKey ? "" : " (no collections created)"}`, "success");
+        // Swap the in-flight log view for the result preview. If no collection
+        // was created there's nothing to preview, so just collapse.
+        setExpandedRow(null);
+        if (lastCollectionKey) setExpandedPreview(id);
         return result;
+      })
+      .catch((err) => {
+        // On error/cancel the log view should not stick around — the status
+        // cell carries the error message via its tooltip.
+        setExpandedRow(null);
+        throw err;
       })
       .finally(() => {
         runningRuleIdRef.current = null;
@@ -451,14 +471,6 @@ export default function Rules() {
     runningRuleIdRef.current = null;
     setRunningRuleId(null);
     runMutation.reset();
-  }
-
-  function toggleRowExpand(id: string) {
-    setExpandedRow((prev) => {
-      const next = prev === id ? null : id;
-      if (next) setExpandedPreview(null);
-      return next;
-    });
   }
 
   useEffect(() => {
@@ -578,7 +590,7 @@ export default function Rules() {
       ) : rules.length === 0 ? (
         <EmptyState icon="cog" title="No matching rules" description="Try a different search or filter." />
       ) : (
-        <div className="table-scroll">
+        <div className={`table-scroll ${styles.tableBleedRight}`}>
           <table className={shared.table}>
             <thead>
               <tr>
@@ -614,7 +626,6 @@ export default function Rules() {
                     isRunning={isRunning}
                     isExpanded={expandedRow === rule.id}
                     highlighted={highlightedRuleId === rule.id}
-                    onToggleRowExpand={() => toggleRowExpand(rule.id)}
                     previewExpanded={expandedPreview === rule.id}
                     onTogglePreview={() => togglePreviewExpand(rule.id)}
                     formActive={!!form}

@@ -1,12 +1,32 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { keepPreviousData } from "@tanstack/react-query";
 import ConfirmModal from "#components/ConfirmModal";
-import FadeImage from "#components/FadeImage";
-import { ListSkeleton } from "#components/Skeleton";
+import { PreviewHubRow, PreviewHubRowSkeleton } from "#components/PreviewHubRow";
 import Spinner from "#components/Spinner";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
 import styles from "./Preview.module.css";
+
+// Layout matches Plex's home: a couple of wide (Continue Watching-style)
+// rows up top, then taller poster rows below. Mirroring the eventual UI
+// gives a much less jarring transition than a generic table skeleton.
+const SKELETON_HUBS: Array<{ wide: boolean; cards: number }> = [
+  { wide: true, cards: 5 },
+  { wide: false, cards: 8 },
+  { wide: false, cards: 8 },
+  { wide: false, cards: 8 },
+];
+
+function PreviewSkeleton() {
+  return (
+    <>
+      {SKELETON_HUBS.map((hub, i) => (
+        <PreviewHubRowSkeleton key={i} wide={hub.wide} cards={hub.cards} />
+      ))}
+    </>
+  );
+}
 
 const COLLECTION_HUB_PREFIX = "custom.collection.";
 
@@ -56,23 +76,6 @@ function readStoredSectionId(): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function thumbUrl(path: string | undefined): string | null {
-  if (!path) return null;
-  return `/api/plex-image?path=${encodeURIComponent(path)}`;
-}
-
-function pickPosterPath(item: {
-  type: string;
-  thumb?: string;
-  parentThumb?: string;
-  grandparentThumb?: string;
-}): string | undefined {
-  // For episodes, prefer the show poster (grandparentThumb) — matches Plex.
-  if (item.type === "episode") return item.grandparentThumb || item.parentThumb || item.thumb;
-  if (item.type === "season") return item.parentThumb || item.thumb;
-  return item.thumb;
-}
-
 function isWideHub(hub: { type: string; identifier: string; context?: string }): boolean {
   // Continue Watching / On Deck show 16:9 art tiles in Plex.
   const ctx = (hub.context || "").toLowerCase();
@@ -84,17 +87,6 @@ function isWideHub(hub: { type: string; identifier: string; context?: string }):
     id.includes("ondeck") ||
     hub.type === "clip"
   );
-}
-
-function pickWideArtPath(item: {
-  type: string;
-  art?: string;
-  thumb?: string;
-  parentThumb?: string;
-  grandparentThumb?: string;
-}): string | undefined {
-  if (item.type === "episode") return item.thumb || item.art;
-  return item.art || item.thumb;
 }
 
 export default function Preview() {
@@ -114,30 +106,59 @@ export default function Preview() {
   const usersQuery = trpc.users.list.useQuery({ limit: 200, offset: 0 });
   const sectionsQuery = trpc.plexSections.useQuery();
   const rulesQuery = trpc.rules.list.useQuery();
-  const previewQuery = trpc.preview.home.useQuery({ userId, sectionId });
-  const previewInput = { userId, sectionId };
+  // Two-stage fetch: the fast query (12 items/hub) paints the page quickly;
+  // the full query (25 items/hub) runs immediately after and silently swaps
+  // in deeper content for hubs the user might scroll within.
+  const fastInput = { userId, sectionId, count: 12 } as const;
+  const fullInput = { userId, sectionId, count: 25 } as const;
+  const fastQuery = trpc.preview.home.useQuery(fastInput, {
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const fullQuery = trpc.preview.home.useQuery(fullInput, {
+    // Don't fire the heavier request until the fast one has returned; this
+    // keeps the Plex server doing one thing at a time and matches user
+    // perception of "fast first, full after".
+    enabled: !!fastQuery.data,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const previewQuery = {
+    data: fullQuery.data ?? fastQuery.data,
+    isLoading: fastQuery.isLoading,
+    error: fullQuery.error ?? fastQuery.error,
+  };
 
   const unpinMutation = trpc.preview.unpinCollection.useMutation({
     onMutate: async ({ hubIdentifier }) => {
-      await utils.preview.home.cancel(previewInput);
-      const prev = utils.preview.home.getData(previewInput);
-      if (prev) {
-        utils.preview.home.setData(previewInput, {
-          ...prev,
-          hubs: prev.hubs.filter((h) => h.identifier !== hubIdentifier),
-        });
+      // Apply the optimistic removal to BOTH the fast and full caches so the
+      // hub disappears from screen regardless of which query last won.
+      const inputs = [fastInput, fullInput] as const;
+      await Promise.all(inputs.map((i) => utils.preview.home.cancel(i)));
+      const prev = inputs.map((i) => ({ input: i, data: utils.preview.home.getData(i) }));
+      for (const { input, data } of prev) {
+        if (data) {
+          utils.preview.home.setData(input, {
+            ...data,
+            hubs: data.hubs.filter((h) => h.identifier !== hubIdentifier),
+          });
+        }
       }
       return { prev };
     },
     onError: (err, _input, ctx) => {
-      if (ctx?.prev) utils.preview.home.setData(previewInput, ctx.prev);
+      for (const { input, data } of ctx?.prev ?? []) {
+        if (data) utils.preview.home.setData(input, data);
+      }
       addToast(`Failed to unpin: ${err.message}`, "error");
     },
     onSuccess: () => {
       addToast("Collection unpinned from homepage", "success");
     },
     onSettled: () => {
-      utils.preview.home.invalidate(previewInput);
+      utils.preview.home.invalidate();
     },
   });
 
@@ -280,7 +301,7 @@ export default function Preview() {
 
       {shuffleStatus && <div className={styles.warnings}>{shuffleStatus}</div>}
 
-      {previewQuery.isLoading && <ListSkeleton rows={4} />}
+      {previewQuery.isLoading && <PreviewSkeleton />}
       {previewQuery.error && (
         <div className={styles.warnings}>
           <div>Failed to load preview: {previewQuery.error.message}</div>
@@ -306,100 +327,62 @@ export default function Preview() {
         const ruleId = collectionRatingKey ? ruleByCollectionKey.get(collectionRatingKey) : undefined;
         const isRuleManaged = !!ruleId;
         const isUnpinning = unpinMutation.isPending && unpinMutation.variables?.hubIdentifier === hub.identifier;
+        const chips = collectionRatingKey ? (
+          <>
+            {isRuleManaged ? (
+              <Link
+                to={`/rules?focus=${ruleId}`}
+                className={styles.hubChip}
+                title="Generated by a Tinkerbell rule — open in Rules"
+              >
+                Rule
+              </Link>
+            ) : (
+              <span className={`${styles.hubChip} ${styles.hubChipStatic}`} title="Created manually in Plex">
+                User
+              </span>
+            )}
+            <Link
+              to={`/collections/${collectionRatingKey}`}
+              className={styles.hubChip}
+              title="Open collection in Tinkerbell"
+            >
+              Open
+            </Link>
+            {collectionSectionId && (
+              <button
+                type="button"
+                className={`${styles.hubChip} ${styles.hubChipDanger}`}
+                disabled={isUnpinning}
+                title="Unpin this collection from the Plex homepage"
+                onClick={() =>
+                  setUnpinTarget({
+                    sectionId: collectionSectionId,
+                    hubIdentifier: hub.identifier,
+                    title: hub.title,
+                  })
+                }
+              >
+                {isUnpinning ? (
+                  <>
+                    <Spinner size="xs" /> Unpinning…
+                  </>
+                ) : (
+                  "Unpin"
+                )}
+              </button>
+            )}
+          </>
+        ) : undefined;
         return (
-          <section key={hub.identifier || hub.key || hub.title} className={styles.hub}>
-            <h3 className={styles.hubTitle}>
-              {hub.title}
-              <span className={styles.hubMeta}>{hub.items.length} items</span>
-              {collectionRatingKey && (
-                <>
-                  {isRuleManaged ? (
-                    <Link
-                      to={`/rules?focus=${ruleId}`}
-                      className={styles.hubChip}
-                      title="Generated by a Tinkerbell rule — open in Rules"
-                    >
-                      Rule
-                    </Link>
-                  ) : (
-                    <span className={`${styles.hubChip} ${styles.hubChipStatic}`} title="Created manually in Plex">
-                      User
-                    </span>
-                  )}
-                  <Link
-                    to={`/collections/${collectionRatingKey}`}
-                    className={styles.hubChip}
-                    title="Open collection in Tinkerbell"
-                  >
-                    Open
-                  </Link>
-                  {collectionSectionId && (
-                    <button
-                      type="button"
-                      className={`${styles.hubChip} ${styles.hubChipDanger}`}
-                      disabled={isUnpinning}
-                      title="Unpin this collection from the Plex homepage"
-                      onClick={() =>
-                        setUnpinTarget({
-                          sectionId: collectionSectionId,
-                          hubIdentifier: hub.identifier,
-                          title: hub.title,
-                        })
-                      }
-                    >
-                      {isUnpinning ? (
-                        <>
-                          <Spinner size="xs" /> Unpinning…
-                        </>
-                      ) : (
-                        "Unpin"
-                      )}
-                    </button>
-                  )}
-                </>
-              )}
-            </h3>
-            <div className={styles.row}>
-              {hub.items.map((item) => {
-                const path = wide ? pickWideArtPath(item) : pickPosterPath(item);
-                const src = thumbUrl(path);
-                const progress =
-                  item.viewOffset && item.duration && item.duration > 0
-                    ? Math.min(1, item.viewOffset / item.duration)
-                    : 0;
-                return (
-                  <div
-                    key={item.ratingKey}
-                    className={`${styles.card} ${wide ? styles.cardWide : ""}`}
-                    onClick={() => navigate(`/media/${item.ratingKey}`)}
-                  >
-                    <div className={styles.posterWrap}>
-                      {src ? (
-                        <FadeImage className={styles.poster} src={src} alt={item.title} loading="lazy" />
-                      ) : (
-                        <div className={styles.posterPlaceholder}>No image</div>
-                      )}
-                      {progress > 0 && (
-                        <div className={styles.progressTrack}>
-                          <div className={styles.progressFill} style={{ width: `${progress * 100}%` }} />
-                        </div>
-                      )}
-                    </div>
-                    <div className={styles.cardTitle} title={item.title}>
-                      {item.type === "episode" && item.grandparentTitle ? item.grandparentTitle : item.title}
-                    </div>
-                    <div className={styles.cardMeta}>
-                      {item.type === "episode"
-                        ? item.parentIndex != null && item.index != null
-                          ? `S${item.parentIndex} · E${item.index} · ${item.title}`
-                          : item.title
-                        : (item.year ?? item.librarySectionTitle ?? "")}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+          <PreviewHubRow
+            key={hub.identifier || hub.key || hub.title}
+            title={hub.title}
+            chips={chips}
+            items={hub.items}
+            wide={wide}
+            onItemClick={(item) => navigate(`/media/${item.ratingKey}`)}
+          />
         );
       })}
 

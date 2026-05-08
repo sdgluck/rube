@@ -18,7 +18,6 @@ interface RuleTableRowProps {
   isRunning: boolean;
   isExpanded: boolean;
   highlighted?: boolean;
-  onToggleRowExpand: () => void;
   previewExpanded: boolean;
   onTogglePreview: () => void;
   formActive: boolean;
@@ -45,7 +44,6 @@ export default function RuleTableRow({
   isRunning,
   isExpanded,
   highlighted,
-  onToggleRowExpand,
   previewExpanded,
   onTogglePreview,
   formActive,
@@ -79,6 +77,10 @@ export default function RuleTableRow({
         : null;
   const expandable = !!errorToShow || rule.hasTestResult;
   const showDetail = isTesting || isRunning || (isExpanded && expandable);
+  // A collection only really exists on Plex when the last run finished `ok`;
+  // a stale `lastCollectionRatingKey` from a cancelled/error run points at
+  // metadata that 404s.
+  const hasGeneratedCollection = !!rule.lastCollectionRatingKey && rule.lastRunStatus === "ok";
 
   return (
     <Fragment>
@@ -102,21 +104,19 @@ export default function RuleTableRow({
           <ToggleSwitch checked={!!rule.enabled} onChange={onToggleEnabled} size="sm" />
         </td>
         <td className={styles.statusCell}>
-          <StatusCell
-            rule={rule}
-            isTesting={isTesting}
-            isRunning={isRunning}
-            expanded={isExpanded}
-            expandable={expandable}
-            onToggle={onToggleRowExpand}
-          />
+          <StatusCell rule={rule} isTesting={isTesting} isRunning={isRunning} />
         </td>
         <td>
           <span className={styles.configSummary}>{configSummary}</span>
         </td>
         <td>
           <div className={styles.actions}>
-            {rule.lastCollectionRatingKey && (
+            {/* Preview / View only make sense when the last run actually
+             * produced a collection. A `lastCollectionRatingKey` left over
+             * from a cancelled or failed run points at metadata that no
+             * longer exists on Plex (or never did) — gate on `lastRunStatus`
+             * so users don't get a 404 the moment they click. */}
+            {hasGeneratedCollection && (
               <button
                 className={`${styles.actionBtn} ${previewExpanded ? styles.actionBtnActive : ""}`}
                 onClick={onTogglePreview}
@@ -125,7 +125,7 @@ export default function RuleTableRow({
                 Preview
               </button>
             )}
-            {rule.lastCollectionRatingKey &&
+            {hasGeneratedCollection &&
               ((rule.lastRunCollectionCount ?? 0) > 1 ? (
                 <button
                   className={styles.actionBtn}
@@ -193,8 +193,8 @@ export default function RuleTableRow({
           onCleared={onDetailCleared}
         />
       )}
-      {previewExpanded && rule.lastCollectionRatingKey && (
-        <RulePreviewRow ruleId={rule.id} fallbackRatingKey={rule.lastCollectionRatingKey} />
+      {previewExpanded && hasGeneratedCollection && (
+        <RulePreviewRow ruleId={rule.id} fallbackRatingKey={rule.lastCollectionRatingKey!} />
       )}
     </Fragment>
   );

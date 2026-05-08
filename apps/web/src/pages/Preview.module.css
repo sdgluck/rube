@@ -33,8 +33,6 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .headerLeft {
@@ -234,14 +232,14 @@ button.hubChip:hover:not(:disabled) {
   gap: 14px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
-  padding-bottom: 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  /* Slight negative margin so first/last cards can sit flush with the page edge
-     while still allowing room for the hover scale to bleed without clipping. */
-  margin: 0 -4px;
-  padding-left: 4px;
-  padding-right: 4px;
+  /* Vertical padding only — the hover-lift translateY(-2px) needs a couple
+     pixels of bleed at top/bottom; horizontal hover effects use inset
+     box-shadow now so no horizontal bleed is needed and cards align cleanly
+     with the hub title at the parent's content edge. */
+  padding: 4px 0;
+  margin: -4px 0;
 }
 
 .row::-webkit-scrollbar {
@@ -275,16 +273,30 @@ button.hubChip:hover:not(:disabled) {
   overflow: hidden;
   background: #2a2a2a;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  transition:
-    box-shadow 0.18s ease,
-    outline-color 0.18s ease;
-  outline: 2px solid transparent;
-  outline-offset: 0;
+  transition: box-shadow 0.18s ease;
 }
 
 .card:hover .posterWrap {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-  outline-color: #e5a00d;
+}
+
+/* Hover ring is a pseudo-element overlay rather than an `outline` so it
+   can't be clipped by any ancestor's overflow (the row's `overflow-x: auto`
+   clips outlines at its padding edge), and it paints ABOVE the poster image
+   — an inset box-shadow on `.posterWrap` sits behind child content so the
+   image hides it. The pseudo's border draws at the poster's inner edge. */
+.posterWrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  pointer-events: none;
+  transition: border-color 0.18s ease;
+}
+
+.card:hover .posterWrap::after {
+  border-color: #e5a00d;
 }
 
 .poster {
@@ -356,6 +368,55 @@ button.hubChip:hover:not(:disabled) {
   text-align: center;
   color: rgba(255, 255, 255, 0.4);
   font-size: 0.9rem;
+}
+
+/* ─── Skeleton (mirrors hub + card layout in Plex tones) ────────────────── */
+
+@keyframes previewShimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeletonShimmer {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%)
+      0 0 / 800px 100% no-repeat,
+    rgba(255, 255, 255, 0.04);
+  animation: previewShimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+
+.skeletonHubTitle {
+  composes: skeletonShimmer;
+  width: 180px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.skeletonCard {
+  composes: skeletonShimmer;
+  flex: 0 0 auto;
+  width: 150px;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+}
+
+.skeletonCard.cardWide {
+  width: 280px;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 768px) {
+  .skeletonCard {
+    width: 120px;
+  }
+  .skeletonCard.cardWide {
+    width: 220px;
+  }
 }
 
 /* ─── Responsive ──────────────────────────────────────────────────────────── */

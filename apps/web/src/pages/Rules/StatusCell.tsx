@@ -7,19 +7,15 @@ interface RuleStatusCellProps {
   rule: RuleRow;
   isTesting: boolean;
   isRunning: boolean;
-  expanded: boolean;
-  expandable: boolean;
-  onToggle: () => void;
 }
 
-export default function StatusCell({
-  rule,
-  isTesting,
-  isRunning,
-  expanded,
-  expandable,
-  onToggle,
-}: RuleStatusCellProps) {
+/**
+ * Read-only status text. Was previously a button that toggled an inline
+ * popup with logs/details; that affordance was removed — logs are surfaced
+ * automatically while a run/test is in-flight, and the result preview
+ * opens automatically on completion.
+ */
+export default function StatusCell({ rule, isTesting, isRunning }: RuleStatusCellProps) {
   if (isRunning) {
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
@@ -61,32 +57,9 @@ export default function StatusCell({
   if (status === "error") cls = styles.statusError;
   else if (status === "cancelled") cls = styles.statusCancelled;
 
-  const body = (
-    <span>
+  return (
+    <span className={`${styles.statusInline} ${cls}`} title={error || undefined}>
       {label} <RelativeTime timestamp={stamp} /> · {summary}
     </span>
-  );
-
-  if (!expandable) {
-    return (
-      <span className={`${styles.statusInline} ${cls}`} title={error || undefined}>
-        {body}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`${styles.statusInline} ${styles.statusToggle} ${cls}`}
-      title={error || `${label} — click to ${expanded ? "hide" : "show"} details`}
-      aria-expanded={expanded}
-    >
-      <span className={styles.chevron} aria-hidden="true">
-        {expanded ? "▾" : "▸"}
-      </span>
-      {body}
-    </button>
   );
 }

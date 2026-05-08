@@ -1,8 +1,7 @@
 import { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import FadeImage from "#components/FadeImage";
+import { PreviewHubRow } from "#components/PreviewHubRow";
 import { trpc } from "#/trpc";
-import previewStyles from "#pages/Preview.module.css";
 import InlineProgress from "./InlineProgress";
 import styles from "./Rules.module.css";
 import { formatDuration } from "./utils";
@@ -114,38 +113,17 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
       ) : stackWidth == null ? null : (
         <div className={styles.testPreviewStack} style={{ width: `${stackWidth}px` }}>
           {result.collections.map((col, i) => (
-            <div key={i} className={styles.previewBlock}>
-              <h4 className={styles.previewBlockTitle}>
-                {col.name}
-                <span className={styles.previewBlockMeta}>
+            <PreviewHubRow
+              key={i}
+              title={col.name}
+              chips={
+                <span className={styles.previewSectionMeta}>
                   {col.sectionTitle} · {col.items.length} item{col.items.length === 1 ? "" : "s"}
                 </span>
-              </h4>
-              <div className={styles.testPreviewPosterRow}>
-                {col.items.map((item) => {
-                  const src = item.thumb ? `/api/plex-image?path=${encodeURIComponent(item.thumb)}` : null;
-                  return (
-                    <div
-                      key={item.ratingKey}
-                      className={previewStyles.card}
-                      onClick={() => navigate(`/media/${item.ratingKey}`)}
-                    >
-                      <div className={previewStyles.posterWrap}>
-                        {src ? (
-                          <FadeImage className={previewStyles.poster} src={src} alt={item.title} loading="lazy" />
-                        ) : (
-                          <div className={previewStyles.posterPlaceholder}>No image</div>
-                        )}
-                      </div>
-                      <div className={previewStyles.cardTitle} title={item.title}>
-                        {item.title}
-                      </div>
-                      {item.year != null && <div className={previewStyles.cardMeta}>{item.year}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+              }
+              items={col.items}
+              onItemClick={(item) => navigate(`/media/${item.ratingKey}`)}
+            />
           ))}
         </div>
       )}

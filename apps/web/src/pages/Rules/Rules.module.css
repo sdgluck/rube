@@ -141,86 +141,91 @@
   border-color: var(--border-color);
 }
 
-.previewBlockCell {
+/* ─── Rule preview canvas ─────────────────────────────────────────────────
+ *
+ * Just the dark surrounding box; the hub rows themselves render via
+ * <PreviewHubRow> from #components/PreviewHubRow so the visual treatment
+ * is identical to the Preview page. Keep this file slim — geometry/colors
+ * for hubs/cards live in Preview.module.css.
+ */
+
+/* Compound selector beats `.detailRow td` (specificity 0,1,1) so the dark
+   Plex canvas wins over the generic detail-row background. */
+td.previewBlockCell {
   padding: 0 !important;
+  background: #1f1f1f;
+  color: #eee;
 }
 
 .previewStack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 12px 0;
+  gap: 22px;
+  padding: 22px 24px;
   box-sizing: border-box;
   max-height: 580px;
   overflow-y: auto;
+  background: #1f1f1f;
+  position: relative;
 }
 
-.previewBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Bleed the dark canvas past the layout's right edge so it reaches the
+   viewport edge. We can't simply increase the previewStack width inside the
+   table cell (that would push the table wider than the viewport — see
+   `.tableBleedRight` below for why we have to also disable the wrapper's
+   horizontal clipping). The pseudo paints a #1f1f1f strip extending right of
+   the previewStack, picked at 80px to comfortably cover .content's 40px
+   padding plus any rounding. */
+.previewStack::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 80px;
+  background: #1f1f1f;
+  pointer-events: none;
 }
 
-.previewBlockTitle {
-  margin: 0;
-  padding: 0 18px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* When applied to the rules-page table-scroll wrapper, allow the preview
+   row's right-side bleed to escape the wrapper. Native `.table-scroll` uses
+   `overflow-x: auto` for narrow-viewport horizontal scroll; on this page the
+   table fits comfortably so the bleed is the more important consideration. */
+.tableBleedRight {
+  overflow-x: visible !important;
 }
 
-.previewBlockMeta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 400;
-}
-
-.previewAbsolute {
-  overflow-x: auto;
-  padding: 4px 18px;
-  display: flex;
-  gap: 10px;
-  box-sizing: border-box;
-}
-
+/* Test-preview (RuleWizard) — same Plex canvas with a self-contained border
+   so it reads as a panel rather than a bleeding row. */
 .testPreviewStack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
   margin-top: 10px;
+  padding: 18px;
   max-height: 580px;
   overflow-y: auto;
   box-sizing: border-box;
-}
-
-.testPreviewStack .previewBlockTitle {
-  padding: 0;
-}
-
-.testPreviewPosterRow {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  box-sizing: border-box;
-}
-
-.previewLoading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  padding: 8px 18px;
+  background: #1f1f1f;
+  color: #eee;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .previewEmpty {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 0.85rem;
   padding: 8px 18px;
+}
+
+/* Small uppercase meta chip rendered next to a hub title (e.g. test-result
+   summary "Films · 12 items"). Sized to match the .hubMeta primitive. */
+.previewSectionMeta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .actionBtnDanger {
