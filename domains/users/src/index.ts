@@ -2,8 +2,8 @@
  * Users module — sync Plex shared users to local SQLite and query them.
  */
 
-import { eq, like, or, asc, desc, lt, sql } from "drizzle-orm";
-import { db, plexUsers } from "@tinkerbell/db";
+import { eq, or, asc, desc, lt, sql } from "drizzle-orm";
+import { db, plexUsers, likeContains } from "@tinkerbell/db";
 import { getLocalCollections } from "@tinkerbell/domain.collections";
 import type { PlexClient } from "@tinkerbell/plex";
 
@@ -128,7 +128,7 @@ export function getLocalUsers(filters: UserFilters): {
   const conditions = [];
 
   if (filters.search) {
-    conditions.push(or(like(plexUsers.username, `%${filters.search}%`), like(plexUsers.name, `%${filters.search}%`)));
+    conditions.push(or(likeContains(plexUsers.username, filters.search), likeContains(plexUsers.name, filters.search)));
   }
 
   const offset = filters.offset ?? 0;

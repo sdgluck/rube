@@ -2,8 +2,8 @@
  * Media module — sync Plex media items to local SQLite and query them.
  */
 
-import { eq, and, like, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
-import { db, mediaItems } from "@tinkerbell/db";
+import { eq, and, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
+import { db, mediaItems, likeContains } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
 export type MediaItemRow = InferSelectModel<typeof mediaItems>;
@@ -116,7 +116,7 @@ export function getLocalMediaItems(filters: MediaFilters): {
     conditions.push(eq(mediaItems.type, filters.type));
   }
   if (filters.search) {
-    conditions.push(like(mediaItems.title, `%${filters.search}%`));
+    conditions.push(likeContains(mediaItems.title, filters.search));
   }
   if (filters.videoResolution) {
     conditions.push(eq(mediaItems.videoResolution, filters.videoResolution));
