@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
 import { UsersSkeleton } from "#components/Skeleton";
+import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import EmptyState from "#components/EmptyState";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
@@ -141,11 +142,7 @@ export default function Users() {
 
   const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const debouncedSearch = useDebouncedValue(search);
 
   const offset = (page - 1) * PAGE_SIZE;
 
