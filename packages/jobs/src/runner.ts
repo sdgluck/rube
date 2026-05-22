@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { errorMessage } from "@tinkerbell/core";
 import { join } from "node:path";
-import { eq, and, ne, desc, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, ne, desc, notInArray, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 import { seedDefaultRules } from "@tinkerbell/domain.rules";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
@@ -230,29 +230,25 @@ export async function startJob(jobId: string): Promise<{ runId: string } | null>
   `);
   if (result.changes === 0) return null;
 
-  // Clean up old runs (keep last JOB_RUN_KEEP_PER_JOB)
-  const keepIds = db
-    .select({ id: jobRuns.id })
-    .from(jobRuns)
-    .where(eq(jobRuns.jobId, jobId))
-    .orderBy(desc(jobRuns.startedAt))
-    .limit(JOB_RUN_KEEP_PER_JOB)
-    .all()
-    .map((r) => r.id);
+  // Clean up old runs (keep last JOB_RUN_KEEP_PER_JOB). SELECT + DELETE
+  // are wrapped in a transaction so a concurrent insert between them
+  // can't be deleted by our cleanup (off-by-one retention).
+  db.transaction((tx) => {
+    const keepIds = tx
+      .select({ id: jobRuns.id })
+      .from(jobRuns)
+      .where(eq(jobRuns.jobId, jobId))
+      .orderBy(desc(jobRuns.startedAt))
+      .limit(JOB_RUN_KEEP_PER_JOB)
+      .all()
+      .map((r) => r.id);
 
-  if (keepIds.length >= JOB_RUN_KEEP_PER_JOB) {
-    db.delete(jobRuns)
-      .where(
-        and(
-          eq(jobRuns.jobId, jobId),
-          sql`${jobRuns.id} NOT IN (${sql.join(
-            keepIds.map((id) => sql`${id}`),
-            sql`,`,
-          )})`,
-        ),
-      )
-      .run();
-  }
+    if (keepIds.length >= JOB_RUN_KEEP_PER_JOB) {
+      tx.delete(jobRuns)
+        .where(and(eq(jobRuns.jobId, jobId), notInArray(jobRuns.id, keepIds)))
+        .run();
+    }
+  });
 
   // Internal jobs run in-process without the command pattern
   const internalHandler = internalJobs[job.command];
