@@ -136,28 +136,22 @@ export function createItemsModule(http: PlexHttp) {
     let processed = 0;
 
     for await (const { item, totalSize } of allItems(sectionId)) {
-      const existingLabels: string[] = (item.Label ?? []).map((l) => l.tag);
-
-      if (existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-        processed++;
-        if (onProgress) onProgress(processed, totalSize);
-        continue;
-      }
-
-      const newLabels = [...existingLabels, label];
-      const labelParams: Record<string, string | number> = {
-        type: typeNum,
-        id: item.ratingKey ?? "",
-        "label.locked": 1,
-      };
-      for (let i = 0; i < newLabels.length; i++) {
-        labelParams[`label[${i}].tag.tag`] = newLabels[i];
-      }
-
       void queue.add(async () => {
         try {
-          await http.request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-          updated++;
+          const existingLabels: string[] = (item.Label ?? []).map((l) => l.tag);
+          if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+            const newLabels = [...existingLabels, label];
+            const labelParams: Record<string, string | number> = {
+              type: typeNum,
+              id: item.ratingKey ?? "",
+              "label.locked": 1,
+            };
+            for (let i = 0; i < newLabels.length; i++) {
+              labelParams[`label[${i}].tag.tag`] = newLabels[i];
+            }
+            await http.request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
+            updated++;
+          }
         } catch (err) {
           console.warn(`[plex] Failed to add label to item ${item.ratingKey}:`, errorMessage(err));
         }
