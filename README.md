@@ -35,6 +35,15 @@ pnpm dev
 
 Server runs on `:3000`, web on Vite, with `portless` for local hostnames (`api.tinkerbell`, `web.tinkerbell`).
 
+## Network exposure
+
+Tinkerbell is unauthenticated: anyone who can reach the server port can call every tRPC mutation. To make this safe-by-default, the server binds to `127.0.0.1` by default. Override with the `HOST` environment variable:
+
+- `HOST=127.0.0.1` (default) — loopback only, safe.
+- `HOST=0.0.0.0` — listen on all interfaces. The Docker image sets this so the container is reachable from the host. Only do this when the port is behind a trusted reverse proxy or firewall.
+
+The server logs a `[security]` warning at startup whenever it binds to a non-loopback interface.
+
 Database lives at `tinkerbell.db` (SQLite). Schema changes:
 
 ```sh

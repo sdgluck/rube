@@ -17,6 +17,11 @@ setHealthReporter(reportHealth);
 setPostCollectionSyncHook(scanAllProviders);
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
+// Bind to loopback by default. Tinkerbell has no auth: anyone who can reach
+// the port can call every tRPC mutation. The Docker image sets HOST=0.0.0.0
+// because the container must be reachable from outside, and trusts the user
+// to put it behind a reverse proxy / firewall.
+const HOST = process.env.HOST || "127.0.0.1";
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
 
 const MIME_TYPES: Record<string, string> = {
@@ -156,8 +161,14 @@ async function main() {
     console.error("[jobs] Init failed:", err);
     process.exit(1);
   }
-  server.listen(PORT, () => {
-    console.log(`Tinkerbell admin server listening on port ${PORT} (https://api.tinkerbell.localhost)`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Tinkerbell admin server listening on ${HOST}:${PORT} (https://api.tinkerbell.localhost)`);
+    if (HOST !== "127.0.0.1" && HOST !== "localhost" && HOST !== "::1") {
+      console.warn(
+        `[security] Listening on ${HOST}: every tRPC mutation is reachable without authentication. ` +
+          `Only expose this port to networks you trust.`,
+      );
+    }
   });
 }
 
