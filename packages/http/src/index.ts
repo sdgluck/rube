@@ -115,3 +115,5 @@ export async function httpRequestJson<T>(opts: HttpRequestOptions): Promise<T> {
   const res = await httpRequest(opts);
   return (await res.json()) as T;
 }
+
+export { assertSafeOutboundUrl, UnsafeUrlError } from "./ssrf.ts";

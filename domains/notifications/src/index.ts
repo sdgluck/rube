@@ -1,4 +1,5 @@
 import { getConfig, type ConfigValue, type ConfigKey } from "@tinkerbell/core";
+import { assertSafeOutboundUrl } from "@tinkerbell/http";
 
 export const EVENT_TYPES = [
   { id: "job.completed", label: "Job Completed" },
@@ -43,6 +44,7 @@ export async function sendPushover(title: string, message: string): Promise<void
 export async function sendDiscord(title: string, message: string): Promise<void> {
   const webhookUrl = getConfig("global_discord_webhook_url");
   if (!webhookUrl) throw new Error("Discord webhook URL is required");
+  assertSafeOutboundUrl(webhookUrl);
 
   const res = await fetch(webhookUrl, {
     method: "POST",
@@ -65,6 +67,7 @@ export async function sendGotify(title: string, message: string): Promise<void> 
   if (!url || !token) throw new Error("Gotify URL and application token are required");
 
   const endpoint = new URL("/message", url);
+  assertSafeOutboundUrl(endpoint);
   const res = await fetch(endpoint.toString(), {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Gotify-Key": token },
@@ -81,6 +84,7 @@ export async function sendGotify(title: string, message: string): Promise<void> 
 export async function sendLunaSea(title: string, message: string): Promise<void> {
   const webhookUrl = getConfig("global_lunasea_webhook_url");
   if (!webhookUrl) throw new Error("LunaSea webhook URL is required");
+  assertSafeOutboundUrl(webhookUrl);
 
   const res = await fetch(webhookUrl, {
     method: "POST",
@@ -115,6 +119,7 @@ export async function sendPushbullet(title: string, message: string): Promise<vo
 export async function sendSlack(title: string, message: string): Promise<void> {
   const webhookUrl = getConfig("global_slack_webhook_url");
   if (!webhookUrl) throw new Error("Slack webhook URL is required");
+  assertSafeOutboundUrl(webhookUrl);
 
   const res = await fetch(webhookUrl, {
     method: "POST",
@@ -159,6 +164,10 @@ export async function sendTelegram(title: string, message: string): Promise<void
 export async function sendWebhook(title: string, message: string): Promise<void> {
   const url = getConfig("global_webhook_url");
   if (!url) throw new Error("Webhook URL is required");
+  // Webhook URLs are typed in by the admin and the destination is arbitrary,
+  // so this is the most attractive SSRF target in the codebase. The host
+  // check defaults off in dev and can be opted out of in production.
+  assertSafeOutboundUrl(url);
 
   const res = await fetch(url, {
     method: "POST",
