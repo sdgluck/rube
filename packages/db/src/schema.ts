@@ -142,7 +142,9 @@ export const ruleHistory = sqliteTable(
   "rule_history",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    ruleId: text("rule_id").notNull(),
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
     sectionKey: text("section_key").notNull(),
     sectionTitle: text("section_title").notNull(),
     runAt: integer("run_at").notNull(),
