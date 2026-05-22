@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@tinkerbell/http": "workspace:*",
+    "fast-xml-parser": "^4.5.0",
     "p-queue": "^9.1.0",
     "zod": "^4.3.6"
   },
