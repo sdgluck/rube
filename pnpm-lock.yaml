@@ -38,6 +38,9 @@ importers:
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
+      '@tinkerbell/domain.events':
+        specifier: workspace:*
+        version: link:../../domains/events
       '@tinkerbell/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
