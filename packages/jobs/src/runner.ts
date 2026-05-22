@@ -207,7 +207,19 @@ async function startSidequest(): Promise<void> {
   console.log("[jobs] Sidequest engine started");
 }
 
+let shuttingDown = false;
+
+/**
+ * Set by `stopSidequest` so in-flight job code can decide whether a DB
+ * write failure is just the engine tearing down (silent) or something
+ * to actually log (everything else).
+ */
+export function isShuttingDown(): boolean {
+  return shuttingDown;
+}
+
 export async function stopSidequest(): Promise<void> {
+  shuttingDown = true;
   try {
     const { Sidequest } = await import("sidequest");
     await Sidequest.stop();

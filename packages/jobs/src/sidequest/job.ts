@@ -12,6 +12,17 @@ import {
   type OverlaysJobConfig,
 } from "@tinkerbell/core";
 import { JOB_CANCEL_POLL_INTERVAL_MS, JOB_LOG_FLUSH_INTERVAL_MS } from "../limits.ts";
+import { isShuttingDown } from "../runner.ts";
+
+/**
+ * Log job DB-write failures unless the engine is mid-shutdown. The previous
+ * blanket `catch {}` blocks here hid every failure — constraint violations,
+ * lock timeouts, schema drift — and left runs stuck in `running` forever.
+ */
+function logJobDbError(jobName: string, runId: string, op: string, err: unknown): void {
+  if (isShuttingDown()) return;
+  console.error(`[jobs] ${jobName} (${runId}) failed to ${op}:`, errorMessage(err));
+}
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -58,8 +69,8 @@ export class CommandJob extends Job {
           .where(eq(jobRuns.id, runId))
           .run();
         logBuffer = "";
-      } catch {
-        // DB may be closed during shutdown
+      } catch (err) {
+        logJobDbError(jobName, runId, "flush log/progress", err);
       }
     }
 
@@ -100,8 +111,8 @@ export class CommandJob extends Job {
         if (row?.status === "cancelled") {
           controller.abort();
         }
-      } catch {
-        // DB may be closed
+      } catch (err) {
+        logJobDbError(jobName, runId, "poll cancellation", err);
       }
     }, JOB_CANCEL_POLL_INTERVAL_MS);
 
@@ -149,8 +160,8 @@ export class CommandJob extends Job {
       try {
         db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
         emitEvent("job.failed", `${jobName} failed: ${errorMsg}`, { jobId });
-      } catch {
-        // DB may be closed
+      } catch (err2) {
+        logJobDbError(jobName, runId, "mark run as failed", err2);
       }
       console.error(`[jobs] ${jobName} failed: ${errorMsg}`);
 
