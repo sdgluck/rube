@@ -3,7 +3,7 @@
  */
 
 import { eq, and, or, like, asc, desc, lt, sql, inArray, type InferSelectModel } from "drizzle-orm";
-import { db, collections, collectionItems } from "@tinkerbell/db";
+import { db, collections, collectionItems, likeContains } from "@tinkerbell/db";
 import { runPostCollectionSyncHook } from "@tinkerbell/core";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
@@ -210,19 +210,19 @@ export function getLocalCollections(filters?: CollectionFilters): { items: Colle
   if (filters?.label) {
     // Labels are stored as a JSON-encoded array (`["foo","bar"]`). Match the
     // value with its surrounding quotes so `foo` doesn't match `foobar`.
-    conditions.push(like(collections.labels, `%${JSON.stringify(filters.label)}%`));
+    conditions.push(likeContains(collections.labels, JSON.stringify(filters.label)));
   }
 
   if (filters?.ruleId) {
     // Same anchoring as `filters.label` — keep the JSON quotes so `Rule:1`
     // doesn't match `Rule:10`, `Rule:11`, etc.
-    const labelMatch = like(collections.labels, `%${JSON.stringify(`Rule:${filters.ruleId}`)}%`);
+    const labelMatch = likeContains(collections.labels, JSON.stringify(`Rule:${filters.ruleId}`));
     const ratingKeyMatch = filters.ruleLastRatingKey ? eq(collections.plexRatingKey, filters.ruleLastRatingKey) : null;
     conditions.push(ratingKeyMatch ? or(labelMatch, ratingKeyMatch)! : labelMatch);
   }
 
   if (filters?.search) {
-    conditions.push(like(collections.title, `%${filters.search}%`));
+    conditions.push(likeContains(collections.title, filters.search));
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

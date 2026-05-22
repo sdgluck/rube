@@ -67,6 +67,9 @@ export const config = sqliteTable("config", {
   value: text("value", { mode: "json" }).$type<unknown>(),
 });
 
+// Nullable: addedAt only — Plex sometimes omits it on items that have never
+// been re-scanned. All other columns are notNull with sensible defaults so
+// the upsert in syncCollections can stay value-uniform.
 export const collections = sqliteTable(
   "collections",
   {
@@ -113,6 +116,10 @@ export const jobs = sqliteTable("jobs", {
   config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
 });
 
+// Nullable: every `last*` column. A rule has no run history until it runs
+// for the first time, and `lastCollectionRatingKey` stays null until the
+// rule has actually produced a collection (some rule types never do —
+// preview-only, etc.). Callers should treat null as "hasn't happened yet".
 export const rules = sqliteTable("rules", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -156,6 +163,8 @@ export const ruleHistory = sqliteTable(
   (table) => [index("idx_rule_history_rule_section_run").on(table.ruleId, table.sectionKey, table.runAt)],
 );
 
+// Nullable: finishedAt only — null while the run is still in progress, set
+// when the run terminates (success, failure, or cancellation).
 export const jobRuns = sqliteTable(
   "job_runs",
   {
@@ -223,6 +232,9 @@ export const healthChecks = sqliteTable(
   (table) => [index("idx_health_checks_service_timestamp").on(table.service, table.timestamp)],
 );
 
+// Nullable: metadata. Some event types ride on just `message`; others
+// (`job.completed`, `health.failed`) attach structured context like
+// `{ jobId, service, durationMs }`.
 export const events = sqliteTable(
   "events",
   {
@@ -235,6 +247,10 @@ export const events = sqliteTable(
   (table) => [index("idx_events_timestamp").on(table.timestamp)],
 );
 
+// Nullable: year, thumb, addedAt, all media-attribute columns. Plex omits
+// these on items that haven't been scanned yet or that have no underlying
+// media file (placeholder shows, deleted-but-still-referenced items, etc).
+// syncedAt is always set by sync-media.
 export const mediaItems = sqliteTable(
   "media_items",
   {
@@ -278,6 +294,9 @@ export const statsCache = sqliteTable("stats_cache", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+// Nullable: name, lastWatched{Title,At}. Plex managed/home users may not have
+// a display name distinct from `username`, and lastWatched* is null until
+// the user has watched anything.
 export const plexUsers = sqliteTable(
   "plex_users",
   {

@@ -16,6 +16,7 @@ sqlite.pragma("busy_timeout = 5000");
 export const db = drizzle(sqlite, { schema });
 
 export * from "./schema.ts";
+export * from "./like.ts";
 
 // Migrations are NOT applied here. They run as a discrete entrypoint step
 // (dev script, Docker entrypoint) via `pnpm --filter @tinkerbell/db migrate`.
