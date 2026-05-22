@@ -12,7 +12,7 @@ import { db, statsCache, jobs, jobRuns, mediaItems, plexUsers } from "@tinkerbel
 const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
-import { getConfig } from "@tinkerbell/core";
+import { getConfig, DAY_MS, WEEK_MS } from "@tinkerbell/core";
 import type { PlexRecentItem } from "@tinkerbell/plex";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ export async function syncMostWatched(): Promise<string> {
 
   const history = await client.getWatchHistory({ limit: 1000 });
   const nowSec = Math.floor(Date.now() / 1000);
-  const weekCutoff = nowSec - 7 * 86400;
+  const weekCutoff = nowSec - WEEK_MS / 1000;
   const todayCutoff = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
   const recentHistory = history.filter((item) => (item.viewedAt ?? 0) >= weekCutoff);
 
@@ -190,7 +190,7 @@ export function getCachedActivitySummary(): {
 // ─── Operational summary (failed jobs, last sync, uptime) ───────────────────
 
 export function getOpsSummary(): { failedJobs24h: number; lastSyncAt: number | null; uptimeSec: number } {
-  const dayCutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const dayCutoff = Date.now() - DAY_MS;
   const failedJobs24h =
     db
       .select({ count: sql<number>`count(*)` })
@@ -245,7 +245,7 @@ export function getLibraryOverview() {
     .groupBy(mediaItems.audioCodec)
     .all();
 
-  const weekCutoff = Math.floor(Date.now() / 1000) - 7 * 86400;
+  const weekCutoff = Math.floor((Date.now() - WEEK_MS) / 1000);
   const addedThisWeek =
     db
       .select({ count: sql<number>`count(*)` })

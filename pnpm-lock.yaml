@@ -257,6 +257,9 @@ importers:
 
   domains/events:
     dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -775,6 +778,9 @@ importers:
 
   packages/posters:
     dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../core
       zod:
         specifier: ^4.3.6
         version: 4.4.2

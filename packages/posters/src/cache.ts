@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { DAY_MS } from "@tinkerbell/core";
 
 type Sidecar = {
   url: string;
@@ -19,7 +20,7 @@ export type RefreshSummary = {
   failed: number;
 };
 
-const NEGATIVE_TTL_MS = 24 * 60 * 60 * 1000;
+const NEGATIVE_TTL_MS = DAY_MS;
 
 export type FetchResult =
   | { status: "ok"; buffer: Buffer; fromCache: boolean }

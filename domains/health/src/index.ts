@@ -2,7 +2,7 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
-import { getAllConfig, getLlmConfig, configSchema } from "@tinkerbell/core";
+import { getAllConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";
@@ -274,7 +274,7 @@ export function getHealthHistory(service: string, since: number): Array<{ status
 
 // Keep the table from growing unbounded — delete entries older than 7 days
 export function pruneHealthChecks(): void {
-  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - WEEK_MS;
   db.delete(healthChecks)
     .where(sql`${healthChecks.timestamp} < ${cutoff}`)
     .run();
