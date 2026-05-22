@@ -122,8 +122,12 @@ export class CommandJob extends Job {
         ctx: JobContext,
         config: CommonJobConfig | GenerateJobConfig | BywJobConfig | OverlaysJobConfig,
       ) => Promise<void> = mod.default;
-      if (!commandFn) {
-        throw new Error(`Unknown command: ${commandName}`);
+      // `commandName` is already validated against VALID_COMMANDS above, so
+      // an unknown name throws at the import. This branch only fires if a
+      // command file exists but forgot to default-export — an internal bug
+      // typechecking would catch, but the runtime guard is cheap.
+      if (typeof commandFn !== "function") {
+        throw new Error(`Command module ${commandName} has no default export`);
       }
 
       await commandFn(ctx, jobConfig);
