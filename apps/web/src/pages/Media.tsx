@@ -6,6 +6,7 @@ import { MediaSkeleton } from "#components/Skeleton";
 import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
 import FadeImage from "#components/FadeImage";
+import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { readEnumStorage } from "#/storage";
 import styles from "./Collections.module.css";
 import mediaStyles from "./Media.module.css";
@@ -381,12 +382,7 @@ export default function Media() {
     });
   }, []);
 
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const debouncedSearch = useDebouncedValue(search);
 
   // Reset page when debounced search changes
   useEffect(() => {

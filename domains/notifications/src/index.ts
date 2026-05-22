@@ -1,4 +1,4 @@
-import { getConfig, type ConfigValue, type ConfigKey } from "@tinkerbell/core";
+import { getConfig, emitEventViaHook, errorMessage, type ConfigValue, type ConfigKey } from "@tinkerbell/core";
 import { assertSafeOutboundUrl } from "@tinkerbell/http";
 
 export const EVENT_TYPES = [
@@ -280,6 +280,17 @@ export function notifyEvent(type: string, message: string, metadata?: Record<str
 
     agent.send(label, message).catch((err) => {
       console.error(`[${agent.name}] Error sending notification:`, err);
+      // Surface to the activity feed so silent channel failures (dead
+      // webhook URL, expired token, etc.) become visible. Guard against
+      // the obvious recursion: a failed `notification.*.failed` send must
+      // not re-emit a `notification.*.failed` event.
+      if (!type.startsWith("notification.")) {
+        emitEventViaHook(
+          `notification.${agent.name}.failed`,
+          `Failed to send ${label} via ${agent.name}: ${errorMessage(err)}`,
+          { service: agent.name, originalType: type, ...(jobId ? { jobId } : {}) },
+        );
+      }
     });
   }
 }

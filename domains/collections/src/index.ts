@@ -218,7 +218,7 @@ export function getLocalCollections(filters?: CollectionFilters): { items: Colle
     // doesn't match `Rule:10`, `Rule:11`, etc.
     const labelMatch = likeContains(collections.labels, JSON.stringify(`Rule:${filters.ruleId}`));
     const ratingKeyMatch = filters.ruleLastRatingKey ? eq(collections.plexRatingKey, filters.ruleLastRatingKey) : null;
-    conditions.push(ratingKeyMatch ? or(labelMatch, ratingKeyMatch)! : labelMatch);
+    conditions.push(ratingKeyMatch ? or(labelMatch, ratingKeyMatch) : labelMatch);
   }
 
   if (filters?.search) {

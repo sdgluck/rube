@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "#/trpc";
@@ -94,7 +95,7 @@ export default function Collections() {
   );
   const setSearch = useCallback((v: string) => setParam("q", v), [setParam]);
 
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debouncedSearch = useDebouncedValue(search);
   const { addToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
@@ -102,11 +103,6 @@ export default function Collections() {
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const offset = (page - 1) * PAGE_SIZE;
 

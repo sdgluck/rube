@@ -45,3 +45,21 @@ export function setLocalCollectionsReader(next: LocalCollectionsReader): void {
 export function readLocalCollections(): { items: LocalCollectionForReader[] } {
   return localCollectionsReader();
 }
+
+/**
+ * `domains/notifications` records its own failed sends via this hook so
+ * the failure shows up in the activity feed without notifications having
+ * to import the events domain (which already imports notifications —
+ * direct dependency would form a cycle).
+ */
+type EventEmitter = (type: string, message: string, metadata?: Record<string, unknown>) => void;
+
+let eventEmitter: EventEmitter = () => {};
+
+export function setEventEmitter(next: EventEmitter): void {
+  eventEmitter = next;
+}
+
+export function emitEventViaHook(type: string, message: string, metadata?: Record<string, unknown>): void {
+  eventEmitter(type, message, metadata);
+}

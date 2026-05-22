@@ -1,5 +1,6 @@
 import type { PlexHttp } from "./http.ts";
 import {
+  PLEX_COLLECTION_TYPE,
   SECTION_TYPE_MAP,
   type PlexItem,
   type PlexCollection,
@@ -10,7 +11,7 @@ import {
 export function createCollectionsModule(http: PlexHttp) {
   async function getCollections(sectionId: string): Promise<PlexCollection[]> {
     const data = await http.request(`/library/sections/${sectionId}/all`, {
-      params: { type: 18 },
+      params: { type: PLEX_COLLECTION_TYPE },
     });
     return data?.MediaContainer?.Metadata || [];
   }
@@ -113,7 +114,7 @@ export function createCollectionsModule(http: PlexHttp) {
 
     const labelArray = Array.isArray(labels) ? labels : [labels];
     const labelParams: Record<string, string | number> = {
-      type: 18,
+      type: PLEX_COLLECTION_TYPE,
       id: collectionKey,
       "label.locked": 1,
     };

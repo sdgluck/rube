@@ -8,7 +8,8 @@ import { and, eq } from "drizzle-orm";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
-import { cancelRun, cronJobs, scheduleCron, startJob } from "./runner.ts";
+import { cancelRun, startJob } from "./runner.ts";
+import { cronJobs, scheduleCron } from "./schedule.ts";
 
 export interface FeatureTemplate {
   id: string;

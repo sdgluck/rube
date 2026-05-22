@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { errorMessage } from "@tinkerbell/core";
 import { join } from "node:path";
-import { eq, and, ne, desc, notInArray, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, desc, notInArray, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 import { seedDefaultRules } from "@tinkerbell/domain.rules";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 import { internalJobs } from "./internal-jobs.ts";
+import { initSchedule, scheduleCron, startCronSchedules } from "./schedule.ts";
 import { JOB_RUN_KEEP_PER_JOB } from "./limits.ts";
 
 type Job = InferSelectModel<typeof jobs>;
@@ -72,8 +73,6 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
-export const cronJobs = new Map<string, Cron>();
-
 const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa"];
 
 function seedDefaultJobs(): void {
@@ -106,34 +105,6 @@ function markStaleRunsAsFailed(): void {
   if (result.changes > 0) {
     console.log(`[jobs] Marked ${result.changes} stale running run(s) as failed`);
   }
-}
-
-function startCronSchedules(): void {
-  const enabledJobs = db
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.enabled, 1), ne(jobs.schedule, "")))
-    .all();
-  for (const job of enabledJobs) {
-    scheduleCron(job);
-  }
-  console.log(`[jobs] Started ${enabledJobs.length} cron schedule(s)`);
-}
-
-export function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): void {
-  const existing = cronJobs.get(job.id);
-  if (existing) {
-    existing.stop();
-    cronJobs.delete(job.id);
-  }
-
-  if (!job.enabled || !job.schedule) return;
-
-  const cron = new Cron(job.schedule, () => {
-    console.log(`[jobs] Cron triggered: ${job.name}`);
-    startJob(job.id).catch((err) => console.error(`[jobs] Failed to start ${job.name}:`, err));
-  });
-  cronJobs.set(job.id, cron);
 }
 
 async function startSidequest(): Promise<void> {
@@ -284,6 +255,9 @@ export function updateJob(
 }
 
 export async function initJobs(): Promise<void> {
+  // Wire startJob into the cron-trigger callback before any schedule
+  // can fire. See schedule.ts for the dependency-inversion shape.
+  initSchedule(startJob);
   seedDefaultJobs();
   seedDefaultRules();
   markStaleRunsAsFailed();
