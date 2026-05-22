@@ -27,6 +27,10 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV DATA_DIR=/config
 ENV NODE_ENV=production
+# Container must bind to the container's network interface to be reachable
+# from the host. The server defaults to 127.0.0.1 so non-containerised installs
+# are safe by default; expose it deliberately here.
+ENV HOST=0.0.0.0
 ENV PUID=99
 ENV PGID=100
 EXPOSE 3000

@@ -96,8 +96,10 @@ export async function syncCollections(
 ): Promise<SyncStats> {
   const now = Date.now();
 
-  let synced = 0;
-
+  // Phase 1: fetch everything from Plex first. If any of these awaits throws
+  // (network blip, Plex outage), the whole sync aborts before we touch the
+  // DB — so a partial fetch never causes the phase-2 cleanup to delete
+  // collections we simply haven't restamped yet.
   const sectionCollections: Array<{ section: PlexSection; colls: Awaited<ReturnType<PlexClient["getCollections"]>> }> =
     [];
   for (const section of sections) {
@@ -107,66 +109,78 @@ export async function syncCollections(
   const total = sectionCollections.reduce((sum, s) => sum + s.colls.length, 0);
   onProgress?.(0, total, `Syncing ${total} collection(s) across ${sections.length} section(s)...`);
 
+  type Detail = Awaited<ReturnType<PlexClient["getCollectionDetail"]>>;
+  type Member = { ratingKey: string };
+  const fetched: Array<{
+    section: PlexSection;
+    ratingKey: string;
+    detail: Detail;
+    members: Member[] | null;
+  }> = [];
+
+  let synced = 0;
   for (const { section, colls } of sectionCollections) {
     for (const col of colls) {
       const detail = await client.getCollectionDetail(col.ratingKey);
-
-      const smartFilter = detail.smart ? detail.content : "";
-      db.insert(collections)
-        .values({
-          plexRatingKey: col.ratingKey,
-          sectionId: section.key,
-          sectionTitle: section.title,
-          title: detail.title,
-          summary: detail.summary,
-          childCount: detail.childCount,
-          labels: detail.labels,
-          addedAt: detail.addedAt ?? null,
-          thumb: detail.thumb,
-          smart: detail.smart ? 1 : 0,
-          smartFilter,
-          syncedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: collections.plexRatingKey,
-          set: {
-            sectionId: section.key,
-            sectionTitle: section.title,
-            title: detail.title,
-            summary: detail.summary,
-            childCount: detail.childCount,
-            labels: detail.labels,
-            addedAt: detail.addedAt ?? null,
-            thumb: detail.thumb,
-            smart: detail.smart ? 1 : 0,
-            smartFilter,
-            syncedAt: now,
-          },
-        })
-        .run();
-
+      // Membership refresh is best-effort — a single Plex error here
+      // shouldn't fail the whole sync. `null` means "leave the prior
+      // membership rows in place".
+      let members: Member[] | null = null;
       try {
-        await syncCollectionMembership(client, col.ratingKey);
+        members = await client.getCollectionChildren(col.ratingKey);
       } catch {
-        // Membership refresh is best-effort — a single Plex error here
-        // shouldn't fail the whole sync. Leaves the prior membership rows
-        // (or none) in place for this collection.
+        members = null;
       }
+      fetched.push({ section, ratingKey: col.ratingKey, detail, members });
 
       synced++;
       onProgress?.(synced, total, `Synced ${detail.title}`);
     }
   }
 
-  // Remove stale entries in a single statement to avoid races with
-  // concurrent inserts between SELECT and DELETE.
-  const result = db.delete(collections).where(lt(collections.syncedAt, now)).run();
-  const removed = Number(result.changes ?? 0);
+  // Phase 2: apply every write in a single transaction. Either all of the
+  // upserts AND the stale-cleanup land, or none of them do.
+  const removed = db.transaction((tx) => {
+    for (const { section, ratingKey, detail, members } of fetched) {
+      const smartFilter = detail.smart ? detail.content : "";
+      const values = {
+        plexRatingKey: ratingKey,
+        sectionId: section.key,
+        sectionTitle: section.title,
+        title: detail.title,
+        summary: detail.summary,
+        childCount: detail.childCount,
+        labels: detail.labels,
+        addedAt: detail.addedAt ?? null,
+        thumb: detail.thumb,
+        smart: detail.smart ? 1 : 0,
+        smartFilter,
+        syncedAt: now,
+      };
+      tx.insert(collections)
+        .values(values)
+        .onConflictDoUpdate({ target: collections.plexRatingKey, set: values })
+        .run();
 
-  // Drop membership rows for collections that no longer exist locally.
-  db.run(
-    sql`DELETE FROM collection_items WHERE collection_rating_key NOT IN (SELECT plex_rating_key FROM collections)`,
-  );
+      if (members !== null) {
+        tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, ratingKey)).run();
+        if (members.length > 0) {
+          tx.insert(collectionItems)
+            .values(members.map((m) => ({ collectionRatingKey: ratingKey, itemRatingKey: m.ratingKey })))
+            .run();
+        }
+      }
+    }
+
+    const result = tx.delete(collections).where(lt(collections.syncedAt, now)).run();
+
+    // Drop membership rows for collections that no longer exist locally.
+    tx.run(
+      sql`DELETE FROM collection_items WHERE collection_rating_key NOT IN (SELECT plex_rating_key FROM collections)`,
+    );
+
+    return Number(result.changes ?? 0);
+  });
 
   // Refresh every migration provider's scan so the banner / Settings →
   // Migrate page reflects the freshly-synced state without an explicit
@@ -194,11 +208,15 @@ export function getLocalCollections(filters?: CollectionFilters): { items: Colle
   }
 
   if (filters?.label) {
-    conditions.push(like(collections.labels, `%${JSON.stringify(filters.label).slice(1, -1)}%`));
+    // Labels are stored as a JSON-encoded array (`["foo","bar"]`). Match the
+    // value with its surrounding quotes so `foo` doesn't match `foobar`.
+    conditions.push(like(collections.labels, `%${JSON.stringify(filters.label)}%`));
   }
 
   if (filters?.ruleId) {
-    const labelMatch = like(collections.labels, `%Rule:${filters.ruleId}%`);
+    // Same anchoring as `filters.label` — keep the JSON quotes so `Rule:1`
+    // doesn't match `Rule:10`, `Rule:11`, etc.
+    const labelMatch = like(collections.labels, `%${JSON.stringify(`Rule:${filters.ruleId}`)}%`);
     const ratingKeyMatch = filters.ruleLastRatingKey ? eq(collections.plexRatingKey, filters.ruleLastRatingKey) : null;
     conditions.push(ratingKeyMatch ? or(labelMatch, ratingKeyMatch)! : labelMatch);
   }

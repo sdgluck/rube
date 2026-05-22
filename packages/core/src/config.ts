@@ -9,6 +9,7 @@
  *   const libs = getConfig("global_plex_libraries"); // string[] | undefined
  */
 
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, config } from "@tinkerbell/db";
@@ -150,8 +151,12 @@ export type ConfigValue<K extends ConfigKey> = z.infer<ConfigSchema>[K];
  * Sent in place of a stored secret when the value is shipped to the browser.
  * `setConfig` (and the config.save tRPC mutation) treat this sentinel as
  * "keep the existing value" so the form can round-trip without erasing.
+ *
+ * The sentinel is freshly randomised per process so a user can't deliberately
+ * (or accidentally) type it into a secret field and have the save endpoint
+ * silently skip the update.
  */
-export const REDACTED_SECRET = "__redacted__";
+export const REDACTED_SECRET = `__redacted__:${randomUUID()}`;
 
 /**
  * Top-level config keys whose values must never be sent to the browser.

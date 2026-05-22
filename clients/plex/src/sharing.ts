@@ -1,3 +1,4 @@
+import { XMLParser } from "fast-xml-parser";
 import { httpRequest, HttpError } from "@tinkerbell/http";
 import type { PlexHttp } from "./http.ts";
 
@@ -7,6 +8,19 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 import { plexSharedServerRawSchema } from "./schemas.ts";
+
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "",
+  // Containers we want to walk return as arrays even when there's only one
+  // child, so downstream code doesn't have to special-case 1-vs-N.
+  isArray: (name) => name === "User" || name === "Server" || name === "SharedServer" || name === "Section",
+});
+
+function toArray<T>(v: T | T[] | undefined): T[] {
+  if (v === undefined) return [];
+  return Array.isArray(v) ? v : [v];
+}
 import type {
   PlexAccount,
   PlexHistoryItem,
@@ -71,33 +85,27 @@ export function createSharingModule(http: PlexHttp) {
       const data = await plexTvRequest("/api/users/");
       const xml: string = data?._raw || "";
       if (xml) {
-        const userRegex = /<User\s([^>]+)>([\s\S]*?)<\/User>/g;
-        let match;
-        while ((match = userRegex.exec(xml)) !== null) {
-          const attrs = match[1];
-          const children = match[2];
-          const userId = attrs.match(/\bid="(\d+)"/)?.[1];
-          const username = attrs.match(/\busername="([^"]*)"/)?.[1];
-          const title = attrs.match(/\btitle="([^"]*)"/)?.[1];
-
-          const serverRegex = /<Server\s([^>]*machineIdentifier="[^"]*"[^>]*)\/?>|<Server\s([^>]*)>[^<]*<\/Server>/g;
-          let serverMatch;
-          while ((serverMatch = serverRegex.exec(children)) !== null) {
-            const serverAttrs = serverMatch[1] || serverMatch[2];
-            if (serverAttrs.includes(`machineIdentifier="${machineIdentifier}"`)) {
-              if (userId) {
-                const id = parseInt(userId, 10);
-                seenIds.add(id);
-                results.push({
-                  id,
-                  userId: id,
-                  username: username || title || "",
-                  machineIdentifier,
-                });
-              }
-              break;
-            }
-          }
+        const parsed = xmlParser.parse(xml) as { MediaContainer?: { User?: unknown[] } };
+        const users = toArray(parsed.MediaContainer?.User) as Array<{
+          id?: string | number;
+          username?: string;
+          title?: string;
+          Server?: unknown[];
+        }>;
+        for (const user of users) {
+          const servers = toArray(user.Server) as Array<{ machineIdentifier?: string }>;
+          if (!servers.some((s) => s.machineIdentifier === machineIdentifier)) continue;
+          const idRaw = user.id;
+          if (idRaw === undefined || idRaw === null) continue;
+          const id = typeof idRaw === "number" ? idRaw : parseInt(String(idRaw), 10);
+          if (!Number.isFinite(id)) continue;
+          seenIds.add(id);
+          results.push({
+            id,
+            userId: id,
+            username: user.username || user.title || "",
+            machineIdentifier,
+          });
         }
       }
     } catch {
@@ -153,32 +161,29 @@ export function createSharingModule(http: PlexHttp) {
     const xml: string = data?._raw || "";
     if (!xml) return [];
 
-    const sharedRegex = /<SharedServer\s([^>]+?)>([\s\S]*?)<\/SharedServer>|<SharedServer\s([^>]+?)\/>/g;
+    const root = xmlParser.parse(xml) as { MediaContainer?: { SharedServer?: unknown[] } };
+    const shared = toArray(root.MediaContainer?.SharedServer) as Array<{
+      userID?: string | number;
+      filterMovies?: string;
+      filterTelevision?: string;
+      Section?: unknown[];
+    }>;
+
     const out: PlexSharedServerDetail[] = [];
-    let match;
-    while ((match = sharedRegex.exec(xml)) !== null) {
-      const attrs = match[1] || match[3] || "";
-      const inner = match[2] || "";
-
-      const userID = attrs.match(/\buserID="(\d+)"/)?.[1];
-      const filterMovies = attrs.match(/\bfilterMovies="([^"]*)"/)?.[1] ?? "";
-      const filterTelevision = attrs.match(/\bfilterTelevision="([^"]*)"/)?.[1] ?? "";
-
+    for (const node of shared) {
+      const sections = toArray(node.Section) as Array<{ key?: string | number; shared?: string | number }>;
       const sectionIds: number[] = [];
-      const sectionRegex = /<Section\s([^>]+?)\/?>/g;
-      let sMatch;
-      while ((sMatch = sectionRegex.exec(inner)) !== null) {
-        const sAttrs = sMatch[1];
-        const shared = sAttrs.match(/\bshared="(\d+)"/)?.[1];
-        if (shared !== "1") continue;
-        const keyAttr = sAttrs.match(/\bkey="(\d+)"/)?.[1];
-        if (keyAttr) sectionIds.push(parseInt(keyAttr, 10));
+      for (const s of sections) {
+        if (String(s.shared) !== "1") continue;
+        const key = typeof s.key === "number" ? s.key : parseInt(String(s.key ?? ""), 10);
+        if (Number.isFinite(key)) sectionIds.push(key);
       }
 
+      const userIdNum = typeof node.userID === "number" ? node.userID : parseInt(String(node.userID ?? ""), 10);
       const parsed = plexSharedServerRawSchema.safeParse({
-        userID: userID ? parseInt(userID, 10) : undefined,
-        filterMovies,
-        filterTelevision,
+        userID: Number.isFinite(userIdNum) ? userIdNum : undefined,
+        filterMovies: node.filterMovies ?? "",
+        filterTelevision: node.filterTelevision ?? "",
         librarySectionIDs: sectionIds.join(","),
       });
       if (!parsed.success || !parsed.data.userID) continue;

@@ -139,12 +139,19 @@ export function removeOverlayConfigById(id: number): void {
   db.delete(overlayConfigs).where(eq(overlayConfigs.id, id)).run();
 }
 
-/** Move an overlay to a different position+order. Re-numbers within the target stack. */
+/**
+ * Move an overlay to a different position+order. Re-numbers within the
+ * target stack.
+ *
+ * The negative-tmp dance below is safe against concurrent reorders because
+ * `db.transaction` (better-sqlite3) is synchronous and SQLite serialises
+ * writers: a second reorder cannot interleave with the first. Within a
+ * single transaction the tmp orders never collide because they're assigned
+ * sequentially.
+ */
 export function moveOverlayConfig(id: number, targetPosition: OverlayPosition, targetOrder: number): void {
   const row = getOverlayConfig(id);
   if (!row) return;
-  // Two-step: shift target stack to make space, set this row's new position+order.
-  // Simpler approach: remove the row, then renumber all rows in source/target positions, then re-insert at target index.
   db.transaction((tx) => {
     // Take all rows in target position (excluding the one being moved).
     const targetRows = tx

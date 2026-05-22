@@ -1,6 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import { db, collections, mediaItems, rules, plexUsers, jobRuns, events } from "@tinkerbell/db";
+import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 
 /**
@@ -8,7 +9,7 @@ import { t, procedure } from "./_base.ts";
  * meaningful if the underlying job ran recently. Anything older than this
  * surfaces as `null` so we render nothing instead of a stale ✓.
  */
-const STATUS_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const STATUS_FRESHNESS_MS = WEEK_MS;
 
 function countOf(table: AnySQLiteTable): number {
   try {
@@ -68,7 +69,7 @@ export const navRouter = t.router({
       media: countOf(mediaItems),
       rules: countOf(rules),
       users: countOf(plexUsers),
-      eventsErrors24h: recentErrorEventCount(24 * 60 * 60 * 1000),
+      eventsErrors24h: recentErrorEventCount(DAY_MS),
       overlaysStatus: lastJobStatus("overlays"),
       jobsStatus: lastJobStatus("healthcheck"),
     };

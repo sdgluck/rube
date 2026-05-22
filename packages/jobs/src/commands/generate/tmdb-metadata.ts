@@ -2,10 +2,10 @@ import PQueue from "p-queue";
 import { db, tmdbCache, type TmdbCachedDetails } from "@tinkerbell/db";
 import { eq, inArray, sql } from "drizzle-orm";
 import { fetchItemDetails, type TmdbConfig, type TmdbItemDetails } from "@tinkerbell/tmdb";
-import type { JobContext } from "@tinkerbell/core";
+import { MONTH_MS, type JobContext } from "@tinkerbell/core";
 
 /** TTL for cached entries: 30 days. Beyond this, we re-fetch on demand. */
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const CACHE_TTL_MS = MONTH_MS;
 const FETCH_CONCURRENCY = 8;
 const PROGRESS_INTERVAL = 50;
 

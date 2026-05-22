@@ -3,8 +3,10 @@
  * named in one place and obvious to find when tuning.
  */
 
+import { WEEK_MS } from "@tinkerbell/core";
+
 /** How long finished job runs are kept before `purge-runs` deletes them. */
-export const JOB_RUN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+export const JOB_RUN_RETENTION_MS = WEEK_MS;
 
 /** Per-job hard cap on retained runs in `jobRuns`. The purge-runs cron handles
  * age-based cleanup; this cap handles high-frequency jobs that would otherwise

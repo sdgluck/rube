@@ -1,4 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
@@ -17,6 +19,11 @@ setHealthReporter(reportHealth);
 setPostCollectionSyncHook(scanAllProviders);
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
+// Bind to loopback by default. Tinkerbell has no auth: anyone who can reach
+// the port can call every tRPC mutation. The Docker image sets HOST=0.0.0.0
+// because the container must be reachable from outside, and trusts the user
+// to put it behind a reverse proxy / firewall.
+const HOST = process.env.HOST || "127.0.0.1";
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
 
 const MIME_TYPES: Record<string, string> = {
@@ -28,6 +35,8 @@ const MIME_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
 };
+
+const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 
 async function serveStatic(res: ServerResponse, filePath: string): Promise<boolean> {
   try {
@@ -68,15 +77,14 @@ function toFetchRequest(req: IncomingMessage): Request {
 
 async function sendFetchResponse(fetchRes: Response, res: ServerResponse): Promise<void> {
   res.writeHead(fetchRes.status, Object.fromEntries(fetchRes.headers.entries()));
-  if (fetchRes.body) {
-    const reader = fetchRes.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(value);
-    }
+  if (!fetchRes.body) {
+    res.end();
+    return;
   }
-  res.end();
+  // `pipeline` honours Node's HTTP backpressure (the previous hand-rolled
+  // loop ignored `res.write()`'s return value and buffered without bound)
+  // and tears down the upstream reader on error.
+  await pipeline(Readable.fromWeb(fetchRes.body as never), res);
 }
 
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -102,19 +110,24 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         res.end();
         return;
       }
+      // Don't trust the upstream MIME — a hostile/compromised Plex could
+      // return text/html and turn this same-origin endpoint into an XSS
+      // vector against the SPA. Coerce anything outside the allow-list
+      // to an opaque download so the browser won't parse it.
+      const upstream = pRes.headers.get("Content-Type") ?? "";
+      const mime = ALLOWED_IMAGE_MIME.has(upstream) ? upstream : "application/octet-stream";
       res.writeHead(200, {
-        "Content-Type": pRes.headers.get("Content-Type") || "image/jpeg",
+        "Content-Type": mime,
+        "Content-Disposition": "inline",
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=86400",
       });
-      const reader = pRes.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
+      // `pipeline` propagates backpressure and cancels the upstream reader
+      // on error/abort, so we don't need an explicit reader.cancel().
+      await pipeline(Readable.fromWeb(pRes.body as never), res);
     } catch {
-      res.writeHead(502);
+      // Headers may already have been sent if the stream broke mid-flight.
+      if (!res.headersSent) res.writeHead(502);
       res.end();
     }
     return;
@@ -156,8 +169,14 @@ async function main() {
     console.error("[jobs] Init failed:", err);
     process.exit(1);
   }
-  server.listen(PORT, () => {
-    console.log(`Tinkerbell admin server listening on port ${PORT} (https://api.tinkerbell.localhost)`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Tinkerbell admin server listening on ${HOST}:${PORT} (https://api.tinkerbell.localhost)`);
+    if (HOST !== "127.0.0.1" && HOST !== "localhost" && HOST !== "::1") {
+      console.warn(
+        `[security] Listening on ${HOST}: every tRPC mutation is reachable without authentication. ` +
+          `Only expose this port to networks you trust.`,
+      );
+    }
   });
 }
 

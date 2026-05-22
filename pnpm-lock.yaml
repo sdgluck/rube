@@ -190,6 +190,9 @@ importers:
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../../packages/http
+      fast-xml-parser:
+        specifier: ^4.5.0
+        version: 4.5.6
       p-queue:
         specifier: ^9.1.0
         version: 9.2.0
@@ -257,6 +260,9 @@ importers:
 
   domains/events:
     dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -775,6 +781,9 @@ importers:
 
   packages/posters:
     dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../core
       zod:
         specifier: ^4.3.6
         version: 4.4.2
@@ -2560,6 +2569,10 @@ packages:
     resolution: {integrity: sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==}
     engines: {node: '>= 18'}
 
+  fast-xml-parser@4.5.6:
+    resolution: {integrity: sha512-Yd4vkROfJf8AuJrDIVMVmYfULKmIJszVsMv7Vo71aocsKgFxpdlpSHXSaInvyYfgw2PRuObQSW2GFpVMUjxu9A==}
+    hasBin: true
+
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -3159,6 +3172,9 @@ packages:
   strip-json-comments@2.0.1:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
+
+  strnum@1.1.2:
+    resolution: {integrity: sha512-vrN+B7DBIoTTZjnPNewwhx6cBA/H+IS7rfW68n7XxC1y7uoiGQBxaKzqucGUgavX15dJgiGztLJ8vxuEzwqBdA==}
 
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
@@ -4584,6 +4600,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  fast-xml-parser@4.5.6:
+    dependencies:
+      strnum: 1.1.2
+
   fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:
       picomatch: 4.0.4
@@ -5253,6 +5273,8 @@ snapshots:
       ansi-regex: 6.2.2
 
   strip-json-comments@2.0.1: {}
+
+  strnum@1.1.2: {}
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
