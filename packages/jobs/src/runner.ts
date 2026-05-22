@@ -8,10 +8,9 @@ import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 import { internalJobs } from "./internal-jobs.ts";
-import { DEFAULT_JOB_RUN_LIMIT, JOB_RUN_KEEP_PER_JOB } from "./limits.ts";
+import { JOB_RUN_KEEP_PER_JOB } from "./limits.ts";
 
 type Job = InferSelectModel<typeof jobs>;
-type JobRun = InferSelectModel<typeof jobRuns>;
 
 // System + always-seeded background/escape-hatch jobs. Features are NOT here
 // — they're created on demand via installFeature(). See FEATURE_TEMPLATES.
@@ -65,44 +64,6 @@ const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
   "overlays-remove": { mode: "remove" },
 };
 
-// Features are user-installed. Templates describe defaults the install
-// mutation uses to create the row (or restore one whose config was wiped).
-export interface FeatureTemplate {
-  id: string;
-  name: string;
-  command: string;
-  defaultSchedule: string;
-  defaultConfig: Record<string, unknown>;
-}
-
-export const FEATURE_TEMPLATES: FeatureTemplate[] = [
-  {
-    id: "because-you-watched",
-    name: "Because You Watched",
-    command: "because-you-watched",
-    defaultSchedule: "0 2 * * *",
-    defaultConfig: { limit: DEFAULT_JOB_RUN_LIMIT },
-  },
-  {
-    id: "shuffle",
-    name: "Shuffle Hubs",
-    command: "shuffle",
-    defaultSchedule: "*/30 * * * *",
-    defaultConfig: {},
-  },
-  {
-    id: "overlays",
-    name: "Apply Overlays",
-    command: "overlays",
-    defaultSchedule: "",
-    defaultConfig: {},
-  },
-];
-
-function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {
-  return FEATURE_TEMPLATES.find((f) => f.id === featureId);
-}
-
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
@@ -111,7 +72,7 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
-const cronJobs = new Map<string, Cron>();
+export const cronJobs = new Map<string, Cron>();
 
 const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa"];
 
@@ -159,7 +120,7 @@ function startCronSchedules(): void {
   console.log(`[jobs] Started ${enabledJobs.length} cron schedule(s)`);
 }
 
-function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): void {
+export function scheduleCron(job: Pick<Job, "id" | "name" | "enabled" | "schedule">): void {
   const existing = cronJobs.get(job.id);
   if (existing) {
     existing.stop();
@@ -292,105 +253,6 @@ export function cancelRun(runId: string): boolean {
   return true;
 }
 
-export function getJobs(): Array<
-  Job & { lastRunStatus?: string | null; lastRunStartedAt?: number | null; lastRunId?: string | null }
-> {
-  const rows = db
-    .select({
-      id: jobs.id,
-      name: jobs.name,
-      command: jobs.command,
-      schedule: jobs.schedule,
-      enabled: jobs.enabled,
-      config: jobs.config,
-      lastRunStatus: sql<string | null>`lr.status`.as("lastRunStatus"),
-      lastRunStartedAt: sql<number | null>`lr.started_at`.as("lastRunStartedAt"),
-      lastRunId: sql<string | null>`lr.id`.as("lastRunId"),
-    })
-    .from(jobs)
-    .leftJoin(
-      sql`job_runs lr`,
-      sql`lr.id = (SELECT id FROM job_runs WHERE job_id = ${jobs.id} ORDER BY started_at DESC LIMIT 1)`,
-    )
-    .orderBy(jobs.id)
-    .all();
-  return rows;
-}
-
-export function getJobRuns(jobId: string, limit = 20): Array<Omit<JobRun, "log">> {
-  return db
-    .select({
-      id: jobRuns.id,
-      jobId: jobRuns.jobId,
-      status: jobRuns.status,
-      progress: jobRuns.progress,
-      message: jobRuns.message,
-      startedAt: jobRuns.startedAt,
-      finishedAt: jobRuns.finishedAt,
-    })
-    .from(jobRuns)
-    .where(eq(jobRuns.jobId, jobId))
-    .orderBy(desc(jobRuns.startedAt))
-    .limit(limit)
-    .all();
-}
-
-export function getJobRun(runId: string): JobRun | null {
-  return db.select().from(jobRuns).where(eq(jobRuns.id, runId)).get() ?? null;
-}
-
-export function getActiveRuns(): Array<{
-  id: string;
-  jobId: string;
-  jobName: string;
-  progress: number;
-  message: string;
-  startedAt: number;
-}> {
-  return db
-    .select({
-      id: jobRuns.id,
-      jobId: jobRuns.jobId,
-      jobName: jobs.name,
-      progress: jobRuns.progress,
-      message: jobRuns.message,
-      startedAt: jobRuns.startedAt,
-    })
-    .from(jobRuns)
-    .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
-    .where(eq(jobRuns.status, "running"))
-    .orderBy(jobRuns.startedAt)
-    .all();
-}
-
-export function getRecentRuns(): Array<{
-  id: string;
-  jobId: string;
-  jobName: string;
-  status: string;
-  progress: number;
-  message: string;
-  startedAt: number;
-  finishedAt: number | null;
-}> {
-  return db
-    .select({
-      id: jobRuns.id,
-      jobId: jobRuns.jobId,
-      jobName: jobs.name,
-      status: jobRuns.status,
-      progress: jobRuns.progress,
-      message: jobRuns.message,
-      startedAt: jobRuns.startedAt,
-      finishedAt: jobRuns.finishedAt,
-    })
-    .from(jobRuns)
-    .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
-    .orderBy(desc(jobRuns.startedAt))
-    .limit(8)
-    .all();
-}
-
 export function updateJob(
   jobId: string,
   updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
@@ -419,90 +281,6 @@ export function updateJob(
 
   // Reschedule cron
   scheduleCron(job);
-}
-
-export interface FeatureCatalogEntry {
-  id: string;
-  name: string;
-  installed: boolean;
-}
-
-export function listFeatureCatalog(): FeatureCatalogEntry[] {
-  const installedIds = new Set(
-    db
-      .select({ id: jobs.id })
-      .from(jobs)
-      .all()
-      .map((r) => r.id),
-  );
-  return FEATURE_TEMPLATES.map((t) => ({ id: t.id, name: t.name, installed: installedIds.has(t.id) }));
-}
-
-export function installFeature(
-  featureId: string,
-  opts: { schedule?: string; config?: Record<string, unknown> } = {},
-): void {
-  const template = getFeatureTemplate(featureId);
-  if (!template) throw new Error(`Unknown feature "${featureId}"`);
-
-  const schedule = opts.schedule ?? template.defaultSchedule;
-  if (schedule) new Cron(schedule); // validate
-  const config = opts.config ?? template.defaultConfig;
-
-  const existing = db.select().from(jobs).where(eq(jobs.id, featureId)).get();
-  if (existing) {
-    db.update(jobs).set({ schedule, enabled: 1, config }).where(eq(jobs.id, featureId)).run();
-  } else {
-    db.insert(jobs)
-      .values({
-        id: template.id,
-        name: template.name,
-        command: template.command,
-        schedule,
-        enabled: 1,
-        config,
-      })
-      .run();
-  }
-
-  scheduleCron({ id: template.id, name: template.name, enabled: 1, schedule });
-}
-
-export async function uninstallFeature(featureId: string): Promise<void> {
-  const template = getFeatureTemplate(featureId);
-  if (!template) throw new Error(`Unknown feature "${featureId}"`);
-
-  // Stop any cron schedule first.
-  const cron = cronJobs.get(featureId);
-  if (cron) {
-    cron.stop();
-    cronJobs.delete(featureId);
-  }
-
-  // Delete run history then the row itself (FK constraint).
-  db.delete(jobRuns).where(eq(jobRuns.jobId, featureId)).run();
-  db.delete(jobs).where(eq(jobs.id, featureId)).run();
-
-  // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
-  // collections on the Plex server — fire byw-remove so removing the feature
-  // actually undoes those side-effects. Item-level Tinkerbell labels are NOT
-  // touched here; users can clean those up via Settings → Maintenance.
-  if (featureId === "because-you-watched") {
-    // Cancel any in-flight BYW run first so we don't race with the cleanup.
-    const active = db
-      .select({ id: jobRuns.id })
-      .from(jobRuns)
-      .where(and(eq(jobRuns.jobId, "because-you-watched"), eq(jobRuns.status, "running")))
-      .all();
-    for (const run of active) {
-      cancelRun(run.id);
-    }
-    try {
-      await startJob("byw-remove");
-    } catch (err) {
-      console.error(`[jobs] BYW uninstall: failed to start byw-remove:`, err);
-    }
-  }
 }
 
 export async function initJobs(): Promise<void> {

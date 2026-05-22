@@ -1,21 +1,13 @@
+export { initJobs, stopSidequest, startJob, cancelRun, updateJob } from "./runner.ts";
+export { getJobs, getJobRuns, getJobRun, getActiveRuns, getRecentRuns } from "./queries.ts";
 export {
-  initJobs,
-  stopSidequest,
-  startJob,
-  cancelRun,
-  getJobs,
-  getJobRuns,
-  getJobRun,
-  getActiveRuns,
-  getRecentRuns,
-  updateJob,
   installFeature,
   uninstallFeature,
   listFeatureCatalog,
   FEATURE_TEMPLATES,
   type FeatureTemplate,
   type FeatureCatalogEntry,
-} from "./runner.ts";
+} from "./features.ts";
 export {
   markStaleStressTestsAsFailed,
   getStressTestRuns,
