@@ -6,10 +6,11 @@ import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
-import { getConfig, setHealthReporter, setPostCollectionSyncHook } from "@tinkerbell/core";
+import { getConfig, setHealthReporter, setPostCollectionSyncHook, setLocalCollectionsReader } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
 import { reportHealth } from "@tinkerbell/domain.health";
 import { scanAllProviders } from "@tinkerbell/domain.migration";
+import { getLocalCollections } from "@tinkerbell/domain.collections";
 import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
 
 setHealthReporter(reportHealth);
@@ -17,6 +18,9 @@ setHealthReporter(reportHealth);
 // Wired here at boot so the collections domain doesn't have to import
 // the migration domain (avoiding the near-cycle the audit flagged).
 setPostCollectionSyncHook(scanAllProviders);
+// `domains/users` calls this when counting per-user collection labels.
+// Registered here so users doesn't import collections directly (GET-118).
+setLocalCollectionsReader(() => getLocalCollections());
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 // Bind to loopback by default. Tinkerbell has no auth: anyone who can reach

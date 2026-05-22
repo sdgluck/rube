@@ -4,7 +4,7 @@
 
 import { eq, or, asc, desc, lt, sql } from "drizzle-orm";
 import { db, plexUsers, likeContains } from "@tinkerbell/db";
-import { getLocalCollections } from "@tinkerbell/domain.collections";
+import { readLocalCollections } from "@tinkerbell/core";
 import type { PlexClient } from "@tinkerbell/plex";
 
 interface SyncStats {
@@ -26,7 +26,7 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
 
   const [sharings, allCollectionsResult, accounts, history, owner] = await Promise.all([
     client.getSharings(identity.machineIdentifier),
-    Promise.resolve(getLocalCollections()),
+    Promise.resolve(readLocalCollections()),
     client.getAccounts(),
     client.getWatchHistory({ limit: 500 }),
     client.getOwner(),
