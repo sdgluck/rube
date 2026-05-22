@@ -1,4 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
@@ -75,15 +77,14 @@ function toFetchRequest(req: IncomingMessage): Request {
 
 async function sendFetchResponse(fetchRes: Response, res: ServerResponse): Promise<void> {
   res.writeHead(fetchRes.status, Object.fromEntries(fetchRes.headers.entries()));
-  if (fetchRes.body) {
-    const reader = fetchRes.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(value);
-    }
+  if (!fetchRes.body) {
+    res.end();
+    return;
   }
-  res.end();
+  // `pipeline` honours Node's HTTP backpressure (the previous hand-rolled
+  // loop ignored `res.write()`'s return value and buffered without bound)
+  // and tears down the upstream reader on error.
+  await pipeline(Readable.fromWeb(fetchRes.body as never), res);
 }
 
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -102,7 +103,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       res.end();
       return;
     }
-    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
       const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
       if (!pRes.ok || !pRes.body) {
@@ -122,21 +122,13 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=86400",
       });
-      reader = pRes.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
+      // `pipeline` propagates backpressure and cancels the upstream reader
+      // on error/abort, so we don't need an explicit reader.cancel().
+      await pipeline(Readable.fromWeb(pRes.body as never), res);
     } catch {
       // Headers may already have been sent if the stream broke mid-flight.
       if (!res.headersSent) res.writeHead(502);
       res.end();
-    } finally {
-      // Release the upstream connection. cancel() rejects on a closed
-      // stream, which is fine — we're tearing down regardless.
-      reader?.cancel().catch(() => {});
     }
     return;
   }
