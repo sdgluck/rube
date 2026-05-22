@@ -185,9 +185,26 @@ main().catch((err) => {
   process.exit(1);
 });
 
+const SHUTDOWN_GRACE_MS = 10_000;
+
+let shuttingDown = false;
 async function shutdown() {
+  // Two signals = exit now. Container orchestrators send SIGTERM, wait,
+  // then SIGKILL, and a human pressing Ctrl-C twice means "I'm impatient".
+  if (shuttingDown) process.exit(0);
+  shuttingDown = true;
+
   await stopSidequest();
-  server.close();
+
+  // Stop accepting new connections, then wait up to SHUTDOWN_GRACE_MS for
+  // in-flight requests (streaming Plex images, large tRPC responses) to
+  // drain. Force-close anything still hanging so we don't block the
+  // container exit forever.
+  const closed = new Promise<void>((resolve) => server.close(() => resolve()));
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_MS).unref());
+  await Promise.race([closed, timeout]);
+  server.closeAllConnections();
+
   process.exit(0);
 }
 process.on("SIGTERM", shutdown);
