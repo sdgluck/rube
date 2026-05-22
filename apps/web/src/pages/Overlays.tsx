@@ -209,11 +209,14 @@ export default function Overlays() {
     });
   }, [importText, importMode, sectionId, importSectionMutation]);
 
-  const handleImportFile = useCallback((file: File) => {
-    file.text().then((text) => {
+  const handleImportFile = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
       setImportText(text);
       setImportError(null);
-    });
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Could not read file");
+    }
   }, []);
 
   const configs = configsQuery.data ?? [];
