@@ -1,15 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { errorMessage } from "@tinkerbell/core";
 import { join } from "node:path";
-import { eq, and, ne, lt, desc, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, ne, desc, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 import { seedDefaultRules } from "@tinkerbell/domain.rules";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
-import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
-import { syncRecentlyAdded, syncMostWatched } from "@tinkerbell/domain.stats";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
-import { DEFAULT_JOB_RUN_LIMIT, JOB_RUN_KEEP_PER_JOB, JOB_RUN_RETENTION_MS } from "./limits.ts";
+import { internalJobs } from "./internal-jobs.ts";
+import { DEFAULT_JOB_RUN_LIMIT, JOB_RUN_KEEP_PER_JOB } from "./limits.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -113,22 +112,6 @@ function formatDuration(ms: number): string {
 }
 
 const cronJobs = new Map<string, Cron>();
-
-// Internal jobs run in-process without the command pattern
-const internalJobs: Record<string, () => string | Promise<string>> = {
-  "purge-runs": () => {
-    const cutoff = Date.now() - JOB_RUN_RETENTION_MS;
-    const result = db
-      .delete(jobRuns)
-      .where(and(ne(jobRuns.status, "running"), lt(jobRuns.startedAt, cutoff)))
-      .run();
-    pruneHealthChecks();
-    return `Purged ${result.changes} job run(s) older than 7 days.`;
-  },
-  "sync-recently-added": () => syncRecentlyAdded(),
-  "sync-most-watched": () => syncMostWatched(),
-  healthcheck: () => checkAllConfiguredServices(),
-};
 
 const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa"];
 
