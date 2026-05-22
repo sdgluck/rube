@@ -34,6 +34,8 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
+
 async function serveStatic(res: ServerResponse, filePath: string): Promise<boolean> {
   try {
     const info = await stat(filePath);
@@ -100,6 +102,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       res.end();
       return;
     }
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
       const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
       if (!pRes.ok || !pRes.body) {
@@ -107,11 +110,19 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         res.end();
         return;
       }
+      // Don't trust the upstream MIME — a hostile/compromised Plex could
+      // return text/html and turn this same-origin endpoint into an XSS
+      // vector against the SPA. Coerce anything outside the allow-list
+      // to an opaque download so the browser won't parse it.
+      const upstream = pRes.headers.get("Content-Type") ?? "";
+      const mime = ALLOWED_IMAGE_MIME.has(upstream) ? upstream : "application/octet-stream";
       res.writeHead(200, {
-        "Content-Type": pRes.headers.get("Content-Type") || "image/jpeg",
+        "Content-Type": mime,
+        "Content-Disposition": "inline",
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=86400",
       });
-      const reader = pRes.body.getReader();
+      reader = pRes.body.getReader();
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -119,8 +130,13 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       }
       res.end();
     } catch {
-      res.writeHead(502);
+      // Headers may already have been sent if the stream broke mid-flight.
+      if (!res.headersSent) res.writeHead(502);
       res.end();
+    } finally {
+      // Release the upstream connection. cancel() rejects on a closed
+      // stream, which is fine — we're tearing down regardless.
+      reader?.cancel().catch(() => {});
     }
     return;
   }
