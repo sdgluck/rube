@@ -12,3 +12,4 @@ apps/web/dist
 .claude/
 .idea/
 /posters/
+.pnpm-store/
