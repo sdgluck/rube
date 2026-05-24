@@ -15,7 +15,6 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/core": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { DAY_MS } from "@tinkerbell/core";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type Sidecar = {
   url: string;
