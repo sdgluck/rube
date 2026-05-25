@@ -8,6 +8,7 @@ node_modules/
 *.sqlite-wal
 *.sqlite-journal
 apps/web/dist
+apps/portal/dist
 .turbo
 .claude/
 .idea/

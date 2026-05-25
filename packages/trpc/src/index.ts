@@ -257,3 +257,5 @@ export const appRouter = t.router({
 });
 
 export type AppRouter = typeof appRouter;
+
+export { portalRouter, createPortalContext, type PortalRouter, type PortalContext } from "./portal.router.ts";

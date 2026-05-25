@@ -30,6 +30,10 @@ export const configSchema = z.object({
     enabledAt: z.number().optional(),
     lastReconcileAt: z.number().optional(),
   }),
+  /** Stable X-Plex-Client-Identifier for the Sign-in-with-Plex portal flow. */
+  global_plex_client_id: z.string(),
+  /** Public base URL of the user portal, used as the Plex auth forwardUrl. */
+  user_app_public_url: z.string(),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
     provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),

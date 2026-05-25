@@ -7,12 +7,14 @@ RUN apk add --no-cache python3 make g++
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
+COPY apps/portal/package.json ./apps/portal/
 COPY packages/db/package.json ./packages/db/
 RUN pnpm install --frozen-lockfile
 COPY apps/ ./apps/
 COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile --offline
 RUN pnpm --filter @tinkerbell/web run build
+RUN pnpm --filter @tinkerbell/portal run build
 RUN pnpm --filter=@tinkerbell/server deploy --prod /out
 
 FROM node:25-alpine
@@ -22,6 +24,7 @@ RUN mkdir -p /config
 
 COPY --from=build /out/ ./apps/server/
 COPY --from=build /repo/apps/web/dist ./apps/web/dist/
+COPY --from=build /repo/apps/portal/dist ./apps/portal/dist/
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
@@ -33,7 +36,10 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PUID=99
 ENV PGID=100
-EXPOSE 3000
+# 3000 = admin app/API (unauthenticated). 3100 = user portal (Sign in with
+# Plex). USER_HOST inherits HOST so the portal is reachable too. For a public
+# deployment, expose only 3100 and keep 3000 on a trusted network.
+EXPOSE 3000 3100
 VOLUME /config
 
 LABEL net.unraid.docker.webui="http://[IP]:[PORT:3000]"

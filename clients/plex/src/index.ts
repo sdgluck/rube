@@ -62,3 +62,12 @@ export function createPlexClient(opts: PlexClientOptions) {
 }
 
 export type PlexClient = ReturnType<typeof createPlexClient>;
+
+export {
+  createPlexPin,
+  buildPlexAuthUrl,
+  checkPlexPin,
+  getPlexAccount,
+  type PlexPin,
+  type PlexUserAccount,
+} from "./auth.ts";

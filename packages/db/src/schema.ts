@@ -334,6 +334,20 @@ export const userPreferences = sqliteTable("user_preferences", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+// Portal login sessions for the Sign-in-with-Plex flow. `id` is the SHA-256 of
+// the opaque cookie token (the raw token is only ever in the user's cookie).
+export const plexSessions = sqliteTable(
+  "plex_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    username: text("username").notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [index("idx_plex_sessions_expires").on(table.expiresAt)],
+);
+
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
   config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),
