@@ -3,6 +3,15 @@ import { portalTrpc } from "./trpc.ts";
 
 const PIN_KEY = "tb_pin";
 
+function useDebounced<T>(value: T, ms: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return debounced;
+}
+
 export default function PortalApp() {
   const utils = portalTrpc.useUtils();
   const meQuery = portalTrpc.me.useQuery(undefined, { retry: false });
@@ -113,8 +122,8 @@ interface FormState {
   loved: string[];
   liked: string[];
   hated: string[];
-  moods: string;
-  excludedTitles: string;
+  moods: string[];
+  excludedTitles: string[];
   ratingFloor: string;
   rowCount: string;
   watchedBias: "new_to_me" | "include_favorites" | "balanced";
@@ -130,12 +139,26 @@ const WATCHED_BIAS_HINTS: Record<FormState["watchedBias"], string> = {
   include_favorites: "Also resurface titles you've watched and loved.",
 };
 
-function linesToArray(s: string): string[] {
-  return s
-    .split(/[\n,]/)
-    .map((t) => t.trim())
-    .filter(Boolean);
-}
+const MOOD_OPTIONS = [
+  "Cosy",
+  "Feel-good",
+  "Mind-bending",
+  "Intense",
+  "Dark",
+  "Uplifting",
+  "Nostalgic",
+  "Suspenseful",
+  "Funny",
+  "Romantic",
+  "Epic",
+  "Gritty",
+  "Heartwarming",
+  "Thought-provoking",
+  "Action-packed",
+  "Relaxing",
+  "Quirky",
+  "Tear-jerker",
+];
 
 function PreferencesForm() {
   const utils = portalTrpc.useUtils();
@@ -146,6 +169,14 @@ function PreferencesForm() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saved, setSaved] = useState(false);
 
+  // Title search for the "never recommend" picker.
+  const [titleQuery, setTitleQuery] = useState("");
+  const debouncedTitle = useDebounced(titleQuery, 250);
+  const titleResults = portalTrpc.searchTitles.useQuery(
+    { q: debouncedTitle },
+    { enabled: debouncedTitle.trim().length >= 2 },
+  );
+
   useEffect(() => {
     if (!prefsQuery.data) return;
     const p = prefsQuery.data.preferences;
@@ -153,8 +184,8 @@ function PreferencesForm() {
       loved: p.genres.loved,
       liked: p.genres.liked,
       hated: p.genres.hated,
-      moods: p.moods.join(", "),
-      excludedTitles: p.excludedTitles.join("\n"),
+      moods: p.moods,
+      excludedTitles: p.excludedTitles,
       ratingFloor: p.ratingFloor != null ? String(p.ratingFloor) : "",
       rowCount: p.rowCount != null ? String(p.rowCount) : "",
       watchedBias: p.watchedBias,
@@ -180,6 +211,18 @@ function PreferencesForm() {
       return next;
     });
 
+  const toggleMood = (m: string) =>
+    setForm((f) => (f ? { ...f, moods: f.moods.includes(m) ? f.moods.filter((x) => x !== m) : [...f.moods, m] } : f));
+
+  const addExcluded = (title: string) => {
+    const t = title.trim();
+    if (!t) return;
+    setForm((f) => (f && !f.excludedTitles.includes(t) ? { ...f, excludedTitles: [...f.excludedTitles, t] } : f));
+    setTitleQuery("");
+  };
+  const removeExcluded = (title: string) =>
+    setForm((f) => (f ? { ...f, excludedTitles: f.excludedTitles.filter((x) => x !== title) } : f));
+
   function save() {
     if (!form) return;
     setSaved(false);
@@ -188,8 +231,8 @@ function PreferencesForm() {
         optedIn: form.optedIn,
         preferences: {
           genres: { loved: form.loved, liked: form.liked, hated: form.hated },
-          moods: linesToArray(form.moods),
-          excludedTitles: linesToArray(form.excludedTitles),
+          moods: form.moods,
+          excludedTitles: form.excludedTitles,
           ratingFloor: Number(form.ratingFloor) > 0 ? Number(form.ratingFloor) : undefined,
           rowCount: form.rowCount.trim() ? Number(form.rowCount) : undefined,
           watchedBias: form.watchedBias,
@@ -205,6 +248,8 @@ function PreferencesForm() {
     );
   }
 
+  const suggestions = (titleResults.data ?? []).filter((t) => !form.excludedTitles.includes(t));
+
   return (
     <div className="stack">
       {statusQuery.data !== "enabled" && (
@@ -214,18 +259,24 @@ function PreferencesForm() {
         </p>
       )}
 
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={form.optedIn}
-          onChange={(e) => setForm({ ...form, optedIn: e.target.checked })}
-        />
-        Personalize my home screen
-      </label>
+      <div className="field">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={form.optedIn}
+            onChange={(e) => setForm({ ...form, optedIn: e.target.checked })}
+          />
+          Personalize my home screen
+        </label>
+        <span className="field-hint">Master switch for your account — turn your saved preferences on or off.</span>
+      </div>
 
       <div className="field">
         <span className="field-label">Genres</span>
-        <span className="field-hint">Love = show me more · Like = a bit more · Hate = keep away</span>
+        <span className="field-hint">
+          Rate the genres in your library so we show more of what you love and less of what you don't. Love = lots more
+          · Like = a bit more · Hate = keep away.
+        </span>
         <div className="genre-box">
           {genres.length === 0 && <div className="genre-row muted">No genres available.</div>}
           {genres.map((g) => {
@@ -251,28 +302,66 @@ function PreferencesForm() {
         </div>
       </div>
 
-      <label className="field">
+      <div className="field">
         <span className="field-label">Moods</span>
-        <input
-          type="text"
-          value={form.moods}
-          onChange={(e) => setForm({ ...form, moods: e.target.value })}
-          placeholder="cosy, mind-bending, feel-good"
-        />
-      </label>
+        <span className="field-hint">Pick the moods you're in for — recommendations will lean toward them.</span>
+        <div className="chips">
+          {MOOD_OPTIONS.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`chip ${form.moods.includes(m) ? "on" : ""}`}
+              onClick={() => toggleMood(m)}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <label className="field">
+      <div className="field">
         <span className="field-label">Never recommend</span>
-        <span className="field-hint">One title per line.</span>
-        <textarea
-          value={form.excludedTitles}
-          onChange={(e) => setForm({ ...form, excludedTitles: e.target.value })}
-          rows={3}
-        />
-      </label>
+        <span className="field-hint">Search your library and add titles you never want suggested.</span>
+        {form.excludedTitles.length > 0 && (
+          <div className="pills">
+            {form.excludedTitles.map((t) => (
+              <span key={t} className="pill">
+                {t}
+                <button type="button" aria-label={`Remove ${t}`} onClick={() => removeExcluded(t)}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="combo">
+          <input
+            type="text"
+            value={titleQuery}
+            onChange={(e) => setTitleQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addExcluded(titleQuery);
+              }
+            }}
+            placeholder="Search titles…"
+          />
+          {suggestions.length > 0 && (
+            <div className="combo-results">
+              {suggestions.map((t) => (
+                <button key={t} type="button" onClick={() => addExcluded(t)}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       <label className="field">
         <span className="field-label">Minimum rating</span>
+        <span className="field-hint">Only suggest titles rated at least this high. Set to "Any" for no limit.</span>
         <div className="slider-row">
           <input
             type="range"
@@ -290,6 +379,7 @@ function PreferencesForm() {
 
       <label className="field narrow">
         <span className="field-label">Rows on my home</span>
+        <span className="field-hint">How many personalized rows to add to your Plex home screen.</span>
         <input
           type="number"
           min={1}
@@ -313,14 +403,19 @@ function PreferencesForm() {
         <span className="field-hint">{WATCHED_BIAS_HINTS[form.watchedBias]}</span>
       </div>
 
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={form.strictHate}
-          onChange={(e) => setForm({ ...form, strictHate: e.target.checked })}
-        />
-        Strictly avoid my hated genres
-      </label>
+      <div className="field">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={form.strictHate}
+            onChange={(e) => setForm({ ...form, strictHate: e.target.checked })}
+          />
+          Strictly avoid my hated genres
+        </label>
+        <span className="field-hint">
+          When on, hated genres are never included. When off, they're just shown less often.
+        </span>
+      </div>
 
       <div className="save-row">
         <button type="button" className="btn-primary" onClick={save} disabled={setMutation.isPending}>

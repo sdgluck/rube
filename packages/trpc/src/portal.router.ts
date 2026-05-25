@@ -19,6 +19,7 @@ import {
   getPlexClient,
 } from "@tinkerbell/core";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
+import { searchMediaTitles } from "@tinkerbell/domain.media";
 
 const COOKIE = "tb_session";
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // seconds
@@ -109,6 +110,8 @@ export const portalRouter = tp.router({
         return { ok: true };
       }),
   }),
+
+  searchTitles: userProcedure.input(z.object({ q: z.string() })).query(({ input }) => searchMediaTitles(input.q, 15)),
 
   availableGenres: userProcedure.query(async () => {
     const client = getPlexClient();
