@@ -96,7 +96,7 @@ export default function PortalApp() {
           <button
             type="button"
             className="btn-ghost"
-            onClick={() => logoutMutation.mutate(undefined, { onSuccess: () => utils.me.invalidate() })}
+            onClick={() => logoutMutation.mutate(undefined, { onSuccess: () => utils.me.reset() })}
           >
             Sign out ({meQuery.data.username})
           </button>
@@ -123,6 +123,12 @@ interface FormState {
 }
 
 const SEG_LABELS: Record<GenreLevel, string> = { loved: "Love", liked: "Like", hated: "Hate", none: "—" };
+
+const WATCHED_BIAS_HINTS: Record<FormState["watchedBias"], string> = {
+  balanced: "A mix of new titles and ones you've watched before.",
+  new_to_me: "Favour titles you probably haven't watched yet.",
+  include_favorites: "Also resurface titles you've watched and loved.",
+};
 
 function linesToArray(s: string): string[] {
   return s
@@ -184,7 +190,7 @@ function PreferencesForm() {
           genres: { loved: form.loved, liked: form.liked, hated: form.hated },
           moods: linesToArray(form.moods),
           excludedTitles: linesToArray(form.excludedTitles),
-          ratingFloor: form.ratingFloor.trim() ? Number(form.ratingFloor) : undefined,
+          ratingFloor: Number(form.ratingFloor) > 0 ? Number(form.ratingFloor) : undefined,
           rowCount: form.rowCount.trim() ? Number(form.rowCount) : undefined,
           watchedBias: form.watchedBias,
           strictHate: form.strictHate,
@@ -265,39 +271,46 @@ function PreferencesForm() {
         />
       </label>
 
-      <div className="inline">
-        <label className="field narrow">
-          <span className="field-label">Min rating</span>
+      <label className="field">
+        <span className="field-label">Minimum rating</span>
+        <div className="slider-row">
           <input
-            type="number"
+            type="range"
             min={0}
             max={10}
             step={0.5}
-            value={form.ratingFloor}
+            value={form.ratingFloor || "0"}
             onChange={(e) => setForm({ ...form, ratingFloor: e.target.value })}
           />
-        </label>
-        <label className="field narrow">
-          <span className="field-label">Rows on my home</span>
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={form.rowCount}
-            onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
-          />
-        </label>
-        <label className="field narrow">
-          <span className="field-label">Watched bias</span>
-          <select
-            value={form.watchedBias}
-            onChange={(e) => setForm({ ...form, watchedBias: e.target.value as FormState["watchedBias"] })}
-          >
-            <option value="balanced">Balanced</option>
-            <option value="new_to_me">New to me</option>
-            <option value="include_favorites">Include favourites</option>
-          </select>
-        </label>
+          <span className="slider-val">
+            {Number(form.ratingFloor || 0) === 0 ? "Any" : Number(form.ratingFloor).toFixed(1)}
+          </span>
+        </div>
+      </label>
+
+      <label className="field narrow">
+        <span className="field-label">Rows on my home</span>
+        <input
+          type="number"
+          min={1}
+          max={20}
+          value={form.rowCount}
+          onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
+        />
+      </label>
+
+      <div className="field">
+        <span className="field-label">Watched bias</span>
+        <select
+          value={form.watchedBias}
+          onChange={(e) => setForm({ ...form, watchedBias: e.target.value as FormState["watchedBias"] })}
+          style={{ alignSelf: "flex-start" }}
+        >
+          <option value="balanced">Balanced</option>
+          <option value="new_to_me">New to me</option>
+          <option value="include_favorites">Include favourites</option>
+        </select>
+        <span className="field-hint">{WATCHED_BIAS_HINTS[form.watchedBias]}</span>
       </div>
 
       <label className="check">

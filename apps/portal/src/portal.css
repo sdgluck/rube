@@ -232,6 +232,25 @@ textarea {
   width: 130px;
 }
 
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.slider-val {
+  min-width: 3.5ch;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
 /* ── Genre tri-state ───────────────────────────────────────── */
 .genre-box {
   max-height: 300px;
