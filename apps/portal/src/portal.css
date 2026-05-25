@@ -1,0 +1,327 @@
+:root {
+  --bg-page: #f5f5f5;
+  --bg-surface: #fff;
+  --bg-surface-2: #fafbfc;
+  --bg-input: #fff;
+  --text-primary: #2b2b33;
+  --text-secondary: #555;
+  --text-muted: #888;
+  --border-color: #e2e2e8;
+  --border-input: #ccc;
+  --accent: #4a6cf7;
+  --accent-hover: #3b5de7;
+  --love: #2e7d32;
+  --like: #4a6cf7;
+  --hate: #c0392b;
+  --plex: #e5a00d;
+  --plex-hover: #cf9009;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #121220;
+    --bg-surface: #1e1e2f;
+    --bg-surface-2: #25253a;
+    --bg-input: #2a2a3d;
+    --text-primary: #e6e6ea;
+    --text-secondary: #b0b0b0;
+    --text-muted: #8a8a9a;
+    --border-color: #34344a;
+    --border-input: #444;
+    --accent: #6b8cff;
+    --accent-hover: #5a7bf0;
+    --love: #6fcf97;
+    --like: #6b8cff;
+    --hate: #f07070;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.brand-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--plex));
+}
+
+.lede {
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+}
+
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+h1.title {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  font-weight: 600;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-plex {
+  background: var(--plex);
+  border-color: var(--plex);
+  color: #1b1b1b;
+  font-size: 1rem;
+  padding: 12px 22px;
+}
+
+.btn-plex:hover:not(:disabled) {
+  background: var(--plex-hover);
+  border-color: var(--plex-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+/* ── Forms ─────────────────────────────────────────────────── */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.18);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.inline {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.field.narrow input,
+.field.narrow select {
+  width: 130px;
+}
+
+/* ── Genre tri-state ───────────────────────────────────────── */
+.genre-box {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-surface-2);
+}
+
+.genre-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.genre-row:last-child {
+  border-bottom: none;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seg button {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-left: 1px solid var(--border-input);
+}
+
+.seg button:first-child {
+  border-left: none;
+}
+
+.seg button:hover:not(.on) {
+  background: var(--bg-surface-hover, rgba(127, 127, 127, 0.12));
+}
+
+.seg button.on.loved {
+  background: var(--love);
+  color: #fff;
+}
+.seg button.on.liked {
+  background: var(--like);
+  color: #fff;
+}
+.seg button.on.hated {
+  background: var(--hate);
+  color: #fff;
+}
+.seg button.on.none {
+  background: var(--text-muted);
+  color: #fff;
+}
+
+/* ── Misc ──────────────────────────────────────────────────── */
+.banner {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--plex);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.save-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.ok {
+  color: var(--love);
+  font-weight: 600;
+}
+
+.err {
+  color: var(--hate);
+}

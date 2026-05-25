@@ -3,13 +3,6 @@ import { portalTrpc } from "./trpc.ts";
 
 const PIN_KEY = "tb_pin";
 
-const wrap: React.CSSProperties = {
-  maxWidth: 640,
-  margin: "0 auto",
-  padding: 24,
-  fontFamily: "system-ui, sans-serif",
-};
-
 export default function PortalApp() {
   const utils = portalTrpc.useUtils();
   const meQuery = portalTrpc.me.useQuery(undefined, { retry: false });
@@ -70,34 +63,46 @@ export default function PortalApp() {
   }
 
   if (meQuery.isLoading) {
-    return <div style={wrap}>Loading…</div>;
+    return (
+      <div className="page">
+        <div className="card muted">Loading…</div>
+      </div>
+    );
   }
 
   if (!meQuery.data) {
     return (
-      <div style={wrap}>
-        <h1>Tinkerbell</h1>
-        <p>Sign in with your Plex account to personalize your home screen.</p>
-        <button type="button" onClick={signIn} disabled={startMutation.isPending || finishing}>
-          {finishing ? "Finishing sign-in…" : startMutation.isPending ? "Redirecting…" : "Sign in with Plex"}
-        </button>
-        {error && <p style={{ color: "#c0392b" }}>{error}</p>}
+      <div className="page">
+        <div className="card">
+          <h1 className="brand">
+            <span className="brand-dot" />
+            Tinkerbell
+          </h1>
+          <p className="lede">Sign in with your Plex account to personalize your home screen.</p>
+          <button type="button" className="btn-plex" onClick={signIn} disabled={startMutation.isPending || finishing}>
+            {finishing ? "Finishing sign-in…" : startMutation.isPending ? "Redirecting…" : "Sign in with Plex"}
+          </button>
+          {error && <p className="err">{error}</p>}
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={wrap}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ margin: 0 }}>Your recommendations</h1>
-        <button
-          type="button"
-          onClick={() => logoutMutation.mutate(undefined, { onSuccess: () => utils.me.invalidate() })}
-        >
-          Sign out ({meQuery.data.username})
-        </button>
+    <div className="page">
+      <div className="card">
+        <div className="row-between">
+          <h1 className="title">Your recommendations</h1>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => logoutMutation.mutate(undefined, { onSuccess: () => utils.me.invalidate() })}
+          >
+            Sign out ({meQuery.data.username})
+          </button>
+        </div>
+        <PreferencesForm />
       </div>
-      <PreferencesForm />
     </div>
   );
 }
@@ -116,6 +121,8 @@ interface FormState {
   strictHate: boolean;
   optedIn: boolean;
 }
+
+const SEG_LABELS: Record<GenreLevel, string> = { loved: "Love", liked: "Like", hated: "Hate", none: "—" };
 
 function linesToArray(s: string): string[] {
   return s
@@ -150,7 +157,7 @@ function PreferencesForm() {
     });
   }, [prefsQuery.data]);
 
-  if (!form) return <p>Loading your preferences…</p>;
+  if (!form) return <p className="muted">Loading your preferences…</p>;
 
   const genres = genresQuery.data ?? [];
   const genreLevel = (g: string): GenreLevel =>
@@ -193,15 +200,15 @@ function PreferencesForm() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 16 }}>
+    <div className="stack">
       {statusQuery.data !== "enabled" && (
-        <p style={{ fontSize: "0.85rem", color: "#9a6700" }}>
+        <p className="banner">
           Personalized home screens aren't switched on yet. Your choices are saved and will apply once the server admin
           enables them.
         </p>
       )}
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <label className="check">
         <input
           type="checkbox"
           checked={form.optedIn}
@@ -210,30 +217,25 @@ function PreferencesForm() {
         Personalize my home screen
       </label>
 
-      <section>
-        <strong>Genres</strong>
-        <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: 8 }}>
-          Love = show me more · Like = a bit more · Hate = keep away
-        </div>
-        <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid #ccc", borderRadius: 6, padding: 8 }}>
-          {genres.length === 0 && <span style={{ color: "#666" }}>No genres available.</span>}
+      <div className="field">
+        <span className="field-label">Genres</span>
+        <span className="field-hint">Love = show me more · Like = a bit more · Hate = keep away</span>
+        <div className="genre-box">
+          {genres.length === 0 && <div className="genre-row muted">No genres available.</div>}
           {genres.map((g) => {
             const level = genreLevel(g);
             return (
-              <div
-                key={g}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0" }}
-              >
+              <div key={g} className="genre-row">
                 <span>{g}</span>
-                <span style={{ display: "flex", gap: 4 }}>
+                <span className="seg">
                   {(["loved", "liked", "hated", "none"] as GenreLevel[]).map((lv) => (
                     <button
                       key={lv}
                       type="button"
+                      className={`${lv} ${level === lv ? "on" : ""}`}
                       onClick={() => setGenre(g, lv)}
-                      style={{ fontSize: "0.72rem", padding: "2px 6px", opacity: level === lv ? 1 : 0.45 }}
                     >
-                      {lv === "none" ? "—" : lv === "loved" ? "Love" : lv === "liked" ? "Like" : "Hate"}
+                      {SEG_LABELS[lv]}
                     </button>
                   ))}
                 </span>
@@ -241,32 +243,31 @@ function PreferencesForm() {
             );
           })}
         </div>
-      </section>
+      </div>
 
-      <label>
-        <span style={{ display: "block", marginBottom: 4 }}>Moods (comma-separated)</span>
+      <label className="field">
+        <span className="field-label">Moods</span>
         <input
           type="text"
           value={form.moods}
           onChange={(e) => setForm({ ...form, moods: e.target.value })}
-          style={{ width: "100%" }}
           placeholder="cosy, mind-bending, feel-good"
         />
       </label>
 
-      <label>
-        <span style={{ display: "block", marginBottom: 4 }}>Never recommend (one per line)</span>
+      <label className="field">
+        <span className="field-label">Never recommend</span>
+        <span className="field-hint">One title per line.</span>
         <textarea
           value={form.excludedTitles}
           onChange={(e) => setForm({ ...form, excludedTitles: e.target.value })}
           rows={3}
-          style={{ width: "100%" }}
         />
       </label>
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <label>
-          <span style={{ display: "block", marginBottom: 4 }}>Minimum rating (0–10)</span>
+      <div className="inline">
+        <label className="field narrow">
+          <span className="field-label">Min rating</span>
           <input
             type="number"
             min={0}
@@ -274,22 +275,20 @@ function PreferencesForm() {
             step={0.5}
             value={form.ratingFloor}
             onChange={(e) => setForm({ ...form, ratingFloor: e.target.value })}
-            style={{ width: 120 }}
           />
         </label>
-        <label>
-          <span style={{ display: "block", marginBottom: 4 }}>Rows on my home</span>
+        <label className="field narrow">
+          <span className="field-label">Rows on my home</span>
           <input
             type="number"
             min={1}
             max={20}
             value={form.rowCount}
             onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
-            style={{ width: 120 }}
           />
         </label>
-        <label>
-          <span style={{ display: "block", marginBottom: 4 }}>Watched bias</span>
+        <label className="field narrow">
+          <span className="field-label">Watched bias</span>
           <select
             value={form.watchedBias}
             onChange={(e) => setForm({ ...form, watchedBias: e.target.value as FormState["watchedBias"] })}
@@ -301,7 +300,7 @@ function PreferencesForm() {
         </label>
       </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <label className="check">
         <input
           type="checkbox"
           checked={form.strictHate}
@@ -310,12 +309,12 @@ function PreferencesForm() {
         Strictly avoid my hated genres
       </label>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button type="button" onClick={save} disabled={setMutation.isPending}>
+      <div className="save-row">
+        <button type="button" className="btn-primary" onClick={save} disabled={setMutation.isPending}>
           {setMutation.isPending ? "Saving…" : "Save"}
         </button>
-        {saved && <span style={{ color: "#2e7d32" }}>Saved ✓</span>}
-        {setMutation.error && <span style={{ color: "#c0392b" }}>{setMutation.error.message}</span>}
+        {saved && <span className="ok">Saved ✓</span>}
+        {setMutation.error && <span className="err">{setMutation.error.message}</span>}
       </div>
     </div>
   );
