@@ -87,6 +87,12 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--plex));
 }
 
+.brand-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .lede {
   color: var(--text-secondary);
   margin: 0 0 24px;

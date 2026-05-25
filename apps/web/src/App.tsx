@@ -22,7 +22,7 @@ const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifica
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
 const SettingsPersonalization = lazy(() => import("#pages/Settings/SettingsPersonalization"));
-const SettingsPreferences = lazy(() => import("#pages/Settings/SettingsPreferences"));
+const SettingsPortal = lazy(() => import("#pages/Settings/SettingsPortal"));
 const Collections = lazy(() => import("#pages/Collections"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const Rules = lazy(() => import("#pages/Rules"));
@@ -260,10 +260,10 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="preferences"
+                  path="portal"
                   element={
                     <LazyPage>
-                      <SettingsPreferences />
+                      <SettingsPortal />
                     </LazyPage>
                   }
                 />

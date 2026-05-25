@@ -34,6 +34,13 @@ export const configSchema = z.object({
   global_plex_client_id: z.string(),
   /** Public base URL of the user portal, used as the Plex auth forwardUrl. */
   user_app_public_url: z.string(),
+  /** Admin-customizable look of the user portal (header + background). */
+  portal_branding: z.object({
+    title: z.string().optional(),
+    icon: z.string().optional(),
+    iconColor: z.string().optional(),
+    backgroundImage: z.string().optional(),
+  }),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
     provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),

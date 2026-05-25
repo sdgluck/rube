@@ -1,7 +1,25 @@
 import { useEffect, useState } from "react";
 import { portalTrpc } from "./trpc.ts";
+import { getPortalIcon } from "./portalIcons.ts";
 
 const PIN_KEY = "tb_pin";
+
+interface Branding {
+  title?: string;
+  icon?: string;
+  iconColor?: string;
+  backgroundImage?: string;
+}
+
+function BrandHeader({ branding, size = 26 }: { branding: Branding; size?: number }) {
+  const Icon = getPortalIcon(branding.icon);
+  return (
+    <span className="brand-head">
+      <Icon size={size} color={branding.iconColor || "#e5a00d"} />
+      <span>{branding.title?.trim() || "Tinkerbell"}</span>
+    </span>
+  );
+}
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -18,8 +36,27 @@ export default function PortalApp() {
   const startMutation = portalTrpc.auth.start.useMutation();
   const pollMutation = portalTrpc.auth.poll.useMutation();
   const logoutMutation = portalTrpc.auth.logout.useMutation();
+  const brandingQuery = portalTrpc.branding.useQuery();
+  const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PIN_KEY));
+
+  // Apply the admin's background image to the page.
+  useEffect(() => {
+    const bg = branding.backgroundImage?.trim();
+    const { style } = document.body;
+    if (bg) {
+      style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("${bg}")`;
+      style.backgroundSize = "cover";
+      style.backgroundPosition = "center";
+      style.backgroundAttachment = "fixed";
+    } else {
+      style.backgroundImage = "";
+    }
+    return () => {
+      style.backgroundImage = "";
+    };
+  }, [branding.backgroundImage]);
 
   // After returning from Plex, finish the handshake by polling the pin.
   useEffect(() => {
@@ -84,8 +121,7 @@ export default function PortalApp() {
       <div className="page">
         <div className="card">
           <h1 className="brand">
-            <span className="brand-dot" />
-            Tinkerbell
+            <BrandHeader branding={branding} size={32} />
           </h1>
           <p className="lede">Sign in with your Plex account to personalize your home screen.</p>
           <button type="button" className="btn-plex" onClick={signIn} disabled={startMutation.isPending || finishing}>
@@ -101,7 +137,9 @@ export default function PortalApp() {
     <div className="page">
       <div className="card">
         <div className="row-between">
-          <h1 className="title">Your recommendations</h1>
+          <h1 className="title">
+            <BrandHeader branding={branding} />
+          </h1>
           <button
             type="button"
             className="btn-ghost"

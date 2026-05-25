@@ -64,6 +64,9 @@ export const portalRouter = tp.router({
     return getConfig("global_personalized_sharing")?.status ?? "disabled";
   }),
 
+  // Admin-customized header/background. Public so the login screen is branded.
+  branding: publicProcedure.query(() => getConfig("portal_branding") ?? {}),
+
   auth: tp.router({
     start: publicProcedure.input(z.object({ forwardUrl: z.string().url().optional() })).mutation(async ({ input }) => {
       const clientId = ensurePlexClientId();

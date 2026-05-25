@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import styles from "./Personalization.module.css";
 
 type PendingAction = "enable" | "disable" | null;
 
@@ -71,62 +72,60 @@ export default function SettingsPersonalization() {
     <div>
       <h3>Personalized Home Screens</h3>
       <p>
-        Lets each Plex user get their own home-screen collections (Because You Watched and, later, the self-service
-        portal). To make per-user collections visible only to their owner, enabling this labels every item in your
-        configured libraries with <code>Tinkerbell</code> and restricts every shared user to their own content plus that
-        shared baseline.
+        Lets each Plex user get their own home-screen collections (Because You Watched and the self-service portal). To
+        make per-user collections visible only to their owner, enabling this labels every item in your configured
+        libraries with <code>Tinkerbell</code> and restricts every shared user to their own content plus that shared
+        baseline.
       </p>
 
-      <div
-        style={{
-          border: "1px solid var(--border-color)",
-          borderRadius: 6,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          marginTop: 16,
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <strong>
+      <div className={styles.card}>
+        <div className={styles.row}>
+          <div>
+            <div className={styles.statusLine}>
               Status: {STATUS_LABELS[status] ?? status}
               {status === "enabled" && enabledAt && (
-                <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>
-                  {" "}
-                  — since <RelativeTime timestamp={enabledAt} />
+                <span className={styles.muted}>
+                  {" — since "}
+                  <RelativeTime timestamp={enabledAt} />
                 </span>
               )}
-            </strong>
+            </div>
             {status === "enabled" && lastReconcileAt && (
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              <div className={styles.hint}>
                 Last reconciled <RelativeTime timestamp={lastReconcileAt} />
-              </span>
+              </div>
             )}
             {inProgress && (
-              <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                A job is running — this can take a while on large libraries.
-              </span>
+              <div className={styles.hint}>A job is running — this can take a while on large libraries.</div>
             )}
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div className={styles.actions}>
             {status === "enabled" && (
-              <button type="button" onClick={runReconcile} disabled={reconcileMutation.isPending}>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={runReconcile}
+                disabled={reconcileMutation.isPending}
+              >
                 Reconcile users
               </button>
             )}
             {status === "disabled" || status === "enabling" ? (
-              <button type="button" onClick={() => setPending("enable")} disabled={enableMutation.isPending}>
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => setPending("enable")}
+                disabled={enableMutation.isPending}
+              >
                 {status === "enabling" ? "Resume enabling" : "Enable"}
               </button>
             ) : (
               <button
                 type="button"
+                className={styles.danger}
                 onClick={() => setPending("disable")}
                 disabled={disableMutation.isPending}
-                style={{ borderColor: "var(--danger, #c0392b)" }}
               >
                 {status === "disabling" ? "Resume disabling" : "Disable"}
               </button>
@@ -134,9 +133,9 @@ export default function SettingsPersonalization() {
           </div>
         </div>
 
-        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+        <p className={styles.hint}>
           Note: the Plex server owner can't be restricted, so the owner will see every user's personalized collections.
-          Newly shared users aren't restricted automatically — use <em>Reconcile users</em> after adding someone.
+          Newly shared users are restricted automatically when the Sync Plex Users job runs.
         </p>
       </div>
 

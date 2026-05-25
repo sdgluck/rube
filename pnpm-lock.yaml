@@ -47,6 +47,9 @@ importers:
       '@trpc/server':
         specifier: ^11.10.0
         version: 11.17.0(typescript@5.9.3)
+      lucide-react:
+        specifier: ^1.14.0
+        version: 1.16.0(react@19.2.6)
       react:
         specifier: ^19.0.0
         version: 19.2.6
