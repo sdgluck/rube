@@ -18,6 +18,18 @@ export const configSchema = z.object({
   global_plex_url: z.string(),
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
+  /**
+   * Master switch for per-user personalization. When `enabled`, every Plex
+   * item carries the `Tinkerbell` label and every shared user is restricted
+   * to `[Tinkerbell, User:<self>]`, which is what makes per-user collections
+   * (BYW, the portal) visible only to their owner. `enabling`/`disabling`
+   * are transient states while the long-running jobs run.
+   */
+  global_personalized_sharing: z.object({
+    status: z.enum(["disabled", "enabling", "enabled", "disabling"]),
+    enabledAt: z.number().optional(),
+    lastReconcileAt: z.number().optional(),
+  }),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
     provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),
@@ -196,6 +208,13 @@ export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): v
 
 export function deleteConfig(key: ConfigKey): void {
   db.delete(config).where(eq(config.key, key)).run();
+}
+
+export type PersonalizedSharingStatus = "disabled" | "enabling" | "enabled" | "disabling";
+
+/** Current personalization master-switch status (defaults to "disabled"). */
+export function getPersonalizedSharingStatus(): PersonalizedSharingStatus {
+  return getConfig("global_personalized_sharing")?.status ?? "disabled";
 }
 
 /**

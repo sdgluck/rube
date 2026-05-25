@@ -312,6 +312,18 @@ export const plexUsers = sqliteTable(
   (table) => [index("idx_plex_users_username").on(table.username)],
 );
 
+// Snapshot of each shared user's plex.tv sharing filters captured when the
+// personalization master switch is enabled, so disabling can restore the
+// exact prior state instead of just clearing. One row per sharing.
+export const sharingRestrictionBackups = sqliteTable("sharing_restriction_backups", {
+  sharingId: integer("sharing_id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  username: text("username").notNull(),
+  filterMovies: text("filter_movies").notNull().default(""),
+  filterTelevision: text("filter_television").notNull().default(""),
+  capturedAt: integer("captured_at").notNull(),
+});
+
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
   config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),

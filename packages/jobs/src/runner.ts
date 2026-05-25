@@ -48,6 +48,20 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
   { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
   { id: "label-undo", name: "Clear Tinkerbell Labels", command: "label-undo", schedule: "", enabled: 1 },
   { id: "byw-remove", name: "Remove Because You Watched", command: "byw-remove", schedule: "", enabled: 1 },
+  {
+    id: "personalize-enable",
+    name: "Enable Personalized Home Screens",
+    command: "personalize-enable",
+    schedule: "",
+    enabled: 1,
+  },
+  {
+    id: "personalize-disable",
+    name: "Disable Personalized Home Screens",
+    command: "personalize-disable",
+    schedule: "",
+    enabled: 1,
+  },
   { id: "overlays-remove", name: "Remove Overlays", command: "overlays", schedule: "", enabled: 1 },
   // No schedule — only ever triggered explicitly from Settings → Migrate.
   // One job covers all migration providers; the providerId is read from

@@ -6,6 +6,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
+import { getPersonalizedSharingStatus } from "@tinkerbell/core";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
 import { cancelRun, startJob } from "./runner.ts";
@@ -17,6 +18,8 @@ export interface FeatureTemplate {
   command: string;
   defaultSchedule: string;
   defaultConfig: Record<string, unknown>;
+  /** Feature only works while the personalization master switch is enabled. */
+  requiresPersonalizedSharing?: boolean;
 }
 
 export const FEATURE_TEMPLATES: FeatureTemplate[] = [
@@ -26,6 +29,7 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     command: "because-you-watched",
     defaultSchedule: "0 2 * * *",
     defaultConfig: { limit: DEFAULT_JOB_RUN_LIMIT },
+    requiresPersonalizedSharing: true,
   },
   {
     id: "shuffle",
@@ -51,6 +55,10 @@ export interface FeatureCatalogEntry {
   id: string;
   name: string;
   installed: boolean;
+  /** Requires the personalization master switch to be enabled. */
+  requiresPersonalizedSharing: boolean;
+  /** True when the feature can't be installed yet because its gate is off. */
+  locked: boolean;
 }
 
 export function listFeatureCatalog(): FeatureCatalogEntry[] {
@@ -61,7 +69,14 @@ export function listFeatureCatalog(): FeatureCatalogEntry[] {
       .all()
       .map((r) => r.id),
   );
-  return FEATURE_TEMPLATES.map((t) => ({ id: t.id, name: t.name, installed: installedIds.has(t.id) }));
+  const sharingEnabled = getPersonalizedSharingStatus() === "enabled";
+  return FEATURE_TEMPLATES.map((t) => ({
+    id: t.id,
+    name: t.name,
+    installed: installedIds.has(t.id),
+    requiresPersonalizedSharing: t.requiresPersonalizedSharing ?? false,
+    locked: (t.requiresPersonalizedSharing ?? false) && !sharingEnabled,
+  }));
 }
 
 export function installFeature(
@@ -70,6 +85,12 @@ export function installFeature(
 ): void {
   const template = getFeatureTemplate(featureId);
   if (!template) throw new Error(`Unknown feature "${featureId}"`);
+
+  if (template.requiresPersonalizedSharing && getPersonalizedSharingStatus() !== "enabled") {
+    throw new Error(
+      `"${template.name}" requires Personalized Home Screens to be enabled first (Settings → Personalization).`,
+    );
+  }
 
   const schedule = opts.schedule ?? template.defaultSchedule;
   if (schedule) new Cron(schedule); // validate

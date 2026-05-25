@@ -156,6 +156,14 @@ export function createSharingModule(http: PlexHttp) {
     });
   }
 
+  /** Set raw filter strings verbatim — used to restore a snapshotted state. */
+  async function setSharingFilters(userId: number, filterMovies: string, filterTelevision: string): Promise<void> {
+    await plexTvRequest(`/api/friends/${userId}`, {
+      method: "PUT",
+      params: { filterMovies, filterTelevision },
+    });
+  }
+
   async function getSharedServerDetails(machineIdentifier: string): Promise<PlexSharedServerDetail[]> {
     const data = await plexTvRequest(`/api/servers/${machineIdentifier}/shared_servers`);
     const xml: string = data?._raw || "";
@@ -245,6 +253,7 @@ export function createSharingModule(http: PlexHttp) {
     getSharings,
     setSharingRestrictions,
     clearSharingRestrictions,
+    setSharingFilters,
     getSharedServerDetails,
     getWatchHistory,
     getAccounts,

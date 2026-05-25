@@ -40,6 +40,8 @@ const VALID_COMMANDS = new Set([
   "label",
   "label-undo",
   "byw-remove",
+  "personalize-enable",
+  "personalize-disable",
   "sync-media",
   "overlays",
   "sync-users",
