@@ -42,6 +42,7 @@ const VALID_COMMANDS = new Set([
   "byw-remove",
   "personalize-enable",
   "personalize-disable",
+  "personalize",
   "sync-media",
   "overlays",
   "sync-users",

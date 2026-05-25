@@ -27,6 +27,12 @@ export const ruleConfigSchema = z.object({
   /** seerr-requests: status filter ("all" / "approved" / "pending" / …). */
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
+  /**
+   * When true, the personalize job also runs this rule per opted-in user,
+   * producing a `User:<name>`-labelled variant on their home shaped by their
+   * preferences (in addition to the shared collection this rule produces).
+   */
+  personalizable: z.boolean().optional(),
   arr: z
     .object({
       enabled: z.boolean(),

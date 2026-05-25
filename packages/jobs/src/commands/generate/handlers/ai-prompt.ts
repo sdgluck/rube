@@ -5,7 +5,7 @@ import { askLlm, shuffled } from "#commands/generate/ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<PendingCollection> {
-  const { ctx, client, sections, rule, ruleConfig, onAiUsage } = deps;
+  const { ctx, client, sections, rule, ruleConfig, onAiUsage, userPrefs } = deps;
 
   const maxCollections = ruleConfig.limit ?? 8;
   const minItems = ruleConfig.minItems ?? 15;
@@ -40,6 +40,7 @@ export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<Pendin
       vibe: ruleConfig.vibe,
       nameStyle: ruleConfig.nameStyle,
       history,
+      preferences: userPrefs,
     });
 
     const itemList = shuffled(items)

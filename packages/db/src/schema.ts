@@ -324,6 +324,16 @@ export const sharingRestrictionBackups = sqliteTable("sharing_restriction_backup
   capturedAt: integer("captured_at").notNull(),
 });
 
+// Per-user personalization preferences (loved/liked/hated genres etc.). The
+// JSON blob is validated by `userPreferencesSchema` in @tinkerbell/core;
+// keyed by Plex user id to match `plex_users.userId`.
+export const userPreferences = sqliteTable("user_preferences", {
+  userId: integer("user_id").primaryKey(),
+  preferences: text("preferences", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
+  optedIn: integer("opted_in").notNull().default(1),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
   config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),

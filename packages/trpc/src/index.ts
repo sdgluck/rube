@@ -34,6 +34,7 @@ import { postersRouter } from "./posters.router.ts";
 import { migrationRouter } from "./migration.router.ts";
 import { navRouter } from "./nav.router.ts";
 import { personalizationRouter } from "./personalization.router.ts";
+import { preferencesRouter } from "./preferences.router.ts";
 
 export const appRouter = t.router({
   config: configRouter,
@@ -54,6 +55,7 @@ export const appRouter = t.router({
   migration: migrationRouter,
   nav: navRouter,
   personalization: personalizationRouter,
+  preferences: preferencesRouter,
 
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();

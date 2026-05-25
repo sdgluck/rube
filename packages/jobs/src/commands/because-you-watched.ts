@@ -3,6 +3,7 @@ import { errorMessage } from "@tinkerbell/core";
 import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, getLlmConfig } from "@tinkerbell/core";
+import { getOptedInPreferencesByUsername, preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
 import { reportHealth } from "@tinkerbell/domain.health";
 import { upsertCollectionByKey } from "@tinkerbell/domain.collections";
 import { z } from "zod";
@@ -118,6 +119,8 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
     }
 
     const collectionLabels = isPerUser ? ["Tinkerbell", BYW_LABEL, `User:${user.plexUsername}`] : BYW_LABELS;
+    const userPrefs = isPerUser ? getOptedInPreferencesByUsername(user.plexUsername) : undefined;
+    if (userPrefs) ctx.log(`Applying ${user.name}'s preferences.`);
 
     for (const section of targetSections) {
       step++;
@@ -182,6 +185,7 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
             section.title,
             MIN_ITEMS,
             MAX_ITEMS,
+            userPrefs,
           );
           if (col) {
             aiCollections.push(col);
@@ -290,8 +294,17 @@ async function generateBYWCollection(
   sectionTitle: string,
   minItems: number,
   maxItems: number,
+  prefs?: UserPreferences,
 ): Promise<AiCollection | null> {
-  const itemList = libraryItems.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
+  // Hard-exclude any titles the user never wants recommended before the
+  // candidate list even reaches the model.
+  const excluded = new Set((prefs?.excludedTitles ?? []).map((t) => t.toLowerCase()));
+  const candidates =
+    excluded.size > 0
+      ? libraryItems.filter((i) => !excluded.has(i.title.toLowerCase()) && !excluded.has(watchedTitle.toLowerCase()))
+      : libraryItems;
+  const itemList = candidates.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
+  const prefsBlock = prefs ? preferencesPromptBlock(prefs) : "";
 
   const prompt = `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
 
@@ -304,7 +317,7 @@ Rules:
 - Do NOT include "${watchedTitle}" in the collection
 - Pick items that are thematically similar: shared vibes, tonal similarities, narrative parallels, genre connections, visual motifs
 - The collection should feel like a genuine recommendation, not just the same genre
-
+${prefsBlock}
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
 {"name":"Because you watched ${watchedTitle}","items":["Title (Year)","Title (Year)"]}
 

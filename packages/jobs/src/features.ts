@@ -32,6 +32,14 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "personalize",
+    name: "Personalized Collections",
+    command: "personalize",
+    defaultSchedule: "0 3 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "shuffle",
     name: "Shuffle Hubs",
     command: "shuffle",
