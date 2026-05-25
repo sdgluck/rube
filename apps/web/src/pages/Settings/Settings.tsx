@@ -15,6 +15,7 @@ const SECTIONS: { heading: string; links: { to: string; label: string }[] }[] = 
     heading: "Automation",
     links: [
       { to: "/settings/personalization", label: "Personalization" },
+      { to: "/settings/preferences", label: "User Preferences" },
       { to: "/settings/notifications", label: "Notifications" },
       { to: "/settings/posters", label: "Posters" },
     ],
