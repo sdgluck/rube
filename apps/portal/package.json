@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "portless portal.tinkerbell.localhost vite",
     "build": "vite build",
     "typecheck": "tsc"
   },
