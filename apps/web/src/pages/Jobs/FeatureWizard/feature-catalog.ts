@@ -13,9 +13,17 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
     id: "because-you-watched",
     name: "Because You Watched",
     description:
-      "Generate personalised collections for each Plex user based on their recent watch history. Sharing restrictions are applied automatically so users only see their own collections.",
+      "Generate personalised collections for each Plex user based on their recent watch history, shaped by their preferences. Each user only sees their own collections.",
     defaultSchedule: "0 2 * * *",
-    requires: "An AI provider configured under Settings → AI.",
+    requires: "Personalized Home Screens (Settings → Personalization) and an AI provider (Settings → AI).",
+  },
+  {
+    id: "personalize",
+    name: "Personalized Collections",
+    description:
+      "For each opted-in user, re-run the rules you've marked personalizable using their preferences, producing per-user collections pinned to their own home.",
+    defaultSchedule: "0 3 * * *",
+    requires: "Personalized Home Screens (Settings → Personalization) and rules marked personalizable.",
   },
   {
     id: "shuffle",
