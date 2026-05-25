@@ -15,7 +15,8 @@
     "src"
   ],
   "scripts": {
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "spike:user-targeting": "node src/spike/user-targeting.ts"
   },
   "dependencies": {
     "@sidequest/sqlite-backend": "^1.14.0",
