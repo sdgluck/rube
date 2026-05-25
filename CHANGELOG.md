@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-25
+
+### Added
+
+- Personalized home screens: an opt-in, server-wide mode (Settings → Personalization) that gives each Plex user their own home-screen collections by labelling the library and restricting sharing per user. Enabling snapshots prior sharing settings; disabling deletes per-user collections before restoring sharing, leaving the server as if it was never enabled.
+- Per-user preferences (loved/liked/hated genres, moods, rating floor, content-rating ceiling, excluded titles, watched bias, row cap) that steer recommendations.
+- Sign-in-with-Plex user portal (`apps/portal`) on its own port where users edit their own preferences without access to the admin API.
+- Admin "User Preferences" editor under Settings.
+- "Personalized Collections" feature: re-runs rules marked personalizable per opted-in user, shaped by their preferences.
+
+### Changed
+
+- Because You Watched now honours each user's preferences; it and the personalized features require the Personalized Home Screens switch to be enabled.
+
 ## [0.4.1] - 2026-05-04
 
 ### Added
