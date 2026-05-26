@@ -14,3 +14,4 @@ apps/portal/dist
 .idea/
 /posters/
 .pnpm-store/
+.DS_Store
