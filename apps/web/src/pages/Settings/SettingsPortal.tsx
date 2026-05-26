@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { PORTAL_ICONS, getPortalIcon, DEFAULT_PORTAL_ICON } from "#lib/portalIcons";
 import styles from "./Personalization.module.css";
 
 const DEFAULT_COLOR = "#e5a00d";
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 interface BrandingForm {
   title: string;
@@ -21,6 +22,25 @@ export default function SettingsPortal() {
   const configQuery = trpc.config.get.useQuery();
   const saveMutation = trpc.config.save.useMutation();
   const [form, setForm] = useState<BrandingForm>(EMPTY);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      addToast("Please choose an image file", "error");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      addToast("Image is too large (max 4 MB)", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm((f) => ({ ...f, backgroundImage: String(reader.result) }));
+    reader.onerror = () => addToast("Could not read that image", "error");
+    reader.readAsDataURL(file);
+  }
 
   useEffect(() => {
     const b = configQuery.data?.portal_branding;
@@ -111,17 +131,39 @@ export default function SettingsPortal() {
           </div>
         </div>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Background image URL</span>
-          <span className={styles.hint}>Shown behind the portal. Leave blank for a plain background.</span>
-          <input
-            className={styles.input}
-            type="text"
-            value={form.backgroundImage}
-            onChange={(e) => setForm({ ...form, backgroundImage: e.target.value })}
-            placeholder="https://example.com/backdrop.jpg"
-          />
-        </label>
+        <div className={styles.field}>
+          <span className={styles.label}>Background image</span>
+          <span className={styles.hint}>
+            Shown behind the portal. Paste a URL or upload an image (stored in the database, max 4 MB). Leave blank for
+            a plain background.
+          </span>
+          {form.backgroundImage.startsWith("data:") ? (
+            <div className={styles.colorRow}>
+              <span className={styles.muted}>Uploaded image embedded.</span>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => setForm({ ...form, backgroundImage: "" })}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <input
+              className={styles.input}
+              type="text"
+              value={form.backgroundImage}
+              onChange={(e) => setForm({ ...form, backgroundImage: e.target.value })}
+              placeholder="https://example.com/backdrop.jpg"
+            />
+          )}
+          <div>
+            <button type="button" className={styles.secondary} onClick={() => fileInputRef.current?.click()}>
+              Upload image…
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onPickFile} />
+          </div>
+        </div>
 
         <div>
           <button type="button" className={styles.primary} onClick={save} disabled={saveMutation.isPending}>

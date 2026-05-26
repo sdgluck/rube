@@ -39,7 +39,9 @@ export const configSchema = z.object({
     title: z.string().optional(),
     icon: z.string().optional(),
     iconColor: z.string().optional(),
-    backgroundImage: z.string().optional(),
+    // A URL or a base64 data URL (uploaded image). Capped to keep the config
+    // row — and the payload shipped to the browser — to a sane size.
+    backgroundImage: z.string().max(8_000_000).optional(),
   }),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
