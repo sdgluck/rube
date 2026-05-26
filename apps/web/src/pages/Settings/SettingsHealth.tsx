@@ -1,4 +1,5 @@
 import { trpc } from "#/trpc";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./SettingsHealth.module.css";
 
 function timeAgo(timestamp: number): string {
@@ -93,6 +94,10 @@ export default function SettingsHealth() {
 
   return (
     <div>
+      <SettingsPageHeader
+        title="Health"
+        description="Connection status and recent activity for each configured integration."
+      />
       <div className={styles.header}>
         <span className={styles.headerHint}>Last 24 hours</span>
         <button

@@ -4,6 +4,7 @@ import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 
 export default function SettingsPlex() {
@@ -138,6 +139,10 @@ export default function SettingsPlex() {
 
   return (
     <div className={styles.form}>
+      <SettingsPageHeader
+        title="Plex"
+        description="Connect Tinkerbell to your Plex server and choose which libraries it manages."
+      />
       <fieldset className={styles.group}>
         <legend className={styles.groupTitle}>Plex</legend>
         <label className={styles.field}>

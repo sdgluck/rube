@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import SettingsPageHeader from "./SettingsPageHeader";
 
 interface MaintenanceAction {
   jobId: string;
@@ -56,8 +57,10 @@ export default function SettingsMaintenance() {
 
   return (
     <div>
-      <h3>Maintenance</h3>
-      <p>One-shot escape hatches that undo Tinkerbell-applied changes to your Plex server.</p>
+      <SettingsPageHeader
+        title="Maintenance"
+        description="One-shot escape hatches that undo Tinkerbell-applied changes to your Plex server."
+      />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
         {ACTIONS.map((action) => {

@@ -1,3 +1,5 @@
+import SettingsPageHeader from "./SettingsPageHeader";
+
 type Credit = {
   name: string;
   url: string;
@@ -90,9 +92,10 @@ const SECTIONS: Section[] = [
 export default function SettingsCredits() {
   return (
     <div style={{ maxWidth: 720 }}>
-      <p style={{ color: "var(--color-muted, #888)", marginTop: 0, marginBottom: 24, lineHeight: 1.5 }}>
-        Tinkerbell is built on the work of many open-source projects. Thanks to all the maintainers below.
-      </p>
+      <SettingsPageHeader
+        title="Credits"
+        description="Tinkerbell is built on the work of many open-source projects. Thanks to all the maintainers below."
+      />
 
       {SECTIONS.map((section) => (
         <section key={section.title} style={{ marginBottom: 28 }}>

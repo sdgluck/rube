@@ -4,6 +4,7 @@ import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 
 export default function SettingsDatabases() {
@@ -154,6 +155,10 @@ export default function SettingsDatabases() {
 
   return (
     <div className={styles.form}>
+      <SettingsPageHeader
+        title="Databases"
+        description="Optional metadata sources (OMDb, TMDb, MDBList) used to enrich your library."
+      />
       <fieldset className={styles.group}>
         <legend className={styles.groupTitle}>OMDB</legend>
         <label className={styles.field}>
