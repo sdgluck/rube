@@ -8,6 +8,7 @@ import { appRouter, portalRouter, createPortalContext } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
 import {
   getConfig,
+  getPersonalizedSharingStatus,
   setEventEmitter,
   setHealthReporter,
   setLocalCollectionsReader,
@@ -201,6 +202,27 @@ const portalServer = createServer(async (req: IncomingMessage, res: ServerRespon
   await serveStatic(res, join(PORTAL_DIST_DIR, "index.html"));
 });
 
+// Keep listening even if a bind fails (e.g. port in use) — the reconciler
+// retries on its interval rather than crashing the admin server.
+portalServer.on("error", (err) => {
+  console.error("[portal] server error:", err);
+});
+
+const PORTAL_RECONCILE_MS = 15_000;
+
+// The portal only runs while personalization is enabled. The status flips
+// inside the enable/disable jobs, so we poll and start/stop accordingly.
+function syncPortalServer(): void {
+  const shouldRun = getPersonalizedSharingStatus() === "enabled";
+  if (shouldRun && !portalServer.listening) {
+    portalServer.listen(USER_PORT, USER_HOST, () => {
+      console.log(`Tinkerbell user portal listening on ${USER_HOST}:${USER_PORT}`);
+    });
+  } else if (!shouldRun && portalServer.listening) {
+    portalServer.close(() => console.log("Tinkerbell user portal stopped (personalization disabled)"));
+  }
+}
+
 async function main() {
   // Finish boot before we accept any traffic. If init fails we want clean
   // "connection refused" rather than half-initialised tRPC handlers, and a
@@ -225,9 +247,10 @@ async function main() {
       );
     }
   });
-  portalServer.listen(USER_PORT, USER_HOST, () => {
-    console.log(`Tinkerbell user portal listening on ${USER_HOST}:${USER_PORT}`);
-  });
+  // Start the portal only if personalization is already enabled, and keep it
+  // in sync with the master switch thereafter.
+  syncPortalServer();
+  setInterval(syncPortalServer, PORTAL_RECONCILE_MS).unref();
 }
 
 main().catch((err) => {

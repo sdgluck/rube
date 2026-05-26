@@ -53,6 +53,8 @@ The **user portal** (Sign in with Plex) runs as a separate app (`apps/portal`) o
 
 For a public deployment, expose only the portal port (`3100`) and keep the admin port (`3000`) on a trusted network / behind a reverse proxy.
 
+The portal listener only runs while **Personalized Home Screens** is enabled (Settings → Personalization); enabling/disabling the feature starts/stops it automatically.
+
 ## Personalized home screens
 
 Per-user recommendations (Because You Watched, and any rule marked _personalizable_) work by giving each user a `User:<name>`-labelled collection and restricting their Plex sharing so they only see their own. Because isolation only holds when **every** shared user is restricted, this is gated behind a single server-wide switch you control under **Settings → Personalization**.

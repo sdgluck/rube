@@ -200,7 +200,6 @@ const MOOD_OPTIONS = [
 
 function PreferencesForm() {
   const utils = portalTrpc.useUtils();
-  const statusQuery = portalTrpc.personalizationStatus.useQuery();
   const prefsQuery = portalTrpc.preferences.get.useQuery();
   const genresQuery = portalTrpc.availableGenres.useQuery();
   const setMutation = portalTrpc.preferences.set.useMutation();
@@ -290,13 +289,6 @@ function PreferencesForm() {
 
   return (
     <div className="stack">
-      {statusQuery.data !== "enabled" && (
-        <p className="banner">
-          Personalized home screens aren't switched on yet. Your choices are saved and will apply once the server admin
-          enables them.
-        </p>
-      )}
-
       <div className="field">
         <label className="check">
           <input
