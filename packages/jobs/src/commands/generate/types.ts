@@ -1,5 +1,5 @@
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext, UserPreferences } from "@tinkerbell/core";
 import type { Rule } from "@tinkerbell/domain.rules";
 import type { RuleConfig } from "./config.ts";
 
@@ -31,6 +31,11 @@ export interface HandlerDeps {
    * uses it, and only the preview path currently consumes the totals.
    */
   onAiUsage?: (tokensIn: number, tokensOut: number) => void;
+  /**
+   * Set only during a per-user personalize run — the preferences of the user
+   * this generation pass is for. Handlers use it to steer/filter output.
+   */
+  userPrefs?: UserPreferences;
 }
 
 export type Handler = (deps: HandlerDeps) => AsyncGenerator<PendingCollection>;

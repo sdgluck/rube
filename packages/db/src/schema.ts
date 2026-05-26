@@ -312,6 +312,42 @@ export const plexUsers = sqliteTable(
   (table) => [index("idx_plex_users_username").on(table.username)],
 );
 
+// Snapshot of each shared user's plex.tv sharing filters captured when the
+// personalization master switch is enabled, so disabling can restore the
+// exact prior state instead of just clearing. One row per sharing.
+export const sharingRestrictionBackups = sqliteTable("sharing_restriction_backups", {
+  sharingId: integer("sharing_id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  username: text("username").notNull(),
+  filterMovies: text("filter_movies").notNull().default(""),
+  filterTelevision: text("filter_television").notNull().default(""),
+  capturedAt: integer("captured_at").notNull(),
+});
+
+// Per-user personalization preferences (loved/liked/hated genres etc.). The
+// JSON blob is validated by `userPreferencesSchema` in @tinkerbell/core;
+// keyed by Plex user id to match `plex_users.userId`.
+export const userPreferences = sqliteTable("user_preferences", {
+  userId: integer("user_id").primaryKey(),
+  preferences: text("preferences", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
+  optedIn: integer("opted_in").notNull().default(1),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+// Portal login sessions for the Sign-in-with-Plex flow. `id` is the SHA-256 of
+// the opaque cookie token (the raw token is only ever in the user's cookie).
+export const plexSessions = sqliteTable(
+  "plex_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    username: text("username").notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [index("idx_plex_sessions_expires").on(table.expiresAt)],
+);
+
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
   config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),

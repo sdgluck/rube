@@ -4,7 +4,7 @@ import { pipeline } from "node:stream/promises";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter } from "@tinkerbell/trpc";
+import { appRouter, portalRouter, createPortalContext } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
 import {
   getConfig,
@@ -39,7 +39,13 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 // because the container must be reachable from outside, and trusts the user
 // to put it behind a reverse proxy / firewall.
 const HOST = process.env.HOST || "127.0.0.1";
+// The user portal (Sign-in-with-Plex). Served on its own port so it can be
+// exposed publicly without exposing the unauthenticated admin API. Defaults to
+// loopback like the admin server; the Docker image opens this one to the host.
+const USER_PORT = parseInt(process.env.USER_PORT || "3100", 10);
+const USER_HOST = process.env.USER_HOST || HOST;
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
+const PORTAL_DIST_DIR = join(import.meta.dirname, "..", "..", "portal", "dist");
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -169,6 +175,32 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   await serveStatic(res, join(DIST_DIR, "index.html"));
 });
 
+// User portal server: only the session-gated portalRouter + the portal SPA.
+// The admin appRouter is intentionally NOT mounted here, so even though it's
+// unauthenticated it stays unreachable on the public port.
+const portalServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const url = new URL(req.url!, `http://${req.headers.host}`);
+  const path = url.pathname;
+
+  if (path.startsWith("/api/trpc")) {
+    const fetchReq = toFetchRequest(req);
+    const fetchRes = await fetchRequestHandler({
+      endpoint: "/api/trpc",
+      req: fetchReq,
+      router: portalRouter,
+      createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders }),
+    });
+    await sendFetchResponse(fetchRes, res);
+    return;
+  }
+
+  const resolved = resolveStaticPath(PORTAL_DIST_DIR, path);
+  if (resolved && (await serveStatic(res, resolved))) return;
+
+  // Portal SPA fallback — the portal app, never the admin one.
+  await serveStatic(res, join(PORTAL_DIST_DIR, "index.html"));
+});
+
 async function main() {
   // Finish boot before we accept any traffic. If init fails we want clean
   // "connection refused" rather than half-initialised tRPC handlers, and a
@@ -193,6 +225,9 @@ async function main() {
       );
     }
   });
+  portalServer.listen(USER_PORT, USER_HOST, () => {
+    console.log(`Tinkerbell user portal listening on ${USER_HOST}:${USER_PORT}`);
+  });
 }
 
 main().catch((err) => {
@@ -215,10 +250,14 @@ async function shutdown() {
   // in-flight requests (streaming Plex images, large tRPC responses) to
   // drain. Force-close anything still hanging so we don't block the
   // container exit forever.
-  const closed = new Promise<void>((resolve) => server.close(() => resolve()));
+  const closed = Promise.all([
+    new Promise<void>((resolve) => server.close(() => resolve())),
+    new Promise<void>((resolve) => portalServer.close(() => resolve())),
+  ]);
   const timeout = new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_MS).unref());
   await Promise.race([closed, timeout]);
   server.closeAllConnections();
+  portalServer.closeAllConnections();
 
   process.exit(0);
 }

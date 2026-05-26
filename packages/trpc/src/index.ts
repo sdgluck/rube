@@ -33,6 +33,7 @@ import { arrRouter } from "./arr.router.ts";
 import { postersRouter } from "./posters.router.ts";
 import { migrationRouter } from "./migration.router.ts";
 import { navRouter } from "./nav.router.ts";
+import { personalizationRouter } from "./personalization.router.ts";
 
 export const appRouter = t.router({
   config: configRouter,
@@ -52,6 +53,7 @@ export const appRouter = t.router({
   posters: postersRouter,
   migration: migrationRouter,
   nav: navRouter,
+  personalization: personalizationRouter,
 
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();
@@ -253,3 +255,5 @@ export const appRouter = t.router({
 });
 
 export type AppRouter = typeof appRouter;
+
+export { portalRouter, createPortalContext, type PortalRouter, type PortalContext } from "./portal.router.ts";

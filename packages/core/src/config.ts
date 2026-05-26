@@ -18,6 +18,31 @@ export const configSchema = z.object({
   global_plex_url: z.string(),
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
+  /**
+   * Master switch for per-user personalization. When `enabled`, every Plex
+   * item carries the `Tinkerbell` label and every shared user is restricted
+   * to `[Tinkerbell, User:<self>]`, which is what makes per-user collections
+   * (BYW, the portal) visible only to their owner. `enabling`/`disabling`
+   * are transient states while the long-running jobs run.
+   */
+  global_personalized_sharing: z.object({
+    status: z.enum(["disabled", "enabling", "enabled", "disabling"]),
+    enabledAt: z.number().optional(),
+    lastReconcileAt: z.number().optional(),
+  }),
+  /** Stable X-Plex-Client-Identifier for the Sign-in-with-Plex portal flow. */
+  global_plex_client_id: z.string(),
+  /** Public base URL of the user portal, used as the Plex auth forwardUrl. */
+  user_app_public_url: z.string(),
+  /** Admin-customizable look of the user portal (header + background). */
+  portal_branding: z.object({
+    title: z.string().optional(),
+    icon: z.string().optional(),
+    iconColor: z.string().optional(),
+    // A URL or a base64 data URL (uploaded image). Capped to keep the config
+    // row — and the payload shipped to the browser — to a sane size.
+    backgroundImage: z.string().max(8_000_000).optional(),
+  }),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
     provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),
@@ -196,6 +221,13 @@ export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): v
 
 export function deleteConfig(key: ConfigKey): void {
   db.delete(config).where(eq(config.key, key)).run();
+}
+
+export type PersonalizedSharingStatus = "disabled" | "enabling" | "enabled" | "disabling";
+
+/** Current personalization master-switch status (defaults to "disabled"). */
+export function getPersonalizedSharingStatus(): PersonalizedSharingStatus {
+  return getConfig("global_personalized_sharing")?.status ?? "disabled";
 }
 
 /**

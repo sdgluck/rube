@@ -88,6 +88,29 @@ const SORT_COLUMNS = {
   container: mediaItems.container,
 } as const;
 
+/** Distinct "Title (Year)" labels matching a query — for type-ahead pickers. */
+export function searchMediaTitles(query: string, limit = 20): string[] {
+  const q = query.trim();
+  if (!q) return [];
+  const rows = db
+    .select({ title: mediaItems.title, year: mediaItems.year })
+    .from(mediaItems)
+    .where(likeContains(mediaItems.title, q))
+    .orderBy(asc(mediaItems.title))
+    .limit(limit * 2)
+    .all();
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of rows) {
+    const label = r.year ? `${r.title} (${r.year})` : r.title;
+    if (seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 export function getLocalMediaItems(filters: MediaFilters): {
   items: Array<{
     ratingKey: string;

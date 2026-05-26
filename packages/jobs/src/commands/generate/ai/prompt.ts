@@ -1,4 +1,5 @@
 import type { HistoricalCollection } from "@tinkerbell/domain.rule-history";
+import { preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
 import { VIBE_HINTS, NAME_STYLE_HINTS, type RuleConfig } from "#commands/generate/config.ts";
 
 export function buildAiPrompt(args: {
@@ -10,8 +11,10 @@ export function buildAiPrompt(args: {
   vibe?: RuleConfig["vibe"];
   nameStyle?: RuleConfig["nameStyle"];
   history: HistoricalCollection[];
+  preferences?: UserPreferences;
 }): string {
-  const { sectionTitle, limit, minItems, themes, customThemes, vibe, nameStyle, history } = args;
+  const { sectionTitle, limit, minItems, themes, customThemes, vibe, nameStyle, history, preferences } = args;
+  const prefsBlock = preferences ? preferencesPromptBlock(preferences) : "";
 
   const allThemes = [...themes, ...customThemes].filter((t) => t.trim().length > 0);
   const themesBlock =
@@ -48,7 +51,7 @@ Previously generated collections for this library (DO NOT repeat these themes, n
 ${historyBlock}
 
 Your new collections must explore different angles than anything above.
-
+${prefsBlock}
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
 [{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]`;
 }

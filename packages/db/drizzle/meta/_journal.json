@@ -85,6 +85,27 @@
       "when": 1780400000000,
       "tag": "0011_rule_history_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1780500000000,
+      "tag": "0012_burly_miss_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1780600000000,
+      "tag": "0013_hard_magdalene",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1780700000000,
+      "tag": "0014_daffy_magma",
+      "breakpoints": true
     }
   ]
 }
