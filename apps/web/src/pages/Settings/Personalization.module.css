@@ -19,14 +19,7 @@
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 20px;
-  background: var(--bg-surface);
-  margin-top: 16px;
+  composes: group from "./Settings.module.css";
 }
 
 .row {
@@ -43,21 +36,16 @@
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  composes: field from "./Settings.module.css";
   max-width: 440px;
 }
 
 .label {
-  font-weight: 600;
-  font-size: 0.9rem;
+  composes: label from "./Settings.module.css";
 }
 
 .hint {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0;
+  composes: hint from "./Settings.module.css";
 }
 
 .muted {

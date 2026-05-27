@@ -144,7 +144,7 @@ export default function SettingsPlex() {
         description="Connect Tinkerbell to your Plex server and choose which libraries it manages."
       />
       <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Plex</legend>
+        <legend className={styles.groupTitle}>Connection</legend>
         <label className={styles.field}>
           <span className={styles.label}>Plex URL</span>
           <input
