@@ -15,8 +15,10 @@ import { PageSkeleton } from "#components/Skeleton";
 const Stats = lazy(() => import("#pages/Stats"));
 const SettingsPlex = lazy(() => import("#pages/Settings/SettingsPlex"));
 const SettingsAi = lazy(() => import("#pages/Settings/SettingsAi"));
-const SettingsArrs = lazy(() => import("#pages/Settings/SettingsArrs"));
-const SettingsDatabases = lazy(() => import("#pages/Settings/SettingsDatabases"));
+const SettingsArrs = lazy(() => import("#pages/Settings/Arrs/SettingsArrs"));
+const SettingsArrsService = lazy(() => import("#pages/Settings/Arrs/SettingsArrsService"));
+const SettingsDatabases = lazy(() => import("#pages/Settings/Databases/SettingsDatabases"));
+const SettingsDatabasesService = lazy(() => import("#pages/Settings/Databases/SettingsDatabasesService"));
 const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/SettingsNotifications"));
 const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsService"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
@@ -209,7 +211,17 @@ export default function App() {
                       <SettingsArrs />
                     </LazyPage>
                   }
-                />
+                >
+                  <Route index element={<Navigate to="/settings/arrs/radarr" replace />} />
+                  <Route
+                    path=":service"
+                    element={
+                      <LazyPage>
+                        <SettingsArrsService />
+                      </LazyPage>
+                    }
+                  />
+                </Route>
                 <Route
                   path="databases"
                   element={
@@ -217,7 +229,17 @@ export default function App() {
                       <SettingsDatabases />
                     </LazyPage>
                   }
-                />
+                >
+                  <Route index element={<Navigate to="/settings/databases/omdb" replace />} />
+                  <Route
+                    path=":service"
+                    element={
+                      <LazyPage>
+                        <SettingsDatabasesService />
+                      </LazyPage>
+                    }
+                  />
+                </Route>
                 <Route
                   path="notifications"
                   element={
