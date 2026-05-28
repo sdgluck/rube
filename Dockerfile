@@ -1,4 +1,4 @@
-FROM node:25-alpine AS base
+FROM node:26-alpine AS base
 RUN npm install -g pnpm@9.15.0
 WORKDIR /repo
 
@@ -17,7 +17,7 @@ RUN pnpm --filter @tinkerbell/web run build
 RUN pnpm --filter @tinkerbell/portal run build
 RUN pnpm --filter=@tinkerbell/server deploy --prod /out
 
-FROM node:25-alpine
+FROM node:26-alpine
 RUN apk add --no-cache su-exec tini
 WORKDIR /app
 RUN mkdir -p /config
