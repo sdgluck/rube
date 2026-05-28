@@ -43,18 +43,18 @@ export default function SettingsMigrate() {
         description="Import existing collections from other tools (e.g. Kometa) into Tinkerbell rules."
       />
       {providers.length > 1 && (
-        <div className={styles.buttons} style={{ marginBottom: 8 }}>
+        <nav className={styles.subTabs}>
           {providers.map((p) => (
             <button
               key={p.id}
               type="button"
-              className={p.id === providerId ? styles.button : styles.buttonSecondary}
+              className={`${styles.subTab} ${p.id === providerId ? styles.subTabActive : ""}`}
               onClick={() => setProviderId(p.id)}
             >
               {p.label}
             </button>
           ))}
-        </div>
+        </nav>
       )}
       {providerId && (
         <ProviderPanel

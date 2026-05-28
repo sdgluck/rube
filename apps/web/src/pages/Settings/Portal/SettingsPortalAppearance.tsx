@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { PORTAL_ICONS, getPortalIcon, DEFAULT_PORTAL_ICON } from "#lib/portalIcons";
-import SettingsPageHeader from "./SettingsPageHeader";
-import styles from "./Personalization.module.css";
+import styles from "../Personalization.module.css";
 
 const DEFAULT_COLOR = "#e5a00d";
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -79,8 +78,6 @@ export default function SettingsPortal() {
 
   return (
     <div>
-      <SettingsPageHeader title="Portal" description="Customise the Sign-in-with-Plex portal that your users see." />
-
       <div className={styles.card}>
         <label className={styles.field}>
           <span className={styles.label}>Header title</span>
