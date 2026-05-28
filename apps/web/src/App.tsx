@@ -21,8 +21,9 @@ const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/S
 const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsService"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
-const SettingsPersonalization = lazy(() => import("#pages/Settings/SettingsPersonalization"));
-const SettingsPortal = lazy(() => import("#pages/Settings/SettingsPortal"));
+const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
+const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
+const SettingsPortalAppearance = lazy(() => import("#pages/Settings/Portal/SettingsPortalAppearance"));
 const Collections = lazy(() => import("#pages/Collections"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const Rules = lazy(() => import("#pages/Rules"));
@@ -252,21 +253,31 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="personalization"
-                  element={
-                    <LazyPage>
-                      <SettingsPersonalization />
-                    </LazyPage>
-                  }
-                />
-                <Route
                   path="portal"
                   element={
                     <LazyPage>
                       <SettingsPortal />
                     </LazyPage>
                   }
-                />
+                >
+                  <Route index element={<Navigate to="/settings/portal/personalization" replace />} />
+                  <Route
+                    path="personalization"
+                    element={
+                      <LazyPage>
+                        <SettingsPortalPersonalization />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="appearance"
+                    element={
+                      <LazyPage>
+                        <SettingsPortalAppearance />
+                      </LazyPage>
+                    }
+                  />
+                </Route>
                 <Route
                   path="stress-test"
                   element={

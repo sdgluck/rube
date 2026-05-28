@@ -5,8 +5,7 @@ import { formatDurationMs } from "#/utils";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
-import SettingsPageHeader from "./SettingsPageHeader";
-import styles from "./Personalization.module.css";
+import styles from "../Personalization.module.css";
 
 type PendingAction = "enable" | "disable" | null;
 
@@ -73,18 +72,11 @@ export default function SettingsPersonalization() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Personalized Home Screens"
-        description={
-          <>
-            Lets each Plex user get their own home-screen collections (Because You Watched and the self-service portal).
-            To make per-user collections visible only to their owner, enabling this labels every item in your configured
-            libraries with <code>Tinkerbell</code> and restricts every shared user to their own content plus that shared
-            baseline.
-          </>
-        }
-      />
-
+      <p className={styles.hint}>
+        When enabled, every item in your configured libraries is labelled <code>Tinkerbell</code> and every shared user
+        is restricted to their own content plus that shared baseline — which is what makes per-user collections (Because
+        You Watched, the self-service portal) visible only to their owner.
+      </p>
       <div className={styles.card}>
         <div className={styles.row}>
           <div>
