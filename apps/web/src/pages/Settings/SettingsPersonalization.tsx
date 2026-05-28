@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
+import { formatDurationMs } from "#/utils";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
@@ -33,6 +34,7 @@ export default function SettingsPersonalization() {
   const reconcileMutation = trpc.personalization.reconcile.useMutation();
 
   const [pending, setPending] = useState<PendingAction>(null);
+  const estimateQuery = trpc.personalization.estimate.useQuery(undefined, { enabled: pending === "enable" });
 
   const status = statusQuery.data?.status ?? "disabled";
   const enabledAt = statusQuery.data && "enabledAt" in statusQuery.data ? statusQuery.data.enabledAt : undefined;
@@ -146,7 +148,15 @@ export default function SettingsPersonalization() {
 
       {pending === "enable" && (
         <ConfirmModal
-          message="This labels every item in your configured Plex libraries and restricts each shared user's view to their own content plus the shared baseline. Continue?"
+          message={(() => {
+            const base =
+              "This labels every item in your configured Plex libraries and restricts each shared user's view to their own content plus the shared baseline.";
+            if (estimateQuery.isLoading) return `${base} Estimating duration… Continue?`;
+            const est = estimateQuery.data;
+            if (!est) return `${base} Continue?`;
+            const items = est.itemCount.toLocaleString();
+            return `${base} About ${items} items to label — estimated ~${formatDurationMs(est.estimatedSeconds * 1000)}. Continue?`;
+          })()}
           confirmLabel="Enable"
           onConfirm={runEnable}
           onCancel={() => setPending(null)}
