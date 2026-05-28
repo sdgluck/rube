@@ -4,6 +4,7 @@ import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 
 interface ServiceConfig {
@@ -181,6 +182,10 @@ export default function SettingsArrs() {
 
   return (
     <div className={styles.form}>
+      <SettingsPageHeader
+        title="Arrs"
+        description="Connect Radarr, Sonarr, and Jellyseerr/Overseerr so rules can request and manage media."
+      />
       {services.map((svc) => (
         <ServiceConfigFieldset
           key={svc.urlConfigKey}

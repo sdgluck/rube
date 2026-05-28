@@ -3,6 +3,25 @@
   margin-bottom: 24px;
 }
 
+/* Standard per-page header (title + description) used by every settings page
+ * via <SettingsPageHeader> for consistent information hierarchy. */
+.pageHeader {
+  margin-bottom: 20px;
+}
+
+.pageTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pageDescription {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  max-width: 70ch;
+}
+
 .toast {
   padding: 10px 16px;
   border-radius: 6px;

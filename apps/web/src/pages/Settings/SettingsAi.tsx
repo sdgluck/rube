@@ -5,6 +5,7 @@ import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 
 const DEFAULT_LLM: LlmConfig = {
@@ -83,6 +84,10 @@ export default function SettingsAi() {
 
   return (
     <div className={styles.form}>
+      <SettingsPageHeader
+        title="AI"
+        description="Choose the AI provider used for AI-assisted smart filters and Because You Watched."
+      />
       <fieldset className={styles.group}>
         <legend className={styles.groupTitle}>LLM provider</legend>
         <p className={styles.hint}>

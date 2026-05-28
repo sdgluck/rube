@@ -1,14 +1,19 @@
 import { Link } from "react-router-dom";
 import { VERSION, IS_BETA } from "#/version";
+import SettingsPageHeader from "./SettingsPageHeader";
 
 export default function SettingsAbout() {
   return (
     <div style={{ maxWidth: 640 }}>
-      <h3 style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 0 }}>
-        Tinkerbell
-        {IS_BETA && <span className="version-pill">beta</span>}
-      </h3>
-      <p style={{ color: "var(--color-muted, #888)", margin: "4px 0 24px 0" }}>Version {VERSION}</p>
+      <SettingsPageHeader
+        title="Tinkerbell"
+        description={
+          <>
+            Version {VERSION}
+            {IS_BETA && <span className="version-pill"> beta</span>}
+          </>
+        }
+      />
 
       {IS_BETA && (
         <div

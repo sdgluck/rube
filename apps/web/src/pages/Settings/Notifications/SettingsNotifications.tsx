@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { trpc } from "#/trpc";
+import SettingsPageHeader from "#pages/Settings/SettingsPageHeader";
 import styles from "#pages/Settings/Settings.module.css";
 
 const TABS = [
@@ -69,6 +70,10 @@ export default function SettingsNotifications() {
 
   return (
     <div>
+      <SettingsPageHeader
+        title="Notifications"
+        description="Send job, event, and health alerts to your chosen services."
+      />
       <nav className={styles.subTabs}>
         {TABS.map((tab) => (
           <NavLink

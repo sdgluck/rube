@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "#/trpc";
 import { FormSkeleton } from "#components/Skeleton";
+import SettingsPageHeader from "#pages/Settings/SettingsPageHeader";
 import styles from "#pages/Settings/Settings.module.css";
 import ProviderPanel from "./ProviderPanel.tsx";
 
@@ -37,6 +38,10 @@ export default function SettingsMigrate() {
 
   return (
     <div className={styles.form} style={{ maxWidth: 880 }}>
+      <SettingsPageHeader
+        title="Migrate"
+        description="Import existing collections from other tools (e.g. Kometa) into Tinkerbell rules."
+      />
       {providers.length > 1 && (
         <div className={styles.buttons} style={{ marginBottom: 8 }}>
           {providers.map((p) => (

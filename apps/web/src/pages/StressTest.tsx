@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "#/trpc";
 import Spinner from "#components/Spinner";
+import SettingsPageHeader from "./Settings/SettingsPageHeader";
 import styles from "./StressTest.module.css";
 import shared from "./Collections.module.css";
 
@@ -77,6 +78,10 @@ export default function StressTest() {
 
   return (
     <div>
+      <SettingsPageHeader
+        title="Stress Test"
+        description="Generate synthetic load to exercise the job runner and database."
+      />
       <div className={styles.header}>
         {!isRunning && (
           <button className={shared.button} onClick={() => setShowConfig(!showConfig)}>
@@ -169,7 +174,7 @@ export default function StressTest() {
             </div>
           </div>
 
-          <h2 className={styles.sectionTitle}>Steps</h2>
+          <h4 className={styles.sectionTitle}>Steps</h4>
           <div className="table-scroll">
             <table className={styles.table}>
               <thead>
@@ -205,7 +210,7 @@ export default function StressTest() {
       )}
 
       <div className={styles.runsSection}>
-        <h2 className={styles.sectionTitle}>Past Runs</h2>
+        <h4 className={styles.sectionTitle}>Past Runs</h4>
         {runs.length === 0 ? (
           <div className={styles.emptyState}>No stress test runs yet. Click "Run Test" to start one.</div>
         ) : (

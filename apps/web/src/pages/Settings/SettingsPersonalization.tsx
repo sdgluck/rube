@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Personalization.module.css";
 
 type PendingAction = "enable" | "disable" | null;
@@ -70,13 +71,17 @@ export default function SettingsPersonalization() {
 
   return (
     <div>
-      <h3>Personalized Home Screens</h3>
-      <p>
-        Lets each Plex user get their own home-screen collections (Because You Watched and the self-service portal). To
-        make per-user collections visible only to their owner, enabling this labels every item in your configured
-        libraries with <code>Tinkerbell</code> and restricts every shared user to their own content plus that shared
-        baseline.
-      </p>
+      <SettingsPageHeader
+        title="Personalized Home Screens"
+        description={
+          <>
+            Lets each Plex user get their own home-screen collections (Because You Watched and the self-service portal).
+            To make per-user collections visible only to their owner, enabling this labels every item in your configured
+            libraries with <code>Tinkerbell</code> and restricts every shared user to their own content plus that shared
+            baseline.
+          </>
+        }
+      />
 
       <div className={styles.card}>
         <div className={styles.row}>

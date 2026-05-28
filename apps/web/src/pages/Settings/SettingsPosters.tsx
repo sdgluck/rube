@@ -5,6 +5,7 @@ import ToggleSwitch from "#components/ToggleSwitch";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
+import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 
 const PERSON_STYLES = [
@@ -88,6 +89,10 @@ export default function SettingsPosters() {
 
   return (
     <div className={styles.form}>
+      <SettingsPageHeader
+        title="Posters"
+        description="Use Kometa default posters for auto-generated collection artwork."
+      />
       <fieldset className={styles.group}>
         <legend className={styles.groupTitle}>Kometa default posters</legend>
         <p className={styles.hint}>
