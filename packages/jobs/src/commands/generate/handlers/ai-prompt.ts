@@ -1,7 +1,7 @@
 import { getRecentHistory } from "@tinkerbell/domain.rule-history";
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
 import { parseAiCollections } from "#commands/generate/ai/parse.ts";
-import { askLlm, shuffled } from "#commands/generate/ai/llm.ts";
+import { askLlm, shuffled, MAX_ITEMS_PER_CALL } from "#commands/generate/ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<PendingCollection> {
@@ -43,9 +43,22 @@ export async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<Pendin
       preferences: userPrefs,
     });
 
-    const itemList = shuffled(items)
-      .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
-      .join("\n");
+    // The LLM call caps its payload at MAX_ITEMS_PER_CALL titles (a security
+    // bound on blast radius — see llm.ts). For libraries larger than that we
+    // send a random sample rather than failing the whole rule. The shuffle
+    // reseeds every run, so different titles surface over time, and combined
+    // with the rule-history mechanism that turns the partial view into
+    // variety rather than a blind spot. Matching below still runs against the
+    // full library, so the model can name any sampled title.
+    const sample = shuffled(items).slice(0, MAX_ITEMS_PER_CALL);
+    if (items.length > MAX_ITEMS_PER_CALL) {
+      ctx.log(`Library has ${items.length} items; sampling ${MAX_ITEMS_PER_CALL} this run (LLM cap).`);
+    }
+    // Collapse any newlines in a title to a space so each item stays exactly
+    // one line: the cap is enforced as a line count, and a title with an
+    // embedded newline (arbitrary Plex names are user-controlled) would both
+    // re-trip that cap and corrupt the line-delimited format we parse back.
+    const itemList = sample.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`.replace(/[\r\n]+/g, " ")).join("\n");
 
     ctx.log(`Asking the LLM for curated collections...`);
     const { text, tokensIn, tokensOut } = await askLlm(prompt, itemList, ctx.signal);

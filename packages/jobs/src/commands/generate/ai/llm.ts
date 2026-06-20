@@ -15,7 +15,7 @@ export interface LlmCallResult {
  * media with arbitrary names), so we cap the payload to keep each call's
  * blast radius bounded if a Plex mass-rename attack ever happens.
  */
-const MAX_ITEMS_PER_CALL = 2000;
+export const MAX_ITEMS_PER_CALL = 2000;
 
 const FENCE_OPEN = "<media_items>";
 const FENCE_CLOSE = "</media_items>";
