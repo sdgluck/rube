@@ -1,0 +1,196 @@
+/* ── Hero ───────────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  padding-top: 72px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -40% 0 auto 0;
+  height: 700px;
+  background: radial-gradient(60% 50% at 50% 0%, rgba(74, 108, 247, 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+.title {
+  position: relative;
+  font-size: clamp(2.3rem, 5.5vw, 3.8rem);
+  margin: 18px auto 0;
+  max-width: 16ch;
+}
+
+.titleAccent {
+  color: var(--accent);
+}
+
+.lede {
+  position: relative;
+  max-width: 62ch;
+  margin: 22px auto 0;
+  font-size: 1.12rem;
+  color: var(--text-secondary);
+}
+
+.cta {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.heroShot {
+  position: relative;
+  margin-top: 56px;
+}
+
+/* ── Sections ───────────────────────────────────────────────────────── */
+
+.section {
+  padding-top: 96px;
+}
+
+.sectionHead {
+  text-align: center;
+  max-width: 60ch;
+  margin: 0 auto 44px;
+}
+
+.sectionHead h2 {
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  margin-top: 12px;
+}
+
+.sectionHead p {
+  margin-top: 14px;
+  color: var(--text-secondary);
+}
+
+/* ── Feature grid ───────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px 24px;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-3px);
+}
+
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.card h3 {
+  font-size: 1.18rem;
+}
+
+.cardTagline {
+  margin-top: 6px;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.cardBody {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+}
+
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.cardLink:hover {
+  gap: 9px;
+}
+
+/* ── Install ────────────────────────────────────────────────────────── */
+
+.installWrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 44px;
+}
+
+.installWrap h2 {
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  margin-top: 12px;
+}
+
+.installLede {
+  margin-top: 14px;
+  color: var(--text-secondary);
+}
+
+.bullets {
+  list-style: none;
+  margin: 22px 0;
+  display: grid;
+  gap: 10px;
+}
+
+.bullets li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+}
+
+.bullets li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 14px;
+  height: 9px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 880px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .installWrap {
+    grid-template-columns: 1fr;
+    padding: 30px;
+  }
+}

@@ -1,0 +1,77 @@
+.page {
+  padding-top: 72px;
+}
+
+.head {
+  text-align: center;
+  max-width: 56ch;
+  margin: 0 auto 64px;
+}
+
+.head h1 {
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  margin-top: 14px;
+}
+
+.head p {
+  margin-top: 16px;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 88px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 48px;
+  align-items: center;
+  scroll-margin-top: 90px;
+}
+
+.row[data-flip="true"] .copy {
+  order: 2;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.copy h2 {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+
+.tagline {
+  margin-top: 8px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.body {
+  margin-top: 16px;
+  color: var(--text-secondary);
+  font-size: 1.02rem;
+}
+
+@media (max-width: 880px) {
+  .row,
+  .row[data-flip="true"] .copy {
+    grid-template-columns: 1fr;
+    order: 0;
+  }
+  .rows {
+    gap: 64px;
+  }
+}

@@ -1,0 +1,46 @@
+.footer {
+  border-top: 1px solid var(--border);
+  margin-top: 96px;
+  padding-block: 40px;
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 32px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+}
+
+.version {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 2px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+}
+
+.links {
+  display: flex;
+  gap: 22px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.links a:hover {
+  color: var(--text-primary);
+}
+
+.note {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}

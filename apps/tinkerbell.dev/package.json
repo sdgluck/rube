@@ -1,0 +1,35 @@
+{
+  "name": "@tinkerbell/tinkerbell.dev",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*",
+    "#pages/*": "./src/pages/*",
+    "#components/*": "./src/components/*",
+    "#data/*": "./src/data/*"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc",
+    "capture": "node --experimental-strip-types harness/capture.ts"
+  },
+  "dependencies": {
+    "lucide-react": "^1.14.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.0"
+  },
+  "devDependencies": {
+    "@tinkerbell/core": "workspace:*",
+    "@tinkerbell/db": "workspace:*",
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.0",
+    "playwright": "^1.50.0",
+    "sharp": "^0.34.5",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.0"
+  }
+}

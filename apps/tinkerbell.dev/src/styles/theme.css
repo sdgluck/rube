@@ -1,0 +1,134 @@
+/*
+ * Marketing theme for tinkerbell.dev.
+ *
+ * Palette tokens mirror the product UI (apps/web/src/App.css) so the site and
+ * the app feel like one family — accent #4a6cf7, dark surfaces. The site is
+ * dark-first because the captured screenshots are dark-theme.
+ */
+
+:root {
+  --accent: #6b8cff;
+  --accent-strong: #4a6cf7;
+  --accent-soft: rgba(107, 140, 255, 0.14);
+
+  --bg-page: #0c0c14;
+  --bg-elevated: #14141f;
+  --bg-surface: #1a1a28;
+  --bg-surface-hover: #22223360;
+
+  --text-primary: #ecedf4;
+  --text-secondary: #b6b8c8;
+  --text-muted: #7e8194;
+
+  --border: #262635;
+  --border-strong: #34344a;
+
+  --radius: 12px;
+  --radius-lg: 18px;
+  --maxw: 1080px;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* ── Shared layout helpers ───────────────────────────────────────────── */
+
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-surface);
+}

@@ -1,0 +1,14 @@
+.figure {
+  scroll-margin-top: 90px;
+}
+
+.caption {
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.caption strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}

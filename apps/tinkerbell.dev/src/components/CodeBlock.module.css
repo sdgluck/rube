@@ -1,0 +1,18 @@
+.block {
+  background: #07070d;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.line {
+  color: #d9def0;
+}
+
+.comment {
+  color: var(--text-muted);
+}

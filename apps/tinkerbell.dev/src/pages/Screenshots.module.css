@@ -1,0 +1,26 @@
+.page {
+  padding-top: 72px;
+}
+
+.head {
+  text-align: center;
+  max-width: 56ch;
+  margin: 0 auto 56px;
+}
+
+.head h1 {
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  margin-top: 14px;
+}
+
+.head p {
+  margin-top: 16px;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
