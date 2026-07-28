@@ -2,6 +2,7 @@ import type React from "react";
 import RelativeTime from "#components/RelativeTime";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
+import ErrorState from "#components/ErrorState";
 import { formatDuration } from "#/format";
 import { stripDurationFromMessage } from "#/utils";
 import styles from "#pages/Stats/Stats.module.css";
@@ -14,6 +15,9 @@ export function SystemPanel({ dragHandle, dragProps }: { dragHandle: React.React
 
   return (
     <PanelShell title="System Status" dragHandle={dragHandle} dragProps={dragProps}>
+      {healthQuery.error && activeJobsQuery.error && eventsQuery.error && (
+        <ErrorState inline title="Couldn't load system status" onRetry={() => healthQuery.refetch()} />
+      )}
       {healthQuery.data && (
         <div className={styles.healthRow}>
           {healthQuery.data

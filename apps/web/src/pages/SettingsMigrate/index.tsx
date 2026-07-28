@@ -43,7 +43,7 @@ export default function SettingsMigrate() {
         description="Import existing collections from other tools (e.g. Kometa) into Tinkerbell rules."
       />
       {providers.length > 1 && (
-        <nav className={styles.subTabs}>
+        <nav className={styles.subTabs} aria-label="Migration providers">
           {providers.map((p) => (
             <button
               key={p.id}

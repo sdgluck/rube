@@ -74,7 +74,7 @@ export default function SettingsNotifications() {
         title="Notifications"
         description="Send job, event, and health alerts to your chosen services."
       />
-      <nav className={styles.subTabs}>
+      <nav className={styles.subTabs} aria-label="Notification services">
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}

@@ -5,6 +5,7 @@ import { useToast } from "#components/Toast";
 import { describeCron } from "#/utils";
 import { FEATURE_CATALOG, type FeatureCatalogEntry } from "./feature-catalog";
 import Modal from "#components/Modal";
+import ErrorState from "#components/ErrorState";
 import styles from "./FeatureWizard.module.css";
 
 interface Props {
@@ -115,7 +116,15 @@ export default function FeatureWizard({ onClose }: Props) {
       </div>
 
       <div className={styles.body}>
-        {step === "pick" && (
+        {step === "pick" && jobsQuery.error && (
+          <ErrorState
+            inline
+            title="Couldn't check which features are installed"
+            error={jobsQuery.error}
+            onRetry={() => jobsQuery.refetch()}
+          />
+        )}
+        {step === "pick" && !jobsQuery.error && (
           <div className={styles.catalog}>
             {FEATURE_CATALOG.map((entry) => {
               const already = installedIds.has(entry.id);
