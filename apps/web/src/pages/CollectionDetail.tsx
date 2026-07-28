@@ -177,6 +177,7 @@ export default function CollectionDetail() {
 
         <div className={styles.detailMain}>
           <div className={styles.detailHeader}>
+            <h2 className="sr-only">{collection.title}</h2>
             <input
               className={styles.titleInput}
               value={title}
@@ -227,6 +228,7 @@ export default function CollectionDetail() {
                       labels: labels.filter((l) => l !== label),
                     });
                   }}
+                  aria-label={`Remove label ${label}`}
                 >
                   &times;
                 </button>

@@ -18,7 +18,10 @@ export default function Spinner({
     .filter(Boolean)
     .join(" ");
   return (
-    <span className={cls} role="status" aria-live="polite">
+    // data-motion="essential" exempts this from the global reduced-motion
+    // reset: a spinner that doesn't spin conveys nothing. Its reduced-motion
+    // form is a gentler pulse rather than a rotation.
+    <span className={cls} role="status" aria-live="polite" data-motion="essential">
       <span className={styles.label}>{label}</span>
     </span>
   );

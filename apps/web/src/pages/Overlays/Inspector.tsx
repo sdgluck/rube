@@ -71,7 +71,7 @@ export function Inspector({
           >
             ▼
           </button>
-          <button className={styles.iconBtn} onClick={onClose} title="Close">
+          <button className={styles.iconBtn} onClick={onClose} title="Close" aria-label="Close inspector">
             ×
           </button>
         </div>

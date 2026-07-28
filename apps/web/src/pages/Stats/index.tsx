@@ -430,6 +430,10 @@ export default function Stats() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className={styles.dashboard}>
+        {/* The dashboard's identity is obvious on screen from the tiles and
+            panels; the heading exists so the page has one for screen readers
+            and document outline. */}
+        <h2 className="sr-only">Stats</h2>
         {/* ─── Summary Bar ──────────────────────────────────────────── */}
         <div className={styles.summaryBar}>
           {selectedTiles.flatMap((id, i) => {

@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA } from "#/version";
@@ -30,10 +30,18 @@ export function SidebarHealthDot() {
     colorClass = "health-dot-orange";
   }
 
+  const summary =
+    errorCount === 0
+      ? `All ${withStatus.length} integrations healthy`
+      : `${errorCount} of ${withStatus.length} integrations failing`;
+
   return (
-    <Link to="/settings/health" className="health-dot-link">
+    // The tooltip is CSS :hover *and* :focus-visible so it's reachable by
+    // keyboard; the summary in aria-label carries the same information for
+    // screen readers and touch, where a hover tooltip never appears.
+    <Link to="/settings/health" className="health-dot-link" aria-label={`${summary} — view health`}>
       <span className={`health-dot ${colorClass}`} />
-      <div className="health-tooltip">
+      <div className="health-tooltip" aria-hidden="true">
         <div className="health-tooltip-list">
           {withStatus.map((s) => (
             <div key={s.service} className="health-tooltip-row">
@@ -92,7 +100,6 @@ function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMet
 }
 
 function SidebarActiveJobs() {
-  const navigate = useNavigate();
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
   const cancelMutation = trpc.jobs.cancel.useMutation({
     onSuccess: () => activeRunsQuery.refetch(),
@@ -105,17 +112,22 @@ function SidebarActiveJobs() {
     <div className={styles.sidebarJobs}>
       <div className={styles.sidebarJobsTitle}>Running</div>
       {runs.map((run) => (
-        <div key={run.id} className={styles.sidebarJob} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
+        <div key={run.id} className={styles.sidebarJob}>
           <Spinner size="sm" variant="inverse" />
-          <span className={styles.sidebarJobName}>{run.jobName}</span>
-          {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
+          {/* A real link, not a div with onClick: focusable, middle-clickable,
+              and announced as a link. */}
+          <Link to={`/jobs/runs/${run.id}`} className={styles.sidebarJobLink}>
+            <span className={styles.sidebarJobName}>{run.jobName}</span>
+            {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
+          </Link>
           <button
             className={styles.sidebarCancel}
             onClick={(e) => {
               e.stopPropagation();
               cancelMutation.mutate({ runId: run.id });
             }}
-            title="Cancel"
+            title={`Cancel ${run.jobName}`}
+            aria-label={`Cancel ${run.jobName}`}
           >
             &times;
           </button>

@@ -104,7 +104,7 @@ export default function JobRun() {
       </Link>
 
       <div className={styles.runHeader}>
-        <h1 className={styles.runTitle}>Job Run</h1>
+        <h2 className={styles.runTitle}>Job Run</h2>
         <StatusBadge status={run.status} />
         {run.status === "running" && (
           <button

@@ -28,7 +28,12 @@ export function PresetList({ presets, onApply, onDelete, onSaveCurrent, canSave 
             <span className={styles.presetItemName}>{p.name}</span>
             <span className={styles.presetItemDesc}>{p.description}</span>
           </button>
-          <button className={styles.iconBtn} onClick={() => onDelete(p.id)} title="Delete preset">
+          <button
+            className={styles.iconBtn}
+            onClick={() => onDelete(p.id)}
+            title="Delete preset"
+            aria-label={`Delete preset ${p.name}`}
+          >
             ×
           </button>
         </div>

@@ -246,7 +246,7 @@ export default function Preview() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Preview</h1>
+          <h2 className={styles.title}>Preview</h2>
           <span
             className={styles.badge}
             title="Approximate — labels and library access only; watch progress is the admin's"

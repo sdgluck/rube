@@ -631,6 +631,7 @@ export default function Overlays() {
                       >
                         <button
                           className={styles.badgeRemove}
+                          aria-label={`Remove ${POSITIONS.find((pos) => pos.id === box.position)?.label ?? "overlay"} overlay from layout`}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (box.id != null) removeConfigMutation.mutate({ id: box.id });

@@ -331,7 +331,8 @@ body {
   pointer-events: none;
 }
 
-.health-dot-link:hover .health-tooltip {
+.health-dot-link:hover .health-tooltip,
+.health-dot-link:focus-visible .health-tooltip {
   display: block;
 }
 
@@ -743,5 +744,96 @@ button:active:not(:disabled),
 @media (max-width: 480px) {
   .content {
     padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 72px);
+  }
+}
+
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
+
+/* Present to assistive tech, invisible on screen. For headings a page conveys
+   visually through layout but doesn't spell out, and for redundant labels. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Focus visibility ───────────────────────────────────────────────────────
+ * Links and other non-.btn controls relied on the UA default ring, which is
+ * invisible against the dark sidebar. One consistent ring everywhere.
+ */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.nav-link:focus-visible,
+.bottom-nav-item:focus-visible,
+.bottom-sheet-link:focus-visible,
+.sidebar-search:focus-visible,
+.version-pill:focus-visible,
+.sidebar-version:focus-visible,
+.health-dot-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+/* ─── Touch targets ──────────────────────────────────────────────────────────
+ * Pointer-coarse only: on a mouse these controls are comfortably clickable at
+ * their visual size, and forcing 44px would loosen dense tables on desktop.
+ */
+
+@media (pointer: coarse) {
+  .bottom-nav-item,
+  .nav-link,
+  .bottom-sheet-link {
+    min-height: 44px;
+  }
+
+  button,
+  [role="button"],
+  summary {
+    min-height: 32px;
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────
+ * Honour the OS preference. Transitions are kept but collapsed to
+ * near-instant so state changes still register; entrance/exit animations and
+ * the press-scale are dropped entirely.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  /* [data-motion="essential"] opts out: a loading indicator whose animation IS
+     the information (the spinner) must keep moving. Reduced motion means no
+     gratuitous movement, not "remove all feedback". */
+  *:not([data-motion="essential"]),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animated-page {
+    animation: none;
+  }
+
+  button:active:not(:disabled),
+  .nav-link:active,
+  .bottom-nav-item:active {
+    transform: none;
+    opacity: 1;
+  }
+
+  .bottom-sheet {
+    transition: none;
   }
 }

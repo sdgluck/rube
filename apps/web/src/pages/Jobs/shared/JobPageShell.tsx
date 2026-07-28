@@ -55,7 +55,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
       <div className={styles.jobDetailHeader}>
         <div className={styles.jobDetailHeading}>
-          <h1 className={styles.heading}>{job.name}</h1>
+          <h2 className={styles.heading}>{job.name}</h2>
           {status && (
             <span className={styles.statusPill} data-status={status}>
               <span className={styles.statusDot} data-status={status} />

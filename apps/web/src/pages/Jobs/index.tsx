@@ -362,6 +362,7 @@ export default function Jobs() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className={styles.dashboard}>
+        <h2 className="sr-only">Jobs</h2>
         {/* ─── Summary Bar ──────────────────────────────────────────── */}
         <div className={styles.summaryBar}>
           <div className={styles.summaryItem}>
