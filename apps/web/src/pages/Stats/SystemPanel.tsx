@@ -2,7 +2,8 @@ import type React from "react";
 import RelativeTime from "#components/RelativeTime";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
-import { formatDurationMs, stripDurationFromMessage } from "#/utils";
+import { formatDuration } from "#/format";
+import { stripDurationFromMessage } from "#/utils";
 import styles from "#pages/Stats/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
@@ -55,7 +56,7 @@ export function SystemPanel({ dragHandle, dragProps }: { dragHandle: React.React
                   ? stripDurationFromMessage(event.message)
                   : event.message}
                 {event.count > 1 && event.avgDurationMs != null && (
-                  <span className={styles.muted}> (avg {formatDurationMs(event.avgDurationMs)})</span>
+                  <span className={styles.muted}> (avg {formatDuration(event.avgDurationMs)})</span>
                 )}
               </span>
             </div>

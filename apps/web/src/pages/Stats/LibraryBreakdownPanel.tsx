@@ -2,7 +2,7 @@ import type React from "react";
 import { trpc } from "#/trpc";
 import { DistributionBar, RESOLUTION_COLORS } from "./DistributionBar";
 import styles from "#pages/Stats/Stats.module.css";
-import { formatCodec, formatResolution } from "./format";
+import { formatCodec, formatResolution } from "#/format";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function LibraryBreakdownPanel({

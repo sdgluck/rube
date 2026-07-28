@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import { trpc } from "#/trpc";
-import { formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "./format";
+import { formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
 import { DragHandle, type PanelDragProps } from "./PanelShell";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";

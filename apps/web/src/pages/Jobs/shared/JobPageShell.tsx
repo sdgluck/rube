@@ -10,7 +10,7 @@ import type { Job } from "#pages/Jobs/types";
 import { getJobDescription } from "#pages/Jobs/descriptions";
 import { getJobFields } from "#pages/Jobs/fields";
 import { useJobActions } from "./useJobActions";
-import { formatDuration } from "./formatDuration";
+import { formatElapsed } from "#/format";
 
 interface Props {
   job: Job;
@@ -45,7 +45,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
   const status = job.lastRunStatus;
   const lastDuration =
-    latestRun && latestRun.status !== "running" ? formatDuration(latestRun.startedAt, latestRun.finishedAt) : null;
+    latestRun && latestRun.status !== "running" ? formatElapsed(latestRun.startedAt, latestRun.finishedAt) : null;
 
   return (
     <div ref={swipeRef} className={styles.jobDetail}>

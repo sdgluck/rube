@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
-import { formatDurationMs } from "#/utils";
+import { formatDuration } from "#/format";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
@@ -147,7 +147,7 @@ export default function SettingsPersonalization() {
             const est = estimateQuery.data;
             if (!est) return `${base} Continue?`;
             const items = est.itemCount.toLocaleString();
-            return `${base} About ${items} items to label — estimated ~${formatDurationMs(est.estimatedSeconds * 1000)}. Continue?`;
+            return `${base} About ${items} items to label — estimated ~${formatDuration(est.estimatedSeconds * 1000)}. Continue?`;
           })()}
           confirmLabel="Enable"
           onConfirm={runEnable}

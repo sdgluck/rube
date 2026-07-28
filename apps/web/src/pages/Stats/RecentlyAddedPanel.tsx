@@ -3,15 +3,9 @@ import { Link } from "react-router-dom";
 import RelativeTime from "#components/RelativeTime";
 import { ListSkeleton } from "#components/Skeleton";
 import { trpc } from "#/trpc";
+import { formatFileSize } from "#/format";
 import styles from "#pages/Stats/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
-
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes) return "—";
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
-  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
-  return `${(bytes / 1e3).toFixed(0)} KB`;
-}
 
 export function RecentlyAddedPanel({
   dragHandle,

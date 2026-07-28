@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ListSkeleton } from "#components/Skeleton";
 import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
-import { formatBandwidth, formatCodec, formatDuration, formatResolution } from "./format";
+import { formatBandwidth, formatClock, formatCodec, formatResolution } from "#/format";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.ReactNode; dragProps: PanelDragProps }) {
@@ -88,7 +88,7 @@ export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.Reac
                     {session.duration != null && session.duration > 0 && (
                       <div
                         className={styles.miniProgress}
-                        title={`${formatDuration(session.viewOffset ?? 0)} / ${formatDuration(session.duration)}`}
+                        title={`${formatClock(session.viewOffset ?? 0)} / ${formatClock(session.duration)}`}
                       >
                         <div
                           className={styles.miniProgressFill}

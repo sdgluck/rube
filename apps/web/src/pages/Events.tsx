@@ -7,7 +7,8 @@ import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import EmptyState from "#components/EmptyState";
 import PullToRefresh from "#components/PullToRefresh";
 import RelativeTime from "#components/RelativeTime";
-import { formatDurationMs, stripDurationFromMessage } from "#/utils";
+import { formatDuration } from "#/format";
+import { stripDurationFromMessage } from "#/utils";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Events.module.css";
 
@@ -170,7 +171,7 @@ export default function Events() {
                             ? stripDurationFromMessage(event.message)
                             : event.message}
                           {event.count > 1 && event.avgDurationMs != null && (
-                            <span className={styles.avgDuration}> (avg {formatDurationMs(event.avgDurationMs)})</span>
+                            <span className={styles.avgDuration}> (avg {formatDuration(event.avgDurationMs)})</span>
                           )}
                         </td>
                       </tr>

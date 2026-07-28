@@ -12,6 +12,7 @@ import ToggleSwitch from "#components/ToggleSwitch";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
 import { readEnumStorage } from "#/storage";
+import { formatDuration, formatTimeUntil } from "#/format";
 import styles from "./Jobs.module.css";
 import shared from "#/styles/shared.module.css";
 import { getJobFields } from "./fields";
@@ -69,33 +70,11 @@ function rollupRecentRuns(runs: RecentRun[]): RecentRunGroup[] {
   return out;
 }
 
-function formatDurationMs(ms: number): string {
-  const secs = Math.floor(ms / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  if (mins < 60) return `${mins}m ${remSecs}s`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ${mins % 60}m`;
-}
-
 function formatGroupDuration(group: RecentRunGroup): string {
   if (group.latest.status === "running") return "—";
-  if (group.count === 1) return formatDurationMs(group.maxDurationMs);
-  if (group.minDurationMs === group.maxDurationMs) return formatDurationMs(group.maxDurationMs);
-  return `${formatDurationMs(group.minDurationMs)}–${formatDurationMs(group.maxDurationMs)}`;
-}
-
-function formatTimeUntil(ms: number): string {
-  const diff = ms - Date.now();
-  if (diff < 0) return "now";
-  const secs = Math.floor(diff / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ${mins % 60}m`;
-  return `${Math.floor(hours / 24)}d`;
+  if (group.count === 1) return formatDuration(group.maxDurationMs);
+  if (group.minDurationMs === group.maxDurationMs) return formatDuration(group.maxDurationMs);
+  return `${formatDuration(group.minDurationMs)}–${formatDuration(group.maxDurationMs)}`;
 }
 
 const SORT_KEYS = ["name", "schedule", "enabled", "lastRun", "lastRunStatus"] as const;
