@@ -1,5 +1,6 @@
 import { trpc } from "#/trpc";
 import SettingsPageHeader from "./SettingsPageHeader";
+import ErrorState from "#components/ErrorState";
 import styles from "./SettingsHealth.module.css";
 
 function timeAgo(timestamp: number): string {
@@ -111,6 +112,10 @@ export default function SettingsHealth() {
         </button>
       </div>
 
+      {query.error && !query.data && (
+        <ErrorState inline title="Couldn't load health status" error={query.error} onRetry={() => query.refetch()} />
+      )}
+
       <div className={styles.serviceList}>
         {query.data?.map((svc) => {
           let dotClass = styles.statusNone;
@@ -151,7 +156,7 @@ export default function SettingsHealth() {
                   disabled={isChecking}
                   onClick={() => checkMutation.mutate({ service: svc.service })}
                 >
-                  {isChecking ? "Checking..." : "Check"}
+                  {isChecking ? "Checking…" : "Check"}
                 </button>
               )}
             </div>

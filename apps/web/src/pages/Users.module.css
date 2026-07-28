@@ -38,8 +38,8 @@
 }
 
 .labelUser {
-  background: #d5f5e3;
-  color: #1e8449;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .emptyState {

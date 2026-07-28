@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { EMPTY } from "#/format";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { CONFIG_SUMMARY, TYPE_BADGE, TYPE_LABELS } from "./constants";
@@ -66,7 +67,7 @@ export default function RuleTableRow({
   const parts: string[] = [];
   if (summary) parts.push(summary);
   if (sections?.length) parts.push(`Sections: ${sections.join(", ")}`);
-  const configSummary = parts.join(" | ") || "—";
+  const configSummary = parts.join(" | ") || EMPTY;
 
   const typeBadge = TYPE_BADGE[rule.type] ?? styles.typeCriteria;
   const errorToShow =

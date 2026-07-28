@@ -1,0 +1,33 @@
+.summary {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.limitInput {
+  max-width: 140px;
+  margin-left: 26px;
+}
+
+.apply {
+  composes: btn btnPrimary from "../../styles/controls.module.css";
+}
+
+.cancel {
+  composes: btn btnSecondary from "../../styles/controls.module.css";
+}

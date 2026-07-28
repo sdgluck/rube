@@ -53,11 +53,11 @@
 }
 
 .statusOk {
-  background: #28a745;
+  background: var(--status-ok-dot);
 }
 
 .statusError {
-  background: #dc3545;
+  background: var(--status-error-dot);
 }
 
 .statusNone {
@@ -87,7 +87,7 @@
 .serviceUptime {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #28a745;
+  color: var(--status-ok-dot);
   white-space: nowrap;
 }
 

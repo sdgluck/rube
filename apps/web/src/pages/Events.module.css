@@ -41,23 +41,23 @@
 }
 
 .badgeJobCompleted {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .badgeJobFailed {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .badgeHealthFailed {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .badgeHealthRecovered {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .badgeDefault {

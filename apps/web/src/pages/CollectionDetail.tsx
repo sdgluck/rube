@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { EMPTY } from "#/format";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
@@ -8,8 +9,8 @@ import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
-import { readEnumStorage } from "#/storage";
-import styles from "./Collections.module.css";
+import { readEnumStorage, writeStorage } from "#/storage";
+import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer, SmartFilterSummary } from "#components/SmartFiltersEditor";
 
 const VIEW_MODES = ["table", "grid"] as const;
@@ -140,7 +141,7 @@ export default function CollectionDetail() {
 
   const setItemsViewPersisted = (mode: ViewMode) => {
     setItemsView(mode);
-    localStorage.setItem("collection-items-view", mode);
+    writeStorage("collection-items-view", mode);
   };
 
   if (collectionQuery.isLoading) return <DetailSkeleton />;
@@ -177,6 +178,7 @@ export default function CollectionDetail() {
 
         <div className={styles.detailMain}>
           <div className={styles.detailHeader}>
+            <h2 className="sr-only">{collection.title}</h2>
             <input
               className={styles.titleInput}
               value={title}
@@ -227,6 +229,7 @@ export default function CollectionDetail() {
                       labels: labels.filter((l) => l !== label),
                     });
                   }}
+                  aria-label={`Remove label ${label}`}
                 >
                   &times;
                 </button>
@@ -235,7 +238,7 @@ export default function CollectionDetail() {
             <input
               type="text"
               className={styles.labelEditorInput}
-              placeholder="Add label..."
+              placeholder="Add label…"
               value={labelInput}
               onChange={(e) => setLabelInput(e.target.value)}
               onKeyDown={(e) => {
@@ -288,7 +291,7 @@ export default function CollectionDetail() {
           <input
             type="text"
             className={styles.itemSearch}
-            placeholder="Search items..."
+            placeholder="Search items…"
             value={itemSearch}
             onChange={(e) => setItemSearch(e.target.value)}
           />
@@ -308,7 +311,7 @@ export default function CollectionDetail() {
           </div>
         </div>
         {itemsQuery.isLoading ? (
-          <p className={styles.hint}>Loading items...</p>
+          <p className={styles.hint}>Loading items…</p>
         ) : items.length === 0 ? (
           <EmptyState icon="film" title="No items in this collection" />
         ) : filteredItems.length === 0 ? (
@@ -358,7 +361,7 @@ export default function CollectionDetail() {
                     onClick={() => navigate(`/media/${item.ratingKey}`)}
                   >
                     <td>{item.title}</td>
-                    <td className={styles.itemYear}>{item.year || "—"}</td>
+                    <td className={styles.itemYear}>{item.year || EMPTY}</td>
                   </tr>
                 ))}
               </tbody>
@@ -374,7 +377,7 @@ export default function CollectionDetail() {
             Discard
           </button>
           <button className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       )}
@@ -393,8 +396,10 @@ export default function CollectionDetail() {
 
       {pendingConfirm && (
         <ConfirmModal
+          title="Delete collection?"
           message={pendingConfirm.message}
           confirmLabel="Delete"
+          danger
           onConfirm={pendingConfirm.onConfirm}
           onCancel={() => setPendingConfirm(null)}
         />

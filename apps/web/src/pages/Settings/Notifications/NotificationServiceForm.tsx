@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
+import ErrorState from "#components/ErrorState";
+import UnsavedBanner from "#components/UnsavedBanner";
+import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import styles from "#pages/Settings/Settings.module.css";
 
@@ -39,6 +42,10 @@ export default function NotificationServiceForm({
   const [healthMode, setHealthMode] = useState<FilterMode>("all");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  // Snapshot of the loaded config, for dirty comparison. The Arrs and Databases
+  // forms have had unsaved-change protection all along; this one did not, so
+  // navigating away silently discarded edits.
+  const [pristine, setPristine] = useState<string | null>(null);
 
   const { addToast } = useToast();
 
@@ -69,8 +76,30 @@ export default function NotificationServiceForm({
       const targets = (data[healthTargetsKey] as string[]) ?? [];
       setSelectedHealthTargets(targets);
       setHealthMode(targets.length > 0 ? "specific" : "all");
+      setPristine(
+        JSON.stringify({
+          vals,
+          events: (data[eventsKey] as string[]) ?? [],
+          jobs,
+          targets,
+        }),
+      );
     }
   }, [configQuery.data, eventsKey, jobsKey, healthTargetsKey, fields]);
+
+  const current = useMemo(
+    () =>
+      JSON.stringify({
+        vals: values,
+        events: enabledEvents,
+        jobs: jobsMode === "all" ? [] : selectedJobs,
+        targets: healthMode === "all" ? [] : selectedHealthTargets,
+      }),
+    [values, enabledEvents, jobsMode, selectedJobs, healthMode, selectedHealthTargets],
+  );
+
+  const isDirty = pristine !== null && current !== pristine;
+  useUnsavedChanges(isDirty);
 
   function buildConfigPayload(): Record<string, unknown> {
     const payload: Record<string, unknown> = {};
@@ -103,11 +132,18 @@ export default function NotificationServiceForm({
     }
   };
 
+  /**
+   * Test sends using the *saved* configuration. It used to silently write the
+   * form's current values first, so clicking "Test" persisted changes the user
+   * hadn't chosen to save — and the sibling service forms didn't do that.
+   */
   const handleTest = async () => {
+    if (isDirty) {
+      addToast("Save your changes before sending a test notification", "error");
+      return;
+    }
     setTesting(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await saveConfigMutation.mutateAsync(buildConfigPayload() as any);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await testMutation.mutateAsync({ service: service as any });
       addToast("Test notification sent", "success");
@@ -132,7 +168,11 @@ export default function NotificationServiceForm({
   };
 
   if (configQuery.isLoading) return <FormSkeleton rows={4} />;
-  if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
+  if (configQuery.error) {
+    return (
+      <ErrorState title="Couldn't load settings" error={configQuery.error} onRetry={() => configQuery.refetch()} />
+    );
+  }
 
   const eventTypes = eventTypesQuery.data || [];
   const jobsList = jobsQuery.data ?? [];
@@ -172,11 +212,12 @@ export default function NotificationServiceForm({
         )}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
           <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
-            {testing ? "Sending..." : "Test"}
+            {testing ? "Sending…" : "Test"}
           </button>
+          <UnsavedBanner visible={isDirty} />
         </div>
       </fieldset>
 
@@ -184,7 +225,7 @@ export default function NotificationServiceForm({
         <legend className={styles.groupTitle}>Events</legend>
         <span className={styles.hint}>Select which events trigger a {title} notification.</span>
         {eventTypes.length === 0 ? (
-          <p className={styles.hint}>Loading event types...</p>
+          <p className={styles.hint}>Loading event types…</p>
         ) : (
           <div className={styles.libraryList}>
             {eventTypes.map((evt) => (

@@ -5,6 +5,7 @@ import { useToast } from "#components/Toast";
 import { FormSkeleton } from "#components/Skeleton";
 import RelativeTime from "#components/RelativeTime";
 import styles from "#pages/Settings/Settings.module.css";
+import local from "./SettingsMigrate.module.css";
 
 interface ProviderPanelProps {
   providerId: string;
@@ -130,7 +131,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           </p>
         )}
         {status.bySection.length > 0 && (
-          <ul style={{ margin: "0 0 12px 0", paddingLeft: 20, lineHeight: 1.6 }}>
+          <ul className={local.bulletsTight}>
             {status.bySection.map((s) => (
               <li key={s.sectionId}>
                 {s.sectionTitle}: {s.count}
@@ -140,7 +141,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
         )}
         <div className={styles.buttons}>
           <button type="button" className={styles.buttonSecondary} onClick={handleScan} disabled={scanning}>
-            {scanning ? "Scanning..." : "Re-scan"}
+            {scanning ? "Scanning…" : "Re-scan"}
           </button>
         </div>
       </fieldset>
@@ -159,38 +160,42 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           </p>
         )}
         {plan.proposed.length > 0 && (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-input)" }}>
-                <th style={{ padding: "8px 4px", width: 32 }}></th>
-                <th style={{ padding: "8px 4px" }}>Rule</th>
-                <th style={{ padding: "8px 4px" }}>Type</th>
-                <th style={{ padding: "8px 4px" }}>Section</th>
-                <th style={{ padding: "8px 4px", textAlign: "right" }}>Replaces</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plan.proposed.map((p) => (
-                <tr key={p.key} style={{ borderBottom: "1px solid var(--border-input)" }}>
-                  <td style={{ padding: "8px 4px" }}>
-                    <input type="checkbox" checked={selected.has(p.key)} onChange={() => toggle(p.key)} />
-                  </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <div>{p.ruleName}</div>
-                    <div style={{ color: "var(--color-muted, #888)", fontSize: "0.85rem" }}>
-                      e.g. {p.sampleNames.slice(0, 3).join(", ")}
-                      {p.sampleNames.length > 3 ? ", …" : ""}
-                    </div>
-                  </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <code>{p.ruleType}</code>
-                  </td>
-                  <td style={{ padding: "8px 4px" }}>{p.sectionTitle}</td>
-                  <td style={{ padding: "8px 4px", textAlign: "right" }}>{p.replacesCount}</td>
+          <div className="table-scroll">
+            <table className={local.planTable}>
+              <thead>
+                <tr>
+                  <th className={local.checkCol}>
+                    <span className="sr-only">Include</span>
+                  </th>
+                  <th>Rule</th>
+                  <th>Type</th>
+                  <th>Section</th>
+                  <th className={local.numCol}>Replaces</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {plan.proposed.map((p) => (
+                  <tr key={p.key}>
+                    <td>
+                      <input type="checkbox" checked={selected.has(p.key)} onChange={() => toggle(p.key)} />
+                    </td>
+                    <td>
+                      <div>{p.ruleName}</div>
+                      <div className={local.rowHint}>
+                        e.g. {p.sampleNames.slice(0, 3).join(", ")}
+                        {p.sampleNames.length > 3 ? ", …" : ""}
+                      </div>
+                    </td>
+                    <td>
+                      <code>{p.ruleType}</code>
+                    </td>
+                    <td>{p.sectionTitle}</td>
+                    <td className={local.numCol}>{p.replacesCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </fieldset>
 
@@ -201,11 +206,11 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
             These {providerLabel} collections classify into known buckets that don't have a Tinkerbell rule type yet.
             They'll be skipped by this migration; future Tinkerbell releases will add the missing rule types.
           </p>
-          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
+          <ul className={local.bullets}>
             {plan.future.map((f, i) => (
               <li key={`${f.bucket}-${f.sectionId}-${i}`}>
                 <strong>{f.bucket}</strong> in {f.sectionTitle} — {f.count} collection(s).{" "}
-                <span style={{ color: "var(--color-muted, #888)" }}>{f.note}</span>
+                <span className={local.muted}>{f.note}</span>
               </li>
             ))}
           </ul>
@@ -221,10 +226,10 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
             {deleteOriginals &&
               " Delete-originals only removes collections behind selected proposed rules, so these are safe."}
           </p>
-          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7, maxHeight: 220, overflowY: "auto" }}>
+          <ul className={local.bulletsScroll}>
             {plan.unmappable.map((u) => (
               <li key={u.ratingKey}>
-                {u.title} <span style={{ color: "var(--color-muted, #888)" }}>({u.sectionTitle})</span>
+                {u.title} <span className={local.muted}>({u.sectionTitle})</span>
               </li>
             ))}
           </ul>
@@ -235,13 +240,13 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
         <legend className={styles.groupTitle}>Run migration</legend>
         {planCanDeleteOriginals && (
           <>
-            <label className={styles.field} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <label className={`${styles.field} ${local.inlineField}`}>
               <input type="checkbox" checked={deleteOriginals} onChange={(e) => setDeleteOriginals(e.target.checked)} />
               <span>
                 Delete the {providerLabel}-managed collections behind the selected rules from Plex after creating them
               </span>
             </label>
-            <p className={styles.hint} style={{ color: "var(--color-warn, #c97a00)" }}>
+            <p className={`${styles.hint} ${local.warnHint}`}>
               Selected rules will replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
               {deleteOriginals
                 ? " Originals will be deleted from Plex — this cannot be undone."
@@ -251,7 +256,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
         )}
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleRun} disabled={running || selected.size === 0}>
-            {running ? "Starting..." : `Migrate ${selected.size} rule(s)`}
+            {running ? "Starting…" : `Migrate ${selected.size} rule(s)`}
           </button>
         </div>
       </fieldset>

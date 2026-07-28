@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
+import Banner from "#components/Banner";
 import { useToast } from "#components/Toast";
+import controls from "#/styles/controls.module.css";
 
 /**
  * Top-of-Rules-page nudge surfacing per-provider migration counts.
@@ -36,52 +38,30 @@ export default function MigrationBanner() {
   };
 
   return (
-    <div
-      style={{
-        margin: "0 0 16px 0",
-        padding: "12px 16px",
-        background: "rgba(74, 108, 247, 0.08)",
-        border: "1px solid rgba(74, 108, 247, 0.3)",
-        borderRadius: 6,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        lineHeight: 1.5,
-      }}
+    <Banner
+      variant="info"
+      actions={
+        <>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnPrimary} ${controls.btnSm}`}
+            onClick={() => navigate("/settings/migrate")}
+          >
+            Review
+          </button>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+            onClick={handleDismiss}
+            disabled={dismiss.isPending}
+          >
+            Dismiss
+          </button>
+        </>
+      }
     >
-      <div style={{ flex: 1 }}>
-        Tinkerbell can migrate <strong>{count}</strong> {labelText}-managed collection{count === 1 ? "" : "s"} into
-        Tinkerbell rules.
-      </div>
-      <button
-        type="button"
-        onClick={() => navigate("/settings/migrate")}
-        style={{
-          padding: "6px 14px",
-          background: "var(--accent)",
-          color: "#fff",
-          border: "1px solid var(--accent)",
-          borderRadius: 6,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        Review
-      </button>
-      <button
-        type="button"
-        onClick={handleDismiss}
-        style={{
-          padding: "6px 14px",
-          background: "transparent",
-          color: "var(--color-muted, #888)",
-          border: "1px solid var(--border-input)",
-          borderRadius: 6,
-          cursor: "pointer",
-        }}
-      >
-        Dismiss
-      </button>
-    </div>
+      Tinkerbell can migrate <strong>{count}</strong> {labelText}-managed collection{count === 1 ? "" : "s"} into
+      Tinkerbell rules.
+    </Banner>
   );
 }

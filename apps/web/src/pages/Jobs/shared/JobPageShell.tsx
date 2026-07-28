@@ -10,7 +10,7 @@ import type { Job } from "#pages/Jobs/types";
 import { getJobDescription } from "#pages/Jobs/descriptions";
 import { getJobFields } from "#pages/Jobs/fields";
 import { useJobActions } from "./useJobActions";
-import { formatDuration } from "./formatDuration";
+import { formatElapsed } from "#/format";
 
 interface Props {
   job: Job;
@@ -45,7 +45,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
   const status = job.lastRunStatus;
   const lastDuration =
-    latestRun && latestRun.status !== "running" ? formatDuration(latestRun.startedAt, latestRun.finishedAt) : null;
+    latestRun && latestRun.status !== "running" ? formatElapsed(latestRun.startedAt, latestRun.finishedAt) : null;
 
   return (
     <div ref={swipeRef} className={styles.jobDetail}>
@@ -55,7 +55,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
       <div className={styles.jobDetailHeader}>
         <div className={styles.jobDetailHeading}>
-          <h1 className={styles.heading}>{job.name}</h1>
+          <h2 className={styles.heading}>{job.name}</h2>
           {status && (
             <span className={styles.statusPill} data-status={status}>
               <span className={styles.statusDot} data-status={status} />
@@ -107,7 +107,9 @@ export default function JobPageShell({ job, actions, children }: Props) {
               ? `Remove ${job.name}? This will delete its config, run history, and every Because You Watched collection from Plex, then clear every shared user's sharing restrictions. Item-level Tinkerbell labels are kept (use Settings → Maintenance to clear those).`
               : `Remove ${job.name}? This will delete its config and run history. You can re-install it later from the Jobs page.`
           }
+          title={`Remove ${job.name}?`}
           confirmLabel="Remove"
+          danger
           onConfirm={() => {
             setConfirmRemove(false);
             uninstallMutation.mutate({ featureId: job.id });

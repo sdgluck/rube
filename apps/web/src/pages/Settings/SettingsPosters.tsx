@@ -145,10 +145,10 @@ export default function SettingsPosters() {
 
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
           <button type="button" className={styles.buttonSecondary} onClick={handleClearCache} disabled={clearing}>
-            {clearing ? "Clearing..." : "Clear cache"}
+            {clearing ? "Clearing…" : "Clear cache"}
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>

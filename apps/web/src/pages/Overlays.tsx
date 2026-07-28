@@ -5,6 +5,7 @@ import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "#lib/PosterCan
 import ConfirmModal from "#components/ConfirmModal";
 import FeatureStatusBanner from "#components/FeatureStatusBanner";
 import { PageSkeleton } from "#components/Skeleton";
+import ErrorState from "#components/ErrorState";
 import Spinner from "#components/Spinner";
 import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@tinkerbell/contracts";
 import styles from "./Overlays.module.css";
@@ -408,6 +409,15 @@ export default function Overlays() {
   const displayRatio = posterNatural.w > 0 && frameSize.w > 0 ? frameSize.w / posterNatural.w : 0;
 
   if (sectionsQuery.isLoading) return <PageSkeleton />;
+  if (sectionsQuery.error) {
+    return (
+      <ErrorState
+        title="Couldn't load Plex libraries"
+        error={sectionsQuery.error}
+        onRetry={() => sectionsQuery.refetch()}
+      />
+    );
+  }
 
   return (
     <div className={styles.root}>
@@ -621,6 +631,7 @@ export default function Overlays() {
                       >
                         <button
                           className={styles.badgeRemove}
+                          aria-label={`Remove ${POSITIONS.find((pos) => pos.id === box.position)?.label ?? "overlay"} overlay from layout`}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (box.id != null) removeConfigMutation.mutate({ id: box.id });
@@ -828,6 +839,7 @@ export default function Overlays() {
       {confirmClearOpen && (
         <ConfirmModal
           message={`Remove all ${configs.length} overlay${configs.length === 1 ? "" : "s"} from this section's layout? This won't change posters that have already been applied in Plex.`}
+          title="Clear overlay layout?"
           confirmLabel="Clear"
           danger
           onConfirm={() => clearConfigsMutation.mutate({ sectionId })}

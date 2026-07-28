@@ -81,7 +81,7 @@
 }
 
 .railLink:hover {
-  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 
@@ -91,7 +91,7 @@
 }
 
 .railLinkActive:hover {
-  background: var(--accent-hover, var(--accent));
+  background: var(--accent-hover);
   color: #fff;
 }
 
@@ -154,7 +154,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #28a745;
+  background: var(--status-ok-dot);
   margin-right: 5px;
   vertical-align: middle;
 }

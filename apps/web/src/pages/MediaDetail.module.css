@@ -59,18 +59,18 @@
 }
 
 .ratingHigh {
-  background: rgba(34, 197, 94, 0.12);
-  color: #15803d;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .ratingMid {
-  background: rgba(234, 179, 8, 0.14);
-  color: #a16207;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
 }
 
 .ratingLow {
-  background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .ratingHigh .ratingLabel,
@@ -152,7 +152,7 @@
 }
 
 .collectionLink {
-  color: var(--accent, #4a6cf7);
+  color: var(--accent);
   text-decoration: none;
   font-weight: 500;
 }
@@ -222,8 +222,8 @@
 }
 
 .optimizedBadge {
-  background: #d4edda !important;
-  color: #155724 !important;
+  background: var(--status-ok-bg) !important;
+  color: var(--status-ok-fg) !important;
 }
 
 /* ─── Stream rows ────────────────────────────────────────────────────────── */
@@ -249,13 +249,13 @@
 }
 
 .streamLabelVideo {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
 }
 
 .streamLabelAudio {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
 }
 
 .streamLabelSub {

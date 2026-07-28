@@ -170,10 +170,10 @@ export default function SettingsAi() {
 
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
           <button type="button" className={styles.button} onClick={handleTest} disabled={testing}>
-            {testing ? "Testing..." : "Test connection"}
+            {testing ? "Testing…" : "Test connection"}
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>

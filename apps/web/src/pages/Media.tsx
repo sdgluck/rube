@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { EMPTY } from "#/format";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
 import { MediaSkeleton } from "#components/Skeleton";
 import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
+import Pagination from "#components/Pagination";
+import SortableTh from "#components/SortableTh";
+import { useListParams } from "#hooks/useListParams";
 import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
-import { readEnumStorage } from "#/storage";
-import styles from "./Collections.module.css";
+import { readEnumStorage, writeStorage } from "#/storage";
+import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
 
 const VIEW_MODES = ["table", "grid"] as const;
@@ -82,7 +87,6 @@ const SORT_KEYS = [
   "container",
 ] as const;
 type SortKey = (typeof SORT_KEYS)[number];
-type SortDir = "asc" | "desc";
 
 interface ColumnDef {
   id: SortKey;
@@ -116,17 +120,17 @@ const ALL_COLUMNS: ColumnDef[] = [
   { id: "title", label: "Title", render: (item) => item.title },
   { id: "section", label: "Section", render: (item) => item.sectionTitle },
   { id: "type", label: "Type", render: (item) => item.type },
-  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : "\u2014") },
-  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || "\u2014" },
-  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || "\u2014" },
-  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || "\u2014" },
+  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY) },
+  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || EMPTY },
+  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || EMPTY },
+  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || EMPTY },
   {
     id: "audioChannels",
     label: "Channels",
     render: (item) =>
-      item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : "\u2014",
+      item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : EMPTY,
   },
-  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || "\u2014" },
+  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || EMPTY },
 ];
 
 const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
@@ -228,7 +232,7 @@ function ChildrenRows({
                     )}
                     {child.title}
                     {child.leafCount != null && (
-                      <span style={{ color: "#999", marginLeft: 6, fontSize: "0.85em" }}>
+                      <span className={mediaStyles.childEpisodeCount}>
                         ({child.leafCount} episode{child.leafCount !== 1 ? "s" : ""})
                       </span>
                     )}
@@ -258,17 +262,17 @@ export default function Media() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  const { sortKey, sortDir, page, setPage, toggleSort } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "title",
+    descFirst: ["year"],
+  });
+
   const sectionFilter = searchParams.get("section") ?? "";
   const typeFilter = searchParams.get("type") ?? "";
   const search = searchParams.get("q") ?? "";
-  const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("media-view", VIEW_MODES, "table"));
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
-  const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("media-sort-key", SORT_KEYS, "title"));
-  const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = localStorage.getItem("media-sort-dir");
-    return stored === "desc" ? "desc" : "asc";
-  });
 
   const resFilter = searchParams.get("res") ?? "";
   const vcodecFilter = searchParams.get("vcodec") ?? "";
@@ -355,23 +359,6 @@ export default function Media() {
     );
   }, [setSearchParams]);
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      const next = sortDir === "asc" ? "desc" : "asc";
-      setSortDir(next);
-      localStorage.setItem("media-sort-dir", next);
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-      localStorage.setItem("media-sort-key", key);
-      localStorage.setItem("media-sort-dir", "asc");
-    }
-    // Reset to first page on sort change
-    setParam("page", "");
-  };
-
-  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
-
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const toggleExpanded = useCallback((key: string) => {
     setExpandedRows((prev) => {
@@ -419,7 +406,9 @@ export default function Media() {
   const sections = sectionsQuery.data ?? [];
 
   if (mediaQuery.isLoading && !mediaQuery.data) return <MediaSkeleton />;
-  if (mediaQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media</div>;
+  if (mediaQuery.error && !mediaQuery.data) {
+    return <ErrorState title="Couldn't load media" error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />;
+  }
 
   return (
     <div>
@@ -429,7 +418,8 @@ export default function Media() {
         <input
           type="text"
           className={styles.searchInput}
-          placeholder="Search media..."
+          placeholder="Search media…"
+          aria-label="Search media"
           value={search}
           onChange={(e) => setParam("q", e.target.value)}
         />
@@ -501,7 +491,7 @@ export default function Media() {
             className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
             onClick={() => {
               setViewMode("table");
-              localStorage.setItem("media-view", "table");
+              writeStorage("media-view", "table");
             }}
           >
             Table
@@ -510,7 +500,7 @@ export default function Media() {
             className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
             onClick={() => {
               setViewMode("grid");
-              localStorage.setItem("media-view", "grid");
+              writeStorage("media-view", "grid");
             }}
           >
             Grid
@@ -596,10 +586,9 @@ export default function Media() {
             <thead>
               <tr>
                 {visibleColumns.map((col) => (
-                  <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id)}>
+                  <SortableTh key={col.id} sortKey={col.id} activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                     {col.label}
-                    {sortIndicator(col.id)}
-                  </th>
+                  </SortableTh>
                 ))}
               </tr>
             </thead>
@@ -646,27 +635,7 @@ export default function Media() {
         </div>
       )}
 
-      {total > PAGE_SIZE && (
-        <div className={styles.pagination}>
-          <button
-            className={styles.buttonSecondary}
-            disabled={page <= 1}
-            onClick={() => setParam("page", String(page - 1))}
-          >
-            Previous
-          </button>
-          <span className={styles.paginationInfo}>
-            Page {page} of {totalPages} ({total} items)
-          </span>
-          <button
-            className={styles.buttonSecondary}
-            disabled={page >= totalPages}
-            onClick={() => setParam("page", String(page + 1))}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} total={total} noun="items" onPageChange={setPage} />
     </div>
   );
 }

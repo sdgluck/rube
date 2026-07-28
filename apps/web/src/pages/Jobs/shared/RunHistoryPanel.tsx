@@ -3,7 +3,7 @@ import RelativeTime from "#components/RelativeTime";
 import EmptyState from "#components/EmptyState";
 import styles from "#pages/Jobs/Jobs.module.css";
 import StatusBadge from "./StatusBadge";
-import { formatDuration } from "./formatDuration";
+import { formatElapsed } from "#/format";
 import type { useJobActions } from "./useJobActions";
 
 interface Props {
@@ -15,10 +15,10 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
     <fieldset className={styles.detailSectionCapped}>
       <legend className={styles.detailSectionTitle}>Run History</legend>
       {runsQuery.isLoading ? (
-        <p>Loading runs...</p>
+        <p>Loading runs…</p>
       ) : runsQuery.data && runsQuery.data.length > 0 ? (
         <div className="table-scroll">
-          <table className={styles.table}>
+          <table className={styles.compactTable}>
             <thead>
               <tr>
                 <th>Status</th>
@@ -36,7 +36,7 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
                   <td className={styles.runMeta}>
                     <RelativeTime timestamp={run.startedAt} />
                   </td>
-                  <td className={styles.runMeta}>{formatDuration(run.startedAt, run.finishedAt)}</td>
+                  <td className={styles.runMeta}>{formatElapsed(run.startedAt, run.finishedAt)}</td>
                   <td>
                     <Link to={`/jobs/runs/${run.id}`} className={styles.runLink}>
                       View Log

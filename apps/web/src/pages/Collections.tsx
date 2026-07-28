@@ -8,16 +8,19 @@ import ConfirmModal from "#components/ConfirmModal";
 import BulkLabelsModal from "#components/BulkLabelsModal";
 import { CollectionsSkeleton } from "#components/Skeleton";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
+import Pagination from "#components/Pagination";
+import SortableTh from "#components/SortableTh";
+import { useListParams } from "#hooks/useListParams";
 import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
-import { readEnum, readEnumStorage } from "#/storage";
-import styles from "./Collections.module.css";
+import { readEnumStorage, writeStorage } from "#/storage";
+import styles from "#/styles/shared.module.css";
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
-type SortDir = "asc" | "desc";
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 const PAGE_SIZE = 50;
@@ -32,8 +35,11 @@ export default function Collections() {
   const ruleIdFilter = searchParams.get("ruleId") ?? (rawLabel.startsWith("Rule:") ? rawLabel.slice(5) : "");
   const search = searchParams.get("q") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const sortKey: SortKey = readEnum(searchParams.get("sort"), SORT_KEYS, "title");
-  const sortDir: SortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
+  const { sortKey, sortDir, toggleSort, setPage } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "title",
+    descFirst: ["addedAt", "childCount"],
+  });
   const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("collections-view", VIEW_MODES, "table"));
 
   const setParam = useCallback(
@@ -149,29 +155,6 @@ export default function Collections() {
     }
     return null;
   };
-
-  const toggleSort = (key: SortKey) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (sortKey === key) {
-          const newDir = sortDir === "asc" ? "desc" : "asc";
-          if (newDir === "asc") next.delete("dir");
-          else next.set("dir", newDir);
-        } else {
-          if (key === "title") next.delete("sort");
-          else next.set("sort", key);
-          next.delete("dir");
-        }
-        // Reset page on sort change
-        next.delete("page");
-        return next;
-      },
-      { replace: true },
-    );
-  };
-
-  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
   // Unique labels across selected collections
   const selectedLabels = [
@@ -307,8 +290,15 @@ export default function Collections() {
   };
 
   if (collectionsQuery.isLoading && !collectionsQuery.data) return <CollectionsSkeleton />;
-  if (collectionsQuery.error)
-    return <div className={`${styles.toast} ${styles.error}`}>Failed to load collections</div>;
+  if (collectionsQuery.error && !collectionsQuery.data) {
+    return (
+      <ErrorState
+        title="Couldn't load collections"
+        error={collectionsQuery.error}
+        onRetry={() => collectionsQuery.refetch()}
+      />
+    );
+  }
 
   return (
     <PullToRefresh
@@ -361,7 +351,8 @@ export default function Collections() {
           <input
             type="text"
             className={styles.searchInput}
-            placeholder="Search collections..."
+            placeholder="Search collections…"
+            aria-label="Search collections"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -396,7 +387,7 @@ export default function Collections() {
               className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
               onClick={() => {
                 setViewMode("table");
-                localStorage.setItem("collections-view", "table");
+                writeStorage("collections-view", "table");
               }}
             >
               Table
@@ -405,7 +396,7 @@ export default function Collections() {
               className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
               onClick={() => {
                 setViewMode("grid");
-                localStorage.setItem("collections-view", "grid");
+                writeStorage("collections-view", "grid");
               }}
             >
               Grid
@@ -461,25 +452,25 @@ export default function Collections() {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <th className={styles.sortable} onClick={() => toggleSort("title")}>
-                        Title{sortIndicator("title")}
-                      </th>
-                      <th className={styles.sortable} onClick={() => toggleSort("sectionTitle")}>
-                        Section{sortIndicator("sectionTitle")}
-                      </th>
-                      <th className={styles.sortable} onClick={() => toggleSort("childCount")}>
-                        Items{sortIndicator("childCount")}
-                      </th>
-                      <th className={styles.sortable} onClick={() => toggleSort("smart")}>
-                        Smart{sortIndicator("smart")}
-                      </th>
-                      <th className={styles.sortable} onClick={() => toggleSort("labels")}>
-                        Labels{sortIndicator("labels")}
-                      </th>
+                      <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Title
+                      </SortableTh>
+                      <SortableTh sortKey="sectionTitle" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Section
+                      </SortableTh>
+                      <SortableTh sortKey="childCount" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Items
+                      </SortableTh>
+                      <SortableTh sortKey="smart" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Smart
+                      </SortableTh>
+                      <SortableTh sortKey="labels" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Labels
+                      </SortableTh>
                       <th>Rule</th>
-                      <th className={styles.sortable} onClick={() => toggleSort("addedAt")}>
-                        Added{sortIndicator("addedAt")}
-                      </th>
+                      <SortableTh sortKey="addedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Added
+                      </SortableTh>
                       <th></th>
                     </tr>
                   </thead>
@@ -554,34 +545,16 @@ export default function Collections() {
               </div>
             )}
 
-            {total > PAGE_SIZE && (
-              <div className={styles.pagination}>
-                <button
-                  className={styles.buttonSecondary}
-                  disabled={page <= 1}
-                  onClick={() => setParam("page", String(page - 1))}
-                >
-                  Previous
-                </button>
-                <span className={styles.paginationInfo}>
-                  Page {page} of {totalPages} ({total} items)
-                </span>
-                <button
-                  className={styles.buttonSecondary}
-                  disabled={page >= totalPages}
-                  onClick={() => setParam("page", String(page + 1))}
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <Pagination page={page} totalPages={totalPages} total={total} noun="collections" onPageChange={setPage} />
           </>
         )}
 
         {pendingConfirm && (
           <ConfirmModal
+            title="Delete collection?"
             message={pendingConfirm.message}
             confirmLabel="Delete"
+            danger
             onConfirm={pendingConfirm.onConfirm}
             onCancel={() => setPendingConfirm(null)}
           />

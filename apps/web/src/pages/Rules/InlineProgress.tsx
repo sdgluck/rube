@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "#/trpc";
 import styles from "./Rules.module.css";
-import { formatDuration } from "./utils";
+import { formatDuration } from "#/format";
 
 interface InlineProgressProps {
   ruleId: string;

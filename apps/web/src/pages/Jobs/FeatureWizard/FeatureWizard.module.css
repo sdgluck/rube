@@ -1,39 +1,11 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  width: min(640px, 92vw);
-  max-height: 90vh;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.title {
-  margin: 0 0 8px;
-  font-size: 1.1rem;
-}
-
 .steps {
   display: flex;
   gap: 12px;
   font-size: 0.75rem;
   color: var(--text-muted);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .step,
@@ -48,9 +20,7 @@
 }
 
 .body {
-  padding: 16px 20px;
-  overflow-y: auto;
-  flex: 1;
+  min-height: 0;
 }
 
 .catalog {
@@ -165,15 +135,6 @@
 
 .summary dd {
   margin: 0;
-}
-
-.footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-surface);
 }
 
 .footerSpacer {

@@ -4,7 +4,7 @@ import { PreviewHubRow } from "#components/PreviewHubRow";
 import { trpc } from "#/trpc";
 import InlineProgress from "./InlineProgress";
 import styles from "./Rules.module.css";
-import { formatDuration } from "./utils";
+import { formatDuration } from "#/format";
 
 interface RuleDetailRowProps {
   ruleId: string;

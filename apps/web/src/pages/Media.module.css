@@ -46,7 +46,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 12px;
   min-width: 220px;
-  z-index: 100;
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -148,4 +148,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.childEpisodeCount {
+  color: var(--text-muted);
+  margin-left: 6px;
+  font-size: 0.85em;
 }

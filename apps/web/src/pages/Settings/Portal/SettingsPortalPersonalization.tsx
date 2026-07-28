@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
-import { formatDurationMs } from "#/utils";
+import { formatDuration } from "#/format";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import ErrorState from "#components/ErrorState";
 import styles from "../Personalization.module.css";
 
 type PendingAction = "enable" | "disable" | null;
@@ -68,6 +69,16 @@ export default function SettingsPersonalization() {
       onSuccess: ({ runId }) => onJobStarted(runId, "Reconcile users"),
       onError: (err) => addToast(err.message, "error"),
     });
+  }
+
+  if (statusQuery.error && !statusQuery.data) {
+    return (
+      <ErrorState
+        title="Couldn't load personalization status"
+        error={statusQuery.error}
+        onRetry={() => statusQuery.refetch()}
+      />
+    );
   }
 
   return (
@@ -147,8 +158,9 @@ export default function SettingsPersonalization() {
             const est = estimateQuery.data;
             if (!est) return `${base} Continue?`;
             const items = est.itemCount.toLocaleString();
-            return `${base} About ${items} items to label — estimated ~${formatDurationMs(est.estimatedSeconds * 1000)}. Continue?`;
+            return `${base} About ${items} items to label — estimated ~${formatDuration(est.estimatedSeconds * 1000)}. Continue?`;
           })()}
+          title="Enable personalization?"
           confirmLabel="Enable"
           onConfirm={runEnable}
           onCancel={() => setPending(null)}
@@ -157,7 +169,9 @@ export default function SettingsPersonalization() {
       {pending === "disable" && (
         <ConfirmModal
           message="This deletes all per-user collections (Because You Watched, etc.) and restores every user's previous sharing settings — leaving your server as if personalization was never enabled. Continue?"
+          title="Disable personalization?"
           confirmLabel="Disable"
+          danger
           onConfirm={runDisable}
           onCancel={() => setPending(null)}
         />

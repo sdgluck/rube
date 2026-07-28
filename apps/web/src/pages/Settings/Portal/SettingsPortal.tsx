@@ -14,7 +14,7 @@ export default function SettingsPortal() {
         title="Portal"
         description="The Sign-in-with-Plex portal where your users opt in and set their preferences."
       />
-      <nav className={styles.subTabs}>
+      <nav className={styles.subTabs} aria-label="Portal sections">
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
 import FadeImage from "#components/FadeImage";
 import styles from "#pages/Jobs/Jobs.module.css";
 
@@ -22,7 +23,14 @@ export default function GeneratedCollectionsPanel() {
         {total !== undefined && <span className={styles.runMeta}>{` — ${total} total`}</span>}
       </legend>
       {collectionsQuery.isLoading ? (
-        <p>Loading...</p>
+        <p>Loading…</p>
+      ) : collectionsQuery.error ? (
+        <ErrorState
+          inline
+          title="Couldn't load generated collections"
+          error={collectionsQuery.error}
+          onRetry={() => collectionsQuery.refetch()}
+        />
       ) : !collectionsQuery.data || collectionsQuery.data.length === 0 ? (
         <EmptyState
           icon="list"

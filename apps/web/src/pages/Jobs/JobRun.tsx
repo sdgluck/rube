@@ -5,30 +5,14 @@ import RelativeTime from "#components/RelativeTime";
 import { DetailSkeleton } from "#components/Skeleton";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
-
-function formatDuration(startMs: number, endMs?: number | null): string {
-  const diff = (endMs || Date.now()) - startMs;
-  const secs = Math.floor(diff / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  if (mins < 60) return `${mins}m ${remSecs}s`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ${mins % 60}m`;
-}
+import { formatDuration, formatElapsed } from "#/format";
 
 function formatEta(startMs: number, progress: number): string | null {
   if (progress <= 0 || progress >= 1) return null;
   const elapsed = Date.now() - startMs;
   const remaining = elapsed / progress - elapsed;
-  const secs = Math.ceil(remaining / 1000);
-  if (secs <= 0) return null;
-  if (secs < 60) return `~${secs}s remaining`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  if (mins < 60) return `~${mins}m ${remSecs}s remaining`;
-  const hours = Math.floor(mins / 60);
-  return `~${hours}h ${mins % 60}m remaining`;
+  if (remaining < 1000) return null;
+  return `~${formatDuration(remaining)} remaining`;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -120,7 +104,7 @@ export default function JobRun() {
       </Link>
 
       <div className={styles.runHeader}>
-        <h1 className={styles.runTitle}>Job Run</h1>
+        <h2 className={styles.runTitle}>Job Run</h2>
         <StatusBadge status={run.status} />
         {run.status === "running" && (
           <button
@@ -147,7 +131,7 @@ export default function JobRun() {
           </>
         )}
         <span className={styles.metaLabel}>Duration</span>
-        <span>{formatDuration(run.startedAt, run.finishedAt)}</span>
+        <span>{formatElapsed(run.startedAt, run.finishedAt)}</span>
         {run.status === "running" &&
           run.progress > 0 &&
           (() => {
@@ -177,7 +161,7 @@ export default function JobRun() {
         <input
           type="text"
           className={styles.logFilterInput}
-          placeholder="Filter log..."
+          placeholder="Filter log…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />

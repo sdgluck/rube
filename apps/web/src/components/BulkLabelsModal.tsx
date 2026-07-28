@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import confirmStyles from "./ConfirmModal.module.css";
-import collectionsStyles from "#pages/Collections.module.css";
+import { useState } from "react";
+import Modal from "./Modal";
+import styles from "./BulkLabelsModal.module.css";
+import shared from "#/styles/shared.module.css";
 
 interface Props {
   count: number;
@@ -9,23 +10,11 @@ interface Props {
   onCancel: () => void;
 }
 
+const MANAGED_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
+
 export default function BulkLabelsModal({ count, existingLabels, onApply, onCancel }: Props) {
-  const [exiting, setExiting] = useState(false);
   const [labelsToAdd, setLabelsToAdd] = useState("");
   const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
-
-  const handleClose = useCallback(() => {
-    setExiting(true);
-    setTimeout(() => onCancel(), 200);
-  }, [onCancel]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [handleClose]);
 
   const addList = labelsToAdd
     .split(",")
@@ -33,74 +22,71 @@ export default function BulkLabelsModal({ count, existingLabels, onApply, onCanc
     .filter(Boolean);
   const canApply = addList.length > 0 || labelsToRemove.size > 0;
 
+  const labelClass = (lbl: string) => {
+    const lower = lbl.toLowerCase();
+    if (MANAGED_LABELS.includes(lower)) return shared.labelTinkerbell;
+    if (lower.startsWith("user:")) return shared.labelUser;
+    return "";
+  };
+
   return (
-    <div className={`${confirmStyles.backdrop} ${exiting ? confirmStyles.backdropExiting : ""}`} onClick={handleClose}>
-      <div
-        className={`${confirmStyles.modal} ${exiting ? confirmStyles.modalExiting : ""}`}
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 520 }}
-      >
-        <h3 style={{ margin: "0 0 16px", fontSize: "1.05rem", fontWeight: 600 }}>
-          Edit labels on {count} collection{count !== 1 ? "s" : ""}
-        </h3>
-        <div className={collectionsStyles.labelEditorRow}>
-          <label>Add labels:</label>
-          <input
-            type="text"
-            autoFocus
-            className={collectionsStyles.labelEditorInput}
-            placeholder="Label1, Label2, ..."
-            value={labelsToAdd}
-            onChange={(e) => setLabelsToAdd(e.target.value)}
-          />
-        </div>
-        {existingLabels.length > 0 && (
-          <div className={collectionsStyles.labelEditorRow} style={{ marginTop: 12 }}>
-            <label>Remove labels:</label>
-            <div className={collectionsStyles.labelCheckboxList}>
-              {existingLabels.map((lbl) => (
-                <span key={lbl} className={collectionsStyles.labelCheckboxItem}>
-                  <input
-                    type="checkbox"
-                    checked={labelsToRemove.has(lbl)}
-                    onChange={() =>
-                      setLabelsToRemove((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(lbl)) next.delete(lbl);
-                        else next.add(lbl);
-                        return next;
-                      })
-                    }
-                  />
-                  <span
-                    className={`${collectionsStyles.label} ${
-                      ["tinkerbell", "generated", "becauseyouwatched"].includes(lbl.toLowerCase())
-                        ? collectionsStyles.labelTinkerbell
-                        : lbl.toLowerCase().startsWith("user:")
-                          ? collectionsStyles.labelUser
-                          : ""
-                    }`}
-                  >
-                    {lbl}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className={confirmStyles.actions} style={{ marginTop: 20 }}>
+    <Modal
+      open
+      onClose={onCancel}
+      size="md"
+      title={`Edit labels on ${count} collection${count !== 1 ? "s" : ""}`}
+      footer={
+        <>
+          <button type="button" className={styles.cancel} onClick={onCancel}>
+            Cancel
+          </button>
           <button
-            className={`${confirmStyles.btn} ${confirmStyles.btnPrimary}`}
+            type="button"
+            className={styles.apply}
             disabled={!canApply}
             onClick={() => onApply({ add: addList, remove: labelsToRemove })}
           >
             Apply
           </button>
-          <button className={`${confirmStyles.btn} ${confirmStyles.btnSecondary}`} onClick={handleClose}>
-            Cancel
-          </button>
-        </div>
+        </>
+      }
+    >
+      <div className={shared.labelEditorRow}>
+        <label htmlFor="bulk-labels-add">Add labels:</label>
+        <input
+          id="bulk-labels-add"
+          type="text"
+          autoFocus
+          className={shared.labelEditorInput}
+          placeholder="Label1, Label2, …"
+          value={labelsToAdd}
+          onChange={(e) => setLabelsToAdd(e.target.value)}
+        />
       </div>
-    </div>
+      {existingLabels.length > 0 && (
+        <div className={`${shared.labelEditorRow} ${styles.removeRow}`}>
+          <label>Remove labels:</label>
+          <div className={shared.labelCheckboxList}>
+            {existingLabels.map((lbl) => (
+              <label key={lbl} className={shared.labelCheckboxItem}>
+                <input
+                  type="checkbox"
+                  checked={labelsToRemove.has(lbl)}
+                  onChange={() =>
+                    setLabelsToRemove((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(lbl)) next.delete(lbl);
+                      else next.add(lbl);
+                      return next;
+                    })
+                  }
+                />
+                <span className={`${shared.label} ${labelClass(lbl)}`}>{lbl}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }

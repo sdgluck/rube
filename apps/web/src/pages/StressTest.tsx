@@ -3,23 +3,11 @@ import { trpc } from "#/trpc";
 import Spinner from "#components/Spinner";
 import SettingsPageHeader from "./Settings/SettingsPageHeader";
 import styles from "./StressTest.module.css";
-import shared from "./Collections.module.css";
-
-function formatDuration(startedAt: number, finishedAt: number | null): string {
-  if (!finishedAt) return "...";
-  const seconds = Math.round((finishedAt - startedAt) / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-}
-
-function formatDate(ms: number): string {
-  return new Date(ms).toLocaleString();
-}
+import shared from "#/styles/shared.module.css";
+import { EMPTY, formatElapsed, formatTime } from "#/format";
 
 function SpeedCell({ speed }: { speed: number | null }) {
-  if (speed == null) return <span style={{ color: "#999" }}>n/a</span>;
+  if (speed == null) return <span className={styles.speedNone}>{EMPTY}</span>;
   const cls = speed >= 1.0 ? styles.speedGood : speed >= 0.7 ? styles.speedWarn : styles.speedBad;
   return (
     <span className={styles.speedBar}>
@@ -198,7 +186,7 @@ export default function StressTest() {
                       <td>
                         <SpeedCell speed={step.avgTranscodeSpeed} />
                       </td>
-                      <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : "n/a"}</td>
+                      <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : EMPTY}</td>
                       <td>{step.errors}</td>
                     </tr>
                   );
@@ -231,12 +219,14 @@ export default function StressTest() {
                     className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
                     onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
                   >
-                    <td>{formatDate(run.startedAt)}</td>
+                    <td>{formatTime(run.startedAt)}</td>
                     <td>
                       <span className={styles.badge}>{run.config.mode}</span>
                     </td>
                     <td>{run.maxSessions ?? "?"}</td>
-                    <td className={styles.duration}>{formatDuration(run.startedAt, run.finishedAt)}</td>
+                    <td className={styles.duration}>
+                      {run.finishedAt ? formatElapsed(run.startedAt, run.finishedAt) : "…"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

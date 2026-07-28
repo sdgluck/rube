@@ -1,31 +1,12 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 20vh;
-  z-index: 300;
-  animation: backdropIn 200ms ease-out;
+/* The palette is a <Modal> with its own chrome: the search field replaces the
+ * dialog header, so padding is applied per-region rather than to the body. */
+.panel {
+  align-self: flex-start;
+  margin-top: 12vh;
 }
 
-.backdropExiting {
-  animation: backdropOut 200ms ease-in forwards;
-}
-
-.modal {
-  background: var(--bg-surface);
-  border-radius: 12px;
-  width: 90%;
-  max-width: 520px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
-  animation: modalIn 200ms ease-out;
-}
-
-.modalExiting {
-  animation: modalOut 200ms ease-in forwards;
+.panel > * {
+  padding: 0;
 }
 
 .inputWrapper {
@@ -39,6 +20,7 @@
   border: none;
   background: none;
   font-size: 1rem;
+  font-family: inherit;
   color: var(--text-primary);
   outline: none;
 }
@@ -68,14 +50,27 @@
   background: var(--bg-surface-hover);
 }
 
-.itemLabel {
+.itemRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   flex: 1;
+  min-width: 0;
 }
 
-.itemShortcut {
+.itemTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemSubtitle {
   font-size: 0.75rem;
+  font-family: var(--font-mono);
   color: var(--text-muted);
-  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .empty {
@@ -92,26 +87,4 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-}
-
-.itemSubtitle {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-left: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.itemRow {
-  display: flex;
-  align-items: baseline;
-  flex: 1;
-  min-width: 0;
-}
-
-.itemTitle {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

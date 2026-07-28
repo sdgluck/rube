@@ -19,7 +19,7 @@ export default function SettingsDatabases() {
         title="Databases"
         description="Optional metadata sources (OMDb, TMDb, MDBList) used to enrich your library."
       />
-      <nav className={styles.subTabs}>
+      <nav className={styles.subTabs} aria-label="Database services">
         {DATABASE_TAB_ORDER.map((id) => {
           const svc = DATABASE_SERVICES[id];
           return (

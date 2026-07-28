@@ -1,4 +1,5 @@
 import SettingsPageHeader from "./SettingsPageHeader";
+import local from "./SettingsCredits.module.css";
 
 type Credit = {
   name: string;
@@ -91,25 +92,23 @@ const SECTIONS: Section[] = [
 
 export default function SettingsCredits() {
   return (
-    <div style={{ maxWidth: 720 }}>
+    <div className={local.page}>
       <SettingsPageHeader
         title="Credits"
         description="Tinkerbell is built on the work of many open-source projects. Thanks to all the maintainers below."
       />
 
       {SECTIONS.map((section) => (
-        <section key={section.title} style={{ marginBottom: 28 }}>
-          <h4 style={{ marginBottom: section.blurb ? 6 : 10 }}>{section.title}</h4>
-          {section.blurb && (
-            <p style={{ color: "var(--color-muted, #888)", margin: "0 0 12px 0", lineHeight: 1.5 }}>{section.blurb}</p>
-          )}
-          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
+        <section key={section.title} className={local.section}>
+          <h3 className={section.blurb ? local.titleWithBlurb : local.title}>{section.title}</h3>
+          {section.blurb && <p className={local.blurb}>{section.blurb}</p>}
+          <ul className={local.list}>
             {section.items.map((item) => (
               <li key={item.url}>
                 <a href={item.url} target="_blank" rel="noopener noreferrer">
                   {item.name}
                 </a>
-                {item.note && <span style={{ color: "var(--color-muted, #888)" }}> — {item.note}</span>}
+                {item.note && <span className={local.note}> — {item.note}</span>}
               </li>
             ))}
           </ul>

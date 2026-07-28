@@ -21,7 +21,7 @@
 
 @keyframes rowHighlightPulse {
   0% {
-    background: var(--accent-soft, rgba(255, 196, 0, 0.28));
+    background: var(--accent-soft);
   }
   100% {
     background: transparent;
@@ -58,31 +58,31 @@
 
 .typeAi {
   background: rgba(155, 89, 182, 0.1);
-  color: #8e44ad;
+  color: var(--status-special-fg);
   border-color: rgba(155, 89, 182, 0.2);
 }
 
 .typeCriteria {
   background: rgba(39, 174, 96, 0.1);
-  color: #1e8449;
+  color: var(--status-ok-fg);
   border-color: rgba(39, 174, 96, 0.2);
 }
 
 .typeImdb {
   background: rgba(241, 196, 15, 0.12);
-  color: #b7791f;
+  color: var(--status-warn-fg);
   border-color: rgba(241, 196, 15, 0.25);
 }
 
 .typeRt {
   background: rgba(231, 76, 60, 0.1);
-  color: #c0392b;
+  color: var(--status-error-fg);
   border-color: rgba(231, 76, 60, 0.2);
 }
 
 .typeSeerr {
   background: rgba(52, 152, 219, 0.1);
-  color: #2874a6;
+  color: var(--status-info-fg);
   border-color: rgba(52, 152, 219, 0.2);
 }
 
@@ -229,13 +229,13 @@ td.previewBlockCell {
 }
 
 .actionBtnDanger {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .actionBtnDanger:hover:not(:disabled) {
-  background: #dc3545;
+  background: var(--danger);
   color: #fff;
-  border-color: #dc3545;
+  border-color: var(--danger);
 }
 
 .actionsDivider {
@@ -420,7 +420,7 @@ td.previewBlockCell {
 .search:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.12);
+  box-shadow: var(--input-focus-ring);
 }
 
 .segmented {
@@ -563,11 +563,11 @@ td.previewBlockCell {
 }
 
 .statusOk {
-  color: var(--text-success, #1e8449);
+  color: var(--text-success);
 }
 
 .statusError {
-  color: var(--text-error, #c0392b);
+  color: var(--text-error);
   cursor: pointer;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
@@ -665,7 +665,7 @@ td.previewBlockCell {
 }
 
 .logTail {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-muted);
   background: var(--bg-input);

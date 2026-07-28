@@ -38,6 +38,8 @@ export default function SectionsRow({ selected, onChange }: Props) {
             </div>
             <div className={styles.fieldHelp}>{summary}</div>
           </>
+        ) : sectionsQuery.error ? (
+          <span className={styles.fieldHelp}>Couldn&rsquo;t load Plex libraries — {sectionsQuery.error.message}</span>
         ) : (
           <span className={styles.fieldHelp}>Configure Plex first</span>
         )}

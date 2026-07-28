@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
+import ErrorState from "#components/ErrorState";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
@@ -39,34 +40,36 @@ export default function ArrsServiceForm({ config, runTest }: Props) {
 
   useUnsavedChanges(isDirty);
 
-  const handleTest = async (): Promise<boolean> => {
+  /** Test never writes config — see the note on handleSave. */
+  const handleTest = async () => {
     if (!url || !apiKey) {
       addToast("Both URL and API key are required", "error");
-      return false;
+      return;
     }
     setTesting(true);
     try {
-      const message = await runTest({ url, api_key: apiKey });
-      addToast(message, "success");
-      return true;
+      addToast(await runTest({ url, api_key: apiKey }), "success");
     } catch (err) {
       addToast(`Connection test failed: ${(err as Error).message}`, "error");
-      return false;
     } finally {
       setTesting(false);
       utils.health.status.invalidate();
     }
   };
 
+  /**
+   * Save always saves.
+   *
+   * This used to run a connection test first and refuse to save when it failed,
+   * which made it impossible to enter credentials for a service that happens to
+   * be down — and emitted two toasts on the way. The other two service forms
+   * (Databases, Notifications) saved unconditionally, so the same-looking button
+   * behaved differently in three places. A failed reachability check is now a
+   * warning, not a veto.
+   */
   const handleSave = async () => {
     setSaving(true);
     try {
-      const ok = await handleTest();
-      if (!ok) {
-        addToast(`${config.serviceName} connection failed — settings not saved`, "error");
-        setSaving(false);
-        return;
-      }
       await saveConfigMutation.mutateAsync({
         [config.urlConfigKey]: url,
         [config.apiKeyConfigKey]: apiKey,
@@ -77,11 +80,16 @@ export default function ArrsServiceForm({ config, runTest }: Props) {
       addToast(`Failed to save ${config.serviceName} settings`, "error");
     } finally {
       setSaving(false);
+      utils.health.status.invalidate();
     }
   };
 
   if (configQuery.isLoading) return <FormSkeleton rows={2} />;
-  if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
+  if (configQuery.error) {
+    return (
+      <ErrorState title="Couldn't load settings" error={configQuery.error} onRetry={() => configQuery.refetch()} />
+    );
+  }
 
   return (
     <div className={styles.form}>
@@ -109,10 +117,10 @@ export default function ArrsServiceForm({ config, runTest }: Props) {
         </label>
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
           <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
-            {testing ? "Testing..." : "Test Connection"}
+            {testing ? "Testing…" : "Test Connection"}
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>

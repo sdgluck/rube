@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import ConfirmModal from "#components/ConfirmModal";
 import DropdownButton from "#components/DropdownButton";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
 import RuleWizard, {
   type AiNameStyle,
   type AiVibe,
@@ -13,7 +14,7 @@ import RuleWizard, {
 import { RulesSkeleton } from "#components/Skeleton";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
-import shared from "#pages/Collections.module.css";
+import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import BulkActionsBar from "./BulkActionsBar";
 import BulkEditModal from "./BulkEditModal";
@@ -505,6 +506,9 @@ export default function Rules() {
   }, [form]);
 
   if (rulesQuery.isLoading) return <RulesSkeleton />;
+  if (rulesQuery.error) {
+    return <ErrorState title="Couldn't load rules" error={rulesQuery.error} onRetry={() => rulesQuery.refetch()} />;
+  }
 
   const allSelected = rules.length > 0 && rules.every((r) => selected.has(r.id));
 
@@ -670,8 +674,10 @@ export default function Rules() {
 
       {pendingConfirm && (
         <ConfirmModal
+          title="Delete rule?"
           message={pendingConfirm.message}
           confirmLabel="Delete"
+          danger
           onConfirm={pendingConfirm.onConfirm}
           onCancel={() => setPendingConfirm(null)}
         />

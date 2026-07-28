@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import Modal from "#components/Modal";
 import Spinner from "#components/Spinner";
 import styles from "../Overlays.module.css";
 
@@ -30,68 +31,24 @@ export function ImportLayoutModal({
   onImport,
 }: ImportLayoutModalProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
-  if (!open) return null;
+
   return (
-    <div className={styles.modalBackdrop} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Import layout</h3>
-          <button className={styles.modalClose} onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <p className={styles.modalHint} style={{ textAlign: "left" }}>
-          Choose a JSON file exported from this page, or paste its contents.
-        </p>
-        <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onPickFile(f);
-              e.target.value = "";
-            }}
-          />
-          <button className={styles.smallBtn} onClick={() => fileRef.current?.click()}>
-            Choose file…
-          </button>
-        </div>
-        <textarea
-          className={styles.input}
-          value={text}
-          onChange={(e) => onTextChange(e.target.value)}
-          placeholder='{"version":1,"configs":[…]}'
-          rows={8}
-          style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", resize: "vertical" }}
-        />
-        <div className={styles.checkRow}>
-          <label className={styles.checkLabel}>
-            <input
-              type="radio"
-              name="importMode"
-              checked={mode === "replace"}
-              onChange={() => onModeChange("replace")}
-            />
-            Replace ({existingCount} existing will be removed)
-          </label>
-          <label className={styles.checkLabel}>
-            <input type="radio" name="importMode" checked={mode === "append"} onChange={() => onModeChange("append")} />
-            Append to existing
-          </label>
-        </div>
-        {error && (
-          <p className={styles.fieldHint} style={{ color: "#dc3545" }}>
-            {error}
-          </p>
-        )}
-        <div className={styles.modalActions}>
-          <button className={styles.smallBtn} onClick={onClose}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Import layout"
+      size="md"
+      footer={
+        <>
+          <button type="button" className={styles.smallBtn} onClick={onClose}>
             Cancel
           </button>
-          <button className={styles.actionBtnPrimary} disabled={!text.trim() || importing} onClick={onImport}>
+          <button
+            type="button"
+            className={styles.actionBtnPrimary}
+            disabled={!text.trim() || importing}
+            onClick={onImport}
+          >
             {importing ? (
               <>
                 <Spinner size="xs" /> Importing…
@@ -100,8 +57,49 @@ export function ImportLayoutModal({
               "Import"
             )}
           </button>
-        </div>
+        </>
+      }
+    >
+      <p className={styles.modalHintStart}>Choose a JSON file exported from this page, or paste its contents.</p>
+      <div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className={styles.hiddenFileInput}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onPickFile(f);
+            e.target.value = "";
+          }}
+        />
+        <button type="button" className={styles.smallBtn} onClick={() => fileRef.current?.click()}>
+          Choose file…
+        </button>
       </div>
-    </div>
+      <textarea
+        className={`${styles.input} ${styles.importTextarea}`}
+        value={text}
+        onChange={(e) => onTextChange(e.target.value)}
+        placeholder='{"version":1,"configs":[…]}'
+        rows={8}
+        aria-label="Layout JSON"
+      />
+      <div className={styles.checkRow}>
+        <label className={styles.checkLabel}>
+          <input type="radio" name="importMode" checked={mode === "replace"} onChange={() => onModeChange("replace")} />
+          Replace ({existingCount} existing will be removed)
+        </label>
+        <label className={styles.checkLabel}>
+          <input type="radio" name="importMode" checked={mode === "append"} onChange={() => onModeChange("append")} />
+          Append to existing
+        </label>
+      </div>
+      {error && (
+        <p className={styles.fieldError} role="alert">
+          {error}
+        </p>
+      )}
+    </Modal>
   );
 }

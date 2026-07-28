@@ -1,0 +1,50 @@
+.planTable {
+  composes: table from "../../styles/shared.module.css";
+  margin-top: 8px;
+}
+
+.checkCol {
+  width: 32px;
+}
+
+/* Counts read better right-aligned and in tabular figures. */
+.numCol {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowHint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.warnHint {
+  color: var(--text-warn);
+}
+
+.bullets {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.bulletsTight {
+  composes: bullets;
+  margin-bottom: 12px;
+}
+
+.bulletsScroll {
+  composes: bullets;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.inlineField {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}

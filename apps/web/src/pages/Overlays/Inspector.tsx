@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { EMPTY } from "#/format";
 import type { BadgeStyle, ConditionalRule, OverlayType } from "@tinkerbell/contracts";
 import styles from "../Overlays.module.css";
 import { COLOR_PRESETS, FONT_SIZE_OPTIONS, OVERLAY_CATALOG, SHAPE_OPTIONS } from "./constants";
@@ -71,7 +72,7 @@ export function Inspector({
           >
             ▼
           </button>
-          <button className={styles.iconBtn} onClick={onClose} title="Close">
+          <button className={styles.iconBtn} onClick={onClose} title="Close" aria-label="Close inspector">
             ×
           </button>
         </div>
@@ -195,7 +196,7 @@ export function Inspector({
                 value={rule.minImdb ?? ""}
                 onChange={(e) => onPatchRule({ minImdb: e.target.value ? parseFloat(e.target.value) : undefined })}
                 className={styles.numberInput}
-                placeholder="—"
+                placeholder={EMPTY}
               />
             </div>
           )}
@@ -210,7 +211,7 @@ export function Inspector({
                 value={rule.minRt ?? ""}
                 onChange={(e) => onPatchRule({ minRt: e.target.value ? parseInt(e.target.value, 10) : undefined })}
                 className={styles.numberInput}
-                placeholder="—"
+                placeholder={EMPTY}
               />
               <span>%</span>
             </div>

@@ -1,9 +1,10 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA } from "#/version";
 import { NAV_SECTIONS, type NavMetric } from "#/nav";
-import styles from "#pages/Jobs/Jobs.module.css";
+import { modChord } from "#components/Kbd";
+import styles from "./Sidebar.module.css";
 
 export function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {
@@ -29,10 +30,18 @@ export function SidebarHealthDot() {
     colorClass = "health-dot-orange";
   }
 
+  const summary =
+    errorCount === 0
+      ? `All ${withStatus.length} integrations healthy`
+      : `${errorCount} of ${withStatus.length} integrations failing`;
+
   return (
-    <Link to="/settings/health" className="health-dot-link">
+    // The tooltip is CSS :hover *and* :focus-visible so it's reachable by
+    // keyboard; the summary in aria-label carries the same information for
+    // screen readers and touch, where a hover tooltip never appears.
+    <Link to="/settings/health" className="health-dot-link" aria-label={`${summary} — view health`}>
       <span className={`health-dot ${colorClass}`} />
-      <div className="health-tooltip">
+      <div className="health-tooltip" aria-hidden="true">
         <div className="health-tooltip-list">
           {withStatus.map((s) => (
             <div key={s.service} className="health-tooltip-row">
@@ -91,7 +100,6 @@ function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMet
 }
 
 function SidebarActiveJobs() {
-  const navigate = useNavigate();
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
   const cancelMutation = trpc.jobs.cancel.useMutation({
     onSuccess: () => activeRunsQuery.refetch(),
@@ -104,17 +112,22 @@ function SidebarActiveJobs() {
     <div className={styles.sidebarJobs}>
       <div className={styles.sidebarJobsTitle}>Running</div>
       {runs.map((run) => (
-        <div key={run.id} className={styles.sidebarJob} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
+        <div key={run.id} className={styles.sidebarJob}>
           <Spinner size="sm" variant="inverse" />
-          <span className={styles.sidebarJobName}>{run.jobName}</span>
-          {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
+          {/* A real link, not a div with onClick: focusable, middle-clickable,
+              and announced as a link. */}
+          <Link to={`/jobs/runs/${run.id}`} className={styles.sidebarJobLink}>
+            <span className={styles.sidebarJobName}>{run.jobName}</span>
+            {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
+          </Link>
           <button
             className={styles.sidebarCancel}
             onClick={(e) => {
               e.stopPropagation();
               cancelMutation.mutate({ runId: run.id });
             }}
-            title="Cancel"
+            title={`Cancel ${run.jobName}`}
+            aria-label={`Cancel ${run.jobName}`}
           >
             &times;
           </button>
@@ -125,12 +138,10 @@ function SidebarActiveJobs() {
 }
 
 type SidebarProps = {
-  open: boolean;
-  onClose: () => void;
   onOpenPalette: () => void;
 };
 
-export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) {
+export default function Sidebar({ onOpenPalette }: SidebarProps) {
   const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
@@ -139,36 +150,35 @@ export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) 
   const metrics = metricsQuery.data;
 
   return (
-    <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
+    <aside className="sidebar">
       <h1 className="sidebar-title">
         Tinkerbell
         {IS_BETA && (
-          <Link to="/changelog" className="version-pill" title={`v${VERSION} — view changelog`} onClick={onClose}>
+          <Link to="/changelog" className="version-pill" title={`v${VERSION} — view changelog`}>
             beta
           </Link>
         )}
         <SidebarHealthDot />
       </h1>
-      <Link to="/changelog" className="sidebar-version" onClick={onClose}>
+      <Link to="/changelog" className="sidebar-version">
         v{VERSION}
       </Link>
       <button
         type="button"
         className="sidebar-search"
-        onClick={() => {
-          onClose();
-          onOpenPalette();
-        }}
-        title="Search (⌘K)"
+        onClick={() => onOpenPalette()}
+        title={`Search (${modChord("K")})`}
       >
         <span className="sidebar-search-icon" aria-hidden="true">
           ⌕
         </span>
         <span className="sidebar-search-label">Search…</span>
-        <span className="sidebar-search-kbd">⌘K</span>
+        <span className="sidebar-search-kbd" aria-hidden="true">
+          {modChord("K")}
+        </span>
       </button>
       <hr className="sidebar-search-divider" />
-      <nav>
+      <nav aria-label="Main">
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="nav-section">
             <div className="nav-section-title">{section.label}</div>
@@ -177,7 +187,6 @@ export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) 
                 key={item.to}
                 to={item.to}
                 className={item.metric ? "nav-link nav-link-with-metric" : "nav-link"}
-                onClick={onClose}
               >
                 <span className="nav-link-label">{item.label}</span>
                 {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}

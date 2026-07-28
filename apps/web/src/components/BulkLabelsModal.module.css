@@ -1,0 +1,11 @@
+.removeRow {
+  margin-top: 12px;
+}
+
+.apply {
+  composes: btn btnPrimary from "../styles/controls.module.css";
+}
+
+.cancel {
+  composes: btn btnSecondary from "../styles/controls.module.css";
+}

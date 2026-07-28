@@ -10,7 +10,7 @@
 }
 
 .versionLine {
-  color: var(--color-muted, #888);
+  color: var(--text-muted);
   margin: 0 0 24px 0;
   font-size: 0.9rem;
 }
@@ -24,7 +24,7 @@
 .entry h3 {
   margin-top: 20px;
   font-size: 1rem;
-  color: var(--color-muted, #aaa);
+  color: var(--text-muted);
 }
 
 .entry ul {

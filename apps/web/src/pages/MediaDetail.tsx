@@ -3,85 +3,20 @@ import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
 import useSwipeBack from "#hooks/useSwipeBack";
-import styles from "./Collections.module.css";
+import styles from "#/styles/shared.module.css";
+import {
+  EMPTY,
+  formatBitrate,
+  formatChannels,
+  formatCodec,
+  formatFileSize,
+  formatRuntime,
+  formatSamplingRate,
+} from "#/format";
 import mediaStyles from "./MediaDetail.module.css";
 
-function formatCodec(codec: string | undefined): string {
-  if (!codec) return "—";
-  const map: Record<string, string> = {
-    h264: "H.264",
-    hevc: "HEVC",
-    h265: "HEVC",
-    vp9: "VP9",
-    av1: "AV1",
-    mpeg4: "MPEG-4",
-    vc1: "VC-1",
-    mpeg2video: "MPEG-2",
-    aac: "AAC",
-    ac3: "AC3",
-    eac3: "EAC3",
-    dca: "DTS",
-    "dca-ma": "DTS-HD MA",
-    truehd: "TrueHD",
-    flac: "FLAC",
-    mp3: "MP3",
-    opus: "Opus",
-    vorbis: "Vorbis",
-    pcm: "PCM",
-    pcm_s16le: "PCM",
-    pcm_s24le: "PCM 24-bit",
-    subrip: "SRT",
-    srt: "SRT",
-    ass: "ASS",
-    ssa: "SSA",
-    mov_text: "TX3G",
-    pgssub: "PGS",
-    dvd_subtitle: "VobSub",
-    hdmv_pgs_subtitle: "PGS",
-    webvtt: "WebVTT",
-  };
-  return map[codec.toLowerCase()] || codec.toUpperCase();
-}
-
-function formatChannels(ch: number | undefined): string {
-  if (!ch) return "";
-  if (ch === 8) return "7.1";
-  if (ch === 6) return "5.1";
-  if (ch === 2) return "Stereo";
-  if (ch === 1) return "Mono";
-  return `${ch}ch`;
-}
-
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes) return "—";
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
-  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
-  return `${(bytes / 1e3).toFixed(0)} KB`;
-}
-
-function formatBitrate(kbps: number | undefined): string {
-  if (!kbps) return "—";
-  if (kbps >= 1000) return `${(kbps / 1000).toFixed(1)} Mbps`;
-  return `${Math.round(kbps)} kbps`;
-}
-
-function formatDuration(ms: number | undefined): string {
-  if (!ms) return "—";
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s}s`;
-}
-
-function formatSamplingRate(rate: number | undefined): string {
-  if (!rate) return "";
-  return `${(rate / 1000).toFixed(1)} kHz`;
-}
-
 function fileName(path: string | undefined): string {
-  if (!path) return "—";
+  if (!path) return EMPTY;
   const parts = path.split("/");
   return parts[parts.length - 1];
 }
@@ -141,7 +76,7 @@ export default function MediaDetail() {
             {[
               item.year && String(item.year),
               item.contentRating,
-              item.duration && formatDuration(item.duration),
+              item.duration && formatRuntime(item.duration),
               item.studio,
               item.type && item.type[0].toUpperCase() + item.type.slice(1),
               item.addedAt && `Added ${new Date(item.addedAt * 1000).toLocaleDateString()}`,

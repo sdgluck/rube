@@ -1,14 +1,17 @@
-import { useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
 import { EventsSkeleton } from "#components/Skeleton";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
+import { useListParams } from "#hooks/useListParams";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
+import Pagination from "#components/Pagination";
 import PullToRefresh from "#components/PullToRefresh";
 import RelativeTime from "#components/RelativeTime";
-import { formatDurationMs, stripDurationFromMessage } from "#/utils";
-import sharedStyles from "./Collections.module.css";
+import SortableTh from "#components/SortableTh";
+import { formatDuration } from "#/format";
+import { stripDurationFromMessage } from "#/utils";
+import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Events.module.css";
 
 const BADGE_MAP: Record<string, { label: string; className: string }> = {
@@ -19,69 +22,25 @@ const BADGE_MAP: Record<string, { label: string; className: string }> = {
 };
 
 const PAGE_SIZE = 50;
-
-type SortKey = "timestamp" | "type" | "message";
-type SortDir = "asc" | "desc";
+const SORT_KEYS = ["timestamp", "type", "message"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
 
 export default function Events() {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const typeFilter = searchParams.get("type") ?? "";
-  const search = searchParams.get("q") ?? "";
-  const page = Math.max(1, Number(searchParams.get("page")) || 1);
-
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    const stored = localStorage.getItem("events-sort-key");
-    return stored === "type" || stored === "message" || stored === "timestamp" ? stored : "timestamp";
-  });
-  const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = localStorage.getItem("events-sort-dir");
-    return stored === "asc" ? "asc" : "desc";
+  const { sortKey, sortDir, page, param, setParam, setParams, setPage, toggleSort } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "timestamp",
+    defaultSortDir: "desc",
+    descFirst: ["timestamp"],
   });
 
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (value) {
-            next.set(key, value);
-          } else {
-            next.delete(key);
-          }
-          if (key !== "page") next.delete("page");
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      const next = sortDir === "asc" ? "desc" : "asc";
-      setSortDir(next);
-      localStorage.setItem("events-sort-dir", next);
-    } else {
-      setSortKey(key);
-      setSortDir(key === "timestamp" ? "desc" : "asc");
-      localStorage.setItem("events-sort-key", key);
-      localStorage.setItem("events-sort-dir", key === "timestamp" ? "desc" : "asc");
-    }
-    setParam("page", "");
-  };
-
-  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
-
+  const typeFilter = param("type");
+  const search = param("q");
   const debouncedSearch = useDebouncedValue(search);
-
-  const offset = (page - 1) * PAGE_SIZE;
 
   const query = trpc.events.list.useQuery(
     {
       limit: PAGE_SIZE,
-      offset,
+      offset: (page - 1) * PAGE_SIZE,
       type: typeFilter || undefined,
       search: debouncedSearch || undefined,
       sort: sortKey,
@@ -96,8 +55,12 @@ export default function Events() {
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const eventTypes = typesQuery.data ?? [];
+  const isFiltered = !!(typeFilter || search);
 
   if (query.isLoading && !query.data) return <EventsSkeleton />;
+  if (query.error && !query.data) {
+    return <ErrorState title="Couldn't load events" error={query.error} onRetry={() => query.refetch()} />;
+  }
 
   return (
     <PullToRefresh
@@ -112,11 +75,17 @@ export default function Events() {
           <input
             type="text"
             className={sharedStyles.searchInput}
-            placeholder="Search events..."
+            placeholder="Search events…"
+            aria-label="Search events"
             value={search}
             onChange={(e) => setParam("q", e.target.value)}
           />
-          <select className={sharedStyles.select} value={typeFilter} onChange={(e) => setParam("type", e.target.value)}>
+          <select
+            className={sharedStyles.select}
+            value={typeFilter}
+            aria-label="Filter by event type"
+            onChange={(e) => setParam("type", e.target.value)}
+          >
             <option value="">All types</option>
             {eventTypes.map((t) => {
               const badge = BADGE_MAP[t];
@@ -130,22 +99,43 @@ export default function Events() {
         </div>
 
         {events.length === 0 ? (
-          <EmptyState icon="bell" title="No events found" />
+          isFiltered ? (
+            <EmptyState
+              icon="search"
+              title="No events match your filters"
+              description="Try a different search term or event type."
+              action={
+                <button
+                  type="button"
+                  className={sharedStyles.buttonSecondary}
+                  onClick={() => setParams({ q: "", type: "" })}
+                >
+                  Clear filters
+                </button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="bell"
+              title="No events yet"
+              description="Job runs and health checks record their outcomes here."
+            />
+          )
         ) : (
           <>
             <div className="table-scroll">
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("timestamp")}>
-                      Time{sortIndicator("timestamp")}
-                    </th>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("type")}>
-                      Type{sortIndicator("type")}
-                    </th>
-                    <th className={sharedStyles.sortable} onClick={() => toggleSort("message")}>
-                      Message{sortIndicator("message")}
-                    </th>
+                    <SortableTh sortKey="timestamp" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                      Time
+                    </SortableTh>
+                    <SortableTh sortKey="type" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                      Type
+                    </SortableTh>
+                    <SortableTh sortKey="message" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                      Message
+                    </SortableTh>
                   </tr>
                 </thead>
                 <tbody>
@@ -170,7 +160,7 @@ export default function Events() {
                             ? stripDurationFromMessage(event.message)
                             : event.message}
                           {event.count > 1 && event.avgDurationMs != null && (
-                            <span className={styles.avgDuration}> (avg {formatDurationMs(event.avgDurationMs)})</span>
+                            <span className={styles.avgDuration}> (avg {formatDuration(event.avgDurationMs)})</span>
                           )}
                         </td>
                       </tr>
@@ -180,27 +170,7 @@ export default function Events() {
               </table>
             </div>
 
-            {total > PAGE_SIZE && (
-              <div className={sharedStyles.pagination}>
-                <button
-                  className={sharedStyles.buttonSecondary}
-                  disabled={page <= 1}
-                  onClick={() => setParam("page", String(page - 1))}
-                >
-                  Previous
-                </button>
-                <span className={sharedStyles.paginationInfo}>
-                  Page {page} of {totalPages} ({total} events)
-                </span>
-                <button
-                  className={sharedStyles.buttonSecondary}
-                  disabled={page >= totalPages}
-                  onClick={() => setParam("page", String(page + 1))}
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <Pagination page={page} totalPages={totalPages} total={total} noun="events" onPageChange={setPage} />
           </>
         )}
       </div>

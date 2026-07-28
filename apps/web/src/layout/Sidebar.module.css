@@ -1,0 +1,81 @@
+/* Sidebar chrome that isn't in App.css: the "Running" active-jobs list.
+ * Lives here rather than in the Jobs page stylesheet, which the layout
+ * has no business importing. */
+
+.sidebarJobs {
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebarJobsTitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+
+.sidebarJob {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  transition: background 0.15s;
+}
+
+.sidebarJobLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sidebarJobLink:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sidebarJob:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebarJobName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebarJobProgress {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.sidebarCancel {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sidebarCancel:hover {
+  color: var(--status-error-dot);
+}
