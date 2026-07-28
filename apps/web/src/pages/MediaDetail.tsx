@@ -3,7 +3,7 @@ import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
 import useSwipeBack from "#hooks/useSwipeBack";
-import styles from "./Collections.module.css";
+import styles from "#/styles/shared.module.css";
 import mediaStyles from "./MediaDetail.module.css";
 
 function formatCodec(codec: string | undefined): string {

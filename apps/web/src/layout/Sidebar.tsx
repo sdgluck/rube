@@ -3,7 +3,7 @@ import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA } from "#/version";
 import { NAV_SECTIONS, type NavMetric } from "#/nav";
-import styles from "#pages/Jobs/Jobs.module.css";
+import styles from "./Sidebar.module.css";
 
 export function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {

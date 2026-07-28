@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import confirmStyles from "./ConfirmModal.module.css";
-import collectionsStyles from "#pages/Collections.module.css";
+import collectionsStyles from "#/styles/shared.module.css";
 
 interface Props {
   count: number;

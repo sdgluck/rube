@@ -13,7 +13,7 @@ import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
 import { readEnumStorage } from "#/storage";
 import styles from "./Jobs.module.css";
-import shared from "#pages/Collections.module.css";
+import shared from "#/styles/shared.module.css";
 import { getJobFields } from "./fields";
 import FeatureWizard from "./FeatureWizard";
 import { getFeatureCatalogEntry } from "./FeatureWizard/feature-catalog";

@@ -8,7 +8,7 @@ import EmptyState from "#components/EmptyState";
 import PullToRefresh from "#components/PullToRefresh";
 import RelativeTime from "#components/RelativeTime";
 import { formatDurationMs, stripDurationFromMessage } from "#/utils";
-import sharedStyles from "./Collections.module.css";
+import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Events.module.css";
 
 const BADGE_MAP: Record<string, { label: string; className: string }> = {

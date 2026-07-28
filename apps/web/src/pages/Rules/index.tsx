@@ -13,7 +13,7 @@ import RuleWizard, {
 import { RulesSkeleton } from "#components/Skeleton";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
-import shared from "#pages/Collections.module.css";
+import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import BulkActionsBar from "./BulkActionsBar";
 import BulkEditModal from "./BulkEditModal";

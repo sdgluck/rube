@@ -1,4 +1,4 @@
-import shared from "#pages/Collections.module.css";
+import shared from "#/styles/shared.module.css";
 import styles from "./Rules.module.css";
 
 interface BulkActionsBarProps {

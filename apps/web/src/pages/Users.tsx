@@ -7,7 +7,7 @@ import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import EmptyState from "#components/EmptyState";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
-import sharedStyles from "./Collections.module.css";
+import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Users.module.css";
 
 const PAGE_SIZE = 50;

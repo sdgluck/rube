@@ -184,52 +184,6 @@
   background: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* ─── Compact table ─────────────────────────────────────────────────────── */
-
-.compactTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.compactTable th {
-  text-align: left;
-  padding: 0 8px;
-  height: 24px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
-}
-
-.compactTable td {
-  padding: 0 8px;
-  height: 32px;
-  font-size: 0.8rem;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.compactTable tr:last-child td {
-  border-bottom: none;
-}
-
-.compactTable tbody tr:hover {
-  background: var(--bg-surface-hover);
-}
-
-.sortable {
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.sortable:hover {
-  color: var(--accent);
-}
-
 .clickableRow {
   cursor: pointer;
 }
@@ -620,71 +574,6 @@
 .metaLabel {
   font-weight: 600;
   color: var(--text-secondary);
-}
-
-/* ─── Sidebar active jobs ────────────────────────────────────────────────── */
-
-.sidebarJobs {
-  margin-top: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  padding-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sidebarJobsTitle {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 4px;
-}
-
-.sidebarJob {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  border-radius: 6px;
-  padding: 4px 6px;
-  margin: 0 -6px;
-  transition: background 0.15s;
-}
-
-.sidebarJob:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.sidebarJobName {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebarJobProgress {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
-  flex-shrink: 0;
-}
-
-.sidebarCancel {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0 4px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.sidebarCancel:hover {
-  color: var(--status-error-dot);
 }
 
 .noRuns {
@@ -1132,4 +1021,12 @@
     color: var(--text-muted);
     margin-top: 1px;
   }
+}
+
+.compactTable {
+  composes: compactTable from "../../styles/shared.module.css";
+}
+
+.sortable {
+  composes: sortable from "../../styles/shared.module.css";
 }

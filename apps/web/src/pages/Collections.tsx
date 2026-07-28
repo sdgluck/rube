@@ -13,7 +13,7 @@ import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
 import { readEnum, readEnumStorage } from "#/storage";
-import styles from "./Collections.module.css";
+import styles from "#/styles/shared.module.css";
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
 type SortKey = (typeof SORT_KEYS)[number];

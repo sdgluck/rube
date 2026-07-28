@@ -3,7 +3,7 @@ import { trpc } from "#/trpc";
 import Spinner from "#components/Spinner";
 import SettingsPageHeader from "./Settings/SettingsPageHeader";
 import styles from "./StressTest.module.css";
-import shared from "./Collections.module.css";
+import shared from "#/styles/shared.module.css";
 
 function formatDuration(startedAt: number, finishedAt: number | null): string {
   if (!finishedAt) return "...";

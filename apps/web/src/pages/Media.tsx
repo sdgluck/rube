@@ -8,7 +8,7 @@ import EmptyState from "#components/EmptyState";
 import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { readEnumStorage } from "#/storage";
-import styles from "./Collections.module.css";
+import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
 
 const VIEW_MODES = ["table", "grid"] as const;

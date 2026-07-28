@@ -1,4 +1,4 @@
-import shared from "#pages/Collections.module.css";
+import shared from "#/styles/shared.module.css";
 import styles from "#pages/Rules/RuleWizard/RuleWizard.module.css";
 import { LIST_PROVIDERS } from "#pages/Rules/RuleWizard/constants.ts";
 import type { SourceStepProps } from "#pages/Rules/RuleWizard/types.ts";

@@ -9,7 +9,7 @@ import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
 import { readEnumStorage } from "#/storage";
-import styles from "./Collections.module.css";
+import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer, SmartFilterSummary } from "#components/SmartFiltersEditor";
 
 const VIEW_MODES = ["table", "grid"] as const;

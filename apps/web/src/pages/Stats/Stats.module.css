@@ -337,38 +337,6 @@
   border-radius: 50%;
 }
 
-/* ─── Compact table ─────────────────────────────────────────────────────── */
-
-.compactTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.compactTable th {
-  text-align: left;
-  padding: 0 8px;
-  height: 24px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
-}
-
-.compactTable td {
-  padding: 0 8px;
-  height: 32px;
-  font-size: 0.8rem;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.compactTable tr:last-child td {
-  border-bottom: none;
-}
-
 /* ─── Status dot ────────────────────────────────────────────────────────── */
 
 .statusDot {
@@ -742,4 +710,8 @@
     width: 50px;
     min-width: 40px;
   }
+}
+
+.compactTable {
+  composes: compactTable from "../../styles/shared.module.css";
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "#/trpc";
-import shared from "#pages/Collections.module.css";
+import shared from "#/styles/shared.module.css";
 import styles from "./RuleWizard.module.css";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
