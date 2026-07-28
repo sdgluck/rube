@@ -57,10 +57,7 @@ export function useListParams<K extends string>({
     [setSearchParams],
   );
 
-  const setParam = useCallback(
-    (key: string, value: string) => setParams({ [key]: value }),
-    [setParams],
-  );
+  const setParam = useCallback((key: string, value: string) => setParams({ [key]: value }), [setParams]);
 
   const setPage = useCallback((next: number) => setParams({ page: next <= 1 ? "" : String(next) }), [setParams]);
 

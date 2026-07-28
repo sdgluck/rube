@@ -5,6 +5,7 @@ import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import SettingsPageHeader from "./SettingsPageHeader";
+import ErrorState from "#components/ErrorState";
 
 interface MaintenanceAction {
   jobId: string;
@@ -61,6 +62,15 @@ export default function SettingsMaintenance() {
         title="Maintenance"
         description="One-shot escape hatches that undo Tinkerbell-applied changes to your Plex server."
       />
+
+      {jobsQuery.error && (
+        <ErrorState
+          inline
+          title="Couldn't load maintenance job status"
+          error={jobsQuery.error}
+          onRetry={() => jobsQuery.refetch()}
+        />
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
         {ACTIONS.map((action) => {

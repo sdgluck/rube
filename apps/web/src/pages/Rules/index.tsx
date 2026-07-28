@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import ConfirmModal from "#components/ConfirmModal";
 import DropdownButton from "#components/DropdownButton";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
 import RuleWizard, {
   type AiNameStyle,
   type AiVibe,
@@ -505,6 +506,9 @@ export default function Rules() {
   }, [form]);
 
   if (rulesQuery.isLoading) return <RulesSkeleton />;
+  if (rulesQuery.error) {
+    return <ErrorState title="Couldn't load rules" error={rulesQuery.error} onRetry={() => rulesQuery.refetch()} />;
+  }
 
   const allSelected = rules.length > 0 && rules.every((r) => selected.has(r.id));
 

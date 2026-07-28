@@ -1,6 +1,7 @@
 import type React from "react";
 import { Link } from "react-router-dom";
 import { ListSkeleton } from "#components/Skeleton";
+import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
@@ -18,6 +19,9 @@ export function MostWatchedPanel({
   return (
     <PanelShell title="Most Watched This Week" dragHandle={dragHandle} dragProps={dragProps}>
       {mostWatchedQuery.isLoading && <ListSkeleton rows={3} />}
+      {mostWatchedQuery.error && (
+        <ErrorState inline title="Couldn't load watch history" onRetry={() => mostWatchedQuery.refetch()} />
+      )}
       {mostWatchedQuery.data && mostWatchedQuery.data.length === 0 && (
         <div className={styles.muted}>No watch history this week</div>
       )}

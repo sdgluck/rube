@@ -2,6 +2,7 @@ import type React from "react";
 import { Link } from "react-router-dom";
 import RelativeTime from "#components/RelativeTime";
 import { ListSkeleton } from "#components/Skeleton";
+import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
 import { formatFileSize } from "#/format";
 import styles from "#pages/Stats/Stats.module.css";
@@ -19,6 +20,9 @@ export function RecentlyAddedPanel({
   return (
     <PanelShell title="Recently Added" dragHandle={dragHandle} dragProps={dragProps}>
       {recentQuery.isLoading && <ListSkeleton rows={3} />}
+      {recentQuery.error && (
+        <ErrorState inline title="Couldn't load recently added" onRetry={() => recentQuery.refetch()} />
+      )}
       {recentQuery.data && recentQuery.data.items.length === 0 && (
         <div className={styles.muted}>No recently added media</div>
       )}

@@ -5,6 +5,7 @@ import { formatDuration } from "#/format";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import ErrorState from "#components/ErrorState";
 import styles from "../Personalization.module.css";
 
 type PendingAction = "enable" | "disable" | null;
@@ -68,6 +69,16 @@ export default function SettingsPersonalization() {
       onSuccess: ({ runId }) => onJobStarted(runId, "Reconcile users"),
       onError: (err) => addToast(err.message, "error"),
     });
+  }
+
+  if (statusQuery.error && !statusQuery.data) {
+    return (
+      <ErrorState
+        title="Couldn't load personalization status"
+        error={statusQuery.error}
+        onRetry={() => statusQuery.refetch()}
+      />
+    );
   }
 
   return (

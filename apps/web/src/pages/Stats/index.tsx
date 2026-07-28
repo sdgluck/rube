@@ -3,6 +3,7 @@ import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
+import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
 import { formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
 import { DragHandle, type PanelDragProps } from "./PanelShell";
@@ -415,6 +416,16 @@ export default function Stats() {
       }}
     />
   );
+
+  // Individual panels report their own failures. When every core stat query is
+  // down the server itself is unreachable, and a page of empty panels reads as
+  // "your library is empty" — so say what actually happened instead.
+  const coreQueries = [sessionsQuery, overviewQuery, activityQuery, opsQuery];
+  if (coreQueries.every((q) => q.isError)) {
+    return (
+      <ErrorState title="Couldn't reach the Tinkerbell server" error={overviewQuery.error} onRetry={handleRefresh} />
+    );
+  }
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>

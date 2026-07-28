@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
+import ErrorState from "#components/ErrorState";
 import { PORTAL_ICONS, getPortalIcon, DEFAULT_PORTAL_ICON } from "#lib/portalIcons";
 import styles from "../Personalization.module.css";
 
@@ -75,6 +76,16 @@ export default function SettingsPortal() {
 
   const PreviewIcon = getPortalIcon(form.icon);
   const title = form.title.trim() || "Tinkerbell";
+
+  if (configQuery.error && !configQuery.data) {
+    return (
+      <ErrorState
+        title="Couldn't load portal appearance settings"
+        error={configQuery.error}
+        onRetry={() => configQuery.refetch()}
+      />
+    );
+  }
 
   return (
     <div>
