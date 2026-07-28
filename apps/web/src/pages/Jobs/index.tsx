@@ -11,7 +11,7 @@ import Spinner from "#components/Spinner";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
-import { readEnumStorage } from "#/storage";
+import { readEnumStorage, readStorage, writeStorage } from "#/storage";
 import { formatDuration, formatTimeUntil } from "#/format";
 import styles from "./Jobs.module.css";
 import shared from "#/styles/shared.module.css";
@@ -129,7 +129,7 @@ export default function Jobs() {
 
   const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("jobs-sort-key", SORT_KEYS, "name"));
   const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = localStorage.getItem("jobs-sort-dir");
+    const stored = readStorage("jobs-sort-dir");
     return stored === "desc" ? "desc" : "asc";
   });
 
@@ -159,12 +159,12 @@ export default function Jobs() {
     if (sortKey === key) {
       const next = sortDir === "asc" ? "desc" : "asc";
       setSortDir(next);
-      localStorage.setItem("jobs-sort-dir", next);
+      writeStorage("jobs-sort-dir", next);
     } else {
       setSortKey(key);
       setSortDir("asc");
-      localStorage.setItem("jobs-sort-key", key);
-      localStorage.setItem("jobs-sort-dir", "asc");
+      writeStorage("jobs-sort-key", key);
+      writeStorage("jobs-sort-dir", "asc");
     }
   };
 

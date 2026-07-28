@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { readStorage, writeStorage } from "#/storage";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
@@ -96,13 +97,13 @@ export default function Users() {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const [sortKey, setSortKey] = useState<SortKey>(() => {
-    const stored = localStorage.getItem("users-sort-key");
+    const stored = readStorage("users-sort-key");
     return stored === "name" || stored === "collectionCount" || stored === "lastWatchedAt" || stored === "username"
       ? stored
       : "username";
   });
   const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = localStorage.getItem("users-sort-dir");
+    const stored = readStorage("users-sort-dir");
     return stored === "desc" ? "desc" : "asc";
   });
 
@@ -129,13 +130,13 @@ export default function Users() {
     if (sortKey === key) {
       const next = sortDir === "asc" ? "desc" : "asc";
       setSortDir(next);
-      localStorage.setItem("users-sort-dir", next);
+      writeStorage("users-sort-dir", next);
     } else {
       setSortKey(key);
       const defaultDir = key === "lastWatchedAt" ? "desc" : "asc";
       setSortDir(defaultDir);
-      localStorage.setItem("users-sort-key", key);
-      localStorage.setItem("users-sort-dir", defaultDir);
+      writeStorage("users-sort-key", key);
+      writeStorage("users-sort-dir", defaultDir);
     }
     setParam("page", "");
   };

@@ -12,7 +12,7 @@ import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
-import { readEnum, readEnumStorage } from "#/storage";
+import { readEnum, readEnumStorage, writeStorage } from "#/storage";
 import styles from "#/styles/shared.module.css";
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
@@ -396,7 +396,7 @@ export default function Collections() {
               className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
               onClick={() => {
                 setViewMode("table");
-                localStorage.setItem("collections-view", "table");
+                writeStorage("collections-view", "table");
               }}
             >
               Table
@@ -405,7 +405,7 @@ export default function Collections() {
               className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
               onClick={() => {
                 setViewMode("grid");
-                localStorage.setItem("collections-view", "grid");
+                writeStorage("collections-view", "grid");
               }}
             >
               Grid

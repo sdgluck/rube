@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { readStorage, writeStorage } from "#/storage";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
@@ -32,11 +33,11 @@ export default function Events() {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const [sortKey, setSortKey] = useState<SortKey>(() => {
-    const stored = localStorage.getItem("events-sort-key");
+    const stored = readStorage("events-sort-key");
     return stored === "type" || stored === "message" || stored === "timestamp" ? stored : "timestamp";
   });
   const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = localStorage.getItem("events-sort-dir");
+    const stored = readStorage("events-sort-dir");
     return stored === "asc" ? "asc" : "desc";
   });
 
@@ -63,12 +64,12 @@ export default function Events() {
     if (sortKey === key) {
       const next = sortDir === "asc" ? "desc" : "asc";
       setSortDir(next);
-      localStorage.setItem("events-sort-dir", next);
+      writeStorage("events-sort-dir", next);
     } else {
       setSortKey(key);
       setSortDir(key === "timestamp" ? "desc" : "asc");
-      localStorage.setItem("events-sort-key", key);
-      localStorage.setItem("events-sort-dir", key === "timestamp" ? "desc" : "asc");
+      writeStorage("events-sort-key", key);
+      writeStorage("events-sort-dir", key === "timestamp" ? "desc" : "asc");
     }
     setParam("page", "");
   };

@@ -7,7 +7,7 @@ import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
 import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
-import { readEnumStorage } from "#/storage";
+import { readEnumStorage, readStorage, writeStorage } from "#/storage";
 import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
 
@@ -266,7 +266,7 @@ export default function Media() {
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
   const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("media-sort-key", SORT_KEYS, "title"));
   const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = localStorage.getItem("media-sort-dir");
+    const stored = readStorage("media-sort-dir");
     return stored === "desc" ? "desc" : "asc";
   });
 
@@ -359,12 +359,12 @@ export default function Media() {
     if (sortKey === key) {
       const next = sortDir === "asc" ? "desc" : "asc";
       setSortDir(next);
-      localStorage.setItem("media-sort-dir", next);
+      writeStorage("media-sort-dir", next);
     } else {
       setSortKey(key);
       setSortDir("asc");
-      localStorage.setItem("media-sort-key", key);
-      localStorage.setItem("media-sort-dir", "asc");
+      writeStorage("media-sort-key", key);
+      writeStorage("media-sort-dir", "asc");
     }
     // Reset to first page on sort change
     setParam("page", "");
@@ -501,7 +501,7 @@ export default function Media() {
             className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
             onClick={() => {
               setViewMode("table");
-              localStorage.setItem("media-view", "table");
+              writeStorage("media-view", "table");
             }}
           >
             Table
@@ -510,7 +510,7 @@ export default function Media() {
             className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
             onClick={() => {
               setViewMode("grid");
-              localStorage.setItem("media-view", "grid");
+              writeStorage("media-view", "grid");
             }}
           >
             Grid

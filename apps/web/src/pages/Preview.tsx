@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { readStorage, writeStorage } from "#/storage";
 import { Link, useNavigate } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import ConfirmModal from "#components/ConfirmModal";
@@ -63,14 +64,14 @@ const STORAGE_KEY = "preview.userId";
 const SECTION_STORAGE_KEY = "preview.sectionId";
 
 function readStoredUserId(): number | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = readStorage(STORAGE_KEY);
   if (!raw || raw === "null") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 }
 
 function readStoredSectionId(): number | null {
-  const raw = localStorage.getItem(SECTION_STORAGE_KEY);
+  const raw = readStorage(SECTION_STORAGE_KEY);
   if (!raw || raw === "null") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
@@ -207,12 +208,12 @@ export default function Preview() {
 
   const onPickUser = (next: number | null) => {
     setUserId(next);
-    localStorage.setItem(STORAGE_KEY, next == null ? "null" : String(next));
+    writeStorage(STORAGE_KEY, next == null ? "null" : String(next));
   };
 
   const onPickSection = (next: number | null) => {
     setSectionId(next);
-    localStorage.setItem(SECTION_STORAGE_KEY, next == null ? "null" : String(next));
+    writeStorage(SECTION_STORAGE_KEY, next == null ? "null" : String(next));
   };
 
   const onShuffle = () => {

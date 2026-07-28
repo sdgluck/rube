@@ -8,7 +8,7 @@ import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
-import { readEnumStorage } from "#/storage";
+import { readEnumStorage, writeStorage } from "#/storage";
 import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer, SmartFilterSummary } from "#components/SmartFiltersEditor";
 
@@ -140,7 +140,7 @@ export default function CollectionDetail() {
 
   const setItemsViewPersisted = (mode: ViewMode) => {
     setItemsView(mode);
-    localStorage.setItem("collection-items-view", mode);
+    writeStorage("collection-items-view", mode);
   };
 
   if (collectionQuery.isLoading) return <DetailSkeleton />;
