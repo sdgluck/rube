@@ -159,38 +159,40 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           </p>
         )}
         {plan.proposed.length > 0 && (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-input)" }}>
-                <th style={{ padding: "8px 4px", width: 32 }}></th>
-                <th style={{ padding: "8px 4px" }}>Rule</th>
-                <th style={{ padding: "8px 4px" }}>Type</th>
-                <th style={{ padding: "8px 4px" }}>Section</th>
-                <th style={{ padding: "8px 4px", textAlign: "right" }}>Replaces</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plan.proposed.map((p) => (
-                <tr key={p.key} style={{ borderBottom: "1px solid var(--border-input)" }}>
-                  <td style={{ padding: "8px 4px" }}>
-                    <input type="checkbox" checked={selected.has(p.key)} onChange={() => toggle(p.key)} />
-                  </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <div>{p.ruleName}</div>
-                    <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                      e.g. {p.sampleNames.slice(0, 3).join(", ")}
-                      {p.sampleNames.length > 3 ? ", …" : ""}
-                    </div>
-                  </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <code>{p.ruleType}</code>
-                  </td>
-                  <td style={{ padding: "8px 4px" }}>{p.sectionTitle}</td>
-                  <td style={{ padding: "8px 4px", textAlign: "right" }}>{p.replacesCount}</td>
+          <div className="table-scroll">
+            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+              <thead>
+                <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-input)" }}>
+                  <th style={{ padding: "8px 4px", width: 32 }}></th>
+                  <th style={{ padding: "8px 4px" }}>Rule</th>
+                  <th style={{ padding: "8px 4px" }}>Type</th>
+                  <th style={{ padding: "8px 4px" }}>Section</th>
+                  <th style={{ padding: "8px 4px", textAlign: "right" }}>Replaces</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {plan.proposed.map((p) => (
+                  <tr key={p.key} style={{ borderBottom: "1px solid var(--border-input)" }}>
+                    <td style={{ padding: "8px 4px" }}>
+                      <input type="checkbox" checked={selected.has(p.key)} onChange={() => toggle(p.key)} />
+                    </td>
+                    <td style={{ padding: "8px 4px" }}>
+                      <div>{p.ruleName}</div>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                        e.g. {p.sampleNames.slice(0, 3).join(", ")}
+                        {p.sampleNames.length > 3 ? ", …" : ""}
+                      </div>
+                    </td>
+                    <td style={{ padding: "8px 4px" }}>
+                      <code>{p.ruleType}</code>
+                    </td>
+                    <td style={{ padding: "8px 4px" }}>{p.sectionTitle}</td>
+                    <td style={{ padding: "8px 4px", textAlign: "right" }}>{p.replacesCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </fieldset>
 

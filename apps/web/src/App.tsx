@@ -54,8 +54,6 @@ function LazyPage({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [paletteInitialQuery, setPaletteInitialQuery] = useState<string>("");
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
@@ -71,11 +69,7 @@ export default function App() {
 
   return (
     <div className="layout">
-      <button className="sidebar-toggle" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle menu">
-        {sidebarOpen ? "✕" : "☰"}
-      </button>
-      <div className={`sidebar-overlay ${sidebarOpen ? "sidebar-overlay-visible" : ""}`} onClick={closeSidebar} />
-      <Sidebar open={sidebarOpen} onClose={closeSidebar} onOpenPalette={openPalette} />
+      <Sidebar onOpenPalette={openPalette} />
       <BottomNav />
       <main className="content">
         <ScrollRestoration />

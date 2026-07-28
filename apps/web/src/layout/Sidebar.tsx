@@ -125,12 +125,10 @@ function SidebarActiveJobs() {
 }
 
 type SidebarProps = {
-  open: boolean;
-  onClose: () => void;
   onOpenPalette: () => void;
 };
 
-export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) {
+export default function Sidebar({ onOpenPalette }: SidebarProps) {
   const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
@@ -139,28 +137,20 @@ export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) 
   const metrics = metricsQuery.data;
 
   return (
-    <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
+    <aside className="sidebar">
       <h1 className="sidebar-title">
         Tinkerbell
         {IS_BETA && (
-          <Link to="/changelog" className="version-pill" title={`v${VERSION} — view changelog`} onClick={onClose}>
+          <Link to="/changelog" className="version-pill" title={`v${VERSION} — view changelog`}>
             beta
           </Link>
         )}
         <SidebarHealthDot />
       </h1>
-      <Link to="/changelog" className="sidebar-version" onClick={onClose}>
+      <Link to="/changelog" className="sidebar-version">
         v{VERSION}
       </Link>
-      <button
-        type="button"
-        className="sidebar-search"
-        onClick={() => {
-          onClose();
-          onOpenPalette();
-        }}
-        title="Search (⌘K)"
-      >
+      <button type="button" className="sidebar-search" onClick={() => onOpenPalette()} title="Search (⌘K)">
         <span className="sidebar-search-icon" aria-hidden="true">
           ⌕
         </span>
@@ -177,7 +167,6 @@ export default function Sidebar({ open, onClose, onOpenPalette }: SidebarProps) 
                 key={item.to}
                 to={item.to}
                 className={item.metric ? "nav-link nav-link-with-metric" : "nav-link"}
-                onClick={onClose}
               >
                 <span className="nav-link-label">{item.label}</span>
                 {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}

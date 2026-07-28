@@ -830,6 +830,8 @@
 .detailSectionScroll {
   flex: 1;
   overflow-y: auto;
+  /* Config rows have wide value controls; scroll rather than overflow the page. */
+  overflow-x: auto;
   min-height: 0;
 }
 

@@ -406,48 +406,54 @@ export default function Jobs() {
           <div className={styles.panel}>
             <div className={styles.panelHeader}>Recent Runs</div>
             {recentRunsQuery.data && recentRunsQuery.data.length > 0 ? (
-              <table className={styles.compactTable}>
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th>Job</th>
-                    <th>Started</th>
-                    <th>Duration</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rollupRecentRuns(recentRunsQuery.data).map((group) => {
-                    const run = group.latest;
-                    return (
-                      <tr key={run.id} className={styles.clickableRow} onClick={() => navigate(`/jobs/runs/${run.id}`)}>
-                        <td>
-                          {run.status === "running" ? (
-                            <Spinner size="xs" />
-                          ) : (
-                            <span className={styles.statusDot} data-status={run.status} />
-                          )}
-                        </td>
-                        <td className={styles.nameCell}>
-                          <span className={styles.jobNameText}>{run.jobName}</span>
-                          {group.count > 1 && <span className={styles.rollupBadge}>×{group.count}</span>}
-                          {run.status === "running" && run.progress > 0 && (
-                            <div className={styles.miniProgress}>
-                              <div
-                                className={styles.miniProgressFill}
-                                style={{ width: `${Math.round(run.progress * 100)}%` }}
-                              />
-                            </div>
-                          )}
-                        </td>
-                        <td className={styles.monoCell}>
-                          <RelativeTime timestamp={run.startedAt} />
-                        </td>
-                        <td className={styles.monoCell}>{formatGroupDuration(group)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table className={styles.compactTable}>
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>Job</th>
+                      <th>Started</th>
+                      <th>Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rollupRecentRuns(recentRunsQuery.data).map((group) => {
+                      const run = group.latest;
+                      return (
+                        <tr
+                          key={run.id}
+                          className={styles.clickableRow}
+                          onClick={() => navigate(`/jobs/runs/${run.id}`)}
+                        >
+                          <td>
+                            {run.status === "running" ? (
+                              <Spinner size="xs" />
+                            ) : (
+                              <span className={styles.statusDot} data-status={run.status} />
+                            )}
+                          </td>
+                          <td className={styles.nameCell}>
+                            <span className={styles.jobNameText}>{run.jobName}</span>
+                            {group.count > 1 && <span className={styles.rollupBadge}>×{group.count}</span>}
+                            {run.status === "running" && run.progress > 0 && (
+                              <div className={styles.miniProgress}>
+                                <div
+                                  className={styles.miniProgressFill}
+                                  style={{ width: `${Math.round(run.progress * 100)}%` }}
+                                />
+                              </div>
+                            )}
+                          </td>
+                          <td className={styles.monoCell}>
+                            <RelativeTime timestamp={run.startedAt} />
+                          </td>
+                          <td className={styles.monoCell}>{formatGroupDuration(group)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className={styles.muted}>No recent runs</div>
             )}
@@ -457,28 +463,30 @@ export default function Jobs() {
           <div className={styles.panel}>
             <div className={styles.panelHeader}>Upcoming</div>
             {upcoming.length > 0 ? (
-              <table className={styles.compactTable}>
-                <thead>
-                  <tr>
-                    <th>Job</th>
-                    <th>Next Run</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {upcoming.map((item) => (
-                    <tr
-                      key={item.jobId}
-                      className={styles.clickableRow}
-                      onClick={() => navigate(`/jobs/${item.jobId}`)}
-                    >
-                      <td className={styles.nameCell}>
-                        <span className={styles.jobNameText}>{item.name}</span>
-                      </td>
-                      <td className={styles.monoCell}>in {formatTimeUntil(item.nextRun)}</td>
+              <div className="table-scroll">
+                <table className={styles.compactTable}>
+                  <thead>
+                    <tr>
+                      <th>Job</th>
+                      <th>Next Run</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {upcoming.map((item) => (
+                      <tr
+                        key={item.jobId}
+                        className={styles.clickableRow}
+                        onClick={() => navigate(`/jobs/${item.jobId}`)}
+                      >
+                        <td className={styles.nameCell}>
+                          <span className={styles.jobNameText}>{item.name}</span>
+                        </td>
+                        <td className={styles.monoCell}>in {formatTimeUntil(item.nextRun)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className={styles.muted}>No scheduled jobs</div>
             )}
@@ -496,70 +504,75 @@ export default function Jobs() {
               <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
                 Infrastructure that keeps Tinkerbell in sync with Plex. Always on; schedules are tweakable.
               </p>
-              <table className={styles.compactTable}>
-                <thead>
-                  <tr>
-                    <th className={styles.sortable} onClick={() => toggleSort("name")}>
-                      Name{sortIndicator("name")}
-                    </th>
-                    <th className={`${styles.sortable} ${styles.hideOnMobile}`} onClick={() => toggleSort("schedule")}>
-                      Schedule{sortIndicator("schedule")}
-                    </th>
-                    <th>On</th>
-                    <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-                      Last Run{sortIndicator("lastRun")}
-                    </th>
-                    <th
-                      className={`${styles.sortable} ${styles.hideOnMobile}`}
-                      onClick={() => toggleSort("lastRunStatus")}
-                    >
-                      Status{sortIndicator("lastRunStatus")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {systemJobs.map((job) => {
-                    const isHealth = job.id === "healthcheck";
-                    return (
-                      <tr
-                        key={job.id}
-                        className={styles.clickableRow}
-                        onClick={() => navigate(isHealth ? "/settings/health" : `/jobs/${job.id}`)}
+              <div className="table-scroll">
+                <table className={styles.compactTable}>
+                  <thead>
+                    <tr>
+                      <th className={styles.sortable} onClick={() => toggleSort("name")}>
+                        Name{sortIndicator("name")}
+                      </th>
+                      <th
+                        className={`${styles.sortable} ${styles.hideOnMobile}`}
+                        onClick={() => toggleSort("schedule")}
                       >
-                        <td className={styles.nameCell}>
-                          <span className={styles.jobNameText}>{job.name}</span>
-                          <span className={styles.scheduleHintInline}>
-                            {job.schedule ? describeCron(job.schedule) : "Manual"}
-                          </span>
-                        </td>
-                        <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
-                          <span className={styles.cronText} title={job.schedule || undefined}>
-                            {job.schedule ? describeCron(job.schedule) : "—"}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={styles.requiredPill}>Required</span>
-                        </td>
-                        <td className={styles.monoCell}>
-                          {job.lastRunStartedAt ? (
-                            <RelativeTime timestamp={job.lastRunStartedAt} />
-                          ) : (
-                            <span className={styles.muted}>Never</span>
-                          )}
-                        </td>
-                        <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
-                          {job.lastRunStatus && (
-                            <span className={styles.statusRow}>
-                              <span className={styles.statusDot} data-status={job.lastRunStatus} />
-                              {job.lastRunStatus}
+                        Schedule{sortIndicator("schedule")}
+                      </th>
+                      <th>On</th>
+                      <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+                        Last Run{sortIndicator("lastRun")}
+                      </th>
+                      <th
+                        className={`${styles.sortable} ${styles.hideOnMobile}`}
+                        onClick={() => toggleSort("lastRunStatus")}
+                      >
+                        Status{sortIndicator("lastRunStatus")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {systemJobs.map((job) => {
+                      const isHealth = job.id === "healthcheck";
+                      return (
+                        <tr
+                          key={job.id}
+                          className={styles.clickableRow}
+                          onClick={() => navigate(isHealth ? "/settings/health" : `/jobs/${job.id}`)}
+                        >
+                          <td className={styles.nameCell}>
+                            <span className={styles.jobNameText}>{job.name}</span>
+                            <span className={styles.scheduleHintInline}>
+                              {job.schedule ? describeCron(job.schedule) : "Manual"}
                             </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                          <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                            <span className={styles.cronText} title={job.schedule || undefined}>
+                              {job.schedule ? describeCron(job.schedule) : "—"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={styles.requiredPill}>Required</span>
+                          </td>
+                          <td className={styles.monoCell}>
+                            {job.lastRunStartedAt ? (
+                              <RelativeTime timestamp={job.lastRunStartedAt} />
+                            ) : (
+                              <span className={styles.muted}>Never</span>
+                            )}
+                          </td>
+                          <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                            {job.lastRunStatus && (
+                              <span className={styles.statusRow}>
+                                <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                                {job.lastRunStatus}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -643,94 +656,96 @@ export default function Jobs() {
               </div>
             )}
 
-            <table className={styles.compactTable}>
-              <thead>
-                <tr>
-                  <th className={shared.checkboxCell}>
-                    <input
-                      type="checkbox"
-                      className={shared.checkbox}
-                      checked={featureJobs.length > 0 && featureJobs.every((j) => selected.has(j.id))}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("name")}>
-                    Name{sortIndicator("name")}
-                  </th>
-                  <th className={`${styles.sortable} ${styles.hideOnMobile}`} onClick={() => toggleSort("schedule")}>
-                    Schedule{sortIndicator("schedule")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
-                    On{sortIndicator("enabled")}
-                  </th>
-                  <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-                    Last Run{sortIndicator("lastRun")}
-                  </th>
-                  <th
-                    className={`${styles.sortable} ${styles.hideOnMobile}`}
-                    onClick={() => toggleSort("lastRunStatus")}
-                  >
-                    Status{sortIndicator("lastRunStatus")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {featureJobs.map((job, i) => (
-                  <tr
-                    key={job.id}
-                    className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                  >
-                    <td
-                      className={shared.checkboxCell}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCheckboxClick(i, e);
-                      }}
-                    >
-                      <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-                    </td>
-                    <td className={styles.nameCell}>
-                      <span className={styles.jobNameText}>{job.name}</span>
-                      <span className={styles.scheduleHintInline}>
-                        {job.schedule ? describeCron(job.schedule) : "Manual"}
-                      </span>
-                    </td>
-                    <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
-                      <span className={styles.cronText} title={job.schedule || undefined}>
-                        {job.schedule ? describeCron(job.schedule) : "—"}
-                      </span>
-                    </td>
-                    <td
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <ToggleSwitch
-                        size="sm"
-                        checked={!!job.enabled}
-                        onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+            <div className="table-scroll">
+              <table className={styles.compactTable}>
+                <thead>
+                  <tr>
+                    <th className={shared.checkboxCell}>
+                      <input
+                        type="checkbox"
+                        className={shared.checkbox}
+                        checked={featureJobs.length > 0 && featureJobs.every((j) => selected.has(j.id))}
+                        onChange={toggleSelectAll}
                       />
-                    </td>
-                    <td className={styles.monoCell}>
-                      {job.lastRunStartedAt ? (
-                        <RelativeTime timestamp={job.lastRunStartedAt} />
-                      ) : (
-                        <span className={styles.muted}>Never</span>
-                      )}
-                    </td>
-                    <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
-                      {job.lastRunStatus && (
-                        <span className={styles.statusRow}>
-                          <span className={styles.statusDot} data-status={job.lastRunStatus} />
-                          {job.lastRunStatus}
-                        </span>
-                      )}
-                    </td>
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("name")}>
+                      Name{sortIndicator("name")}
+                    </th>
+                    <th className={`${styles.sortable} ${styles.hideOnMobile}`} onClick={() => toggleSort("schedule")}>
+                      Schedule{sortIndicator("schedule")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
+                      On{sortIndicator("enabled")}
+                    </th>
+                    <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
+                      Last Run{sortIndicator("lastRun")}
+                    </th>
+                    <th
+                      className={`${styles.sortable} ${styles.hideOnMobile}`}
+                      onClick={() => toggleSort("lastRunStatus")}
+                    >
+                      Status{sortIndicator("lastRunStatus")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {featureJobs.map((job, i) => (
+                    <tr
+                      key={job.id}
+                      className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
+                      <td
+                        className={shared.checkboxCell}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCheckboxClick(i, e);
+                        }}
+                      >
+                        <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                      </td>
+                      <td className={styles.nameCell}>
+                        <span className={styles.jobNameText}>{job.name}</span>
+                        <span className={styles.scheduleHintInline}>
+                          {job.schedule ? describeCron(job.schedule) : "Manual"}
+                        </span>
+                      </td>
+                      <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                        <span className={styles.cronText} title={job.schedule || undefined}>
+                          {job.schedule ? describeCron(job.schedule) : "—"}
+                        </span>
+                      </td>
+                      <td
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <ToggleSwitch
+                          size="sm"
+                          checked={!!job.enabled}
+                          onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+                        />
+                      </td>
+                      <td className={styles.monoCell}>
+                        {job.lastRunStartedAt ? (
+                          <RelativeTime timestamp={job.lastRunStartedAt} />
+                        ) : (
+                          <span className={styles.muted}>Never</span>
+                        )}
+                      </td>
+                      <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                        {job.lastRunStatus && (
+                          <span className={styles.statusRow}>
+                            <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                            {job.lastRunStatus}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* ─── Recent Logs ──────────────────────────────────────────── */}

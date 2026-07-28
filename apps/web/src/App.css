@@ -185,6 +185,10 @@ body {
   position: sticky;
   top: 0;
   z-index: var(--z-sidebar);
+  /* Four nav sections plus the active-jobs list overflow a short viewport;
+     without this the bottom of the nav is simply unreachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sidebar-title {
@@ -507,31 +511,6 @@ body {
   line-height: 1;
 }
 
-/* ─── Mobile sidebar toggle (desktop: hidden, kept for non-bottom-nav fallback) ── */
-
-.sidebar-toggle {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 60;
-  background: #1a1a2e;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  width: 40px;
-  height: 40px;
-  font-size: 1.4rem;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.sidebar-overlay {
-  display: none;
-}
-
 /* ─── Bottom nav (mobile only) ──────────────────────────────────────────── */
 
 .bottom-nav {
@@ -549,11 +528,6 @@ body {
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
-  /* Hide the old hamburger toggle — replaced by bottom nav */
-  .sidebar-toggle {
-    display: none !important;
-  }
-
   /* Hide the sidebar entirely on mobile — bottom nav replaces it */
   .sidebar {
     display: none !important;
