@@ -1099,63 +1099,8 @@
   cursor: not-allowed;
 }
 
-/* ─── Modals ───────────────────────────────────────────────────── */
-
-.modalBackdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-  padding: 24px;
-}
-
-.modal,
-.modalLg {
-  background: var(--bg-surface);
-  border-radius: 12px;
-  padding: 24px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.modalLg {
-  max-width: 900px;
-}
-
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.modalTitle {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.modalClose {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-}
-
-.modalClose:hover {
-  color: var(--text-primary);
-}
+/* ─── Modal content ────────────────────────────────────────────────
+ * The shell itself is <Modal>; these style what goes inside it. */
 
 .modalHint {
   font-size: 0.8rem;
@@ -1164,16 +1109,29 @@
   margin: 4px 0 0;
 }
 
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+.modalHintStart {
+  composes: modalHint;
+  text-align: left;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.importTextarea {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  resize: vertical;
+}
+
+.fieldError {
+  composes: fieldHint;
+  color: var(--danger);
 }
 
 .bulkGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
 }
 

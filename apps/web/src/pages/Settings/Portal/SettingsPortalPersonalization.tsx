@@ -149,6 +149,7 @@ export default function SettingsPersonalization() {
             const items = est.itemCount.toLocaleString();
             return `${base} About ${items} items to label — estimated ~${formatDuration(est.estimatedSeconds * 1000)}. Continue?`;
           })()}
+          title="Enable personalization?"
           confirmLabel="Enable"
           onConfirm={runEnable}
           onCancel={() => setPending(null)}
@@ -157,7 +158,9 @@ export default function SettingsPersonalization() {
       {pending === "disable" && (
         <ConfirmModal
           message="This deletes all per-user collections (Because You Watched, etc.) and restores every user's previous sharing settings — leaving your server as if personalization was never enabled. Continue?"
+          title="Disable personalization?"
           confirmLabel="Disable"
+          danger
           onConfirm={runDisable}
           onCancel={() => setPending(null)}
         />

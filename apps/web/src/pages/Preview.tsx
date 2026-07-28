@@ -389,6 +389,7 @@ export default function Preview() {
       {unpinTarget && (
         <ConfirmModal
           message={`Unpin “${unpinTarget.title}” from the Plex homepage? Other Tinkerbell-managed pinning rules may re-pin it later.`}
+          title="Unpin from homepage?"
           confirmLabel="Unpin"
           danger
           onConfirm={() => {

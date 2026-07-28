@@ -18,7 +18,7 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
         <p>Loading runs...</p>
       ) : runsQuery.data && runsQuery.data.length > 0 ? (
         <div className="table-scroll">
-          <table className={styles.table}>
+          <table className={styles.compactTable}>
             <thead>
               <tr>
                 <th>Status</th>

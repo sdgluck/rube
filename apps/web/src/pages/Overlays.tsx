@@ -828,6 +828,7 @@ export default function Overlays() {
       {confirmClearOpen && (
         <ConfirmModal
           message={`Remove all ${configs.length} overlay${configs.length === 1 ? "" : "s"} from this section's layout? This won't change posters that have already been applied in Plex.`}
+          title="Clear overlay layout?"
           confirmLabel="Clear"
           danger
           onConfirm={() => clearConfigsMutation.mutate({ sectionId })}

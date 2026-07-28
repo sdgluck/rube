@@ -107,7 +107,9 @@ export default function JobPageShell({ job, actions, children }: Props) {
               ? `Remove ${job.name}? This will delete its config, run history, and every Because You Watched collection from Plex, then clear every shared user's sharing restrictions. Item-level Tinkerbell labels are kept (use Settings → Maintenance to clear those).`
               : `Remove ${job.name}? This will delete its config and run history. You can re-install it later from the Jobs page.`
           }
+          title={`Remove ${job.name}?`}
           confirmLabel="Remove"
+          danger
           onConfirm={() => {
             setConfirmRemove(false);
             uninstallMutation.mutate({ featureId: job.id });

@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { describeCron } from "#/utils";
 import { FEATURE_CATALOG, type FeatureCatalogEntry } from "./feature-catalog";
+import Modal from "#components/Modal";
 import styles from "./FeatureWizard.module.css";
 
 interface Props {
@@ -68,76 +69,13 @@ export default function FeatureWizard({ onClose }: Props) {
   }
 
   return (
-    <div className={styles.backdrop} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>Add a feature</h2>
-          <div className={styles.steps}>
-            <span className={step === "pick" ? styles.stepActive : styles.step}>1. Pick</span>
-            <span className={step === "configure" ? styles.stepActive : styles.step}>2. Configure</span>
-            <span className={step === "review" ? styles.stepActive : styles.step}>3. Review</span>
-          </div>
-        </header>
-
-        <div className={styles.body}>
-          {step === "pick" && (
-            <div className={styles.catalog}>
-              {FEATURE_CATALOG.map((entry) => {
-                const already = installedIds.has(entry.id);
-                return (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    className={`${styles.card} ${already ? styles.cardDisabled : ""}`}
-                    onClick={() => pick(entry)}
-                    disabled={already}
-                  >
-                    <div className={styles.cardHeader}>
-                      <strong>{entry.name}</strong>
-                      {already && <span className={styles.installedTag}>Installed</span>}
-                    </div>
-                    <p className={styles.cardDesc}>{entry.description}</p>
-                    {entry.requires && <p className={styles.cardRequires}>Requires: {entry.requires}</p>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {step === "configure" && selected && (
-            <div className={styles.form}>
-              <h3>{selected.name}</h3>
-              <p className={styles.muted}>
-                You can fine-tune sections, limits and other options on the feature's page after installing.
-              </p>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Schedule (cron)</span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={schedule}
-                  onChange={(e) => setSchedule(e.target.value)}
-                  placeholder="e.g. 0 2 * * *"
-                />
-                {scheduleHint && <span className={styles.fieldHint}>{scheduleHint}</span>}
-                {!schedule && <span className={styles.fieldHint}>No schedule — runs only on demand.</span>}
-              </label>
-            </div>
-          )}
-
-          {step === "review" && selected && (
-            <div className={styles.form}>
-              <h3>Install {selected.name}</h3>
-              <p className={styles.muted}>{selected.description}</p>
-              <dl className={styles.summary}>
-                <dt>Schedule</dt>
-                <dd>{schedule ? `${schedule} — ${scheduleHint}` : "Manual / on demand"}</dd>
-              </dl>
-            </div>
-          )}
-        </div>
-
-        <footer className={styles.footer}>
+    <Modal
+      open
+      onClose={onClose}
+      title="Add a feature"
+      size="lg"
+      footer={
+        <>
           <button type="button" className={styles.cancelBtn} onClick={onClose}>
             Cancel
           </button>
@@ -167,8 +105,72 @@ export default function FeatureWizard({ onClose }: Props) {
               </button>
             </>
           )}
-        </footer>
+        </>
+      }
+    >
+      <div className={styles.steps} aria-hidden="true">
+        <span className={step === "pick" ? styles.stepActive : styles.step}>1. Pick</span>
+        <span className={step === "configure" ? styles.stepActive : styles.step}>2. Configure</span>
+        <span className={step === "review" ? styles.stepActive : styles.step}>3. Review</span>
       </div>
-    </div>
+
+      <div className={styles.body}>
+        {step === "pick" && (
+          <div className={styles.catalog}>
+            {FEATURE_CATALOG.map((entry) => {
+              const already = installedIds.has(entry.id);
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={`${styles.card} ${already ? styles.cardDisabled : ""}`}
+                  onClick={() => pick(entry)}
+                  disabled={already}
+                >
+                  <div className={styles.cardHeader}>
+                    <strong>{entry.name}</strong>
+                    {already && <span className={styles.installedTag}>Installed</span>}
+                  </div>
+                  <p className={styles.cardDesc}>{entry.description}</p>
+                  {entry.requires && <p className={styles.cardRequires}>Requires: {entry.requires}</p>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {step === "configure" && selected && (
+          <div className={styles.form}>
+            <h3>{selected.name}</h3>
+            <p className={styles.muted}>
+              You can fine-tune sections, limits and other options on the feature's page after installing.
+            </p>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Schedule (cron)</span>
+              <input
+                type="text"
+                className={styles.input}
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                placeholder="e.g. 0 2 * * *"
+              />
+              {scheduleHint && <span className={styles.fieldHint}>{scheduleHint}</span>}
+              {!schedule && <span className={styles.fieldHint}>No schedule — runs only on demand.</span>}
+            </label>
+          </div>
+        )}
+
+        {step === "review" && selected && (
+          <div className={styles.form}>
+            <h3>Install {selected.name}</h3>
+            <p className={styles.muted}>{selected.description}</p>
+            <dl className={styles.summary}>
+              <dt>Schedule</dt>
+              <dd>{schedule ? `${schedule} — ${scheduleHint}` : "Manual / on demand"}</dd>
+            </dl>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

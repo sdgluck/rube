@@ -1,9 +1,18 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
+import Modal from "./Modal";
 import styles from "./ConfirmModal.module.css";
 
 interface ConfirmModalProps {
   message: string;
+  /** Heading. Defaults to a neutral prompt; prefer something specific. */
+  title?: string;
   confirmLabel?: string;
+  cancelLabel?: string;
+  /**
+   * Styles the confirm button as destructive and requires an explicit
+   * dismissal rather than a stray backdrop click. Defaults to false — it used
+   * to default to true, which painted every confirmation red.
+   */
   danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -11,48 +20,36 @@ interface ConfirmModalProps {
 
 export default function ConfirmModal({
   message,
+  title = "Are you sure?",
   confirmLabel = "Confirm",
-  danger = true,
+  cancelLabel = "Cancel",
+  danger = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  const confirmRef = useRef<HTMLButtonElement>(null);
-  const [exiting, setExiting] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
+  // Destructive prompts open on Cancel so Enter can't confirm by reflex.
   useEffect(() => {
-    confirmRef.current?.focus();
-  }, []);
-
-  const handleClose = useCallback(() => {
-    setExiting(true);
-    setTimeout(() => onCancel(), 200);
-  }, [onCancel]);
-
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [handleClose]);
+    if (danger) cancelRef.current?.focus();
+  }, [danger]);
 
   return (
-    <div className={`${styles.backdrop} ${exiting ? styles.backdropExiting : ""}`} onClick={handleClose}>
-      <div className={`${styles.modal} ${exiting ? styles.modalExiting : ""}`} onClick={(e) => e.stopPropagation()}>
-        <p className={styles.message}>{message}</p>
-        <div className={styles.actions}>
-          <button
-            ref={confirmRef}
-            className={`${styles.btn} ${danger ? styles.btnDanger : styles.btnPrimary}`}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-          <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={handleClose}>
-            Cancel
-          </button>
-        </div>
+    <Modal open onClose={onCancel} title={title} size="sm" dismissOnBackdrop={!danger}>
+      <p className={styles.message}>{message}</p>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={danger ? styles.confirmDanger : styles.confirm}
+          onClick={onConfirm}
+          autoFocus={!danger}
+        >
+          {confirmLabel}
+        </button>
+        <button type="button" ref={cancelRef} className={styles.cancel} onClick={onCancel}>
+          {cancelLabel}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }

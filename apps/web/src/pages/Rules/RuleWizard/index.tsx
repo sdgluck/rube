@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
+import Modal from "#components/Modal";
 import styles from "./RuleWizard.module.css";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
@@ -65,7 +66,6 @@ interface RuleWizardProps {
 export default function RuleWizard({ open, mode, initial, saving, onSave, onCancel }: RuleWizardProps) {
   const [form, setForm] = useState<RuleFormState>(initial);
   const [stepIdx, setStepIdx] = useState(0);
-  const [exiting, setExiting] = useState(false);
   const [showError, setShowError] = useState(false);
   const nameTouchedRef = useRef(mode === "edit");
   const initialKeyRef = useRef<unknown>(null);
@@ -103,7 +103,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     setForm(initial);
     setStepIdx(0);
     setShowError(false);
-    setExiting(false);
     nameTouchedRef.current = mode === "edit" || !!initial.name.trim();
   }, [open, initial, mode]);
 
@@ -162,10 +161,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     sections,
   ]);
 
-  const handleClose = useCallback(() => {
-    setExiting(true);
-    setTimeout(() => onCancel(), 200);
-  }, [onCancel]);
+  const handleClose = onCancel;
 
   const stepError = currentStep ? validateStep(currentStep.id, form) : null;
 
@@ -190,15 +186,10 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (stepIdx > 0) setStepIdx(stepIdx - 1);
   }, [stepIdx]);
 
-  // Esc to close, Enter to advance (when not in textarea).
+  // Enter advances a step. Escape is handled by <Modal>.
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-        return;
-      }
       if (e.key === "Enter" && !e.shiftKey) {
         const target = e.target as HTMLElement | null;
         const tag = target?.tagName;
@@ -210,7 +201,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, goNext, handleClose]);
+  }, [open, goNext]);
 
   if (!open) return null;
 
@@ -660,53 +651,14 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   }
 
   return (
-    <div
-      className={`${styles.backdrop} ${exiting ? styles.backdropExiting : ""}`}
-      onClick={handleClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className={`${styles.modal} ${exiting ? styles.modalExiting : ""}`} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.header}>
-          <div className={styles.headerRow}>
-            <h2 className={styles.title}>{mode === "edit" ? `Edit "${initial.name || "Rule"}"` : "Add Rule"}</h2>
-            <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label="Close">
-              ✕
-            </button>
-          </div>
-          <div className={styles.steps}>
-            {steps.map((s, i) => {
-              const active = i === stepIdx;
-              const done = i < stepIdx;
-              const clickable = mode === "edit" || i <= stepIdx;
-              return (
-                <div key={s.id} style={{ display: "contents" }}>
-                  <button
-                    type="button"
-                    className={`${styles.step} ${active ? styles.stepActive : ""} ${done ? styles.stepDone : ""} ${clickable ? styles.stepClickable : ""}`}
-                    onClick={() => clickable && setStepIdx(i)}
-                    disabled={!clickable}
-                  >
-                    <span className={styles.stepDot}>{i + 1}</span>
-                    <span className={styles.stepLabel}>{s.label}</span>
-                  </button>
-                  {i < steps.length - 1 && <div className={styles.stepSep} />}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className={styles.body} key={currentStep?.id}>
-          {renderStep()}
-          {showError && stepError && currentStep?.id !== "review" && (
-            <p className={styles.errorText} style={{ marginTop: 12 }}>
-              {stepError}
-            </p>
-          )}
-        </div>
-
-        <div className={styles.footer}>
+    <Modal
+      open
+      onClose={handleClose}
+      title={mode === "edit" ? `Edit "${initial.name || "Rule"}"` : "Add Rule"}
+      size="lg"
+      dismissOnBackdrop={false}
+      footer={
+        <>
           <div className={styles.footerLeft}>
             <button type="button" className={shared.buttonSecondary} onClick={handleClose}>
               Cancel
@@ -722,8 +674,37 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               {saving ? "Saving…" : primaryLabel}
             </button>
           </div>
+        </>
+      }
+    >
+      <div className={styles.stepsWrap}>
+        <div className={styles.steps}>
+          {steps.map((s, i) => {
+            const active = i === stepIdx;
+            const done = i < stepIdx;
+            const clickable = mode === "edit" || i <= stepIdx;
+            return (
+              <div key={s.id} style={{ display: "contents" }}>
+                <button
+                  type="button"
+                  className={`${styles.step} ${active ? styles.stepActive : ""} ${done ? styles.stepDone : ""} ${clickable ? styles.stepClickable : ""}`}
+                  onClick={() => clickable && setStepIdx(i)}
+                  disabled={!clickable}
+                >
+                  <span className={styles.stepDot}>{i + 1}</span>
+                  <span className={styles.stepLabel}>{s.label}</span>
+                </button>
+                {i < steps.length - 1 && <div className={styles.stepSep} />}
+              </div>
+            );
+          })}
         </div>
       </div>
-    </div>
+
+      <div className={styles.body} key={currentStep?.id}>
+        {renderStep()}
+        {showError && stepError && currentStep?.id !== "review" && <p className={styles.stepErrorText}>{stepError}</p>}
+      </div>
+    </Modal>
   );
 }

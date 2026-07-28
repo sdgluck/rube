@@ -105,8 +105,10 @@ export default function SettingsMaintenance() {
 
       {pending && (
         <ConfirmModal
+          title={pending.confirmLabel}
           message={pending.confirmMessage}
           confirmLabel={pending.confirmLabel}
+          danger
           onConfirm={() => trigger(pending)}
           onCancel={() => setPending(null)}
         />

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import Modal from "./Modal";
+import Kbd, { MOD_KEY } from "./Kbd";
 import styles from "./KeyboardShortcutsHelp.module.css";
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
 }
 
 const GENERAL_SHORTCUTS = [
-  { label: "Command palette", keys: ["\u2318", "K"] },
+  { label: "Command palette", keys: [MOD_KEY, "K"] },
   { label: "Focus search", keys: ["/"] },
   { label: "Show shortcuts", keys: ["?"] },
 ];
@@ -24,68 +25,29 @@ const NAVIGATION_SHORTCUTS = [
   { label: "Go to Settings", keys: ["g", "p"] },
 ];
 
+const GROUPS = [
+  { title: "General", rows: GENERAL_SHORTCUTS },
+  { title: "Navigation", rows: NAVIGATION_SHORTCUTS },
+];
+
 export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
-  const [exiting, setExiting] = useState(false);
-
-  const close = useCallback(() => {
-    setExiting(true);
-    setTimeout(() => {
-      setExiting(false);
-      onClose();
-    }, 200);
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        close();
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, close]);
-
-  if (!open && !exiting) return null;
-
   return (
-    <div className={`${styles.backdrop} ${exiting ? styles.backdropExiting : ""}`} onClick={close}>
-      <div className={`${styles.modal} ${exiting ? styles.modalExiting : ""}`} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>Keyboard Shortcuts</div>
-
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>General</div>
-          {GENERAL_SHORTCUTS.map((s) => (
+    <Modal open={open} onClose={onClose} title="Keyboard Shortcuts" size="sm">
+      {GROUPS.map((group) => (
+        <div key={group.title} className={styles.section}>
+          <div className={styles.sectionTitle}>{group.title}</div>
+          {group.rows.map((s) => (
             <div key={s.label} className={styles.row}>
               <span className={styles.label}>{s.label}</span>
               <span className={styles.keys}>
                 {s.keys.map((k, i) => (
-                  <span key={i} className={styles.key}>
-                    {k}
-                  </span>
+                  <Kbd key={i}>{k}</Kbd>
                 ))}
               </span>
             </div>
           ))}
         </div>
-
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>Navigation</div>
-          {NAVIGATION_SHORTCUTS.map((s) => (
-            <div key={s.label} className={styles.row}>
-              <span className={styles.label}>{s.label}</span>
-              <span className={styles.keys}>
-                {s.keys.map((k, i) => (
-                  <span key={i} className={styles.key}>
-                    {k}
-                  </span>
-                ))}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      ))}
+    </Modal>
   );
 }

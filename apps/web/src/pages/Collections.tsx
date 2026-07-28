@@ -580,8 +580,10 @@ export default function Collections() {
 
         {pendingConfirm && (
           <ConfirmModal
+            title="Delete collection?"
             message={pendingConfirm.message}
             confirmLabel="Delete"
+            danger
             onConfirm={pendingConfirm.onConfirm}
             onCancel={() => setPendingConfirm(null)}
           />

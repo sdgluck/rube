@@ -86,19 +86,56 @@
 }
 
 .dismiss {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px -8px -2px 0;
+  padding: 0;
   background: none;
   border: none;
-  font-size: 1.1rem;
+  border-radius: 4px;
   cursor: pointer;
-  padding: 0 0 0 4px;
-  line-height: 1;
   color: inherit;
   opacity: 0.7;
   flex-shrink: 0;
 }
 
+.dismiss svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Extends the hit area to ~42px without growing the visual button. */
+.dismiss::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+
 .dismiss:hover {
   opacity: 1;
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+/*
+ * Announcements go through their own live regions rather than the visual
+ * stack, so animating/reordering toasts can't cause re-announcements.
+ */
+.srOnly {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Mobile: center above bottom nav */

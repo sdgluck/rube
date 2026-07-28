@@ -3,6 +3,7 @@ import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA } from "#/version";
 import { NAV_SECTIONS, type NavMetric } from "#/nav";
+import { modChord } from "#components/Kbd";
 import styles from "./Sidebar.module.css";
 
 export function SidebarHealthDot() {
@@ -150,15 +151,22 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
       <Link to="/changelog" className="sidebar-version">
         v{VERSION}
       </Link>
-      <button type="button" className="sidebar-search" onClick={() => onOpenPalette()} title="Search (⌘K)">
+      <button
+        type="button"
+        className="sidebar-search"
+        onClick={() => onOpenPalette()}
+        title={`Search (${modChord("K")})`}
+      >
         <span className="sidebar-search-icon" aria-hidden="true">
           ⌕
         </span>
         <span className="sidebar-search-label">Search…</span>
-        <span className="sidebar-search-kbd">⌘K</span>
+        <span className="sidebar-search-kbd" aria-hidden="true">
+          {modChord("K")}
+        </span>
       </button>
       <hr className="sidebar-search-divider" />
-      <nav>
+      <nav aria-label="Main">
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="nav-section">
             <div className="nav-section-title">{section.label}</div>

@@ -670,8 +670,10 @@ export default function Rules() {
 
       {pendingConfirm && (
         <ConfirmModal
+          title="Delete rule?"
           message={pendingConfirm.message}
           confirmLabel="Delete"
+          danger
           onConfirm={pendingConfirm.onConfirm}
           onCancel={() => setPendingConfirm(null)}
         />
