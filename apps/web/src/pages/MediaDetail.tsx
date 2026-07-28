@@ -5,6 +5,7 @@ import FadeImage from "#components/FadeImage";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "#/styles/shared.module.css";
 import {
+  EMPTY,
   formatBitrate,
   formatChannels,
   formatCodec,
@@ -15,7 +16,7 @@ import {
 import mediaStyles from "./MediaDetail.module.css";
 
 function fileName(path: string | undefined): string {
-  if (!path) return "—";
+  if (!path) return EMPTY;
   const parts = path.split("/");
   return parts[parts.length - 1];
 }

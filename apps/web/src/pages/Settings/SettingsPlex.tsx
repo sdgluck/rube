@@ -167,10 +167,10 @@ export default function SettingsPlex() {
         </label>
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSavePlex} disabled={savingPlex}>
-            {savingPlex ? "Saving..." : "Save"}
+            {savingPlex ? "Saving…" : "Save"}
           </button>
           <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
-            {testing ? "Testing..." : "Test Connection"}
+            {testing ? "Testing…" : "Test Connection"}
           </button>
           <UnsavedBanner visible={isDirtyPlex} />
         </div>
@@ -181,7 +181,7 @@ export default function SettingsPlex() {
         {!plexUrl || !plexToken ? (
           <p className={styles.hint}>Configure Plex URL and token above first.</p>
         ) : sectionsQuery.isLoading ? (
-          <p className={styles.hint}>Loading libraries...</p>
+          <p className={styles.hint}>Loading libraries…</p>
         ) : !sections || sections.length === 0 ? (
           <p className={styles.hint}>No libraries found. Check your Plex connection.</p>
         ) : (
@@ -201,7 +201,7 @@ export default function SettingsPlex() {
             </div>
             <div className={styles.buttons}>
               <button type="button" className={styles.button} onClick={handleSaveLibraries} disabled={savingLibs}>
-                {savingLibs ? "Saving..." : "Save"}
+                {savingLibs ? "Saving…" : "Save"}
               </button>
               <button
                 type="button"
@@ -209,7 +209,7 @@ export default function SettingsPlex() {
                 onClick={handleRefreshSections}
                 disabled={refreshing}
               >
-                {refreshing ? "Refreshing..." : "Refresh"}
+                {refreshing ? "Refreshing…" : "Refresh"}
               </button>
               <UnsavedBanner visible={isDirtyLibs} />
             </div>

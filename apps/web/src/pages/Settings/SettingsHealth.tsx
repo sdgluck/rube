@@ -156,7 +156,7 @@ export default function SettingsHealth() {
                   disabled={isChecking}
                   onClick={() => checkMutation.mutate({ service: svc.service })}
                 >
-                  {isChecking ? "Checking..." : "Check"}
+                  {isChecking ? "Checking…" : "Check"}
                 </button>
               )}
             </div>

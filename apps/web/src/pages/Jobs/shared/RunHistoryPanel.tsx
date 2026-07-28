@@ -15,7 +15,7 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
     <fieldset className={styles.detailSectionCapped}>
       <legend className={styles.detailSectionTitle}>Run History</legend>
       {runsQuery.isLoading ? (
-        <p>Loading runs...</p>
+        <p>Loading runs…</p>
       ) : runsQuery.data && runsQuery.data.length > 0 ? (
         <div className="table-scroll">
           <table className={styles.compactTable}>

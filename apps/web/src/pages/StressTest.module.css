@@ -237,3 +237,7 @@
   word-break: break-word;
   margin-bottom: 24px;
 }
+
+.speedNone {
+  color: var(--text-muted);
+}

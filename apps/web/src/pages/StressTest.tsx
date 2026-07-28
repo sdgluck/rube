@@ -4,10 +4,10 @@ import Spinner from "#components/Spinner";
 import SettingsPageHeader from "./Settings/SettingsPageHeader";
 import styles from "./StressTest.module.css";
 import shared from "#/styles/shared.module.css";
-import { formatElapsed, formatTime } from "#/format";
+import { EMPTY, formatElapsed, formatTime } from "#/format";
 
 function SpeedCell({ speed }: { speed: number | null }) {
-  if (speed == null) return <span style={{ color: "#999" }}>n/a</span>;
+  if (speed == null) return <span className={styles.speedNone}>{EMPTY}</span>;
   const cls = speed >= 1.0 ? styles.speedGood : speed >= 0.7 ? styles.speedWarn : styles.speedBad;
   return (
     <span className={styles.speedBar}>
@@ -186,7 +186,7 @@ export default function StressTest() {
                       <td>
                         <SpeedCell speed={step.avgTranscodeSpeed} />
                       </td>
-                      <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : "n/a"}</td>
+                      <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : EMPTY}</td>
                       <td>{step.errors}</td>
                     </tr>
                   );

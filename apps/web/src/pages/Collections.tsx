@@ -21,7 +21,6 @@ import styles from "#/styles/shared.module.css";
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
-type SortDir = "asc" | "desc";
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 const PAGE_SIZE = 50;

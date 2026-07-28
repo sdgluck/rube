@@ -12,7 +12,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     links: [
       { to: "/settings/plex", label: "Plex" },
       { to: "/settings/ai", label: "AI" },
-      { to: "/settings/arrs", label: "Arrs" },
+      { to: "/settings/arrs", label: "Media Managers" },
       { to: "/settings/databases", label: "Databases" },
     ],
   },

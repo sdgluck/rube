@@ -12,7 +12,7 @@ import ToggleSwitch from "#components/ToggleSwitch";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
 
-import { formatDuration, formatTimeUntil } from "#/format";
+import { EMPTY, formatDuration, formatTimeUntil } from "#/format";
 import ErrorState from "#components/ErrorState";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
@@ -74,7 +74,7 @@ function rollupRecentRuns(runs: RecentRun[]): RecentRunGroup[] {
 }
 
 function formatGroupDuration(group: RecentRunGroup): string {
-  if (group.latest.status === "running") return "—";
+  if (group.latest.status === "running") return EMPTY;
   if (group.count === 1) return formatDuration(group.maxDurationMs);
   if (group.minDurationMs === group.maxDurationMs) return formatDuration(group.maxDurationMs);
   return `${formatDuration(group.minDurationMs)}–${formatDuration(group.maxDurationMs)}`;
@@ -385,7 +385,7 @@ export default function Jobs() {
           <div className={styles.summaryItem}>
             <span className={styles.summaryLabel}>Last Failure</span>
             <span className={`${styles.summaryValue} ${styles.summarySmall}`}>
-              {lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : "—"}
+              {lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : EMPTY}
             </span>
           </div>
         </div>
@@ -542,7 +542,7 @@ export default function Jobs() {
                           </td>
                           <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
                             <span className={styles.cronText} title={job.schedule || undefined}>
-                              {job.schedule ? describeCron(job.schedule) : "—"}
+                              {job.schedule ? describeCron(job.schedule) : EMPTY}
                             </span>
                           </td>
                           <td>
@@ -717,7 +717,7 @@ export default function Jobs() {
                       </td>
                       <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
                         <span className={styles.cronText} title={job.schedule || undefined}>
-                          {job.schedule ? describeCron(job.schedule) : "—"}
+                          {job.schedule ? describeCron(job.schedule) : EMPTY}
                         </span>
                       </td>
                       <td

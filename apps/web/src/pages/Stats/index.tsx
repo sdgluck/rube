@@ -5,7 +5,7 @@ import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
-import { formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
+import { EMPTY, formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
 import { DragHandle, type PanelDragProps } from "./PanelShell";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
@@ -247,7 +247,7 @@ export default function Stats() {
   const renderTile = (id: string): React.ReactNode => {
     const def = TILE_REGISTRY.find((t) => t.id === id);
     if (!def) return null;
-    let value: React.ReactNode = "—";
+    let value: React.ReactNode = EMPTY;
     let sub: React.ReactNode = null;
     switch (id) {
       case "streams":
@@ -264,7 +264,7 @@ export default function Stats() {
         ) : totalBandwidth > 0 ? (
           formatBandwidth(totalBandwidth)
         ) : (
-          "—"
+          EMPTY
         );
         break;
       case "playsToday":
@@ -276,7 +276,7 @@ export default function Stats() {
         break;
       case "topUserToday": {
         const u = activityQuery.data?.topUserToday;
-        value = u ? u.name : "—";
+        value = u ? u.name : EMPTY;
         sub = u ? `${u.plays} ${u.plays === 1 ? "play" : "plays"}` : null;
         break;
       }
@@ -300,7 +300,7 @@ export default function Stats() {
         ) : total > 0 ? (
           `${Math.round((c4k / total) * 100)}%`
         ) : (
-          "—"
+          EMPTY
         );
         if (c4k > 0) sub = `${formatNumber(c4k)} items`;
         break;
@@ -328,10 +328,10 @@ export default function Stats() {
         break;
       }
       case "lastSync":
-        value = opsQuery.data?.lastSyncAt ? formatRelativeShort(opsQuery.data.lastSyncAt) : "—";
+        value = opsQuery.data?.lastSyncAt ? formatRelativeShort(opsQuery.data.lastSyncAt) : EMPTY;
         break;
       case "uptime":
-        value = opsQuery.data?.uptimeSec != null ? formatUptime(opsQuery.data.uptimeSec) : "—";
+        value = opsQuery.data?.uptimeSec != null ? formatUptime(opsQuery.data.uptimeSec) : EMPTY;
         break;
     }
     return (

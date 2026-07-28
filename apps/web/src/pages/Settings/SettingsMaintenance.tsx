@@ -5,6 +5,7 @@ import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import SettingsPageHeader from "./SettingsPageHeader";
+import local from "./SettingsMaintenance.module.css";
 import ErrorState from "#components/ErrorState";
 
 interface MaintenanceAction {
@@ -72,28 +73,18 @@ export default function SettingsMaintenance() {
         />
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
+      <div className={local.actionList}>
         {ACTIONS.map((action) => {
           const job = jobsQuery.data?.find((j) => j.id === action.jobId);
           const lastRun = job?.lastRunStartedAt;
           return (
-            <div
-              key={action.jobId}
-              style={{
-                border: "1px solid var(--border-color)",
-                borderRadius: 6,
-                padding: 16,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div key={action.jobId} className={local.actionCard}>
+              <div className={local.actionRow}>
+                <div className={local.actionText}>
                   <strong>{action.title}</strong>
-                  <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{action.description}</span>
+                  <span className={local.actionDescription}>{action.description}</span>
                   {lastRun && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    <span className={local.actionMeta}>
                       Last run <RelativeTime timestamp={lastRun} />
                       {job?.lastRunStatus ? ` — ${job.lastRunStatus}` : ""}
                     </span>
@@ -103,7 +94,6 @@ export default function SettingsMaintenance() {
                   type="button"
                   onClick={() => setPending(action)}
                   disabled={startMutation.isPending || job?.lastRunStatus === "running"}
-                  style={{ flexShrink: 0 }}
                 >
                   {job?.lastRunStatus === "running" ? "Running…" : "Run"}
                 </button>

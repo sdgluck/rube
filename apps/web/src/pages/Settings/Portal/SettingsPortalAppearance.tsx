@@ -130,11 +130,11 @@ export default function SettingsPortal() {
               onChange={(e) => setForm({ ...form, iconColor: e.target.value })}
             />
             <input
-              className={styles.input}
+              className={`${styles.input} ${styles.colorInput}`}
               type="text"
               value={form.iconColor}
               onChange={(e) => setForm({ ...form, iconColor: e.target.value })}
-              style={{ width: 120 }}
+              aria-label="Icon colour hex value"
             />
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function SettingsPortal() {
         </div>
       </div>
 
-      <h4 style={{ marginTop: 24, marginBottom: 8 }}>Preview</h4>
+      <h3 className={styles.previewHeading}>Preview</h3>
       <div className={styles.preview}>
         <div
           className={styles.previewStage}

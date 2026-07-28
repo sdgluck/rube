@@ -25,7 +25,7 @@ export default function SeerrRequestsSource({ form, setForm, config }: SourceSte
         </div>
       </div>
       {!seerrConfigured && (
-        <p className={styles.hint}>Heads-up: Jellyseerr/Overseerr is not configured in Settings → Arrs.</p>
+        <p className={styles.hint}>Heads-up: Jellyseerr/Overseerr is not configured in Settings → Media Managers.</p>
       )}
     </>
   );

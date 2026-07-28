@@ -4,7 +4,7 @@ import RelativeTime from "#components/RelativeTime";
 import { ListSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
-import { formatFileSize } from "#/format";
+import { EMPTY, formatFileSize } from "#/format";
 import styles from "#pages/Stats/Stats.module.css";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
@@ -57,8 +57,8 @@ export function RecentlyAddedPanel({
                       </Link>
                     </td>
                     <td className={styles.monoCell}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</td>
-                    <td className={styles.monoCell}>{item.container?.toUpperCase() || "—"}</td>
-                    <td className={styles.monoCell}>{item.videoResolution?.toUpperCase() || "—"}</td>
+                    <td className={styles.monoCell}>{item.container?.toUpperCase() || EMPTY}</td>
+                    <td className={styles.monoCell}>{item.videoResolution?.toUpperCase() || EMPTY}</td>
                     <td className={styles.monoCell}>{formatFileSize(item.fileSize)}</td>
                     <td className={styles.monoCell}>
                       <RelativeTime timestamp={item.addedAt} seconds />

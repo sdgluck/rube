@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { EMPTY } from "#/format";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
@@ -237,7 +238,7 @@ export default function CollectionDetail() {
             <input
               type="text"
               className={styles.labelEditorInput}
-              placeholder="Add label..."
+              placeholder="Add label…"
               value={labelInput}
               onChange={(e) => setLabelInput(e.target.value)}
               onKeyDown={(e) => {
@@ -290,7 +291,7 @@ export default function CollectionDetail() {
           <input
             type="text"
             className={styles.itemSearch}
-            placeholder="Search items..."
+            placeholder="Search items…"
             value={itemSearch}
             onChange={(e) => setItemSearch(e.target.value)}
           />
@@ -310,7 +311,7 @@ export default function CollectionDetail() {
           </div>
         </div>
         {itemsQuery.isLoading ? (
-          <p className={styles.hint}>Loading items...</p>
+          <p className={styles.hint}>Loading items…</p>
         ) : items.length === 0 ? (
           <EmptyState icon="film" title="No items in this collection" />
         ) : filteredItems.length === 0 ? (
@@ -360,7 +361,7 @@ export default function CollectionDetail() {
                     onClick={() => navigate(`/media/${item.ratingKey}`)}
                   >
                     <td>{item.title}</td>
-                    <td className={styles.itemYear}>{item.year || "—"}</td>
+                    <td className={styles.itemYear}>{item.year || EMPTY}</td>
                   </tr>
                 ))}
               </tbody>
@@ -376,7 +377,7 @@ export default function CollectionDetail() {
             Discard
           </button>
           <button className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       )}

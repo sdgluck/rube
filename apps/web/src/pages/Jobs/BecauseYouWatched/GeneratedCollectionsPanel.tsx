@@ -22,7 +22,7 @@ export default function GeneratedCollectionsPanel() {
         {total !== undefined && <span className={styles.runMeta}>{` — ${total} total`}</span>}
       </legend>
       {collectionsQuery.isLoading ? (
-        <p>Loading...</p>
+        <p>Loading…</p>
       ) : !collectionsQuery.data || collectionsQuery.data.length === 0 ? (
         <EmptyState
           icon="list"

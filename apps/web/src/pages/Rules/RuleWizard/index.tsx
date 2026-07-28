@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import Modal from "#components/Modal";
@@ -43,7 +44,7 @@ export {
  * children with the appropriate connector and bracket when nested.
  */
 function summarizeSmartFilter(group: SmartFilterGroup): string {
-  if (group.children.length === 0) return "—";
+  if (group.children.length === 0) return EMPTY;
   return summarizeNode(group, true);
 }
 
@@ -227,7 +228,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {RULE_TYPES.map((t) => {
             const missing = t.requires === "omdb" && !omdbConfigured ? "Requires OMDB API key (Settings → AI)" : null;
             const seerrMissing =
-              t.requires === "seerr" && !seerrConfigured ? "Requires Jellyseerr/Overseerr (Settings → Arrs)" : null;
+              t.requires === "seerr" && !seerrConfigured
+                ? "Requires Jellyseerr/Overseerr (Settings → Media Managers)"
+                : null;
             const tmdbMissing =
               t.requires === "tmdb" && !tmdbConfigured ? "Requires TMDb API key (Settings → AI)" : null;
             const warn = missing || seerrMissing || tmdbMissing;
@@ -403,7 +406,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
         {!arrConfigured && (
           <p className={styles.hint}>
-            {service === "radarr" ? "Radarr" : "Sonarr"} is not configured in Settings → Arrs.
+            {service === "radarr" ? "Radarr" : "Sonarr"} is not configured in Settings → Media Managers.
           </p>
         )}
 
@@ -533,7 +536,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (form.type === "ai_prompt") {
       sourceLabel = "Themes";
       const all = [...form.themes, ...form.customThemes.filter((t) => t.trim().length > 0)];
-      sourceValue = all.length === 0 ? "—" : all.join(", ");
+      sourceValue = all.length === 0 ? EMPTY : all.join(", ");
     } else if (form.type === "imdb_chart") {
       sourceLabel = "Chart";
       sourceValue = IMDB_CHART_LABELS[form.chart] || form.chart;
@@ -584,7 +587,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {sourceLabel && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>{sourceLabel}</span>
-              <span className={styles.summaryValue}>{sourceValue || "—"}</span>
+              <span className={styles.summaryValue}>{sourceValue || EMPTY}</span>
               <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("source")}>
                 Edit
               </button>

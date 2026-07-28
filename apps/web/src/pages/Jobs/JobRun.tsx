@@ -161,7 +161,7 @@ export default function JobRun() {
         <input
           type="text"
           className={styles.logFilterInput}
-          placeholder="Filter log..."
+          placeholder="Filter log…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />

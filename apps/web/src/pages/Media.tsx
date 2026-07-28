@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { EMPTY } from "#/format";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
@@ -119,17 +120,17 @@ const ALL_COLUMNS: ColumnDef[] = [
   { id: "title", label: "Title", render: (item) => item.title },
   { id: "section", label: "Section", render: (item) => item.sectionTitle },
   { id: "type", label: "Type", render: (item) => item.type },
-  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : "\u2014") },
-  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || "\u2014" },
-  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || "\u2014" },
-  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || "\u2014" },
+  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY) },
+  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || EMPTY },
+  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || EMPTY },
+  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || EMPTY },
   {
     id: "audioChannels",
     label: "Channels",
     render: (item) =>
-      item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : "\u2014",
+      item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : EMPTY,
   },
-  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || "\u2014" },
+  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || EMPTY },
 ];
 
 const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
@@ -231,7 +232,7 @@ function ChildrenRows({
                     )}
                     {child.title}
                     {child.leafCount != null && (
-                      <span style={{ color: "#999", marginLeft: 6, fontSize: "0.85em" }}>
+                      <span className={mediaStyles.childEpisodeCount}>
                         ({child.leafCount} episode{child.leafCount !== 1 ? "s" : ""})
                       </span>
                     )}

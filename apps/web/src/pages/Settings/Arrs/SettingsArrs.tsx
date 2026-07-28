@@ -17,7 +17,7 @@ export default function SettingsArrs() {
   return (
     <div>
       <SettingsPageHeader
-        title="Arrs"
+        title="Media Managers"
         description="Connect Radarr, Sonarr, and Jellyseerr/Overseerr so rules can request and manage media."
       />
       <nav className={styles.subTabs}>
