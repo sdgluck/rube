@@ -99,16 +99,6 @@
   letter-spacing: 0.04em;
 }
 
-.sortable {
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.sortable:hover {
-  color: var(--accent);
-}
-
 .table td {
   padding: 0 12px;
   height: 44px;
@@ -995,19 +985,6 @@
 }
 
 /* ─── Pagination ─────────────────────────────────────────────────────────── */
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.paginationInfo {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 

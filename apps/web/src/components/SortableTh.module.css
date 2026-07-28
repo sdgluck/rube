@@ -1,0 +1,49 @@
+.th {
+  /* The <th>'s own padding lives in the table stylesheet; the button stretches
+     to fill it so the whole cell stays clickable. */
+  padding: 0 !important;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.button:hover {
+  color: var(--accent);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.arrow {
+  opacity: 0;
+  font-size: 0.7em;
+  transition: opacity 0.12s;
+}
+
+.button:hover .arrow {
+  opacity: 0.45;
+}
+
+.arrowActive {
+  font-size: 0.7em;
+  opacity: 1;
+  color: var(--accent);
+}

@@ -11,8 +11,11 @@ import Spinner from "#components/Spinner";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
-import { readEnumStorage, readStorage, writeStorage } from "#/storage";
+
 import { formatDuration, formatTimeUntil } from "#/format";
+import ErrorState from "#components/ErrorState";
+import SortableTh from "#components/SortableTh";
+import { useListParams } from "#hooks/useListParams";
 import styles from "./Jobs.module.css";
 import shared from "#/styles/shared.module.css";
 import { getJobFields } from "./fields";
@@ -79,7 +82,6 @@ function formatGroupDuration(group: RecentRunGroup): string {
 
 const SORT_KEYS = ["name", "schedule", "enabled", "lastRun", "lastRunStatus"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
-type SortDir = "asc" | "desc";
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
@@ -127,10 +129,10 @@ export default function Jobs() {
 
   const installMutation = trpc.jobs.install.useMutation();
 
-  const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("jobs-sort-key", SORT_KEYS, "name"));
-  const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = readStorage("jobs-sort-dir");
-    return stored === "desc" ? "desc" : "asc";
+  const { sortKey, sortDir, toggleSort } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "name",
+    descFirst: ["lastRun"],
   });
 
   const hasRunning = jobsQuery.data?.some((j) => j.lastRunStatus === "running");
@@ -154,21 +156,6 @@ export default function Jobs() {
     const interval = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(interval);
   }, []);
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      const next = sortDir === "asc" ? "desc" : "asc";
-      setSortDir(next);
-      writeStorage("jobs-sort-dir", next);
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-      writeStorage("jobs-sort-key", key);
-      writeStorage("jobs-sort-dir", "asc");
-    }
-  };
-
-  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
 
   const rawJobs = (jobsQuery.data ?? []).filter((j) => getJobFields(j.id).kind !== "hidden");
   const sortedJobs = [...rawJobs].sort((a, b) => {
@@ -368,7 +355,9 @@ export default function Jobs() {
   };
 
   if (jobsQuery.isLoading) return <JobsSkeleton />;
-  if (jobsQuery.error) return <p>Error: {jobsQuery.error.message}</p>;
+  if (jobsQuery.error) {
+    return <ErrorState title="Couldn't load jobs" error={jobsQuery.error} onRetry={() => jobsQuery.refetch()} />;
+  }
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -508,25 +497,31 @@ export default function Jobs() {
                 <table className={styles.compactTable}>
                   <thead>
                     <tr>
-                      <th className={styles.sortable} onClick={() => toggleSort("name")}>
-                        Name{sortIndicator("name")}
-                      </th>
-                      <th
-                        className={`${styles.sortable} ${styles.hideOnMobile}`}
-                        onClick={() => toggleSort("schedule")}
+                      <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Name
+                      </SortableTh>
+                      <SortableTh
+                        sortKey="schedule"
+                        activeKey={sortKey}
+                        activeDir={sortDir}
+                        onSort={toggleSort}
+                        className={styles.hideOnMobile}
                       >
-                        Schedule{sortIndicator("schedule")}
-                      </th>
+                        Schedule
+                      </SortableTh>
                       <th>On</th>
-                      <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-                        Last Run{sortIndicator("lastRun")}
-                      </th>
-                      <th
-                        className={`${styles.sortable} ${styles.hideOnMobile}`}
-                        onClick={() => toggleSort("lastRunStatus")}
+                      <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Last Run
+                      </SortableTh>
+                      <SortableTh
+                        sortKey="lastRunStatus"
+                        activeKey={sortKey}
+                        activeDir={sortDir}
+                        onSort={toggleSort}
+                        className={styles.hideOnMobile}
                       >
-                        Status{sortIndicator("lastRunStatus")}
-                      </th>
+                        Status
+                      </SortableTh>
                     </tr>
                   </thead>
                   <tbody>
@@ -668,24 +663,33 @@ export default function Jobs() {
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("name")}>
-                      Name{sortIndicator("name")}
-                    </th>
-                    <th className={`${styles.sortable} ${styles.hideOnMobile}`} onClick={() => toggleSort("schedule")}>
-                      Schedule{sortIndicator("schedule")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("enabled")}>
-                      On{sortIndicator("enabled")}
-                    </th>
-                    <th className={styles.sortable} onClick={() => toggleSort("lastRun")}>
-                      Last Run{sortIndicator("lastRun")}
-                    </th>
-                    <th
-                      className={`${styles.sortable} ${styles.hideOnMobile}`}
-                      onClick={() => toggleSort("lastRunStatus")}
+                    <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                      Name
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="schedule"
+                      activeKey={sortKey}
+                      activeDir={sortDir}
+                      onSort={toggleSort}
+                      className={styles.hideOnMobile}
                     >
-                      Status{sortIndicator("lastRunStatus")}
-                    </th>
+                      Schedule
+                    </SortableTh>
+                    <SortableTh sortKey="enabled" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                      On
+                    </SortableTh>
+                    <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                      Last Run
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="lastRunStatus"
+                      activeKey={sortKey}
+                      activeDir={sortDir}
+                      onSort={toggleSort}
+                      className={styles.hideOnMobile}
+                    >
+                      Status
+                    </SortableTh>
                   </tr>
                 </thead>
                 <tbody>

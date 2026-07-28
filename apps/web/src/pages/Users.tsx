@@ -1,20 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { readStorage, writeStorage } from "#/storage";
-import { useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
 import { UsersSkeleton } from "#components/Skeleton";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
+import Pagination from "#components/Pagination";
+import SortableTh from "#components/SortableTh";
+import { useListParams } from "#hooks/useListParams";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Users.module.css";
 
-const PAGE_SIZE = 50;
+const SORT_KEYS = ["username", "name", "collectionCount", "lastWatchedAt"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
 
-type SortKey = "username" | "name" | "collectionCount" | "lastWatchedAt";
-type SortDir = "asc" | "desc";
+const PAGE_SIZE = 50;
 
 function EditableName({
   userId,
@@ -83,7 +85,7 @@ function EditableName({
       }}
       title="Click to edit"
     >
-      {value || <span className={styles.namePlaceholder}>Set name...</span>}
+      {value || <span className={styles.namePlaceholder}>Set name…</span>}
     </span>
   );
 }
@@ -91,60 +93,14 @@ function EditableName({
 export default function Users() {
   const utils = trpc.useUtils();
   const { addToast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const search = searchParams.get("q") ?? "";
-  const page = Math.max(1, Number(searchParams.get("page")) || 1);
-
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    const stored = readStorage("users-sort-key");
-    return stored === "name" || stored === "collectionCount" || stored === "lastWatchedAt" || stored === "username"
-      ? stored
-      : "username";
-  });
-  const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = readStorage("users-sort-dir");
-    return stored === "desc" ? "desc" : "asc";
+  const { sortKey, sortDir, page, param, setParam, setPage, toggleSort } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "username",
+    descFirst: ["lastWatchedAt", "collectionCount"],
   });
 
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (value) {
-            next.set(key, value);
-          } else {
-            next.delete(key);
-          }
-          if (key !== "page") next.delete("page");
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      const next = sortDir === "asc" ? "desc" : "asc";
-      setSortDir(next);
-      writeStorage("users-sort-dir", next);
-    } else {
-      setSortKey(key);
-      const defaultDir = key === "lastWatchedAt" ? "desc" : "asc";
-      setSortDir(defaultDir);
-      writeStorage("users-sort-key", key);
-      writeStorage("users-sort-dir", defaultDir);
-    }
-    setParam("page", "");
-  };
-
-  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
-
+  const search = param("q");
   const debouncedSearch = useDebouncedValue(search);
-
   const offset = (page - 1) * PAGE_SIZE;
 
   const queryInput = {
@@ -173,7 +129,9 @@ export default function Users() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   if (query.isLoading && !query.data) return <UsersSkeleton />;
-  if (query.error) return <div className={`${sharedStyles.toast} ${sharedStyles.error}`}>Failed to load users</div>;
+  if (query.error && !query.data) {
+    return <ErrorState title="Couldn't load users" error={query.error} onRetry={() => query.refetch()} />;
+  }
 
   return (
     <div>
@@ -191,7 +149,8 @@ export default function Users() {
             <input
               type="text"
               className={sharedStyles.searchInput}
-              placeholder="Search users..."
+              placeholder="Search users…"
+              aria-label="Search users"
               value={search}
               onChange={(e) => setParam("q", e.target.value)}
             />
@@ -200,31 +159,39 @@ export default function Users() {
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
             >
-              {syncMutation.isPending ? "Refreshing..." : "Refresh"}
+              {syncMutation.isPending ? "Refreshing…" : "Refresh"}
             </button>
           </div>
 
           {users.length === 0 ? (
-            <EmptyState icon="search" title="No users match your search" />
+            <EmptyState
+              icon="search"
+              title="No users match your search"
+              action={
+                <button type="button" className={sharedStyles.buttonSecondary} onClick={() => setParam("q", "")}>
+                  Clear search
+                </button>
+              }
+            />
           ) : (
             <>
               <div className="table-scroll">
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th className={sharedStyles.sortable} onClick={() => toggleSort("username")}>
-                        Username{sortIndicator("username")}
-                      </th>
-                      <th className={sharedStyles.sortable} onClick={() => toggleSort("name")}>
-                        Name{sortIndicator("name")}
-                      </th>
+                      <SortableTh sortKey="username" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Username
+                      </SortableTh>
+                      <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Name
+                      </SortableTh>
                       <th>Label</th>
-                      <th className={sharedStyles.sortable} onClick={() => toggleSort("collectionCount")}>
-                        Collections{sortIndicator("collectionCount")}
-                      </th>
-                      <th className={sharedStyles.sortable} onClick={() => toggleSort("lastWatchedAt")}>
-                        Last Watched{sortIndicator("lastWatchedAt")}
-                      </th>
+                      <SortableTh sortKey="collectionCount" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Collections
+                      </SortableTh>
+                      <SortableTh sortKey="lastWatchedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        Last Watched
+                      </SortableTh>
                     </tr>
                   </thead>
                   <tbody>
@@ -277,27 +244,7 @@ export default function Users() {
                 </table>
               </div>
 
-              {total > PAGE_SIZE && (
-                <div className={sharedStyles.pagination}>
-                  <button
-                    className={sharedStyles.buttonSecondary}
-                    disabled={page <= 1}
-                    onClick={() => setParam("page", String(page - 1))}
-                  >
-                    Previous
-                  </button>
-                  <span className={sharedStyles.paginationInfo}>
-                    Page {page} of {totalPages} ({total} users)
-                  </span>
-                  <button
-                    className={sharedStyles.buttonSecondary}
-                    disabled={page >= totalPages}
-                    onClick={() => setParam("page", String(page + 1))}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+              <Pagination page={page} totalPages={totalPages} total={total} noun="users" onPageChange={setPage} />
             </>
           )}
         </>

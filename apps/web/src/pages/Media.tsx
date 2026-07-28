@@ -5,9 +5,13 @@ import { trpc } from "#/trpc";
 import { MediaSkeleton } from "#components/Skeleton";
 import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
+import ErrorState from "#components/ErrorState";
+import Pagination from "#components/Pagination";
+import SortableTh from "#components/SortableTh";
+import { useListParams } from "#hooks/useListParams";
 import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
-import { readEnumStorage, readStorage, writeStorage } from "#/storage";
+import { readEnumStorage, writeStorage } from "#/storage";
 import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
 
@@ -82,7 +86,6 @@ const SORT_KEYS = [
   "container",
 ] as const;
 type SortKey = (typeof SORT_KEYS)[number];
-type SortDir = "asc" | "desc";
 
 interface ColumnDef {
   id: SortKey;
@@ -258,17 +261,17 @@ export default function Media() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  const { sortKey, sortDir, page, setPage, toggleSort } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "title",
+    descFirst: ["year"],
+  });
+
   const sectionFilter = searchParams.get("section") ?? "";
   const typeFilter = searchParams.get("type") ?? "";
   const search = searchParams.get("q") ?? "";
-  const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("media-view", VIEW_MODES, "table"));
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
-  const [sortKey, setSortKey] = useState<SortKey>(() => readEnumStorage("media-sort-key", SORT_KEYS, "title"));
-  const [sortDir, setSortDir] = useState<SortDir>(() => {
-    const stored = readStorage("media-sort-dir");
-    return stored === "desc" ? "desc" : "asc";
-  });
 
   const resFilter = searchParams.get("res") ?? "";
   const vcodecFilter = searchParams.get("vcodec") ?? "";
@@ -355,23 +358,6 @@ export default function Media() {
     );
   }, [setSearchParams]);
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      const next = sortDir === "asc" ? "desc" : "asc";
-      setSortDir(next);
-      writeStorage("media-sort-dir", next);
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-      writeStorage("media-sort-key", key);
-      writeStorage("media-sort-dir", "asc");
-    }
-    // Reset to first page on sort change
-    setParam("page", "");
-  };
-
-  const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "");
-
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const toggleExpanded = useCallback((key: string) => {
     setExpandedRows((prev) => {
@@ -419,7 +405,9 @@ export default function Media() {
   const sections = sectionsQuery.data ?? [];
 
   if (mediaQuery.isLoading && !mediaQuery.data) return <MediaSkeleton />;
-  if (mediaQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media</div>;
+  if (mediaQuery.error && !mediaQuery.data) {
+    return <ErrorState title="Couldn't load media" error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />;
+  }
 
   return (
     <div>
@@ -429,7 +417,8 @@ export default function Media() {
         <input
           type="text"
           className={styles.searchInput}
-          placeholder="Search media..."
+          placeholder="Search media…"
+          aria-label="Search media"
           value={search}
           onChange={(e) => setParam("q", e.target.value)}
         />
@@ -596,10 +585,9 @@ export default function Media() {
             <thead>
               <tr>
                 {visibleColumns.map((col) => (
-                  <th key={col.id} className={styles.sortable} onClick={() => toggleSort(col.id)}>
+                  <SortableTh key={col.id} sortKey={col.id} activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                     {col.label}
-                    {sortIndicator(col.id)}
-                  </th>
+                  </SortableTh>
                 ))}
               </tr>
             </thead>
@@ -646,27 +634,7 @@ export default function Media() {
         </div>
       )}
 
-      {total > PAGE_SIZE && (
-        <div className={styles.pagination}>
-          <button
-            className={styles.buttonSecondary}
-            disabled={page <= 1}
-            onClick={() => setParam("page", String(page - 1))}
-          >
-            Previous
-          </button>
-          <span className={styles.paginationInfo}>
-            Page {page} of {totalPages} ({total} items)
-          </span>
-          <button
-            className={styles.buttonSecondary}
-            disabled={page >= totalPages}
-            onClick={() => setParam("page", String(page + 1))}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} total={total} noun="items" onPageChange={setPage} />
     </div>
   );
 }

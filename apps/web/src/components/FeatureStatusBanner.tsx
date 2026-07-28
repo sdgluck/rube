@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
-import styles from "#pages/Jobs/Jobs.module.css";
+import Banner from "#components/Banner";
+import styles from "./FeatureStatusBanner.module.css";
 
 interface Props {
   /** Job id of the feature (e.g. "overlays", "because-you-watched"). */
@@ -19,17 +20,19 @@ export default function FeatureStatusBanner({ featureId }: Props) {
 
   const enabled = !!job.enabled;
   return (
-    <div className={styles.featureBanner}>
-      <span>
-        <span className={styles.featureBannerStatus} data-enabled={enabled ? "true" : "false"}>
-          <span className={styles.statusDot} data-status={enabled ? "completed" : "cancelled"} />
-          {job.name} is {enabled ? "enabled" : "disabled"}
-        </span>
-        {!enabled && " — changes here won't take effect until you enable the feature."}
-      </span>
-      <Link to={`/jobs/${job.id}`} className={styles.featureBannerLink}>
-        Open feature →
-      </Link>
-    </div>
+    <Banner
+      variant={enabled ? "ok" : "warn"}
+      dot
+      actions={
+        <Link to={`/jobs/${job.id}`} className={styles.link}>
+          Open feature
+        </Link>
+      }
+    >
+      <strong>
+        {job.name} is {enabled ? "enabled" : "disabled"}
+      </strong>
+      {!enabled && " — changes here won't take effect until you enable the feature."}
+    </Banner>
   );
 }
