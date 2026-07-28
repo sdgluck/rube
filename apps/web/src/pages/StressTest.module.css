@@ -182,19 +182,19 @@
 }
 
 .speedGood {
-  background: #28a745;
+  background: var(--status-ok-dot);
 }
 
 .speedWarn {
-  background: #ffc107;
+  background: var(--status-warn-dot);
 }
 
 .speedBad {
-  background: #dc3545;
+  background: var(--status-error-dot);
 }
 
 .stepFailed {
-  background: #fff5f5 !important;
+  background: var(--status-error-bg) !important;
 }
 
 .runsSection {

@@ -316,15 +316,15 @@
 }
 
 .statusDot[data-status="running"] {
-  background: #3b82f6;
+  background: var(--status-info-dot);
 }
 
 .statusDot[data-status="completed"] {
-  background: #28a745;
+  background: var(--status-ok-dot);
 }
 
 .statusDot[data-status="failed"] {
-  background: #ef4444;
+  background: var(--status-error-dot);
 }
 
 .statusDot[data-status="cancelled"] {
@@ -367,23 +367,23 @@
 }
 
 .badgeRunning {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
 }
 
 .badgeCompleted {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .badgeFailed {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .badgeCancelled {
   background: #e5e7eb;
-  color: #4b5563;
+  color: var(--status-neutral-fg);
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
@@ -415,7 +415,7 @@
 }
 
 .cronError {
-  color: #dc2626;
+  color: var(--status-error-fg);
 }
 
 /* ─── Run history (JobDetail) ────────────────────────────────────────────── */
@@ -499,7 +499,7 @@
 .logFilterInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .logErrorToggle {
@@ -684,7 +684,7 @@
 }
 
 .sidebarCancel:hover {
-  color: #ef4444;
+  color: var(--status-error-dot);
 }
 
 .noRuns {
@@ -744,7 +744,7 @@
 .configNumberInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .configHint {
@@ -818,14 +818,14 @@
 
 .statusPill[data-status="running"] {
   border-color: rgba(59, 130, 246, 0.4);
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--status-info-fg);
+  background: var(--status-info-bg);
 }
 
 .statusPill[data-status="failed"] {
   border-color: rgba(239, 68, 68, 0.4);
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--status-error-fg);
+  background: var(--status-error-bg);
 }
 
 .statusPillMeta {
@@ -903,7 +903,7 @@
 }
 
 .featureBannerStatus[data-enabled="true"] {
-  color: #16a34a;
+  color: var(--status-ok-fg);
 }
 
 .featureBannerStatus[data-enabled="false"] {
@@ -1001,7 +1001,7 @@
 .fieldHelpError {
   margin-top: 4px;
   font-size: 0.75rem;
-  color: #dc2626;
+  color: var(--status-error-fg);
 }
 
 .configSummary {
@@ -1042,13 +1042,13 @@
   border: 1px solid var(--border-light);
   border-radius: 6px;
   overflow: hidden;
-  background: var(--bg-elevated, var(--bg));
+  background: var(--bg-elevated);
 }
 
 .bywCardLink {
   display: block;
   aspect-ratio: 2 / 3;
-  background: var(--bg-muted, #222);
+  background: var(--bg-muted);
 }
 
 .bywCardPoster {

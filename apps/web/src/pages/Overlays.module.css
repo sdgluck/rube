@@ -644,7 +644,7 @@
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 0.72rem;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   color: var(--text-secondary);
 }
 
@@ -973,8 +973,8 @@
 
 .dangerBtn {
   background: none;
-  border: 1px solid #dc3545;
-  color: #dc3545;
+  border: 1px solid var(--danger);
+  color: var(--danger);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 0.8rem;
@@ -986,7 +986,7 @@
 }
 
 .dangerBtn:hover {
-  background: #dc3545;
+  background: var(--danger);
   color: #fff;
 }
 
@@ -1016,7 +1016,7 @@
   background: var(--bg-surface);
   border-top: 1px solid var(--border-color);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
-  z-index: 49;
+  z-index: var(--z-sticky-bar);
 }
 
 @media (max-width: 768px) {
@@ -1080,8 +1080,8 @@
 
 .actionBtnDanger {
   background: var(--bg-surface);
-  color: #dc3545;
-  border: 1px solid #dc3545;
+  color: var(--danger);
+  border: 1px solid var(--danger);
   border-radius: 6px;
   padding: 8px 16px;
   font-size: 0.85rem;
@@ -1090,7 +1090,7 @@
 }
 
 .actionBtnDanger:hover:not(:disabled) {
-  background: #dc3545;
+  background: var(--danger);
   color: #fff;
 }
 
@@ -1108,7 +1108,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: var(--z-modal);
   padding: 24px;
 }
 
@@ -1253,7 +1253,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  z-index: 60;
+  z-index: var(--z-dropdown);
 }
 
 .overflowItem {
@@ -1288,11 +1288,11 @@
 }
 
 .overflowItemDanger {
-  color: #dc3545;
+  color: var(--danger);
 }
 
 .overflowItemDanger .overflowItemHint {
-  color: #dc3545;
+  color: var(--danger);
   opacity: 0.7;
 }
 
@@ -1345,7 +1345,7 @@
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 0.72rem;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   color: var(--text-secondary);
 }
 

@@ -177,7 +177,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
                   </td>
                   <td style={{ padding: "8px 4px" }}>
                     <div>{p.ruleName}</div>
-                    <div style={{ color: "var(--color-muted, #888)", fontSize: "0.85rem" }}>
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
                       e.g. {p.sampleNames.slice(0, 3).join(", ")}
                       {p.sampleNames.length > 3 ? ", …" : ""}
                     </div>
@@ -205,7 +205,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
             {plan.future.map((f, i) => (
               <li key={`${f.bucket}-${f.sectionId}-${i}`}>
                 <strong>{f.bucket}</strong> in {f.sectionTitle} — {f.count} collection(s).{" "}
-                <span style={{ color: "var(--color-muted, #888)" }}>{f.note}</span>
+                <span style={{ color: "var(--text-muted)" }}>{f.note}</span>
               </li>
             ))}
           </ul>
@@ -224,7 +224,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7, maxHeight: 220, overflowY: "auto" }}>
             {plan.unmappable.map((u) => (
               <li key={u.ratingKey}>
-                {u.title} <span style={{ color: "var(--color-muted, #888)" }}>({u.sectionTitle})</span>
+                {u.title} <span style={{ color: "var(--text-muted)" }}>({u.sectionTitle})</span>
               </li>
             ))}
           </ul>
@@ -241,7 +241,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
                 Delete the {providerLabel}-managed collections behind the selected rules from Plex after creating them
               </span>
             </label>
-            <p className={styles.hint} style={{ color: "var(--color-warn, #c97a00)" }}>
+            <p className={styles.hint} style={{ color: "var(--text-warn)" }}>
               Selected rules will replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
               {deleteOriginals
                 ? " Originals will be deleted from Plex — this cannot be undone."

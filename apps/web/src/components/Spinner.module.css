@@ -17,8 +17,8 @@
 .spinner {
   display: inline-block;
   border-style: solid;
-  border-color: var(--border-input, rgba(255, 255, 255, 0.18));
-  border-top-color: var(--accent, #6366f1);
+  border-color: var(--border-input);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: tb-spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -52,7 +52,7 @@
 
 .subtle {
   border-color: rgba(255, 255, 255, 0.12);
-  border-top-color: var(--accent, #6366f1);
+  border-top-color: var(--accent);
 }
 
 .inverse {
@@ -82,8 +82,8 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation: tb-pulse 1.4s ease-in-out infinite;
-    border-top-color: var(--border-input, rgba(255, 255, 255, 0.18));
-    background: var(--accent, #6366f1);
+    border-top-color: var(--border-input);
+    background: var(--accent);
     border-color: transparent;
   }
 }

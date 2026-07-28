@@ -40,6 +40,60 @@
 
   --danger: #ef4444;
   --danger-hover: #dc2626;
+
+  /* ─── Surfaces & text (extra roles) ─────────────────────────────── */
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-elevated: #fff;
+  --bg-muted: #f0f1f3;
+  --accent-soft: rgba(74, 108, 247, 0.14);
+  --text-warn: #b45309;
+
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, monospace;
+
+  /* ─── Status palette ────────────────────────────────────────────────
+   * One source of truth for every "this thing succeeded / is degraded /
+   * failed" chip, dot and inline message. `-bg`/`-fg` are a contrast-checked
+   * pair for badges; `-dot` is the saturated solid used for status dots and
+   * bar segments (it sits on the page background, not on `-bg`).
+   */
+  --status-ok-bg: #d1fae5;
+  --status-ok-fg: #065f46;
+  --status-ok-dot: #22c55e;
+
+  --status-warn-bg: #fef3c7;
+  --status-warn-fg: #92400e;
+  --status-warn-dot: #f59e0b;
+
+  --status-error-bg: #fee2e2;
+  --status-error-fg: #991b1b;
+  --status-error-dot: #ef4444;
+
+  --status-info-bg: #dbeafe;
+  --status-info-fg: #1d4ed8;
+  --status-info-dot: #3b82f6;
+
+  --status-neutral-bg: #e5e7eb;
+  --status-neutral-fg: #4b5563;
+  --status-neutral-dot: #9ca3af;
+
+  --status-special-bg: #ede9fe;
+  --status-special-fg: #6d28d9;
+  --status-special-dot: #8b5cf6;
+
+  /* ─── Stacking order ────────────────────────────────────────────────
+   * Every app-level layer draws from this scale so overlays can never end
+   * up behind the mobile bottom nav. Purely-local layering inside a single
+   * component (poster canvas layers, progress fills) keeps plain integers.
+   */
+  --z-dropdown: 80;
+  --z-sticky-bar: 90;
+  --z-sidebar: 100;
+  --z-tooltip: 150;
+  --z-bottom-nav: 200;
+  --z-sheet-overlay: 290;
+  --z-sheet: 295;
+  --z-modal: 400;
+  --z-toast: 500;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -70,6 +124,32 @@
     --input-focus-ring: 0 0 0 3px rgba(107, 140, 255, 0.25);
     --danger: #f07070;
     --danger-hover: #e05a5a;
+
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-elevated: #262639;
+    --bg-muted: #23233a;
+    --accent-soft: rgba(107, 140, 255, 0.22);
+    --text-warn: #fcd34d;
+
+    /* Tinted translucent fills read as "part of the surface" on dark, where
+     * the light palette's solid pastels read as pasted-on light chips. */
+    --status-ok-bg: rgba(34, 197, 94, 0.16);
+    --status-ok-fg: #6ee7a8;
+
+    --status-warn-bg: rgba(245, 158, 11, 0.16);
+    --status-warn-fg: #fcd34d;
+
+    --status-error-bg: rgba(239, 68, 68, 0.16);
+    --status-error-fg: #fca5a5;
+
+    --status-info-bg: rgba(59, 130, 246, 0.18);
+    --status-info-fg: #93c5fd;
+
+    --status-neutral-bg: #2a2a3d;
+    --status-neutral-fg: #b0b0b0;
+
+    --status-special-bg: rgba(139, 92, 246, 0.2);
+    --status-special-fg: #c4b5fd;
   }
 }
 
@@ -104,7 +184,7 @@ body {
   height: 100vh;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: var(--z-sidebar);
 }
 
 .sidebar-title {
@@ -243,7 +323,7 @@ body {
   padding: 10px 14px;
   min-width: 180px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  z-index: 100;
+  z-index: var(--z-tooltip);
   pointer-events: none;
 }
 
@@ -495,7 +575,7 @@ body {
     height: calc(env(safe-area-inset-bottom, 0px) + 60px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     background: #1a1a2e;
-    z-index: 200;
+    z-index: var(--z-bottom-nav);
     align-items: stretch;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
@@ -555,7 +635,7 @@ body {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.45);
-    z-index: 190;
+    z-index: var(--z-sheet-overlay);
     -webkit-tap-highlight-color: transparent;
     animation: backdropIn 200ms ease-out;
   }
@@ -569,7 +649,7 @@ body {
     right: 0;
     background: #1a1a2e;
     border-radius: 16px 16px 0 0;
-    z-index: 195;
+    z-index: var(--z-sheet);
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     padding: 8px 0 12px;

@@ -3,8 +3,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -22,7 +22,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: var(--status-warn-dot);
   flex-shrink: 0;
 }
 

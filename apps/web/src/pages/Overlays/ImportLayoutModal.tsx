@@ -65,7 +65,7 @@ export function ImportLayoutModal({
           onChange={(e) => onTextChange(e.target.value)}
           placeholder='{"version":1,"configs":[…]}'
           rows={8}
-          style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", resize: "vertical" }}
+          style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem", resize: "vertical" }}
         />
         <div className={styles.checkRow}>
           <label className={styles.checkLabel}>

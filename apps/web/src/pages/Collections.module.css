@@ -131,13 +131,13 @@
 }
 
 .labelTinkerbell {
-  background: #e8daef;
-  color: #6c3483;
+  background: var(--status-special-bg);
+  color: var(--status-special-fg);
 }
 
 .labelUser {
-  background: #d5f5e3;
-  color: #1e8449;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .labelRemove {
@@ -249,7 +249,7 @@
 .labelEditorInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .labelCheckboxList {
@@ -571,7 +571,7 @@
   border: 1px solid var(--border-color);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  z-index: 90;
+  z-index: var(--z-sticky-bar);
   animation: stickyBarIn 180ms ease-out;
 }
 
@@ -598,7 +598,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 100;
+  z-index: var(--z-modal);
   animation: drawerBackdropIn 180ms ease-out;
 }
 
@@ -733,7 +733,7 @@
 .itemSearch:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 /* ─── Denser grid + hover overlay ────────────────────────────────────────── */
@@ -999,7 +999,7 @@
   outline: none;
   border-color: var(--accent);
   background: var(--bg-input);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.12);
+  box-shadow: var(--input-focus-ring);
 }
 
 .detailHeaderActions {
@@ -1025,7 +1025,7 @@
 .summaryInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .summaryAdd {
@@ -1139,7 +1139,7 @@
   outline: none;
   border-color: var(--accent);
   background: var(--bg-input);
-  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .smartSelectGrow {
@@ -1165,7 +1165,7 @@
   outline: none;
   border-color: var(--accent);
   background: var(--bg-input);
-  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .smartChipField {
@@ -1183,7 +1183,7 @@
 .smartChipField:focus-within {
   border-color: var(--accent);
   background: var(--bg-input);
-  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+  box-shadow: var(--input-focus-ring);
 }
 
 .smartChip {
@@ -1275,7 +1275,7 @@
 
 .smartRemoveBtn:hover {
   background: var(--bg-error, rgba(220, 53, 69, 0.1));
-  color: #dc3545;
+  color: var(--status-error-dot);
 }
 
 .smartActions {

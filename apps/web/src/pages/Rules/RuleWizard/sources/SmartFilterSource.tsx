@@ -88,7 +88,7 @@ function GroupEditor({ group, onChange, depth, onRemove }: GroupEditorProps) {
   // Visual nesting: alternate left-border tint per depth so deeply-nested
   // groups read as a hierarchy rather than a wall of inputs.
   const borderStyle: React.CSSProperties = {
-    borderLeft: `3px solid ${depth % 2 === 0 ? "var(--accent, #888)" : "var(--border-input, #ccc)"}`,
+    borderLeft: `3px solid ${depth % 2 === 0 ? "var(--accent)" : "var(--border-input)"}`,
     paddingLeft: 12,
     marginLeft: depth === 0 ? 0 : 4,
   };

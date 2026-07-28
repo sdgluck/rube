@@ -5,7 +5,7 @@
      wrapping element so the toast clears that UI. */
   bottom: var(--toast-bottom, 24px);
   right: 24px;
-  z-index: 300;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;

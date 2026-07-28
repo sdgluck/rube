@@ -74,7 +74,7 @@ export default function MigrationBanner() {
         style={{
           padding: "6px 14px",
           background: "transparent",
-          color: "var(--color-muted, #888)",
+          color: "var(--text-muted)",
           border: "1px solid var(--border-input)",
           borderRadius: 6,
           cursor: "pointer",

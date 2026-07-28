@@ -52,7 +52,7 @@
   position: absolute;
   top: 30px;
   right: 0;
-  z-index: 30;
+  z-index: var(--z-dropdown);
   min-width: 240px;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -193,8 +193,8 @@
 }
 
 .tilePickerRemove:hover {
-  color: #b91c1c;
-  border-color: #b91c1c;
+  color: var(--status-error-fg);
+  border-color: var(--status-error-fg);
 }
 
 .tilePickerActions {
@@ -205,7 +205,7 @@
 }
 
 .tilePickerSave {
-  background: var(--accent, #4a6cf7);
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 4px;
@@ -376,16 +376,16 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #28a745;
+  background: var(--status-ok-dot);
   flex-shrink: 0;
 }
 
 .statusDot[data-state="paused"] {
-  background: #f5c518;
+  background: var(--status-warn-dot);
 }
 
 .statusDot[data-state="buffering"] {
-  background: #ef4444;
+  background: var(--status-error-dot);
 }
 
 /* ─── Table cells ───────────────────────────────────────────────────────── */
@@ -412,7 +412,7 @@
 }
 
 .titleLink:hover .titleText {
-  color: var(--accent, #4a6cf7);
+  color: var(--accent);
   text-decoration: underline;
 }
 
@@ -495,7 +495,7 @@
 
 .miniProgressFill {
   height: 100%;
-  background: #f5c518;
+  background: var(--status-warn-dot);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -534,11 +534,11 @@
 }
 
 .healthDot[data-status="ok"] {
-  background: #28a745;
+  background: var(--status-ok-dot);
 }
 
 .healthDot[data-status="error"] {
-  background: #ef4444;
+  background: var(--status-error-dot);
 }
 
 /* ─── Sub sections (jobs, events) ───────────────────────────────────────── */

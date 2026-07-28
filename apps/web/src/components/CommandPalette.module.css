@@ -6,7 +6,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: 20vh;
-  z-index: 300;
+  z-index: var(--z-modal);
   animation: backdropIn 200ms ease-out;
 }
 
