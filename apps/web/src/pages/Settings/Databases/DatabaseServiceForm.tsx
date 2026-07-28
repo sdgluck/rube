@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
+import ErrorState from "#components/ErrorState";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
@@ -43,6 +44,7 @@ export default function DatabaseServiceForm({ config, runTest }: Props) {
       addToast(`Failed to save ${config.serviceName} settings`, "error");
     } finally {
       setSaving(false);
+      utils.health.status.invalidate();
     }
   };
 
@@ -64,7 +66,11 @@ export default function DatabaseServiceForm({ config, runTest }: Props) {
   };
 
   if (configQuery.isLoading) return <FormSkeleton rows={2} />;
-  if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
+  if (configQuery.error) {
+    return (
+      <ErrorState title="Couldn't load settings" error={configQuery.error} onRetry={() => configQuery.refetch()} />
+    );
+  }
 
   return (
     <div className={styles.form}>
@@ -83,10 +89,10 @@ export default function DatabaseServiceForm({ config, runTest }: Props) {
         </label>
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
           <button type="button" className={styles.buttonSecondary} onClick={handleTest} disabled={testing}>
-            {testing ? "Testing..." : "Test Connection"}
+            {testing ? "Testing…" : "Test Connection"}
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>
