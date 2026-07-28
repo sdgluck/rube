@@ -89,9 +89,13 @@
   --z-sticky-bar: 90;
   --z-sidebar: 100;
   --z-tooltip: 150;
+  /* The closed More sheet is parked just off-screen, and its top edge overlaps
+     the bottom nav's strip. It must therefore paint UNDER the nav — otherwise
+     that overhang covers the tab bar. Opening the sheet moves it above the
+     nav vertically, so it never needs to win on z. */
+  --z-sheet-overlay: 190;
+  --z-sheet: 195;
   --z-bottom-nav: 200;
-  --z-sheet-overlay: 290;
-  --z-sheet: 295;
   --z-modal: 400;
   --z-toast: 500;
 }
