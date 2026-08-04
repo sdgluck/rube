@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-04
+
+Hardening pass over the background job system, so it can be left running
+unattended.
+
+### Added
+
+- **Settings → Schedules** — choose the timezone all job schedules are evaluated in. Previously schedules followed the container's clock with nothing showing what that was, and drifted by an hour twice a year at daylight-saving changes.
+- Jobs whose scheduled time passed while Tinkerbell was down now run once on the next start, staggered a few seconds apart. Schedules that fire more often than hourly are skipped, and every decision is logged.
+- **Generate Collections** and **Sync Media** record progress as they run and resume where they left off after a restart, instead of starting from zero.
+- A separate queue lane for work you trigger and wait on — uploading a preroll no longer sits behind an hour-long nightly job.
+- `LOG_LEVEL` (`debug`/`info`/`warn`/`error`) and `LOG_FORMAT=json` environment variables. Raising the level also surfaces the job engine's own internals.
+
+### Fixed
+
+- Long-running jobs could be silently re-run up to five times while the first was still going, re-applying label, overlay and personalization changes to your Plex server. The job engine's stale-job sweep had no heartbeat and treated anything running over ten minutes as dead.
+- A single hung network request could jam the entire job queue indefinitely — no further jobs would run, and the container health check still reported healthy. Every outbound request now has a timeout, every job has a wall-clock budget, and a watchdog recovers runs that overrun it.
+- Cancelling a job now actually stops it. Cancellation is reported when the job finishes unwinding, so the run's duration is the time actually spent, and a cancelled job can't be started again while the previous run is still stopping.
+- A job with invalid configuration ran with default behaviour instead of failing. For **Remove Overlays** this meant silently _applying_ overlays instead of removing them.
+- Jobs interrupted by a restart could resume against an already-finished run, corrupting its log and status.
+- Requests to TMDB, OMDb, Overseerr, IMDb and the \*Arrs now retry transient failures. A single upstream blip at 1am no longer fails the whole nightly run.
+- Job run logs stream incrementally instead of re-sending the entire log to the browser every second, and are capped so a failing job can't write an unbounded amount. The end of the log is always kept.
+- The per-minute health check no longer writes an activity-feed event every time it runs when nothing has changed.
+
 ## [0.6.0] - 2026-08-04
 
 ### Added
