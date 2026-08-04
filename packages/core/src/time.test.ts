@@ -7,10 +7,10 @@ import { formatDuration, MINUTE_MS, SECOND_MS } from "./time.ts";
  * messages that users read in the activity feed, so its shape is part of the
  * data, not just presentation. These cases pin it.
  *
- * (The plan for this work referenced a `parseDurationMs` in `domains/events`
- * that would need to round-trip against this. No such function exists in the
- * tree — nothing parses these strings back — so pinning the format is the
- * whole obligation.)
+ * `domains/events` parses the format back out of those messages
+ * (`parseDurationMs`) to average durations across rolled-up rows. The
+ * round-trip between the two is pinned in `domains/events/src/duration.test.ts`
+ * — this file pins the output shape, that one pins the pair.
  */
 describe("formatDuration", () => {
   it("renders sub-minute durations in whole seconds", () => {
@@ -28,8 +28,9 @@ describe("formatDuration", () => {
   });
 
   it("does not roll minutes into hours", () => {
-    // Deliberate: a four-hour job reads as "240m 0s". Changing this would
-    // change strings already written into the events table.
+    // Deliberate, and load-bearing: `parseDurationMs` in `domains/events` has
+    // no hours branch, so an "4h 0m 0s" format would silently stop parsing and
+    // every rolled-up duration in the activity feed would vanish.
     assert.equal(formatDuration(4 * 60 * MINUTE_MS), "240m 0s");
   });
 });

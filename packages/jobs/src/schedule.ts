@@ -12,7 +12,7 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import { Cron } from "croner";
 import { db, jobRuns, jobs } from "@tinkerbell/db";
-import { createLogger, errorMessage, getConfig, DAY_MS, HOUR_MS } from "@tinkerbell/core";
+import { createLogger, errorMessage, getConfig, isValidTimezone, DAY_MS, HOUR_MS } from "@tinkerbell/core";
 
 const log = createLogger("jobs");
 
@@ -44,10 +44,35 @@ export const cronJobs = new Map<string, Cron>();
  * fallback for anyone who set it on the container instead.
  */
 export function schedulerTimezone(): string | undefined {
-  const configured = getConfig("global_timezone")?.trim();
-  if (configured) return configured;
+  // Both sources are validated here rather than trusted. `global_timezone` is
+  // schema-checked on save, but a row written by an older build (or by hand)
+  // bypasses that, and `TZ` never goes through the schema at all — setting it
+  // in a compose file is the first thing a self-hoster does. A bad value
+  // propagated into every `new Cron` throws during `initJobs`, which the server
+  // turns into `process.exit(1)`: a crash-loop with no UI left to fix it from.
+  let configured: string | undefined;
+  try {
+    configured = getConfig("global_timezone")?.trim();
+  } catch (err) {
+    // `getConfig` parses the stored value against the schema, so a corrupt row
+    // throws here. This function runs inside `initJobs`; an exception escaping
+    // it is a boot failure, which is precisely what we're guarding against.
+    log.error("could not read the configured timezone", { err: errorMessage(err) });
+  }
+  if (configured) {
+    if (isValidTimezone(configured)) return configured;
+    log.error("ignoring invalid configured timezone", { timezone: configured });
+  }
+
   const env = process.env.TZ?.trim();
-  return env || undefined;
+  if (env) {
+    if (isValidTimezone(env)) return env;
+    log.error("ignoring invalid TZ environment variable", { TZ: env });
+  }
+
+  // undefined = croner follows the process's own local time, which is the
+  // behaviour we had before the setting existed. Degraded, but running.
+  return undefined;
 }
 
 /** Only catch up on schedules that fire less often than this. */
@@ -67,24 +92,37 @@ export function scheduleCron(job: ScheduledJob): void {
   if (!job.enabled || !job.schedule) return;
 
   const timezone = schedulerTimezone();
-  const cron = new Cron(
-    job.schedule,
-    {
-      timezone,
-      // Without `catch`, a throw inside the handler escapes into croner's own
-      // timer, where nothing is listening for it.
-      catch: (err: unknown) => log.error("cron handler threw", { job: job.name, err: errorMessage(err) }),
-    },
-    () => {
-      log.info("cron triggered", { job: job.name });
-      if (!startJob) {
-        log.error("cron fired before initSchedule() — dropping", { job: job.name });
-        return;
-      }
-      startJob(job.id).catch((err) => log.error("failed to start job", { job: job.name, err: errorMessage(err) }));
-    },
-  );
-  cronJobs.set(job.id, cron);
+  try {
+    const cron = new Cron(
+      job.schedule,
+      {
+        timezone,
+        // Without `catch`, a throw inside the handler escapes into croner's own
+        // timer, where nothing is listening for it.
+        catch: (err: unknown) => log.error("cron handler threw", { job: job.name, err: errorMessage(err) }),
+      },
+      () => {
+        log.info("cron triggered", { job: job.name });
+        if (!startJob) {
+          log.error("cron fired before initSchedule() — dropping", { job: job.name });
+          return;
+        }
+        startJob(job.id).catch((err) => log.error("failed to start job", { job: job.name, err: errorMessage(err) }));
+      },
+    );
+    cronJobs.set(job.id, cron);
+  } catch (err) {
+    // A schedule the user saved through the UI is validated, but a row written
+    // by an older build or edited by hand isn't. Dropping one bad schedule is
+    // recoverable; letting it throw out of `startCronSchedules` during
+    // `initJobs` takes the whole server down on boot, repeatedly.
+    log.error("could not schedule job — leaving it unscheduled", {
+      job: job.name,
+      schedule: job.schedule,
+      timezone: timezone ?? "system",
+      err: errorMessage(err),
+    });
+  }
 }
 
 /**

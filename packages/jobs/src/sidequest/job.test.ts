@@ -19,6 +19,7 @@ const { CommandJob } = await import("./job.ts");
 const { COMMANDS } = await import("../commands/catalog.ts");
 const { JOB_LOG_MAX_BYTES } = await import("../limits.ts");
 const { cancelRun } = await import("../runner.ts");
+const { createCheckpoint } = await import("../checkpoint.ts");
 
 const JOB_ID = "test-job";
 const RUN_ID = "test-run";
@@ -229,6 +230,21 @@ describe("cancellation", () => {
 
     assert.deepEqual(result, { cancelled: true });
     assert.equal(row()?.status, "cancelled");
+  });
+
+  it("discards the checkpoint, so a re-run starts over", async () => {
+    // A crash resumes; a cancel starts fresh. Cancelling is deliberate, and
+    // "cancel, then Run now" reads as "start over" — redoing work is cheap,
+    // silently skipping work the user asked to redo is not.
+    insertRun("running");
+    stubCommand(async (ctx) => {
+      ctx.checkpoint.write({ completedRuleIds: ["a", "b"] });
+      cancelRun(RUN_ID);
+    });
+
+    await runCommandJob();
+
+    assert.equal(createCheckpoint(JOB_ID).read(), null);
   });
 
   it("does not overwrite a run the watchdog already failed", async () => {

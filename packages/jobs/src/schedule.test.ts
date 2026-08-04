@@ -9,8 +9,9 @@ import { setupTempDb } from "./test-support/temp-db.ts";
 
 setupTempDb();
 
-const { db, jobs, jobRuns } = await import("@tinkerbell/db");
-const { catchUpMissedRuns, initSchedule, schedulerTimezone } = await import("./schedule.ts");
+const { db, config, jobs, jobRuns } = await import("@tinkerbell/db");
+const { catchUpMissedRuns, cronJobs, initSchedule, scheduleCron, schedulerTimezone, startCronSchedules } =
+  await import("./schedule.ts");
 const { setConfig, deleteConfig, DAY_MS, HOUR_MS } = await import("@tinkerbell/core");
 
 /** 2026-08-04T12:00:00Z — a fixed "now" so the assertions don't drift. */
@@ -106,10 +107,61 @@ describe("catchUpMissedRuns", () => {
   });
 });
 
+describe("scheduleCron", () => {
+  it("does not throw when a stored schedule is unparseable", () => {
+    // One bad row must not take out the schedules that follow it in
+    // `startCronSchedules`'s loop — that loop runs during `initJobs`.
+    initSchedule(async () => ({ ok: true as const, runId: "x" }));
+    assert.doesNotThrow(() => scheduleCron({ id: "broken", name: "Broken", enabled: 1, schedule: "nope" }));
+    assert.equal(cronJobs.has("broken"), false);
+  });
+
+  it("schedules the good jobs even when a bad one is present", () => {
+    initSchedule(async () => ({ ok: true as const, runId: "x" }));
+    seedJob("broken", "not a cron expression");
+    seedJob("fine", "0 3 * * *");
+
+    assert.doesNotThrow(() => startCronSchedules());
+    assert.equal(cronJobs.has("fine"), true);
+    assert.equal(cronJobs.has("broken"), false);
+
+    for (const cron of cronJobs.values()) cron.stop();
+    cronJobs.clear();
+  });
+});
+
 describe("schedulerTimezone", () => {
   it("prefers the configured zone", () => {
     setConfig("global_timezone", "Europe/London");
     assert.equal(schedulerTimezone(), "Europe/London");
+  });
+
+  it("ignores an invalid stored zone rather than propagating it", () => {
+    // croner throws when it builds a schedule against an unknown zone, and
+    // that throw happens inside `initJobs` — which the server turns into
+    // process.exit(1). A typo in this row must degrade, not crash-loop.
+    db.insert(config)
+      .values({ key: "global_timezone", value: "Europe/Londn" })
+      .onConflictDoUpdate({ target: config.key, set: { value: "Europe/Londn" } })
+      .run();
+    const original = process.env.TZ;
+    delete process.env.TZ;
+
+    assert.equal(schedulerTimezone(), undefined);
+
+    if (original !== undefined) process.env.TZ = original;
+  });
+
+  it("ignores an invalid TZ environment variable", () => {
+    // The realistic trigger: TZ never goes through the config schema at all.
+    deleteConfig("global_timezone");
+    const original = process.env.TZ;
+    process.env.TZ = "Not/AZone";
+
+    assert.equal(schedulerTimezone(), undefined);
+
+    if (original === undefined) delete process.env.TZ;
+    else process.env.TZ = original;
   });
 
   it("falls back to TZ, then to undefined", () => {

@@ -147,7 +147,15 @@ worth knowing when running this unattended:
   queue forever.
 - **Long jobs checkpoint.** `generate` and `sync-media` record their progress
   as they go and resume where they left off if the container restarts
-  mid-run. Checkpoints expire after 24 hours.
+  mid-run — the log says so when it happens. Checkpoints expire after 24 hours,
+  and cancelling a run discards its checkpoint, so an explicit cancel followed
+  by "Run now" starts over rather than resuming.
+- **Missed schedules run once on the next boot.** If the machine is off
+  overnight, an infrequent job whose time passed while it was down runs once
+  when Tinkerbell starts, staggered a few seconds apart. On a server that is
+  only powered on in the evenings this means several jobs catching up at each
+  boot — expected, and every decision is logged. Jobs scheduled more often than
+  hourly are never caught up.
 - **Run one instance.** Cron schedules and the "already running" guard both
   assume a single process. Pointing two replicas at one database will
   double-fire every schedule and let two runs of the same job overlap.

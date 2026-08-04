@@ -84,11 +84,3 @@ export type CommandName = keyof typeof COMMANDS;
 export function isCommandName(name: string): name is CommandName {
   return Object.hasOwn(COMMANDS, name);
 }
-
-export function commandTimeoutMs(name: CommandName): number {
-  return COMMANDS[name].timeoutMs;
-}
-
-export function commandLane(name: CommandName): CommandLane {
-  return COMMANDS[name].lane;
-}

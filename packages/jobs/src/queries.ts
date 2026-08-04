@@ -5,9 +5,7 @@
  */
 import { eq, desc, inArray, sql, type InferSelectModel } from "drizzle-orm";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
-
-/** Statuses that mean a run is still occupying its job. */
-const ACTIVE_STATUSES = ["running", "cancelling"];
+import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -81,18 +79,23 @@ export function getJobRun(runId: string): Omit<JobRun, "log"> | null {
 }
 
 /**
- * A slice of a run's log starting at `offset` bytes.
+ * A slice of a run's log starting at `offset`.
  *
- * SQLite's `substr`/`length` do the slicing server-side, so a poll costs the
- * bytes appended since the last poll rather than the whole column. Callers
+ * SQLite's `substr`/`length` do the slicing server-side, so a poll costs what
+ * was appended since the last poll rather than the whole column. Callers
  * accumulate the chunks; `size` lets them detect a truncated/reset log and
  * start over.
+ *
+ * Offsets are **codepoints**, not JS string indices. SQLite counts characters,
+ * JS's `.length` counts UTF-16 code units, and every astral character (an emoji
+ * in a Plex collection title, say) makes the two disagree by one. Advancing the
+ * caller by `chunk.length` would step past unread output and silently drop it.
  */
 export function getJobRunLog(runId: string, offset = 0): { chunk: string; nextOffset: number; size: number } | null {
   const from = Math.max(0, Math.floor(offset));
   const row = db
     .select({
-      // substr() is 1-indexed.
+      // substr() is 1-indexed, and counts characters.
       chunk: sql<string>`substr(${jobRuns.log}, ${from + 1})`,
       size: sql<number>`length(${jobRuns.log})`,
     })
@@ -101,7 +104,8 @@ export function getJobRunLog(runId: string, offset = 0): { chunk: string; nextOf
     .get();
   if (!row) return null;
   const chunk = row.chunk ?? "";
-  return { chunk, nextOffset: from + chunk.length, size: row.size ?? 0 };
+  // Spread iterates codepoints, matching how SQLite counted `size`.
+  return { chunk, nextOffset: from + [...chunk].length, size: row.size ?? 0 };
 }
 
 /** The complete log, for the download affordance. */
@@ -134,7 +138,7 @@ export function getActiveRuns(): Array<{
     })
     .from(jobRuns)
     .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
-    .where(inArray(jobRuns.status, ACTIVE_STATUSES))
+    .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
     .orderBy(jobRuns.startedAt)
     .all();
 }

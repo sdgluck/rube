@@ -12,6 +12,7 @@ import {
 } from "@tinkerbell/core";
 import { COMMANDS, isCommandName, type CommandName } from "../commands/catalog.ts";
 import { createCheckpoint } from "../checkpoint.ts";
+import { isTerminalStatus } from "../statuses.ts";
 import {
   JOB_CANCEL_POLL_INTERVAL_MS,
   JOB_LOG_FLUSH_INTERVAL_MS,
@@ -22,9 +23,6 @@ import {
 import { isShuttingDown } from "../runner.ts";
 
 const baseLog = createLogger("jobs");
-
-/** Statuses that mean "this run is over, stop writing to it". */
-const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
 export class CommandJob extends Job {
   async run(commandName: string, runId: string, configJson: string, jobName: string, jobId: string) {
@@ -234,7 +232,7 @@ export class CommandJob extends Job {
     const alreadyTerminal = (): boolean => {
       try {
         const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
-        return !!row && TERMINAL_STATUSES.has(row.status);
+        return !!row && isTerminalStatus(row.status);
       } catch {
         return false;
       }
@@ -243,6 +241,12 @@ export class CommandJob extends Job {
     /** Write the terminal `cancelled` status. The worker owns this, not the API. */
     const finishCancelled = (): void => {
       finalizeLog();
+      // Cancelling discards the checkpoint, unlike a crash or a restart. Those
+      // are accidents where resuming is the kindest thing to do; a cancel is a
+      // deliberate act, and "cancel, then Run now" reads as "start over". The
+      // failure modes aren't symmetric either: redoing work the user wanted
+      // redone is cheap, silently skipping it is not.
+      ctx.checkpoint.clear();
       try {
         if (alreadyTerminal()) return;
         db.update(jobRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
@@ -262,7 +266,17 @@ export class CommandJob extends Job {
         throw new Error(`Command module ${commandName} has no default export`);
       }
 
-      await Promise.race([commandFn(ctx, jobConfig as never), graceDeadline]);
+      // Attach a handler to the command's own promise *before* racing. If the
+      // grace deadline wins, the command promise is still pending — and it will
+      // very likely reject shortly afterwards, because the budget timer aborted
+      // `ctx.signal` a minute earlier and most commands surface that as a
+      // thrown AbortError. With no handler that becomes an unhandled rejection
+      // inside a Sidequest worker thread, where the process-level handler in
+      // `server.ts` doesn't apply. The race result is what we act on; this
+      // catch exists only to keep the loser quiet.
+      const running = commandFn(ctx, jobConfig as never);
+      running.catch(() => {});
+      await Promise.race([running, graceDeadline]);
 
       if (wasCancelled()) {
         finishCancelled();

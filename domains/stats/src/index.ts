@@ -70,17 +70,17 @@ function readCache<T>(key: string, schema: z.ZodType<T>): T | null {
 
 // ─── Plex client (returns null when not configured) ───────────────────────────
 
-function tryGetPlexClient() {
+function tryGetPlexClient(signal?: AbortSignal) {
   const plexUrl = getConfig("global_plex_url");
   const plexToken = getConfig("global_plex_token");
   if (!plexUrl || !plexToken) return null;
-  return createPlexClient({ url: plexUrl, token: plexToken, onHealth: plexHealthCallback });
+  return createPlexClient({ url: plexUrl, token: plexToken, signal, onHealth: plexHealthCallback });
 }
 
 // ─── Sync functions (called by jobs) ──────────────────────────────────────────
 
-export async function syncRecentlyAdded(): Promise<string> {
-  const client = tryGetPlexClient();
+export async function syncRecentlyAdded(signal?: AbortSignal): Promise<string> {
+  const client = tryGetPlexClient(signal);
   if (!client) throw new Error("Plex not configured");
   const recent = await client.getRecentlyAdded(20);
   writeCache("recentlyAdded", recent);
@@ -96,8 +96,8 @@ export interface MostWatchedItem {
   plays: number;
 }
 
-export async function syncMostWatched(): Promise<string> {
-  const client = tryGetPlexClient();
+export async function syncMostWatched(signal?: AbortSignal): Promise<string> {
+  const client = tryGetPlexClient(signal);
   if (!client) throw new Error("Plex not configured");
 
   const history = await client.getWatchHistory({ limit: 1000 });

@@ -223,12 +223,19 @@ export async function checkServiceHealth(service: string): Promise<void> {
 }
 
 /** Check all configured services, reporting health for each. Returns a summary string. */
-export async function checkAllConfiguredServices(): Promise<string> {
+export async function checkAllConfiguredServices(signal?: AbortSignal): Promise<string> {
   const cfg = getAllConfig();
   const configured = HEALTH_SERVICES.filter((svc) => svc.configuredFn(cfg));
   const results: string[] = [];
 
   for (const svc of configured) {
+    // Checked between services rather than threaded into each request: every
+    // individual check already carries its own 10s timeout, so the only wait
+    // worth interrupting is the queue of remaining services.
+    if (signal?.aborted) {
+      results.push(`cancelled before ${configured.length - results.length} remaining service(s)`);
+      break;
+    }
     try {
       await checkServiceHealth(svc.service);
       results.push(`${svc.service}: ok`);

@@ -81,6 +81,43 @@ describe("getJobRunLog", () => {
     assert.equal(getJobRunLog("r1", 1.7)?.chunk, "bc");
   });
 
+  it("counts offsets in codepoints, not UTF-16 units", () => {
+    // SQLite's length()/substr() count characters; JS `.length` counts UTF-16
+    // code units. Every astral character makes them disagree by one, so an
+    // offset advanced by `chunk.length` would step past unread output and
+    // silently drop it. Emoji in Plex collection titles are common.
+    const full = "Created 🎬 Movie Night\n";
+    insertRun("r1", "completed", full);
+
+    const slice = getJobRunLog("r1", 0);
+    assert.ok(slice);
+    assert.equal(slice.chunk, full);
+    // Codepoints, which is what `size` reports too — not `full.length` (one more).
+    assert.equal(slice.nextOffset, [...full].length);
+    assert.equal(slice.nextOffset, slice.size);
+    assert.notEqual(slice.nextOffset, full.length);
+
+    // A follow-up poll from that offset sees nothing, rather than re-reading
+    // (or skipping) a character.
+    assert.equal(getJobRunLog("r1", slice.nextOffset)?.chunk, "");
+  });
+
+  it("stitches an astral-heavy log across many polls", () => {
+    const full = "🎬 one\n🍿 two\n🎞 three\n";
+    insertRun("r1", "completed", full);
+
+    let offset = 0;
+    let assembled = "";
+    for (let i = 0; i < 50; i++) {
+      const slice = getJobRunLog("r1", offset);
+      assert.ok(slice);
+      if (slice.chunk === "") break;
+      assembled += slice.chunk;
+      offset = slice.nextOffset;
+    }
+    assert.equal(assembled, full);
+  });
+
   it("returns null for a missing run", () => {
     assert.equal(getJobRunLog("nope", 0), null);
   });

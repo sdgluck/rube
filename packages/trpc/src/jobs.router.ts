@@ -80,9 +80,20 @@ export const jobsRouter = t.router({
   start: procedure.input(z.object({ jobId: z.string() })).mutation(async ({ input }) => {
     const result = await startJob(input.jobId);
     if (!result.ok) {
-      throw result.reason === "not-found"
-        ? new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobId}" does not exist` })
-        : new TRPCError({ code: "CONFLICT", message: `Job "${input.jobId}" is already running` });
+      switch (result.reason) {
+        case "not-found":
+          throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobId}" does not exist` });
+        case "already-running":
+          throw new TRPCError({ code: "CONFLICT", message: `Job "${input.jobId}" is already running` });
+        case "unknown-command":
+          // The job row exists but points at a command this build doesn't have
+          // — usually a downgrade, or a hand-edited row. A failed run row was
+          // created with the details; point the user at it.
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Job "${input.jobId}" points at a command this version doesn't have. See the run log.`,
+          });
+      }
     }
     return { runId: result.runId };
   }),

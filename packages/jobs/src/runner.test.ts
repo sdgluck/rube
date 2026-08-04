@@ -13,7 +13,7 @@ const { db, jobs, jobRuns } = await import("@tinkerbell/db");
 const { startJob, cancelRun, sweepStuckRuns, buildEngineConfig, DEFAULT_JOBS } = await import("./runner.ts");
 const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS } = await import("./limits.ts");
 const { COMMANDS, isCommandName } = await import("./commands/catalog.ts");
-const { isInternalJobName } = await import("./internal-jobs.ts");
+const { internalJobs, isInternalJobName } = await import("./internal-jobs.ts");
 const { FEATURE_TEMPLATES } = await import("./features.ts");
 
 /**
@@ -82,16 +82,28 @@ describe("startJob", () => {
       // (which is what we're asserting) and then fails the run in place.
       seedJob(JOB_ID, "no-such-command");
       const result = await startJob(JOB_ID);
-      assert.equal(result.ok, true, `expected a start after a ${terminal} run`);
+      // The claim succeeded (that's what's under test); the run then fails in
+      // place because the command doesn't exist.
+      assert.notEqual(
+        result.ok === false && result.reason,
+        "already-running",
+        `expected the guard to open after a ${terminal} run`,
+      );
     }
   });
 
-  it("fails the run rather than hanging when a job points at an unknown command", async () => {
+  it("reports unknown-command rather than claiming success", async () => {
     seedJob(JOB_ID, "removed-in-a-past-release");
     const result = await startJob(JOB_ID);
-    assert.equal(result.ok, true);
-    assert.ok(result.ok);
-    const row = statusOf(result.runId);
+
+    // `ok: true` here would tell a caller that work is underway when it isn't.
+    assert.equal(result.ok, false);
+    assert.ok(!result.ok);
+    assert.equal(result.reason, "unknown-command");
+
+    // A run row still exists, failed and explained, so the user can see why.
+    assert.ok(result.runId);
+    const row = statusOf(result.runId!);
     assert.equal(row?.status, "failed");
     assert.notEqual(row?.finishedAt, null);
   });
@@ -162,6 +174,32 @@ describe("watchdog", () => {
 
     const log = db.select({ log: jobRuns.log }).from(jobRuns).where(eq(jobRuns.id, "wedged")).get();
     assert.match(log?.log ?? "", /\[watchdog\]/);
+  });
+
+  it("force-fails a wedged internal job too", () => {
+    // Internal jobs skip the queue and so have no in-run deadline — the
+    // watchdog is their only backstop. Without it a stuck `healthcheck` would
+    // occupy its job forever and never run again.
+    db.delete(jobRuns).run();
+    db.insert(jobs)
+      .values({ id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "", enabled: 1, config: {} })
+      .run();
+    const now = Date.now();
+    const budget = (internalJobs.healthcheck as { timeoutMs: number }).timeoutMs;
+    db.insert(jobRuns)
+      .values({
+        id: "wedged-internal",
+        jobId: "healthcheck",
+        status: "running",
+        log: "",
+        progress: 0,
+        message: "",
+        startedAt: now - budget - 60_000 * 5,
+      })
+      .run();
+
+    assert.equal(sweepStuckRuns(now), 1);
+    assert.equal(statusOf("wedged-internal")?.status, "failed");
   });
 
   it("force-fails a cancellation that never completes", () => {

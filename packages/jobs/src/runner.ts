@@ -11,6 +11,7 @@ import { internalJobs, isInternalJobName, type InternalJobDescriptor, type Inter
 import { initSchedule, scheduleCron, startCronSchedules } from "./schedule.ts";
 import { createCheckpoint } from "./checkpoint.ts";
 import { COMMANDS, isCommandName, type CommandName } from "./commands/catalog.ts";
+import { ACTIVE_RUN_STATUSES, isTerminalStatus } from "./statuses.ts";
 import {
   JOB_CANCELLING_GRACE_MS,
   JOB_RUN_KEEP_PER_JOB,
@@ -154,7 +155,7 @@ function markStaleRunsAsFailed(): void {
   const result = db
     .update(jobRuns)
     .set({ status: "failed", finishedAt: Date.now() })
-    .where(inArray(jobRuns.status, ["running", "cancelling"]))
+    .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
     .run();
   if (result.changes > 0) {
     log.info("marked stale runs as failed", { count: result.changes });
@@ -244,7 +245,15 @@ const internalControllers = new Map<string, AbortController>();
  */
 const cancelRequestedAt = new Map<string, number>();
 
-export type StartResult = { ok: true; runId: string } | { ok: false; reason: "not-found" | "already-running" };
+export type StartResult =
+  | { ok: true; runId: string }
+  /**
+   * `unknown-command` still creates a run row (failed, with an explanation) so
+   * the user has something to look at — but the start did not succeed, and
+   * saying `ok: true` would have made a caller checking that flag believe work
+   * was underway.
+   */
+  | { ok: false; reason: "not-found" | "already-running" | "unknown-command"; runId?: string };
 
 export async function startJob(jobId: string): Promise<StartResult> {
   const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
@@ -302,7 +311,7 @@ export async function startJob(jobId: string): Promise<StartResult> {
       .run();
     emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id });
     log.error("job points at an unknown command", { jobId: job.id, command: job.command });
-    return { ok: true, runId };
+    return { ok: false, reason: "unknown-command", runId };
   }
 
   const descriptor = COMMANDS[job.command];
@@ -329,6 +338,10 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
   const controller = new AbortController();
   internalControllers.set(runId, controller);
 
+  // Log is buffered and written once at the end, unlike `CommandJob`'s 500ms
+  // streaming flush. Deliberate: internal jobs are sub-second, so streaming
+  // would cost a write per job for output nobody can read that fast. Progress
+  // *does* write through, because `purge-runs` has a visible second phase.
   let buffer = "";
   const ctx: JobContext = {
     log: (...args: unknown[]) => {
@@ -357,6 +370,13 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
       jobLog.info("cancelled");
       return;
     }
+    // Same supersede guard `CommandJob` has: the watchdog may have force-failed
+    // this run while we were awaiting, and turning that reported failure back
+    // into a success would leave a `job.failed` event contradicting the row.
+    if (isRunTerminal(runId)) {
+      jobLog.warn("finished after the run was already ended elsewhere; leaving its status alone");
+      return;
+    }
 
     db.update(jobRuns)
       .set({ status: "completed", log: text, progress: 1, message: output, finishedAt: Date.now() })
@@ -379,6 +399,10 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
       jobLog.info("cancelled");
       return;
     }
+    if (isRunTerminal(runId)) {
+      jobLog.warn("failed after the run was already ended elsewhere; leaving its status alone");
+      return;
+    }
     db.update(jobRuns)
       .set({ status: "failed", log: buffer + msg, message: msg, finishedAt: Date.now() })
       .where(eq(jobRuns.id, runId))
@@ -395,6 +419,12 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
 function isCancelling(runId: string): boolean {
   const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
   return row?.status === "cancelling" || row?.status === "cancelled";
+}
+
+/** Has something else (the watchdog) already ended this run? */
+function isRunTerminal(runId: string): boolean {
+  const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+  return !!row && isTerminalStatus(row.status);
 }
 
 function finishInternalCancelled(runId: string, text: string): void {
@@ -451,6 +481,17 @@ let watchdogTimer: NodeJS.Timeout | null = null;
  * cannot help there, because aborting a signal doesn't interrupt a thread
  * stuck in a syscall.
  */
+/**
+ * The wall-clock budget for whatever this job runs, or null if the command
+ * isn't one we know about (in which case there is nothing to enforce — the
+ * run will already have been failed at start).
+ */
+function runBudgetMs(command: string): number | null {
+  if (isCommandName(command)) return COMMANDS[command].timeoutMs;
+  if (isInternalJobName(command)) return (internalJobs[command] as InternalJobDescriptor).timeoutMs;
+  return null;
+}
+
 export function sweepStuckRuns(now = Date.now()): number {
   const active = db
     .select({
@@ -463,7 +504,7 @@ export function sweepStuckRuns(now = Date.now()): number {
     })
     .from(jobRuns)
     .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
-    .where(inArray(jobRuns.status, ["running", "cancelling"]))
+    .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
     .all();
 
   let failed = 0;
@@ -475,10 +516,14 @@ export function sweepStuckRuns(now = Date.now()): number {
       if (now - requestedAt > JOB_CANCELLING_GRACE_MS) {
         reason = `Cancellation did not complete within ${formatDuration(JOB_CANCELLING_GRACE_MS)}`;
       }
-    } else if (isCommandName(run.command)) {
-      const deadline = run.startedAt + COMMANDS[run.command].timeoutMs + JOB_TIMEOUT_GRACE_MS * 2;
-      if (now > deadline) {
-        reason = `Exceeded its ${formatDuration(COMMANDS[run.command].timeoutMs)} budget and did not unwind`;
+    } else {
+      // Internal jobs are swept too. They never pass through `CommandJob`, so
+      // they have no in-run deadline at all — this is their only backstop, and
+      // without it a wedged `healthcheck` would occupy its job forever and
+      // healthcheck would silently never run again.
+      const budgetMs = runBudgetMs(run.command);
+      if (budgetMs !== null && now > run.startedAt + budgetMs + JOB_TIMEOUT_GRACE_MS * 2) {
+        reason = `Exceeded its ${formatDuration(budgetMs)} budget and did not unwind`;
       }
     }
     if (!reason) continue;
