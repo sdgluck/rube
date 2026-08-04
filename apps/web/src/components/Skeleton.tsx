@@ -88,6 +88,27 @@ export function RulesSkeleton() {
   );
 }
 
+export function PrerollsSkeleton() {
+  return (
+    <div className={styles.wrapper}>
+      <SkeletonLine width="150px" />
+      <SkeletonBlock width="100%" height={120} borderRadius={10} />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+          gap: 16,
+          marginTop: 20,
+        }}
+      >
+        {Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonBlock key={i} width="100%" height={200} borderRadius={10} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function FormSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className={styles.wrapper}>

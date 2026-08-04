@@ -2,6 +2,7 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
+import { getEnvironment, getPlexPrerollStatus } from "@tinkerbell/domain.prerolls";
 import { getAllConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
@@ -28,6 +29,9 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   { service: "Slack", configuredFn: (c) => !!c.global_slack_webhook_url },
   { service: "Telegram", configuredFn: (c) => !!(c.global_telegram_bot_token && c.global_telegram_chat_id) },
   { service: "Webhook", configuredFn: (c) => !!c.global_webhook_url },
+  // Only checked once the admin has actually configured prerolls — before
+  // that, a missing ffmpeg isn't a fault, it's an unused feature.
+  { service: "Prerolls", configuredFn: (c) => !!c.prerolls_plex_path },
 ];
 
 export async function testArrConnection(url: string, apiKey: string) {
@@ -197,6 +201,20 @@ export async function checkServiceHealth(service: string): Promise<void> {
     case "Webhook": {
       if (!cfg.global_webhook_url) throw new Error("Not configured");
       reportHealth("Webhook", "ok", "Webhook URL configured");
+      break;
+    }
+    case "Prerolls": {
+      // Three separate ways this feature silently stops working, none of
+      // which surface until a movie starts: ffmpeg vanishing, the volume
+      // going read-only, and Plex's preference drifting from what we set.
+      const env = await getEnvironment();
+      if (!env.ffmpeg) throw new Error("ffmpeg is not installed or not on PATH");
+      if (!env.dirWritable) throw new Error(`Can't write to ${env.dir}`);
+      const sync = await getPlexPrerollStatus();
+      if (!sync.inSync) {
+        throw new Error(`Plex's pre-roll setting doesn't match — expected "${sync.expected}", got "${sync.actual}"`);
+      }
+      reportHealth("Prerolls", "ok", `ffmpeg ${env.ffmpeg}; Plex in sync`);
       break;
     }
     default:

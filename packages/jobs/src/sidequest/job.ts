@@ -48,6 +48,7 @@ const VALID_COMMANDS = new Set([
   "sync-users",
   "posters-refresh",
   "migrate-collections",
+  "preroll-process",
 ]);
 
 export class CommandJob extends Job {

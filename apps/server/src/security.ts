@@ -14,6 +14,29 @@ export function resolveStaticPath(distDir: string, urlPathname: string): string 
   return null;
 }
 
+/** Canonical v4 UUID, which is what `randomUUID()` produces. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate the `:id` segment of a `/api/prerolls/:id/…` request.
+ *
+ * Preroll files are named after their row's UUID, so rather than resolving a
+ * caller-supplied path and checking it stayed inside the directory, we refuse
+ * anything that isn't a UUID in the first place — traversal, absolute paths
+ * and encoded separators all fail the shape test before touching the disk.
+ */
+export function resolvePrerollId(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    // Malformed percent-encoding — nothing legitimate produces this.
+    return null;
+  }
+  return UUID_RE.test(decoded) ? decoded.toLowerCase() : null;
+}
+
 /**
  * Decide whether a `/api/plex-image?path=…` request is safe to forward.
  * Returns the upstream URL to fetch (with token attached) or `null` to

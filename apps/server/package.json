@@ -15,6 +15,7 @@
     "@tinkerbell/domain.health": "workspace:*",
     "@tinkerbell/domain.migration": "workspace:*",
     "@tinkerbell/domain.overlays": "workspace:*",
+    "@tinkerbell/domain.prerolls": "workspace:*",
     "@tinkerbell/jobs": "workspace:*",
     "@tinkerbell/trpc": "workspace:*",
     "@trpc/server": "^11.10.0"

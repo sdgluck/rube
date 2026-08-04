@@ -387,6 +387,54 @@ export interface TmdbCachedDetails {
   releaseMonth?: number;
 }
 
+/**
+ * Videos played before a movie starts, materialised on disk under
+ * `PREROLLS_DIR` and referenced by Plex's `CinemaTrailersPrerollID` preference.
+ *
+ * `filename` is a UUID rather than the uploaded name because the Plex
+ * preference is a `,`/`;`-delimited path list — a comma or semicolon in a
+ * filename would silently corrupt it. The human-readable name lives in `name`.
+ *
+ * Nullable: `sourceUrl`, which is only set for URL imports. Every other column
+ * defaults, so a row can be inserted the moment an upload starts and filled in
+ * once the processing job has probed the file.
+ */
+export const prerolls = sqliteTable(
+  "prerolls",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    originalFilename: text("original_filename").notNull(),
+    /** Empty until processing succeeds; always `<id>.mp4` once ready. */
+    filename: text("filename").notNull().default(""),
+    /** pending | processing | ready | failed */
+    status: text("status").notNull().default("pending"),
+    enabled: integer("enabled").notNull().default(1),
+    /** Playback order, only meaningful in sequential mode. */
+    position: integer("position").notNull().default(0),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    durationMs: integer("duration_ms").notNull().default(0),
+    width: integer("width").notNull().default(0),
+    height: integer("height").notNull().default(0),
+    fps: real("fps").notNull().default(0),
+    videoCodec: text("video_codec").notNull().default(""),
+    audioCodec: text("audio_codec").notNull().default(""),
+    container: text("container").notNull().default(""),
+    /** copy | remux | encode — what the processing job actually did. */
+    transcodeAction: text("transcode_action").notNull().default(""),
+    /** Why, shown verbatim in the detail modal. */
+    transcodeReasons: text("transcode_reasons", { mode: "json" }).$type<string[]>().notNull().default([]),
+    sourceUrl: text("source_url"),
+    error: text("error").notNull().default(""),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("idx_prerolls_status").on(table.status),
+    index("idx_prerolls_enabled_position").on(table.enabled, table.position),
+  ],
+);
+
 export const tmdbCache = sqliteTable(
   "tmdb_cache",
   {

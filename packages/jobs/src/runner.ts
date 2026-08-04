@@ -73,6 +73,15 @@ const DEFAULT_JOBS: Omit<Job, "config">[] = [
     schedule: "",
     enabled: 1,
   },
+  // No schedule — triggered by the Prerolls page whenever a file is uploaded
+  // or imported. There is nothing to do until one is.
+  {
+    id: "preroll-process",
+    name: "Process Prerolls",
+    command: "preroll-process",
+    schedule: "",
+    enabled: 1,
+  },
 ];
 
 const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {

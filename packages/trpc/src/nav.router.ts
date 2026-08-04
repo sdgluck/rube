@@ -1,6 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
-import { db, collections, mediaItems, rules, plexUsers, jobRuns, events } from "@tinkerbell/db";
+import { db, collections, mediaItems, rules, plexUsers, jobRuns, events, prerolls } from "@tinkerbell/db";
 import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 
@@ -69,6 +69,7 @@ export const navRouter = t.router({
       media: countOf(mediaItems),
       rules: countOf(rules),
       users: countOf(plexUsers),
+      prerolls: countOf(prerolls),
       eventsErrors24h: recentErrorEventCount(DAY_MS),
       overlaysStatus: lastJobStatus("overlays"),
       jobsStatus: lastJobStatus("healthcheck"),

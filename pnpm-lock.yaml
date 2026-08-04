@@ -93,6 +93,9 @@ importers:
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
+      '@tinkerbell/domain.prerolls':
+        specifier: workspace:*
+        version: link:../../domains/prerolls
       '@tinkerbell/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
@@ -386,6 +389,9 @@ importers:
       '@tinkerbell/domain.events':
         specifier: workspace:*
         version: link:../events
+      '@tinkerbell/domain.prerolls':
+        specifier: workspace:*
+        version: link:../prerolls
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../../packages/llm
@@ -483,6 +489,31 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/prerolls:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+      '@tinkerbell/video':
+        specifier: workspace:*
+        version: link:../../packages/video
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -751,6 +782,9 @@ importers:
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
+      '@tinkerbell/domain.prerolls':
+        specifier: workspace:*
+        version: link:../../domains/prerolls
       '@tinkerbell/domain.rule-history':
         specifier: workspace:*
         version: link:../../domains/rule-history
@@ -784,6 +818,9 @@ importers:
       '@tinkerbell/tmdb':
         specifier: workspace:*
         version: link:../../clients/tmdb
+      '@tinkerbell/video':
+        specifier: workspace:*
+        version: link:../video
       croner:
         specifier: ^9.0.0
         version: 9.1.0
@@ -919,6 +956,9 @@ importers:
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
+      '@tinkerbell/domain.prerolls':
+        specifier: workspace:*
+        version: link:../../domains/prerolls
       '@tinkerbell/domain.preview':
         specifier: workspace:*
         version: link:../../domains/preview
@@ -943,6 +983,9 @@ importers:
       '@tinkerbell/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../http
       '@tinkerbell/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -973,6 +1016,15 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/video:
     devDependencies:
       '@types/node':
         specifier: ^25.2.3

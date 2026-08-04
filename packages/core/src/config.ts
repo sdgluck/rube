@@ -101,6 +101,22 @@ export const configSchema = z.object({
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),
+  /**
+   * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
+   * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its
+   * own filesystem, so the same directory usually has a different mount point
+   * in each container. This is that prefix — the Sonarr/Radarr "remote path
+   * mapping" idea, reduced to the single directory we care about.
+   */
+  prerolls_plex_path: z.string(),
+  /**
+   * How Plex plays the pool. `random` joins the paths with `,` (Plex picks
+   * one per playback); `sequential` joins with `;` (Plex plays them in order).
+   * The separator is Plex's convention, not ours.
+   */
+  prerolls_mode: z.enum(["random", "sequential"]),
+  /** Downscale ceiling for the transcoder. */
+  prerolls_max_height: z.number().int().positive(),
   posters_kometa_enabled: z.boolean(),
   posters_kometa_person_style: z.enum(["bw", "rainier", "signature", "diiivoy", "diiivoycolor"]),
   /**

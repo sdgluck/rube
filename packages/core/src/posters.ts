@@ -9,12 +9,9 @@ import {
   type RefreshSummary,
 } from "@tinkerbell/posters";
 import { getConfig } from "./config.ts";
+import { dataDir } from "./paths.ts";
 
 let cacheSingleton: PosterCache | null = null;
-
-function dataDir(): string {
-  return process.env.DATA_DIR || join(import.meta.dirname, "..", "..", "..", "..");
-}
 
 export function posterCache(): PosterCache {
   if (!cacheSingleton) {

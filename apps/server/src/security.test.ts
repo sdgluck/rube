@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
+import { buildPlexImageUrl, resolvePrerollId, resolveStaticPath } from "./security.ts";
 
 const DIST = "/srv/web/dist";
 
@@ -28,6 +28,35 @@ describe("resolveStaticPath", () => {
 
   test("trailing slash and dot segments inside dist still resolve to dist", () => {
     assert.equal(resolveStaticPath(DIST, "/foo/./bar"), `${DIST}/foo/bar`);
+  });
+});
+
+describe("resolvePrerollId", () => {
+  const VALID = "3f2a1c4e-9b8d-4e7a-a1b2-c3d4e5f60718";
+
+  test("accepts a canonical UUID and lower-cases it", () => {
+    assert.equal(resolvePrerollId(VALID), VALID);
+    assert.equal(resolvePrerollId(VALID.toUpperCase()), VALID);
+  });
+
+  test("rejects traversal in every encoding", () => {
+    assert.equal(resolvePrerollId("../../etc/passwd"), null);
+    assert.equal(resolvePrerollId("%2e%2e%2f%2e%2e%2fetc%2fpasswd"), null);
+    assert.equal(resolvePrerollId(`${VALID}/../../../etc/passwd`), null);
+    assert.equal(resolvePrerollId("/etc/passwd"), null);
+  });
+
+  test("rejects anything that isn't exactly a UUID", () => {
+    assert.equal(resolvePrerollId(""), null);
+    assert.equal(resolvePrerollId(null), null);
+    assert.equal(resolvePrerollId(undefined), null);
+    assert.equal(resolvePrerollId(`${VALID}.mp4`), null);
+    assert.equal(resolvePrerollId(`  ${VALID}`), null);
+    assert.equal(resolvePrerollId(VALID.replace(/-/g, "")), null);
+  });
+
+  test("rejects malformed percent-encoding rather than throwing", () => {
+    assert.equal(resolvePrerollId("%E0%A4%A"), null);
   });
 });
 

@@ -324,6 +324,20 @@ export interface MediaFilters {
   container?: string;
 }
 
+/** One row of `/:/prefs`. Plex types values loosely, hence the union. */
+export interface PlexPref {
+  id: string;
+  label?: string;
+  summary?: string;
+  type?: string;
+  value?: string | number | boolean;
+  default?: string | number | boolean;
+  hidden?: boolean;
+  advanced?: boolean;
+  group?: string;
+  enumValues?: string;
+}
+
 export interface PinOptions {
   promotedToOwnHome?: number;
   promotedToRecommendedHome?: number;

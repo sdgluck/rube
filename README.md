@@ -10,6 +10,7 @@ A self-hosted Plex companion for automating library curation. Define rules over 
 - **Overlays** — image composition (sharp) to stamp ratings, badges, and labels onto poster artwork.
 - **Because you watched** — generate per-user recommendation collections.
 - **Personalized home screens** — an opt-in, server-wide mode that lets each Plex user tune their own recommendations (loved/liked/hated genres and more). See below.
+- **Prerolls** — upload the videos Plex plays before a movie; Tinkerbell transcodes anything Plex wouldn't direct play and manages the server's pre-roll setting. See below.
 - **Labels** — bulk apply/undo Plex labels driven by rules, with previewable changes.
 - **Notifications** — Discord, Slack, Telegram, Gotify, Pushbullet, Pushover, LunaSea, and generic webhooks.
 - **Job runner** — Sidequest-backed background jobs with detail views, run logs, and a stress-test harness.
@@ -72,6 +73,46 @@ pnpm db:generate   # generate migration from schema
 pnpm db:migrate    # apply migrations (also runs automatically as part of `pnpm dev`)
 ```
 
+## Prerolls
+
+A preroll is a short video Plex plays before every movie. Plex stores them as a
+list of paths **on its own filesystem** (the `CinemaTrailersPrerollID` server
+preference), which means Tinkerbell and Plex have to share a directory.
+
+Mount one directory into both containers:
+
+```yaml
+services:
+  tinkerbell:
+    volumes:
+      - ./config:/config
+      - ./prerolls:/prerolls
+  plex:
+    volumes:
+      - ./prerolls:/prerolls # must be readable by Plex
+```
+
+Then set **Settings → Prerolls → "The same directory, as Plex sees it"** to
+whatever path Plex mounts it at. If both containers use `/prerolls`, the
+default is already correct.
+
+Uploads are probed with `ffprobe` and left untouched when Plex would already
+direct play them; anything else is normalised to H.264/AAC in an MP4 so a
+ten-second clip can't occupy a transcode session. `ffmpeg` ships in the Docker
+image; for a bare install, put it on `PATH` (`brew install ffmpeg`,
+`apt install ffmpeg`).
+
+Two things worth knowing:
+
+- **Prerolls are a Plex Pass feature.** Without a subscription Plex stores the
+  setting and plays nothing.
+- **A wrong path mapping fails silently.** Plex accepts the setting and then
+  finds no file. The Prerolls page reports whether Plex is in sync, and the
+  health check watches for drift.
+
+Set `PREROLLS_DIR` to move Tinkerbell's side of the directory; it defaults to
+`$DATA_DIR/prerolls` outside Docker.
+
 ## Testing
 
 ```sh
@@ -87,7 +128,7 @@ Tests use Node's built-in test runner. Currently covered: `packages/overlays`, `
 
 ```sh
 docker build -t tinkerbell .
-docker run -v /path/to/config:/config -p 3000:3000 tinkerbell
+docker run -v /path/to/config:/config -v /path/to/prerolls:/prerolls -p 3000:3000 tinkerbell
 ```
 
-The container serves the built web app and tRPC API from a single Node process. Persistent state (SQLite, config) lives in `/config`.
+The container serves the built web app and tRPC API from a single Node process. Persistent state (SQLite, config) lives in `/config`. The `/prerolls` volume is only needed if you use the Prerolls feature, and must also be mounted into Plex — see above.

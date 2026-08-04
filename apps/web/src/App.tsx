@@ -36,12 +36,14 @@ const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
 const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
 const Users = lazy(() => import("#pages/Users"));
 const Overlays = lazy(() => import("#pages/Overlays"));
+const Prerolls = lazy(() => import("#pages/Prerolls"));
 const Events = lazy(() => import("#pages/Events"));
 const StressTest = lazy(() => import("#pages/StressTest"));
 const Preview = lazy(() => import("#pages/Preview"));
 const Changelog = lazy(() => import("#pages/Changelog"));
 const SettingsAbout = lazy(() => import("#pages/Settings/SettingsAbout"));
 const SettingsPosters = lazy(() => import("#pages/Settings/SettingsPosters"));
+const SettingsPrerolls = lazy(() => import("#pages/Settings/SettingsPrerolls"));
 const SettingsCredits = lazy(() => import("#pages/Settings/SettingsCredits"));
 const SettingsMigrate = lazy(() => import("#pages/SettingsMigrate"));
 
@@ -137,6 +139,14 @@ export default function App() {
                 element={
                   <LazyPage>
                     <Overlays />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/prerolls"
+                element={
+                  <LazyPage>
+                    <Prerolls />
                   </LazyPage>
                 }
               />
@@ -307,6 +317,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <SettingsPosters />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="prerolls"
+                  element={
+                    <LazyPage>
+                      <SettingsPrerolls />
                     </LazyPage>
                   }
                 />

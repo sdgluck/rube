@@ -17,6 +17,7 @@
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
+    "@tinkerbell/domain.prerolls": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",

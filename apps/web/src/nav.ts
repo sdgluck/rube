@@ -1,5 +1,5 @@
 export type NavMetric =
-  | { kind: "count"; key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" }
+  | { kind: "count"; key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" | "prerolls" }
   | { kind: "status"; key: "overlaysStatus" | "jobsStatus" }
   | { kind: "streams" };
 
@@ -20,6 +20,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: "/collections", label: "Collections", metric: { kind: "count", key: "collections" } },
       { to: "/media", label: "Media", metric: { kind: "count", key: "media" } },
       { to: "/overlays", label: "Overlays", metric: { kind: "status", key: "overlaysStatus" } },
+      { to: "/prerolls", label: "Prerolls", metric: { kind: "count", key: "prerolls" } },
     ],
   },
   {

@@ -20,6 +20,7 @@ import { scanAllProviders } from "@tinkerbell/domain.migration";
 import { getLocalCollections } from "@tinkerbell/domain.collections";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
+import { handlePrerollRoute } from "./prerolls.ts";
 
 setHealthReporter(reportHealth);
 // `domains/collections` calls this at the end of `syncCollections`.
@@ -153,6 +154,18 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       res.end();
     }
     return;
+  }
+
+  // Preroll upload/playback — streaming routes that tRPC's batch link can't
+  // carry. Returns false when the path isn't one of them.
+  if (path.startsWith("/api/prerolls/")) {
+    try {
+      if (await handlePrerollRoute(req, res, url)) return;
+    } catch (err) {
+      if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
+      return;
+    }
   }
 
   // tRPC API routes

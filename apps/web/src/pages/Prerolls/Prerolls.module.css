@@ -1,0 +1,475 @@
+.count {
+  margin-left: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--bg-badge);
+  color: var(--text-badge);
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.intro {
+  margin: 0 0 16px;
+  max-width: 62ch;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+/* ── Upload ──────────────────────────────────────────────────────────────── */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 20px;
+  border: 1.5px dashed var(--border-input);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  text-align: center;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.dropzoneActive {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone[data-disabled="true"] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.dropzoneTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dropzoneHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.dropzoneButton {
+  margin-top: 8px;
+  padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+  border: 1px solid var(--border-input);
+  border-radius: var(--btn-radius);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--btn-font-size-sm);
+  font-weight: var(--btn-font-weight);
+  cursor: pointer;
+}
+
+.dropzoneButton:hover {
+  background: var(--bg-surface-hover);
+}
+
+.uploadList {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uploadRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px 44px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+}
+
+.uploadName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.uploadError {
+  grid-column: 2 / -1;
+  color: var(--status-error-fg);
+}
+
+.uploadPercent {
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressBar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.card[draggable="true"] {
+  cursor: grab;
+}
+
+.cardSelected {
+  border-color: var(--accent);
+  box-shadow: var(--input-focus-ring);
+}
+
+.card[data-status="failed"] {
+  border-color: var(--status-error-dot);
+}
+
+.cardThumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--card-poster-bg);
+  cursor: pointer;
+}
+
+.cardThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cardThumbPlaceholder {
+  width: 100%;
+  height: 100%;
+  /* A slow shimmer reads as "working on it" without needing a spinner. */
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--bg-surface-hover) 50%, var(--bg-muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardThumbPlaceholder {
+    animation: none;
+  }
+}
+
+.cardDuration,
+.cardOrder {
+  position: absolute;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardDuration {
+  right: 6px;
+}
+
+.cardOrder {
+  left: 6px;
+  bottom: auto;
+  top: 6px;
+  background: var(--accent);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardCheckbox {
+  display: flex;
+  align-items: center;
+}
+
+.cardTitle {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cardTitle:hover {
+  color: var(--accent);
+}
+
+.cardStatus {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.cardStatus[data-tone="busy"] {
+  color: var(--text-muted);
+}
+
+.cardStatus[data-tone="error"] {
+  color: var(--status-error-fg);
+  /* Failures can be a whole ffmpeg stderr tail — cap it rather than let one
+     card grow taller than the rest of the grid. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-badge);
+  color: var(--text-badge);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.chip[data-variant="muted"] {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Sync bar ────────────────────────────────────────────────────────────── */
+
+.syncBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.syncSummary {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.modeToggle {
+  display: inline-flex;
+  border: 1px solid var(--border-input);
+  border-radius: var(--btn-radius);
+  overflow: hidden;
+}
+
+.modeButton,
+.modeButtonActive {
+  padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+  border: 0;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--btn-font-size-sm);
+  font-weight: var(--btn-font-weight);
+  cursor: pointer;
+}
+
+.modeButton:hover {
+  background: var(--bg-surface-hover);
+}
+
+.modeButtonActive {
+  background: var(--accent);
+  color: #fff;
+}
+
+.syncStatus {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.syncStatus[data-tone="ok"] {
+  color: var(--status-ok-fg);
+}
+
+.syncStatus[data-tone="warn"] {
+  color: var(--text-warn);
+}
+
+.syncStatus[data-tone="error"] {
+  color: var(--status-error-fg);
+}
+
+/* ── Detail modal ────────────────────────────────────────────────────────── */
+
+.player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #000;
+  margin-bottom: 16px;
+}
+
+.detailNotice {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.fieldRow {
+  display: flex;
+  gap: 8px;
+}
+
+.fieldRow > :first-child {
+  flex: 1;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px 20px;
+  margin: 0 0 16px;
+}
+
+.metaGrid dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.metaGrid dd {
+  margin: 2px 0 0;
+  font-size: 0.86rem;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.reasons {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-muted);
+}
+
+.reasonsTitle {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.reasons ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.detailActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .syncBar {
+    /* The mobile bottom nav owns the bottom edge, so unstick rather than
+       stack two bars on top of each other. */
+    position: static;
+  }
+
+  .uploadRow {
+    grid-template-columns: minmax(0, 1fr) 90px 40px;
+  }
+}

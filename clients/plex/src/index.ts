@@ -15,7 +15,10 @@ import { createSharingModule } from "./sharing.ts";
 import { createSessionsModule } from "./sessions.ts";
 import { createPostersModule } from "./posters.ts";
 import { createStreamingModule } from "./streaming.ts";
+import { createPrefsModule } from "./prefs.ts";
 import type { PlexClientOptions } from "./types.ts";
+
+export { PREROLL_PREF_ID } from "./prefs.ts";
 
 export { SECTION_TYPE_MAP } from "./types.ts";
 export type {
@@ -41,6 +44,7 @@ export type {
   PlexDirectoryEntry,
   PlexMediaFullDetail,
   PlexPoster,
+  PlexPref,
   PlexChildItem,
   MediaFilters,
   PlexHealthCallback,
@@ -58,6 +62,7 @@ export function createPlexClient(opts: PlexClientOptions) {
     ...createSessionsModule(http),
     ...createPostersModule(http),
     ...createStreamingModule(http),
+    ...createPrefsModule(http),
   };
 }
 

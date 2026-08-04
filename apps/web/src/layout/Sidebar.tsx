@@ -70,6 +70,7 @@ type NavMetrics = {
   media: number;
   rules: number;
   users: number;
+  prerolls: number;
   eventsErrors24h: number;
   overlaysStatus: "ok" | "error" | null;
   jobsStatus: "ok" | "error" | null;
