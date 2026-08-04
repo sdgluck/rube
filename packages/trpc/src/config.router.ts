@@ -8,12 +8,21 @@ import {
   type ConfigKey,
   type ConfigValue,
 } from "@tinkerbell/core";
+import { restartSchedules, schedulerTimezone } from "@tinkerbell/jobs";
 import { t, procedure } from "./_base.ts";
 
 export const configRouter = t.router({
   get: procedure.query(() => getAllConfigForClient()),
 
+  /** The zone every cron schedule is evaluated in, resolved (config → TZ → system). */
+  effectiveTimezone: procedure.query(() => ({
+    timezone: schedulerTimezone() ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    explicit: schedulerTimezone() !== undefined,
+  })),
+
   save: procedure.input(configSchema.partial()).mutation(({ input }) => {
+    const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");
+
     for (const key of Object.keys(input) as ConfigKey[]) {
       const value = input[key];
       if (value === undefined) continue;
@@ -30,6 +39,11 @@ export const configRouter = t.router({
       }
       setConfig(key, value);
     }
+
+    // croner bakes the timezone in at construction, so the live Cron objects
+    // would keep evaluating against the old zone until the next restart.
+    if (timezoneChanged) restartSchedules();
+
     return { ok: true };
   }),
 });
