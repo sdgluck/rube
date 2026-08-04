@@ -73,7 +73,11 @@ export const migrationRouter = t.router({
     });
 
     const result = await startJob("migrate-collections");
-    if (!result) throw new Error("Failed to start migrate-collections job.");
+    if (!result.ok) {
+      throw result.reason === "already-running"
+        ? new Error("A collection migration is already running. Wait for it to finish, then try again.")
+        : new Error("The migrate-collections job is missing. Restart Tinkerbell to re-seed it.");
+    }
     return { runId: result.runId };
   }),
 });

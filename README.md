@@ -122,7 +122,57 @@ pnpm lint          # oxlint
 pnpm format        # oxfmt
 ```
 
-Tests use Node's built-in test runner. Currently covered: `packages/overlays`, `clients/plex`.
+Tests use Node's built-in test runner. Currently covered: `packages/overlays`,
+`clients/plex`, `packages/core`, `packages/jobs`.
+
+`pnpm lint` also runs two source guards:
+
+- `scripts/check-fetch.mjs` fails on any `fetch()` without a timeout under
+  `clients/`, `packages/`, `domains/` or `apps/server/`. A request with no
+  deadline is the easiest way to wedge the job queue — the run never finishes,
+  so nothing else runs either. Route new calls through `@tinkerbell/http`
+  (which takes `timeoutMs`), or add an `AbortSignal.timeout()`.
+- `scripts/check-nul.mjs` fails on a raw NUL byte in a source file. NUL is a
+  fine delimiter, but written literally it makes `grep` and `file(1)` treat the
+  whole file as binary and skip it _silently_ — which once put a wrong claim
+  into a design document. Write `\u0000` instead; it's byte-identical at
+  runtime.
+
+## Background jobs
+
+Scheduled work runs through a small queue on top of Sidequest. A few things
+worth knowing when running this unattended:
+
+- **Schedules are timezone-aware.** Set the zone in Settings → Schedules; it
+  falls back to `TZ`, then the container's clock. Cron expressions are
+  evaluated in that zone, so "3am" means 3am there across daylight-saving
+  changes. If Tinkerbell was down when an infrequent job should have fired, it
+  runs once on the next boot and says so in the log.
+- **Every run has a deadline.** Each command has a generous wall-clock budget
+  (6h for preroll processing, 4h for generate, 30min for most things) and a
+  watchdog marks anything past it as failed, so one wedged job can't stop the
+  queue forever.
+- **Long jobs checkpoint.** `generate` and `sync-media` record their progress
+  as they go and resume where they left off if the container restarts
+  mid-run — the log says so when it happens. Checkpoints expire after 24 hours,
+  and cancelling a run discards its checkpoint, so an explicit cancel followed
+  by "Run now" starts over rather than resuming.
+- **Missed schedules run once on the next boot.** If the machine is off
+  overnight, an infrequent job whose time passed while it was down runs once
+  when Tinkerbell starts, staggered a few seconds apart. On a server that is
+  only powered on in the evenings this means several jobs catching up at each
+  boot — expected, and every decision is logged. Jobs scheduled more often than
+  hourly are never caught up.
+- **Run one instance.** Cron schedules and the "already running" guard both
+  assume a single process. Pointing two replicas at one database will
+  double-fire every schedule and let two runs of the same job overlap.
+
+### Logging
+
+`LOG_LEVEL` (`debug` | `info` | `warn` | `error`, default `info`) controls
+verbosity, including the Sidequest engine's own output — raise it to `debug`
+when a job misbehaves. Set `LOG_FORMAT=json` for one JSON object per line if
+you ship container logs to a collector.
 
 ## Production
 

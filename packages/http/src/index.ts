@@ -17,6 +17,8 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 const RETRY_BASE_DELAY_MS = 1_000;
 const RETRY_MAX_DELAY_MS = 10_000;
+/** Ceiling on a server-supplied `Retry-After`, so one can't park a job for an hour. */
+const RETRY_AFTER_MAX_MS = 60_000;
 
 export interface HttpRequestOptions {
   url: string | URL;
@@ -44,6 +46,24 @@ export class HttpError extends Error {
 
 function retryDelay(attempt: number): number {
   return Math.min(RETRY_BASE_DELAY_MS * Math.pow(2, attempt), RETRY_MAX_DELAY_MS);
+}
+
+/**
+ * Honour `Retry-After` on a rate-limited response.
+ *
+ * When a service tells us how long to wait, guessing with exponential backoff
+ * instead is how you turn one 429 into several. Accepts both forms the header
+ * allows (delta-seconds and an HTTP-date), and is capped so a hostile or
+ * mis-set header can't park a job for an hour.
+ */
+function retryAfterMs(res: Response): number | null {
+  const header = res.headers.get("Retry-After");
+  if (!header) return null;
+
+  const seconds = Number(header.trim());
+  const ms = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(header) - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return Math.min(ms, RETRY_AFTER_MAX_MS);
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -92,9 +112,10 @@ export async function httpRequest(opts: HttpRequestOptions): Promise<Response> {
     }
 
     if (!res.ok && retryOn.has(res.status) && attempt < retries) {
+      const serverDelay = retryAfterMs(res);
       // Drain the body so the connection can be reused.
       await res.text().catch(() => "");
-      await sleep(retryDelay(attempt), init.signal ?? undefined);
+      await sleep(serverDelay ?? retryDelay(attempt), init.signal ?? undefined);
       continue;
     }
 

@@ -14,10 +14,42 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, config } from "@tinkerbell/db";
 
+/**
+ * Does the runtime's ICU data recognise this timezone?
+ *
+ * An empty string is accepted as "unset" — that's how the Settings form clears
+ * the setting back to following the server's own clock.
+ */
+export function isValidTimezone(value: string): boolean {
+  if (value.trim() === "") return true;
+  try {
+    // Throws RangeError on an unknown zone. This is the same check croner
+    // performs internally, done somewhere we can still report it to the user.
+    new Intl.DateTimeFormat(undefined, { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const configSchema = z.object({
   global_plex_url: z.string(),
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
+  /**
+   * IANA timezone every cron schedule is evaluated in (e.g. "Europe/London").
+   * Unset means "use the container's local time" (`process.env.TZ`, else the
+   * host default). Without this, `0 3 * * *` silently follows whatever the
+   * container thinks local time is and double-fires or skips on DST changes.
+   *
+   * Deliberately a plain `z.string()`, validated at the write boundary
+   * (`configRouter.save`) rather than here. `configSchema` is used on *read*
+   * too — `getConfig` parses the stored value, and `getAllConfig` parses the
+   * whole blob — so a `.refine()` would turn one bad row into a throw out of
+   * every config read, which is a worse failure than the one it prevents.
+   * `schedulerTimezone()` re-checks whatever it finds before use.
+   */
+  global_timezone: z.string(),
   /**
    * Master switch for per-user personalization. When `enabled`, every Plex
    * item carries the `Tinkerbell` label and every shared user is restricted

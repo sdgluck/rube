@@ -15,7 +15,8 @@
     "src"
   ],
   "scripts": {
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@sidequest/sqlite-backend": "^1.14.0",
@@ -34,10 +35,11 @@
     "@tinkerbell/domain.shuffle-hubs": "workspace:*",
     "@tinkerbell/domain.stats": "workspace:*",
     "@tinkerbell/domain.users": "workspace:*",
+    "@tinkerbell/http": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/plex-smart-filter": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",
     "@tinkerbell/tmdb": "workspace:*",
     "@tinkerbell/video": "workspace:*",

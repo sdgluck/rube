@@ -19,6 +19,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     heading: "Automation",
     links: [
+      { to: "/settings/schedules", label: "Schedules" },
       { to: "/settings/portal", label: "Portal" },
       { to: "/settings/notifications", label: "Notifications" },
       { to: "/settings/posters", label: "Posters" },

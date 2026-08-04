@@ -1,7 +1,7 @@
 // In-memory registry of in-flight test/run operations per rule.
 // The web UI polls these to render progress.
 
-import type { JobContext } from "@tinkerbell/core";
+import { noopCheckpoint, type JobContext } from "@tinkerbell/core";
 
 export type RulePhase = "test" | "run";
 
@@ -102,6 +102,9 @@ export function createTrackedContext(
 
   return {
     signal,
+    // Rule runs are per-rule slices of a job, with no `job_runs` row of their
+    // own to resume from — there is nothing meaningful to checkpoint here.
+    checkpoint: noopCheckpoint,
     log: (...args: unknown[]) => {
       const line = args.map(formatLogArg).join(" ");
       console.log(consolePrefix, ...args);

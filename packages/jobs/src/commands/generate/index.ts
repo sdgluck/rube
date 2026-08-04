@@ -9,13 +9,16 @@ import {
   setRuleLastRun,
 } from "@tinkerbell/domain.rules";
 import { errorMessage } from "@tinkerbell/core";
-import type { JobContext, GenerateJobConfig } from "@tinkerbell/core";
+import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
+
 import { parseRuleConfig } from "./config.ts";
 import { runHandlerWithCommits } from "./dispatch.ts";
 import { resolveArrAdds } from "./arr.ts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
 export { testRule } from "./preview.ts";
+
+const runRuleLog = createLogger("run-rule");
 
 /**
  * Batch entry point: run every enabled rule against the configured Plex
@@ -38,6 +41,31 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
 
   ctx.log(`Found ${enabledRules.length} enabled rule(s).`);
 
+  // Resume whatever a previous run abandoned. `generate` is the longest job in
+  // the system and container restarts on a home server are routine, so
+  // restarting from rule zero after an hour of work is a real cost.
+  //
+  // The checkpoint is discarded when the rule set has changed since it was
+  // written — "skip rule X" is only meaningful against the same list.
+  const saved = ctx.checkpoint.read<GenerateCheckpoint>();
+  const completedRuleIds = new Set<string>(
+    saved && sameRuleSet(saved.ruleIds, enabledRules) ? saved.completedRuleIds : [],
+  );
+  if (saved && completedRuleIds.size === 0 && saved.completedRuleIds.length > 0) {
+    ctx.log("Enabled rules changed since the last run — starting from the first rule.");
+  }
+  if (completedRuleIds.size > 0) {
+    ctx.log(`Resuming: skipping ${completedRuleIds.size} rule(s) completed in the previous run.`);
+  }
+  const checkpointStartedAt = saved && completedRuleIds.size > 0 ? saved.startedAt : Date.now();
+  const ruleIds = enabledRules.map((r) => r.id);
+  const saveCheckpoint = () =>
+    ctx.checkpoint.write({
+      startedAt: checkpointStartedAt,
+      ruleIds,
+      completedRuleIds: [...completedRuleIds],
+    } satisfies GenerateCheckpoint);
+
   // One-time migration: delete old "Generated"-labeled collections.
   for (const section of jobSections) {
     const deleted = await client.deleteCollectionsByLabel(section.key, "Generated");
@@ -48,6 +76,7 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
 
   for (let i = 0; i < enabledRules.length; i++) {
     const rule = enabledRules[i];
+    if (completedRuleIds.has(rule.id)) continue;
     const ruleConfig = parseRuleConfig(rule);
 
     ctx.progress(i + 1, enabledRules.length, `Processing rule "${rule.name}"...`);
@@ -57,6 +86,9 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     const ruleSectionsOrNull = filterSections(allSections, ruleConfig.sections);
     if (ruleSectionsOrNull === null) {
       ctx.log(`No matching sections for rule config, skipping.`);
+      // A rule with nothing to do is done — don't re-evaluate it on a resume.
+      completedRuleIds.add(rule.id);
+      saveCheckpoint();
       continue;
     }
     const sections = ruleSectionsOrNull ?? jobSections;
@@ -85,6 +117,11 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
         collectionCount,
         itemCount,
       });
+
+      // Only after the rule has fully committed — a checkpoint written any
+      // earlier would let a resume skip work that never actually landed.
+      completedRuleIds.add(rule.id);
+      saveCheckpoint();
     } catch (err) {
       setRuleLastRun(rule.id, {
         status: "error",
@@ -95,7 +132,24 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     }
   }
 
+  // Clear on success, so a stale checkpoint can never silently skip a rule on
+  // the next nightly run.
+  ctx.checkpoint.clear();
   ctx.log("\nAll done!");
+}
+
+interface GenerateCheckpoint {
+  /** When the first (possibly earlier) run of this checkpoint began. */
+  startedAt: number;
+  /** The enabled-rule list this checkpoint was written against. */
+  ruleIds: string[];
+  completedRuleIds: string[];
+}
+
+function sameRuleSet(saved: string[], current: { id: string }[]): boolean {
+  if (saved.length !== current.length) return false;
+  const ids = new Set(current.map((r) => r.id));
+  return saved.every((id) => ids.has(id));
 }
 
 /** Single-rule entry point used by the admin UI's "Run now" action. */
@@ -108,9 +162,11 @@ export async function runSingleRule(
   if (!rule) throw new Error(`Rule "${ruleId}" not found`);
 
   const ctx: JobContext = ctxIn ?? {
-    log: (...args: unknown[]) => console.log("[run-rule]", ...args),
+    log: (...args: unknown[]) => runRuleLog.info(args.map(String).join(" ")),
     progress: () => {},
     signal: signal || new AbortController().signal,
+    // A single ad-hoc rule run has nothing to resume from.
+    checkpoint: noopCheckpoint,
   };
 
   ctx.progress(0, 4, `Running rule "${rule.name}"…`);

@@ -7,6 +7,8 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter, portalRouter, createPortalContext } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
 import {
+  createLogger,
+  errorMessage,
   getConfig,
   getPersonalizedSharingStatus,
   setEventEmitter,
@@ -21,6 +23,9 @@ import { getLocalCollections } from "@tinkerbell/domain.collections";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
 import { handlePrerollRoute } from "./prerolls.ts";
+
+const log = createLogger("server");
+const portalLog = createLogger("portal");
 
 setHealthReporter(reportHealth);
 // `domains/collections` calls this at the end of `syncCollections`.
@@ -218,7 +223,7 @@ const portalServer = createServer(async (req: IncomingMessage, res: ServerRespon
 // Keep listening even if a bind fails (e.g. port in use) — the reconciler
 // retries on its interval rather than crashing the admin server.
 portalServer.on("error", (err) => {
-  console.error("[portal] server error:", err);
+  portalLog.error("server error", { err: errorMessage(err) });
 });
 
 const PORTAL_RECONCILE_MS = 15_000;
@@ -229,10 +234,10 @@ function syncPortalServer(): void {
   const shouldRun = getPersonalizedSharingStatus() === "enabled";
   if (shouldRun && !portalServer.listening) {
     portalServer.listen(USER_PORT, USER_HOST, () => {
-      console.log(`Tinkerbell user portal listening on ${USER_HOST}:${USER_PORT}`);
+      portalLog.info("listening", { host: USER_HOST, port: USER_PORT });
     });
   } else if (!shouldRun && portalServer.listening) {
-    portalServer.close(() => console.log("Tinkerbell user portal stopped (personalization disabled)"));
+    portalServer.close(() => portalLog.info("stopped (personalization disabled)"));
   }
 }
 
@@ -243,19 +248,19 @@ async function main() {
   try {
     ensureBuiltInPresets();
   } catch (err) {
-    console.error("[overlays] failed to seed built-in presets:", err);
+    log.error("failed to seed built-in overlay presets", { err: errorMessage(err) });
   }
   try {
     await initJobs();
   } catch (err) {
-    console.error("[jobs] Init failed:", err);
+    log.error("job init failed", { err: errorMessage(err) });
     process.exit(1);
   }
   server.listen(PORT, HOST, () => {
-    console.log(`Tinkerbell admin server listening on ${HOST}:${PORT} (https://api.tinkerbell.localhost)`);
+    log.info("admin server listening", { host: HOST, port: PORT, url: "https://api.tinkerbell.localhost" });
     if (HOST !== "127.0.0.1" && HOST !== "localhost" && HOST !== "::1") {
-      console.warn(
-        `[security] Listening on ${HOST}: every tRPC mutation is reachable without authentication. ` +
+      log.warn(
+        `Listening on ${HOST}: every tRPC mutation is reachable without authentication. ` +
           `Only expose this port to networks you trust.`,
       );
     }
@@ -267,7 +272,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("[boot] Unhandled error during startup:", err);
+  log.error("unhandled error during startup", { err: errorMessage(err) });
   process.exit(1);
 });
 
@@ -299,3 +304,19 @@ async function shutdown() {
 }
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
+
+// On modern Node an unhandled rejection terminates the process with no
+// context. There are fire-and-forget call sites (preroll processing, the BYW
+// uninstall cleanup) where a future edit could easily introduce one, and
+// "container died, no log line" is the worst possible failure mode on a home
+// server.
+process.on("unhandledRejection", (reason) => {
+  log.error("unhandled promise rejection", { err: errorMessage(reason) });
+});
+
+// Exiting here is deliberate: the process is in an unknown state, and the
+// Docker restart policy is a better recovery mechanism than carrying on.
+process.on("uncaughtException", (err) => {
+  log.error("uncaught exception — exiting for restart", { err: errorMessage(err) });
+  process.exit(1);
+});

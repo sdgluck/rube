@@ -4,6 +4,9 @@ import { LlmConfigError, LlmRequestError } from "../types.ts";
 const DEFAULT_MAX_TOKENS = 4096;
 const DEFAULT_TEMPERATURE = 1;
 
+/** See the note in `openai.ts` — `req.signal` alone is not a deadline. */
+const REQUEST_TIMEOUT_MS = 5 * 60_000;
+
 interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
   usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
@@ -32,7 +35,9 @@ export function createGeminiClient(config: LlmConfig): LlmClient {
             temperature: req.temperature ?? config.temperature ?? DEFAULT_TEMPERATURE,
           },
         }),
-        signal: req.signal,
+        signal: req.signal
+          ? AbortSignal.any([req.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
+          : AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (err) {
       throw new LlmRequestError("gemini", undefined, err instanceof Error ? err.message : String(err));

@@ -4,6 +4,15 @@ import { LlmConfigError, LlmRequestError } from "../types.ts";
 const DEFAULT_MAX_TOKENS = 4096;
 const DEFAULT_TEMPERATURE = 1;
 
+/**
+ * Hard deadline on a completion.
+ *
+ * Generous, because a large local model on modest hardware is genuinely slow —
+ * but not absent. `req.signal` alone is the caller's abort, and nothing fires
+ * it on its own; a socket that hangs here hangs the whole job queue behind it.
+ */
+const REQUEST_TIMEOUT_MS = 5 * 60_000;
+
 interface OpenAiCompletionResponse {
   model?: string;
   choices?: Array<{ message?: { content?: string | null } }>;
@@ -45,7 +54,9 @@ export function createOpenAiCompatibleClient(config: LlmConfig, options: Options
           temperature: req.temperature ?? config.temperature ?? DEFAULT_TEMPERATURE,
           messages: [{ role: "user", content: req.prompt }],
         }),
-        signal: req.signal,
+        signal: req.signal
+          ? AbortSignal.any([req.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
+          : AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (err) {
       throw new LlmRequestError(options.provider, undefined, err instanceof Error ? err.message : String(err));

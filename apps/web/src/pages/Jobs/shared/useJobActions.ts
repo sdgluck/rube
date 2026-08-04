@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { trpc } from "#/trpc";
 import type { Job } from "#pages/Jobs/types";
+import { isRunActive } from "./useRunLog";
 
 export function useJobActions(job: Job) {
   const utils = trpc.useUtils();
@@ -12,7 +13,7 @@ export function useJobActions(job: Job) {
     { runId: latestRunId! },
     {
       enabled: !!latestRunId,
-      refetchInterval: (query) => (query.state.data?.status === "running" ? 1000 : false),
+      refetchInterval: (query) => (isRunActive(query.state.data?.status) ? 1000 : false),
     },
   );
 
@@ -30,7 +31,9 @@ export function useJobActions(job: Job) {
     },
   });
 
-  const isRunning = job.lastRunStatus === "running";
+  // A `cancelling` run still occupies the job — the command hasn't unwound and
+  // `startJob` will refuse a second one — so it counts as running here.
+  const isRunning = isRunActive(job.lastRunStatus ?? undefined);
 
   useEffect(() => {
     if (isRunning) {

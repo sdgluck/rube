@@ -45,7 +45,8 @@ export function createOmdbClient(opts: OmdbClientOptions) {
     url.searchParams.set("apikey", apiKey);
     let res: Response;
     try {
-      res = await httpRequest({ url, timeoutMs: 10_000 });
+      // Idempotent GET — see the note in clients/tmdb.
+      res = await httpRequest({ url, timeoutMs: 10_000, retries: 2 });
     } catch (err) {
       if (err instanceof HttpError) {
         onHealth?.("error", `${err.status} ${err.message}`);

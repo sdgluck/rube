@@ -21,6 +21,7 @@ import shared from "#/styles/shared.module.css";
 import { getJobFields } from "./fields";
 import FeatureWizard from "./FeatureWizard";
 import { getFeatureCatalogEntry } from "./FeatureWizard/feature-catalog";
+import { isRunActive, useRunLog } from "./shared/useRunLog";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -58,9 +59,9 @@ function rollupRecentRuns(runs: RecentRun[]): RecentRunGroup[] {
   const out: RecentRunGroup[] = [];
   for (const run of runs) {
     const last = out[out.length - 1];
-    const finished = run.status !== "running" && run.finishedAt != null;
+    const finished = !isRunActive(run.status) && run.finishedAt != null;
     const dur = finished ? (run.finishedAt as number) - run.startedAt : 0;
-    if (last && last.latest.jobId === run.jobId && last.latest.status === run.status && run.status !== "running") {
+    if (last && last.latest.jobId === run.jobId && last.latest.status === run.status && !isRunActive(run.status)) {
       last.count++;
       if (finished) {
         last.minDurationMs = Math.min(last.minDurationMs, dur);
@@ -74,7 +75,7 @@ function rollupRecentRuns(runs: RecentRun[]): RecentRunGroup[] {
 }
 
 function formatGroupDuration(group: RecentRunGroup): string {
-  if (group.latest.status === "running") return EMPTY;
+  if (isRunActive(group.latest.status)) return EMPTY;
   if (group.count === 1) return formatDuration(group.maxDurationMs);
   if (group.minDurationMs === group.maxDurationMs) return formatDuration(group.maxDurationMs);
   return `${formatDuration(group.minDurationMs)}–${formatDuration(group.maxDurationMs)}`;
@@ -104,9 +105,10 @@ export default function Jobs() {
     { runId: selectedRunId! },
     {
       enabled: !!selectedRunId,
-      refetchInterval: (query) => (query.state.data?.status === "running" ? 1000 : false),
+      refetchInterval: (query) => (isRunActive(query.state.data?.status) ? 1000 : false),
     },
   );
+  const selectedLog = useRunLog(selectedRunId, isRunActive(selectedRunQuery.data?.status));
 
   const updateMutation = trpc.jobs.update.useMutation({
     onMutate: async (input) => {
@@ -135,7 +137,7 @@ export default function Jobs() {
     descFirst: ["lastRun"],
   });
 
-  const hasRunning = jobsQuery.data?.some((j) => j.lastRunStatus === "running");
+  const hasRunning = jobsQuery.data?.some((j) => isRunActive(j.lastRunStatus ?? undefined));
 
   useEffect(() => {
     if (hasRunning) {
@@ -187,7 +189,7 @@ export default function Jobs() {
 
   // ─── Derived stats ──────────────────────────────────────────────────────
   const enabledCount = rawJobs.filter((j) => j.enabled).length;
-  const runningCount = recentRunsQuery.data?.filter((r) => r.status === "running").length ?? 0;
+  const runningCount = recentRunsQuery.data?.filter((r) => isRunActive(r.status)).length ?? 0;
   const lastFailure = rawJobs
     .filter((j) => j.lastRunStatus === "failed" && j.lastRunStartedAt)
     .sort((a, b) => (b.lastRunStartedAt ?? 0) - (a.lastRunStartedAt ?? 0))[0];
@@ -416,7 +418,7 @@ export default function Jobs() {
                           onClick={() => navigate(`/jobs/runs/${run.id}`)}
                         >
                           <td>
-                            {run.status === "running" ? (
+                            {isRunActive(run.status) ? (
                               <Spinner size="xs" />
                             ) : (
                               <span className={styles.statusDot} data-status={run.status} />
@@ -425,7 +427,7 @@ export default function Jobs() {
                           <td className={styles.nameCell}>
                             <span className={styles.jobNameText}>{run.jobName}</span>
                             {group.count > 1 && <span className={styles.rollupBadge}>×{group.count}</span>}
-                            {run.status === "running" && run.progress > 0 && (
+                            {isRunActive(run.status) && run.progress > 0 && (
                               <div className={styles.miniProgress}>
                                 <div
                                   className={styles.miniProgressFill}
@@ -773,14 +775,11 @@ export default function Jobs() {
               </div>
               {selectedRunQuery.data ? (
                 <div className={styles.logWrapper}>
-                  <button
-                    className={styles.logCopyBtn}
-                    onClick={() => navigator.clipboard.writeText(selectedRunQuery.data?.log ?? "")}
-                  >
+                  <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(selectedLog)}>
                     Copy
                   </button>
                   <pre ref={logRef} className={styles.logViewer}>
-                    {selectedRunQuery.data.log || "(no output)"}
+                    {selectedLog || "(no output)"}
                   </pre>
                 </div>
               ) : selectedRunQuery.isLoading ? (

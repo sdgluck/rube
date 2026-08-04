@@ -6,6 +6,7 @@ import { DetailSkeleton } from "#components/Skeleton";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
 import { formatDuration, formatElapsed } from "#/format";
+import { isRunActive, useRunLog } from "./shared/useRunLog";
 
 function formatEta(startMs: number, progress: number): string | null {
   if (progress <= 0 || progress >= 1) return null;
@@ -17,14 +18,17 @@ function formatEta(startMs: number, progress: number): string | null {
 
 function StatusBadge({ status }: { status: string }) {
   const cls =
-    status === "running"
+    status === "running" || status === "cancelling"
       ? styles.badgeRunning
       : status === "completed"
         ? styles.badgeCompleted
         : status === "failed"
           ? styles.badgeFailed
           : styles.badgeCancelled;
-  return <span className={`${styles.badge} ${cls}`}>{status}</span>;
+  // `cancelling` is a real, visible state: the cancel has been requested but
+  // the command hasn't unwound yet, and pretending it's already gone would be
+  // a lie the user can see through (the job is still occupied).
+  return <span className={`${styles.badge} ${cls}`}>{status === "cancelling" ? "cancelling…" : status}</span>;
 }
 
 const ERROR_PATTERN = /error|failed|exception|fatal|panic|ENOENT|ECONNREFUSED/i;
@@ -42,7 +46,7 @@ export default function JobRun() {
     { runId: runId! },
     {
       enabled: !!runId,
-      refetchInterval: (query) => (query.state.data?.status === "running" ? 1000 : false),
+      refetchInterval: (query) => (isRunActive(query.state.data?.status) ? 1000 : false),
     },
   );
 
@@ -51,19 +55,20 @@ export default function JobRun() {
   });
 
   const run = runQuery.data;
+  const log = useRunLog(runId, isRunActive(run?.status));
 
   const filteredLog = useMemo(() => {
-    if (!run?.log) return "";
-    if (!filter && !errorsOnly) return run.log;
-    const lines = run.log.split("\n");
+    if (!log) return "";
+    if (!filter && !errorsOnly) return log;
+    const lines = log.split("\n");
     return lines
-      .filter((line) => {
+      .filter((line: string) => {
         if (errorsOnly && !ERROR_PATTERN.test(line)) return false;
         if (filter && !line.toLowerCase().includes(filter.toLowerCase())) return false;
         return true;
       })
       .join("\n");
-  }, [run?.log, filter, errorsOnly]);
+  }, [log, filter, errorsOnly]);
 
   const isFiltering = !!(filter || errorsOnly);
 
@@ -72,7 +77,7 @@ export default function JobRun() {
     if (autoScroll.current && logRef.current && !isFiltering) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
-  }, [run?.log, isFiltering]);
+  }, [log, isFiltering]);
 
   // Track user scroll position
   const handleLogScroll = () => {
@@ -82,8 +87,8 @@ export default function JobRun() {
   };
 
   const handleDownload = () => {
-    if (!run?.log) return;
-    const blob = new Blob([run.log], { type: "text/plain" });
+    if (!log) return;
+    const blob = new Blob([log], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement("a"), {
       href: url,
@@ -107,6 +112,8 @@ export default function JobRun() {
         <h2 className={styles.runTitle}>Job Run</h2>
         <StatusBadge status={run.status} />
         {run.status === "running" && (
+          // Only a `running` run can be cancelled — one already `cancelling`
+          // has been asked and is unwinding.
           <button
             className={`${styles.button} ${styles.buttonDanger}`}
             onClick={() => cancelMutation.mutate({ runId: run.id })}
@@ -169,9 +176,9 @@ export default function JobRun() {
           <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
           Errors only
         </label>
-        {run.log && (
+        {log && (
           <>
-            <button className={styles.logToolbarBtn} onClick={() => navigator.clipboard.writeText(run.log)}>
+            <button className={styles.logToolbarBtn} onClick={() => navigator.clipboard.writeText(log)}>
               Copy
             </button>
             <button className={styles.logToolbarBtn} onClick={handleDownload}>

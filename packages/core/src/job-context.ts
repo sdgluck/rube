@@ -1,10 +1,40 @@
 import { z } from "zod";
 
+/**
+ * Per-job resumable state.
+ *
+ * Keyed on the *job*, not the run, so a fresh run picks up what the previous
+ * one abandoned — which is the whole point on a home server where container
+ * restarts are routine and `generate` is the longest job in the system.
+ *
+ * Only the long commands (`generate`, `sync-media`) checkpoint. The rest are
+ * short enough that restarting from zero costs less than the bookkeeping — that
+ * is a deliberate choice, not an oversight.
+ */
+export interface JobCheckpoint {
+  /** Returns null when there is no checkpoint, or the stored one is past its TTL. */
+  read<T>(): T | null;
+  write(data: unknown): void;
+  clear(): void;
+}
+
 export interface JobContext {
   log: (...args: unknown[]) => void;
   progress: (current: number, total: number, message: string) => void;
   signal: AbortSignal;
+  checkpoint: JobCheckpoint;
 }
+
+/**
+ * Checkpoint that stores nothing. For contexts with no `job_runs` row behind
+ * them — rule previews/tests, the stress test harness — where "resume the
+ * previous run" is meaningless.
+ */
+export const noopCheckpoint: JobCheckpoint = {
+  read: () => null,
+  write: () => {},
+  clear: () => {},
+};
 
 export const commonJobConfigSchema = z.object({
   sections: z.array(z.string()).optional(),

@@ -8,3 +8,4 @@ export * from "./posters.ts";
 export * from "./clients.ts";
 export * from "./hooks.ts";
 export * from "./time.ts";
+export * from "./logger.ts";

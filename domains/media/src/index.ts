@@ -28,15 +28,34 @@ interface MediaFilters {
   sortDir?: "asc" | "desc";
 }
 
+export interface SyncMediaOptions {
+  /**
+   * The `syncedAt` watermark to stamp rows with, and the cutoff for the stale
+   * sweep at the end.
+   *
+   * A resumed sync must reuse the *original* run's watermark: rows written by
+   * the run that was interrupted already carry it, and a fresh `Date.now()`
+   * would make the final sweep delete every one of them.
+   */
+  syncedAt?: number;
+  /** Section keys already synced under this watermark by a previous, interrupted run. */
+  skipSectionKeys?: readonly string[];
+  /** Called once a section has been fully written, so the caller can checkpoint. */
+  onSectionComplete?: (sectionKey: string) => void;
+}
+
 export async function syncMedia(
   client: PlexClient,
   sections: PlexSection[],
   onProgress?: (current: number, total: number, message: string) => void,
+  options: SyncMediaOptions = {},
 ): Promise<SyncStats> {
-  const now = Date.now();
+  const now = options.syncedAt ?? Date.now();
+  const skip = new Set(options.skipSectionKeys ?? []);
   let synced = 0;
 
   for (const section of sections) {
+    if (skip.has(section.key)) continue;
     for await (const { item, totalSize } of client.allItems(section.key)) {
       const ratingKey = item.ratingKey;
       if (!ratingKey) continue;
@@ -66,6 +85,7 @@ export async function syncMedia(
         onProgress(synced, totalSize, `Syncing ${section.title}...`);
       }
     }
+    options.onSectionComplete?.(section.key);
   }
 
   // Remove stale entries not seen in this sync. Single statement avoids the

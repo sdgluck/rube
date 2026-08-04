@@ -182,6 +182,22 @@ export const jobRuns = sqliteTable(
   (table) => [index("idx_job_runs_job_status_started").on(table.jobId, table.status, table.startedAt)],
 );
 
+/**
+ * Resumable per-job state, written by long commands as they make progress.
+ *
+ * Keyed on `jobId` rather than a run id on purpose: the point is for the *next*
+ * run to pick up what the previous one abandoned when the container restarted.
+ * Rows are cleared on successful completion and ignored past their TTL, so a
+ * stale checkpoint can never silently skip work.
+ */
+export const jobCheckpoints = sqliteTable("job_checkpoints", {
+  jobId: text("job_id")
+    .primaryKey()
+    .references(() => jobs.id, { onDelete: "cascade" }),
+  data: text("data", { mode: "json" }).$type<unknown>().notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const overlayConfigs = sqliteTable(
   "overlay_configs",
   {
