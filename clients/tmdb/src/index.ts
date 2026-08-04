@@ -209,6 +209,9 @@ async function tmdbFetch<S extends z.ZodTypeAny>(
     res = await httpRequest({
       url,
       timeoutMs: 15_000,
+      // Idempotent GET. A single 502 from TMDB at 01:00 used to fail the whole
+      // nightly generate, with no job-level retry behind it.
+      retries: 2,
       init: {
         headers: {
           Accept: "application/json",

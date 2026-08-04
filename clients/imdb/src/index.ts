@@ -138,6 +138,8 @@ export function createImdbClient(opts: ImdbClientOptions = {}) {
       res = await httpRequest({
         url: GRAPHQL_URL,
         timeoutMs: 15_000,
+        // A GraphQL POST, but a read-only query — retrying is safe.
+        retries: 2,
         init: { method: "POST", headers: REQUEST_HEADERS, body: JSON.stringify(body) },
       });
     } catch (err) {

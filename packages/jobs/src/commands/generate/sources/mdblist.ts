@@ -1,4 +1,13 @@
 import { getConfig } from "@tinkerbell/core";
+import { httpRequestJson } from "@tinkerbell/http";
+
+/**
+ * MDBList is a third-party service on the far side of the internet. This used
+ * to be a bare `fetch(url, { signal })` where `signal` was only the job's own
+ * abort signal — nothing fired it on its own, so a hung socket meant the run
+ * sat in `running` forever, which blocked the whole queue behind it.
+ */
+const MDBLIST_TIMEOUT_MS = 20_000;
 
 interface MdbListItem {
   imdb_id?: string | null;
@@ -37,9 +46,13 @@ async function mdblistFetch(path: string, signal?: AbortSignal): Promise<MdbList
   if (!apiKey) throw new Error("MDBList API key is not configured (Settings → Databases).");
   const sep = path.includes("?") ? "&" : "?";
   const url = `https://api.mdblist.com${path}${sep}apikey=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`MDBList ${res.status} ${res.statusText}`);
-  const data = (await res.json()) as MdbListResponse;
+  const data = await httpRequestJson<MdbListResponse>({
+    url,
+    init: { signal },
+    timeoutMs: MDBLIST_TIMEOUT_MS,
+    // Idempotent GET — retrying a transient 502 beats failing the nightly run.
+    retries: 2,
+  });
   if (data.error) throw new Error(`MDBList: ${data.error}`);
   return data;
 }

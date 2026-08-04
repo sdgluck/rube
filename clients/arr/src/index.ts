@@ -45,6 +45,10 @@ async function arrFetch(cfg: ArrConfig, path: string, init?: RequestInit): Promi
     const res = await httpRequest({
       url,
       timeoutMs: 15_000,
+      // Only retry reads. `arrFetch` is GET-only today, but the `init` escape
+      // hatch means a future caller could pass a mutation through here, and
+      // silently re-sending one of those would be much worse than a failure.
+      retries: !init?.method || init.method === "GET" ? 2 : 0,
       init: {
         ...init,
         headers: {

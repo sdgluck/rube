@@ -800,6 +800,9 @@ importers:
       '@tinkerbell/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../http
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../llm

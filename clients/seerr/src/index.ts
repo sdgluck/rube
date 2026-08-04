@@ -68,6 +68,8 @@ export async function* iterSeerrRequests(opts: {
       res = await httpRequest({
         url: reqUrl,
         timeoutMs: 15_000,
+        // Idempotent GET — see the note in clients/tmdb.
+        retries: 2,
         init: { headers: { "X-Api-Key": apiKey, Accept: "application/json" } },
       });
     } catch (err) {
@@ -91,6 +93,9 @@ export async function testSeerrConnection(
   const reqUrl = new URL("/api/v1/request/count", url);
   let res: Response;
   try {
+    // No retries here, unlike the paging call above: this is the "Test
+    // connection" button, and a user waiting on it wants a fast honest answer
+    // rather than a result three backoffs later.
     res = await httpRequest({
       url: reqUrl,
       timeoutMs: 10_000,
