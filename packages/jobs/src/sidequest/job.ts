@@ -223,13 +223,28 @@ export class CommandJob extends Job {
       }
     };
 
+    /**
+     * Has something else already ended this run?
+     *
+     * The watchdog force-fails a run whose worker looks wedged. If that worker
+     * later finishes anyway, it must not flip the row back to `completed` — a
+     * run the user was told had failed would silently become a success, and
+     * the `job.failed` event would be left contradicting the row.
+     */
+    const alreadyTerminal = (): boolean => {
+      try {
+        const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+        return !!row && TERMINAL_STATUSES.has(row.status);
+      } catch {
+        return false;
+      }
+    };
+
     /** Write the terminal `cancelled` status. The worker owns this, not the API. */
     const finishCancelled = (): void => {
       finalizeLog();
       try {
-        // Guard against a watchdog that already force-failed us.
-        const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
-        if (row && TERMINAL_STATUSES.has(row.status)) return;
+        if (alreadyTerminal()) return;
         db.update(jobRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
       } catch (err) {
         logDbError("mark run as cancelled", err);
@@ -259,6 +274,10 @@ export class CommandJob extends Job {
 
       progress = 1;
       finalizeLog();
+      if (alreadyTerminal()) {
+        log.warn("finished after the run was already ended elsewhere; leaving its status alone");
+        return this.complete({ ok: true, superseded: true });
+      }
       db.update(jobRuns)
         .set({ status: "completed", progress: 1, finishedAt: Date.now() })
         .where(eq(jobRuns.id, runId))
@@ -280,8 +299,11 @@ export class CommandJob extends Job {
       finalizeLog();
 
       try {
-        db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
-        emitEvent("job.failed", `${jobName} failed: ${errorMsg}`, { jobId });
+        // Don't double-report a run the watchdog already failed.
+        if (!alreadyTerminal()) {
+          db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
+          emitEvent("job.failed", `${jobName} failed: ${errorMsg}`, { jobId });
+        }
       } catch (err2) {
         logDbError("mark run as failed", err2);
       }

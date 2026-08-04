@@ -15,7 +15,8 @@
     "src"
   ],
   "scripts": {
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@sidequest/sqlite-backend": "^1.14.0",

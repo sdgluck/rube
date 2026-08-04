@@ -30,7 +30,7 @@ export type JobCommand = CommandName | InternalJobName;
 //
 // `command` is typed as `JobCommand`, so a rename in the catalog that isn't
 // mirrored here is a typecheck failure rather than a runtime "Unknown command".
-const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobCommand })[] = [
+export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobCommand })[] = [
   // ── System (infrastructure) ─────────────────────────────────────────────
   { id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "0 0 * * *", enabled: 1 },
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
