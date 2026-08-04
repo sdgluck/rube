@@ -9,13 +9,16 @@ import {
   setRuleLastRun,
 } from "@tinkerbell/domain.rules";
 import { errorMessage } from "@tinkerbell/core";
-import type { JobContext, GenerateJobConfig } from "@tinkerbell/core";
+import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
+
 import { parseRuleConfig } from "./config.ts";
 import { runHandlerWithCommits } from "./dispatch.ts";
 import { resolveArrAdds } from "./arr.ts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
 export { testRule } from "./preview.ts";
+
+const runRuleLog = createLogger("run-rule");
 
 /**
  * Batch entry point: run every enabled rule against the configured Plex
@@ -108,9 +111,11 @@ export async function runSingleRule(
   if (!rule) throw new Error(`Rule "${ruleId}" not found`);
 
   const ctx: JobContext = ctxIn ?? {
-    log: (...args: unknown[]) => console.log("[run-rule]", ...args),
+    log: (...args: unknown[]) => runRuleLog.info(args.map(String).join(" ")),
     progress: () => {},
     signal: signal || new AbortController().signal,
+    // A single ad-hoc rule run has nothing to resume from.
+    checkpoint: noopCheckpoint,
   };
 
   ctx.progress(0, 4, `Running rule "${rule.name}"…`);

@@ -5,7 +5,7 @@ import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig } from "@tinkerbell/core";
 import { runStressTest, type StressTestConfig } from "./index.ts";
-import type { JobContext } from "@tinkerbell/core";
+import { noopCheckpoint, type JobContext } from "@tinkerbell/core";
 import { JOB_CANCEL_POLL_INTERVAL_MS, JOB_LOG_FLUSH_INTERVAL_MS } from "../limits.ts";
 
 interface WorkerMessage {
@@ -77,6 +77,9 @@ async function run(id: string, config: StressTestConfig): Promise<void> {
       currentMessage = msg;
     },
     signal: controller.signal,
+    // The stress harness has its own run table and no notion of resuming a
+    // previous attempt — there is nothing to checkpoint.
+    checkpoint: noopCheckpoint,
   };
 
   try {

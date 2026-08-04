@@ -2,9 +2,12 @@ import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "@tinkerbell/core";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getRule } from "@tinkerbell/domain.rules";
-import type { JobContext } from "@tinkerbell/core";
+import { createLogger, noopCheckpoint, type JobContext } from "@tinkerbell/core";
+
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";
+
+const testRuleLog = createLogger("test-rule");
 
 export interface TestCollectionPreview {
   name: string;
@@ -25,9 +28,11 @@ export interface TestRuleResult {
  */
 export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: JobContext): Promise<TestRuleResult> {
   const ctx: JobContext = ctxIn ?? {
-    log: (...args: unknown[]) => console.log("[test-rule]", ...args),
+    log: (...args: unknown[]) => testRuleLog.info(args.map(String).join(" ")),
     progress: () => {},
     signal: signal || new AbortController().signal,
+    // A dry-run preview writes nothing and resumes nothing.
+    checkpoint: noopCheckpoint,
   };
   const log = ctx.log;
   const progress = ctx.progress;

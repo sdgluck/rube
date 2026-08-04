@@ -19,6 +19,13 @@ export const configSchema = z.object({
   global_plex_token: z.string(),
   global_plex_libraries: z.array(z.string()),
   /**
+   * IANA timezone every cron schedule is evaluated in (e.g. "Europe/London").
+   * Unset means "use the container's local time" (`process.env.TZ`, else the
+   * host default). Without this, `0 3 * * *` silently follows whatever the
+   * container thinks local time is and double-fires or skips on DST changes.
+   */
+  global_timezone: z.string(),
+  /**
    * Master switch for per-user personalization. When `enabled`, every Plex
    * item carries the `Tinkerbell` label and every shared user is restricted
    * to `[Tinkerbell, User:<self>]`, which is what makes per-user collections

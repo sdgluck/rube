@@ -1,0 +1,94 @@
+/**
+ * The single registry of runnable commands.
+ *
+ * Before this existed the same list was maintained by hand in three places —
+ * `DEFAULT_JOBS` (runner.ts), `FEATURE_TEMPLATES` (features.ts), and
+ * `VALID_COMMANDS` (sidequest/job.ts) — with nothing catching drift between
+ * them. Everything now derives from `COMMANDS`, so adding a command is one
+ * edit and a missing one is a typecheck error.
+ *
+ * `load()` is a static import thunk rather than the old
+ * ``import(`../commands/${name}.ts`)`` template literal, which defeated static
+ * analysis and would have broken under any future bundling step.
+ *
+ * NOTE: this file is distinct from `../sidequest/registry.ts`, which is
+ * Sidequest's `manualJobResolution` entrypoint and must keep its one-line shape.
+ */
+import { HOUR_MS, MINUTE_MS, type JobContext } from "@tinkerbell/core";
+
+/**
+ * Which Sidequest queue a command runs on.
+ *
+ * - `interactive` — a human clicked a button and is watching for the result.
+ * - `default` — scheduled batch work that may legitimately run for hours.
+ *
+ * The lanes have independent concurrency so a preroll upload doesn't queue
+ * behind the nightly `generate`.
+ */
+export type CommandLane = "default" | "interactive";
+
+export interface CommandDescriptor {
+  load: () => Promise<{ default: (ctx: JobContext, config: never) => Promise<void> }>;
+  lane: CommandLane;
+  /**
+   * Wall-clock budget. These are *runaway detectors*, not SLAs — a command
+   * that legitimately takes longer than its budget should get a bigger budget,
+   * not a faster implementation.
+   */
+  timeoutMs: number;
+}
+
+const DEFAULT_TIMEOUT_MS = 30 * MINUTE_MS;
+
+export const COMMANDS = {
+  // ── Scheduled batch work ───────────────────────────────────────────────
+  generate: { load: () => import("./generate.ts"), lane: "default", timeoutMs: 4 * HOUR_MS },
+  "sync-media": { load: () => import("./sync-media.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
+  "sync-collections": { load: () => import("./sync-collections.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "sync-users": { load: () => import("./sync-users.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "posters-refresh": { load: () => import("./posters-refresh.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
+  shuffle: { load: () => import("./shuffle.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "because-you-watched": {
+    load: () => import("./because-you-watched.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  personalize: { load: () => import("./personalize.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+
+  // ── Human-triggered, watched-in-the-UI ────────────────────────────────
+  // ffmpeg on a large preroll is legitimately slow, hence the 6h budget.
+  "preroll-process": { load: () => import("./preroll-process.ts"), lane: "interactive", timeoutMs: 6 * HOUR_MS },
+  label: { load: () => import("./label.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "label-undo": { load: () => import("./label-undo.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  overlays: { load: () => import("./overlays.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
+  "byw-remove": { load: () => import("./byw-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "personalize-enable": {
+    load: () => import("./personalize-enable.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  "personalize-disable": {
+    load: () => import("./personalize-disable.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  "migrate-collections": {
+    load: () => import("./migrate-collections.ts"),
+    lane: "interactive",
+    timeoutMs: HOUR_MS,
+  },
+} as const satisfies Record<string, CommandDescriptor>;
+
+export type CommandName = keyof typeof COMMANDS;
+
+export function isCommandName(name: string): name is CommandName {
+  return Object.hasOwn(COMMANDS, name);
+}
+
+export function commandTimeoutMs(name: CommandName): number {
+  return COMMANDS[name].timeoutMs;
+}
+
+export function commandLane(name: CommandName): CommandLane {
+  return COMMANDS[name].lane;
+}

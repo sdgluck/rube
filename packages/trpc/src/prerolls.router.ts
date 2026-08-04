@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
-import { errorMessage, setConfig } from "@tinkerbell/core";
+import { createLogger, errorMessage, setConfig } from "@tinkerbell/core";
 import { startJob } from "@tinkerbell/jobs";
 import { UnsafeUrlError } from "@tinkerbell/http";
 import {
@@ -33,12 +33,19 @@ import { getPlexClient, procedure, t } from "./_base.ts";
  * so a second upload arriving mid-run is already covered by the run in
  * flight — a CONFLICT here would be a lie to the user.
  */
+const log = createLogger("prerolls");
+
 async function triggerProcessing(): Promise<void> {
   try {
-    await startJob("preroll-process");
-  } catch {
-    // Swallowed deliberately: the files are on disk and `pending`, so the
-    // next successful trigger picks them up regardless.
+    const result = await startJob("preroll-process");
+    if (!result.ok && result.reason === "not-found") {
+      log.error("preroll-process job is missing — uploaded files will stay pending");
+    }
+  } catch (err) {
+    // The throw is swallowed deliberately: the files are on disk and `pending`,
+    // so the next successful trigger picks them up regardless. Log it, though —
+    // silence here is what made a broken queue invisible.
+    log.warn("failed to trigger preroll processing", { err: errorMessage(err) });
   }
 }
 

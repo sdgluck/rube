@@ -4,18 +4,22 @@
  * there because they also drive system jobs). Extracted from runner.ts
  * (GET-122).
  */
-import { and, eq } from "drizzle-orm";
+import { and, inArray, eq } from "drizzle-orm";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
-import { getPersonalizedSharingStatus } from "@tinkerbell/core";
+import { createLogger, getPersonalizedSharingStatus } from "@tinkerbell/core";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
 import { cancelRun, startJob } from "./runner.ts";
+import type { CommandName } from "./commands/catalog.ts";
 import { cronJobs, scheduleCron } from "./schedule.ts";
+
+const log = createLogger("jobs");
 
 export interface FeatureTemplate {
   id: string;
   name: string;
-  command: string;
+  /** Typed against the catalog so a rename there fails typecheck instead of at run time. */
+  command: CommandName;
   defaultSchedule: string;
   defaultConfig: Record<string, unknown>;
   /** Feature only works while the personalization master switch is enabled. */
@@ -147,15 +151,18 @@ export async function uninstallFeature(featureId: string): Promise<void> {
     const active = db
       .select({ id: jobRuns.id })
       .from(jobRuns)
-      .where(and(eq(jobRuns.jobId, "because-you-watched"), eq(jobRuns.status, "running")))
+      .where(and(eq(jobRuns.jobId, "because-you-watched"), inArray(jobRuns.status, ["running", "cancelling"])))
       .all();
     for (const run of active) {
       cancelRun(run.id);
     }
     try {
-      await startJob("byw-remove");
+      const result = await startJob("byw-remove");
+      if (!result.ok) {
+        log.warn("BYW uninstall: byw-remove did not start", { reason: result.reason });
+      }
     } catch (err) {
-      console.error(`[jobs] BYW uninstall: failed to start byw-remove:`, err);
+      log.error("BYW uninstall: failed to start byw-remove", { err: err instanceof Error ? err.message : String(err) });
     }
   }
 }

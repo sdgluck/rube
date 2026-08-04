@@ -17,8 +17,10 @@ const BASELINE_SECONDS = 30;
 
 async function start(jobId: string): Promise<{ runId: string }> {
   const result = await startJob(jobId);
-  if (!result) {
-    throw new TRPCError({ code: "CONFLICT", message: `${jobId} is already running` });
+  if (!result.ok) {
+    throw result.reason === "not-found"
+      ? new TRPCError({ code: "NOT_FOUND", message: `Job "${jobId}" does not exist` })
+      : new TRPCError({ code: "CONFLICT", message: `${jobId} is already running` });
   }
   return { runId: result.runId };
 }

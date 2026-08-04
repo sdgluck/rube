@@ -42,6 +42,9 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PUID=99
 ENV PGID=100
+# debug | info | warn | error. Raise to `debug` to see per-command job detail
+# and the Sidequest engine's own internals in `docker logs`.
+ENV LOG_LEVEL=info
 # 3000 = admin app/API (unauthenticated). 3100 = user portal (Sign in with
 # Plex). USER_HOST inherits HOST so the portal is reachable too. For a public
 # deployment, expose only 3100 and keep 3000 on a trusted network.

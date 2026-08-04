@@ -10,7 +10,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
-import { errorMessage } from "@tinkerbell/core";
+import { createLogger, errorMessage } from "@tinkerbell/core";
 import { startJob } from "@tinkerbell/jobs";
 import {
   UnsupportedFormatError,
@@ -25,6 +25,7 @@ import {
 } from "@tinkerbell/domain.prerolls";
 import { resolvePrerollId } from "./security.ts";
 
+const log = createLogger("prerolls");
 const UPLOAD_PATH = "/api/prerolls/upload";
 const PREROLL_ROUTE_RE = /^\/api\/prerolls\/([^/]+)\/(preview|thumb)$/;
 
@@ -144,8 +145,16 @@ async function handleUpload(req: IncomingMessage, res: ServerResponse, url: URL)
   }
 
   // Fire-and-forget: the client polls `prerolls.list` for status, and a job
-  // that's already running will pick this row up on its own.
-  startJob("preroll-process").catch(() => {});
+  // that's already running will pick this row up on its own. We don't wait,
+  // but we do say something when it doesn't start — the old `.catch(() => {})`
+  // meant a broken queue looked identical to a working one.
+  startJob("preroll-process")
+    .then((result) => {
+      if (!result.ok && result.reason === "not-found") {
+        log.error("preroll-process job is missing — the upload will stay pending", { prerollId: row.id });
+      }
+    })
+    .catch((err) => log.error("failed to start preroll processing", { err: errorMessage(err) }));
 
   json(res, 200, { id: row.id });
 }
