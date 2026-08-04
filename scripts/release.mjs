@@ -102,7 +102,9 @@ const updatePkg = (path) => {
 };
 
 updatePkg(rootPkgPath);
-for (const group of ["apps", "packages", "clients"]) {
+// `domains` was added after this script was written and was missing here, so
+// those packages kept the previous version through every release.
+for (const group of ["apps", "packages", "clients", "domains"]) {
   const dir = join(ROOT, group);
   for (const name of readdirSync(dir)) {
     const pkgPath = join(dir, name, "package.json");
