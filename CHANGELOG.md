@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-04
+
+### Added
+
+- Preroll management — control which videos Plex plays before movies
+- Public marketing website (tinkerbell.dev) with screenshot harness
+- Portal background image upload
+- Admin-customizable portal branding with auto-reconciliation on user sync
+- Portal fuzzy title picker and mood selector with per-input help
+
+### Changed
+
+- Consolidated Personalization settings into Portal as tabs
+- Added dedicated theming for the user portal
+- Consistent headers and hierarchy across settings pages
+- Node.js runtime updated to v26
+
+### Fixed
+
+- Mobile More sheet positioning below bottom navigation
+- Error handling and reporting for failed API requests
+- Accessibility improvements: focus rings, tap targets, reduced motion support
+- Settings form consistency across Save/Test behavior
+- localStorage access now guarded through a safe module
+- Error boundary resets properly on navigation; fixed mobile overflow and dead drawer
+- Safe-area insets, favicon, and document titles
+- AI Prompt rules no longer fail on oversized libraries (now samples instead)
+- Portal sign-out now updates immediately
+- Portal rating slider and bias hints behavior
+- Removed "not enabled yet" messaging from portal
+
 ## [0.5.0] - 2026-05-25
 
 ### Added
