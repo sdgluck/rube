@@ -5,11 +5,17 @@ import { Cron } from "croner";
 import { seedDefaultRules } from "@tinkerbell/domain.rules";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
-import { createLogger, errorMessage, formatDuration, logLevel, type JobContext } from "@tinkerbell/core";
+import {
+  createLogger,
+  errorMessage,
+  formatDuration,
+  logLevel,
+  noopCheckpoint,
+  type JobContext,
+} from "@tinkerbell/core";
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 import { internalJobs, isInternalJobName, type InternalJobDescriptor, type InternalJobName } from "./internal-jobs.ts";
 import { initSchedule, scheduleCron, startCronSchedules } from "./schedule.ts";
-import { createCheckpoint } from "./checkpoint.ts";
 import { COMMANDS, isCommandName, type CommandName } from "./commands/catalog.ts";
 import { ACTIVE_RUN_STATUSES, isTerminalStatus } from "./statuses.ts";
 import {
@@ -354,7 +360,11 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
         .run();
     },
     signal: controller.signal,
-    checkpoint: createCheckpoint(job.id),
+    // No checkpointing for internal jobs: every one of them is sub-second, so
+    // there is no partial progress worth resuming. A real checkpoint here would
+    // be worse than none — the command path clears it on cancel, and nothing on
+    // this path does, so any state written would outlive the run that wrote it.
+    checkpoint: noopCheckpoint,
   };
 
   jobLog.debug("running internal job");
@@ -428,6 +438,11 @@ function isRunTerminal(runId: string): boolean {
 }
 
 function finishInternalCancelled(runId: string, text: string): void {
+  // Guarded like every other terminal write on this path. Not reachable today
+  // — callers only get here when the status is already `cancelling` — but the
+  // watchdog can force-fail a `cancelling` run out from under us, and being
+  // the one write that could clobber that is not a property worth keeping.
+  if (isRunTerminal(runId)) return;
   db.update(jobRuns)
     .set({ status: "cancelled", log: text, message: "Cancelled", finishedAt: Date.now() })
     .where(eq(jobRuns.id, runId))
@@ -521,12 +536,32 @@ export function sweepStuckRuns(now = Date.now()): number {
       // they have no in-run deadline at all — this is their only backstop, and
       // without it a wedged `healthcheck` would occupy its job forever and
       // healthcheck would silently never run again.
+      //
+      // Be honest about the reach, in the same register as `CommandJob`'s
+      // deadline comment: internal jobs run on the main event loop and so does
+      // this timer, so a wedge inside *synchronous* work blocks the sweep too.
+      // (`better-sqlite3` is entirely synchronous, which is most of what
+      // `purge-runs` does.) This covers async stalls — a fetch that never
+      // settles, a promise that never resolves — which is the common case.
       const budgetMs = runBudgetMs(run.command);
       if (budgetMs !== null && now > run.startedAt + budgetMs + JOB_TIMEOUT_GRACE_MS * 2) {
         reason = `Exceeded its ${formatDuration(budgetMs)} budget and did not unwind`;
       }
     }
     if (!reason) continue;
+
+    // Actually try to stop it before declaring it dead. For an internal job the
+    // AbortController is right here in this process — unlike a command job's
+    // worker thread, which we genuinely cannot interrupt. Skipping this would
+    // free the "already running" guard while the handler kept going, so the
+    // next cron tick would start a second concurrent execution on top of the
+    // first one that never stopped.
+    const controller = internalControllers.get(run.id);
+    if (controller) {
+      controller.abort();
+      internalControllers.delete(run.id);
+      log.warn("aborted a wedged internal job", { runId: run.id, job: run.name });
+    }
 
     db.update(jobRuns)
       .set({

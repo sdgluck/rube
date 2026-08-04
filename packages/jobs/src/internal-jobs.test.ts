@@ -11,7 +11,7 @@ setupTempDb();
 
 const { and, eq } = await import("drizzle-orm");
 const { db, jobs, jobRuns } = await import("@tinkerbell/db");
-const { startJob, cancelRun } = await import("./runner.ts");
+const { startJob, cancelRun, sweepStuckRuns } = await import("./runner.ts");
 const { internalJobs } = await import("./internal-jobs.ts");
 
 const JOB_ID = "purge-runs";
@@ -67,6 +67,22 @@ describe("internal jobs", () => {
     assert.match(row?.log ?? "", /a line from an internal job/);
   });
 
+  it("gets a checkpoint that deliberately stores nothing", async () => {
+    // Internal jobs are sub-second, so there is nothing to resume — and unlike
+    // the command path nothing here clears a checkpoint on cancel, so a real
+    // one would outlive the run that wrote it.
+    let readBack: unknown = "unset";
+    descriptor.run = (ctx: import("@tinkerbell/core").JobContext) => {
+      ctx.checkpoint.write({ some: "state" });
+      readBack = ctx.checkpoint.read();
+      return "done";
+    };
+
+    await startJob(JOB_ID);
+
+    assert.equal(readBack, null, "internal-job checkpoints must not persist anything");
+  });
+
   it("aborts the context signal when cancelled", async () => {
     let abortedDuringRun = false;
     descriptor.run = (ctx: import("@tinkerbell/core").JobContext) => {
@@ -117,6 +133,47 @@ describe("internal jobs", () => {
     const row = runRow(result.runId);
     assert.equal(row?.status, "failed");
     assert.match(row?.message ?? "", /something broke/);
+  });
+
+  it("aborts a wedged run when the watchdog force-fails it", async () => {
+    // The controller is right here in this process, unlike a command job's
+    // worker thread. Not aborting it would free the "already running" guard
+    // while the handler kept going, so the next cron tick would stack a second
+    // concurrent execution on top of one that never stops.
+    let released!: () => void;
+    const blocked = new Promise<void>((resolve) => (released = resolve));
+    let abortedByWatchdog = false;
+
+    descriptor.run = async (ctx: import("@tinkerbell/core").JobContext) => {
+      ctx.signal.addEventListener("abort", () => {
+        abortedByWatchdog = true;
+        released();
+      });
+      await blocked;
+      return "unblocked";
+    };
+
+    const pending = startJob(JOB_ID);
+    // Let startJob reach its first await, so the run row and the controller
+    // both exist before the sweep runs.
+    await Promise.resolve();
+
+    const runId = activeRunId();
+    assert.ok(runId, "expected a running row");
+
+    // Push the row past its budget and sweep.
+    const budget = (internalJobs[JOB_ID] as { timeoutMs: number }).timeoutMs;
+    db.update(jobRuns)
+      .set({ startedAt: Date.now() - budget - 60_000 * 5 })
+      .where(eq(jobRuns.id, runId))
+      .run();
+    assert.equal(sweepStuckRuns(), 1);
+
+    assert.equal(abortedByWatchdog, true, "the watchdog should have aborted the handler");
+    await pending;
+
+    // The watchdog's verdict stands — the handler must not resurrect it.
+    assert.equal(runRow(runId)?.status, "failed");
   });
 
   it("marks healthcheck quiet so it doesn't emit 1440 events a day", () => {

@@ -125,11 +125,18 @@ pnpm format        # oxfmt
 Tests use Node's built-in test runner. Currently covered: `packages/overlays`,
 `clients/plex`, `packages/core`, `packages/jobs`.
 
-`pnpm lint` also runs `scripts/check-fetch.mjs`, which fails on any `fetch()`
-without a timeout under `clients/`, `packages/`, `domains/` or `apps/server/`.
-A request with no deadline is the easiest way to wedge the job queue — the run
-never finishes, so nothing else runs either. Route new calls through
-`@tinkerbell/http` (which takes `timeoutMs`), or add an `AbortSignal.timeout()`.
+`pnpm lint` also runs two source guards:
+
+- `scripts/check-fetch.mjs` fails on any `fetch()` without a timeout under
+  `clients/`, `packages/`, `domains/` or `apps/server/`. A request with no
+  deadline is the easiest way to wedge the job queue — the run never finishes,
+  so nothing else runs either. Route new calls through `@tinkerbell/http`
+  (which takes `timeoutMs`), or add an `AbortSignal.timeout()`.
+- `scripts/check-nul.mjs` fails on a raw NUL byte in a source file. NUL is a
+  fine delimiter, but written literally it makes `grep` and `file(1)` treat the
+  whole file as binary and skip it _silently_ — which once put a wrong claim
+  into a design document. Write `\u0000` instead; it's byte-identical at
+  runtime.
 
 ## Background jobs
 
