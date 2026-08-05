@@ -13,4 +13,10 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(rootPkg.version),
   },
+  server: {
+    // Fixed port so localias can map site.tinkerbell.localhost to it (.localias.yaml).
+    port: 5175,
+    strictPort: true,
+    allowedHosts: [".tinkerbell.localhost"],
+  },
 });

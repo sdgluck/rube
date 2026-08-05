@@ -30,13 +30,29 @@ A self-hosted Plex companion for automating library curation. Define rules over 
 Requires Node 25+ and pnpm 9.15.
 
 ```sh
+mise install   # node + localias
 pnpm install
 pnpm dev
 ```
 
-`pnpm dev` runs `pnpm migrate` first as a discrete step, then starts the apps via Turbo. Migrations are applied at the entrypoint (dev script / Docker entrypoint) — never as part of application boot.
+`pnpm dev` runs `pnpm migrate` first as a discrete step, brings up the local proxy, then starts the apps via Turbo. Migrations are applied at the entrypoint (dev script / Docker entrypoint) — never as part of application boot.
 
-Server runs on `:3000`, web on Vite, with `portless` for local hostnames (`api.tinkerbell`, `web.tinkerbell`).
+### Local hostnames
+
+Every app serves on a fixed port, and [localias](https://github.com/peterldowns/localias) proxies a named HTTPS hostname onto each:
+
+| URL                                   | App                             | Port   |
+| ------------------------------------- | ------------------------------- | ------ |
+| `https://api.tinkerbell.localhost`    | server                          | `3000` |
+| `https://web.tinkerbell.localhost`    | web (admin UI)                  | `5173` |
+| `https://portal.tinkerbell.localhost` | portal                          | `5174` |
+| `https://site.tinkerbell.localhost`   | tinkerbell.dev (marketing site) | `5175` |
+
+The mapping lives in `.localias.yaml` at the repo root; edit it and re-run `pnpm proxy:up` to apply. localias manages `/etc/hosts` and a local root certificate, so the first run prompts for sudo.
+
+`pnpm dev` starts the proxy for you and stops it again when the dev session ends, Ctrl-C included. To drive it by hand: `pnpm proxy:up`, `pnpm proxy:down`, `pnpm proxy:status`.
+
+The proxy is optional — if localias isn't installed, `pnpm dev` warns and carries on, and the apps remain reachable on their raw ports.
 
 ## Network exposure
 

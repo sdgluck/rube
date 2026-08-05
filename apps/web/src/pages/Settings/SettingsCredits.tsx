@@ -85,7 +85,7 @@ const SECTIONS: Section[] = [
       { name: "oxfmt", url: "https://github.com/oxc-project/oxc" },
       { name: "Husky", url: "https://github.com/typicode/husky" },
       { name: "lint-staged", url: "https://github.com/lint-staged/lint-staged" },
-      { name: "portless", url: "https://github.com/akellbl4/portless" },
+      { name: "localias", url: "https://github.com/peterldowns/localias" },
     ],
   },
 ];

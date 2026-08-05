@@ -1,0 +1,10 @@
+# Local hostnames for the dev servers, proxied by localias.
+# https://github.com/peterldowns/localias
+#
+# Picked up automatically because this file sits at the git repo root.
+# Ports must match the `strictPort` values in the apps' vite configs and
+# the server's PORT default.
+api.tinkerbell.localhost: 3000
+web.tinkerbell.localhost: 5173
+portal.tinkerbell.localhost: 5174
+site.tinkerbell.localhost: 5175

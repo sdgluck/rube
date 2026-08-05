@@ -20,9 +20,6 @@ importers:
       oxlint:
         specifier: ^1.62.0
         version: 1.66.0
-      portless:
-        specifier: ^0.12.0
-        version: 0.12.0
       turbo:
         specifier: ^2.10.7
         version: 2.10.7
@@ -109,9 +106,6 @@ importers:
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
-      portless:
-        specifier: ^0.12.0
-        version: 0.12.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -225,9 +219,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.3.0
         version: 4.7.0(vite@6.4.2)
-      portless:
-        specifier: ^0.12.0
-        version: 0.12.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -4486,13 +4477,6 @@ packages:
       playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
-    dev: true
-
-  /portless@0.12.0:
-    resolution: {integrity: sha512-zE8EYJ5xIEtKEBu1wnD+FavOE90/GNxRixF4Mu2hxMvDuVx1ftUbA6VbjbxI9sP9LUt0L26l6OiENGo4EFtLfw==}
-    engines: {node: '>=20'}
-    os: [darwin, linux, win32]
-    hasBin: true
     dev: true
 
   /postcss@8.5.15:

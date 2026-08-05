@@ -16,6 +16,10 @@ export default defineConfig({
     __CHANGELOG__: JSON.stringify(changelog),
   },
   server: {
+    // Fixed port so localias can map web.tinkerbell.localhost to it (.localias.yaml).
+    port: 5173,
+    strictPort: true,
+    allowedHosts: [".tinkerbell.localhost"],
     proxy: {
       "/api": "http://localhost:3000",
     },
