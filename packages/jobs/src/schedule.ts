@@ -239,6 +239,15 @@ export function catchUpMissedRuns(now = Date.now()): string[] {
  * a surprising thing for a settings save to do.
  */
 export function startCronSchedules(opts: { catchUp?: boolean } = {}): void {
+  // Tooling that boots the server only to look at it — the screenshot harness —
+  // sets this. Otherwise the scheduler starts firing against the seeded data and
+  // writes fresh run rows underneath the very pages being captured, so the same
+  // screen renders differently on every run.
+  if (process.env.TB_DISABLE_SCHEDULER === "1") {
+    log.info("scheduler disabled by TB_DISABLE_SCHEDULER");
+    return;
+  }
+
   // Stop everything first so this is safe to call again when the timezone
   // setting changes — every cron has to be rebuilt with the new zone.
   for (const cron of cronJobs.values()) cron.stop();

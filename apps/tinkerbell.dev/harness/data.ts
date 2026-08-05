@@ -345,3 +345,209 @@ export const ITEM_BY_RATING_KEY: Record<string, { title: string; hue: number; ki
 export function thumbPath(ratingKey: string): string {
   return `/library/metadata/${ratingKey}/thumb/1`;
 }
+
+// ─── Prerolls ────────────────────────────────────────────────────────────────
+//
+// One of each card state, so the page shows the ready / processing / failed
+// treatments side by side rather than three identical rows.
+
+export interface DemoPreroll {
+  id: string;
+  name: string;
+  status: "ready" | "processing" | "failed";
+  enabled: boolean;
+  position: number;
+  sizeBytes: number;
+  durationMs: number;
+  width: number;
+  height: number;
+  videoCodec: string;
+  audioCodec: string;
+  transcodeAction: string;
+  transcodeReasons: string[];
+  error: string;
+}
+
+export const PREROLLS: DemoPreroll[] = [
+  {
+    id: "pr-001",
+    name: "Feature Presentation",
+    status: "ready",
+    enabled: true,
+    position: 1,
+    sizeBytes: 18_432_000,
+    durationMs: 12_400,
+    width: 1920,
+    height: 1080,
+    videoCodec: "h264",
+    audioCodec: "aac",
+    transcodeAction: "copy",
+    transcodeReasons: ["Plex direct plays this already"],
+    error: "",
+  },
+  {
+    id: "pr-002",
+    name: "Cinema Ident",
+    status: "ready",
+    enabled: true,
+    position: 2,
+    sizeBytes: 7_340_032,
+    durationMs: 6_000,
+    width: 3840,
+    height: 2160,
+    videoCodec: "h264",
+    audioCodec: "aac",
+    transcodeAction: "encode",
+    transcodeReasons: ["Source was HEVC 10-bit", "Normalised to H.264/AAC"],
+    error: "",
+  },
+  {
+    id: "pr-003",
+    name: "Late Night Sting",
+    status: "processing",
+    enabled: true,
+    position: 3,
+    sizeBytes: 24_117_248,
+    durationMs: 0,
+    width: 0,
+    height: 0,
+    videoCodec: "",
+    audioCodec: "",
+    transcodeAction: "",
+    transcodeReasons: [],
+    error: "",
+  },
+  {
+    id: "pr-004",
+    name: "Old Projector Reel",
+    status: "failed",
+    enabled: false,
+    position: 4,
+    sizeBytes: 3_145_728,
+    durationMs: 0,
+    width: 0,
+    height: 0,
+    videoCodec: "",
+    audioCodec: "",
+    transcodeAction: "",
+    transcodeReasons: [],
+    error: "ffmpeg: moov atom not found — the upload is truncated",
+  },
+];
+
+// ─── Job runs ────────────────────────────────────────────────────────────────
+//
+// The job rows themselves are created by the server at boot (`seedDefaultJobs`),
+// so these only supply history. Ids are fixed because shots.ts links straight
+// to `/jobs/runs/<id>`.
+
+export interface DemoJobRun {
+  id: string;
+  jobId: string;
+  status: "completed" | "failed" | "running";
+  message: string;
+  progress: number;
+  agoMin: number;
+  durationMs: number;
+  log: string;
+}
+
+export const JOB_RUNS: DemoJobRun[] = [
+  {
+    id: "run-generate-1",
+    jobId: "generate",
+    status: "completed",
+    message: "8 collections refreshed",
+    progress: 1,
+    agoMin: 21,
+    durationMs: 4_180,
+    log: [
+      "[12:00:01] starting generate",
+      "[12:00:01] 8 enabled rules",
+      "[12:00:02] Top Rated · Sci-Fi → 42 items",
+      "[12:00:02] Recently Added (per section) → 88 items",
+      "[12:00:03] Cozy Autumn Nights → 24 items",
+      "[12:00:03] 4K Showcase → 31 items",
+      "[12:00:04] From Your Requests → 57 items",
+      "[12:00:04] Because You Watched → 120 items across 6 collections",
+      "[12:00:05] Hidden Gems → OMDb rate limit exceeded (429), skipped",
+      "[12:00:05] done — 8 collections, 362 items, 4.18s",
+    ].join("\n"),
+  },
+  {
+    id: "run-generate-2",
+    jobId: "generate",
+    status: "completed",
+    message: "8 collections refreshed",
+    progress: 1,
+    agoMin: 1_461,
+    durationMs: 3_920,
+    log: "[12:00:01] starting generate\n[12:00:05] done — 8 collections, 358 items, 3.92s",
+  },
+  {
+    id: "run-sync-media-1",
+    jobId: "sync-media",
+    status: "completed",
+    message: "312 items in 4.2s",
+    progress: 1,
+    agoMin: 3,
+    durationMs: 4_210,
+    log: "[12:00:00] syncing Movies\n[12:00:02] syncing TV Shows\n[12:00:04] done — 312 items",
+  },
+  {
+    id: "run-purge-1",
+    jobId: "purge-runs",
+    status: "completed",
+    message: "42 runs removed",
+    progress: 1,
+    agoMin: 190,
+    durationMs: 210,
+    log: "[12:00:00] retention 30 days\n[12:00:00] removed 42 runs",
+  },
+  {
+    id: "run-healthcheck-fail",
+    jobId: "healthcheck",
+    status: "failed",
+    message: "OMDb: request timed out",
+    progress: 1,
+    agoMin: 95,
+    durationMs: 30_120,
+    log: "[12:00:00] checking 6 services\n[12:00:30] OMDb: The operation was aborted due to timeout",
+  },
+];
+
+// ─── Health ──────────────────────────────────────────────────────────────────
+// Mixed on purpose: the sidebar footer and the Health page both want to show
+// something other than "all green".
+
+export const HEALTH: Array<{ service: string; status: "ok" | "error"; message: string; agoMin: number }> = [
+  { service: "Plex", status: "ok", message: "Reachable — 20 items across 2 libraries", agoMin: 2 },
+  { service: "Plex.tv", status: "ok", message: "Signed in", agoMin: 2 },
+  { service: "Radarr", status: "ok", message: "v5.14 — 2 root folders", agoMin: 4 },
+  { service: "Sonarr", status: "ok", message: "v4.0 — 1 root folder", agoMin: 4 },
+  { service: "OMDb", status: "error", message: "The operation was aborted due to timeout", agoMin: 6 },
+  { service: "TMDb", status: "ok", message: "Authenticated", agoMin: 6 },
+];
+
+/**
+ * Integration config, so the Settings tabs show a filled-in form rather than an
+ * empty one. Hostnames are `.demo`, which is not a resolvable TLD — a probe
+ * against these can only ever fail locally, never reach anything real.
+ */
+export const SERVICE_CONFIG = {
+  global_radarr_url: "http://radarr.demo:7878",
+  global_sonarr_url: "http://sonarr.demo:8989",
+  global_seerr_url: "http://seerr.demo:5055",
+} as const;
+
+/**
+ * No API keys, tokens or webhook URLs here, deliberately. The server never
+ * ships a secret to the browser — it substitutes `__redacted__:<uuid>`, and
+ * that uuid is randomised per process on purpose, so a screenshot of a
+ * filled-in secret field would differ on every single capture. Empty secret
+ * fields are also the honest thing to publish.
+ */
+export const LLM_CONFIG = {
+  provider: "anthropic",
+  model: "claude-sonnet-5",
+} as const;

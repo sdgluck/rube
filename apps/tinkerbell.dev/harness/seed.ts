@@ -6,15 +6,45 @@
  * Invoked by capture.ts; not meant to touch a real tinkerbell.db.
  */
 
-import { db, plexSections, plexUsers, collections, collectionItems, mediaItems, rules, events } from "@tinkerbell/db";
+import {
+  db,
+  plexSections,
+  plexUsers,
+  collections,
+  collectionItems,
+  mediaItems,
+  rules,
+  events,
+  jobs,
+  jobRuns,
+  prerolls,
+  healthChecks,
+  userPreferences,
+} from "@tinkerbell/db";
 import { setConfig } from "@tinkerbell/core";
-import { SECTIONS, ITEMS, COLLECTIONS, RULES, USERS, EVENTS, thumbPath } from "./data.ts";
+import {
+  SECTIONS,
+  ITEMS,
+  COLLECTIONS,
+  RULES,
+  USERS,
+  EVENTS,
+  PREROLLS,
+  JOB_RUNS,
+  HEALTH,
+  SERVICE_CONFIG,
+  LLM_CONFIG,
+  thumbPath,
+} from "./data.ts";
+import { FIXED_NOW, DAY, MINUTE, fnv1a } from "./clock.ts";
 
 const mockUrl = process.env.MOCK_PLEX_URL;
 if (!mockUrl) throw new Error("MOCK_PLEX_URL is required");
 
-const now = Date.now();
-const min = 60_000;
+// Every timestamp hangs off the one frozen instant, so a re-run writes the
+// same bytes. See clock.ts.
+const now = FIXED_NOW;
+const min = MINUTE;
 
 // ── Config: point the app at the mock Plex so /api/plex-image resolves ──────
 setConfig("global_plex_url", mockUrl);
@@ -43,7 +73,9 @@ for (const it of ITEMS) {
       year: it.year,
       thumb: thumbPath(it.ratingKey),
       type: it.type,
-      addedAt: now - Math.floor(Math.random() * 30) * 24 * 60 * min,
+      // Scattered over the last month but stable per item — random() here
+      // would reorder the Media list on every capture.
+      addedAt: now - (fnv1a(it.ratingKey) % 30) * DAY,
       videoResolution: it.videoResolution,
       videoCodec: it.videoCodec,
       audioCodec: it.audioCodec,
@@ -128,6 +160,93 @@ for (const e of EVENTS) {
     .run();
 }
 
+// ── Integration config, so Settings forms show a configured service ─────────
+for (const [key, value] of Object.entries(SERVICE_CONFIG)) {
+  setConfig(key as keyof typeof SERVICE_CONFIG, value);
+}
+setConfig("global_llm", LLM_CONFIG);
+
+// ── Prerolls ────────────────────────────────────────────────────────────────
+for (const p of PREROLLS) {
+  db.insert(prerolls)
+    .values({
+      id: p.id,
+      name: p.name,
+      originalFilename: `${p.name.toLowerCase().replace(/\s+/g, "-")}.mov`,
+      filename: p.status === "ready" ? `${p.id}.mp4` : "",
+      status: p.status,
+      enabled: p.enabled ? 1 : 0,
+      position: p.position,
+      sizeBytes: p.sizeBytes,
+      durationMs: p.durationMs,
+      width: p.width,
+      height: p.height,
+      fps: p.status === "ready" ? 24 : 0,
+      videoCodec: p.videoCodec,
+      audioCodec: p.audioCodec,
+      container: p.status === "ready" ? "mp4" : "",
+      transcodeAction: p.transcodeAction,
+      transcodeReasons: p.transcodeReasons,
+      error: p.error,
+      createdAt: now - p.position * 40 * min,
+      updatedAt: now - p.position * 40 * min,
+    })
+    .onConflictDoNothing()
+    .run();
+}
+
+// ── Job runs ────────────────────────────────────────────────────────────────
+// The job rows are normally created by the server at boot, but job_runs.job_id
+// is a foreign key — so insert the parent first rather than depend on ordering.
+for (const jobId of new Set(JOB_RUNS.map((r) => r.jobId))) {
+  db.insert(jobs)
+    .values({ id: jobId, name: jobId, command: jobId, schedule: "", enabled: 1, config: {} })
+    .onConflictDoNothing()
+    .run();
+}
+for (const r of JOB_RUNS) {
+  const startedAt = now - r.agoMin * min;
+  db.insert(jobRuns)
+    .values({
+      id: r.id,
+      jobId: r.jobId,
+      status: r.status,
+      log: r.log,
+      progress: r.progress,
+      message: r.message,
+      startedAt,
+      finishedAt: r.status === "running" ? null : startedAt + r.durationMs,
+    })
+    .onConflictDoNothing()
+    .run();
+}
+
+// ── Health history ──────────────────────────────────────────────────────────
+for (const h of HEALTH) {
+  // A short history each, so the Health page's 24h sparkline has something to
+  // draw rather than a flat empty bar.
+  for (let i = 0; i < 6; i++) {
+    db.insert(healthChecks)
+      .values({
+        service: h.service,
+        // Only the newest entry carries the failure, so the sparkline shows a
+        // service that recently broke rather than one that never worked.
+        status: i === 0 ? h.status : "ok",
+        message: i === 0 ? h.message : "OK",
+        timestamp: now - h.agoMin * min - i * 4 * 60 * min,
+      })
+      .run();
+  }
+}
+
+// ── Portal opt-in, so Users shows both pill states ──────────────────────────
+for (const u of USERS.slice(0, 2)) {
+  db.insert(userPreferences)
+    .values({ userId: u.userId, preferences: {}, optedIn: 1, updatedAt: now })
+    .onConflictDoNothing()
+    .run();
+}
+
 console.log(
-  `[seed] ${ITEMS.length} media · ${COLLECTIONS.length} collections · ${RULES.length} rules · ${USERS.length} users · ${EVENTS.length} events`,
+  `[seed] ${ITEMS.length} media · ${COLLECTIONS.length} collections · ${RULES.length} rules · ${USERS.length} users · ${EVENTS.length} events · ${PREROLLS.length} prerolls · ${JOB_RUNS.length} runs`,
 );

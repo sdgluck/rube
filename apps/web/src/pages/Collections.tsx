@@ -451,6 +451,7 @@ export default function Collections() {
                         <input
                           type="checkbox"
                           className={styles.checkbox}
+                          aria-label="Select all collections"
                           checked={collections.length > 0 && selected.size === collections.length}
                           onChange={toggleSelectAll}
                         />

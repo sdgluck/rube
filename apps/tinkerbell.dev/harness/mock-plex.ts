@@ -7,7 +7,9 @@
  *    `/api/plex-image` proxy fetches, so its origin must equal the configured
  *    `global_plex_url`.
  *  - `/library/sections/:id/all` → a page of items (for the Overlays sample).
- *  - `/library/metadata/:keys` → full metadata (Overlays canvas + badges).
+ *  - `/library/metadata/:keys` → full metadata for items AND collections, the
+ *    latter carrying the `content` URI the Smart Filters editor parses.
+ *  - `/library/metadata/:key/children` → a collection's items.
  *  - `/hubs` → home hubs built from the demo collections (for the Preview page).
  *
  * Anything else returns an empty-but-valid `{ MediaContainer }` so stray live
@@ -19,6 +21,63 @@ import { ITEMS, COLLECTIONS, ITEM_BY_RATING_KEY, thumbPath, type DemoItem } from
 import { poster } from "./posters.ts";
 
 const ITEM_BY_KEY = new Map(ITEMS.map((i) => [i.ratingKey, i]));
+const COLLECTION_BY_KEY = new Map(COLLECTIONS.map((c) => [c.ratingKey, c]));
+
+/** Plex identifies a server by machine id; the smart-filter envelope carries it. */
+const MACHINE_ID = "demo-machine-id";
+
+/**
+ * A smart collection's `content` is the saved filter URI. The Smart Filters
+ * editor parses this into its tree, so it has to be shaped the way Plex writes
+ * it — otherwise the drawer opens on an empty group. Two clauses and a nested
+ * OR, to exercise the depth rails.
+ */
+function smartContent(sectionId: string, type: string): string {
+  const query = [
+    `type=${type}`,
+    "sort=rating%3Adesc",
+    "genre=Science%20Fiction",
+    "push=1",
+    "year>>=2015",
+    "or=1",
+    "userRating>>=8",
+    "pop=1",
+  ].join("&");
+  return `server://${MACHINE_ID}/com.plexapp.plugins.library/library/sections/${sectionId}/all?${query}`;
+}
+
+/** The dynamic query path a smart collection resolves its items through. */
+function smartKey(sectionId: string, type: string): string {
+  return `/library/sections/${sectionId}/all?type=${type}&sort=rating%3Adesc`;
+}
+
+function collectionMetadata(c: (typeof COLLECTIONS)[number]) {
+  const type = c.sectionId === "1" ? "1" : "2";
+  return {
+    ratingKey: c.ratingKey,
+    key: c.smart ? smartKey(c.sectionId, type) : `/library/metadata/${c.ratingKey}/children`,
+    title: c.title,
+    summary: c.summary,
+    type: "collection",
+    subtype: c.sectionId === "1" ? "movie" : "show",
+    smart: c.smart ? "1" : "0",
+    content: c.smart ? smartContent(c.sectionId, type) : "",
+    thumb: thumbPath(c.ratingKey),
+    childCount: c.itemRatingKeys.length,
+    addedAt: 1_700_000_000,
+    librarySectionID: Number(c.sectionId),
+    librarySectionTitle: c.sectionTitle,
+    Label: c.labels.map((tag) => ({ tag })),
+  };
+}
+
+function collectionChildren(c: (typeof COLLECTIONS)[number]) {
+  const metas = c.itemRatingKeys
+    .map((k) => ITEM_BY_KEY.get(k))
+    .filter((x): x is DemoItem => Boolean(x))
+    .map(metadata);
+  return { size: metas.length, totalSize: metas.length, Metadata: metas };
+}
 
 /** Synthetic but deterministic ratings so overlay badges have something to show. */
 function ratingsFor(it: DemoItem) {
@@ -69,10 +128,16 @@ function sectionItems(sectionId: string, offset: number, size: number) {
 }
 
 function metadataForKeys(keys: string[]) {
+  // Collections share the metadata endpoint with items — the collection-detail
+  // page looks one up by rating key exactly like an item.
   const metas = keys
-    .map((k) => ITEM_BY_KEY.get(k))
-    .filter((x): x is DemoItem => Boolean(x))
-    .map(metadata);
+    .map((k) => {
+      const item = ITEM_BY_KEY.get(k);
+      if (item) return metadata(item);
+      const collection = COLLECTION_BY_KEY.get(k);
+      return collection ? collectionMetadata(collection) : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x));
   return { size: metas.length, Metadata: metas };
 }
 
@@ -157,6 +222,14 @@ export function startMockPlex(port: number, host = "127.0.0.1"): Promise<MockPle
         const offset = Number(q.get("X-Plex-Container-Start") ?? "0");
         const size = Number(q.get("X-Plex-Container-Size") ?? "20");
         json(res, sectionItems(sectionAll[1], offset, size));
+        return;
+      }
+
+      // ── Collection children (non-smart collection detail) ───────────────
+      const childrenMatch = path.match(/^\/library\/metadata\/(\d+)\/children$/);
+      if (childrenMatch) {
+        const collection = COLLECTION_BY_KEY.get(childrenMatch[1]);
+        json(res, collection ? collectionChildren(collection) : { size: 0, Metadata: [] });
         return;
       }
 

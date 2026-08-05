@@ -21,7 +21,9 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: [".tinkerbell.localhost"],
     proxy: {
-      "/api": "http://localhost:3000",
+      // The screenshot harness runs its own server on a high port so a capture
+      // doesn't collide with a running dev stack.
+      "/api": process.env.TB_API_TARGET || "http://localhost:3000",
     },
   },
 });
