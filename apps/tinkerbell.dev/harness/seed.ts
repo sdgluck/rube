@@ -122,7 +122,7 @@ RULES.forEach((r, i) => {
       name: r.name,
       type: r.type,
       enabled: r.enabled ? 1 : 0,
-      config: {},
+      config: r.config,
       createdAt: now - (i + 1) * 3 * 24 * 60 * min,
       lastCollectionRatingKey: COLLECTIONS[i]?.ratingKey ?? null,
       lastRunAt: now - (i + 1) * 17 * min,

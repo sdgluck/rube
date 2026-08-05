@@ -201,7 +201,16 @@ export const SHOTS: Shot[] = [
     description: "Rule wizard step 2 — source configuration for a Smart Filter rule",
     path: "/rules",
     viewports: DESKTOP,
-    steps: [{ click: "Add Rule" }, { clickText: "Smart Filter" }, { click: "Next" }],
+    // By description, not by name: the type filter chips on the page behind the
+    // modal are labelled "Smart Filter" too, and they come first in the DOM.
+    steps: [
+      { click: "Add Rule" },
+      { clickText: "Build a single collection by AND'ing Plex filter clauses" },
+      { click: "Next" },
+      // Not the AND/OR row: that only renders once a group has more than one
+      // clause, and a new rule starts with one.
+      { wait: "text=+ Add clause" },
+    ],
   },
   {
     // A Smart Filter rule can't leave its source step until it has a clause, so

@@ -2,3 +2,18 @@ node_modules
 .git
 .husky
 .claude
+
+# Build-context weight. The pnpm store alone is ~300 MB and none of this is
+# needed by either image; the capture image mounts screenshots back in at run
+# time rather than copying them.
+.pnpm-store
+.turbo
+.idea
+screenshots
+posters
+prerolls
+apps/*/dist
+*.db
+*.db-shm
+*.db-wal
+*.sqlite

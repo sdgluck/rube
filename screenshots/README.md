@@ -4,8 +4,20 @@ Every page of the admin UI, at two viewports, so a design review is always
 looking at what the app currently renders rather than at a diff.
 
 ```sh
-pnpm screenshots        # ~4 min, then `git add screenshots`
+pnpm screenshots        # in Docker, then `git add screenshots`
+pnpm screenshots:local  # faster, for iterating on shots — don't commit the result
 ```
+
+`pnpm screenshots` runs the whole capture — mock Plex, server, Vite and Chromium
+— inside the Playwright image, so it needs a Docker daemon. That is not
+ceremony: the font rasteriser is part of the operating system, macOS draws
+glyphs through CoreText and Linux through FreeType, and nothing inside Chromium
+can reconcile the two. Pinning the OS is the only way these images mean the same
+thing on someone else's machine.
+
+`screenshots:local` skips the container and runs against your own Chromium. Much
+faster while you are adding shots, and every pixel of text will differ from the
+committed set, so regenerate properly before committing.
 
 `desktop/` is 1440×900, `mobile/` is 430×932. Files are numbered in sidebar
 order so the folder reads as a tour; the suffix is the state
@@ -48,16 +60,22 @@ of a readable diff. Getting there took pinning:
 | Redacted secrets — the sentinel is randomised per process, by design  | No secrets in the fixtures                                                                                                  |
 | Chromium's PNG encoder, which is not byte-stable for identical pixels | Re-encoded through `sharp`                                                                                                  |
 | GPU raster jitter in shadow gradients                                 | `--disable-gpu`, `--force-color-profile=srgb`                                                                               |
+| The host OS's font rasteriser — CoreText on macOS, FreeType on Linux  | The capture runs inside `mcr.microsoft.com/playwright`, tagged to match the installed driver                                |
 
 Verify with two runs back to back: the second should report
 `0 updated, 96 unchanged`.
 
 ## Limits
 
-- **One machine.** Glyph rasterisation differs between macOS and Linux, so
-  captures made elsewhere will differ even with the colour profile pinned. If
-  more than one person ever generates these, generation has to move into the
-  Playwright Docker image.
+- **Same architecture.** The container fixes the operating system, which was the
+  large difference. It does not guarantee that linux/arm64 and linux/amd64
+  rasterise identically — probably they do, since FreeType's output isn't
+  arch-dependent, but nobody has checked. If two machines ever disagree, pin
+  `--platform` in `scripts/capture-docker.mjs` and regenerate once.
+- **These are Linux screenshots.** Platform-conditional UI renders accordingly —
+  the search hint reads `Ctrl+K` rather than `⌘K`, because that is what
+  `modChord` returns off a Mac. Correct for the container, and worth
+  remembering before filing it as a bug.
 - **The hook proves a procedure ran, not that the pixels are right.** A capture
   against a stale mock still satisfies it. `manifest.json` records the
   Playwright and Chromium versions so a mass diff has an explanation.

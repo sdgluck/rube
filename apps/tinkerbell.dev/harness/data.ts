@@ -46,8 +46,15 @@ export interface DemoCollection {
 export interface DemoRule {
   id: string;
   name: string;
+  /**
+   * Must be a real value from `RULE_TYPES` in the wizard's rule-types.ts —
+   * the list page keys its labels, badge colours and config summary off it, and
+   * an invented id falls through to showing the raw string.
+   */
   type: string;
   enabled: boolean;
+  /** Shape must match `CONFIG_SUMMARY[type]`, which renders the config column. */
+  config: Record<string, unknown>;
   collectionCount: number;
   itemCount: number;
   status: "ok" | "error";
@@ -230,17 +237,24 @@ export const RULES: DemoRule[] = [
   {
     id: "rule-top-scifi",
     name: "Top Rated · Sci-Fi",
-    type: "smart-filter",
+    type: "smart_filter",
     enabled: true,
+    config: {
+      filters: [
+        { field: "genre", op: "=", value: "Science Fiction" },
+        { field: "year", op: ">>=", value: "2015" },
+      ],
+    },
     collectionCount: 1,
     itemCount: 42,
     status: "ok",
   },
   {
-    id: "rule-recent",
-    name: "Recently Added (per section)",
-    type: "recently-added",
+    id: "rule-highest",
+    name: "Highest Rated",
+    type: "top_rated",
     enabled: true,
+    config: { limit: 50 },
     collectionCount: 2,
     itemCount: 88,
     status: "ok",
@@ -248,8 +262,9 @@ export const RULES: DemoRule[] = [
   {
     id: "rule-cozy",
     name: "Cozy Autumn Nights",
-    type: "ai-prompt",
+    type: "ai_prompt",
     enabled: true,
+    config: { themes: ["cosy", "autumnal", "slow-burn"], limit: 10, minItems: 12 },
     collectionCount: 1,
     itemCount: 24,
     status: "ok",
@@ -257,8 +272,9 @@ export const RULES: DemoRule[] = [
   {
     id: "rule-4k",
     name: "4K Showcase",
-    type: "smart-filter",
+    type: "smart_filter",
     enabled: true,
+    config: { filters: [{ field: "resolution", op: "=", value: "4k" }] },
     collectionCount: 1,
     itemCount: 31,
     status: "ok",
@@ -266,8 +282,9 @@ export const RULES: DemoRule[] = [
   {
     id: "rule-requests",
     name: "From Your Requests",
-    type: "overseerr",
+    type: "seerr_requests",
     enabled: true,
+    config: { filter: "available", limit: 40 },
     collectionCount: 1,
     itemCount: 57,
     status: "ok",
@@ -275,17 +292,19 @@ export const RULES: DemoRule[] = [
   {
     id: "rule-imdb-top",
     name: "IMDb Top 250 (owned)",
-    type: "imdb-chart",
+    type: "imdb_chart",
     enabled: false,
+    config: { chart: "top" },
     collectionCount: 1,
     itemCount: 73,
     status: "ok",
   },
   {
-    id: "rule-byw",
-    name: "Because You Watched",
-    type: "because-you-watched",
+    id: "rule-studios",
+    name: "By Studio",
+    type: "studios",
     enabled: true,
+    config: {},
     collectionCount: 6,
     itemCount: 120,
     status: "ok",
@@ -293,8 +312,14 @@ export const RULES: DemoRule[] = [
   {
     id: "rule-gems",
     name: "Hidden Gems",
-    type: "smart-filter",
+    type: "smart_filter",
     enabled: true,
+    config: {
+      filters: [
+        { field: "rating", op: ">>=", value: "7.5" },
+        { field: "audienceRating", op: "<<=", value: "8.5" },
+      ],
+    },
     collectionCount: 1,
     itemCount: 29,
     status: "error",

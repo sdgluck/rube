@@ -152,6 +152,9 @@ async function launch(): Promise<Browser> {
       "--font-render-hinting=none",
       // Scrollbars are painted and take layout width, and differ per platform.
       "--hide-scrollbars",
+      // Chromium's sandbox needs privileges a container doesn't have, and the
+      // alternative is running the whole capture as root.
+      ...(process.env.TB_CHROMIUM_NO_SANDBOX === "1" ? ["--no-sandbox", "--disable-dev-shm-usage"] : []),
       // Pure CPU raster. With the GPU path in play, shadow gradients came back
       // a few pixels different between runs on the same machine.
       "--disable-gpu",
@@ -487,8 +490,16 @@ async function main() {
   console.log(`\n✓ ${written} updated, ${unchanged} unchanged → screenshots/`);
 }
 
-/** Shared with the pre-commit check; see scripts/ui-pathspec.mjs. */
+/**
+ * The hash the pre-commit check compares against; see scripts/ui-hash.mjs.
+ *
+ * When the capture runs in the container it is handed the hash the host
+ * computed, because the container only holds a copy of the source — it has no
+ * index, and `git ls-files` there would describe a tree nobody is committing.
+ */
 async function computeUiHash(): Promise<string> {
+  const provided = process.env.TB_UI_HASH;
+  if (provided) return provided;
   const { uiHashFromWorktree } = await import(resolve(repoRoot, "scripts/ui-hash.mjs"));
   return uiHashFromWorktree(repoRoot);
 }
