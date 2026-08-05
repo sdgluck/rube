@@ -2,11 +2,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  border: 1px solid;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  padding: 10px 13px;
+  margin-bottom: 12px;
+  border: none;
+  border-radius: var(--r-sunken);
+  font-size: 12.5px;
   line-height: 1.5;
   flex-wrap: wrap;
 }
@@ -24,8 +24,8 @@
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
   background: currentColor;
@@ -33,25 +33,21 @@
 
 .info {
   background: var(--status-info-bg);
-  border-color: var(--status-info-dot);
   color: var(--status-info-fg);
 }
 
 .warn {
   background: var(--status-warn-bg);
-  border-color: var(--status-warn-dot);
   color: var(--status-warn-fg);
 }
 
 .error {
   background: var(--status-error-bg);
-  border-color: var(--status-error-dot);
   color: var(--status-error-fg);
 }
 
 .ok {
   background: var(--status-ok-bg);
-  border-color: var(--status-ok-dot);
   color: var(--status-ok-fg);
 }
 

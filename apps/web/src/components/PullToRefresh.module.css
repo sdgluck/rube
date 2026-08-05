@@ -1,5 +1,9 @@
 .wrapper {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .indicator {
@@ -19,7 +23,7 @@
 .arrow {
   width: 20px;
   height: 20px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   transition: transform 0.2s ease;
 }
 

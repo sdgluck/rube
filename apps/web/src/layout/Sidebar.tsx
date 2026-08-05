@@ -6,6 +6,21 @@ import { NAV_SECTIONS, type NavMetric } from "#/nav";
 import { modChord } from "#components/Kbd";
 import styles from "./Sidebar.module.css";
 
+function checkedAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+/**
+ * The sidebar footer: one aggregate dot, a plain-language summary, and a
+ * tooltip breaking it down per integration. The tooltip opens *above* the
+ * footer — there is no room beside a rail pinned to the viewport edge.
+ */
 export function SidebarHealthDot() {
   const query = trpc.health.status.useQuery(undefined, {
     refetchInterval: 30000,
@@ -22,6 +37,7 @@ export function SidebarHealthDot() {
   if (withStatus.length === 0) return null;
 
   const errorCount = withStatus.filter((s) => s.status === "error").length;
+  const healthy = withStatus.length - errorCount;
 
   let colorClass = "health-dot-green";
   if (errorCount === withStatus.length) {
@@ -30,10 +46,7 @@ export function SidebarHealthDot() {
     colorClass = "health-dot-orange";
   }
 
-  const summary =
-    errorCount === 0
-      ? `All ${withStatus.length} integrations healthy`
-      : `${errorCount} of ${withStatus.length} integrations failing`;
+  const summary = `${healthy} of ${withStatus.length} healthy`;
 
   return (
     // The tooltip is CSS :hover *and* :focus-visible so it's reachable by
@@ -41,12 +54,16 @@ export function SidebarHealthDot() {
     // screen readers and touch, where a hover tooltip never appears.
     <Link to="/settings/health" className="health-dot-link" aria-label={`${summary} — view health`}>
       <span className={`health-dot ${colorClass}`} />
+      <span className="health-summary">{summary}</span>
       <div className="health-tooltip" aria-hidden="true">
         <div className="health-tooltip-list">
           {withStatus.map((s) => (
             <div key={s.service} className="health-tooltip-row">
               <span className={`health-tooltip-dot ${s.status === "ok" ? "health-dot-green" : "health-dot-red"}`} />
               <span className="health-tooltip-name">{s.service}</span>
+              <span className={`health-tooltip-latency ${s.status === "ok" ? "" : "health-tooltip-latency-error"}`}>
+                {s.status === "ok" ? (s.timestamp ? checkedAgo(s.timestamp) : "—") : "failing"}
+              </span>
             </div>
           ))}
         </div>
@@ -82,8 +99,10 @@ function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMet
   if (metric.kind === "count") {
     const value = metrics[metric.key];
     if (!value) return <span className="nav-metric nav-metric-placeholder" aria-hidden="true" />;
+    // An error tally is not a neutral count and must not read as one.
+    const isErrors = metric.key === "eventsErrors24h";
     return (
-      <span className="nav-metric nav-metric-count" title={`${value}`}>
+      <span className={`nav-metric ${isErrors ? "nav-metric-error" : "nav-metric-count"}`} title={`${value}`}>
         {value > 999 ? `${Math.floor(value / 1000)}k` : value}
       </span>
     );
@@ -153,17 +172,14 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
   return (
     <aside className="sidebar">
       <h1 className="sidebar-title">
+        <img src="/favicon.svg" alt="" className="sidebar-mark" width={22} height={22} />
         Tinkerbell
         {IS_BETA && (
           <Link to="/changelog" className="version-pill" title={`v${VERSION} — view changelog`}>
             beta
           </Link>
         )}
-        <SidebarHealthDot />
       </h1>
-      <Link to="/changelog" className="sidebar-version">
-        v{VERSION}
-      </Link>
       <button
         type="button"
         className="sidebar-search"
@@ -184,11 +200,7 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
           <div key={section.label} className="nav-section">
             <div className="nav-section-title">{section.label}</div>
             {section.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={item.metric ? "nav-link nav-link-with-metric" : "nav-link"}
-              >
+              <NavLink key={item.to} to={item.to} className="nav-link">
                 <span className="nav-link-label">{item.label}</span>
                 {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}
               </NavLink>
@@ -197,6 +209,12 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
         ))}
       </nav>
       <SidebarActiveJobs />
+      <div className="sidebar-footer">
+        <SidebarHealthDot />
+        <Link to="/changelog" className="sidebar-version" title="View changelog">
+          v{VERSION}
+        </Link>
+      </div>
     </aside>
   );
 }

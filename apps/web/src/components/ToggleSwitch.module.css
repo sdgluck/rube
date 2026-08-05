@@ -16,7 +16,7 @@
 }
 
 .track[data-checked="false"] {
-  background: var(--border-input);
+  background: #cfd8d7;
 }
 
 .track[data-checked="true"] {
@@ -56,6 +56,22 @@
 }
 
 .sm .track[data-checked="true"] .toggle:active .thumb {
+  transform: translateX(12px);
+}
+
+/* Size: xs (28px wide) — the compact variant used inside cards */
+.xs .track {
+  width: 28px;
+  height: 16px;
+}
+
+.xs .thumb {
+  width: 12px;
+  height: 12px;
+  left: 2px;
+}
+
+.xs .track[data-checked="true"] .thumb {
   transform: translateX(12px);
 }
 

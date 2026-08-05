@@ -8,7 +8,7 @@
   padding: 0 12px;
   height: 32px;
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -20,7 +20,7 @@
   height: 44px;
   border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
-  font-size: 0.875rem;
+  font-size: 12.5px;
 }
 
 .table tr:hover td {
@@ -31,7 +31,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 11px;
   font-weight: 600;
   background: var(--bg-badge);
   color: var(--text-badge);
@@ -53,7 +53,7 @@
 }
 
 .hint {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   color: var(--text-muted);
 }
 
@@ -106,13 +106,13 @@
   .table td:nth-child(1) {
     grid-column: 1;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 13px;
   }
 
   /* Name — below username */
   .table td:nth-child(2) {
     grid-column: 1;
-    font-size: 0.85rem;
+    font-size: 12.5px;
     color: var(--text-secondary);
   }
 
@@ -126,7 +126,7 @@
     grid-row: 1;
     grid-column: 2;
     justify-self: end;
-    font-size: 0.8rem;
+    font-size: 12px;
     color: var(--text-muted);
   }
 
@@ -137,7 +137,7 @@
   /* Last watched — full width */
   .table td:nth-child(5) {
     grid-column: 1 / -1;
-    font-size: 0.8rem;
+    font-size: 12px;
     color: var(--text-muted);
     margin-top: 2px;
   }

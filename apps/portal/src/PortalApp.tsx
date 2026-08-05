@@ -118,8 +118,8 @@ export default function PortalApp() {
 
   if (!meQuery.data) {
     return (
-      <div className="page">
-        <div className="card">
+      <div className="page page-signin">
+        <div className="card card-signin">
           <h1 className="brand">
             <BrandHeader branding={branding} size={32} />
           </h1>
@@ -127,6 +127,7 @@ export default function PortalApp() {
           <button type="button" className="btn-plex" onClick={signIn} disabled={startMutation.isPending || finishing}>
             {finishing ? "Finishing sign-in…" : startMutation.isPending ? "Redirecting…" : "Sign in with Plex"}
           </button>
+          <p className="reassurance">Tinkerbell never sees your Plex password.</p>
           {error && <p className="err">{error}</p>}
         </div>
       </div>

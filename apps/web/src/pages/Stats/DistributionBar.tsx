@@ -1,14 +1,19 @@
 import styles from "#pages/Stats/Stats.module.css";
 
+/* Distributions and rankings step down one hue rather than reaching for six
+ * unrelated ones — the ordering is the information, not the categories. */
+const RAMP = ["#12867c", "#5cb8ae", "#9fd8d1", "#d3e9e6"];
+const RAMP_TAIL = "#c3cecc";
+
 export const RESOLUTION_COLORS: Record<string, string> = {
-  "4k": "#7c4dff",
-  "1080": "#4a6cf7",
-  "720": "#28a745",
-  "480": "#f5c518",
-  sd: "#888",
+  "4k": RAMP[0],
+  "1080": RAMP[1],
+  "720": RAMP[2],
+  "480": RAMP[3],
+  sd: RAMP_TAIL,
 };
 
-const CODEC_COLORS = ["#7c4dff", "#4a6cf7", "#28a745", "#f5c518", "#ef4444", "#888"];
+const CODEC_COLORS = [...RAMP, RAMP_TAIL];
 
 export interface DistItem {
   value: string | null;

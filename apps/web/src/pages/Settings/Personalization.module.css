@@ -50,7 +50,7 @@
 
 .muted {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 .colorRow {
@@ -124,7 +124,7 @@
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 22px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--e-float);
 }
 
 .previewTitle {
@@ -132,13 +132,13 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 1.3rem;
+  font-size: 18px;
   font-weight: 700;
 }
 
 .previewLede {
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 12.5px;
   margin: 8px 0 0;
 }
 
@@ -161,7 +161,7 @@
 }
 
 .previewHeading {
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 600;
   margin: 24px 0 8px;
 }

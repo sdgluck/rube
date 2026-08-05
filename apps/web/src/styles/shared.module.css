@@ -10,27 +10,29 @@
  */
 
 .heading {
-  font-size: 1.5rem;
-  margin-bottom: 24px;
+  font: var(--t-page);
+  letter-spacing: var(--t-page-tracking);
+  margin-bottom: 16px;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .headerActions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .toast {
-  padding: 10px 16px;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  padding: 9px 13px;
+  border-radius: var(--r-sunken);
+  font-size: 12.5px;
   margin-bottom: 16px;
 }
 
@@ -52,6 +54,10 @@
   composes: btn btnSecondary from "./controls.module.css";
 }
 
+.buttonGhost {
+  composes: btn btnGhost from "./controls.module.css";
+}
+
 .buttonDanger {
   composes: btn btnDangerOutline btnSm from "./controls.module.css";
 }
@@ -60,10 +66,14 @@
   composes: btnSm from "./controls.module.css";
 }
 
+/* ─── Filter bar ──────────────────────────────────────────────────────────
+ * Search first, then filter selects, then Advanced/Columns, then a spacer,
+ * then the view switch pinned right. */
+
 .filters {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -73,42 +83,54 @@
 }
 
 .select {
-  composes: select from "./controls.module.css";
+  composes: select selectSm from "./controls.module.css";
 }
 
 .searchInput {
-  composes: input from "./controls.module.css";
-  flex: 1;
-  max-width: 300px;
+  composes: input inputSm inputSearch from "./controls.module.css";
+  width: 236px;
+  flex-shrink: 0;
 }
+
+/* ─── Table ───────────────────────────────────────────────────────────────
+ * The single most important component — four pages share it. 38px rows were
+ * chosen as the balance point: tighter than the 44px this replaced, loose
+ * enough to scan fifty of them. */
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--surface);
 }
 
 .table th {
   text-align: left;
-  padding: 0 12px;
+  padding: 0 16px;
   height: 32px;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  background: var(--surface-header);
+  border-bottom: 1px solid #ecefee;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .table td {
-  padding: 0 12px;
-  height: 44px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 0 16px;
+  height: 38px;
+  border-bottom: 1px solid var(--line-soft);
   vertical-align: middle;
-  font-size: 0.875rem;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .table tr:hover td {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .clickableRow {
@@ -116,8 +138,58 @@
 }
 
 .clickableRow:active td {
-  background: var(--bg-surface-hover);
+  background: var(--fill-quiet);
   transition: background 50ms;
+}
+
+/* Cell kinds. The split is the rule the whole redesign runs on: anything the
+   machine produced is mono, anything a human wrote is Archivo. */
+
+.cellStrong {
+  font-weight: 600;
+}
+
+.cellMuted {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.cellNum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cellLink {
+  font-size: 12.5px;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.cellLink:hover {
+  text-decoration: underline;
+}
+
+.tableFooter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--surface-header);
+  border-top: 1px solid #ecefee;
+}
+
+.tableFooterLabel {
+  font: var(--t-data);
+  font-size: 11px;
+  color: var(--ink-3);
+  flex: 1;
+}
+
+.tableFooterActions {
+  display: flex;
+  gap: 6px;
 }
 
 /* ─── Compact table ───────────────────────────────────────────────────────
@@ -130,23 +202,22 @@
 
 .compactTable th {
   text-align: left;
-  padding: 0 8px;
-  height: 24px;
-  font-size: 0.65rem;
-  font-weight: 600;
+  padding: 0 10px;
+  height: 26px;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
+  color: var(--ink-3);
+  border-bottom: 1px solid #ecefee;
   white-space: nowrap;
 }
 
 .compactTable td {
-  padding: 0 8px;
-  height: 32px;
-  font-size: 0.8rem;
+  padding: 0 10px;
+  height: 34px;
+  font-size: 12.5px;
   vertical-align: middle;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .compactTable tr:last-child td {
@@ -154,18 +225,21 @@
 }
 
 .compactTable tbody tr:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
+/* ─── Chips, pills, tags ──────────────────────────────────────────────── */
+
 .label {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--bg-badge);
-  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  font: 600 10.5px/1.4 var(--font-mono);
+  background: var(--fill-quiet);
+  color: var(--ink-2);
   margin-right: 4px;
+  white-space: nowrap;
 }
 
 .labelTinkerbell {
@@ -181,79 +255,230 @@
 .labelRemove {
   background: none;
   border: none;
-  color: inherit;
+  color: var(--ink-faint);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 12px;
   line-height: 1;
   margin-left: 4px;
   padding: 0 2px;
-  opacity: 0.6;
 }
 
 .labelRemove:hover {
-  opacity: 1;
+  color: inherit;
 }
 
-/* ─── Bulk actions ────────────────────────────────────────────────────────── */
+/* Cron expressions, codecs, resolutions, file data. */
+.monoTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--r-tag);
+  background: var(--fill-quiet);
+  color: var(--ink-2);
+  font: 400 11px/1.4 var(--font-mono);
+  white-space: nowrap;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font: 600 10.5px/1.4 var(--font-mono);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+  white-space: nowrap;
+}
+
+.statusPillDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+  font: 600 10.5px/1.4 var(--font-mono);
+}
+
+.selectedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* A filter you applied and can take off again. */
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.filterChipRemove {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+}
+
+.filterChipRemove:hover {
+  color: var(--ink-2);
+}
+
+/* ─── Bulk actions ────────────────────────────────────────────────────────
+ * The selection bar doubles as the progress bar for the operation it starts:
+ * a long bulk delete reports in place rather than behind a modal. */
 
 .bulkBar {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
-  background: var(--bg-bulk);
-  border: 1px solid var(--bulk-border);
-  border-radius: 6px;
-  margin-bottom: 16px;
+  padding: 9px 14px;
+  background: var(--inverse);
+  border-radius: 10px;
+  box-shadow: var(--e-inverse);
+  margin-bottom: 12px;
+  color: #e6f2f0;
 }
 
 .bulkCount {
-  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--accent);
+  color: #fff;
 }
 
 .bulkProgressBar {
-  flex: 1;
-  height: 6px;
-  background: var(--bulk-border);
-  border-radius: 3px;
-  overflow: hidden;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 .bulkProgressFill {
   height: 100%;
-  background: var(--accent);
-  border-radius: 3px;
+  background: rgba(18, 134, 124, 0.4);
   transition: width 0.2s ease;
 }
 
+.bulkPercent {
+  position: relative;
+  z-index: 1;
+  font: var(--t-data);
+  color: rgba(230, 242, 240, 0.7);
+}
+
+.bulkSpacer {
+  flex: 1;
+}
+
+.bulkActions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulkBtn {
+  composes: btn btnSm from "./controls.module.css";
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: transparent;
+}
+
+.bulkBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bulkBtnDanger {
+  composes: btn btnSm from "./controls.module.css";
+  background: var(--danger);
+  color: #fff;
+  border-color: transparent;
+}
+
+.bulkBtnDanger:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+
+.bulkBtnClear {
+  composes: btn btnSm from "./controls.module.css";
+  background: transparent;
+  color: rgba(230, 242, 240, 0.7);
+  border-color: transparent;
+}
+
+.bulkBtnClear:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
 .checkboxCell {
-  width: 36px;
-  text-align: center;
+  width: 38px;
+  padding-left: 16px !important;
+  padding-right: 0 !important;
 }
 
 .checkbox {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   accent-color: var(--accent);
   cursor: pointer;
 }
 
 .selectedRow td {
-  background: var(--bg-bulk);
+  background: var(--accent-soft);
+}
+
+.table tr.selectedRow:hover td {
+  background: var(--accent-soft);
 }
 
 /* ─── Label editor ────────────────────────────────────────────────────────── */
 
 .labelEditor {
-  padding: 12px 16px;
-  background: var(--bg-bulk);
-  border: 1px solid var(--bulk-border);
-  border-top: none;
-  border-radius: 0 0 6px 6px;
-  margin-top: -16px;
-  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sunken);
+  margin-bottom: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -266,28 +491,18 @@
 }
 
 .labelEditorRow label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
   white-space: nowrap;
   min-width: 100px;
 }
 
 .labelEditorInput {
-  padding: 6px 10px;
-  border: 1px solid var(--bulk-border);
-  border-radius: 4px;
-  font-size: 0.85rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  composes: input inputSm from "./controls.module.css";
   flex: 1;
   max-width: 400px;
-}
-
-.labelEditorInput:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--input-focus-ring);
 }
 
 .labelCheckboxList {
@@ -299,8 +514,9 @@
 .labelCheckboxItem {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   cursor: pointer;
+  font-size: 12.5px;
 }
 
 .labelCheckboxItem input {
@@ -319,41 +535,27 @@
 /* ─── View toggle ─────────────────────────────────────────────────────────── */
 
 .viewToggle {
-  display: flex;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  overflow: hidden;
+  composes: segmented from "./controls.module.css";
 }
 
 .viewToggleBtn {
-  padding: 7px 12px;
-  background: var(--bg-surface);
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-  line-height: 1;
-}
-
-.viewToggleBtn:not(:last-child) {
-  border-right: 1px solid var(--border-input);
+  composes: segmentedItem from "./controls.module.css";
 }
 
 .viewToggleBtnActive {
-  background: var(--accent);
-  color: #fff;
+  composes: segmentedItemActive from "./controls.module.css";
 }
 
 /* ─── Poster grid ─────────────────────────────────────────────────────────── */
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 16px;
+  padding: 18px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
 }
 
 .card {
@@ -362,8 +564,7 @@
   color: inherit;
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: var(--r-md);
   transition:
     transform 0.15s,
     box-shadow 0.15s;
@@ -371,7 +572,6 @@
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .cardPoster {
@@ -380,24 +580,25 @@
   object-fit: cover;
   background: var(--card-poster-bg);
   display: block;
-  border-radius: 8px;
+  border-radius: var(--r-md);
 }
 
+/* The striped placeholder reads as "no artwork yet" rather than "broken". */
 .cardPosterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: var(--card-poster-bg);
+  background: repeating-linear-gradient(135deg, #e8edec 0 8px, #e0e7e6 8px 16px);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  border-radius: 8px;
+  color: var(--ink-faint);
+  font: var(--t-caption);
+  border-radius: var(--r-md);
 }
 
 .cardTitle {
   padding: 8px 2px 0;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   line-height: 1.3;
   overflow: hidden;
@@ -407,23 +608,31 @@
 
 .cardMeta {
   padding: 2px 2px 0;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font: var(--t-data);
+  font-size: 11px;
+  color: var(--ink-3);
 }
+
+/* ─── Empty state ─────────────────────────────────────────────────────────
+ * Copy says what to do next, not that something is missing. */
 
 .emptyState {
   text-align: center;
-  padding: 48px 24px;
-  color: var(--text-muted);
+  padding: 44px 24px;
+  color: var(--ink-3);
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
 }
 
 .emptyState p {
-  margin: 8px 0;
+  margin: 6px 0;
+  font-size: 11.5px;
 }
 
 .hint {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--ink-3);
   margin: 0;
 }
 
@@ -431,9 +640,9 @@
 
 .detailLayout {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 148px 1fr;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   align-items: start;
 }
 
@@ -443,22 +652,22 @@
 
 .detailPosterImg {
   width: 100%;
-  border-radius: 8px;
+  border-radius: var(--r-sunken);
   display: block;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--e-card);
 }
 
 .detailPosterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: var(--card-poster-bg);
-  border-radius: 8px;
+  background: repeating-linear-gradient(135deg, #e8edec 0 8px, #e0e7e6 8px 16px);
+  border-radius: var(--r-sunken);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  color: var(--ink-faint);
+  font: var(--t-caption);
+  box-shadow: var(--e-card);
 }
 
 .detailMain {
@@ -468,17 +677,16 @@
 .backLink {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 20px;
-  color: var(--text-secondary);
+  gap: 6px;
+  margin-bottom: 14px;
+  color: var(--ink-3);
   text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font: var(--t-data);
   transition: color 0.15s;
 }
 
 .backLink:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .detailHeader {
@@ -491,7 +699,8 @@
 
 .detailHeader .heading {
   margin-bottom: 0;
-  font-size: 1.5rem;
+  font: var(--t-page);
+  letter-spacing: var(--t-page-tracking);
 }
 
 .detailMetaRow {
@@ -517,16 +726,15 @@
 }
 
 .summaryText {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  font: var(--t-body);
+  color: var(--ink-2);
   cursor: text;
   padding: 4px 0;
   margin: 0 0 4px;
 }
 
 .summaryText:hover {
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 /* ─── Sticky save bar ────────────────────────────────────────────────────── */
@@ -539,11 +747,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  padding: 9px 14px;
+  background: var(--inverse);
+  border: none;
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--e-inverse);
   z-index: var(--z-sticky-bar);
   animation: stickyBarIn 180ms ease-out;
 }
@@ -560,8 +768,8 @@
 }
 
 .stickySaveLabel {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: 12.5px;
+  color: rgba(230, 242, 240, 0.7);
   font-weight: 500;
 }
 
@@ -575,11 +783,10 @@
 }
 
 .itemsToolbarTitle {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .itemsToolbarSpacer {
@@ -587,33 +794,22 @@
 }
 
 .itemSearch {
-  padding: 6px 10px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  composes: input inputSm inputSearch from "./controls.module.css";
   width: 220px;
-}
-
-.itemSearch:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--input-focus-ring);
 }
 
 /* ─── Denser grid + hover overlay ────────────────────────────────────────── */
 
 .gridDense {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
   gap: 12px;
 }
 
 .cardDense {
   position: relative;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   overflow: hidden;
   transition:
     transform 0.15s,
@@ -622,25 +818,25 @@
 
 .cardDense:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 14px rgba(19, 28, 27, 0.18);
 }
 
 .cardDense .cardPoster,
 .cardDense .cardPosterPlaceholder {
-  border-radius: 6px;
+  border-radius: var(--r-md);
 }
 
 .cardOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.55) 35%, rgba(0, 0, 0, 0) 70%);
+  background: linear-gradient(to top, rgba(19, 28, 27, 0.88) 0%, rgba(19, 28, 27, 0.55) 35%, rgba(19, 28, 27, 0) 70%);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: 8px;
   opacity: 0;
   transition: opacity 0.15s;
-  border-radius: 6px;
+  border-radius: var(--r-md);
 }
 
 .cardDense:hover .cardOverlay,
@@ -649,7 +845,7 @@
 }
 
 .cardOverlayTitle {
-  font-size: 0.78rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: #fff;
   line-height: 1.25;
@@ -660,7 +856,8 @@
 }
 
 .cardOverlayMeta {
-  font-size: 0.7rem;
+  font: var(--t-data);
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.78);
   margin-top: 2px;
 }
@@ -670,9 +867,8 @@
 }
 
 .detailSummary {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  font: var(--t-body);
+  color: var(--ink-2);
   margin-bottom: 16px;
 }
 
@@ -681,12 +877,11 @@
 }
 
 .detailSectionTitle {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 12px;
+  color: var(--ink-3);
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -701,22 +896,35 @@
 
 .detailLabels .labelEditorInput {
   max-width: 160px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  border-radius: 12px;
+  border-radius: var(--r-pill);
 }
 
 .detailDivider {
   height: 1px;
-  background: var(--border-light);
+  background: var(--line-soft);
   margin: 20px 0;
 }
 
+/* ─── Card and panel ──────────────────────────────────────────────────────
+ * Every card and panel takes the same elevation. Blocks *inside* a card take
+ * the flat inset instead — nothing stacks two shadows. */
+
+.cardSurface {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 18px 20px 20px;
+}
+
+.sunken {
+  background: var(--surface-sunken);
+  border-radius: var(--r-sunken);
+  box-shadow: var(--e-flat);
+  padding: 12px 14px;
+}
+
 .detailEditCard {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 20px;
+  composes: cardSurface;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -729,26 +937,26 @@
 }
 
 .detailEditTitle {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-primary);
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  color: var(--ink);
 }
 
 .group {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 20px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 18px 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .groupTitle {
-  font-weight: 600;
-  font-size: 0.95rem;
-  padding: 0 6px;
-  color: var(--text-secondary);
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  color: var(--ink);
 }
 
 .field {
@@ -759,7 +967,8 @@
 
 .fieldLabel {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 12.5px;
+  color: var(--ink);
 }
 
 .input {
@@ -772,7 +981,7 @@
 
 .buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .itemsHeader {
@@ -781,14 +990,14 @@
 }
 
 .itemYear {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .meta {
   display: flex;
   gap: 6px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--ink-2);
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
@@ -796,35 +1005,40 @@
 .metaChip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  background: var(--bg-badge);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: var(--text-badge);
+  gap: 5px;
+  padding: 3px 9px;
+  background: var(--fill-quiet);
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  color: var(--ink-2);
   font-weight: 500;
   white-space: nowrap;
 }
 
 .metaChipIcon {
-  font-size: 0.75rem;
-  opacity: 0.7;
+  font-size: 11px;
+  color: var(--ink-faint);
 }
 
 .metaChipLink {
   text-decoration: none;
-  color: var(--accent);
-  background: rgba(74, 108, 247, 0.08);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
   cursor: pointer;
   transition:
     background 0.15s,
     color 0.15s;
 }
 
+.metaChipLink:hover {
+  background: var(--accent-fill);
+  color: #fff;
+}
+
 .ruleLink {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 500;
 }
 
@@ -833,12 +1047,7 @@
 }
 
 .muted {
-  color: var(--text-muted);
-}
-
-.metaChipLink:hover {
-  background: var(--accent);
-  color: #fff;
+  color: var(--ink-3);
 }
 
 /* ─── Inline title / summary ─────────────────────────────────────────────── */
@@ -846,26 +1055,25 @@
 .titleInput {
   flex: 1;
   min-width: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
+  font: var(--t-page);
+  letter-spacing: var(--t-page-tracking);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   padding: 4px 8px;
   margin: -4px -8px;
-  color: var(--text-primary);
-  font-family: inherit;
+  color: var(--ink);
+  font-family: var(--font-sans);
 }
 
 .titleInput:hover {
-  border-color: var(--border-light);
+  border-color: var(--line);
 }
 
 .titleInput:focus {
-  outline: none;
+  outline: var(--focus-ring);
   border-color: var(--accent);
-  background: var(--bg-input);
-  box-shadow: var(--input-focus-ring);
+  background: var(--surface);
 }
 
 .detailHeaderActions {
@@ -875,30 +1083,18 @@
 }
 
 .summaryInput {
+  composes: textarea from "./controls.module.css";
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-family: inherit;
-  resize: vertical;
   min-height: 60px;
   margin-bottom: 16px;
-}
-
-.summaryInput:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--input-focus-ring);
 }
 
 .summaryAdd {
   background: none;
   border: none;
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  color: var(--accent-text);
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
   padding: 4px 0;
   margin-bottom: 16px;
@@ -906,74 +1102,53 @@
 }
 
 .summaryAdd:hover {
-  color: var(--accent);
+  text-decoration: underline;
 }
 
 /* ─── Advanced filters ───────────────────────────────────────────────────── */
 
 .advancedFilterToggle {
-  padding: 7px 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
-  display: flex;
-  align-items: center;
+  composes: btn btnSecondary btnSm from "./controls.module.css";
   gap: 6px;
-  white-space: nowrap;
 }
 
-.advancedFilterToggle:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.advancedFilterToggleActive {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.advancedFilterToggleActive:hover {
-  background: var(--accent-hover);
-  color: #fff;
+/* Active means "filters are hiding rows from you" — it has to be legible at a
+   glance, hence the accent fill and the count. */
+.advancedFilterToggleActive,
+.advancedFilterToggleActive:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: #b9e0d9;
+  color: var(--accent-ink);
 }
 
 .advancedFilterBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1;
-  background: #fff;
-  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  font: 600 10px/1.4 var(--font-mono);
+  background: var(--accent-fill);
+  color: #fff;
 }
 
 .advancedFilters {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
   align-items: center;
   flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
 }
 
 .clearFilters {
   background: none;
   border: none;
-  color: var(--accent);
-  font-size: 0.85rem;
+  color: var(--accent-text);
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
@@ -983,8 +1158,6 @@
 .clearFilters:hover {
   text-decoration: underline;
 }
-
-/* ─── Pagination ─────────────────────────────────────────────────────────── */
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
@@ -1001,45 +1174,77 @@
 
   .detailLayout {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 16px;
   }
 
   .detailPoster {
-    max-width: 200px;
-  }
-
-  .detailHeader .heading {
-    font-size: 1.3rem;
+    max-width: 180px;
   }
 
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
     gap: 12px;
+    padding: 12px;
   }
 
-  .table th,
+  /* Tables become cards on mobile rather than scrolling sideways: a row of a
+     dense admin table is unreadable at 390px, and a horizontal scrollbar hides
+     the columns that matter. The first cell is the title; the rest stack under
+     it as meta. */
+  .table,
+  .table tbody,
+  .table tr,
   .table td {
-    padding: 0 6px;
+    display: block;
   }
 
+  .table thead {
+    display: none;
+  }
+
+  .table tr {
+    background: var(--surface);
+    border-radius: var(--r-sunken);
+    box-shadow: var(--e-flat);
+    margin-bottom: 8px;
+    padding: 10px 12px;
+  }
+
+  .table tr:hover td,
   .table td {
-    height: 40px;
+    background: none;
+    border: none;
+    height: auto;
+    padding: 2px 0;
+  }
+
+  /* The title column, whichever page it belongs to. */
+  .table td:nth-child(2) {
+    font-size: 13px;
+    font-weight: 600;
   }
 
   /* Hide: Checkbox, Smart, Labels, Rule, Added, Delete on mobile */
-  .table th:nth-child(1),
   .table td:nth-child(1),
-  .table th:nth-child(5),
   .table td:nth-child(5),
-  .table th:nth-child(6),
   .table td:nth-child(6),
-  .table th:nth-child(7),
   .table td:nth-child(7),
-  .table th:nth-child(8),
   .table td:nth-child(8),
-  .table th:nth-child(9),
   .table td:nth-child(9) {
     display: none;
+  }
+
+  /* Remaining meta sits on one line under the title. */
+  .table td:nth-child(3),
+  .table td:nth-child(4) {
+    display: inline-block;
+    font: var(--t-data);
+    color: var(--ink-3);
+  }
+
+  .table td:nth-child(3)::after {
+    content: " ·";
+    padding-right: 4px;
   }
 
   .filters {
@@ -1048,6 +1253,6 @@
   }
 
   .searchInput {
-    max-width: none;
+    width: auto;
   }
 }

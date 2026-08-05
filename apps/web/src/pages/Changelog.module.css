@@ -1,46 +1,128 @@
-.page {
-  max-width: 760px;
+/* One card per release. Version and date are machine facts, so both are mono;
+ * the entries themselves are prose. */
+
+.releases {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 860px;
 }
 
-.heading {
-  margin: 0 0 8px 0;
+.release {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 16px 20px 20px;
+}
+
+.releaseHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.versionLine {
-  color: var(--text-muted);
-  margin: 0 0 24px 0;
-  font-size: 0.9rem;
+.releaseVersion {
+  margin: 0;
+  font: 600 16px/1.2 var(--font-mono);
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
-.entry h2 {
-  margin-top: 32px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.releaseSpacer {
+  flex: 1;
 }
 
-.entry h3 {
-  margin-top: 20px;
-  font-size: 1rem;
-  color: var(--text-muted);
+.releaseDate {
+  font: var(--t-data);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.entry {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.sectionHeading {
+  margin: 14px 0 6px;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.sectionHeading:first-child {
+  margin-top: 0;
+}
+
+/* Fixed width so the four kinds line up down the card. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  padding: 3px 0;
+  border-radius: var(--r-tag);
+  font: 600 9.5px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tagAdded {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.tagChanged {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+.tagFixed {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.tagRemoved {
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+}
+
+.tagNeutral {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
 }
 
 .entry ul {
-  margin: 8px 0;
-  padding-left: 20px;
+  margin: 6px 0;
+  padding-left: 18px;
 }
 
 .entry li {
-  margin: 4px 0;
-  line-height: 1.5;
+  margin: 5px 0;
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
 .entry p {
-  line-height: 1.6;
+  line-height: 1.55;
+  margin: 6px 0;
+}
+
+.entry code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--fill-quiet);
+  border-radius: var(--r-tag);
+  padding: 1px 5px;
+}
+
+.entry strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .entry a {
-  color: #7fb3ff;
+  color: var(--accent-text);
 }

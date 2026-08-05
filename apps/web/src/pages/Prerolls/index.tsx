@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import PageShell from "#components/PageShell";
 import ConfirmModal from "#components/ConfirmModal";
 import Banner from "#components/Banner";
 import { PrerollsSkeleton } from "#components/Skeleton";
@@ -176,29 +177,21 @@ export default function Prerolls() {
   }
 
   return (
-    <div>
-      <header className={shared.header}>
-        <h2 className={shared.heading}>
-          Prerolls
-          {prerolls.length > 0 && <span className={styles.count}>{prerolls.length}</span>}
-        </h2>
-        <div className={shared.headerActions}>
-          <button
-            type="button"
-            className={`${controls.btn} ${controls.btnSecondary}`}
-            onClick={() => setImportOpen(true)}
-            disabled={ffmpegMissing}
-          >
-            Import from URL
-          </button>
-        </div>
-      </header>
-
-      <p className={styles.intro}>
-        Short videos Plex plays before every movie. Tinkerbell transcodes anything Plex wouldn't direct play, then
-        points the server's pre-roll setting at the results.
-      </p>
-
+    <PageShell
+      title="Prerolls"
+      count={prerolls.length > 0 ? prerolls.length : undefined}
+      subtitle="Short videos Plex plays before every movie. Tinkerbell transcodes anything Plex wouldn't direct play, then points the server's pre-roll setting at the results."
+      actions={
+        <button
+          type="button"
+          className={`${controls.btn} ${controls.btnSecondary}`}
+          onClick={() => setImportOpen(true)}
+          disabled={ffmpegMissing}
+        >
+          Import from URL
+        </button>
+      }
+    >
       {ffmpegMissing && (
         <Banner variant="error">
           ffmpeg isn't available, so uploads can't be processed. <Link to="/settings/prerolls">See Settings</Link> for
@@ -286,6 +279,6 @@ export default function Prerolls() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

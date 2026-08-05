@@ -172,6 +172,9 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
           ))
         )}
       </div>
+      <div className={styles.footer} aria-hidden="true">
+        ↑↓ move · ↵ open · esc close
+      </div>
     </Modal>
   );
 }

@@ -1,51 +1,58 @@
+/* Say what failed and what happens next. The block carries the failure; the
+ * retry sits below it, outside — an action is not part of the diagnosis. */
+
 .container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 48px 24px;
+  padding: 24px 0;
 }
 
 .inline {
   composes: container;
-  padding: 24px 16px;
+  padding: 12px 0;
   gap: 6px;
 }
 
+.block {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 13px;
+  background: var(--status-error-bg);
+  border-radius: var(--r-sunken);
+}
+
 .icon {
-  color: var(--status-error-dot);
-  margin-bottom: 4px;
-}
-
-.icon svg {
-  width: 32px;
-  height: 32px;
-  display: block;
-}
-
-.inline .icon svg {
-  width: 24px;
-  height: 24px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-error-dot);
+  flex-shrink: 0;
+  margin-top: 5px;
 }
 
 .title {
-  font-size: 0.95rem;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--status-error-fg);
   margin: 0;
 }
 
+/* The technical half — the code, the retry window. Machine output, so mono. */
 .detail {
-  font-size: 0.83rem;
-  color: var(--text-muted);
-  margin: 0;
-  max-width: 52ch;
-  line-height: 1.5;
+  font: var(--t-data);
+  font-size: 11px;
+  color: var(--status-error-fg);
+  opacity: 0.8;
+  margin: 2px 0 0;
+  max-width: 60ch;
   overflow-wrap: anywhere;
 }
 
 .retry {
   composes: btn btnSecondary btnSm from "../styles/controls.module.css";
-  margin-top: 8px;
+  margin-top: 2px;
 }

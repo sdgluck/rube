@@ -32,12 +32,15 @@ export function DragHandle({ onDragStart, onDragEnd }: DragHandleProps) {
 export function PanelShell({
   title,
   badge,
+  meta,
   dragHandle,
   dragProps,
   children,
 }: {
   title: string;
   badge?: React.ReactNode;
+  /** Right-aligned mono string: a total, a window, a last-updated time. */
+  meta?: React.ReactNode;
   dragHandle: React.ReactNode;
   dragProps: PanelDragProps;
   children: React.ReactNode;
@@ -45,11 +48,13 @@ export function PanelShell({
   return (
     <div className={styles.panel} {...dragProps}>
       <div className={styles.panelHeader}>
-        {dragHandle}
-        {title}
+        <span className={styles.panelTitle}>{title}</span>
         {badge}
+        <span className={styles.panelSpacer} />
+        {meta && <span className={styles.panelMeta}>{meta}</span>}
+        {dragHandle}
       </div>
-      {children}
+      <div className={styles.panelBody}>{children}</div>
     </div>
   );
 }

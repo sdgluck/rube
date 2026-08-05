@@ -1,13 +1,6 @@
-.description {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  margin: -16px 0 20px;
-  line-height: 1.5;
-}
-
 .configSummary {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  font: var(--t-data);
+  color: var(--ink-3);
   max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -36,15 +29,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 9px 3px 8px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  background: var(--bg-badge);
-  color: var(--text-badge);
-  border: 1px solid transparent;
-  line-height: 1.4;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font: 600 10.5px/1.4 var(--font-mono);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+  border: none;
+  white-space: nowrap;
 }
 
 .typeLabel::before {
@@ -57,33 +48,28 @@
 }
 
 .typeAi {
-  background: rgba(155, 89, 182, 0.1);
+  background: var(--status-special-bg);
   color: var(--status-special-fg);
-  border-color: rgba(155, 89, 182, 0.2);
 }
 
 .typeCriteria {
-  background: rgba(39, 174, 96, 0.1);
+  background: var(--status-ok-bg);
   color: var(--status-ok-fg);
-  border-color: rgba(39, 174, 96, 0.2);
 }
 
 .typeImdb {
-  background: rgba(241, 196, 15, 0.12);
+  background: var(--status-warn-bg);
   color: var(--status-warn-fg);
-  border-color: rgba(241, 196, 15, 0.25);
 }
 
 .typeRt {
-  background: rgba(231, 76, 60, 0.1);
+  background: var(--status-error-bg);
   color: var(--status-error-fg);
-  border-color: rgba(231, 76, 60, 0.2);
 }
 
 .typeSeerr {
-  background: rgba(52, 152, 219, 0.1);
+  background: var(--status-info-bg);
   color: var(--status-info-fg);
-  border-color: rgba(52, 152, 219, 0.2);
 }
 
 /* ─── Compact action buttons ─────────────────────────────────────────────── */
@@ -99,10 +85,10 @@
   appearance: none;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-secondary);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  color: var(--ink-2);
+  padding: 4px 9px;
+  border-radius: var(--r-sm);
+  font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -114,31 +100,29 @@
 }
 
 .actionBtn:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  color: var(--text-primary);
-  border-color: var(--border-light);
+  background: var(--fill-quiet);
+  color: var(--ink);
 }
 
 .actionBtn:disabled {
-  opacity: 0.45;
+  color: var(--ink-faint);
   cursor: not-allowed;
 }
 
 .actionBtnPrimary {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
 .actionBtnPrimary:hover:not(:disabled) {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
-  border-color: var(--accent);
+  border-color: transparent;
 }
 
 .actionBtnActive {
-  background: var(--bg-surface-hover);
-  color: var(--text-primary);
-  border-color: var(--border-color);
+  background: var(--fill-quiet);
+  color: var(--ink);
 }
 
 /* ─── Rule preview canvas ─────────────────────────────────────────────────
@@ -153,8 +137,8 @@
    Plex canvas wins over the generic detail-row background. */
 td.previewBlockCell {
   padding: 0 !important;
-  background: #1f1f1f;
-  color: #eee;
+  background: var(--sidebar);
+  color: #f2f6f5;
 }
 
 .previewStack {
@@ -165,7 +149,7 @@ td.previewBlockCell {
   box-sizing: border-box;
   max-height: 580px;
   overflow-y: auto;
-  background: #1f1f1f;
+  background: var(--sidebar);
   position: relative;
 }
 
@@ -183,7 +167,7 @@ td.previewBlockCell {
   bottom: 0;
   left: 100%;
   width: 80px;
-  background: #1f1f1f;
+  background: var(--sidebar);
   pointer-events: none;
 }
 
@@ -206,26 +190,25 @@ td.previewBlockCell {
   max-height: 580px;
   overflow-y: auto;
   box-sizing: border-box;
-  background: #1f1f1f;
-  color: #eee;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sidebar);
+  color: #f2f6f5;
+  border-radius: var(--r-panel);
+  border: none;
 }
 
 .previewEmpty {
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.85rem;
+  color: rgba(242, 246, 245, 0.4);
+  font-size: 12.5px;
   padding: 8px 18px;
 }
 
 /* Small uppercase meta chip rendered next to a hub title (e.g. test-result
    summary "Films · 12 items"). Sized to match the .hubMeta primitive. */
 .previewSectionMeta {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  color: rgba(242, 246, 245, 0.4);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .actionBtnDanger {
@@ -248,8 +231,9 @@ td.previewBlockCell {
 /* ─── Checkboxes ─────────────────────────────────────────────────────────── */
 
 .checkboxCell {
-  width: 32px;
-  text-align: center;
+  width: 38px;
+  padding-left: 16px !important;
+  padding-right: 0 !important;
 }
 
 .checkboxCell input {
@@ -264,23 +248,26 @@ td.previewBlockCell {
 .bulkBar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--bg-bulk);
-  border: 1px solid var(--bulk-border);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 16px;
+  gap: 8px;
+  padding: 9px 14px;
+  background: var(--inverse);
+  border: none;
+  border-radius: 10px;
+  box-shadow: var(--e-inverse);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
 /* ─── Test preview panel ─────────────────────────────────────────────────── */
 
 .testPreview {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 24px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 18px 20px 20px;
+  margin-top: 16px;
 }
 
 .testPreviewHeader {
@@ -292,7 +279,8 @@ td.previewBlockCell {
 
 .testPreviewHeader h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
 }
 
 .testPreviewCloseBtn {
@@ -300,7 +288,7 @@ td.previewBlockCell {
   border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 4px 12px;
-  font-size: 0.8rem;
+  font-size: 12px;
   cursor: pointer;
   color: var(--text-secondary);
 }
@@ -329,11 +317,11 @@ td.previewBlockCell {
 
 .testPreviewCollectionName {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 13px;
 }
 
 .testPreviewCollectionMeta {
-  font-size: 0.78rem;
+  font-size: 11.5px;
   color: var(--text-muted);
 }
 
@@ -346,7 +334,7 @@ td.previewBlockCell {
 }
 
 .testPreviewItem {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   padding: 2px 0;
   color: var(--text-primary);
 }
@@ -359,7 +347,7 @@ td.previewBlockCell {
   text-align: center;
   padding: 24px;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 13px;
 }
 
 .testPreviewError {
@@ -367,7 +355,7 @@ td.previewBlockCell {
   background: var(--bg-error);
   color: var(--text-error);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 13px;
   margin-top: 24px;
 }
 
@@ -402,10 +390,11 @@ td.previewBlockCell {
 
 .search {
   width: 100%;
-  padding: 7px 12px 7px 32px;
-  border: 1px solid var(--border-input);
-  border-radius: 8px;
-  font-size: 0.85rem;
+  padding: 5px 10px 5px 30px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
   background: var(--bg-input);
   color: var(--text-primary);
   transition:
@@ -425,10 +414,9 @@ td.previewBlockCell {
 
 .segmented {
   display: inline-flex;
-  border: 1px solid var(--border-input);
-  border-radius: 8px;
-  background: var(--bg-input);
-  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
   padding: 2px;
   gap: 2px;
 }
@@ -437,11 +425,11 @@ td.previewBlockCell {
   appearance: none;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 6px;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   transition:
     background 0.12s,
@@ -455,20 +443,20 @@ td.previewBlockCell {
 }
 
 .segmentedBtnActive {
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  background: var(--accent-fill);
+  color: #fff;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .filterChip {
   appearance: none;
   padding: 4px 11px;
-  border: 1px solid var(--border-input);
-  border-radius: 999px;
-  background: var(--bg-input);
-  color: var(--text-secondary);
-  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -485,9 +473,10 @@ td.previewBlockCell {
 }
 
 .filterChipActive {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-soft);
+  border-color: #b9e0d9;
+  color: var(--accent-ink);
+  font-weight: 600;
 }
 
 .filterDivider {
@@ -498,12 +487,13 @@ td.previewBlockCell {
 }
 
 .sortSelect {
-  padding: 6px 28px 6px 10px;
-  border: 1px solid var(--border-input);
-  border-radius: 8px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: 0.8rem;
+  padding: 5px 26px 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
@@ -520,7 +510,7 @@ td.previewBlockCell {
 /* ─── Status column ──────────────────────────────────────────────────────── */
 
 .statusCell {
-  font-size: 0.8rem;
+  font: var(--t-data);
   white-space: nowrap;
 }
 
@@ -557,29 +547,29 @@ td.previewBlockCell {
 .chevron {
   display: inline-block;
   width: 10px;
-  color: var(--text-muted);
+  color: var(--ink-faint);
   transition: transform 120ms;
   margin-left: -2px;
 }
 
 .statusOk {
-  color: var(--text-success);
+  color: var(--status-ok-fg);
 }
 
 .statusError {
-  color: var(--text-error);
+  color: var(--status-error-fg);
   cursor: pointer;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
 
 .statusCancelled {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-style: italic;
 }
 
 .statusIdle {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .statusIdle::before {
@@ -587,7 +577,7 @@ td.previewBlockCell {
 }
 
 .statusBusy {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 500;
 }
 
@@ -604,8 +594,8 @@ td.previewBlockCell {
 
 .detailWrap {
   padding: 14px 18px 18px;
-  border-top: 1px dashed var(--border-light);
-  background: var(--bg-surface-hover, transparent);
+  border-top: 1px solid var(--line-soft);
+  background: var(--surface-sunken);
 }
 
 .detailHeader {
@@ -617,21 +607,21 @@ td.previewBlockCell {
 }
 
 .detailTitle {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .detailMeta {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+  font: var(--t-data);
+  color: var(--ink-3);
 }
 
 .progressBar {
   width: 100%;
   height: 4px;
-  background: var(--border-light);
-  border-radius: 2px;
+  background: #eff2f1;
+  border-radius: var(--r-pill);
   overflow: hidden;
   margin-bottom: 8px;
 }
@@ -659,18 +649,18 @@ td.previewBlockCell {
 }
 
 .progressMessage {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .logTail {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  background: var(--bg-input);
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
+  font-size: 11px;
+  color: var(--ink-3);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-tag);
   padding: 6px 10px;
   max-height: 130px;
   overflow-y: auto;
@@ -680,10 +670,10 @@ td.previewBlockCell {
 
 .errorBox {
   padding: 8px 12px;
-  background: var(--bg-error);
-  color: var(--text-error);
-  border-radius: 4px;
-  font-size: 0.85rem;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+  border-radius: var(--r-sunken);
+  font-size: 12.5px;
 }
 
 /* ─── Inline test preview (anchored to row) ──────────────────────────────── */
@@ -691,7 +681,7 @@ td.previewBlockCell {
 .detailTestSummary {
   display: flex;
   gap: 14px;
-  font-size: 0.8rem;
+  font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 10px;
   flex-wrap: wrap;
@@ -725,6 +715,18 @@ td.previewBlockCell {
 
 .titleGroup h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 18px;
   letter-spacing: -0.01em;
+}
+
+/* Eleven columns, seven of them per-row actions: at the shared 16px cell
+   gutter the name column loses and rule names wrap to two lines. Tighten the
+   gutter for this table only. */
+.tableBleedRight th,
+.tableBleedRight td {
+  padding: 0 10px;
+}
+
+.tableBleedRight td:nth-child(2) {
+  min-width: 160px;
 }

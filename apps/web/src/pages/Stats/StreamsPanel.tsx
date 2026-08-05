@@ -22,7 +22,7 @@ export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.Reac
       {!sessionsQuery.isLoading && sessions.length === 0 && <div className={styles.muted}>No active streams</div>}
 
       {sessions.length > 0 && (
-        <div className="table-scroll">
+        <div className="table-scroll in-panel">
           <table className={styles.compactTable}>
             <thead>
               <tr>

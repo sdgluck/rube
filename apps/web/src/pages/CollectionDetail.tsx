@@ -345,7 +345,7 @@ export default function CollectionDetail() {
             ))}
           </div>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll in-panel">
             <table className={styles.table}>
               <thead>
                 <tr>

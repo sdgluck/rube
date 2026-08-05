@@ -1,41 +1,54 @@
+/* The portal is the same family as the admin app, softer: a warmer page,
+ * larger radii, bigger targets, and Plex amber reserved for signing in —
+ * because signing in is Plex's action, not ours. */
+
 :root {
-  --bg-page: #f5f5f5;
+  --bg-page: #e8efec;
   --bg-surface: #fff;
-  --bg-surface-2: #fafbfc;
+  --bg-surface-2: #f6f9f8;
   --bg-input: #fff;
-  --text-primary: #2b2b33;
-  --text-secondary: #555;
-  --text-muted: #888;
-  --border-color: #e2e2e8;
-  --border-input: #ccc;
-  --accent: #4a6cf7;
-  --accent-hover: #3b5de7;
-  --love: #2e7d32;
-  --like: #4a6cf7;
-  --hate: #c0392b;
+  --text-primary: #131c1b;
+  --text-secondary: #5a6866;
+  --text-muted: #5f6d6b;
+  --border-color: #dfe5e4;
+  --border-input: #dfe5e4;
+  --accent: #127f76;
+  --accent-hover: #0f7269;
+  --accent-soft: #e0f1ee;
+  --accent-ink: #0b5f57;
+  --inverse: #0f2624;
+  --love: #0b5940;
+  --like: #127f76;
+  --hate: #b0332c;
   --plex: #e5a00d;
   --plex-hover: #cf9009;
-  --radius: 10px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --radius: 16px;
+  --radius-lg: 20px;
+  --radius-sm: 10px;
+  --font-sans: Archivo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --shadow: 0 1px 2px rgba(19, 28, 27, 0.05), 0 12px 30px -16px rgba(19, 28, 27, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-page: #121220;
-    --bg-surface: #1e1e2f;
-    --bg-surface-2: #25253a;
-    --bg-input: #2a2a3d;
-    --text-primary: #e6e6ea;
-    --text-secondary: #b0b0b0;
-    --text-muted: #8a8a9a;
-    --border-color: #34344a;
-    --border-input: #444;
-    --accent: #6b8cff;
-    --accent-hover: #5a7bf0;
-    --love: #6fcf97;
-    --like: #6b8cff;
-    --hate: #f07070;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.35);
+    --bg-page: #0d1413;
+    --bg-surface: #16201f;
+    --bg-surface-2: #111a19;
+    --bg-input: #16201f;
+    --text-primary: #f2f6f5;
+    --text-secondary: #a6b4b2;
+    --text-muted: #8b9a98;
+    --border-color: #26302f;
+    --border-input: #26302f;
+    --accent: #1aa79b;
+    --accent-hover: #35c4b7;
+    --accent-soft: #0f3a35;
+    --accent-ink: #9fd8d1;
+    --inverse: #1d3230;
+    --love: #6fd3ab;
+    --like: #1aa79b;
+    --hate: #e0736b;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -45,14 +58,13 @@
 
 body {
   margin: 0;
-  background: var(--bg-page);
+  /* A radial lift behind the card so the page reads as lit rather than flat. */
+  background:
+    radial-gradient(120% 60% at 50% 0%, #f3f8f6 0%, var(--bg-page) 60%) no-repeat,
+    var(--bg-page);
+  min-height: 100vh;
   color: var(--text-primary);
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -65,8 +77,8 @@ body {
 
 .card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  border: none;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   padding: 28px;
 }
@@ -75,16 +87,17 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
   margin: 0 0 4px;
 }
 
 .brand-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--plex));
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--accent);
 }
 
 .brand-head {
@@ -115,11 +128,12 @@ h1.title {
 button {
   font: inherit;
   cursor: pointer;
-  border-radius: 8px;
+  min-height: 44px;
+  border-radius: 12px;
   border: 1px solid var(--border-input);
-  background: var(--bg-surface-2);
+  background: var(--bg-surface);
   color: var(--text-primary);
-  padding: 8px 14px;
+  padding: 10px 16px;
   font-weight: 600;
   transition:
     background 0.12s ease,
@@ -128,6 +142,12 @@ button {
 }
 
 button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:focus-visible {
+  outline: 3px solid rgba(18, 134, 124, 0.14);
+  outline-offset: 1px;
   border-color: var(--accent);
 }
 
@@ -147,12 +167,14 @@ button:disabled {
   border-color: var(--accent-hover);
 }
 
+/* Signing in is Plex's action, so the button wears Plex's colour. */
 .btn-plex {
   background: var(--plex);
   border-color: var(--plex);
   color: #1b1b1b;
   font-size: 1rem;
-  padding: 12px 22px;
+  padding: 13px 22px;
+  min-height: 48px;
 }
 
 .btn-plex:hover:not(:disabled) {
@@ -193,11 +215,12 @@ input[type="number"],
 textarea,
 select {
   font: inherit;
+  min-height: 44px;
   color: var(--text-primary);
   background: var(--bg-input);
   border: 1px solid var(--border-input);
-  border-radius: 8px;
-  padding: 9px 12px;
+  border-radius: 12px;
+  padding: 10px 14px;
 }
 
 input[type="text"]:focus,
@@ -206,7 +229,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.18);
+  box-shadow: 0 0 0 3px rgba(18, 134, 124, 0.14);
 }
 
 textarea {
@@ -259,10 +282,10 @@ textarea {
 
 /* ── Genre tri-state ───────────────────────────────────────── */
 .genre-box {
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-surface-2);
 }
 
@@ -280,24 +303,22 @@ textarea {
 
 .seg {
   display: inline-flex;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--border-input);
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: 12px;
+  background: var(--bg-surface-2);
 }
 
 .seg button {
   border: none;
-  border-radius: 0;
+  min-height: 32px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-muted);
-  padding: 4px 10px;
-  font-size: 0.75rem;
+  padding: 6px 12px;
+  font-size: 0.78rem;
   font-weight: 600;
-  border-left: 1px solid var(--border-input);
-}
-
-.seg button:first-child {
-  border-left: none;
 }
 
 .seg button:hover:not(.on) {
@@ -326,9 +347,9 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-surface-2);
 }
 
@@ -337,14 +358,15 @@ textarea {
   color: var(--text-secondary);
   border: 1px solid var(--border-input);
   border-radius: 999px;
-  padding: 5px 12px;
-  font-size: 0.82rem;
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
 }
 
 .chip.on {
-  background: var(--accent);
+  background: var(--accent-soft);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 /* ── Title picker (pills + fuzzy results) ──────────────────── */
@@ -358,17 +380,20 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--bg-surface-2);
-  border: 1px solid var(--border-color);
+  background: var(--accent-soft);
+  border: none;
+  color: var(--accent-ink);
   border-radius: 999px;
-  padding: 4px 6px 4px 12px;
-  font-size: 0.82rem;
+  padding: 6px 8px 6px 14px;
+  font-size: 0.85rem;
 }
 
 .pill button {
   border: none;
+  min-height: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: inherit;
+  opacity: 0.6;
   padding: 0 5px;
   font-size: 1.05rem;
   line-height: 1;
@@ -395,9 +420,9 @@ textarea {
   left: 0;
   right: 0;
   background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 20px 48px -20px rgba(19, 28, 27, 0.55);
   max-height: 240px;
   overflow-y: auto;
 }
@@ -410,7 +435,7 @@ textarea {
   border-radius: 0;
   background: transparent;
   font-weight: 400;
-  padding: 8px 12px;
+  padding: 10px 14px;
 }
 
 .combo-results button:hover:not(:disabled) {
@@ -422,9 +447,8 @@ textarea {
 .banner {
   background: var(--bg-surface-2);
   border: 1px solid var(--border-color);
-  border-left: 3px solid var(--plex);
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  padding: 13px 15px;
   font-size: 0.88rem;
   color: var(--text-secondary);
 }
@@ -446,4 +470,70 @@ textarea {
 
 .err {
   color: var(--hate);
+}
+
+/* ── Sign-in ───────────────────────────────────────────────── */
+
+/* One centred card and nothing else: signing in is the only thing to do. */
+.page-signin {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card-signin {
+  width: 100%;
+  max-width: 404px;
+  text-align: center;
+}
+
+.card-signin .brand {
+  justify-content: center;
+}
+
+.card-signin .btn-plex {
+  width: 100%;
+  justify-content: center;
+}
+
+.reassurance {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ── Sticky save bar ───────────────────────────────────────── */
+
+/* Preferences save from wherever you are on the page — the bar follows. */
+.save-row {
+  position: sticky;
+  bottom: 16px;
+  z-index: 10;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--inverse);
+  border-radius: 14px;
+  box-shadow: 0 14px 32px -12px rgba(15, 38, 36, 0.6);
+  color: #e6f2f0;
+}
+
+.save-row .btn-primary {
+  background: #127f76;
+  border-color: transparent;
+  color: #fff;
+}
+
+.save-row .btn-primary:hover:not(:disabled) {
+  background: #0f7269;
+  border-color: transparent;
+}
+
+.save-row .ok {
+  color: #9fd8d1;
+}
+
+.save-row .err {
+  color: #f0a9a2;
 }

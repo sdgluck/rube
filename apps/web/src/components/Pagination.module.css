@@ -1,18 +1,40 @@
+/* The table card's footer: where you are on the left, where you can go on the
+ * right. It renders as a sibling of the table wrapper rather than inside it —
+ * App.css squares the wrapper's bottom corners so the two read as one card. */
+
 .pagination {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 24px;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--surface-header);
+  border-top: 1px solid #ecefee;
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  box-shadow: var(--e-card);
   flex-wrap: wrap;
 }
 
 .info {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  flex: 1;
+  font: var(--t-data);
+  font-size: 11px;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
 .button {
-  composes: btn btnSecondary from "../styles/controls.module.css";
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
+}
+
+@media (max-width: 768px) {
+  /* No table card to sit under — the pager becomes its own card. */
+  .pagination {
+    border-top: none;
+    border-radius: var(--r-card);
+  }
 }

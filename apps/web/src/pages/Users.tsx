@@ -5,6 +5,7 @@ import { UsersSkeleton } from "#components/Skeleton";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import PageShell from "#components/PageShell";
 import Pagination from "#components/Pagination";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
@@ -134,9 +135,11 @@ export default function Users() {
   }
 
   return (
-    <div>
-      <h2 className={sharedStyles.heading}>Users{total > 0 && <span className="count-badge">{total}</span>}</h2>
-
+    <PageShell
+      title="Users"
+      count={total > 0 ? total.toLocaleString() : undefined}
+      subtitle="Everyone your Plex server is shared with, and whether they opted into personalisation."
+    >
       {users.length === 0 && !search ? (
         <EmptyState
           icon="person"
@@ -249,6 +252,6 @@ export default function Users() {
           )}
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

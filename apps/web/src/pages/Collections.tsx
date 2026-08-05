@@ -16,6 +16,7 @@ import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
+import PageShell from "#components/PageShell";
 import { readEnumStorage, writeStorage } from "#/storage";
 import styles from "#/styles/shared.module.css";
 
@@ -307,9 +308,11 @@ export default function Collections() {
         filtersQuery.refetch();
       }}
     >
-      <div>
-        <h2 className={styles.heading}>Collections{total > 0 && <span className="count-badge">{total}</span>}</h2>
-
+      <PageShell
+        title="Collections"
+        count={total > 0 ? total.toLocaleString() : undefined}
+        subtitle="Every collection Tinkerbell can see in Plex, whether it built it or you did."
+      >
         {(selected.size > 0 || bulkProgress) && (
           <div className={styles.bulkBar}>
             {bulkProgress ? (
@@ -568,7 +571,7 @@ export default function Collections() {
             onCancel={() => setLabelEditing(false)}
           />
         )}
-      </div>
+      </PageShell>
     </PullToRefresh>
   );
 }

@@ -17,28 +17,30 @@ interface PaginationProps {
 export default function Pagination({ page, totalPages, total, noun, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null;
   return (
-    <nav className={styles.pagination} aria-label="Pagination">
-      <button
-        type="button"
-        className={styles.button}
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-        aria-label="Previous page"
-      >
-        Previous
-      </button>
+    <nav className={styles.pagination} aria-label="Pagination" data-table-footer>
       <span className={styles.info} aria-live="polite">
-        Page {page} of {totalPages} ({total.toLocaleString()} {noun})
+        Page {page} of {totalPages} · {total.toLocaleString()} {noun}
       </span>
-      <button
-        type="button"
-        className={styles.button}
-        disabled={page >= totalPages}
-        onClick={() => onPageChange(page + 1)}
-        aria-label="Next page"
-      >
-        Next
-      </button>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.button}
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          aria-label="Previous page"
+        >
+          Prev
+        </button>
+        <button
+          type="button"
+          className={styles.button}
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          aria-label="Next page"
+        >
+          Next
+        </button>
+      </div>
     </nav>
   );
 }

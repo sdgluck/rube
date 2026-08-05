@@ -1,20 +1,17 @@
 /* ─── Preview page — styled to closely mirror the Plex web app ───────────── */
 
+/* The whole stage is Plex's: dark inside a panel, so the chrome gets out of
+ * the way and the posters dominate. */
 .page {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 36px;
-  color: #eee;
-  /* Soft gradient fade from the sidebar's near-black into the Plex canvas,
-     plus a hairline separator on the very edge so the boundary reads cleanly
-     without a harsh white line. */
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0, transparent 44px), #1f1f1f;
-  border-left: 1px solid rgba(255, 255, 255, 0.13);
-  /* Bleed past the surrounding .content padding (32px 40px desktop) so the
-     dark Plex canvas reaches the viewport edges. */
-  margin: -32px -40px;
-  padding: 32px 40px;
-  min-height: calc(100% + 64px);
+  gap: 30px;
+  color: #f2f6f5;
+  background: var(--sidebar);
+  border-radius: var(--r-panel);
+  box-shadow: var(--e-card);
+  padding: 44px 24px 26px;
   font-family:
     "Plex Sans",
     -apple-system,
@@ -25,7 +22,39 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── Header ──────────────────────────────────────────────────────────────── */
+/* ─── Stage chip ──────────────────────────────────────────────────────────── */
+
+/* Amber, because this surface belongs to Plex. */
+.stageChip {
+  position: absolute;
+  top: 16px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--r-tag);
+  background: rgba(229, 160, 13, 0.16);
+  color: var(--plex);
+  font: 600 10px/1.3 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ─── Header controls (light page chrome, not the stage) ──────────────────── */
+
+.pickerLabel {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* Sized to the selected name rather than a fixed width. */
+.pickerSelect {
+  composes: select selectSm from "../styles/controls.module.css";
+  max-width: 220px;
+}
 
 .header {
   display: flex;
@@ -43,14 +72,14 @@
 
 .title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 18px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.01em;
 }
 
 .badge {
-  font-size: 0.62rem;
+  font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
@@ -68,7 +97,7 @@
 }
 
 .userPicker label {
-  font-size: 0.72rem;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
@@ -76,13 +105,14 @@
 }
 
 .shuffleBtn {
-  padding: 7px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #eee;
-  font-size: 0.85rem;
-  font-weight: 500;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background 0.15s,
@@ -94,9 +124,7 @@
 }
 
 .shuffleBtn:hover:not(:disabled) {
-  background: rgba(229, 160, 13, 0.12);
-  border-color: rgba(229, 160, 13, 0.5);
-  color: #e5a00d;
+  border-color: #bcc7c5;
 }
 
 .shuffleBtn:disabled {
@@ -115,7 +143,7 @@
       no-repeat,
     rgba(255, 255, 255, 0.04);
   color: #eee;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   min-width: 200px;
   appearance: none;
   cursor: pointer;
@@ -144,13 +172,12 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid rgba(229, 160, 13, 0.25);
-  border-left: 3px solid #e5a00d;
-  border-radius: 4px;
-  background: rgba(229, 160, 13, 0.06);
-  color: #ddd;
-  font-size: 0.85rem;
+  padding: 11px 13px;
+  border: none;
+  border-radius: var(--r-sunken);
+  background: rgba(229, 160, 13, 0.12);
+  color: #f0d9a4;
+  font-size: 12.5px;
 }
 
 /* ─── Hub rows ────────────────────────────────────────────────────────────── */
@@ -163,37 +190,37 @@
 
 .hubTitle {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 14.5px;
+  font-weight: 600;
   color: #fff;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.012em;
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+/* The owning rule, pushed to the right at low contrast: it's provenance, not
+   part of the row's title. */
 .hubMeta {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  margin-left: auto;
+  font: var(--t-data);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .hubChip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.62rem;
+  font: 600 9.5px/1.4 var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
+  letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
   padding: 3px 8px;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   background: transparent;
   line-height: 1.4;
   cursor: pointer;
@@ -250,7 +277,7 @@ button.hubChip:hover:not(:disabled) {
 
 .card {
   flex: 0 0 auto;
-  width: 150px;
+  width: 116px;
   cursor: pointer;
   scroll-snap-align: start;
   display: flex;
@@ -260,7 +287,7 @@ button.hubChip:hover:not(:disabled) {
 }
 
 .card.cardWide {
-  width: 280px;
+  width: 228px;
 }
 
 .card:hover {
@@ -269,9 +296,9 @@ button.hubChip:hover:not(:disabled) {
 
 .posterWrap {
   position: relative;
-  border-radius: 4px;
+  border-radius: var(--r-md);
   overflow: hidden;
-  background: #2a2a2a;
+  background: #222928;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   transition: box-shadow 0.18s ease;
 }
@@ -289,7 +316,7 @@ button.hubChip:hover:not(:disabled) {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 4px;
+  border-radius: var(--r-md);
   border: 2px solid transparent;
   pointer-events: none;
   transition: border-color 0.18s ease;
@@ -302,7 +329,7 @@ button.hubChip:hover:not(:disabled) {
 .poster {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: #2a2a2a;
+  background: repeating-linear-gradient(135deg, #222928 0 8px, #1b2221 8px 16px);
   object-fit: cover;
   display: block;
 }
@@ -314,12 +341,12 @@ button.hubChip:hover:not(:disabled) {
 .posterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: #2a2a2a;
+  background: repeating-linear-gradient(135deg, #222928 0 8px, #1b2221 8px 16px);
   display: flex;
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, 0.3);
-  font-size: 0.72rem;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -334,20 +361,20 @@ button.hubChip:hover:not(:disabled) {
   right: 0;
   bottom: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   z-index: 1;
 }
 
+/* Watch progress is Plex's own, so it keeps Plex amber. */
 .progressFill {
   height: 100%;
-  background: #e5a00d;
-  box-shadow: 0 0 6px rgba(229, 160, 13, 0.6);
+  background: var(--plex);
 }
 
 .cardTitle {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #eee;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f2f6f5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -355,7 +382,8 @@ button.hubChip:hover:not(:disabled) {
 }
 
 .cardMeta {
-  font-size: 0.72rem;
+  font: var(--t-data);
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.45);
   white-space: nowrap;
   overflow: hidden;
@@ -367,7 +395,7 @@ button.hubChip:hover:not(:disabled) {
   padding: 48px;
   text-align: center;
   color: rgba(255, 255, 255, 0.4);
-  font-size: 0.9rem;
+  font-size: 13px;
 }
 
 /* ─── Skeleton (mirrors hub + card layout in Plex tones) ────────────────── */
@@ -400,13 +428,13 @@ button.hubChip:hover:not(:disabled) {
 .skeletonCard {
   composes: skeletonShimmer;
   flex: 0 0 auto;
-  width: 150px;
+  width: 116px;
   aspect-ratio: 2 / 3;
-  border-radius: 4px;
+  border-radius: var(--r-md);
 }
 
 .skeletonCard.cardWide {
-  width: 280px;
+  width: 228px;
   aspect-ratio: 16 / 9;
 }
 
@@ -423,17 +451,16 @@ button.hubChip:hover:not(:disabled) {
 
 @media (max-width: 768px) {
   .page {
-    gap: 28px;
-    margin: -16px -16px calc(-1 * (env(safe-area-inset-bottom, 0px) + 72px));
-    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 72px);
+    gap: 24px;
+    padding: 40px 14px 20px;
+  }
+  .stageChip {
+    left: 14px;
   }
   .card {
-    width: 120px;
+    width: 104px;
   }
   .card.cardWide {
-    width: 220px;
-  }
-  .userSelect {
-    min-width: 150px;
+    width: 196px;
   }
 }

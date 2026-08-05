@@ -7,6 +7,7 @@ import { MediaSkeleton } from "#components/Skeleton";
 import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import PageShell from "#components/PageShell";
 import Pagination from "#components/Pagination";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
@@ -92,6 +93,9 @@ interface ColumnDef {
   id: SortKey;
   label: string;
   render: (item: MediaItem) => string;
+  /** File data the server reported — rendered in mono, like every other
+      machine-produced value in the app. */
+  mono?: boolean;
 }
 
 type MediaItem = {
@@ -120,17 +124,18 @@ const ALL_COLUMNS: ColumnDef[] = [
   { id: "title", label: "Title", render: (item) => item.title },
   { id: "section", label: "Section", render: (item) => item.sectionTitle },
   { id: "type", label: "Type", render: (item) => item.type },
-  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY) },
-  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || EMPTY },
-  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || EMPTY },
-  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || EMPTY },
+  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY), mono: true },
+  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || EMPTY, mono: true },
+  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || EMPTY, mono: true },
+  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || EMPTY, mono: true },
   {
     id: "audioChannels",
     label: "Channels",
     render: (item) =>
       item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : EMPTY,
+    mono: true,
   },
-  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || EMPTY },
+  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || EMPTY, mono: true },
 ];
 
 const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
@@ -212,7 +217,10 @@ function ChildrenRows({
             <tr className={mediaStyles.childRow} onClick={() => navigate(`/media/${child.ratingKey}`)}>
               {isEpisode ? (
                 visibleColumns.map((col, colIdx) => (
-                  <td key={col.id} className={colIdx === 0 ? mediaStyles.childRowDepth2 : undefined}>
+                  <td
+                    key={col.id}
+                    className={colIdx === 0 ? mediaStyles.childRowDepth2 : col.mono ? styles.cellMuted : undefined}
+                  >
                     {col.render(childToMediaItem(child))}
                   </td>
                 ))
@@ -411,9 +419,11 @@ export default function Media() {
   }
 
   return (
-    <div>
-      <h2 className={styles.heading}>Media{total > 0 && <span className="count-badge">{total}</span>}</h2>
-
+    <PageShell
+      title="Media"
+      count={total > 0 ? total.toLocaleString() : undefined}
+      subtitle="Every item in the libraries Tinkerbell manages, with the filters and columns you choose."
+    >
       <div className={styles.filters}>
         <input
           type="text"
@@ -600,7 +610,18 @@ export default function Media() {
                   <React.Fragment key={item.ratingKey}>
                     <tr className={styles.clickableRow} onClick={() => navigate(`/media/${item.ratingKey}`)}>
                       {visibleColumns.map((col, colIdx) => (
-                        <td key={col.id} className={col.id === "year" ? styles.itemYear : undefined}>
+                        <td
+                          key={col.id}
+                          className={
+                            col.id === "year"
+                              ? `${styles.cellNum} ${styles.itemYear}`
+                              : col.mono
+                                ? styles.cellMuted
+                                : colIdx === 0
+                                  ? styles.cellStrong
+                                  : undefined
+                          }
+                        >
                           {colIdx === 0 && isShow && (
                             <button
                               className={mediaStyles.expandToggle}
@@ -636,6 +657,6 @@ export default function Media() {
       )}
 
       <Pagination page={page} totalPages={totalPages} total={total} noun="items" onPageChange={setPage} />
-    </div>
+    </PageShell>
   );
 }

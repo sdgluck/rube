@@ -12,7 +12,7 @@
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -22,7 +22,7 @@
   height: 44px;
   border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
-  font-size: 0.875rem;
+  font-size: 12.5px;
 }
 
 .table tbody tr:hover {
@@ -35,7 +35,7 @@
   display: inline-block;
   padding: 3px 10px;
   border-radius: 12px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -69,7 +69,7 @@
 
 .avgDuration {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 12px;
   margin-left: 4px;
 }
 
@@ -78,7 +78,7 @@
 .timestamp {
   color: var(--text-muted);
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 /* ─── Empty state ──────────────────────────────────────────────────────────── */
@@ -124,13 +124,13 @@
     grid-column: 2;
     justify-self: end;
     align-self: center;
-    font-size: 0.75rem;
+    font-size: 11px;
   }
 
   /* Message — full width below */
   .table td:nth-child(3) {
     grid-column: 1 / -1;
-    font-size: 0.85rem;
+    font-size: 12.5px;
     color: var(--text-secondary);
     margin-top: 2px;
   }

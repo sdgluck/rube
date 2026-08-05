@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
+import PageShell, { StatusChip } from "#components/PageShell";
 import { trpc } from "#/trpc";
 import { EMPTY, formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
 import { DragHandle, type PanelDragProps } from "./PanelShell";
@@ -429,30 +430,31 @@ export default function Stats() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className={styles.dashboard}>
-        {/* The dashboard's identity is obvious on screen from the tiles and
-            panels; the heading exists so the page has one for screen readers
-            and document outline. */}
-        <h2 className="sr-only">Stats</h2>
-        {/* ─── Summary Bar ──────────────────────────────────────────── */}
-        <div className={styles.summaryBar}>
-          {selectedTiles.flatMap((id, i) => {
-            const nodes: React.ReactNode[] = [];
-            if (i > 0) nodes.push(<div key={`d-${id}`} className={styles.summaryDivider} />);
-            nodes.push(renderTile(id));
-            return nodes;
-          })}
-          <TilePicker selected={selectedTiles} onSave={saveTiles} />
-        </div>
+      <PageShell
+        title="Stats"
+        chip={
+          sessions.length > 0 ? (
+            <StatusChip tone="ok" dot>
+              {sessions.length} streaming
+            </StatusChip>
+          ) : undefined
+        }
+        subtitle="What your server is doing right now, and what your library looks like."
+        actions={<TilePicker selected={selectedTiles} onSave={saveTiles} />}
+      >
+        <div className={styles.dashboard}>
+          {/* ─── Metric tiles ─────────────────────────────────────────── */}
+          <div className={styles.summaryBar}>{selectedTiles.map(renderTile)}</div>
 
-        {/* ─── Two-column grid ──────────────────────────────────────── */}
-        <div className={styles.grid}>
-          {panelOrder.map((id, i) => {
-            const Panel = PANEL_COMPONENTS[id];
-            return <Panel key={id} dragHandle={buildDragHandle(i)} dragProps={buildDragProps(id, i)} />;
-          })}
+          {/* ─── Two-column masonry ───────────────────────────────────── */}
+          <div className={styles.grid}>
+            {panelOrder.map((id, i) => {
+              const Panel = PANEL_COMPONENTS[id];
+              return <Panel key={id} dragHandle={buildDragHandle(i)} dragProps={buildDragProps(id, i)} />;
+            })}
+          </div>
         </div>
-      </div>
+      </PageShell>
     </PullToRefresh>
   );
 }

@@ -88,6 +88,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 key={toast.id}
                 className={`${styles.toast} ${styles[toast.type]} ${toast.exiting ? styles.toastExiting : ""}`}
               >
+                <span className={styles.dot} aria-hidden="true" />
                 <span>{toast.message}</span>
                 <button
                   type="button"

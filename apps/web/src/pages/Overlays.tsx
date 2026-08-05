@@ -4,6 +4,7 @@ import { useToast } from "#components/Toast";
 import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "#lib/PosterCanvas";
 import ConfirmModal from "#components/ConfirmModal";
 import FeatureStatusBanner from "#components/FeatureStatusBanner";
+import PageShell from "#components/PageShell";
 import { PageSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import Spinner from "#components/Spinner";
@@ -420,195 +421,151 @@ export default function Overlays() {
   }
 
   return (
-    <div className={styles.root}>
-      <header className={styles.header}>
-        <div className={styles.headerMain}>
-          <h2 className={styles.title}>
-            Poster Overlays
-            {sections.length > 1 && (
-              <select
-                className={styles.sectionSelectInline}
-                value={sectionId}
-                onChange={(e) => setActiveSection(e.target.value)}
-              >
-                {sections.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.title}
-                  </option>
-                ))}
-              </select>
-            )}
-          </h2>
-        </div>
-      </header>
+    <PageShell
+      title="Overlays"
+      subtitle="Badges painted onto poster artwork before Plex sees it. Drag one onto a zone to place it."
+      actions={
+        sections.length > 1 ? (
+          <select
+            className={styles.sectionSelectInline}
+            value={sectionId}
+            onChange={(e) => setActiveSection(e.target.value)}
+            aria-label="Library section"
+          >
+            {sections.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.title}
+              </option>
+            ))}
+          </select>
+        ) : undefined
+      }
+    >
+      <div className={styles.root}>
+        <FeatureStatusBanner featureId="overlays" />
 
-      <FeatureStatusBanner featureId="overlays" />
-
-      {sections.length === 0 ? (
-        <p>No movie or TV libraries found. Configure your Plex libraries in Settings.</p>
-      ) : (
-        <>
-          <div className={styles.workspace}>
-            {/* ─── Left: catalog + presets (separate panels) ────────── */}
-            <div className={styles.catalogColumn}>
-              <Catalog />
-              <aside className={styles.catalog}>
-                <h3 className={styles.paneTitle}>Presets</h3>
-                <div className={styles.panelBody}>
-                  <PresetList
-                    presets={presetsQuery.data ?? []}
-                    onApply={(id) => applyPresetMutation.mutate({ sectionId, presetId: id })}
-                    onDelete={(id) => deletePresetMutation.mutate({ id })}
-                    onSaveCurrent={() => setSavePresetOpen(true)}
-                    canSave={configs.length > 0}
-                  />
-                </div>
-              </aside>
-            </div>
-
-            {/* ─── Center: poster canvas ───────────────────────────── */}
-            <div className={styles.canvas}>
-              <div className={styles.canvasHeader}>
-                <span className={styles.canvasTitle}>
-                  {sampleQuery.data ? (
-                    `${sampleQuery.data.title}${sampleQuery.data.year ? ` (${sampleQuery.data.year})` : ""}`
-                  ) : (
-                    <Spinner size="xs" />
-                  )}
-                </span>
-                <div className={styles.canvasActions}>
-                  <button
-                    className={styles.iconActionBtn}
-                    onClick={handleShuffle}
-                    disabled={sampleQuery.isFetching}
-                    title="Shuffle to a different sample poster"
-                    aria-label="Shuffle"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="16 3 21 3 21 8" />
-                      <line x1="4" y1="20" x2="21" y2="3" />
-                      <polyline points="21 16 21 21 16 21" />
-                      <line x1="15" y1="15" x2="21" y2="21" />
-                      <line x1="4" y1="4" x2="9" y2="9" />
-                    </svg>
-                  </button>
-                  <button
-                    className={styles.iconActionBtn}
-                    onMouseDown={() => setHidingBadges(true)}
-                    onMouseUp={() => setHidingBadges(false)}
-                    onMouseLeave={() => setHidingBadges(false)}
-                    onTouchStart={() => setHidingBadges(true)}
-                    onTouchEnd={() => setHidingBadges(false)}
-                    disabled={canvasBadges.length === 0}
-                    title="Hold to see the original poster"
-                    aria-label="Show original"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
-                </div>
+        {sections.length === 0 ? (
+          <p>No movie or TV libraries found. Configure your Plex libraries in Settings.</p>
+        ) : (
+          <>
+            <div className={styles.workspace}>
+              {/* ─── Left: catalog + presets (separate panels) ────────── */}
+              <div className={styles.catalogColumn}>
+                <Catalog />
+                <aside className={styles.catalog}>
+                  <h3 className={styles.paneTitle}>Presets</h3>
+                  <div className={styles.panelBody}>
+                    <PresetList
+                      presets={presetsQuery.data ?? []}
+                      onApply={(id) => applyPresetMutation.mutate({ sectionId, presetId: id })}
+                      onDelete={(id) => deletePresetMutation.mutate({ id })}
+                      onSaveCurrent={() => setSavePresetOpen(true)}
+                      canSave={configs.length > 0}
+                    />
+                  </div>
+                </aside>
               </div>
 
-              <div
-                ref={setPosterFrameRef}
-                className={styles.posterFrame}
-                onDragOver={(e) => e.preventDefault()}
-                onClick={(e) => {
-                  // Click on empty area deselects.
-                  if (e.target === e.currentTarget) setSelectedConfigId(null);
-                }}
-              >
-                {posterUrl ? (
-                  <PosterCanvas
-                    posterUrl={posterUrl}
-                    badges={canvasBadges}
-                    hideBadges={hidingBadges}
-                    className={styles.posterImage}
-                    alt="Sample poster"
-                    onLayout={handleLayout}
-                  />
-                ) : (
-                  <div className={styles.posterPlaceholder}>No poster</div>
-                )}
-
-                {/* Drop targets at each corner. Visually surfaced only during a drag;
-                    occupied zones still receive drops invisibly so users can stack. */}
-                {POSITIONS.map((pos) => {
-                  const stack = configsByPosition.get(pos.id) ?? [];
-                  const isOver = dragOverPosition === pos.id;
-                  const isEmpty = stack.length === 0;
-                  const showVisual = isDragging && isEmpty;
-
-                  return (
-                    <div
-                      key={pos.id}
-                      className={`${styles.dropZone} ${styles[`pos_${pos.id.replace("-", "_")}`]} ${isOver ? styles.dropZoneOver : ""} ${showVisual ? styles.dropZoneEmpty : styles.dropZoneOccupied}`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragOverPosition(pos.id);
-                      }}
-                      onDragLeave={() => setDragOverPosition(null)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        try {
-                          const raw = e.dataTransfer.getData("text/plain");
-                          const data = JSON.parse(raw);
-                          if (data.kind === "new") handleDropFromCatalog(pos.id, data.type);
-                          else if (data.kind === "move") handleMoveExisting(data.id, pos.id);
-                        } catch {
-                          /* ignore */
-                        }
-                      }}
+              {/* ─── Center: poster canvas ───────────────────────────── */}
+              <div className={styles.canvas}>
+                <div className={styles.canvasHeader}>
+                  <span className={styles.canvasTitle}>
+                    {sampleQuery.data ? (
+                      `${sampleQuery.data.title}${sampleQuery.data.year ? ` (${sampleQuery.data.year})` : ""}`
+                    ) : (
+                      <Spinner size="xs" />
+                    )}
+                  </span>
+                  <div className={styles.canvasActions}>
+                    <button
+                      className={styles.iconActionBtn}
+                      onClick={handleShuffle}
+                      disabled={sampleQuery.isFetching}
+                      title="Shuffle to a different sample poster"
+                      aria-label="Shuffle"
                     >
-                      {showVisual && <span className={styles.dropZonePlaceholder}>{pos.label}</span>}
-                    </div>
-                  );
-                })}
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="16 3 21 3 21 8" />
+                        <line x1="4" y1="20" x2="21" y2="3" />
+                        <polyline points="21 16 21 21 16 21" />
+                        <line x1="15" y1="15" x2="21" y2="21" />
+                        <line x1="4" y1="4" x2="9" y2="9" />
+                      </svg>
+                    </button>
+                    <button
+                      className={styles.iconActionBtn}
+                      onMouseDown={() => setHidingBadges(true)}
+                      onMouseUp={() => setHidingBadges(false)}
+                      onMouseLeave={() => setHidingBadges(false)}
+                      onTouchStart={() => setHidingBadges(true)}
+                      onTouchEnd={() => setHidingBadges(false)}
+                      disabled={canvasBadges.length === 0}
+                      title="Hold to see the original poster"
+                      aria-label="Show original"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
 
-                {/* Hit boxes — absolutely positioned to the canvas-natural coords scaled by displayRatio */}
-                {!hidingBadges &&
-                  displayRatio > 0 &&
-                  badgeLayout.map((box) => {
-                    if (box.id == null) return null;
-                    const isSelected = selectedConfigId === box.id;
+                <div
+                  ref={setPosterFrameRef}
+                  className={styles.posterFrame}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    // Click on empty area deselects.
+                    if (e.target === e.currentTarget) setSelectedConfigId(null);
+                  }}
+                >
+                  {posterUrl ? (
+                    <PosterCanvas
+                      posterUrl={posterUrl}
+                      badges={canvasBadges}
+                      hideBadges={hidingBadges}
+                      className={styles.posterImage}
+                      alt="Sample poster"
+                      onLayout={handleLayout}
+                    />
+                  ) : (
+                    <div className={styles.posterPlaceholder}>No poster</div>
+                  )}
+
+                  {/* Drop targets at each corner. Visually surfaced only during a drag;
+                    occupied zones still receive drops invisibly so users can stack. */}
+                  {POSITIONS.map((pos) => {
+                    const stack = configsByPosition.get(pos.id) ?? [];
+                    const isOver = dragOverPosition === pos.id;
+                    const isEmpty = stack.length === 0;
+                    const showVisual = isDragging && isEmpty;
+
                     return (
                       <div
-                        key={box.id}
-                        className={`${styles.hitBox} ${isSelected ? styles.hitBoxSelected : ""}`}
-                        style={{
-                          left: `${box.left * displayRatio}px`,
-                          top: `${box.top * displayRatio}px`,
-                          width: `${box.width * displayRatio}px`,
-                          height: `${box.height * displayRatio}px`,
-                        }}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData("text/plain", JSON.stringify({ kind: "move", id: box.id }));
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
+                        key={pos.id}
+                        className={`${styles.dropZone} ${styles[`pos_${pos.id.replace("-", "_")}`]} ${isOver ? styles.dropZoneOver : ""} ${showVisual ? styles.dropZoneEmpty : styles.dropZoneOccupied}`}
                         onDragOver={(e) => {
                           e.preventDefault();
-                          setDragOverPosition(box.position);
+                          setDragOverPosition(pos.id);
                         }}
                         onDragLeave={() => setDragOverPosition(null)}
                         onDrop={(e) => {
@@ -616,264 +573,311 @@ export default function Overlays() {
                           try {
                             const raw = e.dataTransfer.getData("text/plain");
                             const data = JSON.parse(raw);
-                            if (data.kind === "new") handleDropFromCatalog(box.position, data.type);
-                            else if (data.kind === "move" && data.id !== box.id)
-                              handleMoveExisting(data.id, box.position);
+                            if (data.kind === "new") handleDropFromCatalog(pos.id, data.type);
+                            else if (data.kind === "move") handleMoveExisting(data.id, pos.id);
                           } catch {
                             /* ignore */
                           }
                         }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedConfigId(box.id ?? null);
-                        }}
-                        title={POSITIONS.find((p) => p.id === box.position)?.label}
                       >
-                        <button
-                          className={styles.badgeRemove}
-                          aria-label={`Remove ${POSITIONS.find((pos) => pos.id === box.position)?.label ?? "overlay"} overlay from layout`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (box.id != null) removeConfigMutation.mutate({ id: box.id });
-                            if (box.id != null && selectedConfigId === box.id) setSelectedConfigId(null);
-                          }}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
+                        {showVisual && <span className={styles.dropZonePlaceholder}>{pos.label}</span>}
                       </div>
                     );
                   })}
+
+                  {/* Hit boxes — absolutely positioned to the canvas-natural coords scaled by displayRatio */}
+                  {!hidingBadges &&
+                    displayRatio > 0 &&
+                    badgeLayout.map((box) => {
+                      if (box.id == null) return null;
+                      const isSelected = selectedConfigId === box.id;
+                      return (
+                        <div
+                          key={box.id}
+                          className={`${styles.hitBox} ${isSelected ? styles.hitBoxSelected : ""}`}
+                          style={{
+                            left: `${box.left * displayRatio}px`,
+                            top: `${box.top * displayRatio}px`,
+                            width: `${box.width * displayRatio}px`,
+                            height: `${box.height * displayRatio}px`,
+                          }}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", JSON.stringify({ kind: "move", id: box.id }));
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverPosition(box.position);
+                          }}
+                          onDragLeave={() => setDragOverPosition(null)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            try {
+                              const raw = e.dataTransfer.getData("text/plain");
+                              const data = JSON.parse(raw);
+                              if (data.kind === "new") handleDropFromCatalog(box.position, data.type);
+                              else if (data.kind === "move" && data.id !== box.id)
+                                handleMoveExisting(data.id, box.position);
+                            } catch {
+                              /* ignore */
+                            }
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedConfigId(box.id ?? null);
+                          }}
+                          title={POSITIONS.find((p) => p.id === box.position)?.label}
+                        >
+                          <button
+                            className={styles.badgeRemove}
+                            aria-label={`Remove ${POSITIONS.find((pos) => pos.id === box.position)?.label ?? "overlay"} overlay from layout`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (box.id != null) removeConfigMutation.mutate({ id: box.id });
+                              if (box.id != null && selectedConfigId === box.id) setSelectedConfigId(null);
+                            }}
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* ─── Right: inspector + shortcuts ─────────────────────── */}
+              <div className={styles.inspectorColumn}>
+                <aside className={styles.inspector}>
+                  {selected ? (
+                    (() => {
+                      const stack = configsByPosition.get(selected.position as OverlayPosition) ?? [];
+                      const idx = stack.findIndex((c) => c.id === selected.id);
+                      const canUp = idx > 0;
+                      const canDown = idx >= 0 && idx < stack.length - 1;
+                      return (
+                        <Inspector
+                          config={selected}
+                          onPatchStyle={(p) => handlePatchStyle(selected.id, p)}
+                          onPatchRule={(p) => handlePatchRule(selected.id, p)}
+                          onResetStyle={() => updateConfigMutation.mutate({ id: selected.id, style: null })}
+                          onResetRule={() => updateConfigMutation.mutate({ id: selected.id, rule: null })}
+                          onRemove={() => {
+                            removeConfigMutation.mutate({ id: selected.id });
+                            setSelectedConfigId(null);
+                          }}
+                          onClose={() => setSelectedConfigId(null)}
+                          onMoveUp={
+                            canUp
+                              ? () =>
+                                  moveConfigMutation.mutate({
+                                    id: selected.id,
+                                    position: selected.position as OverlayPosition,
+                                    order: idx - 1,
+                                  })
+                              : null
+                          }
+                          onMoveDown={
+                            canDown
+                              ? () =>
+                                  moveConfigMutation.mutate({
+                                    id: selected.id,
+                                    position: selected.position as OverlayPosition,
+                                    order: idx + 1,
+                                  })
+                              : null
+                          }
+                        />
+                      );
+                    })()
+                  ) : configs.length === 0 && (presetsQuery.data?.length ?? 0) > 0 ? (
+                    <div className={styles.inspectorEmpty}>
+                      <h3 className={styles.paneTitle}>Quick start</h3>
+                      <p className={styles.inspectorEmptyText}>
+                        Apply a built-in preset, or drag overlays from the left.
+                      </p>
+                      <div className={styles.presetQuickList}>
+                        {presetsQuery
+                          .data!.filter((p) => p.builtIn)
+                          .map((p) => (
+                            <button
+                              key={p.id}
+                              className={styles.presetQuickItem}
+                              onClick={() => applyPresetMutation.mutate({ sectionId, presetId: p.id })}
+                              disabled={applyPresetMutation.isPending}
+                            >
+                              <span className={styles.presetQuickName}>{p.name}</span>
+                              <span className={styles.presetQuickDesc}>{p.description}</span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.inspectorEmpty}>
+                      <h3 className={styles.paneTitle}>Inspector</h3>
+                      <p className={styles.inspectorEmptyText}>
+                        Click a placed overlay to customize its label, color, size, shape, opacity, and visibility
+                        rules.
+                      </p>
+                    </div>
+                  )}
+                </aside>
+                <div className={styles.shortcutsPanel}>
+                  <h3 className={styles.paneTitle}>Shortcuts</h3>
+                  <div className={styles.shortcutsList}>
+                    <span>
+                      <kbd>↑↓←→</kbd> move
+                    </span>
+                    <span>
+                      <kbd>Del</kbd> remove
+                    </span>
+                    <span>
+                      <kbd>Esc</kbd> deselect
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* ─── Right: inspector + shortcuts ─────────────────────── */}
-            <div className={styles.inspectorColumn}>
-              <aside className={styles.inspector}>
-                {selected ? (
-                  (() => {
-                    const stack = configsByPosition.get(selected.position as OverlayPosition) ?? [];
-                    const idx = stack.findIndex((c) => c.id === selected.id);
-                    const canUp = idx > 0;
-                    const canDown = idx >= 0 && idx < stack.length - 1;
-                    return (
-                      <Inspector
-                        config={selected}
-                        onPatchStyle={(p) => handlePatchStyle(selected.id, p)}
-                        onPatchRule={(p) => handlePatchRule(selected.id, p)}
-                        onResetStyle={() => updateConfigMutation.mutate({ id: selected.id, style: null })}
-                        onResetRule={() => updateConfigMutation.mutate({ id: selected.id, rule: null })}
-                        onRemove={() => {
-                          removeConfigMutation.mutate({ id: selected.id });
-                          setSelectedConfigId(null);
-                        }}
-                        onClose={() => setSelectedConfigId(null)}
-                        onMoveUp={
-                          canUp
-                            ? () =>
-                                moveConfigMutation.mutate({
-                                  id: selected.id,
-                                  position: selected.position as OverlayPosition,
-                                  order: idx - 1,
-                                })
-                            : null
-                        }
-                        onMoveDown={
-                          canDown
-                            ? () =>
-                                moveConfigMutation.mutate({
-                                  id: selected.id,
-                                  position: selected.position as OverlayPosition,
-                                  order: idx + 1,
-                                })
-                            : null
-                        }
-                      />
-                    );
-                  })()
-                ) : configs.length === 0 && (presetsQuery.data?.length ?? 0) > 0 ? (
-                  <div className={styles.inspectorEmpty}>
-                    <h3 className={styles.paneTitle}>Quick start</h3>
-                    <p className={styles.inspectorEmptyText}>
-                      Apply a built-in preset, or drag overlays from the left.
-                    </p>
-                    <div className={styles.presetQuickList}>
-                      {presetsQuery
-                        .data!.filter((p) => p.builtIn)
-                        .map((p) => (
-                          <button
-                            key={p.id}
-                            className={styles.presetQuickItem}
-                            onClick={() => applyPresetMutation.mutate({ sectionId, presetId: p.id })}
-                            disabled={applyPresetMutation.isPending}
-                          >
-                            <span className={styles.presetQuickName}>{p.name}</span>
-                            <span className={styles.presetQuickDesc}>{p.description}</span>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
+            {/* ─── Sticky bottom action bar ─────────────────────────── */}
+            <div className={styles.actionBar}>
+              <span className={styles.actionBarStatus}>
+                {statusQuery.data ? (
+                  `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} have overlays applied`
                 ) : (
-                  <div className={styles.inspectorEmpty}>
-                    <h3 className={styles.paneTitle}>Inspector</h3>
-                    <p className={styles.inspectorEmptyText}>
-                      Click a placed overlay to customize its label, color, size, shape, opacity, and visibility rules.
-                    </p>
+                  <Spinner size="xs" />
+                )}
+              </span>
+              <div className={styles.overflowWrap} ref={overflowRef}>
+                <button
+                  className={styles.actionBtnSecondary}
+                  onClick={() => setOverflowOpen((v) => !v)}
+                  aria-label="More actions"
+                  title="More actions"
+                >
+                  ⋯
+                </button>
+                {overflowOpen && (
+                  <div className={styles.overflowMenu} role="menu">
+                    <button
+                      className={styles.overflowItem}
+                      onClick={() => {
+                        setOverflowOpen(false);
+                        handleExport();
+                      }}
+                      disabled={configs.length === 0}
+                    >
+                      Export layout…
+                      <span className={styles.overflowItemHint}>Download this section's overlays as JSON</span>
+                    </button>
+                    <button
+                      className={styles.overflowItem}
+                      onClick={() => {
+                        setOverflowOpen(false);
+                        setImportText("");
+                        setImportError(null);
+                        setImportMode("replace");
+                        setImportOpen(true);
+                      }}
+                    >
+                      Import layout…
+                      <span className={styles.overflowItemHint}>Load overlays from a JSON file</span>
+                    </button>
+                    <button
+                      className={styles.overflowItem}
+                      onClick={() => {
+                        setOverflowOpen(false);
+                        setConfirmClearOpen(true);
+                      }}
+                      disabled={configs.length === 0 || clearConfigsMutation.isPending}
+                    >
+                      Clear layout
+                      <span className={styles.overflowItemHint}>Reset this section's overlays</span>
+                    </button>
+                    <button
+                      className={`${styles.overflowItem} ${styles.overflowItemDanger}`}
+                      onClick={() => {
+                        setOverflowOpen(false);
+                        startJobMutation.mutate({ jobId: "overlays-remove" });
+                      }}
+                      disabled={startJobMutation.isPending || (statusQuery.data?.count || 0) === 0}
+                    >
+                      Remove all from Plex
+                      <span className={styles.overflowItemHint}>Strip overlays from every poster</span>
+                    </button>
                   </div>
                 )}
-              </aside>
-              <div className={styles.shortcutsPanel}>
-                <h3 className={styles.paneTitle}>Shortcuts</h3>
-                <div className={styles.shortcutsList}>
-                  <span>
-                    <kbd>↑↓←→</kbd> move
-                  </span>
-                  <span>
-                    <kbd>Del</kbd> remove
-                  </span>
-                  <span>
-                    <kbd>Esc</kbd> deselect
-                  </span>
-                </div>
               </div>
-            </div>
-          </div>
-
-          {/* ─── Sticky bottom action bar ─────────────────────────── */}
-          <div className={styles.actionBar}>
-            <span className={styles.actionBarStatus}>
-              {statusQuery.data ? (
-                `${statusQuery.data.count} item${statusQuery.data.count === 1 ? "" : "s"} have overlays applied`
-              ) : (
-                <Spinner size="xs" />
-              )}
-            </span>
-            <div className={styles.overflowWrap} ref={overflowRef}>
               <button
                 className={styles.actionBtnSecondary}
-                onClick={() => setOverflowOpen((v) => !v)}
-                aria-label="More actions"
-                title="More actions"
+                onClick={() => {
+                  setBulkOpen(true);
+                  bulkPreviewMutation.mutate({ sectionId, count: 6 });
+                }}
+                disabled={configs.length === 0 || bulkPreviewMutation.isPending}
               >
-                ⋯
+                {bulkPreviewMutation.isPending ? <Spinner size="xs" /> : "Bulk Preview"}
               </button>
-              {overflowOpen && (
-                <div className={styles.overflowMenu} role="menu">
-                  <button
-                    className={styles.overflowItem}
-                    onClick={() => {
-                      setOverflowOpen(false);
-                      handleExport();
-                    }}
-                    disabled={configs.length === 0}
-                  >
-                    Export layout…
-                    <span className={styles.overflowItemHint}>Download this section's overlays as JSON</span>
-                  </button>
-                  <button
-                    className={styles.overflowItem}
-                    onClick={() => {
-                      setOverflowOpen(false);
-                      setImportText("");
-                      setImportError(null);
-                      setImportMode("replace");
-                      setImportOpen(true);
-                    }}
-                  >
-                    Import layout…
-                    <span className={styles.overflowItemHint}>Load overlays from a JSON file</span>
-                  </button>
-                  <button
-                    className={styles.overflowItem}
-                    onClick={() => {
-                      setOverflowOpen(false);
-                      setConfirmClearOpen(true);
-                    }}
-                    disabled={configs.length === 0 || clearConfigsMutation.isPending}
-                  >
-                    Clear layout
-                    <span className={styles.overflowItemHint}>Reset this section's overlays</span>
-                  </button>
-                  <button
-                    className={`${styles.overflowItem} ${styles.overflowItemDanger}`}
-                    onClick={() => {
-                      setOverflowOpen(false);
-                      startJobMutation.mutate({ jobId: "overlays-remove" });
-                    }}
-                    disabled={startJobMutation.isPending || (statusQuery.data?.count || 0) === 0}
-                  >
-                    Remove all from Plex
-                    <span className={styles.overflowItemHint}>Strip overlays from every poster</span>
-                  </button>
-                </div>
-              )}
+              <button
+                className={styles.actionBtnPrimary}
+                onClick={() => startJobMutation.mutate({ jobId: "overlays" })}
+                disabled={startJobMutation.isPending || configs.length === 0}
+              >
+                Apply Overlays
+              </button>
             </div>
-            <button
-              className={styles.actionBtnSecondary}
-              onClick={() => {
-                setBulkOpen(true);
-                bulkPreviewMutation.mutate({ sectionId, count: 6 });
-              }}
-              disabled={configs.length === 0 || bulkPreviewMutation.isPending}
-            >
-              {bulkPreviewMutation.isPending ? <Spinner size="xs" /> : "Bulk Preview"}
-            </button>
-            <button
-              className={styles.actionBtnPrimary}
-              onClick={() => startJobMutation.mutate({ jobId: "overlays" })}
-              disabled={startJobMutation.isPending || configs.length === 0}
-            >
-              Apply Overlays
-            </button>
-          </div>
-        </>
-      )}
+          </>
+        )}
 
-      <BulkPreviewModal
-        open={bulkOpen}
-        loading={bulkPreviewMutation.isPending}
-        items={bulkItems}
-        onClose={() => setBulkOpen(false)}
-      />
-
-      {confirmClearOpen && (
-        <ConfirmModal
-          message={`Remove all ${configs.length} overlay${configs.length === 1 ? "" : "s"} from this section's layout? This won't change posters that have already been applied in Plex.`}
-          title="Clear overlay layout?"
-          confirmLabel="Clear"
-          danger
-          onConfirm={() => clearConfigsMutation.mutate({ sectionId })}
-          onCancel={() => setConfirmClearOpen(false)}
+        <BulkPreviewModal
+          open={bulkOpen}
+          loading={bulkPreviewMutation.isPending}
+          items={bulkItems}
+          onClose={() => setBulkOpen(false)}
         />
-      )}
 
-      <SavePresetModal
-        open={savePresetOpen}
-        name={presetName}
-        description={presetDesc}
-        saving={savePresetMutation.isPending}
-        onNameChange={setPresetName}
-        onDescriptionChange={setPresetDesc}
-        onClose={() => setSavePresetOpen(false)}
-        onSave={() => savePresetMutation.mutate({ sectionId, name: presetName.trim(), description: presetDesc.trim() })}
-      />
+        {confirmClearOpen && (
+          <ConfirmModal
+            message={`Remove all ${configs.length} overlay${configs.length === 1 ? "" : "s"} from this section's layout? This won't change posters that have already been applied in Plex.`}
+            title="Clear overlay layout?"
+            confirmLabel="Clear"
+            danger
+            onConfirm={() => clearConfigsMutation.mutate({ sectionId })}
+            onCancel={() => setConfirmClearOpen(false)}
+          />
+        )}
 
-      <ImportLayoutModal
-        open={importOpen}
-        text={importText}
-        mode={importMode}
-        error={importError}
-        importing={importSectionMutation.isPending}
-        existingCount={configs.length}
-        onTextChange={(v) => {
-          setImportText(v);
-          if (importError) setImportError(null);
-        }}
-        onModeChange={setImportMode}
-        onPickFile={handleImportFile}
-        onClose={() => setImportOpen(false)}
-        onImport={handleImport}
-      />
-    </div>
+        <SavePresetModal
+          open={savePresetOpen}
+          name={presetName}
+          description={presetDesc}
+          saving={savePresetMutation.isPending}
+          onNameChange={setPresetName}
+          onDescriptionChange={setPresetDesc}
+          onClose={() => setSavePresetOpen(false)}
+          onSave={() =>
+            savePresetMutation.mutate({ sectionId, name: presetName.trim(), description: presetDesc.trim() })
+          }
+        />
+
+        <ImportLayoutModal
+          open={importOpen}
+          text={importText}
+          mode={importMode}
+          error={importError}
+          importing={importSectionMutation.isPending}
+          existingCount={configs.length}
+          onTextChange={(v) => {
+            setImportText(v);
+            if (importError) setImportError(null);
+          }}
+          onModeChange={setImportMode}
+          onPickFile={handleImportFile}
+          onClose={() => setImportOpen(false)}
+          onImport={handleImport}
+        />
+      </div>
+    </PageShell>
   );
 }

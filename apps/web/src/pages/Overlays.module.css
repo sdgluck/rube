@@ -10,9 +10,9 @@
    * extra bottom padding for the action bar — the workspace's height already
    * reserves space for it via `calc(100vh - 180px)`.
    */
-  margin: -32px -40px;
-  padding: 32px 40px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
+  margin: -20px -28px -40px;
+  padding: 20px 28px 40px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(19,28,27,0.07)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
   background-position: 0 0;
 }
 
@@ -36,7 +36,7 @@
 }
 
 .title {
-  font-size: 1.4rem;
+  font-size: 18px;
   font-weight: 700;
   margin: 0 0 4px;
   display: flex;
@@ -52,7 +52,7 @@
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 13px;
   margin: 0;
   line-height: 1.5;
   max-width: 720px;
@@ -71,11 +71,11 @@
  */
 .workspace {
   display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  gap: 24px;
+  grid-template-columns: 236px 1fr 292px;
+  gap: 16px;
   align-items: stretch;
   /* Reserve: page header (~90px) + action bar (~64px) + breathing room. */
-  height: calc(100vh - 180px);
+  height: calc(100vh - 190px);
   min-height: 480px;
 }
 
@@ -90,9 +90,9 @@
 /* ─── Pane shared ──────────────────────────────────────────────── */
 
 .paneTitle {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
   margin: 0 0 12px;
 }
 
@@ -109,10 +109,11 @@
 }
 
 .catalog {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 16px;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--r-panel);
+  box-shadow: var(--e-card);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -138,7 +139,7 @@
 }
 
 .catalogGroupLabel {
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -170,7 +171,7 @@
 
 .catalogChip:hover {
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(74, 108, 247, 0.15);
+  box-shadow: 0 2px 6px rgba(18, 134, 124, 0.2);
 }
 
 .catalogChip:active {
@@ -179,13 +180,13 @@
 }
 
 .catalogChipLabel {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .catalogChipSample {
-  font-size: 0.7rem;
+  font-size: 11px;
   pointer-events: none;
 }
 
@@ -208,7 +209,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
   cursor: pointer;
@@ -220,7 +221,7 @@
 }
 
 .collapsibleChevron {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
   width: 12px;
   display: inline-block;
@@ -248,7 +249,7 @@
 }
 
 .presetGroupLabel {
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -280,13 +281,13 @@
 }
 
 .presetItemName {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .presetItemDesc {
-  font-size: 0.72rem;
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -304,7 +305,7 @@
   border: 1px solid var(--bulk-border);
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -332,13 +333,13 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  max-width: 480px;
+  max-width: 392px;
 }
 
 .canvasTitle {
-  font-size: 0.9rem;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -357,14 +358,14 @@
 .posterFrame {
   /* Width caps at 480px / 60vw, but also derives from available height so
      the poster shrinks to fit within the viewport-constrained workspace. */
-  --poster-width: min(480px, 60vw, calc((100vh - 240px) * 2 / 3));
+  --poster-width: min(392px, 60vw, calc((100vh - 250px) * 2 / 3));
   position: relative;
   width: var(--poster-width);
   aspect-ratio: 2/3;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   overflow: hidden;
-  background: var(--card-poster-bg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  background: repeating-linear-gradient(135deg, #e8edec 0 8px, #e0e7e6 8px 16px);
+  box-shadow: var(--e-float);
   flex-shrink: 1;
   min-height: 0;
 }
@@ -383,7 +384,7 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 13px;
 }
 
 .renderingBadge {
@@ -391,9 +392,9 @@
   top: 8px;
   right: 50%;
   transform: translateX(50%);
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(19, 28, 27, 0.72);
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 12px;
@@ -415,8 +416,8 @@
 }
 
 .dropZoneEmpty {
-  border: 2px dashed rgba(255, 255, 255, 0.55);
-  background: rgba(0, 0, 0, 0.18);
+  border: 2px dashed rgba(255, 255, 255, 0.6);
+  background: rgba(19, 28, 27, 0.14);
   animation: dropZoneFadeIn 0.12s ease-out;
 }
 
@@ -431,12 +432,14 @@
 
 .dropZoneEmpty:hover {
   border-color: rgba(255, 255, 255, 0.95);
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(19, 28, 27, 0.24);
 }
 
+/* The zone you're about to drop on switches to the accent, so the target is
+   never ambiguous when several zones are visible at once. */
 .dropZoneOver {
   border: 2px dashed var(--accent) !important;
-  background: rgba(74, 108, 247, 0.25) !important;
+  background: rgba(18, 134, 124, 0.28) !important;
 }
 
 .pos_top_left {
@@ -490,10 +493,10 @@
 }
 
 .dropZonePlaceholder {
-  font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.5);
+  font: 600 8.5px/1.3 var(--font-mono);
+  color: rgba(255, 255, 255, 0.75);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -570,13 +573,13 @@
   position: absolute;
   top: -6px;
   right: -6px;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(19, 28, 27, 0.85);
   color: #fff;
   border: none;
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  font-size: 0.7rem;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
   display: none;
@@ -598,10 +601,11 @@
 }
 
 .inspector {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 16px;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--r-panel);
+  box-shadow: var(--e-card);
+  padding: 16px 18px;
   min-height: 0;
   overflow-y: auto;
 }
@@ -615,7 +619,7 @@
 }
 
 .shortcutsLabel {
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -627,7 +631,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 0.78rem;
+  font-size: 11.5px;
   color: var(--text-secondary);
 }
 
@@ -643,7 +647,7 @@
   border-bottom-width: 2px;
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 0.72rem;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-secondary);
 }
@@ -654,7 +658,7 @@
 
 .inspectorEmptyText {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 12.5px;
   line-height: 1.5;
   margin: 0 0 16px;
 }
@@ -668,7 +672,7 @@
 }
 
 .statusCardLabel {
-  font-size: 0.7rem;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -677,7 +681,7 @@
 }
 
 .statusCardValue {
-  font-size: 0.95rem;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -690,7 +694,7 @@
 }
 
 .startCardLabel {
-  font-size: 0.7rem;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--accent);
@@ -721,13 +725,13 @@
 }
 
 .presetQuickName {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .presetQuickDesc {
-  font-size: 0.7rem;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -760,7 +764,7 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 15px;
   line-height: 1;
   padding: 4px 8px;
   border-radius: 4px;
@@ -776,7 +780,7 @@
 }
 
 .sectionTitle {
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -791,7 +795,7 @@
   border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   box-sizing: border-box;
 }
 
@@ -802,14 +806,14 @@
 }
 
 .fieldHint {
-  font-size: 0.7rem;
+  font-size: 11px;
   color: var(--text-muted);
   margin: 4px 0 0;
 }
 
 .fieldLabel {
   display: block;
-  font-size: 0.75rem;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   margin: 8px 0 4px;
@@ -829,7 +833,7 @@
   background: none;
   border: none;
   padding: 6px 4px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -859,7 +863,7 @@
   border: 2px solid transparent;
   border-radius: 6px;
   padding: 6px 4px;
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.1s;
@@ -926,7 +930,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 .numberInput {
@@ -936,7 +940,7 @@
   border: 1px solid var(--border-input);
   border-radius: 4px;
   padding: 4px 6px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 .checkRow {
@@ -951,7 +955,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.8rem;
+  font-size: 12px;
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -960,7 +964,7 @@
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   padding: 4px 0;
@@ -977,7 +981,7 @@
   color: var(--danger);
   border-radius: 6px;
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -997,25 +1001,28 @@
   align-items: center;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid var(--line-soft);
 }
 
 /* ─── Sticky action bar ────────────────────────────────────────── */
 
+/* A floating pill rather than a full-width tray: it belongs to the workspace
+   above it, not to the window. */
 .actionBar {
   position: fixed;
-  bottom: 0;
-  /* Sidebar is 220px wide on desktop; start the action bar after it so the
-     sidebar's "Running" jobs section stays visible. */
-  left: 220px;
-  right: 0;
+  bottom: 16px;
+  /* The 206px rail keeps the sidebar's "Running" jobs list visible. */
+  left: calc(206px + 28px);
+  right: 28px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 24px;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-color);
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  gap: 8px;
+  padding: 9px 14px;
+  background: var(--inverse);
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--e-inverse);
+  color: #e6f2f0;
   z-index: var(--z-sticky-bar);
 }
 
@@ -1023,74 +1030,78 @@
   /* Mobile uses bottom nav instead of the sidebar — action bar can span
      full width but should sit above the bottom nav. */
   .actionBar {
-    left: 0;
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
   }
 }
 
 .actionBarStatus {
   flex: 1;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
 }
 
 .actionBtnPrimary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 7px 13px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .actionBtnPrimary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--accent-text);
 }
 
 .actionBtnPrimary:disabled {
-  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(230, 242, 240, 0.5);
   cursor: not-allowed;
 }
 
 .actionBtnSecondary {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 7px 13px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
+  transition: background 0.15s;
 }
 
 .actionBtnSecondary:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .actionBtnSecondary:disabled {
-  opacity: 0.5;
+  color: rgba(230, 242, 240, 0.4);
   cursor: not-allowed;
 }
 
 .actionBtnDanger {
-  background: var(--bg-surface);
-  color: var(--danger);
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 7px 13px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .actionBtnDanger:hover:not(:disabled) {
-  background: var(--danger);
+  background: var(--danger-hover);
   color: #fff;
 }
 
@@ -1103,7 +1114,7 @@
  * The shell itself is <Modal>; these style what goes inside it. */
 
 .modalHint {
-  font-size: 0.8rem;
+  font-size: 12px;
   color: var(--text-muted);
   text-align: center;
   margin: 4px 0 0;
@@ -1120,7 +1131,7 @@
 
 .importTextarea {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 11.5px;
   resize: vertical;
 }
 
@@ -1149,7 +1160,7 @@
 }
 
 .bulkCell span {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-secondary);
   text-align: center;
   overflow: hidden;
@@ -1206,7 +1217,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--e-float);
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -1225,7 +1236,7 @@
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -1240,7 +1251,7 @@
 }
 
 .overflowItemHint {
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
 }
@@ -1274,7 +1285,7 @@
 }
 
 .shortcutsLabel {
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1286,7 +1297,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 0.78rem;
+  font-size: 11.5px;
   color: var(--text-secondary);
 }
 
@@ -1302,7 +1313,7 @@
   border-bottom-width: 2px;
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 0.72rem;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-secondary);
 }
@@ -1310,7 +1321,7 @@
 /* ─── Color brand label ────────────────────────────────────────── */
 
 .colorBrandLabel {
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1334,7 +1345,7 @@
 }
 
 .catalogChipLabel {
-  font-size: 0.78rem;
+  font-size: 11.5px;
 }
 
 .catalogChipSample {

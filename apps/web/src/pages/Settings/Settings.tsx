@@ -1,11 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
+import PageShell from "#components/PageShell";
 import styles from "./Settings.module.css";
 import { SETTINGS_SECTIONS } from "./sections";
 
 export default function Settings() {
   return (
-    <div>
-      <h2 className={styles.heading}>Settings</h2>
+    <PageShell title="Settings" subtitle="How Tinkerbell connects to Plex and everything around it.">
       <div className={styles.layout}>
         <nav className={styles.rail} aria-label="Settings sections">
           {SETTINGS_SECTIONS.map((section) => (
@@ -29,6 +29,6 @@ export default function Settings() {
           <Outlet />
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -32,14 +32,15 @@
 
 .menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--r-sunken);
+  box-shadow: var(--e-float);
   z-index: var(--z-dropdown);
-  min-width: 120px;
+  min-width: 160px;
+  padding: 4px;
   overflow: hidden;
   transform-origin: top right;
   animation: menuIn 150ms ease-out;
@@ -52,24 +53,32 @@
 .menuItem {
   display: block;
   width: 100%;
-  padding: 8px 16px;
+  padding: 7px 10px;
   border: none;
+  border-radius: var(--r-sm);
   background: none;
   text-align: left;
-  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 .menuItem:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
+  background: var(--fill-quiet);
 }
 
 .menuItem:disabled {
-  opacity: 0.5;
+  color: var(--ink-faint);
   cursor: not-allowed;
 }
 
-.menuItem + .menuItem {
-  border-top: 1px solid var(--border-light);
+/* Destructive items name their consequence and carry the error ink. */
+.menuItemDanger {
+  color: var(--status-error-fg);
+}
+
+.menuItemDanger:hover:not(:disabled) {
+  background: var(--status-error-bg);
 }

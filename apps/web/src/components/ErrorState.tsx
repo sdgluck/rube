@@ -27,14 +27,13 @@ export default function ErrorState({
 }: ErrorStateProps) {
   return (
     <div className={inline ? styles.inline : styles.container} role="alert">
-      <div className={styles.icon} aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 8v4.5M12 16h.01" />
-        </svg>
+      <div className={styles.block}>
+        <span className={styles.icon} aria-hidden="true" />
+        <div>
+          <p className={styles.title}>{title}</p>
+          {error?.message && <p className={styles.detail}>{error.message}</p>}
+        </div>
       </div>
-      <p className={styles.title}>{title}</p>
-      {error?.message && <p className={styles.detail}>{error.message}</p>}
       {onRetry && (
         <button type="button" className={styles.retry} onClick={onRetry}>
           Try again

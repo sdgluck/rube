@@ -20,7 +20,7 @@
   border-radius: var(--btn-radius);
   font-size: var(--btn-font-size);
   font-weight: var(--btn-font-weight);
-  font-family: inherit;
+  font-family: var(--font-sans);
   line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
@@ -31,50 +31,58 @@
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+  border-color: var(--accent);
 }
 
+/* Disabled is a state with its own colour, not a faded copy of the variant —
+   a 55%-opacity primary still reads as the thing you're meant to press. */
 .btn:disabled {
-  opacity: 0.55;
+  background: var(--surface);
+  color: var(--ink-faint);
+  border-color: #e8ecec;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
 /* Variants — colors only. Geometry is on .btn. */
 
+/* One per view. */
 .btnPrimary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
-  border-color: var(--accent);
+  border-color: transparent;
+  box-shadow: 0 1px 2px rgba(18, 134, 124, 0.35);
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--accent-text);
 }
 
 .btnSecondary {
-  background: var(--bg-input);
-  color: var(--text-primary);
-  border-color: var(--border-input);
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+  box-shadow: 0 1px 2px rgba(19, 28, 27, 0.04);
 }
 
 .btnSecondary:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  border-color: var(--text-muted);
+  border-color: #bcc7c5;
 }
 
 .btnGhost {
   background: transparent;
-  color: var(--text-primary);
-  border-color: var(--border-input);
+  color: var(--ink-2);
+  border-color: transparent;
 }
 
 .btnGhost:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  border-color: var(--text-muted);
+  background: var(--fill-quiet);
+  color: var(--ink);
 }
 
+/* Named for what it destroys, and solid — the confirm-dialog commit. */
 .btnDanger {
   background: var(--danger);
   color: #fff;
@@ -86,14 +94,17 @@
   border-color: var(--danger-hover);
 }
 
+/* Outlined until hovered, deliberately: a destructive action in a row of
+   ordinary ones shouldn't be the loudest thing on screen until aimed at. */
 .btnDangerOutline {
-  background: var(--bg-input);
+  background: var(--surface);
   color: var(--danger);
-  border-color: var(--danger);
+  border-color: var(--danger-line);
 }
 
 .btnDangerOutline:hover:not(:disabled) {
   background: var(--danger);
+  border-color: var(--danger);
   color: #fff;
 }
 
@@ -102,6 +113,7 @@
 .btnSm {
   padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
   font-size: var(--btn-font-size-sm);
+  border-radius: var(--r-sm);
 }
 
 /* Press feedback — overrides global button:active scale, kept consistent. */
@@ -111,6 +123,35 @@
   transition:
     transform 50ms,
     opacity 50ms;
+}
+
+/* ─── In-flight ───────────────────────────────────────────────────────────
+ * A button mid-action keeps its fill and gains a spinner; the label switches
+ * to the present tense at the call site ("Running…"). Every long action stays
+ * cancellable, so this is never a dead end. */
+
+.btnSpinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btnSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* On a light-filled button the track has to darken instead. */
+.btnSecondary .btnSpinner,
+.btnGhost .btnSpinner,
+.btnDangerOutline .btnSpinner {
+  border-color: rgba(19, 28, 27, 0.18);
+  border-top-color: var(--accent);
+}
+
+@keyframes btnSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── Inputs ──────────────────────────────────────────────────────────── */
@@ -124,45 +165,64 @@
   background: var(--bg-input);
   color: var(--text-primary);
   font-size: var(--input-font-size);
-  font-family: inherit;
+  font-family: var(--font-sans);
   line-height: 1.4;
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
 }
 
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--ink-faint);
+}
+
 .input:hover:not(:disabled):not(:focus),
 .select:hover:not(:disabled):not(:focus),
 .textarea:hover:not(:disabled):not(:focus) {
-  border-color: var(--text-muted);
+  border-color: #bcc7c5;
 }
 
 .input:focus,
 .select:focus,
 .textarea:focus {
-  outline: none;
+  outline: var(--focus-ring);
+  outline-offset: 0;
   border-color: var(--accent);
-  box-shadow: var(--input-focus-ring);
 }
 
 .input:disabled,
 .select:disabled,
 .textarea:disabled {
-  opacity: 0.6;
+  background: var(--fill-quiet);
+  color: var(--ink-faint);
   cursor: not-allowed;
 }
 
 .textarea {
   resize: vertical;
   min-height: 72px;
-  font-family: inherit;
+}
+
+/* Anything the machine produced — URLs, cron, keys, IDs, numbers. */
+.inputMono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+/* An input that failed validation states it, and stays stated until fixed. */
+.inputError,
+.inputError:hover:not(:disabled):not(:focus) {
+  border-color: var(--danger-line);
+  background: #fffbfb;
+  box-shadow: 0 0 0 3px rgba(176, 51, 44, 0.1);
 }
 
 /* Select chevron */
 
 .select {
   appearance: none;
-  padding-right: 28px;
+  padding-right: 26px;
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -182,6 +242,7 @@
 .selectSm {
   padding: 5px 10px;
   font-size: var(--btn-font-size-sm);
+  border-radius: var(--r-sm);
 }
 
 .selectSm {
@@ -189,4 +250,150 @@
   background-position:
     calc(100% - 12px) 50%,
     calc(100% - 7px) 50%;
+}
+
+/* Search field — the glyph is drawn, not a font character, so it can't drift
+   with the fallback stack. Declared after .inputSm so the left inset for the
+   glyph survives the size modifier's padding shorthand. */
+/* Compound selector so the inset survives whichever size modifier is composed
+   alongside it — those set `padding` wholesale. */
+.inputSearch.inputSearch {
+  padding-left: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235f6d6b' stroke-width='1.6'%3E%3Ccircle cx='7' cy='7' r='4.4'/%3E%3Cpath d='M10.4 10.4 14 14' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px 50%;
+  background-size: 11px 11px;
+}
+
+/* ─── Segmented control ───────────────────────────────────────────────── */
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+}
+
+.segmentedItem {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.segmentedItem:hover:not(.segmentedItemActive) {
+  color: var(--ink);
+}
+
+.segmentedItemActive {
+  background: var(--accent-fill);
+  color: #fff;
+}
+
+/* "Raised": the active item lifts onto white over a darker trough. Used where
+   the control is navigation rather than a value — the Settings sub-navs. */
+.segmentedRaised {
+  background: #e4e9e8;
+  border-color: transparent;
+}
+
+.segmentedRaised .segmentedItemActive {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(19, 28, 27, 0.08);
+}
+
+/* ─── Toggle ──────────────────────────────────────────────────────────── */
+
+.toggle {
+  appearance: none;
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: #cfd8d7;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: transform 0.15s;
+}
+
+.toggle:checked {
+  background: var(--accent);
+}
+
+.toggle:checked::after {
+  transform: translateX(14px);
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* The compact variant used inside cards. */
+.toggleSm {
+  width: 28px;
+  height: 16px;
+}
+
+.toggleSm::after {
+  width: 12px;
+  height: 12px;
+}
+
+.toggleSm:checked::after {
+  transform: translateX(12px);
+}
+
+/* ─── Checkbox / radio ────────────────────────────────────────────────── */
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.radio {
+  appearance: none;
+  box-sizing: border-box;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid #cfd8d7;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border 0.15s;
+}
+
+.radio:checked {
+  border: 5px solid var(--accent);
 }

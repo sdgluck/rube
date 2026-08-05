@@ -3,6 +3,7 @@ import { readStorage, writeStorage } from "#/storage";
 import { Link, useNavigate } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import ConfirmModal from "#components/ConfirmModal";
+import PageShell, { StatusChip } from "#components/PageShell";
 import { PreviewHubRow, PreviewHubRowSkeleton } from "#components/PreviewHubRow";
 import Spinner from "#components/Spinner";
 import { useToast } from "#components/Toast";
@@ -185,6 +186,8 @@ export default function Preview() {
 
   const users = usersQuery.data?.items ?? [];
   const sections = (sectionsQuery.data ?? []).filter((s) => s.type === "movie" || s.type === "show");
+  const viewingAs = users.find((u) => u.userId === userId);
+  const viewingAsLabel = viewingAs ? `as ${viewingAs.name || viewingAs.username}` : "as admin";
 
   const orderedHubs = useMemo(() => {
     const hubs = previewQuery.data?.hubs ?? [];
@@ -243,18 +246,12 @@ export default function Preview() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h2 className={styles.title}>Preview</h2>
-          <span
-            className={styles.badge}
-            title="Approximate — labels and library access only; watch progress is the admin's"
-          >
-            Approximate
-          </span>
-        </div>
-        <div className={styles.userPicker}>
+    <PageShell
+      title="Preview"
+      chip={<StatusChip tone="advisory">Approximate</StatusChip>}
+      subtitle="The Plex home screen as one of your users would see it — labels and library access only."
+      actions={
+        <>
           <button
             className={styles.shuffleBtn}
             onClick={onShuffle}
@@ -269,24 +266,12 @@ export default function Preview() {
               "Shuffle hubs"
             )}
           </button>
-          <label htmlFor="preview-user">View as</label>
-          <select
-            id="preview-user"
-            className={styles.userSelect}
-            value={userId == null ? "" : String(userId)}
-            onChange={(e) => onPickUser(e.target.value === "" ? null : Number(e.target.value))}
-          >
-            <option value="">Admin (no filters)</option>
-            {users.map((u) => (
-              <option key={u.userId} value={u.userId}>
-                {u.name ? `${u.name} (${u.username})` : u.username}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="preview-section">Library</label>
+          <label className={styles.pickerLabel} htmlFor="preview-section">
+            Library
+          </label>
           <select
             id="preview-section"
-            className={styles.userSelect}
+            className={styles.pickerSelect}
             value={sectionId == null ? "" : String(sectionId)}
             onChange={(e) => onPickSection(e.target.value === "" ? null : Number(e.target.value))}
           >
@@ -297,112 +282,133 @@ export default function Preview() {
               </option>
             ))}
           </select>
-        </div>
-      </div>
+          <label className={styles.pickerLabel} htmlFor="preview-user">
+            View as
+          </label>
+          <select
+            id="preview-user"
+            className={styles.pickerSelect}
+            value={userId == null ? "" : String(userId)}
+            onChange={(e) => onPickUser(e.target.value === "" ? null : Number(e.target.value))}
+          >
+            <option value="">Admin (no filters)</option>
+            {users.map((u) => (
+              <option key={u.userId} value={u.userId}>
+                {u.name ? `${u.name} (${u.username})` : u.username}
+              </option>
+            ))}
+          </select>
+        </>
+      }
+    >
+      {/* The stage is Plex's, not ours: dark, chrome-free, posters dominant. */}
+      <div className={styles.page}>
+        <span className={styles.stageChip}>Plex home · {viewingAsLabel}</span>
 
-      {shuffleStatus && <div className={styles.warnings}>{shuffleStatus}</div>}
+        {shuffleStatus && <div className={styles.warnings}>{shuffleStatus}</div>}
 
-      {previewQuery.isLoading && <PreviewSkeleton />}
-      {previewQuery.error && (
-        <div className={styles.warnings}>
-          <div>Failed to load preview: {previewQuery.error.message}</div>
-        </div>
-      )}
+        {previewQuery.isLoading && <PreviewSkeleton />}
+        {previewQuery.error && (
+          <div className={styles.warnings}>
+            <div>Failed to load preview: {previewQuery.error.message}</div>
+          </div>
+        )}
 
-      {previewQuery.data && previewQuery.data.warnings.length > 0 && (
-        <div className={styles.warnings}>
-          {previewQuery.data.warnings.map((w, i) => (
-            <div key={i}>{w}</div>
-          ))}
-        </div>
-      )}
+        {previewQuery.data && previewQuery.data.warnings.length > 0 && (
+          <div className={styles.warnings}>
+            {previewQuery.data.warnings.map((w, i) => (
+              <div key={i}>{w}</div>
+            ))}
+          </div>
+        )}
 
-      {previewQuery.data && previewQuery.data.hubs.length === 0 && !previewQuery.isLoading && (
-        <div className={styles.empty}>No hubs to show.</div>
-      )}
+        {previewQuery.data && previewQuery.data.hubs.length === 0 && !previewQuery.isLoading && (
+          <div className={styles.empty}>No hubs to show.</div>
+        )}
 
-      {orderedHubs.map((hub) => {
-        const wide = isWideHub(hub);
-        const collectionRatingKey = parseCollectionRatingKey(hub.identifier);
-        const collectionSectionId = parseCollectionSectionId(hub.identifier);
-        const ruleId = collectionRatingKey ? ruleByCollectionKey.get(collectionRatingKey) : undefined;
-        const isRuleManaged = !!ruleId;
-        const isUnpinning = unpinMutation.isPending && unpinMutation.variables?.hubIdentifier === hub.identifier;
-        const chips = collectionRatingKey ? (
-          <>
-            {isRuleManaged ? (
+        {orderedHubs.map((hub) => {
+          const wide = isWideHub(hub);
+          const collectionRatingKey = parseCollectionRatingKey(hub.identifier);
+          const collectionSectionId = parseCollectionSectionId(hub.identifier);
+          const ruleId = collectionRatingKey ? ruleByCollectionKey.get(collectionRatingKey) : undefined;
+          const isRuleManaged = !!ruleId;
+          const isUnpinning = unpinMutation.isPending && unpinMutation.variables?.hubIdentifier === hub.identifier;
+          const chips = collectionRatingKey ? (
+            <>
+              {isRuleManaged ? (
+                <Link
+                  to={`/rules?focus=${ruleId}`}
+                  className={styles.hubChip}
+                  title="Generated by a Tinkerbell rule — open in Rules"
+                >
+                  Rule
+                </Link>
+              ) : (
+                <span className={`${styles.hubChip} ${styles.hubChipStatic}`} title="Created manually in Plex">
+                  User
+                </span>
+              )}
               <Link
-                to={`/rules?focus=${ruleId}`}
+                to={`/collections/${collectionRatingKey}`}
                 className={styles.hubChip}
-                title="Generated by a Tinkerbell rule — open in Rules"
+                title="Open collection in Tinkerbell"
               >
-                Rule
+                Open
               </Link>
-            ) : (
-              <span className={`${styles.hubChip} ${styles.hubChipStatic}`} title="Created manually in Plex">
-                User
-              </span>
-            )}
-            <Link
-              to={`/collections/${collectionRatingKey}`}
-              className={styles.hubChip}
-              title="Open collection in Tinkerbell"
-            >
-              Open
-            </Link>
-            {collectionSectionId && (
-              <button
-                type="button"
-                className={`${styles.hubChip} ${styles.hubChipDanger}`}
-                disabled={isUnpinning}
-                title="Unpin this collection from the Plex homepage"
-                onClick={() =>
-                  setUnpinTarget({
-                    sectionId: collectionSectionId,
-                    hubIdentifier: hub.identifier,
-                    title: hub.title,
-                  })
-                }
-              >
-                {isUnpinning ? (
-                  <>
-                    <Spinner size="xs" /> Unpinning…
-                  </>
-                ) : (
-                  "Unpin"
-                )}
-              </button>
-            )}
-          </>
-        ) : undefined;
-        return (
-          <PreviewHubRow
-            key={hub.identifier || hub.key || hub.title}
-            title={hub.title}
-            chips={chips}
-            items={hub.items}
-            wide={wide}
-            onItemClick={(item) => navigate(`/media/${item.ratingKey}`)}
-          />
-        );
-      })}
+              {collectionSectionId && (
+                <button
+                  type="button"
+                  className={`${styles.hubChip} ${styles.hubChipDanger}`}
+                  disabled={isUnpinning}
+                  title="Unpin this collection from the Plex homepage"
+                  onClick={() =>
+                    setUnpinTarget({
+                      sectionId: collectionSectionId,
+                      hubIdentifier: hub.identifier,
+                      title: hub.title,
+                    })
+                  }
+                >
+                  {isUnpinning ? (
+                    <>
+                      <Spinner size="xs" /> Unpinning…
+                    </>
+                  ) : (
+                    "Unpin"
+                  )}
+                </button>
+              )}
+            </>
+          ) : undefined;
+          return (
+            <PreviewHubRow
+              key={hub.identifier || hub.key || hub.title}
+              title={hub.title}
+              chips={chips}
+              items={hub.items}
+              wide={wide}
+              onItemClick={(item) => navigate(`/media/${item.ratingKey}`)}
+            />
+          );
+        })}
 
-      {unpinTarget && (
-        <ConfirmModal
-          message={`Unpin “${unpinTarget.title}” from the Plex homepage? Other Tinkerbell-managed pinning rules may re-pin it later.`}
-          title="Unpin from homepage?"
-          confirmLabel="Unpin"
-          danger
-          onConfirm={() => {
-            unpinMutation.mutate({
-              sectionId: unpinTarget.sectionId,
-              hubIdentifier: unpinTarget.hubIdentifier,
-            });
-            setUnpinTarget(null);
-          }}
-          onCancel={() => setUnpinTarget(null)}
-        />
-      )}
-    </div>
+        {unpinTarget && (
+          <ConfirmModal
+            message={`Unpin “${unpinTarget.title}” from the Plex homepage? Other Tinkerbell-managed pinning rules may re-pin it later.`}
+            title="Unpin from homepage?"
+            confirmLabel="Unpin"
+            danger
+            onConfirm={() => {
+              unpinMutation.mutate({
+                sectionId: unpinTarget.sectionId,
+                hubIdentifier: unpinTarget.hubIdentifier,
+              });
+              setUnpinTarget(null);
+            }}
+            onCancel={() => setUnpinTarget(null)}
+          />
+        )}
+      </div>
+    </PageShell>
   );
 }

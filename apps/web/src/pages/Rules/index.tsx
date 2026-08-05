@@ -4,6 +4,7 @@ import ConfirmModal from "#components/ConfirmModal";
 import DropdownButton from "#components/DropdownButton";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import PageShell from "#components/PageShell";
 import RuleWizard, {
   type AiNameStyle,
   type AiVibe,
@@ -513,13 +514,12 @@ export default function Rules() {
   const allSelected = rules.length > 0 && rules.every((r) => selected.has(r.id));
 
   return (
-    <div>
-      <MigrationBanner />
-      <div className={shared.header}>
-        <h2 className={shared.heading}>
-          Rules{allRules.length > 0 && <span className="count-badge">{allRules.length}</span>}
-        </h2>
-        <div className={shared.headerActions}>
+    <PageShell
+      title="Rules"
+      count={allRules.length > 0 ? allRules.length.toLocaleString() : undefined}
+      subtitle="Rules define how the Generate Collections job creates collections. Each enabled rule runs during generation."
+      actions={
+        <>
           <DropdownButton
             label="Export"
             className={shared.buttonSecondary}
@@ -547,11 +547,10 @@ export default function Rules() {
           <button className={shared.button} onClick={startCreate} disabled={!!form}>
             Add Rule
           </button>
-        </div>
-      </div>
-      <p className={styles.description}>
-        Rules define how the Generate Collections job creates collections. Each enabled rule runs during generation.
-      </p>
+        </>
+      }
+    >
+      <MigrationBanner />
 
       {allRules.length > 0 && (
         <RulesToolbar
@@ -682,6 +681,6 @@ export default function Rules() {
           onCancel={() => setPendingConfirm(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

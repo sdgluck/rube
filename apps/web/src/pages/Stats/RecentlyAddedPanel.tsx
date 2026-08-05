@@ -27,7 +27,7 @@ export function RecentlyAddedPanel({
         <div className={styles.muted}>No recently added media</div>
       )}
       {recentQuery.data && recentQuery.data.items.length > 0 && (
-        <div className="table-scroll">
+        <div className="table-scroll in-panel">
           <table className={styles.compactTable}>
             <thead>
               <tr>

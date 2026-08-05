@@ -7,7 +7,13 @@
          anything but 0; the bottom nav and content padding both depend on it. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="theme-color" content="#0f1615" />
+    <!-- Archivo for interface text, IBM Plex Mono for anything the machine
+         produced. Both are self-hosted from /fonts — see src/styles/fonts.css.
+         Preloading the two latin faces the first paint needs keeps the swap
+         from landing after the page has already drawn. -->
+    <link rel="preload" href="/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/ibm-plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin />
     <meta name="description" content="Tinkerbell — self-hosted Plex library automation." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

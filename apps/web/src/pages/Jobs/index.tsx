@@ -14,6 +14,7 @@ import PullToRefresh from "#components/PullToRefresh";
 
 import { EMPTY, formatDuration, formatTimeUntil } from "#/format";
 import ErrorState from "#components/ErrorState";
+import PageShell, { StatusChip } from "#components/PageShell";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
 import styles from "./Jobs.module.css";
@@ -363,143 +364,320 @@ export default function Jobs() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className={styles.dashboard}>
-        <h2 className="sr-only">Jobs</h2>
-        {/* ─── Summary Bar ──────────────────────────────────────────── */}
-        <div className={styles.summaryBar}>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Total</span>
-            <span className={styles.summaryValue}>{rawJobs.length}</span>
-          </div>
-          <div className={styles.summaryDivider} />
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Enabled</span>
-            <span className={styles.summaryValue}>{enabledCount}</span>
-          </div>
-          <div className={styles.summaryDivider} />
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Running</span>
-            <span className={`${styles.summaryValue} ${runningCount > 0 ? styles.summaryAccent : ""}`}>
-              {runningCount}
-            </span>
-          </div>
-          <div className={styles.summaryDivider} />
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Last Failure</span>
-            <span className={`${styles.summaryValue} ${styles.summarySmall}`}>
-              {lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : EMPTY}
-            </span>
-          </div>
-        </div>
-
-        {/* ─── Two-column grid ──────────────────────────────────────── */}
-        <div className={styles.grid}>
-          {/* ─── Recent Runs ────────────────────────────────────────── */}
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>Recent Runs</div>
-            {recentRunsQuery.data && recentRunsQuery.data.length > 0 ? (
-              <div className="table-scroll">
-                <table className={styles.compactTable}>
-                  <thead>
-                    <tr>
-                      <th></th>
-                      <th>Job</th>
-                      <th>Started</th>
-                      <th>Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rollupRecentRuns(recentRunsQuery.data).map((group) => {
-                      const run = group.latest;
-                      return (
-                        <tr
-                          key={run.id}
-                          className={styles.clickableRow}
-                          onClick={() => navigate(`/jobs/runs/${run.id}`)}
-                        >
-                          <td>
-                            {isRunActive(run.status) ? (
-                              <Spinner size="xs" />
-                            ) : (
-                              <span className={styles.statusDot} data-status={run.status} />
-                            )}
-                          </td>
-                          <td className={styles.nameCell}>
-                            <span className={styles.jobNameText}>{run.jobName}</span>
-                            {group.count > 1 && <span className={styles.rollupBadge}>×{group.count}</span>}
-                            {isRunActive(run.status) && run.progress > 0 && (
-                              <div className={styles.miniProgress}>
-                                <div
-                                  className={styles.miniProgressFill}
-                                  style={{ width: `${Math.round(run.progress * 100)}%` }}
-                                />
-                              </div>
-                            )}
-                          </td>
-                          <td className={styles.monoCell}>
-                            <RelativeTime timestamp={run.startedAt} />
-                          </td>
-                          <td className={styles.monoCell}>{formatGroupDuration(group)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className={styles.muted}>No recent runs</div>
-            )}
+      <PageShell
+        title="Jobs"
+        count={rawJobs.length > 0 ? rawJobs.length : undefined}
+        chip={
+          runningCount > 0 ? (
+            <StatusChip tone="running" dot>
+              {runningCount} running
+            </StatusChip>
+          ) : undefined
+        }
+        subtitle="The scheduled work Tinkerbell does on your library, and the optional features you've installed."
+      >
+        <div className={styles.dashboard}>
+          {/* ─── Metric tiles ─────────────────────────────────────────── */}
+          <div className={styles.summaryBar}>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Total</span>
+              <span className={styles.summaryValue}>{rawJobs.length}</span>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Enabled</span>
+              <span className={styles.summaryValue}>{enabledCount}</span>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Running</span>
+              <span className={`${styles.summaryValue} ${runningCount > 0 ? styles.summaryAccent : ""}`}>
+                {runningCount}
+              </span>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Last Failure</span>
+              <span className={`${styles.summaryValue} ${styles.summarySmall}`}>
+                {lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : EMPTY}
+              </span>
+            </div>
           </div>
 
-          {/* ─── Schedule Timeline ──────────────────────────────────── */}
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>Upcoming</div>
-            {upcoming.length > 0 ? (
-              <div className="table-scroll">
-                <table className={styles.compactTable}>
-                  <thead>
-                    <tr>
-                      <th>Job</th>
-                      <th>Next Run</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {upcoming.map((item) => (
-                      <tr
-                        key={item.jobId}
-                        className={styles.clickableRow}
-                        onClick={() => navigate(`/jobs/${item.jobId}`)}
-                      >
-                        <td className={styles.nameCell}>
-                          <span className={styles.jobNameText}>{item.name}</span>
-                        </td>
-                        <td className={styles.monoCell}>in {formatTimeUntil(item.nextRun)}</td>
+          {/* ─── Two-column grid ──────────────────────────────────────── */}
+          <div className={styles.grid}>
+            {/* ─── Recent Runs ────────────────────────────────────────── */}
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>Recent Runs</div>
+              {recentRunsQuery.data && recentRunsQuery.data.length > 0 ? (
+                <div className="table-scroll in-panel">
+                  <table className={styles.compactTable}>
+                    <thead>
+                      <tr>
+                        <th></th>
+                        <th>Job</th>
+                        <th>Started</th>
+                        <th>Duration</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className={styles.muted}>No scheduled jobs</div>
-            )}
-          </div>
+                    </thead>
+                    <tbody>
+                      {rollupRecentRuns(recentRunsQuery.data).map((group) => {
+                        const run = group.latest;
+                        return (
+                          <tr
+                            key={run.id}
+                            className={styles.clickableRow}
+                            onClick={() => navigate(`/jobs/runs/${run.id}`)}
+                          >
+                            <td>
+                              {isRunActive(run.status) ? (
+                                <Spinner size="xs" />
+                              ) : (
+                                <span className={styles.statusDot} data-status={run.status} />
+                              )}
+                            </td>
+                            <td className={styles.nameCell}>
+                              <span className={styles.jobNameText}>{run.jobName}</span>
+                              {group.count > 1 && <span className={styles.rollupBadge}>×{group.count}</span>}
+                              {isRunActive(run.status) && run.progress > 0 && (
+                                <div className={styles.miniProgress}>
+                                  <div
+                                    className={styles.miniProgressFill}
+                                    style={{ width: `${Math.round(run.progress * 100)}%` }}
+                                  />
+                                </div>
+                              )}
+                            </td>
+                            <td className={styles.monoCell}>
+                              <RelativeTime timestamp={run.startedAt} />
+                            </td>
+                            <td className={styles.monoCell}>{formatGroupDuration(group)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className={styles.muted}>No recent runs</div>
+              )}
+            </div>
 
-          {/* ─── System Tasks ────────────────────────────────────────── */}
-          {systemJobs.length > 0 && (
+            {/* ─── Schedule Timeline ──────────────────────────────────── */}
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>Upcoming</div>
+              {upcoming.length > 0 ? (
+                <div className="table-scroll in-panel">
+                  <table className={styles.compactTable}>
+                    <thead>
+                      <tr>
+                        <th>Job</th>
+                        <th>Next Run</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upcoming.map((item) => (
+                        <tr
+                          key={item.jobId}
+                          className={styles.clickableRow}
+                          onClick={() => navigate(`/jobs/${item.jobId}`)}
+                        >
+                          <td className={styles.nameCell}>
+                            <span className={styles.jobNameText}>{item.name}</span>
+                          </td>
+                          <td className={styles.monoCell}>in {formatTimeUntil(item.nextRun)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className={styles.muted}>No scheduled jobs</div>
+              )}
+            </div>
+
+            {/* ─── System Tasks ────────────────────────────────────────── */}
+            {systemJobs.length > 0 && (
+              <div className={styles.panel}>
+                <div className={styles.panelHeaderRow}>
+                  <div className={styles.panelHeader}>
+                    System Tasks
+                    <span className={styles.countBadge}>{systemJobs.length}</span>
+                  </div>
+                </div>
+                <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
+                  Infrastructure that keeps Tinkerbell in sync with Plex. Always on; schedules are tweakable.
+                </p>
+                <div className="table-scroll in-panel">
+                  <table className={styles.compactTable}>
+                    <thead>
+                      <tr>
+                        <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                          Name
+                        </SortableTh>
+                        <SortableTh
+                          sortKey="schedule"
+                          activeKey={sortKey}
+                          activeDir={sortDir}
+                          onSort={toggleSort}
+                          className={styles.hideOnMobile}
+                        >
+                          Schedule
+                        </SortableTh>
+                        <th>On</th>
+                        <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                          Last Run
+                        </SortableTh>
+                        <SortableTh
+                          sortKey="lastRunStatus"
+                          activeKey={sortKey}
+                          activeDir={sortDir}
+                          onSort={toggleSort}
+                          className={styles.hideOnMobile}
+                        >
+                          Status
+                        </SortableTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {systemJobs.map((job) => {
+                        const isHealth = job.id === "healthcheck";
+                        return (
+                          <tr
+                            key={job.id}
+                            className={styles.clickableRow}
+                            onClick={() => navigate(isHealth ? "/settings/health" : `/jobs/${job.id}`)}
+                          >
+                            <td className={styles.nameCell}>
+                              <span className={styles.jobNameText}>{job.name}</span>
+                              <span className={styles.scheduleHintInline}>
+                                {job.schedule ? describeCron(job.schedule) : "Manual"}
+                              </span>
+                            </td>
+                            <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                              <span className={styles.cronText} title={job.schedule || undefined}>
+                                {job.schedule ? describeCron(job.schedule) : EMPTY}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={styles.requiredPill}>Required</span>
+                            </td>
+                            <td className={styles.monoCell}>
+                              {job.lastRunStartedAt ? (
+                                <RelativeTime timestamp={job.lastRunStartedAt} />
+                              ) : (
+                                <span className={styles.muted}>Never</span>
+                              )}
+                            </td>
+                            <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                              {job.lastRunStatus && (
+                                <span className={styles.statusRow}>
+                                  <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                                  {job.lastRunStatus}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ─── Your Features ────────────────────────────────────────── */}
             <div className={styles.panel}>
               <div className={styles.panelHeaderRow}>
                 <div className={styles.panelHeader}>
-                  System Tasks
-                  <span className={styles.countBadge}>{systemJobs.length}</span>
+                  Your Features
+                  {featureJobs.length > 0 && <span className={styles.countBadge}>{featureJobs.length}</span>}
+                </div>
+                <div className={styles.headerActions}>
+                  <button type="button" className={styles.headerBtn} onClick={() => setWizardOpen(true)}>
+                    + Add Feature
+                  </button>
+                  <DropdownButton
+                    label="Export"
+                    className={styles.headerBtn}
+                    disabled={jobs.length === 0}
+                    options={[
+                      { label: "File", onClick: handleExportFile },
+                      { label: "Clipboard", onClick: handleExportClipboard },
+                    ]}
+                  />
+                  <DropdownButton
+                    label="Import"
+                    className={styles.headerBtn}
+                    options={[
+                      { label: "File", onClick: () => fileInputRef.current?.click() },
+                      { label: "Clipboard", onClick: handleImportClipboard },
+                    ]}
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    style={{ display: "none" }}
+                    onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
+                  />
                 </div>
               </div>
               <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
-                Infrastructure that keeps Tinkerbell in sync with Plex. Always on; schedules are tweakable.
+                Optional capabilities you've installed. Toggle off to pause; remove anytime from each feature's page.
               </p>
-              <div className="table-scroll">
+              {featureJobs.length === 0 && (
+                <p className={styles.muted} style={{ padding: "16px 0" }}>
+                  No features installed yet. Click <strong>+ Add Feature</strong> to pick one.
+                </p>
+              )}
+
+              {selected.size > 0 && (
+                <div className={shared.bulkBar}>
+                  {bulkProgress ? (
+                    <>
+                      <span style={{ fontSize: "0.8rem" }}>
+                        {bulkProgress.done}/{bulkProgress.total}
+                      </span>
+                      <div className={shared.bulkProgressBar}>
+                        <div
+                          className={shared.bulkProgressFill}
+                          style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{selected.size} selected</span>
+                      <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
+                        Enable
+                      </button>
+                      <button
+                        className={`${styles.button} ${styles.buttonSmall}`}
+                        onClick={() => bulkSetEnabled(false)}
+                      >
+                        Disable
+                      </button>
+                      <button
+                        className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
+                        onClick={() => setSelected(new Set())}
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              <div className="table-scroll in-panel">
                 <table className={styles.compactTable}>
                   <thead>
                     <tr>
+                      <th className={shared.checkboxCell}>
+                        <input
+                          type="checkbox"
+                          className={shared.checkbox}
+                          checked={featureJobs.length > 0 && featureJobs.every((j) => selected.has(j.id))}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
                       <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Name
                       </SortableTh>
@@ -512,7 +690,9 @@ export default function Jobs() {
                       >
                         Schedule
                       </SortableTh>
-                      <th>On</th>
+                      <SortableTh sortKey="enabled" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                        On
+                      </SortableTh>
                       <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Last Run
                       </SortableTh>
@@ -528,267 +708,100 @@ export default function Jobs() {
                     </tr>
                   </thead>
                   <tbody>
-                    {systemJobs.map((job) => {
-                      const isHealth = job.id === "healthcheck";
-                      return (
-                        <tr
-                          key={job.id}
-                          className={styles.clickableRow}
-                          onClick={() => navigate(isHealth ? "/settings/health" : `/jobs/${job.id}`)}
+                    {featureJobs.map((job, i) => (
+                      <tr
+                        key={job.id}
+                        className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
+                        onClick={() => navigate(`/jobs/${job.id}`)}
+                      >
+                        <td
+                          className={shared.checkboxCell}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCheckboxClick(i, e);
+                          }}
                         >
-                          <td className={styles.nameCell}>
-                            <span className={styles.jobNameText}>{job.name}</span>
-                            <span className={styles.scheduleHintInline}>
-                              {job.schedule ? describeCron(job.schedule) : "Manual"}
+                          <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
+                        </td>
+                        <td className={styles.nameCell}>
+                          <span className={styles.jobNameText}>{job.name}</span>
+                          <span className={styles.scheduleHintInline}>
+                            {job.schedule ? describeCron(job.schedule) : "Manual"}
+                          </span>
+                        </td>
+                        <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
+                          <span className={styles.cronText} title={job.schedule || undefined}>
+                            {job.schedule ? describeCron(job.schedule) : EMPTY}
+                          </span>
+                        </td>
+                        <td
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <ToggleSwitch
+                            size="sm"
+                            checked={!!job.enabled}
+                            onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
+                          />
+                        </td>
+                        <td className={styles.monoCell}>
+                          {job.lastRunStartedAt ? (
+                            <RelativeTime timestamp={job.lastRunStartedAt} />
+                          ) : (
+                            <span className={styles.muted}>Never</span>
+                          )}
+                        </td>
+                        <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
+                          {job.lastRunStatus && (
+                            <span className={styles.statusRow}>
+                              <span className={styles.statusDot} data-status={job.lastRunStatus} />
+                              {job.lastRunStatus}
                             </span>
-                          </td>
-                          <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
-                            <span className={styles.cronText} title={job.schedule || undefined}>
-                              {job.schedule ? describeCron(job.schedule) : EMPTY}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={styles.requiredPill}>Required</span>
-                          </td>
-                          <td className={styles.monoCell}>
-                            {job.lastRunStartedAt ? (
-                              <RelativeTime timestamp={job.lastRunStartedAt} />
-                            ) : (
-                              <span className={styles.muted}>Never</span>
-                            )}
-                          </td>
-                          <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
-                            {job.lastRunStatus && (
-                              <span className={styles.statusRow}>
-                                <span className={styles.statusDot} data-status={job.lastRunStatus} />
-                                {job.lastRunStatus}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
 
-          {/* ─── Your Features ────────────────────────────────────────── */}
-          <div className={styles.panel}>
-            <div className={styles.panelHeaderRow}>
-              <div className={styles.panelHeader}>
-                Your Features
-                {featureJobs.length > 0 && <span className={styles.countBadge}>{featureJobs.length}</span>}
-              </div>
-              <div className={styles.headerActions}>
-                <button type="button" className={styles.headerBtn} onClick={() => setWizardOpen(true)}>
-                  + Add Feature
-                </button>
-                <DropdownButton
-                  label="Export"
-                  className={styles.headerBtn}
-                  disabled={jobs.length === 0}
-                  options={[
-                    { label: "File", onClick: handleExportFile },
-                    { label: "Clipboard", onClick: handleExportClipboard },
-                  ]}
-                />
-                <DropdownButton
-                  label="Import"
-                  className={styles.headerBtn}
-                  options={[
-                    { label: "File", onClick: () => fileInputRef.current?.click() },
-                    { label: "Clipboard", onClick: handleImportClipboard },
-                  ]}
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json"
-                  style={{ display: "none" }}
-                  onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
-                />
-              </div>
-            </div>
-            <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
-              Optional capabilities you've installed. Toggle off to pause; remove anytime from each feature's page.
-            </p>
-            {featureJobs.length === 0 && (
-              <p className={styles.muted} style={{ padding: "16px 0" }}>
-                No features installed yet. Click <strong>+ Add Feature</strong> to pick one.
-              </p>
-            )}
-
-            {selected.size > 0 && (
-              <div className={shared.bulkBar}>
-                {bulkProgress ? (
-                  <>
-                    <span style={{ fontSize: "0.8rem" }}>
-                      {bulkProgress.done}/{bulkProgress.total}
-                    </span>
-                    <div className={shared.bulkProgressBar}>
-                      <div
-                        className={shared.bulkProgressFill}
-                        style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{selected.size} selected</span>
-                    <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(true)}>
-                      Enable
+            {/* ─── Recent Logs ──────────────────────────────────────────── */}
+            {latestRunPerJob.length > 0 && (
+              <div className={styles.panel}>
+                <div className={styles.logTabsHeader}>
+                  <div className={styles.panelHeader}>Recent Logs</div>
+                  <div className={styles.logTabs}>
+                    {latestRunPerJob.map((run) => (
+                      <button
+                        key={run.id}
+                        className={`${styles.logTab} ${selectedRunId === run.id ? styles.logTabActive : ""}`}
+                        onClick={() => setSelectedRunId(run.id)}
+                      >
+                        <span className={styles.statusDot} data-status={run.status} />
+                        {run.jobName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {selectedRunQuery.data ? (
+                  <div className={styles.logWrapper}>
+                    <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(selectedLog)}>
+                      Copy
                     </button>
-                    <button className={`${styles.button} ${styles.buttonSmall}`} onClick={() => bulkSetEnabled(false)}>
-                      Disable
-                    </button>
-                    <button
-                      className={`${shared.buttonSecondary} ${styles.buttonSmall}`}
-                      onClick={() => setSelected(new Set())}
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
+                    <pre ref={logRef} className={styles.logViewer}>
+                      {selectedLog || "(no output)"}
+                    </pre>
+                  </div>
+                ) : selectedRunQuery.isLoading ? (
+                  <div className={styles.muted}>Loading log…</div>
+                ) : null}
               </div>
             )}
-
-            <div className="table-scroll">
-              <table className={styles.compactTable}>
-                <thead>
-                  <tr>
-                    <th className={shared.checkboxCell}>
-                      <input
-                        type="checkbox"
-                        className={shared.checkbox}
-                        checked={featureJobs.length > 0 && featureJobs.every((j) => selected.has(j.id))}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
-                    <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                      Name
-                    </SortableTh>
-                    <SortableTh
-                      sortKey="schedule"
-                      activeKey={sortKey}
-                      activeDir={sortDir}
-                      onSort={toggleSort}
-                      className={styles.hideOnMobile}
-                    >
-                      Schedule
-                    </SortableTh>
-                    <SortableTh sortKey="enabled" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                      On
-                    </SortableTh>
-                    <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                      Last Run
-                    </SortableTh>
-                    <SortableTh
-                      sortKey="lastRunStatus"
-                      activeKey={sortKey}
-                      activeDir={sortDir}
-                      onSort={toggleSort}
-                      className={styles.hideOnMobile}
-                    >
-                      Status
-                    </SortableTh>
-                  </tr>
-                </thead>
-                <tbody>
-                  {featureJobs.map((job, i) => (
-                    <tr
-                      key={job.id}
-                      className={`${styles.clickableRow} ${selected.has(job.id) ? shared.selectedRow : ""}`}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                    >
-                      <td
-                        className={shared.checkboxCell}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCheckboxClick(i, e);
-                        }}
-                      >
-                        <input type="checkbox" className={shared.checkbox} checked={selected.has(job.id)} readOnly />
-                      </td>
-                      <td className={styles.nameCell}>
-                        <span className={styles.jobNameText}>{job.name}</span>
-                        <span className={styles.scheduleHintInline}>
-                          {job.schedule ? describeCron(job.schedule) : "Manual"}
-                        </span>
-                      </td>
-                      <td className={`${styles.scheduleCell} ${styles.hideOnMobile}`}>
-                        <span className={styles.cronText} title={job.schedule || undefined}>
-                          {job.schedule ? describeCron(job.schedule) : EMPTY}
-                        </span>
-                      </td>
-                      <td
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <ToggleSwitch
-                          size="sm"
-                          checked={!!job.enabled}
-                          onChange={(checked) => updateMutation.mutate({ jobId: job.id, enabled: checked })}
-                        />
-                      </td>
-                      <td className={styles.monoCell}>
-                        {job.lastRunStartedAt ? (
-                          <RelativeTime timestamp={job.lastRunStartedAt} />
-                        ) : (
-                          <span className={styles.muted}>Never</span>
-                        )}
-                      </td>
-                      <td className={`${styles.statusCell} ${styles.hideOnMobile}`}>
-                        {job.lastRunStatus && (
-                          <span className={styles.statusRow}>
-                            <span className={styles.statusDot} data-status={job.lastRunStatus} />
-                            {job.lastRunStatus}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
-
-          {/* ─── Recent Logs ──────────────────────────────────────────── */}
-          {latestRunPerJob.length > 0 && (
-            <div className={styles.panel}>
-              <div className={styles.logTabsHeader}>
-                <div className={styles.panelHeader}>Recent Logs</div>
-                <div className={styles.logTabs}>
-                  {latestRunPerJob.map((run) => (
-                    <button
-                      key={run.id}
-                      className={`${styles.logTab} ${selectedRunId === run.id ? styles.logTabActive : ""}`}
-                      onClick={() => setSelectedRunId(run.id)}
-                    >
-                      <span className={styles.statusDot} data-status={run.status} />
-                      {run.jobName}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {selectedRunQuery.data ? (
-                <div className={styles.logWrapper}>
-                  <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(selectedLog)}>
-                    Copy
-                  </button>
-                  <pre ref={logRef} className={styles.logViewer}>
-                    {selectedLog || "(no output)"}
-                  </pre>
-                </div>
-              ) : selectedRunQuery.isLoading ? (
-                <div className={styles.muted}>Loading log…</div>
-              ) : null}
-            </div>
-          )}
         </div>
-      </div>
+      </PageShell>
       {wizardOpen && <FeatureWizard onClose={() => setWizardOpen(false)} />}
     </PullToRefresh>
   );

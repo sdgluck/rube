@@ -1,33 +1,46 @@
+/* Copy says what to do next, not that something is missing. */
+
 .container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
+  padding: 44px 24px;
   text-align: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .icon {
-  width: 48px;
-  height: 48px;
-  color: var(--text-muted);
-  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sunken);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  opacity: 1;
   margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .title {
-  font-size: 0.95rem;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink);
   margin: 0;
 }
 
 .description {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--ink-3);
   margin: 0;
-  max-width: 320px;
+  max-width: 44ch;
   line-height: 1.5;
 }
 

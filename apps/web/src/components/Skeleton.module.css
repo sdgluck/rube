@@ -1,23 +1,25 @@
+/* Skeletons keep the shape of what's loading — varied widths, real row
+ * heights — so the page doesn't visibly reflow when the data lands. */
+
 @keyframes shimmer {
   0% {
-    background-position: -400px 0;
+    background-position: -320px 0;
   }
   100% {
-    background-position: 400px 0;
+    background-position: 320px 0;
   }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--card-poster-bg) 25%, var(--bg-surface-hover) 50%, var(--card-poster-bg) 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.5s infinite linear;
-  border-radius: 6px;
+  background: linear-gradient(90deg, #eef1f0 25%, #f8faf9 50%, #eef1f0 75%);
+  background-size: 640px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--r-tag);
 }
 
 .line {
   composes: skeleton;
-  height: 14px;
-  border-radius: 4px;
+  height: 11px;
 }
 
 .block {
@@ -25,15 +27,14 @@
 }
 
 .tableRow td {
-  padding: 0 12px;
-  height: 44px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 0 16px;
+  height: 38px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .tableCell {
   composes: skeleton;
-  height: 14px;
-  border-radius: 4px;
+  height: 11px;
 }
 
 .wrapper {
@@ -51,7 +52,7 @@
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
   gap: 12px;
 }
 
@@ -60,37 +61,40 @@
 .collectionsTable {
   width: 100%;
   border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
 }
 
 .collectionsTable th {
   text-align: left;
-  padding: 0 12px;
+  padding: 0 16px;
   height: 32px;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  background: var(--surface-header);
+  border-bottom: 1px solid #ecefee;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .jobsRow td {
-  padding: 0 12px;
-  height: 44px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 0 16px;
+  height: 38px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .detailLayout {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   margin-top: 16px;
 }
 
 .detailPoster {
   composes: skeleton;
-  width: 200px;
-  height: 300px;
-  border-radius: 8px;
+  width: 148px;
+  height: 222px;
+  border-radius: var(--r-sunken);
   flex-shrink: 0;
 }
 
@@ -107,7 +111,7 @@
   }
 
   .detailPoster {
-    width: 140px;
-    height: 210px;
+    width: 120px;
+    height: 180px;
   }
 }

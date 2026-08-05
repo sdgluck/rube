@@ -9,52 +9,42 @@
 /* ─── Summary bar ───────────────────────────────────────────────────────── */
 
 .summaryBar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 12px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-surface);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 12px;
 }
 
 .summaryItem {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 12px 14px 13px;
+  min-width: 0;
 }
 
 .summaryLabel {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .summaryValue {
-  font-size: 1.25rem;
-  font-weight: 700;
+  margin-top: 2px;
+  font: var(--t-metric);
+  letter-spacing: var(--t-metric-tracking);
   font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-  letter-spacing: 0.02em;
+  color: var(--ink);
 }
 
 .summarySmall {
-  font-size: 0.85rem;
+  font-size: 15px;
 }
 
 .summaryAccent {
-  color: var(--accent);
-}
-
-.summaryDivider {
-  width: 1px;
-  height: 32px;
-  background: var(--border-light);
-  flex-shrink: 0;
+  color: var(--accent-text);
 }
 
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
@@ -74,25 +64,24 @@
 /* ─── Panel ─────────────────────────────────────────────────────────────── */
 
 .panel {
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 12px;
-  background: var(--bg-surface);
+  border: none;
+  border-radius: var(--r-panel);
+  padding: 15px 18px 16px;
+  background: var(--surface);
+  box-shadow: var(--e-card);
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .panelHeader {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
   margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .panelHeaderRow {
@@ -110,13 +99,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.6rem;
-  font-weight: 700;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  padding: 2px 7px;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+  font: 600 10.5px/1.4 var(--font-mono);
+  border-radius: var(--r-pill);
 }
 
 .headerActions {
@@ -158,7 +145,7 @@
   border: 1px solid var(--border-light);
   border-radius: 4px;
   background: none;
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -203,7 +190,7 @@
 .jobNameText {
   display: inline-block;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -218,7 +205,7 @@
   border-radius: 999px;
   background: var(--bg-badge);
   color: var(--text-badge);
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   vertical-align: middle;
@@ -234,14 +221,14 @@
 }
 
 .cronText {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-secondary);
 }
 
 .monoCell {
   white-space: nowrap;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -253,7 +240,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-secondary);
   text-transform: capitalize;
 }
@@ -305,7 +292,7 @@
 /* ─── Muted text ────────────────────────────────────────────────────────── */
 
 .muted {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -315,7 +302,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 600;
   text-transform: capitalize;
 }
@@ -363,7 +350,7 @@
 }
 
 .cronHint {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -390,7 +377,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 .runLink {
@@ -405,16 +392,16 @@
 
 .runMeta {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 12px;
 }
 
 /* ─── Log viewer (JobDetail/JobRun) ──────────────────────────────────────── */
 
 .logViewer {
-  background: #1a1a2e;
+  background: var(--sidebar);
   color: #e0e0e0;
   font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
-  font-size: 0.82rem;
+  font-size: 12px;
   line-height: 1.5;
   padding: 16px;
   border-radius: 8px;
@@ -444,7 +431,7 @@
   padding: 6px 10px;
   border: 1px solid var(--border-input);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   background: var(--bg-input);
   color: var(--text-primary);
   width: 200px;
@@ -460,7 +447,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -478,7 +465,7 @@
   color: var(--text-secondary);
   padding: 5px 12px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -501,7 +488,7 @@
   color: #ccc;
   padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 11px;
   cursor: pointer;
   z-index: 1;
   transition:
@@ -534,16 +521,17 @@
 
 /* ─── Run detail page (JobRun) ───────────────────────────────────────────── */
 
+/* Drill-ins open with a mono back link to the parent route. */
 .backLink {
-  color: var(--accent);
+  color: var(--ink-3);
   text-decoration: none;
-  font-size: 0.9rem;
+  font: var(--t-data);
   display: inline-block;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .backLink:hover {
-  text-decoration: underline;
+  color: var(--accent-text);
 }
 
 .runDetail {
@@ -560,7 +548,7 @@
 }
 
 .runTitle {
-  font-size: 1.3rem;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -568,7 +556,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 6px 16px;
-  font-size: 0.9rem;
+  font-size: 13px;
 }
 
 .metaLabel {
@@ -578,7 +566,7 @@
 
 .noRuns {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-style: italic;
 }
 
@@ -601,7 +589,7 @@
 
 .configLabel {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -618,7 +606,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
   cursor: pointer;
 }
 
@@ -627,7 +615,7 @@
   padding: 4px 8px;
   border: 1px solid var(--border-input);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 .configNumberInput:focus {
@@ -637,7 +625,7 @@
 }
 
 .configHint {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -648,7 +636,7 @@
 }
 
 .runsTitle {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-secondary);
   margin: 0;
@@ -657,14 +645,15 @@
 /* ─── Job detail page (JobDetail) ────────────────────────────────────────── */
 
 .heading {
-  font-size: 1.5rem;
+  font: var(--t-page);
+  letter-spacing: var(--t-page-tracking);
   margin-bottom: 0;
 }
 
 .jobDetail {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .jobDetailHeader {
@@ -695,26 +684,28 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid var(--border-light);
-  color: var(--text-secondary);
-  background: var(--bg-surface);
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font: 600 10.5px/1.4 var(--font-mono);
+  border: none;
+  color: var(--status-neutral-fg);
+  background: var(--status-neutral-bg);
   white-space: nowrap;
 }
 
 .statusPill[data-status="running"] {
-  border-color: rgba(59, 130, 246, 0.4);
   color: var(--status-info-fg);
   background: var(--status-info-bg);
 }
 
 .statusPill[data-status="failed"] {
-  border-color: rgba(239, 68, 68, 0.4);
   color: var(--status-error-fg);
   background: var(--status-error-bg);
+}
+
+.statusPill[data-status="completed"] {
+  color: var(--status-ok-fg);
+  background: var(--status-ok-bg);
 }
 
 .statusPillMeta {
@@ -726,22 +717,21 @@
 .alwaysOnPill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font: 600 10.5px/1.4 var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid var(--border-light);
-  color: var(--text-muted);
-  background: var(--bg-surface);
+  letter-spacing: 0.06em;
+  border: none;
+  color: var(--ink-3);
+  background: var(--fill-quiet);
   white-space: nowrap;
 }
 
 .jobDetailColumns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 16px;
   align-items: stretch;
 }
 
@@ -752,7 +742,7 @@
 .jobDescription {
   margin: -12px 0 0;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 13px;
   line-height: 1.45;
   max-width: 70ch;
 }
@@ -761,7 +751,7 @@
   display: inline-block;
   padding: 1px 8px;
   border-radius: 4px;
-  font-size: 0.65rem;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -809,7 +799,7 @@
 
 .detailSectionTitle {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 13px;
   padding: 0 6px;
   color: var(--text-secondary);
 }
@@ -826,7 +816,7 @@
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -835,7 +825,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-light);
   vertical-align: top;
-  font-size: 0.875rem;
+  font-size: 12.5px;
 }
 
 .configTable td:first-child {
@@ -851,19 +841,19 @@
 
 .fieldHelp {
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
 .fieldHelpError {
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--status-error-fg);
 }
 
 .configSummary {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 .bywGroups {
@@ -881,7 +871,7 @@
 .bywGroupHeader {
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 13px;
   padding: 4px 0;
   user-select: none;
 }
@@ -921,7 +911,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -933,7 +923,7 @@
 }
 
 .bywCardTitle {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -941,7 +931,7 @@
 }
 
 .bywCardMeta {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -968,7 +958,7 @@
   }
 
   .summaryValue {
-    font-size: 1.1rem;
+    font-size: 15px;
   }
 
   .grid {
@@ -985,7 +975,7 @@
 
   .scheduleHintInline {
     display: block;
-    font-size: 0.7rem;
+    font-size: 11px;
     color: var(--text-muted);
     margin-top: 1px;
   }

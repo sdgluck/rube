@@ -7,10 +7,10 @@
 .button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   width: 100%;
   height: 100%;
-  padding: 10px 12px;
+  padding: 0 16px;
   background: none;
   border: none;
   font: inherit;
@@ -24,7 +24,7 @@
 }
 
 .button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .button:focus-visible {
@@ -34,7 +34,8 @@
 
 .arrow {
   opacity: 0;
-  font-size: 0.7em;
+  font-size: 0.85em;
+  margin-left: 5px;
   transition: opacity 0.12s;
 }
 
@@ -43,7 +44,8 @@
 }
 
 .arrowActive {
-  font-size: 0.7em;
+  font-size: 0.85em;
+  margin-left: 5px;
   opacity: 1;
-  color: var(--accent);
+  color: var(--accent-text);
 }

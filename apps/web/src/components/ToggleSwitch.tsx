@@ -3,7 +3,7 @@ import styles from "./ToggleSwitch.module.css";
 interface ToggleSwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   disabled?: boolean;
 }
 

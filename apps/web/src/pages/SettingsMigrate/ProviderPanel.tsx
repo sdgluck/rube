@@ -160,7 +160,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           </p>
         )}
         {plan.proposed.length > 0 && (
-          <div className="table-scroll">
+          <div className="table-scroll in-panel">
             <table className={local.planTable}>
               <thead>
                 <tr>

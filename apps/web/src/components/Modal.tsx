@@ -10,6 +10,8 @@ interface ModalProps {
   /** Accessible name. Rendered as the dialog heading unless `hideTitle`. */
   title: string;
   hideTitle?: boolean;
+  /** Mono string beside the title — a step count, a scope, a total. */
+  meta?: ReactNode;
   size?: Size;
   /** Suppress the default close button — for dialogs with their own header. */
   hideCloseButton?: boolean;
@@ -40,6 +42,7 @@ export default function Modal({
   onClose,
   title,
   hideTitle = false,
+  meta,
   size = "md",
   hideCloseButton = false,
   dismissOnBackdrop = true,
@@ -143,6 +146,7 @@ export default function Modal({
           <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
+          {meta && <span className={styles.meta}>{meta}</span>}
           {!hideCloseButton && (
             <button type="button" className={styles.close} onClick={close} aria-label="Close dialog">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { SidebarStreamCount } from "#layout/Sidebar";
-import { MORE_PAGES, MORE_SECTIONS } from "#/nav";
+import { MORE_PAGES, MORE_SECTIONS, type NavItem } from "#/nav";
+import { trpc } from "#/trpc";
 
 const ICON_PROPS = {
   className: "bottom-nav-icon",
@@ -29,8 +30,34 @@ const TABS = [
   },
 ] as const;
 
+type SheetMetrics = Record<string, number | "ok" | "error" | null>;
+
+/** The card's second line: what this page currently holds, in mono. */
+function sheetMeta(item: NavItem, metrics: SheetMetrics | undefined): { dot?: string; text: string } {
+  if (!item.metric || !metrics) return { text: "" };
+  if (item.metric.kind === "streams") return { text: "" };
+  const value = metrics[item.metric.key];
+  if (item.metric.kind === "status") {
+    if (value === "ok") return { dot: "ok", text: "ok" };
+    if (value === "error") return { dot: "error", text: "failed" };
+    return { text: "never run" };
+  }
+  if (typeof value !== "number" || value === 0) return { text: "—" };
+  if (item.metric.key === "eventsErrors24h") {
+    return { dot: "error", text: `${value} error${value === 1 ? "" : "s"} 24h` };
+  }
+  return { text: value.toLocaleString() };
+}
+
 export default function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
+  // Only fetched once the sheet has been opened: the rail that normally drives
+  // this query isn't rendered on mobile.
+  const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
+    enabled: moreOpen,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
   const location = useLocation();
   const closeMore = useCallback(() => setMoreOpen(false), []);
 
@@ -60,15 +87,24 @@ export default function BottomNav() {
        */}
       <div className={`bottom-sheet ${moreOpen ? "bottom-sheet-open" : ""}`} inert={!moreOpen}>
         <div className="bottom-sheet-handle" />
-        <nav className="bottom-sheet-nav" aria-label="More pages">
+        <nav aria-label="More pages">
           {MORE_SECTIONS.map((section) => (
             <div key={section.label} className="bottom-sheet-section">
-              <div className="nav-section-title">{section.label}</div>
-              {section.items.map((p) => (
-                <NavLink key={p.to} to={p.to} className="bottom-sheet-link" onClick={closeMore}>
-                  {p.label}
-                </NavLink>
-              ))}
+              <div className="bottom-sheet-section-title">{section.label}</div>
+              <div className="bottom-sheet-nav">
+                {section.items.map((p) => {
+                  const meta = sheetMeta(p, metricsQuery.data as SheetMetrics | undefined);
+                  return (
+                    <NavLink key={p.to} to={p.to} className="bottom-sheet-link" onClick={closeMore}>
+                      <span className="bottom-sheet-link-label">
+                        {meta.dot && <span className={`bottom-sheet-dot bottom-sheet-dot-${meta.dot}`} />}
+                        {p.label}
+                      </span>
+                      {meta.text && <span className="bottom-sheet-link-meta">{meta.text}</span>}
+                    </NavLink>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>

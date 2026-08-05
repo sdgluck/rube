@@ -5,6 +5,7 @@ import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { useListParams } from "#hooks/useListParams";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import PageShell from "#components/PageShell";
 import Pagination from "#components/Pagination";
 import PullToRefresh from "#components/PullToRefresh";
 import RelativeTime from "#components/RelativeTime";
@@ -68,9 +69,11 @@ export default function Events() {
         query.refetch();
       }}
     >
-      <div>
-        <h2 className={sharedStyles.heading}>Events{total > 0 && <span className="count-badge">{total}</span>}</h2>
-
+      <PageShell
+        title="Events"
+        count={total > 0 ? total.toLocaleString() : undefined}
+        subtitle="Everything Tinkerbell has done and everything that happened to it, newest first."
+      >
         <div className={sharedStyles.filters}>
           <input
             type="text"
@@ -173,7 +176,7 @@ export default function Events() {
             <Pagination page={page} totalPages={totalPages} total={total} noun="events" onPageChange={setPage} />
           </>
         )}
-      </div>
+      </PageShell>
     </PullToRefresh>
   );
 }

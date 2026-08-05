@@ -343,7 +343,9 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
   const addGroup = () => replaceGroup({ ...group, children: [...group.children, makeGroup("any")] });
 
   return (
-    <div className={isRoot ? styles.smartRoot : styles.smartGroup}>
+    // Depth reads off the rail colour, not indentation alone — three levels of
+    // plain indent are indistinguishable once a group has more than two rows.
+    <div className={isRoot ? styles.smartRoot : styles.smartGroup} data-depth={Math.min(path.length, 3)}>
       {showCombiner && (
         <div className={styles.smartMatchRow}>
           <span className={styles.smartLabel}>Match</span>
