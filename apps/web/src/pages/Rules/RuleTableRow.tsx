@@ -86,7 +86,7 @@ export default function RuleTableRow({
   return (
     <Fragment>
       <tr data-rule-id={rule.id} className={highlighted ? styles.rowHighlighted : undefined}>
-        <td className={styles.checkboxCell}>
+        <td className={styles.checkboxCell} data-cell="hide">
           <input
             type="checkbox"
             aria-label={`Select ${rule.name}`}
@@ -97,20 +97,20 @@ export default function RuleTableRow({
             }}
           />
         </td>
-        <td>{rule.name}</td>
-        <td>
+        <td data-cell="title">{rule.name}</td>
+        <td data-cell="pill">
           <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
         </td>
-        <td className={styles.toggleCell}>
+        <td className={styles.toggleCell} data-cell="hide">
           <ToggleSwitch checked={!!rule.enabled} onChange={onToggleEnabled} size="sm" />
         </td>
-        <td className={styles.statusCell}>
+        <td className={styles.statusCell} data-cell="meta">
           <StatusCell rule={rule} isTesting={isTesting} isRunning={isRunning} />
         </td>
-        <td>
+        <td data-cell="hide">
           <span className={styles.configSummary}>{configSummary}</span>
         </td>
-        <td>
+        <td data-cell="hide">
           <div className={styles.actions}>
             {/* Preview / View only make sense when the last run actually
              * produced a collection. A `lastCollectionRatingKey` left over

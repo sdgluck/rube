@@ -721,12 +721,15 @@ td.previewBlockCell {
 
 /* Eleven columns, seven of them per-row actions: at the shared 16px cell
    gutter the name column loses and rule names wrap to two lines. Tighten the
-   gutter for this table only. */
-.tableBleedRight th,
-.tableBleedRight td {
-  padding: 0 10px;
-}
+   gutter for this table only — and only while it is still a table, since on
+   mobile the rows become cards and set their own padding. */
+@media (min-width: 769px) {
+  .tableBleedRight th,
+  .tableBleedRight td {
+    padding: 0 10px;
+  }
 
-.tableBleedRight td:nth-child(2) {
-  min-width: 160px;
+  .tableBleedRight td[data-cell="title"] {
+    min-width: 160px;
+  }
 }

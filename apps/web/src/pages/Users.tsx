@@ -179,7 +179,7 @@ export default function Users() {
           ) : (
             <>
               <div className="table-scroll">
-                <table className={styles.table}>
+                <table className={sharedStyles.table}>
                   <thead>
                     <tr>
                       <SortableTh sortKey="username" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
@@ -188,7 +188,7 @@ export default function Users() {
                       <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Name
                       </SortableTh>
-                      <th>Label</th>
+                      <th>Personalization</th>
                       <SortableTh sortKey="collectionCount" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Collections
                       </SortableTh>
@@ -200,8 +200,8 @@ export default function Users() {
                   <tbody>
                     {users.map((user) => (
                       <tr key={user.userId}>
-                        <td>{user.username}</td>
-                        <td>
+                        <td data-cell="title">{user.username}</td>
+                        <td data-cell="meta">
                           <EditableName
                             userId={user.userId}
                             value={user.name}
@@ -222,11 +222,23 @@ export default function Users() {
                             onSettled={() => utils.users.list.invalidate()}
                           />
                         </td>
-                        <td>
-                          <span className={`${styles.label} ${styles.labelUser}`}>{user.label}</span>
+                        <td data-cell="pill">
+                          <span
+                            className={`${sharedStyles.statusPill} ${user.optedIn ? styles.pillOptedIn : styles.pillOptedOut}`}
+                            title={
+                              user.optedIn
+                                ? "Personalized home screens are on for this user"
+                                : "This user has opted out of personalization"
+                            }
+                          >
+                            <span className={sharedStyles.statusPillDot} aria-hidden="true" />
+                            {user.optedIn ? "opted in" : "opted out"}
+                          </span>
                         </td>
-                        <td>{user.collectionCount}</td>
-                        <td>
+                        <td data-cell="meta" className={`${sharedStyles.cellNum} ${styles.collectionsCell}`}>
+                          {user.collectionCount}
+                        </td>
+                        <td data-cell="meta">
                           {user.lastWatchedTitle ? (
                             <span>
                               {user.lastWatchedTitle}

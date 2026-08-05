@@ -5,7 +5,7 @@ import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { useListParams } from "#hooks/useListParams";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
-import PageShell from "#components/PageShell";
+import PageShell, { StatusChip } from "#components/PageShell";
 import Pagination from "#components/Pagination";
 import PullToRefresh from "#components/PullToRefresh";
 import RelativeTime from "#components/RelativeTime";
@@ -51,6 +51,13 @@ export default function Events() {
   );
 
   const typesQuery = trpc.events.types.useQuery(undefined, { refetchOnWindowFocus: false });
+  // The same tally the sidebar shows, so the header chip can't disagree with
+  // the rail beside it.
+  const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
+  const errors24h = metricsQuery.data?.eventsErrors24h ?? 0;
 
   const events = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
@@ -72,6 +79,13 @@ export default function Events() {
       <PageShell
         title="Events"
         count={total > 0 ? total.toLocaleString() : undefined}
+        chip={
+          errors24h > 0 ? (
+            <StatusChip tone="error" dot>
+              {errors24h} error{errors24h === 1 ? "" : "s"} 24h
+            </StatusChip>
+          ) : undefined
+        }
         subtitle="Everything Tinkerbell has done and everything that happened to it, newest first."
       >
         <div className={sharedStyles.filters}>
@@ -127,7 +141,7 @@ export default function Events() {
         ) : (
           <>
             <div className="table-scroll">
-              <table className={styles.table}>
+              <table className={sharedStyles.table}>
                 <thead>
                   <tr>
                     <SortableTh sortKey="timestamp" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
@@ -149,21 +163,25 @@ export default function Events() {
                     };
                     return (
                       <tr key={event.id}>
-                        <td className={styles.timestamp}>
+                        <td data-cell="meta" className={styles.timestamp}>
                           <RelativeTime timestamp={event.timestamp} />
                         </td>
-                        <td>
-                          <span className={`${styles.badge} ${badge.className}`}>
-                            {event.count > 1 ? `${event.count}× ` : ""}
-                            {badge.label}
-                          </span>
+                        <td data-cell="pill">
+                          <span className={`${sharedStyles.statusPill} ${badge.className}`}>{badge.label}</span>
                         </td>
-                        <td>
+                        <td data-cell="title">
                           {event.count > 1 && event.avgDurationMs != null
                             ? stripDurationFromMessage(event.message)
                             : event.message}
                           {event.count > 1 && event.avgDurationMs != null && (
                             <span className={styles.avgDuration}> (avg {formatDuration(event.avgDurationMs)})</span>
+                          )}
+                          {/* Repeats collapse into a trailing count rather than
+                              prefixing the type, which read as part of the name. */}
+                          {event.count > 1 && (
+                            <span className={sharedStyles.countBadge} title={`Repeated ${event.count} times`}>
+                              {event.count}×
+                            </span>
                           )}
                         </td>
                       </tr>

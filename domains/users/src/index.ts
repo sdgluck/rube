@@ -3,7 +3,7 @@
  */
 
 import { eq, or, asc, desc, lt, sql } from "drizzle-orm";
-import { db, plexUsers, likeContains } from "@tinkerbell/db";
+import { db, plexUsers, userPreferences, likeContains } from "@tinkerbell/db";
 import { readLocalCollections } from "@tinkerbell/core";
 import type { PlexClient } from "@tinkerbell/plex";
 
@@ -120,6 +120,10 @@ export function getLocalUsers(filters: UserFilters): {
     collectionCount: number;
     lastWatchedTitle: string | null;
     lastWatchedAt: number | null;
+    /** Whether this user opted into personalized home screens in the portal.
+        No preferences row means they never did — the same reading
+        `getUserPreferences` takes for a user it has never seen. */
+    optedIn: boolean;
   }>;
   total: number;
   offset: number;
@@ -147,8 +151,20 @@ export function getLocalUsers(filters: UserFilters): {
   const total = countResult?.count ?? 0;
 
   const rows = db
-    .select()
+    .select({
+      userId: plexUsers.userId,
+      username: plexUsers.username,
+      name: plexUsers.name,
+      label: plexUsers.label,
+      collectionCount: plexUsers.collectionCount,
+      lastWatchedTitle: plexUsers.lastWatchedTitle,
+      lastWatchedAt: plexUsers.lastWatchedAt,
+      optedIn: userPreferences.optedIn,
+    })
     .from(plexUsers)
+    // Left, not inner: a user who has never opened the portal has no
+    // preferences row and must still appear in the list.
+    .leftJoin(userPreferences, eq(userPreferences.userId, plexUsers.userId))
     .where(whereClause)
     .orderBy(orderFn(sortCol))
     .limit(limit)
@@ -164,6 +180,7 @@ export function getLocalUsers(filters: UserFilters): {
       collectionCount: row.collectionCount,
       lastWatchedTitle: row.lastWatchedTitle,
       lastWatchedAt: row.lastWatchedAt,
+      optedIn: row.optedIn === 1,
     })),
     total,
     offset,

@@ -1189,8 +1189,19 @@
 
   /* Tables become cards on mobile rather than scrolling sideways: a row of a
      dense admin table is unreadable at 390px, and a horizontal scrollbar hides
-     the columns that matter. The first cell is the title; the rest stack under
-     it as meta. */
+     the columns that matter.
+
+     Cells declare their role with `data-cell` rather than being picked out by
+     position. Media's columns are user-configurable, so any nth-child rule
+     hides whichever columns happen to land in those slots. Roles are:
+
+       title  the one thing the row is about — 13px/600, its own line
+       meta   machine facts, run together on one line under the title
+       pill   a status pill or badge, on its own line
+       hide   not worth the width on a phone
+
+     An unannotated cell falls through to `meta`, so a table nobody has got to
+     yet still degrades into something readable. */
   .table,
   .table tbody,
   .table tr,
@@ -1202,7 +1213,18 @@
     display: none;
   }
 
+  /* The card is a wrapping flex row: title and pill claim a full line, the
+     metas share the line under them. Spacing comes from `gap`, not from
+     separator glyphs — a `::before` interpunct can't tell whether the cell
+     before it was hidden, so it strands a leading "·" whenever a column is
+     dropped. Gaps have no such edge case: a `display: none` cell simply
+     doesn't take part. */
   .table tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 10px;
+    row-gap: 2px;
     background: var(--surface);
     border-radius: var(--r-sunken);
     box-shadow: var(--e-flat);
@@ -1215,36 +1237,31 @@
     background: none;
     border: none;
     height: auto;
-    padding: 2px 0;
-  }
-
-  /* The title column, whichever page it belongs to. */
-  .table td:nth-child(2) {
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  /* Hide: Checkbox, Smart, Labels, Rule, Added, Delete on mobile */
-  .table td:nth-child(1),
-  .table td:nth-child(5),
-  .table td:nth-child(6),
-  .table td:nth-child(7),
-  .table td:nth-child(8),
-  .table td:nth-child(9) {
-    display: none;
-  }
-
-  /* Remaining meta sits on one line under the title. */
-  .table td:nth-child(3),
-  .table td:nth-child(4) {
-    display: inline-block;
+    padding: 0;
     font: var(--t-data);
     color: var(--ink-3);
   }
 
-  .table td:nth-child(3)::after {
-    content: " ·";
-    padding-right: 4px;
+  /* Roles order themselves, so every card reads title → meta → pill whatever
+     order the columns happen to sit in for that page. */
+  .table td[data-cell="title"] {
+    order: -1;
+    flex-basis: 100%;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 1px;
+  }
+
+  .table td[data-cell="pill"] {
+    order: 1;
+    flex-basis: 100%;
+    margin: 4px 0 2px;
+  }
+
+  .table td[data-cell="hide"] {
+    display: none;
   }
 
   .filters {

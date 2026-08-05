@@ -488,6 +488,7 @@ export default function Collections() {
                         >
                           <td
                             className={styles.checkboxCell}
+                            data-cell="hide"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCheckboxClick(i, e);
@@ -500,11 +501,11 @@ export default function Collections() {
                               readOnly
                             />
                           </td>
-                          <td>{col.title}</td>
-                          <td>{col.sectionTitle}</td>
-                          <td>{col.childCount}</td>
-                          <td>{col.smart ? "Yes" : "No"}</td>
-                          <td>
+                          <td data-cell="title">{col.title}</td>
+                          <td data-cell="meta">{col.sectionTitle}</td>
+                          <td data-cell="meta">{col.childCount}</td>
+                          <td data-cell="hide">{col.smart ? "Yes" : "No"}</td>
+                          <td data-cell="hide">
                             {labels
                               .filter((l) => !l.startsWith("Rule:"))
                               .map((label) => (
@@ -516,7 +517,7 @@ export default function Collections() {
                                 </span>
                               ))}
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
+                          <td data-cell="hide" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                               const rid = findRuleId(labels);
                               if (!rid) return <span className={styles.muted}>—</span>;
@@ -528,8 +529,10 @@ export default function Collections() {
                               );
                             })()}
                           </td>
-                          <td>{col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : ""}</td>
-                          <td>
+                          <td data-cell="meta">
+                            {col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : ""}
+                          </td>
+                          <td data-cell="hide">
                             <button
                               className={`${styles.buttonDanger} ${styles.buttonSmall}`}
                               onClick={(e) => {

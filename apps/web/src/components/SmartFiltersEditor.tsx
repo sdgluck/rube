@@ -301,6 +301,9 @@ export default SmartFiltersEditor;
 
 // ─── Group rendering ─────────────────────────────────────────────────────────
 
+/** Depth 1–3 have a rail colour; deeper would read as undifferentiated indent. */
+const MAX_GROUP_DEPTH = 3;
+
 interface GroupBodyProps {
   group: SmartFilterGroup;
   path: number[];
@@ -308,9 +311,11 @@ interface GroupBodyProps {
   allFields: string[];
   sectionId: string | null;
   onUpdate: (next: SmartFilterGroup) => void;
+  /** Absent on the root group, which can't be removed. */
+  onRemoveGroup?: () => void;
 }
 
-function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: GroupBodyProps) {
+function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate, onRemoveGroup }: GroupBodyProps) {
   const buckets = useMemo(() => bucketChildren(group), [group]);
   const showCombiner = group.children.length > 1;
 
@@ -342,22 +347,45 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
   const addLeaf = () => replaceGroup({ ...group, children: [...group.children, makeLeaf()] });
   const addGroup = () => replaceGroup({ ...group, children: [...group.children, makeGroup("any")] });
 
+  // The word that joins each row to the one above it, so a reader never has to
+  // scroll back up to the header to know how the rows combine.
+  const joinWord = group.combinator === "all" ? "and" : "or";
+  // Three levels are supported; past that the rail runs out of colours and the
+  // tree stops being readable, so nesting simply isn't offered.
+  const canNest = path.length < MAX_GROUP_DEPTH;
+
   return (
     // Depth reads off the rail colour, not indentation alone — three levels of
     // plain indent are indistinguishable once a group has more than two rows.
     <div className={isRoot ? styles.smartRoot : styles.smartGroup} data-depth={Math.min(path.length, 3)}>
       {showCombiner && (
         <div className={styles.smartMatchRow}>
-          <span className={styles.smartLabel}>Match</span>
-          <select
-            className={styles.smartSelect}
-            value={group.combinator === "all" ? "all" : "any"}
-            onChange={(e) => setCombinator(e.target.value as "all" | "any")}
-          >
-            <option value="all">all</option>
-            <option value="any">any</option>
-          </select>
-          <span className={styles.smartLabel}>of the following</span>
+          {/* AND/OR is a two-state choice, so it's a segmented pair rather than
+              a select you have to open to read. */}
+          <div className={styles.smartCombinator} role="group" aria-label="Combine conditions with">
+            <button
+              type="button"
+              className={`${styles.smartCombinatorBtn} ${group.combinator === "all" ? styles.smartCombinatorBtnActive : ""}`}
+              aria-pressed={group.combinator === "all"}
+              onClick={() => setCombinator("all")}
+            >
+              AND
+            </button>
+            <button
+              type="button"
+              className={`${styles.smartCombinatorBtn} ${group.combinator !== "all" ? styles.smartCombinatorBtnActive : ""}`}
+              aria-pressed={group.combinator !== "all"}
+              onClick={() => setCombinator("any")}
+            >
+              OR
+            </button>
+          </div>
+          <span className={styles.smartLabel}>
+            {group.combinator === "all" ? "of the following must match" : "of the following may match"}
+          </span>
+          <span className={styles.smartChildCount}>
+            {buckets.length} condition{buckets.length === 1 ? "" : "s"}
+          </span>
         </div>
       )}
 
@@ -370,6 +398,7 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
               <LeafRow
                 key={`l-${bIdx}-${idx}`}
                 leaf={child}
+                join={bIdx === 0 ? null : joinWord}
                 allFields={allFields}
                 sectionId={sectionId}
                 onChange={(next) => setChildAt(idx, next)}
@@ -379,22 +408,16 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
           }
           return (
             <div key={`g-${bIdx}-${idx}`} className={styles.smartNestedGroup}>
-              <div className={styles.smartNestedGroupHeader}>
-                <button
-                  className={styles.smartRemoveBtn}
-                  onClick={() => setChildAt(idx, null)}
-                  title="Remove group"
-                  aria-label="Remove group"
-                >
-                  ×
-                </button>
-              </div>
+              <span className={styles.smartJoin} aria-hidden="true">
+                {bIdx === 0 ? "" : joinWord}
+              </span>
               <GroupBody
                 group={child}
                 path={[...path, idx]}
                 allFields={allFields}
                 sectionId={sectionId}
                 onUpdate={(next) => setChildAt(idx, next)}
+                onRemoveGroup={() => setChildAt(idx, null)}
               />
             </div>
           );
@@ -402,6 +425,7 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
         return (
           <MultiValueRow
             key={`m-${bIdx}-${bucket.field}-${bucket.op}`}
+            join={bIdx === 0 ? null : joinWord}
             field={bucket.field}
             op={bucket.op}
             values={bucket.leaves.map((l) => l.value)}
@@ -420,9 +444,16 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
         <button className={styles.smartLinkBtn} onClick={addLeaf}>
           + Add filter
         </button>
-        {isRoot && (
+        {canNest && (
           <button className={styles.smartLinkBtn} onClick={addGroup}>
             + Add group
+          </button>
+        )}
+        {/* A group's own actions sit together. A floating × beside the group
+            read as a second "remove this row" next to the leaf's own. */}
+        {onRemoveGroup && (
+          <button className={styles.smartLinkBtn} onClick={onRemoveGroup}>
+            Remove group
           </button>
         )}
       </div>
@@ -434,12 +465,15 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate }: Grou
 
 function LeafRow({
   leaf,
+  join,
   allFields,
   sectionId,
   onChange,
   onRemove,
 }: {
   leaf: SmartFilterLeaf;
+  /** `and`/`or` from the parent group, or null on the first row. */
+  join: string | null;
   allFields: string[];
   sectionId: string | null;
   onChange: (next: SmartFilterLeaf) => void;
@@ -457,6 +491,9 @@ function LeafRow({
 
   return (
     <div className={styles.smartRow}>
+      <span className={styles.smartJoin} aria-hidden="true">
+        {join ?? ""}
+      </span>
       <select className={styles.smartSelect} value={leaf.field} onChange={(e) => updateField(e.target.value)}>
         {allFields.map((f) => (
           <option key={f} value={f}>
@@ -508,6 +545,7 @@ function withFallbackOp(
 // ─── Multi-value chip row ────────────────────────────────────────────────────
 
 function MultiValueRow({
+  join,
   field,
   op,
   values,
@@ -516,6 +554,8 @@ function MultiValueRow({
   onChange,
   onRemove,
 }: {
+  /** `and`/`or` from the parent group, or null on the first row. */
+  join: string | null;
   field: string;
   op: SmartFilterOp;
   values: string[];
@@ -570,6 +610,9 @@ function MultiValueRow({
 
   return (
     <div className={styles.smartRow}>
+      <span className={styles.smartJoin} aria-hidden="true">
+        {join ?? ""}
+      </span>
       <select className={styles.smartSelect} value={field} onChange={(e) => updateField(e.target.value)}>
         {allFields.map((f) => (
           <option key={f} value={f}>

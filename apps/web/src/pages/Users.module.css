@@ -1,76 +1,49 @@
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
+/* The table itself is `shared.table` — only what's genuinely local to this
+ * page lives here: the inline name editor and the personalization pill's two
+ * tones. The page-local table rules this file used to carry predated the
+ * redesign and quietly kept Users off the shared list skeleton. */
 
-.table th {
-  text-align: left;
-  padding: 0 12px;
-  height: 32px;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.table td {
-  padding: 0 12px;
-  height: 44px;
-  border-bottom: 1px solid var(--border-light);
-  vertical-align: middle;
-  font-size: 12.5px;
-}
-
-.table tr:hover td {
-  background: var(--bg-surface-hover);
-}
-
-.label {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--bg-badge);
-  color: var(--text-badge);
-}
-
-.labelUser {
+.pillOptedIn {
   background: var(--status-ok-bg);
   color: var(--status-ok-fg);
 }
 
+.pillOptedOut {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
 .emptyState {
   text-align: center;
-  padding: 48px 24px;
-  color: var(--text-muted);
+  padding: 44px 24px;
+  color: var(--ink-3);
 }
 
 .emptyState p {
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .hint {
-  font-size: 12.5px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--ink-3);
 }
+
+/* ─── Inline name editing ───────────────────────────────────────────────── */
 
 .nameCell {
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  border-radius: var(--r-tag);
   transition: background 0.15s;
 }
 
 .nameCell:hover {
-  background: var(--bg-badge);
+  background: var(--fill-quiet);
 }
 
 .namePlaceholder {
-  color: var(--text-muted);
-  font-style: italic;
+  color: var(--ink-faint);
 }
 
 .nameInput {
@@ -80,65 +53,9 @@
   box-sizing: border-box;
 }
 
-/* ─── Responsive ────────────────────────────────────────────────────────────── */
-
+/* On mobile the column headers are gone, so a bare number needs its noun. */
 @media (max-width: 768px) {
-  .table thead {
-    display: none;
-  }
-
-  .table tbody tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 2px 8px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-light);
-  }
-
-  .table td {
-    display: block;
-    border: none;
-    height: auto;
-    padding: 0;
-  }
-
-  /* Username — full width, bold */
-  .table td:nth-child(1) {
-    grid-column: 1;
-    font-weight: 600;
-    font-size: 13px;
-  }
-
-  /* Name — below username */
-  .table td:nth-child(2) {
-    grid-column: 1;
-    font-size: 12.5px;
-    color: var(--text-secondary);
-  }
-
-  /* Label — hide */
-  .table td:nth-child(3) {
-    display: none;
-  }
-
-  /* Collections — top right */
-  .table td:nth-child(4) {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
-  .table td:nth-child(4)::after {
+  .collectionsCell::after {
     content: " collections";
-  }
-
-  /* Last watched — full width */
-  .table td:nth-child(5) {
-    grid-column: 1 / -1;
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 2px;
   }
 }

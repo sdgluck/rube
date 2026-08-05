@@ -96,6 +96,10 @@ interface ColumnDef {
   /** File data the server reported — rendered in mono, like every other
       machine-produced value in the app. */
   mono?: boolean;
+  /** Role this cell takes when the table becomes cards on mobile. Columns here
+      are user-configurable, so the role travels with the column rather than
+      being inferred from its position in the row. */
+  mobile?: "title" | "meta" | "hide";
 }
 
 type MediaItem = {
@@ -121,21 +125,46 @@ const AUDIO_CHANNELS_LABELS: Record<number, string> = {
 };
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { id: "title", label: "Title", render: (item) => item.title },
-  { id: "section", label: "Section", render: (item) => item.sectionTitle },
-  { id: "type", label: "Type", render: (item) => item.type },
-  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY), mono: true },
-  { id: "resolution", label: "Resolution", render: (item) => item.videoResolution?.toUpperCase() || EMPTY, mono: true },
-  { id: "videoCodec", label: "Video Codec", render: (item) => item.videoCodec?.toUpperCase() || EMPTY, mono: true },
-  { id: "audioCodec", label: "Audio Codec", render: (item) => item.audioCodec?.toUpperCase() || EMPTY, mono: true },
+  { id: "title", label: "Title", render: (item) => item.title, mobile: "title" },
+  { id: "section", label: "Section", render: (item) => item.sectionTitle, mobile: "meta" },
+  { id: "type", label: "Type", render: (item) => item.type, mobile: "meta" },
+  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY), mono: true, mobile: "meta" },
+  {
+    id: "resolution",
+    label: "Resolution",
+    render: (item) => item.videoResolution?.toUpperCase() || EMPTY,
+    mono: true,
+    mobile: "hide",
+  },
+  {
+    id: "videoCodec",
+    label: "Video Codec",
+    render: (item) => item.videoCodec?.toUpperCase() || EMPTY,
+    mono: true,
+    mobile: "hide",
+  },
+  {
+    id: "audioCodec",
+    label: "Audio Codec",
+    render: (item) => item.audioCodec?.toUpperCase() || EMPTY,
+    mono: true,
+    mobile: "hide",
+  },
   {
     id: "audioChannels",
     label: "Channels",
     render: (item) =>
       item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : EMPTY,
     mono: true,
+    mobile: "hide",
   },
-  { id: "container", label: "Container", render: (item) => item.container?.toUpperCase() || EMPTY, mono: true },
+  {
+    id: "container",
+    label: "Container",
+    render: (item) => item.container?.toUpperCase() || EMPTY,
+    mono: true,
+    mobile: "hide",
+  },
 ];
 
 const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
@@ -219,6 +248,7 @@ function ChildrenRows({
                 visibleColumns.map((col, colIdx) => (
                   <td
                     key={col.id}
+                    data-cell={col.mobile ?? "meta"}
                     className={colIdx === 0 ? mediaStyles.childRowDepth2 : col.mono ? styles.cellMuted : undefined}
                   >
                     {col.render(childToMediaItem(child))}
@@ -612,6 +642,7 @@ export default function Media() {
                       {visibleColumns.map((col, colIdx) => (
                         <td
                           key={col.id}
+                          data-cell={col.mobile ?? "meta"}
                           className={
                             col.id === "year"
                               ? `${styles.cellNum} ${styles.itemYear}`
