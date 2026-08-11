@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tinkerbell/core": "workspace:*",
+    "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.collections": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",

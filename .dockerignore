@@ -1,4 +1,10 @@
-node_modules
+# `**/` matters. A bare `node_modules` only matches the one at the context
+# root, so every apps/*/node_modules and packages/*/node_modules was being sent
+# to the daemon and copied in over the top of the install the image had just
+# done. Those are symlinks into .pnpm store paths whose names include a
+# per-pnpm-version peer hash, so a host tree built by a different pnpm than the
+# image leaves dangling links and the Vite build fails to resolve its imports.
+**/node_modules
 .git
 .husky
 .claude

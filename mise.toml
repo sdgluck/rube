@@ -1,3 +1,12 @@
 [tools]
 "github:peterldowns/localias" = "3"
 node = "26.2.0"
+# Pinned exactly, and kept in step with `packageManager` in package.json and
+# the `npm install -g pnpm@…` in both Dockerfiles. pnpm was previously not
+# managed here at all, so whatever happened to be on PATH won — which is how a
+# pnpm 8 lockfile ended up in a repo pinned to 9.
+#
+# The npm backend rather than mise's default (aqua): aqua ships no
+# darwin/amd64 build for pnpm 11, so `pnpm = "…"` fails to install on an Intel
+# Mac. npm's tarball is platform-independent.
+"npm:pnpm" = "11.21.0"

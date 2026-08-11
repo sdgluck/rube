@@ -24,7 +24,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends git \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g pnpm@9.15.0
+RUN npm install -g pnpm@11.21.0
 WORKDIR /repo
 
 # Dependencies first, keyed only on the manifests, so editing a component

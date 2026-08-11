@@ -9,6 +9,20 @@ import { createOmdbClient } from "@tinkerbell/omdb";
 import { createImdbClient } from "@tinkerbell/imdb";
 import { getConfig } from "./config.ts";
 
+/**
+ * Thrown when a client is asked for before its credentials exist. This is a
+ * state the user can resolve in Settings, not a fault, so callers that speak
+ * HTTP map it to 412 rather than letting it fall through as a 500 — see the
+ * `getPlexClient` wrapper in `@tinkerbell/trpc`'s `_base.ts`. Core stays free
+ * of any dependency on the transport by naming the condition and no more.
+ */
+export class NotConfiguredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotConfiguredError";
+  }
+}
+
 type HealthReporter = (service: string, status: "ok" | "error", message: string) => void;
 
 let reporter: HealthReporter = () => {};
@@ -23,7 +37,7 @@ export function getPlexClient(opts: { signal?: AbortSignal } = {}) {
   const plexUrl = getConfig("global_plex_url");
   const plexToken = getConfig("global_plex_token");
   if (!plexUrl || !plexToken) {
-    throw new Error("Plex URL and token are not configured");
+    throw new NotConfiguredError("Plex URL and token are not configured");
   }
   return createPlexClient({
     url: plexUrl,

@@ -16,8 +16,9 @@ import {
   getUserPreferences,
   setUserPreferences,
   userPreferencesSchema,
-  getPlexClient,
 } from "@tinkerbell/core";
+// From _base, not core, so an unconfigured Plex answers 412 here too.
+import { getPlexClient } from "./_base.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
 
