@@ -6,6 +6,7 @@ import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import styles from "#pages/Settings/Settings.module.css";
+import CardSection from "#components/CardSection";
 
 export interface NotificationField {
   key: string;
@@ -182,8 +183,7 @@ export default function NotificationServiceForm({
 
   return (
     <div className={styles.form}>
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>{title}</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title={title}>
         {fields.map((field) =>
           field.type === "checkbox" ? (
             <label key={field.key} className={styles.libraryItem}>
@@ -219,10 +219,9 @@ export default function NotificationServiceForm({
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>
-      </fieldset>
+      </CardSection>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Events</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Events">
         <span className={styles.hint}>Select which events trigger a {title} notification.</span>
         {eventTypes.length === 0 ? (
           <p className={styles.hint}>Loading event types…</p>
@@ -241,11 +240,10 @@ export default function NotificationServiceForm({
             ))}
           </div>
         )}
-      </fieldset>
+      </CardSection>
 
       {hasJobEvents && (
-        <fieldset className={styles.group}>
-          <legend className={styles.groupTitle}>Jobs</legend>
+        <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Jobs">
           <span className={styles.hint}>Limit job event notifications to specific jobs, or notify on all.</span>
           <label className={styles.libraryItem}>
             <input
@@ -284,12 +282,11 @@ export default function NotificationServiceForm({
               )}
             </div>
           )}
-        </fieldset>
+        </CardSection>
       )}
 
       {hasHealthEvents && (
-        <fieldset className={styles.group}>
-          <legend className={styles.groupTitle}>Health Check Targets</legend>
+        <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Health Check Targets">
           <span className={styles.hint}>Limit health event notifications to specific targets, or notify on all.</span>
           <label className={styles.libraryItem}>
             <input
@@ -328,7 +325,7 @@ export default function NotificationServiceForm({
               )}
             </div>
           )}
-        </fieldset>
+        </CardSection>
       )}
     </div>
   );

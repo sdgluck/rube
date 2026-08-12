@@ -17,3 +17,14 @@ export function describeCron(expr: string): string {
 export function stripDurationFromMessage(message: string): string {
   return message.replace(/\s+in\s+(?:\d+m\s+)?\d+s\b/, "");
 }
+
+/**
+ * Pull a human-readable reason out of whatever a mutation rejected with.
+ * Toasts that swallow this and print a fixed "Failed to X" make a server
+ * saying "no, and here's why" indistinguishable from a dead button.
+ */
+export function errorMessage(err: unknown, fallback = "Unknown error"): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "string" && err) return err;
+  return fallback;
+}

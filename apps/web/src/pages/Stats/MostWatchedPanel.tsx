@@ -4,6 +4,8 @@ import { ListSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function MostWatchedPanel({
@@ -15,6 +17,17 @@ export function MostWatchedPanel({
 }) {
   const mostWatchedQuery = trpc.stats.mostWatched.useQuery();
   const maxPlays = mostWatchedQuery.data?.[0]?.plays ?? 1;
+
+  const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
+    rows: mostWatchedQuery.data ?? [],
+    accessors: {
+      title: (i) => (i.grandparentTitle ? `${i.grandparentTitle} — ${i.title}` : i.title),
+      plays: (i) => i.plays,
+    },
+    defaultKey: "plays",
+    defaultDir: "desc",
+    descFirst: ["plays"],
+  });
 
   return (
     <PanelShell title="Most Watched This Week" dragHandle={dragHandle} dragProps={dragProps}>
@@ -31,12 +44,22 @@ export function MostWatchedPanel({
             <thead>
               <tr>
                 <th className={styles.rankCol}>#</th>
-                <th>Title</th>
-                <th className={styles.playsCol}>Plays</th>
+                <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Title
+                </SortableTh>
+                <SortableTh
+                  sortKey="plays"
+                  activeKey={sortKey}
+                  activeDir={sortDir}
+                  onSort={toggleSort}
+                  className={styles.playsCol}
+                >
+                  Plays
+                </SortableTh>
               </tr>
             </thead>
             <tbody>
-              {mostWatchedQuery.data.slice(0, 8).map((item, i) => (
+              {sorted.slice(0, 8).map((item, i) => (
                 <tr key={i}>
                   <td className={styles.rankCell}>{i + 1}</td>
                   <td className={styles.titleCell}>

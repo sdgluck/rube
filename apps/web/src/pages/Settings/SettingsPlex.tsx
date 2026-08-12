@@ -6,6 +6,7 @@ import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
+import CardSection from "#components/CardSection";
 
 export default function SettingsPlex() {
   const [plexUrl, setPlexUrl] = useState("");
@@ -143,8 +144,7 @@ export default function SettingsPlex() {
         title="Plex"
         description="Connect Tinkerbell to your Plex server and choose which libraries it manages."
       />
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Connection</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Connection">
         <label className={styles.field}>
           <span className={styles.label}>Plex URL</span>
           <input
@@ -174,10 +174,9 @@ export default function SettingsPlex() {
           </button>
           <UnsavedBanner visible={isDirtyPlex} />
         </div>
-      </fieldset>
+      </CardSection>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Plex Libraries</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Plex Libraries">
         {!plexUrl || !plexToken ? (
           <p className={styles.hint}>Configure Plex URL and token above first.</p>
         ) : sectionsQuery.isLoading ? (
@@ -215,7 +214,7 @@ export default function SettingsPlex() {
             </div>
           </>
         )}
-      </fieldset>
+      </CardSection>
     </div>
   );
 }

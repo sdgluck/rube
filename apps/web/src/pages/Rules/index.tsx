@@ -13,6 +13,7 @@ import RuleWizard, {
   DEFAULT_ARR_FORM,
 } from "#pages/Rules/RuleWizard";
 import { RulesSkeleton } from "#components/Skeleton";
+import SortableTh from "#components/SortableTh";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
@@ -58,10 +59,26 @@ export default function Rules() {
   const [highlightedRuleId, setHighlightedRuleId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string | "all">("all");
+  // Empty = no type filter. Was a single `string | "all"`; the toolbar now
+  // filters on any combination of types.
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  /**
+   * Column headers and the toolbar's sort dropdown drive the same state, so
+   * the two controls can never disagree about how the table is ordered.
+   * "Status" is the last run, which is most useful newest-first.
+   */
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "lastRun" ? "desc" : "asc");
+    }
+  };
 
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
@@ -107,13 +124,14 @@ export default function Rules() {
       const q = search.trim().toLowerCase();
       out = out.filter((r) => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q));
     }
-    if (typeFilter !== "all") out = out.filter((r) => r.type === typeFilter);
+    if (typeFilter.length > 0) out = out.filter((r) => typeFilter.includes(r.type));
     if (enabledFilter === "enabled") out = out.filter((r) => !!r.enabled);
     else if (enabledFilter === "disabled") out = out.filter((r) => !r.enabled);
     out = [...out].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.name.localeCompare(b.name);
       else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
+      else if (sortKey === "enabled") cmp = Number(!!a.enabled) - Number(!!b.enabled);
       else if (sortKey === "lastRun") cmp = (a.lastRunAt ?? 0) - (b.lastRunAt ?? 0);
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -605,10 +623,18 @@ export default function Rules() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Enabled</th>
-                <th>Status</th>
+                <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Name
+                </SortableTh>
+                <SortableTh sortKey="type" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Type
+                </SortableTh>
+                <SortableTh sortKey="enabled" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Enabled
+                </SortableTh>
+                <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Status
+                </SortableTh>
                 <th>Config</th>
                 <th></th>
               </tr>

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import styles from "#pages/Jobs/Jobs.module.css";
+import CardSection from "#components/CardSection";
 
 interface Props {
   children: ReactNode;
@@ -13,8 +14,11 @@ export default function ConfigPanel({ children, save }: Props) {
   useUnsavedChanges(save?.dirty ?? false);
 
   return (
-    <fieldset className={save ? styles.detailSectionCappedWithFooter : styles.detailSectionCapped}>
-      <legend className={styles.detailSectionTitle}>Configuration</legend>
+    <CardSection
+      className={save ? styles.detailSectionCappedWithFooter : styles.detailSectionCapped}
+      titleClassName={styles.detailSectionTitle}
+      title="Configuration"
+    >
       <div className={styles.detailSectionScroll}>
         <table className={styles.configTable}>
           <tbody>{children}</tbody>
@@ -28,6 +32,6 @@ export default function ConfigPanel({ children, save }: Props) {
           <UnsavedBanner visible={save.dirty} />
         </div>
       )}
-    </fieldset>
+    </CardSection>
   );
 }

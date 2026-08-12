@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 import { EMPTY } from "#/format";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "#/trpc";
@@ -101,6 +103,21 @@ export default function CollectionDetail() {
     if (!q) return items;
     return items.filter((i) => i.title.toLowerCase().includes(q));
   }, [items, itemSearch]);
+
+  const {
+    sortKey: itemSortKey,
+    sortDir: itemSortDir,
+    toggleSort: toggleItemSort,
+    sorted: sortedItems,
+  } = useLocalSort({
+    rows: filteredItems,
+    accessors: {
+      title: (i) => i.title,
+      year: (i) => i.year,
+    },
+    defaultKey: "title",
+    descFirst: ["year"],
+  });
 
   const handleSave = async () => {
     if (!ratingKey || !isDirty) return;
@@ -349,12 +366,16 @@ export default function CollectionDetail() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Title</th>
-                  <th>Year</th>
+                  <SortableTh sortKey="title" activeKey={itemSortKey} activeDir={itemSortDir} onSort={toggleItemSort}>
+                    Title
+                  </SortableTh>
+                  <SortableTh sortKey="year" activeKey={itemSortKey} activeDir={itemSortDir} onSort={toggleItemSort}>
+                    Year
+                  </SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item) => (
+                {sortedItems.map((item) => (
                   <tr
                     key={item.ratingKey}
                     className={styles.clickableRow}

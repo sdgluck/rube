@@ -5,15 +5,31 @@ import styles from "#pages/Jobs/Jobs.module.css";
 import StatusBadge from "./StatusBadge";
 import { formatElapsed } from "#/format";
 import type { useJobActions } from "./useJobActions";
+import CardSection from "#components/CardSection";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 
 interface Props {
   runsQuery: ReturnType<typeof useJobActions>["runsQuery"];
 }
 
 export default function RunHistoryPanel({ runsQuery }: Props) {
+  const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
+    rows: runsQuery.data ?? [],
+    accessors: {
+      status: (r) => r.status,
+      startedAt: (r) => r.startedAt,
+      // A run still going has no finish time; sort those by elapsed so far
+      // rather than dropping them to the bottom as "missing".
+      duration: (r) => (r.finishedAt ?? Date.now()) - r.startedAt,
+    },
+    defaultKey: "startedAt",
+    defaultDir: "desc",
+    descFirst: ["startedAt", "duration"],
+  });
+
   return (
-    <fieldset className={styles.detailSectionCapped}>
-      <legend className={styles.detailSectionTitle}>Run History</legend>
+    <CardSection className={styles.detailSectionCapped} titleClassName={styles.detailSectionTitle} title="Run History">
       {runsQuery.isLoading ? (
         <p>Loading runs…</p>
       ) : runsQuery.data && runsQuery.data.length > 0 ? (
@@ -21,14 +37,20 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
           <table className={styles.compactTable}>
             <thead>
               <tr>
-                <th>Status</th>
-                <th>Started</th>
-                <th>Duration</th>
+                <SortableTh sortKey="status" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Status
+                </SortableTh>
+                <SortableTh sortKey="startedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Started
+                </SortableTh>
+                <SortableTh sortKey="duration" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Duration
+                </SortableTh>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {runsQuery.data.map((run) => (
+              {sorted.map((run) => (
                 <tr key={run.id}>
                   <td>
                     <StatusBadge status={run.status} />
@@ -50,6 +72,6 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
       ) : (
         <EmptyState icon="list" title="No runs yet" />
       )}
-    </fieldset>
+    </CardSection>
   );
 }

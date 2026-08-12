@@ -113,6 +113,15 @@
   --filter-group-bg: var(--surface-sunken);
 
   /* ─── Form-control tokens (used by styles/controls.module.css) ─── */
+
+  /* One height for everything that sits in a filter bar. Each control used to
+     size itself from its own padding, so a search input, a select, a pill and
+     a segmented control landed on four different heights in the same row —
+     visible as a ragged baseline across every table toolbar. Anything that can
+     appear beside another control in a toolbar sets `height: var(--control-h)`
+     and drops its vertical padding. */
+  --control-h: 30px;
+
   --btn-radius: 8px;
   --btn-pad-y: 7px;
   --btn-pad-x: 13px;

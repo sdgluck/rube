@@ -4,11 +4,31 @@ import { ListSkeleton } from "#components/Skeleton";
 import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
 import { formatBandwidth, formatClock, formatCodec, formatResolution } from "#/format";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.ReactNode; dragProps: PanelDragProps }) {
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, { refetchInterval: 5000 });
-  const sessions = sessionsQuery.data ?? [];
+  const allSessions = sessionsQuery.data ?? [];
+
+  const {
+    sortKey,
+    sortDir,
+    toggleSort,
+    sorted: sessions,
+  } = useLocalSort({
+    rows: allSessions,
+    accessors: {
+      title: (s) => (s.grandparentTitle ? s.grandparentTitle : s.title),
+      user: (s) => s.user,
+      quality: (s) => s.videoResolution,
+      bandwidth: (s) => s.bandwidth,
+      progress: (s) => (s.duration && s.viewOffset ? s.viewOffset / s.duration : 0),
+    },
+    defaultKey: "title",
+    descFirst: ["bandwidth", "progress"],
+  });
 
   return (
     <PanelShell
@@ -27,11 +47,33 @@ export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.Reac
             <thead>
               <tr>
                 <th></th>
-                <th>Title</th>
-                <th>User</th>
-                <th className={styles.hideOnMobile}>Quality</th>
-                <th className={styles.hideOnMobile}>Bandwidth</th>
-                <th>Progress</th>
+                <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Title
+                </SortableTh>
+                <SortableTh sortKey="user" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  User
+                </SortableTh>
+                <SortableTh
+                  sortKey="quality"
+                  activeKey={sortKey}
+                  activeDir={sortDir}
+                  onSort={toggleSort}
+                  className={styles.hideOnMobile}
+                >
+                  Quality
+                </SortableTh>
+                <SortableTh
+                  sortKey="bandwidth"
+                  activeKey={sortKey}
+                  activeDir={sortDir}
+                  onSort={toggleSort}
+                  className={styles.hideOnMobile}
+                >
+                  Bandwidth
+                </SortableTh>
+                <SortableTh sortKey="progress" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Progress
+                </SortableTh>
               </tr>
             </thead>
             <tbody>

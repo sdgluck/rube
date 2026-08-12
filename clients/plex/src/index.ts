@@ -19,6 +19,7 @@ import { createPrefsModule } from "./prefs.ts";
 import type { PlexClientOptions } from "./types.ts";
 
 export { PREROLL_PREF_ID } from "./prefs.ts";
+export { PlexApiError } from "./http.ts";
 
 export { SECTION_TYPE_MAP } from "./types.ts";
 export type {

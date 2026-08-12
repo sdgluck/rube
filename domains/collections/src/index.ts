@@ -5,7 +5,7 @@
 import { eq, and, or, like, asc, desc, lt, sql, inArray, type InferSelectModel } from "drizzle-orm";
 import { db, collections, collectionItems, likeContains } from "@tinkerbell/db";
 import { runPostCollectionSyncHook } from "@tinkerbell/core";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 
@@ -298,7 +298,22 @@ export async function updateCollectionLabels(client: PlexClient, ratingKey: stri
 }
 
 export async function deleteCollection(client: PlexClient, ratingKey: string): Promise<void> {
-  await client.deleteItem(ratingKey);
+  try {
+    await client.deleteItem(ratingKey);
+  } catch (err) {
+    // Plex refuses DELETE on /library/metadata with a bare 403 when the server
+    // has "Allow media deletion" switched off, which is the default on a fresh
+    // install. Nothing about the response says so, and the UI used to render
+    // the whole thing as "Failed to delete" with no reason — the single most
+    // likely way for this to look like a broken button rather than a setting.
+    if (err instanceof PlexApiError && err.status === 403) {
+      throw new Error(
+        "Plex refused the delete (403). Enable Settings → Library → “Allow media deletion” on the Plex server, " +
+          "and check the configured token belongs to the server owner.",
+      );
+    }
+    throw err;
+  }
   db.transaction((tx) => {
     tx.delete(collections).where(eq(collections.plexRatingKey, ratingKey)).run();
     tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, ratingKey)).run();

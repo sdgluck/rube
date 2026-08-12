@@ -7,6 +7,7 @@ import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
+import CardSection from "#components/CardSection";
 
 const MAX_HEIGHTS = [
   { value: 720, label: "720p" },
@@ -105,8 +106,7 @@ export default function SettingsPrerolls() {
         </Banner>
       )}
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Storage</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Storage">
         <p className={styles.hint}>
           Prerolls are files, and Plex plays them off its own disk — so the same directory has to be visible to both
           programs. Mount one directory into both containers, then tell Tinkerbell what Plex calls it.
@@ -146,10 +146,9 @@ export default function SettingsPrerolls() {
           proves Plex accepts the setting — it can't prove the path resolves on Plex's filesystem, because nothing over
           the API can.
         </p>
-      </fieldset>
+      </CardSection>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Transcoding</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Transcoding">
         <p className={styles.hint}>
           Uploads are inspected and left alone when Plex would already direct play them. Anything else is converted to
           H.264/AAC in an MP4 — otherwise a ten-second clip can occupy a transcode session and stutter.
@@ -171,15 +170,14 @@ export default function SettingsPrerolls() {
           <span className={styles.label}>ffmpeg</span>
           <span className={styles.hint}>{env ? (env.ffmpeg ?? "Not found") : "Checking…"}</span>
         </div>
-      </fieldset>
+      </CardSection>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Requirements</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Requirements">
         <p className={styles.hint}>
           Pre-rolls are a Plex Pass feature. Without an active subscription Plex will store the setting but never play
           anything — if everything here looks right and nothing plays, that's the first thing to check.
         </p>
-      </fieldset>
+      </CardSection>
 
       <div className={styles.buttons}>
         <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>

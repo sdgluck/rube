@@ -7,6 +7,7 @@ import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
+import CardSection from "#components/CardSection";
 
 const DEFAULT_LLM: LlmConfig = {
   provider: "anthropic",
@@ -88,8 +89,7 @@ export default function SettingsAi() {
         title="AI"
         description="Choose the AI provider used for AI-assisted smart filters and Because You Watched."
       />
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>LLM provider</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="LLM provider">
         <p className={styles.hint}>
           Tinkerbell sends prompts to whichever LLM you configure here. Switch providers any time — your existing rules
           will use the new one on the next run.
@@ -177,7 +177,7 @@ export default function SettingsAi() {
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>
-      </fieldset>
+      </CardSection>
     </div>
   );
 }

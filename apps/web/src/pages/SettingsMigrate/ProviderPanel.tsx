@@ -6,6 +6,9 @@ import { FormSkeleton } from "#components/Skeleton";
 import RelativeTime from "#components/RelativeTime";
 import styles from "#pages/Settings/Settings.module.css";
 import local from "./SettingsMigrate.module.css";
+import CardSection from "#components/CardSection";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 
 interface ProviderPanelProps {
   providerId: string;
@@ -105,6 +108,25 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
     }
   };
 
+  // Above the early returns — the loading and error branches below bail out
+  // before `plan` exists, and a hook can't run conditionally.
+  const {
+    sortKey,
+    sortDir,
+    toggleSort,
+    sorted: sortedProposed,
+  } = useLocalSort({
+    rows: planQuery.data?.proposed ?? [],
+    accessors: {
+      ruleName: (p) => p.ruleName,
+      ruleType: (p) => p.ruleType,
+      sectionTitle: (p) => p.sectionTitle,
+      replacesCount: (p) => p.replacesCount,
+    },
+    defaultKey: "ruleName",
+    descFirst: ["replacesCount"],
+  });
+
   if (statusQuery.isLoading || planQuery.isLoading) return <FormSkeleton rows={5} />;
   if (statusQuery.error || planQuery.error)
     return <div className={`${styles.toast} ${styles.error}`}>Failed to load migration data</div>;
@@ -115,8 +137,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
 
   return (
     <>
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Status</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Status">
         {status.completedAt ? (
           <p className={styles.hint}>
             Migration completed <RelativeTime timestamp={status.completedAt} />.
@@ -144,10 +165,13 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
             {scanning ? "Scanning…" : "Re-scan"}
           </button>
         </div>
-      </fieldset>
+      </CardSection>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Proposed rules ({plan.proposed.length})</legend>
+      <CardSection
+        className={styles.group}
+        titleClassName={styles.groupTitle}
+        title={<>Proposed rules ({plan.proposed.length})</>}
+      >
         {plan.proposed.length === 0 ? (
           <p className={styles.hint}>
             No rules to propose. Either no {providerLabel} collections were found, or none classified into a supported
@@ -167,14 +191,28 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
                   <th className={local.checkCol}>
                     <span className="sr-only">Include</span>
                   </th>
-                  <th>Rule</th>
-                  <th>Type</th>
-                  <th>Section</th>
-                  <th className={local.numCol}>Replaces</th>
+                  <SortableTh sortKey="ruleName" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                    Rule
+                  </SortableTh>
+                  <SortableTh sortKey="ruleType" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                    Type
+                  </SortableTh>
+                  <SortableTh sortKey="sectionTitle" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                    Section
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="replacesCount"
+                    activeKey={sortKey}
+                    activeDir={sortDir}
+                    onSort={toggleSort}
+                    className={local.numCol}
+                  >
+                    Replaces
+                  </SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {plan.proposed.map((p) => (
+                {sortedProposed.map((p) => (
                   <tr key={p.key}>
                     <td>
                       <input type="checkbox" checked={selected.has(p.key)} onChange={() => toggle(p.key)} />
@@ -197,11 +235,14 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
             </table>
           </div>
         )}
-      </fieldset>
+      </CardSection>
 
       {plan.future.length > 0 && (
-        <fieldset className={styles.group}>
-          <legend className={styles.groupTitle}>Recognized but not yet supported ({plan.future.length})</legend>
+        <CardSection
+          className={styles.group}
+          titleClassName={styles.groupTitle}
+          title={<>Recognized but not yet supported ({plan.future.length})</>}
+        >
           <p className={styles.hint}>
             These {providerLabel} collections classify into known buckets that don't have a Tinkerbell rule type yet.
             They'll be skipped by this migration; future Tinkerbell releases will add the missing rule types.
@@ -214,12 +255,15 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
               </li>
             ))}
           </ul>
-        </fieldset>
+        </CardSection>
       )}
 
       {plan.unmappable.length > 0 && (
-        <fieldset className={styles.group}>
-          <legend className={styles.groupTitle}>Unmappable ({plan.unmappable.length})</legend>
+        <CardSection
+          className={styles.group}
+          titleClassName={styles.groupTitle}
+          title={<>Unmappable ({plan.unmappable.length})</>}
+        >
           <p className={styles.hint}>
             These {providerLabel}-managed collections didn't classify into any known bucket. They'll be left untouched
             by the migration.
@@ -233,11 +277,10 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
               </li>
             ))}
           </ul>
-        </fieldset>
+        </CardSection>
       )}
 
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Run migration</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Run migration">
         {planCanDeleteOriginals && (
           <>
             <label className={`${styles.field} ${local.inlineField}`}>
@@ -259,7 +302,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
             {running ? "Starting…" : `Migrate ${selected.size} rule(s)`}
           </button>
         </div>
-      </fieldset>
+      </CardSection>
     </>
   );
 }

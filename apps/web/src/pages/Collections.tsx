@@ -18,6 +18,7 @@ import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
 import PageShell from "#components/PageShell";
 import { readEnumStorage, writeStorage } from "#/storage";
+import { errorMessage } from "#/utils";
 import styles from "#/styles/shared.module.css";
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
@@ -178,8 +179,12 @@ export default function Collections() {
           addToast(`Deleted "${title}"`, "success");
           collectionsQuery.refetch();
           filtersQuery.refetch();
-        } catch {
-          addToast(`Failed to delete "${title}"`, "error");
+        } catch (err) {
+          // Plex has plenty of reasons to refuse a delete (media deletion
+          // disabled, non-owner token, collection already gone) and it used to
+          // report all of them as a bare "Failed to delete", which reads as the
+          // button being broken rather than the server saying no.
+          addToast(`Failed to delete "${title}": ${errorMessage(err)}`, "error");
         }
       },
     });
@@ -194,14 +199,19 @@ export default function Collections() {
         setBulkProgress({ done: 0, total: count });
         let deleted = 0;
         let failed = 0;
+        // Bulk deletes fail for one reason far more often than several, so
+        // reporting the first one turns "failed 12" into something actionable
+        // without stacking a dozen identical toasts.
+        let firstError = "";
         await pMap(
           [...selected],
           async (ratingKey) => {
             try {
               await deleteMutation.mutateAsync({ ratingKey });
               deleted++;
-            } catch {
+            } catch (err) {
               failed++;
+              if (!firstError) firstError = errorMessage(err);
             }
             setBulkProgress({ done: deleted + failed, total: count });
           },
@@ -210,7 +220,7 @@ export default function Collections() {
         setSelected(new Set());
         setBulkProgress(null);
         if (failed > 0) {
-          addToast(`Deleted ${deleted}, failed ${failed}`, "error");
+          addToast(`Deleted ${deleted}, failed ${failed}: ${firstError}`, "error");
         } else {
           addToast(`Deleted ${deleted} collection(s)`, "success");
         }

@@ -12,7 +12,8 @@ export interface RuleProgressState {
   current: number;
   total: number;
   message: string;
-  recentLogs: string[]; // last N log lines
+  /** Log lines for the run so far, oldest first, capped at MAX_LOG_LINES. */
+  recentLogs: string[];
 }
 
 export interface TestPreviewItem {
@@ -39,7 +40,14 @@ export interface PersistedTestResult {
   tokensOut?: number;
 }
 
-const MAX_LOG_LINES = 30;
+/**
+ * The UI shows the whole buffer in a scrollable pane, so this is a memory
+ * bound rather than a display window — 30 was the latter and truncated the
+ * start of any run worth reading. These states are per in-flight rule and are
+ * dropped on completion, so a few hundred lines costs nothing; it stays capped
+ * because a runaway rule logging in a loop shouldn't grow without limit.
+ */
+const MAX_LOG_LINES = 500;
 
 const progressByRule = new Map<string, RuleProgressState>();
 const lastTestResultByRule = new Map<string, PersistedTestResult>();

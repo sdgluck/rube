@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "#/trpc";
 import styles from "./Rules.module.css";
 import { formatDuration } from "#/format";
@@ -17,6 +17,30 @@ export default function InlineProgress({ ruleId, phase }: InlineProgressProps) {
   }, []);
 
   const data = progressQuery.data;
+  const logs = data?.recentLogs ?? [];
+
+  /**
+   * Follow the tail as lines arrive, but stop the moment the user scrolls up —
+   * otherwise the 500ms poll yanks them back to the bottom and reading
+   * anything that already scrolled past becomes impossible. Re-arms when they
+   * scroll back to the bottom themselves.
+   */
+  const logRef = useRef<HTMLPreElement>(null);
+  const pinnedToBottom = useRef(true);
+
+  const handleLogScroll = () => {
+    const el = logRef.current;
+    if (!el) return;
+    // A couple of px of slack: fractional scroll heights mean an element the
+    // user has scrolled fully down rarely lands on an exact equality.
+    pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 4;
+  };
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (el && pinnedToBottom.current) el.scrollTop = el.scrollHeight;
+  }, [logs.length]);
+
   const elapsed = data ? now - data.startedAt : 0;
   const pct = data && data.total > 0 ? Math.min(100, Math.round((data.current / data.total) * 100)) : 0;
   const indeterminate = !data || data.total === 0 || data.current === 0;
@@ -38,8 +62,17 @@ export default function InlineProgress({ ruleId, phase }: InlineProgressProps) {
         )}
       </div>
       <div className={styles.progressMessage}>{data?.message || "Starting…"}</div>
-      {data && data.recentLogs.length > 0 && (
-        <pre className={styles.logTail}>{data.recentLogs.slice(-8).join("\n")}</pre>
+      {logs.length > 0 && (
+        <pre
+          ref={logRef}
+          className={styles.logTail}
+          onScroll={handleLogScroll}
+          tabIndex={0}
+          role="log"
+          aria-label={phase === "test" ? "Test log" : "Run log"}
+        >
+          {logs.join("\n")}
+        </pre>
       )}
     </div>
   );

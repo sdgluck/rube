@@ -5,6 +5,8 @@ import SettingsPageHeader from "./Settings/SettingsPageHeader";
 import styles from "./StressTest.module.css";
 import shared from "#/styles/shared.module.css";
 import { EMPTY, formatElapsed, formatTime } from "#/format";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 
 function SpeedCell({ speed }: { speed: number | null }) {
   if (speed == null) return <span className={styles.speedNone}>{EMPTY}</span>;
@@ -62,7 +64,44 @@ export default function StressTest() {
   }
 
   const runs = runsQuery.data ?? [];
+
+  const {
+    sortKey: runSortKey,
+    sortDir: runSortDir,
+    toggleSort: toggleRunSort,
+    sorted: sortedRuns,
+  } = useLocalSort({
+    rows: runs,
+    accessors: {
+      startedAt: (r) => r.startedAt,
+      mode: (r) => r.config.mode,
+      maxSessions: (r) => r.maxSessions,
+      duration: (r) => (r.finishedAt ? r.finishedAt - r.startedAt : null),
+    },
+    defaultKey: "startedAt",
+    defaultDir: "desc",
+    descFirst: ["startedAt", "maxSessions", "duration"],
+  });
   const selectedRun = selectedRunQuery.data;
+
+  const {
+    sortKey: stepSortKey,
+    sortDir: stepSortDir,
+    toggleSort: toggleStepSort,
+    sorted: sortedSteps,
+  } = useLocalSort({
+    rows: selectedRun?.steps ?? [],
+    accessors: {
+      step: (s) => s.step,
+      sessions: (s) => s.sessions,
+      avgTranscodeSpeed: (s) => s.avgTranscodeSpeed,
+      avgBandwidth: (s) => s.avgBandwidth,
+      errors: (s) => s.errors,
+    },
+    defaultKey: "step",
+    descFirst: ["sessions", "avgBandwidth", "errors"],
+  });
+  const lastStepNumber = selectedRun?.steps.reduce((max, s) => Math.max(max, s.step), 0) ?? 0;
 
   return (
     <div>
@@ -167,16 +206,44 @@ export default function StressTest() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Step</th>
-                  <th>Sessions</th>
-                  <th>Transcode Speed</th>
-                  <th>Bandwidth</th>
-                  <th>Errors</th>
+                  <SortableTh sortKey="step" activeKey={stepSortKey} activeDir={stepSortDir} onSort={toggleStepSort}>
+                    Step
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="sessions"
+                    activeKey={stepSortKey}
+                    activeDir={stepSortDir}
+                    onSort={toggleStepSort}
+                  >
+                    Sessions
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="avgTranscodeSpeed"
+                    activeKey={stepSortKey}
+                    activeDir={stepSortDir}
+                    onSort={toggleStepSort}
+                  >
+                    Transcode Speed
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="avgBandwidth"
+                    activeKey={stepSortKey}
+                    activeDir={stepSortDir}
+                    onSort={toggleStepSort}
+                  >
+                    Bandwidth
+                  </SortableTh>
+                  <SortableTh sortKey="errors" activeKey={stepSortKey} activeDir={stepSortDir} onSort={toggleStepSort}>
+                    Errors
+                  </SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {selectedRun.steps.map((step, i) => {
-                  const isLast = i === selectedRun.steps.length - 1;
+                {sortedSteps.map((step) => {
+                  // "The run gave up here" is a property of the final step, not
+                  // of whichever row happens to render last — so it keys off the
+                  // step number rather than the position in the sorted array.
+                  const isLast = step.step === lastStepNumber;
                   const isFailed =
                     isLast && ((step.avgTranscodeSpeed != null && step.avgTranscodeSpeed < 1.0) || step.errors > 0);
                   return (
@@ -206,14 +273,27 @@ export default function StressTest() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Mode</th>
-                  <th>Max Sessions</th>
-                  <th>Duration</th>
+                  <SortableTh sortKey="startedAt" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
+                    Date
+                  </SortableTh>
+                  <SortableTh sortKey="mode" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
+                    Mode
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="maxSessions"
+                    activeKey={runSortKey}
+                    activeDir={runSortDir}
+                    onSort={toggleRunSort}
+                  >
+                    Max Sessions
+                  </SortableTh>
+                  <SortableTh sortKey="duration" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
+                    Duration
+                  </SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {runs.map((run) => (
+                {sortedRuns.map((run) => (
                   <tr
                     key={run.id}
                     className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}

@@ -6,6 +6,7 @@ import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
+import CardSection from "#components/CardSection";
 
 /**
  * The zone list comes from the browser's own ICU data when available, so it
@@ -72,8 +73,7 @@ export default function SettingsSchedules() {
         title="Schedules"
         description="When Tinkerbell's scheduled jobs run. This affects every job schedule."
       />
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Timezone</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Timezone">
         <label className={styles.field}>
           <span className={styles.label}>Schedule timezone</span>
           <select className={styles.input} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
@@ -102,7 +102,7 @@ export default function SettingsSchedules() {
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>
-      </fieldset>
+      </CardSection>
     </div>
   );
 }

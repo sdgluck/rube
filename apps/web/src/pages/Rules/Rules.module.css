@@ -179,6 +179,37 @@ td.previewBlockCell {
   overflow-x: visible !important;
 }
 
+/* `.table-scroll` normally gets its rounded corners for free: `overflow-x:
+   auto` clips the square-cornered table inside it. Opting out of that clipping
+   above also opts out of the rounding, so the table's own opaque background
+   paints right over the wrapper's rounded corners and this one table reads as
+   a square card while every other list page is rounded.
+
+   Fix without reinstating the clip: let the wrapper's rounded surface show
+   through (the table stops painting its own background) and round the four
+   corner cells, which do paint — the header cells always, the last row's cells
+   on hover. `border-collapse: collapse` rules out rounding the <table> itself,
+   so the corners have to be applied per-cell. */
+.tableBleedRight > table {
+  background: none;
+}
+
+.tableBleedRight > table thead tr:first-child th:first-child {
+  border-top-left-radius: var(--r-card);
+}
+
+.tableBleedRight > table thead tr:first-child th:last-child {
+  border-top-right-radius: var(--r-card);
+}
+
+.tableBleedRight > table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: var(--r-card);
+}
+
+.tableBleedRight > table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: var(--r-card);
+}
+
 /* Test-preview (RuleWizard) — same Plex canvas with a self-contained border
    so it reads as a panel rather than a bleeding row. */
 .testPreviewStack {
@@ -390,7 +421,8 @@ td.previewBlockCell {
 
 .search {
   width: 100%;
-  padding: 5px 10px 5px 30px;
+  height: var(--control-h);
+  padding: 0 10px 0 30px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   font-family: var(--font-sans);
@@ -414,6 +446,7 @@ td.previewBlockCell {
 
 .segmented {
   display: inline-flex;
+  height: var(--control-h);
   border: 1px solid var(--line);
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
@@ -423,12 +456,14 @@ td.previewBlockCell {
 
 .segmentedBtn {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
   background: transparent;
   border: none;
   color: var(--ink-2);
   font-size: 11.5px;
   font-weight: 600;
-  padding: 5px 11px;
+  padding: 0 11px;
   border-radius: var(--r-sm);
   cursor: pointer;
   transition:
@@ -450,7 +485,10 @@ td.previewBlockCell {
 
 .filterChip {
   appearance: none;
-  padding: 4px 11px;
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-h);
+  padding: 0 11px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface);
@@ -487,7 +525,8 @@ td.previewBlockCell {
 }
 
 .sortSelect {
-  padding: 5px 26px 5px 10px;
+  height: var(--control-h);
+  padding: 0 26px 0 10px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
@@ -662,10 +701,22 @@ td.previewBlockCell {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-tag);
   padding: 6px 10px;
-  max-height: 130px;
+  /* Holds the full run log, not a tail of it, so it needs to be worth
+     scrolling — ~18 lines before the scrollbar takes over. Capped rather than
+     free-growing so a long run can't push the rule's action buttons off the
+     bottom of the expanded row. */
+  max-height: 260px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   white-space: pre-wrap;
   word-break: break-word;
+  margin: 0;
+}
+
+/* It's focusable so keyboard users can scroll it; make that visible. */
+.logTail:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .errorBox {

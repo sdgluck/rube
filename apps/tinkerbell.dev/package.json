@@ -12,7 +12,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc",
-    "capture": "node --experimental-strip-types harness/capture.ts"
+    "capture": "node --experimental-strip-types harness/capture.ts",
+    "serve": "node --experimental-strip-types harness/serve.ts"
   },
   "dependencies": {
     "lucide-react": "^1.14.0",

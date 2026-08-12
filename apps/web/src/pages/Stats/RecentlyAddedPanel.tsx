@@ -6,6 +6,8 @@ import ErrorState from "#components/ErrorState";
 import { trpc } from "#/trpc";
 import { EMPTY, formatFileSize } from "#/format";
 import styles from "#pages/Stats/Stats.module.css";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 import { type PanelDragProps, PanelShell } from "./PanelShell";
 
 export function RecentlyAddedPanel({
@@ -16,6 +18,21 @@ export function RecentlyAddedPanel({
   dragProps: PanelDragProps;
 }) {
   const recentQuery = trpc.stats.recentlyAdded.useQuery();
+
+  const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
+    rows: recentQuery.data?.items ?? [],
+    accessors: {
+      title: (i) => i.title,
+      type: (i) => i.type,
+      container: (i) => i.container,
+      videoResolution: (i) => i.videoResolution,
+      fileSize: (i) => i.fileSize,
+      addedAt: (i) => i.addedAt,
+    },
+    defaultKey: "addedAt",
+    defaultDir: "desc",
+    descFirst: ["addedAt", "fileSize"],
+  });
 
   return (
     <PanelShell title="Recently Added" dragHandle={dragHandle} dragProps={dragProps}>
@@ -31,16 +48,28 @@ export function RecentlyAddedPanel({
           <table className={styles.compactTable}>
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Format</th>
-                <th>Resolution</th>
-                <th>Size</th>
-                <th>Added</th>
+                <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Title
+                </SortableTh>
+                <SortableTh sortKey="type" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Type
+                </SortableTh>
+                <SortableTh sortKey="container" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Format
+                </SortableTh>
+                <SortableTh sortKey="videoResolution" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Resolution
+                </SortableTh>
+                <SortableTh sortKey="fileSize" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Size
+                </SortableTh>
+                <SortableTh sortKey="addedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Added
+                </SortableTh>
               </tr>
             </thead>
             <tbody>
-              {recentQuery.data.items.slice(0, 8).map((item) => {
+              {sorted.slice(0, 8).map((item) => {
                 const displayTitle =
                   item.type === "season" && item.parentTitle
                     ? `${item.parentTitle} — ${item.title}`

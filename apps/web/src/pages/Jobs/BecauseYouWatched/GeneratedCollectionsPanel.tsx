@@ -5,6 +5,7 @@ import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
 import FadeImage from "#components/FadeImage";
 import styles from "#pages/Jobs/Jobs.module.css";
+import CardSection from "#components/CardSection";
 
 export default function GeneratedCollectionsPanel() {
   const utils = trpc.useUtils();
@@ -17,11 +18,16 @@ export default function GeneratedCollectionsPanel() {
   const total = collectionsQuery.data?.reduce((n, g) => n + g.collections.length, 0);
 
   return (
-    <fieldset className={styles.detailSection}>
-      <legend className={styles.detailSectionTitle}>
-        Generated Collections
-        {total !== undefined && <span className={styles.runMeta}>{` — ${total} total`}</span>}
-      </legend>
+    <CardSection
+      className={styles.detailSection}
+      titleClassName={styles.detailSectionTitle}
+      title={
+        <>
+          Generated Collections
+          {total !== undefined && <span className={styles.runMeta}>{` — ${total} total`}</span>}
+        </>
+      }
+    >
       {collectionsQuery.isLoading ? (
         <p>Loading…</p>
       ) : collectionsQuery.error ? (
@@ -91,6 +97,6 @@ export default function GeneratedCollectionsPanel() {
           ))}
         </div>
       )}
-    </fieldset>
+    </CardSection>
   );
 }

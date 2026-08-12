@@ -23,7 +23,19 @@
   font-size: 15px;
   font-family: var(--font-sans);
   color: var(--ink);
-  outline: none;
+  /* An outline traces the element's own border-radius, and this field had
+     none — so the global :focus-visible ring (which beats a plain
+     `outline: none` here on equal specificity) drew a hard-cornered rectangle
+     inside the palette's rounded panel. Matching the input radius makes the
+     ring follow the field instead of boxing it. */
+  border-radius: var(--input-radius);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  /* Hugs the field: at the default +2px the ring would collide with the
+     wrapper's 6px padding and the panel's rounded top edge. */
+  outline-offset: -1px;
 }
 
 .input::placeholder {

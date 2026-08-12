@@ -1,4 +1,5 @@
-import type { RefObject } from "react";
+import { useMemo, type RefObject } from "react";
+import MultiSelect from "#components/MultiSelect";
 import { TYPE_LABELS } from "./constants";
 import styles from "./Rules.module.css";
 import type { EnabledFilter, SortKey } from "./types";
@@ -8,8 +9,9 @@ interface RulesToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
   presentTypes: string[];
-  typeFilter: string | "all";
-  onTypeFilterChange: (value: string | "all") => void;
+  /** Selected rule types. Empty means every type passes. */
+  typeFilter: string[];
+  onTypeFilterChange: (value: string[]) => void;
   enabledFilter: EnabledFilter;
   onEnabledFilterChange: (value: EnabledFilter) => void;
   sortKey: SortKey;
@@ -30,6 +32,14 @@ export default function RulesToolbar({
   sortDir,
   onSortChange,
 }: RulesToolbarProps) {
+  const typeOptions = useMemo(
+    () =>
+      presentTypes
+        .map((t) => ({ value: t, label: TYPE_LABELS[t] || t }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [presentTypes],
+  );
+
   return (
     <div className={styles.toolbar}>
       <div className={styles.searchWrap}>
@@ -57,23 +67,13 @@ export default function RulesToolbar({
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
-      <button
-        type="button"
-        className={`${styles.filterChip} ${typeFilter === "all" ? styles.filterChipActive : ""}`}
-        onClick={() => onTypeFilterChange("all")}
-      >
-        All types
-      </button>
-      {presentTypes.map((t) => (
-        <button
-          key={t}
-          type="button"
-          className={`${styles.filterChip} ${typeFilter === t ? styles.filterChipActive : ""}`}
-          onClick={() => onTypeFilterChange(t)}
-        >
-          {TYPE_LABELS[t] || t}
-        </button>
-      ))}
+      <MultiSelect
+        allLabel="All types"
+        ariaLabel="Filter by rule type"
+        options={typeOptions}
+        selected={typeFilter}
+        onChange={onTypeFilterChange}
+      />
       <span className={styles.filterDivider} />
       <div className={styles.segmented} role="tablist">
         <button

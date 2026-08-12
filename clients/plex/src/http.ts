@@ -7,6 +7,25 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 
+/**
+ * A failed Plex call, with the HTTP status kept as a field rather than only
+ * baked into the message. Callers need to branch on it — a 403 from Plex means
+ * something a user can go and fix, and telling them that requires knowing it
+ * was a 403 without regex-ing the message back apart.
+ */
+export class PlexApiError extends Error {
+  readonly status: number;
+  readonly method: string;
+  readonly path: string;
+  constructor(status: number, method: string, path: string, detail: string) {
+    super(`Plex API ${method} ${path} → ${detail}`);
+    this.name = "PlexApiError";
+    this.status = status;
+    this.method = method;
+    this.path = path;
+  }
+}
+
 export interface PlexHttp {
   url: string;
   token: string;
@@ -49,7 +68,7 @@ export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptio
     } catch (err) {
       if (err instanceof HttpError) {
         onHealth?.("Plex", "error", `${method} ${path} → ${err.status} ${err.message}`);
-        throw new Error(`Plex API ${method} ${path} → ${err.message}`);
+        throw new PlexApiError(err.status, method, path, err.message);
       }
       onHealth?.("Plex", "error", `${method} ${path} → ${errorMessage(err)}`);
       throw err;
@@ -87,7 +106,7 @@ export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptio
       });
     } catch (err) {
       if (err instanceof HttpError) {
-        throw new Error(`Plex API ${method} ${path} → ${err.message}`);
+        throw new PlexApiError(err.status, method, path, err.message);
       }
       throw err;
     }

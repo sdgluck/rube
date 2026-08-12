@@ -800,8 +800,13 @@
 .detailSectionTitle {
   font-weight: 600;
   font-size: 13px;
-  padding: 0 6px;
   color: var(--text-secondary);
+  /* No global heading reset, so clear the UA h3 margin and let the card's
+     flex `gap` do the spacing. The 6px inline padding that used to be here
+     was a legend affordance — breathing room either side of the border the
+     legend interrupted — and just misaligns a real heading from the fields
+     below it. */
+  margin: 0;
 }
 
 .configTable {

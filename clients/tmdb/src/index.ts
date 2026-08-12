@@ -21,6 +21,61 @@ export interface TmdbConfig {
   apiKey: string;
 }
 
+// ─── Errors ──────────────────────────────────────────────────────────────
+
+/**
+ * TMDb answers almost every auth failure with a bare 401 and puts the real
+ * reason in a `status_code` in the body. A suspended key, a key TMDb has
+ * never heard of, and an unverified email are three different problems with
+ * three different fixes, and they arrive over the wire looking identical.
+ * Collapsing them into "TMDb 401 Unauthorized" sent one debugging session
+ * chasing an account ban that turned out to be a rotated key.
+ */
+export class TmdbError extends Error {
+  /** HTTP status of the failing response. */
+  readonly httpStatus: number;
+  /** TMDb's own `status_code`, when the body carried one. */
+  readonly statusCode?: number;
+  constructor(message: string, httpStatus: number, statusCode?: number) {
+    super(message);
+    this.name = "TmdbError";
+    this.httpStatus = httpStatus;
+    this.statusCode = statusCode;
+  }
+}
+
+/**
+ * What an admin should actually *do* about each `status_code`, since TMDb's
+ * own `status_message` says what happened but never what to change.
+ */
+const TMDB_STATUS_HINTS: Record<number, string> = {
+  3: "authentication failed — the key is recognised but isn't permitted to use this endpoint.",
+  7: "invalid API key — TMDb doesn't recognise it. Compare Settings → Databases → TMDb against themoviedb.org/settings/api; regenerating a key silently kills the old one.",
+  10: "suspended API key — TMDb has suspended access for this account. A new key won't help; contact TMDb support.",
+  25: "rate limited — too many requests in the window. This clears on its own.",
+  32: "email not verified — confirm the email on the TMDb account before the key will work.",
+  34: "the requested resource does not exist.",
+};
+
+function tmdbErrorFrom(err: HttpError, path: string): TmdbError {
+  let statusCode: number | undefined;
+  let statusMessage: string | undefined;
+  try {
+    const body: unknown = JSON.parse(err.body);
+    if (body && typeof body === "object") {
+      const { status_code, status_message } = body as Record<string, unknown>;
+      if (typeof status_code === "number") statusCode = status_code;
+      if (typeof status_message === "string") statusMessage = status_message;
+    }
+  } catch {
+    // Non-JSON body — a proxy error page, or a payload truncated by
+    // errorBodyMaxLen. Fall back to the raw HTTP status below.
+  }
+  const detail = (statusCode !== undefined ? TMDB_STATUS_HINTS[statusCode] : undefined) ?? statusMessage ?? err.message;
+  const code = statusCode !== undefined ? ` (status_code ${statusCode})` : "";
+  return new TmdbError(`TMDb ${path}: ${detail}${code}`, err.status, statusCode);
+}
+
 // ─── Shared atomic schemas ───────────────────────────────────────────────
 
 const personRawSchema = z.object({
@@ -212,6 +267,9 @@ async function tmdbFetch<S extends z.ZodTypeAny>(
       // Idempotent GET. A single 502 from TMDB at 01:00 used to fail the whole
       // nightly generate, with no job-level retry behind it.
       retries: 2,
+      // TMDb error bodies are ~100 chars, but keep headroom so the JSON we
+      // parse the status_code out of is never truncated mid-object.
+      errorBodyMaxLen: 500,
       init: {
         headers: {
           Accept: "application/json",
@@ -220,7 +278,7 @@ async function tmdbFetch<S extends z.ZodTypeAny>(
       },
     });
   } catch (err) {
-    if (err instanceof HttpError) throw new Error(`TMDb ${err.message}`);
+    if (err instanceof HttpError) throw tmdbErrorFrom(err, path);
     throw err;
   }
   const json = await res.json();

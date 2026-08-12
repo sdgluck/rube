@@ -1,4 +1,4 @@
-export type SortKey = "name" | "type" | "lastRun";
+export type SortKey = "name" | "type" | "enabled" | "lastRun";
 
 export type EnabledFilter = "all" | "enabled" | "disabled";
 

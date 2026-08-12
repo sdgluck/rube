@@ -7,6 +7,7 @@ import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
+import CardSection from "#components/CardSection";
 
 const PERSON_STYLES = [
   { value: "bw", label: "Black & White (default)" },
@@ -93,8 +94,7 @@ export default function SettingsPosters() {
         title="Posters"
         description="Use Kometa default posters for auto-generated collection artwork."
       />
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>Kometa default posters</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Kometa default posters">
         <p className={styles.hint}>
           Auto-apply curated posters from the{" "}
           <a href="https://github.com/Kometa-Team/Default-Images" target="_blank" rel="noopener noreferrer">
@@ -152,7 +152,7 @@ export default function SettingsPosters() {
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>
-      </fieldset>
+      </CardSection>
     </div>
   );
 }

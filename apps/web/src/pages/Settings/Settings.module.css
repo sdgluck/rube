@@ -168,7 +168,6 @@
 
 .group {
   background: var(--surface);
-  border: none;
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
   padding: 18px 20px 20px;
@@ -181,6 +180,9 @@
   font: var(--t-card);
   letter-spacing: var(--t-card-tracking);
   color: var(--ink);
+  /* A heading, not a legend: there is no global heading reset, so the UA's
+     default h3 margin has to go or it fights the card's flex `gap`. */
+  margin: 0;
 }
 
 .field {

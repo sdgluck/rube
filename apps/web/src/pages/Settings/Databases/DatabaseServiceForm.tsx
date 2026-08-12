@@ -7,6 +7,7 @@ import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import styles from "#pages/Settings/Settings.module.css";
 import type { DatabaseServiceConfig } from "./databases.config";
+import CardSection from "#components/CardSection";
 
 interface Props {
   config: DatabaseServiceConfig;
@@ -74,8 +75,7 @@ export default function DatabaseServiceForm({ config, runTest }: Props) {
 
   return (
     <div className={styles.form}>
-      <fieldset className={styles.group}>
-        <legend className={styles.groupTitle}>{config.title}</legend>
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title={config.title}>
         <label className={styles.field}>
           <span className={styles.label}>{config.apiKeyLabel}</span>
           <input
@@ -96,7 +96,7 @@ export default function DatabaseServiceForm({ config, runTest }: Props) {
           </button>
           <UnsavedBanner visible={isDirty} />
         </div>
-      </fieldset>
+      </CardSection>
     </div>
   );
 }
