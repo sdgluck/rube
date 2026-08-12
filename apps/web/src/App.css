@@ -655,15 +655,25 @@ p {
    uses PageShell opts out: the shell manages its own header/body split, and
    the gutter moves inside it. The route element (`.animated-page`) is what
    sits directly under `.content`, so the rule has to reach through it. */
+/* `flex: 1` gives the route a zero basis, so it would take exactly the column's
+   height: a page taller than the viewport spills out of its own box and the
+   bottom gutter is stranded above the overflow — the page ends flush with the
+   last row. `min-height: auto` lets the route grow to its content instead.
+   Only a page that scrolls internally (a flush shell) stays pinned, below. */
 .content > * {
   flex: 1;
-  min-height: 0;
+  min-height: auto;
   padding: 20px 28px 40px;
 }
 
 .content > .page-shell,
 .content > *:has(.page-shell) {
   padding: 0;
+}
+
+.content > .page-shell-flush,
+.content > *:has(.page-shell-flush) {
+  min-height: 0;
 }
 
 /* ─── Table scroll wrapper (global utility) ─────────────────────────────── */
@@ -947,7 +957,6 @@ p {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0;
 }
 
 /* ─── Modal & backdrop animations ────────────────────────────────────────── */

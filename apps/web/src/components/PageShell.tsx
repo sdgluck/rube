@@ -70,9 +70,12 @@ export default function PageShell({
   children,
 }: PageShellProps) {
   const bodyClasses = [styles.body, flush ? styles.bodyFlush : "", bodyClassName ?? ""].filter(Boolean).join(" ");
+  const shellClasses = ["page-shell", styles.shell, flush ? `page-shell-flush ${styles.shellFlush}` : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`page-shell ${styles.shell}`}>
+    <div className={shellClasses}>
       <header className={styles.header}>
         <div className={styles.row}>
           <div className={styles.titleGroup}>

@@ -8,10 +8,16 @@
  * the 28px gutter.
  */
 
+/* The shell grows with its body by default (`min-height: auto`) so a long page
+   carries its bottom gutter past the fold; a flush shell scrolls internally and
+   is pinned to the viewport instead. */
 .shell {
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+
+.shellFlush {
   min-height: 0;
 }
 
@@ -81,7 +87,6 @@
 
 .body {
   flex: 1;
-  min-height: 0;
   padding: 20px 28px 40px;
 }
 
@@ -90,6 +95,7 @@
 .bodyFlush {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   padding-bottom: 20px;
   overflow: hidden;
 }
