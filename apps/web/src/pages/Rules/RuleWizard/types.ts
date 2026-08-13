@@ -43,6 +43,8 @@ export interface RuleFormState {
   /** seerr_requests rule type: status filter ("all" / "approved" / …). */
   filter: string;
   pinToHomepage: boolean;
+  /** Pin only this many collections per library per run, rotating. 0 = pin all. */
+  pinRotationCount: number;
   arr: ArrFormState;
 }
 

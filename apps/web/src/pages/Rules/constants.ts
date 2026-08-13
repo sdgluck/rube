@@ -114,6 +114,7 @@ export const EMPTY_FORM: RuleFormState = {
   smartFilter: { kind: "group", combinator: "all", children: [] },
   filter: "all",
   pinToHomepage: true,
+  pinRotationCount: 0,
   arr: { ...DEFAULT_ARR_FORM },
 };
 

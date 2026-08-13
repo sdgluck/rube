@@ -51,6 +51,7 @@ export function createRule(input: {
     lastRunArrAddedCount: null,
     lastRunArrSkippedCount: null,
     lastRunArrFailedCount: null,
+    lastPinnedCollections: {},
   };
 }
 
@@ -68,6 +69,15 @@ export function updateRule(
 
 export function setRuleLastCollection(id: string, ratingKey: string): void {
   db.update(rules).set({ lastCollectionRatingKey: ratingKey }).where(eq(rules.id, id)).run();
+}
+
+/**
+ * Record which collections a pin rotation put on the homepage, so the next
+ * run can rotate a different set in. Keyed by section, then collection name
+ * — see the column comment in the schema for why names and not rating keys.
+ */
+export function setRuleLastPinnedCollections(id: string, bySection: Record<string, string[]>): void {
+  db.update(rules).set({ lastPinnedCollections: bySection }).where(eq(rules.id, id)).run();
 }
 
 export function setRuleArrCounts(id: string, added: number, skipped: number, failed: number): void {

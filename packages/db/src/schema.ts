@@ -143,6 +143,16 @@ export const rules = sqliteTable("rules", {
   lastRunArrAddedCount: integer("last_run_arr_added_count"),
   lastRunArrSkippedCount: integer("last_run_arr_skipped_count"),
   lastRunArrFailedCount: integer("last_run_arr_failed_count"),
+  /**
+   * Pin-rotation bookkeeping: the collection names this rule pinned on its
+   * last run, keyed by section. Keyed by NAME rather than rating key on
+   * purpose — every run deletes and recreates the rule's collections, so
+   * rating keys don't survive between runs but names do.
+   */
+  lastPinnedCollections: text("last_pinned_collections", { mode: "json" })
+    .$type<Record<string, string[]>>()
+    .notNull()
+    .default({}),
 });
 
 export const ruleHistory = sqliteTable(

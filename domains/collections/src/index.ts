@@ -38,6 +38,7 @@ export async function upsertCollectionByKey(
   ratingKey: string,
 ): Promise<void> {
   const detail = await client.getCollectionDetail(ratingKey);
+  const members = await client.getCollectionChildren(ratingKey);
   const now = Date.now();
   const values = {
     plexRatingKey: ratingKey,
@@ -45,7 +46,9 @@ export async function upsertCollectionByKey(
     sectionTitle: section.title,
     title: detail.title,
     summary: detail.summary,
-    childCount: detail.childCount,
+    // Plex's own `childCount` goes stale — it can sit at 0 while /children
+    // serves a full list. Since we enumerate the members anyway, count those.
+    childCount: members.length,
     labels: detail.labels,
     addedAt: detail.addedAt ?? null,
     thumb: detail.thumb,
@@ -54,11 +57,10 @@ export async function upsertCollectionByKey(
     syncedAt: now,
   };
   db.insert(collections).values(values).onConflictDoUpdate({ target: collections.plexRatingKey, set: values }).run();
-  await syncCollectionMembership(client, ratingKey);
+  syncCollectionMembership(ratingKey, members);
 }
 
-async function syncCollectionMembership(client: PlexClient, collectionRatingKey: string): Promise<void> {
-  const children = await client.getCollectionChildren(collectionRatingKey);
+function syncCollectionMembership(collectionRatingKey: string, children: { ratingKey: string }[]): void {
   db.transaction((tx) => {
     tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, collectionRatingKey)).run();
     if (children.length > 0) {
@@ -143,13 +145,24 @@ export async function syncCollections(
   const removed = db.transaction((tx) => {
     for (const { section, ratingKey, detail, members } of fetched) {
       const smartFilter = detail.smart ? detail.content : "";
+      // Plex's `childCount` goes stale — it can report 0 for a collection
+      // whose /children endpoint happily lists 34 items. We enumerate the
+      // members anyway, so count those. When the membership fetch failed we
+      // keep the rows (and the count) we already had rather than trusting
+      // Plex's number to overwrite a good one.
+      const priorCount = tx
+        .select({ count: sql<number>`count(*)` })
+        .from(collectionItems)
+        .where(eq(collectionItems.collectionRatingKey, ratingKey))
+        .get();
+      const childCount = members !== null ? members.length : priorCount?.count || detail.childCount;
       const values = {
         plexRatingKey: ratingKey,
         sectionId: section.key,
         sectionTitle: section.title,
         title: detail.title,
         summary: detail.summary,
-        childCount: detail.childCount,
+        childCount,
         labels: detail.labels,
         addedAt: detail.addedAt ?? null,
         thumb: detail.thumb,

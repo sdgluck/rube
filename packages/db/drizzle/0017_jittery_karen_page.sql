@@ -1,0 +1,1 @@
+ALTER TABLE `rules` ADD `last_pinned_collections` text DEFAULT '{}' NOT NULL;

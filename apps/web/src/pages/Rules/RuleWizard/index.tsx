@@ -384,6 +384,41 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             home rows.
           </span>
         </div>
+
+        {form.pinToHomepage && (
+          <div className={styles.field}>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.pinRotationCount > 0}
+                onChange={(e) => setForm({ ...form, pinRotationCount: e.target.checked ? 10 : 0 })}
+              />{" "}
+              Rotate a limited number onto the homepage
+            </label>
+            {form.pinRotationCount > 0 && (
+              <input
+                type="number"
+                className={shared.input}
+                style={{ maxWidth: 140 }}
+                min={1}
+                value={form.pinRotationCount}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    pinRotationCount: Math.max(1, parseInt(e.target.value, 10) || 1),
+                  })
+                }
+              />
+            )}
+            <span className={styles.hint}>
+              {form.pinRotationCount > 0
+                ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
+                  "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
+                  `${form.pinRotationCount * 2} collections.`
+                : "When off, every collection this rule generates is pinned."}
+            </span>
+          </div>
+        )}
       </>
     );
   }
@@ -620,7 +655,13 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           )}
           <div className={styles.summaryRow}>
             <span className={styles.summaryLabel}>Pin to homepage</span>
-            <span className={styles.summaryValue}>{form.pinToHomepage ? "On" : "Off"}</span>
+            <span className={styles.summaryValue}>
+              {!form.pinToHomepage
+                ? "Off"
+                : form.pinRotationCount > 0
+                  ? `On — ${form.pinRotationCount}/library, rotating`
+                  : "On"}
+            </span>
             <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
               Edit
             </button>

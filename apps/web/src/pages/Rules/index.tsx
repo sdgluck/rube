@@ -227,6 +227,7 @@ export default function Rules() {
       },
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
+      pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
       arr: {
         ...DEFAULT_ARR_FORM,
         ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
@@ -264,6 +265,7 @@ export default function Rules() {
     if (next.type === "seerr_requests") config.filter = next.filter;
     if (next.sections.length > 0) config.sections = next.sections;
     if (!next.pinToHomepage) config.pinToHomepage = false;
+    if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
     if (next.arr.enabled) config.arr = next.arr;
 
     if (isEditing && next.id) {

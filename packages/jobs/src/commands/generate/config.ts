@@ -28,6 +28,12 @@ export const ruleConfigSchema = z.object({
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
   /**
+   * Pin only this many of the rule's collections per library, rotating a
+   * different set in on each run. Unset (or 0) pins every collection, which
+   * is the original behaviour.
+   */
+  pinRotationCount: z.number().int().positive().optional(),
+  /**
    * When true, the personalize job also runs this rule per opted-in user,
    * producing a `User:<name>`-labelled variant on their home shaped by their
    * preferences (in addition to the shared collection this rule produces).
