@@ -5,6 +5,7 @@ import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { useListParams } from "#hooks/useListParams";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import MultiSelect from "#components/MultiSelect";
 import PageShell, { StatusChip } from "#components/PageShell";
 import Pagination from "#components/Pagination";
 import PullToRefresh from "#components/PullToRefresh";
@@ -27,14 +28,15 @@ const SORT_KEYS = ["timestamp", "type", "message"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 
 export default function Events() {
-  const { sortKey, sortDir, page, param, setParam, setParams, setPage, toggleSort } = useListParams<SortKey>({
-    sortKeys: SORT_KEYS,
-    defaultSortKey: "timestamp",
-    defaultSortDir: "desc",
-    descFirst: ["timestamp"],
-  });
+  const { sortKey, sortDir, page, param, listParam, setParam, setListParam, setParams, setPage, toggleSort } =
+    useListParams<SortKey>({
+      sortKeys: SORT_KEYS,
+      defaultSortKey: "timestamp",
+      defaultSortDir: "desc",
+      descFirst: ["timestamp"],
+    });
 
-  const typeFilter = param("type");
+  const typeFilter = listParam("type");
   const search = param("q");
   const debouncedSearch = useDebouncedValue(search);
 
@@ -42,7 +44,7 @@ export default function Events() {
     {
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      type: typeFilter || undefined,
+      types: typeFilter,
       search: debouncedSearch || undefined,
       sort: sortKey,
       sortDir,
@@ -63,7 +65,7 @@ export default function Events() {
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const eventTypes = typesQuery.data ?? [];
-  const isFiltered = !!(typeFilter || search);
+  const isFiltered = typeFilter.length > 0 || !!search;
 
   if (query.isLoading && !query.data) return <EventsSkeleton />;
   if (query.error && !query.data) {
@@ -86,7 +88,6 @@ export default function Events() {
             </StatusChip>
           ) : undefined
         }
-        subtitle="Everything Tinkerbell has done and everything that happened to it, newest first."
       >
         <div className={sharedStyles.filters}>
           <input
@@ -97,22 +98,13 @@ export default function Events() {
             value={search}
             onChange={(e) => setParam("q", e.target.value)}
           />
-          <select
-            className={sharedStyles.select}
-            value={typeFilter}
-            aria-label="Filter by event type"
-            onChange={(e) => setParam("type", e.target.value)}
-          >
-            <option value="">All types</option>
-            {eventTypes.map((t) => {
-              const badge = BADGE_MAP[t];
-              return (
-                <option key={t} value={t}>
-                  {badge ? badge.label : t}
-                </option>
-              );
-            })}
-          </select>
+          <MultiSelect
+            allLabel="All types"
+            ariaLabel="Filter by event type"
+            options={eventTypes.map((t) => ({ value: t, label: BADGE_MAP[t]?.label ?? t }))}
+            selected={typeFilter}
+            onChange={(next) => setListParam("type", next)}
+          />
         </div>
 
         {events.length === 0 ? (

@@ -5,7 +5,7 @@ import { SETTINGS_SECTIONS } from "./sections";
 
 export default function Settings() {
   return (
-    <PageShell title="Settings" subtitle="How Tinkerbell connects to Plex and everything around it.">
+    <PageShell title="Settings">
       <div className={styles.layout}>
         <nav className={styles.rail} aria-label="Settings sections">
           {SETTINGS_SECTIONS.map((section) => (

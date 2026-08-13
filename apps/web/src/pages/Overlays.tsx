@@ -423,7 +423,6 @@ export default function Overlays() {
   return (
     <PageShell
       title="Overlays"
-      subtitle="Badges painted onto poster artwork before Plex sees it. Drag one onto a zone to place it."
       actions={
         sections.length > 1 ? (
           <select

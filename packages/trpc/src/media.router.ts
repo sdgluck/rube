@@ -9,30 +9,32 @@ export const mediaRouter = t.router({
   list: t.procedure
     .input(
       paginationInput.extend({
-        sectionId: z.string().optional(),
-        type: z.string().optional(),
+        // Value filters are lists: the page's controls are multi-selects, so
+        // each one carries every ticked value. Empty means "filter off".
+        sectionIds: z.array(z.string()).default([]),
+        types: z.array(z.string()).default([]),
         search: z.string().optional(),
-        videoResolution: z.string().optional(),
-        videoCodec: z.string().optional(),
-        audioCodec: z.string().optional(),
-        audioChannels: z.number().optional(),
-        container: z.string().optional(),
+        videoResolutions: z.array(z.string()).default([]),
+        videoCodecs: z.array(z.string()).default([]),
+        audioCodecs: z.array(z.string()).default([]),
+        audioChannels: z.array(z.number()).default([]),
+        containers: z.array(z.string()).default([]),
         sort: z.string().optional(),
         sortDir: z.enum(["asc", "desc"]).default("asc"),
       }),
     )
     .query(({ input }) => {
       return getLocalMediaItems({
-        sectionId: input.sectionId,
-        type: input.type,
+        sectionIds: input.sectionIds,
+        types: input.types,
         search: input.search || undefined,
         offset: input.offset,
         limit: input.limit,
-        videoResolution: input.videoResolution || undefined,
-        videoCodec: input.videoCodec || undefined,
-        audioCodec: input.audioCodec || undefined,
-        audioChannels: input.audioChannels || undefined,
-        container: input.container || undefined,
+        videoResolutions: input.videoResolutions,
+        videoCodecs: input.videoCodecs,
+        audioCodecs: input.audioCodecs,
+        audioChannels: input.audioChannels,
+        containers: input.containers,
         sort: input.sort,
         sortDir: input.sortDir,
       });

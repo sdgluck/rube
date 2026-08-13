@@ -90,10 +90,7 @@ export default function SettingsPosters() {
 
   return (
     <div className={styles.form}>
-      <SettingsPageHeader
-        title="Posters"
-        description="Use Kometa default posters for auto-generated collection artwork."
-      />
+      <SettingsPageHeader title="Posters" />
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Kometa default posters">
         <p className={styles.hint}>
           Auto-apply curated posters from the{" "}

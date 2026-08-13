@@ -2,7 +2,8 @@
  * Media module — sync Plex media items to local SQLite and query them.
  */
 
-import { eq, and, asc, desc, lt, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, lt, sql, type InferSelectModel } from "drizzle-orm";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { db, mediaItems, likeContains } from "@tinkerbell/db";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
@@ -13,15 +14,21 @@ interface SyncStats {
   removed: number;
 }
 
+/**
+ * Value filters are lists — the Media page's filter controls are multi-selects,
+ * so "H.264 or HEVC" is one query rather than two views. An empty or absent
+ * list means the filter is off; values within a list are OR-ed, and separate
+ * filters are AND-ed.
+ */
 interface MediaFilters {
-  sectionId?: string;
-  type?: string;
+  sectionIds?: string[];
+  types?: string[];
   search?: string;
-  videoResolution?: string;
-  videoCodec?: string;
-  audioCodec?: string;
-  audioChannels?: number;
-  container?: string;
+  videoResolutions?: string[];
+  videoCodecs?: string[];
+  audioCodecs?: string[];
+  audioChannels?: number[];
+  containers?: string[];
   offset?: number;
   limit?: number;
   sort?: string;
@@ -152,30 +159,22 @@ export function getLocalMediaItems(filters: MediaFilters): {
 } {
   const conditions = [];
 
-  if (filters.sectionId) {
-    conditions.push(eq(mediaItems.sectionId, filters.sectionId));
-  }
-  if (filters.type) {
-    conditions.push(eq(mediaItems.type, filters.type));
-  }
+  /** One selected value stays an `=`; several become an `IN`. */
+  const anyOf = <T extends string | number>(column: SQLiteColumn, values: T[] | undefined) => {
+    if (!values || values.length === 0) return;
+    conditions.push(values.length === 1 ? eq(column, values[0]) : inArray(column, values));
+  };
+
+  anyOf(mediaItems.sectionId, filters.sectionIds);
+  anyOf(mediaItems.type, filters.types);
   if (filters.search) {
     conditions.push(likeContains(mediaItems.title, filters.search));
   }
-  if (filters.videoResolution) {
-    conditions.push(eq(mediaItems.videoResolution, filters.videoResolution));
-  }
-  if (filters.videoCodec) {
-    conditions.push(eq(mediaItems.videoCodec, filters.videoCodec));
-  }
-  if (filters.audioCodec) {
-    conditions.push(eq(mediaItems.audioCodec, filters.audioCodec));
-  }
-  if (filters.audioChannels) {
-    conditions.push(eq(mediaItems.audioChannels, filters.audioChannels));
-  }
-  if (filters.container) {
-    conditions.push(eq(mediaItems.container, filters.container));
-  }
+  anyOf(mediaItems.videoResolution, filters.videoResolutions);
+  anyOf(mediaItems.videoCodec, filters.videoCodecs);
+  anyOf(mediaItems.audioCodec, filters.audioCodecs);
+  anyOf(mediaItems.audioChannels, filters.audioChannels);
+  anyOf(mediaItems.container, filters.containers);
 
   const offset = filters.offset ?? 0;
   const limit = filters.limit ?? 50;

@@ -249,7 +249,6 @@ export default function Preview() {
     <PageShell
       title="Preview"
       chip={<StatusChip tone="advisory">Approximate</StatusChip>}
-      subtitle="The Plex home screen as one of your users would see it — labels and library access only."
       actions={
         <>
           <button

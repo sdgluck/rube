@@ -69,10 +69,7 @@ export default function SettingsSchedules() {
 
   return (
     <div className={styles.form}>
-      <SettingsPageHeader
-        title="Schedules"
-        description="When Tinkerbell's scheduled jobs run. This affects every job schedule."
-      />
+      <SettingsPageHeader title="Schedules" />
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Timezone">
         <label className={styles.field}>
           <span className={styles.label}>Schedule timezone</span>

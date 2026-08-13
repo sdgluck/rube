@@ -47,8 +47,6 @@ type PageShellProps = {
   chip?: ReactNode;
   /** Ghost → secondary → primary, left to right. */
   actions?: ReactNode;
-  /** What the page shows. Not live state, not the page's own structure. */
-  subtitle?: ReactNode;
   /** Drops the body's bottom gutter for pages that fill the viewport. */
   flush?: boolean;
   bodyClassName?: string;
@@ -64,7 +62,6 @@ export default function PageShell({
   count,
   chip,
   actions,
-  subtitle,
   flush = false,
   bodyClassName,
   children,
@@ -86,7 +83,6 @@ export default function PageShell({
           <div className={styles.spacer} />
           {actions && <div className={styles.actions}>{actions}</div>}
         </div>
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
       </header>
       <div className={bodyClasses}>{children}</div>
     </div>

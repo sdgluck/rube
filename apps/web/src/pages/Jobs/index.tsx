@@ -374,7 +374,6 @@ export default function Jobs() {
             </StatusChip>
           ) : undefined
         }
-        subtitle="The scheduled work Tinkerbell does on your library, and the optional features you've installed."
       >
         <div className={styles.dashboard}>
           {/* ─── Metric tiles ─────────────────────────────────────────── */}

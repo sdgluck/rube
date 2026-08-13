@@ -85,10 +85,7 @@ export default function SettingsAi() {
 
   return (
     <div className={styles.form}>
-      <SettingsPageHeader
-        title="AI"
-        description="Choose the AI provider used for AI-assisted smart filters and Because You Watched."
-      />
+      <SettingsPageHeader title="AI" />
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="LLM provider">
         <p className={styles.hint}>
           Tinkerbell sends prompts to whichever LLM you configure here. Switch providers any time — your existing rules

@@ -95,10 +95,7 @@ export default function SettingsHealth() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Health"
-        description="Connection status and recent activity for each configured integration."
-      />
+      <SettingsPageHeader title="Health" />
       <div className={styles.header}>
         <span className={styles.headerHint}>Last 24 hours</span>
         <button

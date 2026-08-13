@@ -10,10 +10,7 @@ const TABS = [
 export default function SettingsPortal() {
   return (
     <div>
-      <SettingsPageHeader
-        title="Portal"
-        description="The Sign-in-with-Plex portal where your users opt in and set their preferences."
-      />
+      <SettingsPageHeader title="Portal" />
       <nav className={styles.subTabs} aria-label="Portal sections">
         {TABS.map((tab) => (
           <NavLink

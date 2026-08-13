@@ -38,6 +38,15 @@ export function useListParams<K extends string>({
   /** Reads an arbitrary filter param. */
   const param = useCallback((key: string) => searchParams.get(key) ?? "", [searchParams]);
 
+  /**
+   * Reads a multi-value filter param — every selection of a MultiSelect.
+   *
+   * Repeated keys (`?type=movie&type=show`) rather than one delimited value:
+   * the values include Plex labels and collection titles, which are free text
+   * and do contain commas.
+   */
+  const listParam = useCallback((key: string) => searchParams.getAll(key), [searchParams]);
+
   const setParams = useCallback(
     (patch: Record<string, string>, opts?: { keepPage?: boolean }) => {
       setSearchParams(
@@ -59,6 +68,24 @@ export function useListParams<K extends string>({
 
   const setParam = useCallback((key: string, value: string) => setParams({ [key]: value }), [setParams]);
 
+  /** Replaces every value of a multi-value filter param. */
+  const setListParam = useCallback(
+    (key: string, values: string[]) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete(key);
+          for (const value of values) next.append(key, value);
+          // Same rule as setParams: changing a filter invalidates the page.
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const setPage = useCallback((next: number) => setParams({ page: next <= 1 ? "" : String(next) }), [setParams]);
 
   /** Toggles direction on the active column, or switches to a new one. */
@@ -73,5 +100,5 @@ export function useListParams<K extends string>({
     [sortKey, sortDir, setParams, descFirst],
   );
 
-  return { sortKey, sortDir, page, param, setParam, setParams, setPage, toggleSort };
+  return { sortKey, sortDir, page, param, listParam, setParam, setListParam, setParams, setPage, toggleSort };
 }

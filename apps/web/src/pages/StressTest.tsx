@@ -105,10 +105,7 @@ export default function StressTest() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Stress Test"
-        description="Generate synthetic load to exercise the job runner and database."
-      />
+      <SettingsPageHeader title="Stress Test" />
       <div className={styles.header}>
         {!isRunning && (
           <button className={shared.button} onClick={() => setShowConfig(!showConfig)}>

@@ -28,7 +28,7 @@ export default function RulePreviewRow({ ruleId, fallbackRatingKey }: RulePrevie
     return () => ro.disconnect();
   }, [tdEl]);
 
-  const listQuery = trpc.collections.list.useQuery({ label: `Rule:${ruleId}`, limit: 50 });
+  const listQuery = trpc.collections.list.useQuery({ labels: [`Rule:${ruleId}`], limit: 50 });
   const collections =
     listQuery.data && listQuery.data.items.length > 0
       ? listQuery.data.items.map((c) => ({ ratingKey: c.plexRatingKey, title: c.title }))

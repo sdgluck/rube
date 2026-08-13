@@ -16,10 +16,7 @@ export default function SettingsArrs() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Media Managers"
-        description="Connect Radarr, Sonarr, and Jellyseerr/Overseerr so rules can request and manage media."
-      />
+      <SettingsPageHeader title="Media Managers" />
       <nav className={styles.subTabs} aria-label="Media manager services">
         {ARRS_TAB_ORDER.map((id) => {
           const svc = ARRS_SERVICES[id];

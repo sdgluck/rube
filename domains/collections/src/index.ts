@@ -2,7 +2,7 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import { eq, and, or, like, asc, desc, lt, sql, inArray, type InferSelectModel } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, lt, sql, inArray, type SQL, type InferSelectModel } from "drizzle-orm";
 import { db, collections, collectionItems, likeContains } from "@tinkerbell/db";
 import { runPostCollectionSyncHook } from "@tinkerbell/core";
 import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
@@ -14,17 +14,23 @@ interface SyncStats {
   removed: number;
 }
 
+/**
+ * Value filters are lists — the page's filter controls are multi-selects.
+ * Values within one filter are OR-ed; separate filters are AND-ed. Empty or
+ * absent means the filter is off.
+ */
 interface CollectionFilters {
-  sectionId?: string;
-  label?: string;
+  sectionIds?: string[];
+  labels?: string[];
   /**
    * Rule id filter: matches collections labeled `Rule:<id>` OR the rating
    * key recorded as the rule's last-generated collection. The latter
    * covers smart_filter rules created by migration where the existing
    * Plex collection wasn't labeled by Tinkerbell.
    */
-  ruleId?: string;
-  ruleLastRatingKey?: string;
+  ruleIds?: string[];
+  /** `ruleId` → that rule's last-generated collection rating key, where known. */
+  ruleLastRatingKeys?: Record<string, string>;
   search?: string;
   offset?: number;
   limit?: number;
@@ -213,25 +219,41 @@ const SORT_COLUMNS = {
   addedAt: collections.addedAt,
 } as const;
 
+/** `or()` over a list that may hold a single term, where `or()` is a no-op. */
+function orAll(terms: SQL[]): SQL {
+  return terms.length === 1 ? terms[0] : or(...terms)!;
+}
+
 export function getLocalCollections(filters?: CollectionFilters): { items: CollectionRow[]; total: number } {
   const conditions = [];
 
-  if (filters?.sectionId) {
-    conditions.push(eq(collections.sectionId, filters.sectionId));
+  const sectionIds = filters?.sectionIds ?? [];
+  if (sectionIds.length > 0) {
+    conditions.push(
+      sectionIds.length === 1 ? eq(collections.sectionId, sectionIds[0]) : inArray(collections.sectionId, sectionIds),
+    );
   }
 
-  if (filters?.label) {
-    // Labels are stored as a JSON-encoded array (`["foo","bar"]`). Match the
+  const labels = filters?.labels ?? [];
+  if (labels.length > 0) {
+    // Labels are stored as a JSON-encoded array (`["foo","bar"]`). Match each
     // value with its surrounding quotes so `foo` doesn't match `foobar`.
-    conditions.push(likeContains(collections.labels, JSON.stringify(filters.label)));
+    conditions.push(orAll(labels.map((label) => likeContains(collections.labels, JSON.stringify(label)))));
   }
 
-  if (filters?.ruleId) {
-    // Same anchoring as `filters.label` — keep the JSON quotes so `Rule:1`
+  const ruleIds = filters?.ruleIds ?? [];
+  if (ruleIds.length > 0) {
+    // Same anchoring as the label filter — keep the JSON quotes so `Rule:1`
     // doesn't match `Rule:10`, `Rule:11`, etc.
-    const labelMatch = likeContains(collections.labels, JSON.stringify(`Rule:${filters.ruleId}`));
-    const ratingKeyMatch = filters.ruleLastRatingKey ? eq(collections.plexRatingKey, filters.ruleLastRatingKey) : null;
-    conditions.push(ratingKeyMatch ? or(labelMatch, ratingKeyMatch) : labelMatch);
+    conditions.push(
+      orAll(
+        ruleIds.map((ruleId) => {
+          const labelMatch = likeContains(collections.labels, JSON.stringify(`Rule:${ruleId}`));
+          const lastRatingKey = filters?.ruleLastRatingKeys?.[ruleId];
+          return lastRatingKey ? or(labelMatch, eq(collections.plexRatingKey, lastRatingKey))! : labelMatch;
+        }),
+      ),
+    );
   }
 
   if (filters?.search) {

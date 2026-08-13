@@ -15,7 +15,9 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: var(--btn-pad-y) var(--btn-pad-x);
+  box-sizing: border-box;
+  height: var(--control-h);
+  padding: 0 var(--btn-pad-x);
   border: 1px solid transparent;
   border-radius: var(--btn-radius);
   font-size: var(--btn-font-size);
@@ -108,10 +110,11 @@
   color: #fff;
 }
 
-/* Size modifier */
+/* Size modifier — type and horizontal padding only. Height is --control-h for
+   every button, so a "small" button still lines up with the input beside it. */
 
 .btnSm {
-  padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+  padding: 0 var(--btn-pad-x-sm);
   font-size: var(--btn-font-size-sm);
   border-radius: var(--r-sm);
 }
@@ -159,6 +162,7 @@
 .input,
 .select,
 .textarea {
+  box-sizing: border-box;
   padding: var(--input-pad-y) var(--input-pad-x);
   border: 1px solid var(--border-input);
   border-radius: var(--input-radius);
@@ -170,6 +174,15 @@
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
+}
+
+/* Single-line fields take the shared control height instead of stacking
+   padding, so they match every button and select on the page. */
+.input,
+.select {
+  height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .input::placeholder,
@@ -236,13 +249,10 @@
   cursor: pointer;
 }
 
-/* Size modifier */
+/* Size modifier — type and horizontal padding only; height is already shared. */
 
-/* Height comes from the shared control token rather than vertical padding, so
-   these line up with pills, segmented controls and buttons in a filter bar. */
 .inputSm,
 .selectSm {
-  height: var(--control-h);
   padding: 0 10px;
   font-size: var(--btn-font-size-sm);
   border-radius: var(--r-sm);

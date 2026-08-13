@@ -439,7 +439,6 @@ export default function Stats() {
             </StatusChip>
           ) : undefined
         }
-        subtitle="What your server is doing right now, and what your library looks like."
         actions={<TilePicker selected={selectedTiles} onSave={saveTiles} />}
       >
         <div className={styles.dashboard}>

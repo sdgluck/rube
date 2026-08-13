@@ -1,4 +1,4 @@
-import { desc, asc, eq, and, sql } from "drizzle-orm";
+import { desc, asc, eq, and, inArray, sql } from "drizzle-orm";
 import { db, events, likeContains } from "@tinkerbell/db";
 import { MONTH_MS } from "@tinkerbell/core";
 import { notifyEvent } from "@tinkerbell/domain.notifications";
@@ -19,7 +19,8 @@ export function emitEvent(type: string, message: string, metadata?: Record<strin
 interface EventFilters {
   limit?: number;
   offset?: number;
-  type?: string;
+  /** Event types to include. Empty means every type passes. */
+  types?: string[];
   search?: string;
   sort?: string;
   sortDir?: "asc" | "desc";
@@ -110,8 +111,9 @@ export function getEvents(filters: EventFilters): { items: EventItem[]; total: n
   const { limit = 50, offset = 0 } = filters;
   const conditions = [];
 
-  if (filters.type) {
-    conditions.push(eq(events.type, filters.type));
+  const types = filters.types ?? [];
+  if (types.length > 0) {
+    conditions.push(types.length === 1 ? eq(events.type, types[0]) : inArray(events.type, types));
   }
   if (filters.search) {
     conditions.push(likeContains(events.message, filters.search));

@@ -114,26 +114,29 @@
 
   /* ─── Form-control tokens (used by styles/controls.module.css) ─── */
 
-  /* One height for everything that sits in a filter bar. Each control used to
-     size itself from its own padding, so a search input, a select, a pill and
-     a segmented control landed on four different heights in the same row —
-     visible as a ragged baseline across every table toolbar. Anything that can
-     appear beside another control in a toolbar sets `height: var(--control-h)`
-     and drops its vertical padding. */
-  --control-h: 30px;
+  /* One height for every single-line control in the app — buttons, inputs,
+     selects, multi-selects, segmented controls — regardless of size modifier.
+     Each control used to size itself from its own padding, so a search input
+     (34px), a button (31px) and a small button (26px) landed on three
+     different heights in the same row; the `sm` modifiers then only fixed it
+     within a toolbar, so a filter bar still disagreed with the page header
+     above it. Size modifiers now change type and padding, never height.
+
+     Anything single-line sets `height: var(--control-h)` and drops its
+     vertical padding. `.textarea` is the one exception — it grows. */
+  --control-h: 32px;
 
   --btn-radius: 8px;
-  --btn-pad-y: 7px;
   --btn-pad-x: 13px;
-  --btn-pad-y-sm: 5px;
   --btn-pad-x-sm: 10px;
   --btn-font-size: 12.5px;
   --btn-font-size-sm: 11.5px;
   --btn-font-weight: 600;
 
   --input-radius: 8px;
-  --input-pad-y: 8px;
   --input-pad-x: 11px;
+  /* Textareas only — every other input takes its height from --control-h. */
+  --input-pad-y: 8px;
   --input-font-size: 13px;
   --input-focus-ring: 0 0 0 3px rgba(18, 134, 124, 0.14);
 
@@ -193,7 +196,6 @@
   --z-sheet-overlay: 190;
   --z-sheet: 195;
   --z-bottom-nav: 200;
-  --z-page-header: 60;
   --z-modal: 400;
   --z-toast: 500;
 }

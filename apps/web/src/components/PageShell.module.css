@@ -1,11 +1,12 @@
 /* ─── Page shell ───────────────────────────────────────────────────────────
  *
- * The frame every page adopts: a fixed-height header row that stays put while
- * the body scrolls under it, and a body with the page gutter.
+ * The frame every page adopts: a fixed-height header row carrying the title,
+ * count and actions, and a body with the page gutter.
  *
- * The header sticks at the top of `.content` (the scroll container). The
- * negative side margins let it bleed to the column edges while the body keeps
- * the 28px gutter.
+ * The header scrolls away with the body. It used to stick to the top of
+ * `.content`, which cost a band of every screen to a title that never changes
+ * — on a laptop viewport that is the difference between five table rows and
+ * eight. The page title is one glance up in the sidebar nav anyway.
  */
 
 /* The shell grows with its body by default (`min-height: auto`) so a long page
@@ -22,14 +23,8 @@
 }
 
 .header {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-page-header);
   flex-shrink: 0;
   border-bottom: 1px solid #e4e9e8;
-  background: rgba(237, 241, 240, 0.86);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .row {
@@ -74,15 +69,6 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-/* Describes what the page shows — never live state, never the page's own
-   structure. State belongs in the count and the status chip. */
-.subtitle {
-  padding: 0 28px 14px;
-  font: var(--t-body-sm);
-  color: var(--ink-3);
-  max-width: 72ch;
 }
 
 .body {
@@ -167,10 +153,6 @@
     padding: 10px 16px;
     flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .subtitle {
-    padding: 0 16px 12px;
   }
 
   .body {

@@ -140,10 +140,7 @@ export default function SettingsPlex() {
 
   return (
     <div className={styles.form}>
-      <SettingsPageHeader
-        title="Plex"
-        description="Connect Tinkerbell to your Plex server and choose which libraries it manages."
-      />
+      <SettingsPageHeader title="Plex" />
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Connection">
         <label className={styles.field}>
           <span className={styles.label}>Plex URL</span>

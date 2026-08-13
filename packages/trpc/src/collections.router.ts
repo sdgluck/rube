@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
 import { getConfig } from "@tinkerbell/core";
 import {
@@ -18,29 +18,35 @@ export const collectionsRouter = t.router({
   list: t.procedure
     .input(
       paginationInput.extend({
-        sectionId: z.string().optional(),
-        label: z.string().optional(),
-        ruleId: z.string().optional(),
+        // Value filters are lists — the page's controls are multi-selects.
+        sectionIds: z.array(z.string()).default([]),
+        labels: z.array(z.string()).default([]),
+        ruleIds: z.array(z.string()).default([]),
         search: z.string().optional(),
         sort: z.string().optional(),
         sortDir: z.enum(["asc", "desc"]).default("asc"),
       }),
     )
     .query(({ input }) => {
-      let ruleLastRatingKey: string | undefined;
-      if (input.ruleId) {
-        const row = db
-          .select({ key: rules.lastCollectionRatingKey })
+      // A rule also claims the collection recorded as its last generated one,
+      // even when that collection carries no `Rule:<id>` label — see
+      // `getLocalCollections`.
+      const ruleLastRatingKeys: Record<string, string> = {};
+      if (input.ruleIds.length > 0) {
+        const rows = db
+          .select({ id: rules.id, key: rules.lastCollectionRatingKey })
           .from(rules)
-          .where(eq(rules.id, input.ruleId))
-          .get();
-        ruleLastRatingKey = row?.key ?? undefined;
+          .where(inArray(rules.id, input.ruleIds))
+          .all();
+        for (const row of rows) {
+          if (row.key) ruleLastRatingKeys[row.id] = row.key;
+        }
       }
       return getLocalCollections({
-        sectionId: input.sectionId,
-        label: input.label,
-        ruleId: input.ruleId,
-        ruleLastRatingKey,
+        sectionIds: input.sectionIds,
+        labels: input.labels,
+        ruleIds: input.ruleIds,
+        ruleLastRatingKeys,
         search: input.search || undefined,
         offset: input.offset,
         limit: input.limit,

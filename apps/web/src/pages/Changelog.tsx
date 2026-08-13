@@ -108,7 +108,6 @@ export default function Changelog() {
       title="Changelog"
       count={`v${VERSION}`}
       chip={IS_BETA ? <StatusChip tone="advisory">Beta</StatusChip> : undefined}
-      subtitle="What changed in each release, newest first."
     >
       <div className={styles.releases}>
         {releases.map((release) => (

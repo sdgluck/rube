@@ -7,6 +7,7 @@ import { MediaSkeleton } from "#components/Skeleton";
 import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import MultiSelect from "#components/MultiSelect";
 import PageShell from "#components/PageShell";
 import Pagination from "#components/Pagination";
 import SortableTh from "#components/SortableTh";
@@ -20,8 +21,11 @@ import mediaStyles from "./Media.module.css";
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 
+/* Filter options. No "" sentinel entry — every filter is a MultiSelect, where
+   "nothing ticked" is what means "no filter", and the all-label is the
+   control's own empty-state text. */
+
 const TYPE_OPTIONS = [
-  { value: "", label: "All types" },
   { value: "movie", label: "Movies" },
   { value: "show", label: "Shows" },
   { value: "artist", label: "Music" },
@@ -29,7 +33,6 @@ const TYPE_OPTIONS = [
 ];
 
 const RESOLUTION_OPTIONS = [
-  { value: "", label: "Any resolution" },
   { value: "4k", label: "4K" },
   { value: "1080", label: "1080p" },
   { value: "720", label: "720p" },
@@ -38,7 +41,6 @@ const RESOLUTION_OPTIONS = [
 ];
 
 const VIDEO_CODEC_OPTIONS = [
-  { value: "", label: "Any video codec" },
   { value: "h264", label: "H.264" },
   { value: "hevc", label: "HEVC" },
   { value: "vp9", label: "VP9" },
@@ -48,7 +50,6 @@ const VIDEO_CODEC_OPTIONS = [
 ];
 
 const AUDIO_CODEC_OPTIONS = [
-  { value: "", label: "Any audio codec" },
   { value: "aac", label: "AAC" },
   { value: "ac3", label: "AC3 / Dolby Digital" },
   { value: "eac3", label: "EAC3 / Dolby Digital+" },
@@ -58,7 +59,6 @@ const AUDIO_CODEC_OPTIONS = [
 ];
 
 const AUDIO_CHANNELS_OPTIONS = [
-  { value: "", label: "Any channels" },
   { value: "8", label: "7.1" },
   { value: "6", label: "5.1" },
   { value: "2", label: "Stereo" },
@@ -66,7 +66,6 @@ const AUDIO_CHANNELS_OPTIONS = [
 ];
 
 const CONTAINER_OPTIONS = [
-  { value: "", label: "Any container" },
   { value: "mkv", label: "MKV" },
   { value: "mp4", label: "MP4" },
   { value: "avi", label: "AVI" },
@@ -300,25 +299,29 @@ export default function Media() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const { sortKey, sortDir, page, setPage, toggleSort } = useListParams<SortKey>({
+  const { sortKey, sortDir, page, listParam, setParam, setListParam, setPage, toggleSort } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
     defaultSortKey: "title",
     descFirst: ["year"],
   });
 
-  const sectionFilter = searchParams.get("section") ?? "";
-  const typeFilter = searchParams.get("type") ?? "";
+  const sectionFilter = listParam("section");
+  const typeFilter = listParam("type");
   const search = searchParams.get("q") ?? "";
   const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("media-view", VIEW_MODES, "table"));
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
 
-  const resFilter = searchParams.get("res") ?? "";
-  const vcodecFilter = searchParams.get("vcodec") ?? "";
-  const acodecFilter = searchParams.get("acodec") ?? "";
-  const achFilter = searchParams.get("ach") ?? "";
-  const containerFilter = searchParams.get("container") ?? "";
+  const resFilter = listParam("res");
+  const vcodecFilter = listParam("vcodec");
+  const acodecFilter = listParam("acodec");
+  const achFilter = listParam("ach");
+  const containerFilter = listParam("container");
 
-  const activeFilterCount = [resFilter, vcodecFilter, acodecFilter, achFilter, containerFilter].filter(Boolean).length;
+  // Counts filters, not values: three codecs ticked is still one filter doing
+  // the hiding, and the badge answers "how many controls are narrowing this?".
+  const activeFilterCount = [resFilter, vcodecFilter, acodecFilter, achFilter, containerFilter].filter(
+    (f) => f.length > 0,
+  ).length;
 
   // Column configuration
   const [showColumnConfig, setShowColumnConfig] = useState(false);
@@ -363,28 +366,6 @@ export default function Media() {
     saveColumnsMutation.mutate(next);
   }
 
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (value) {
-            next.set(key, value);
-          } else {
-            next.delete(key);
-          }
-          // Reset page when filters change
-          if (key !== "page") {
-            next.delete("page");
-          }
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
-
   const clearAdvancedFilters = useCallback(() => {
     setSearchParams(
       (prev) => {
@@ -420,16 +401,16 @@ export default function Media() {
 
   const mediaQuery = trpc.media.list.useQuery(
     {
-      sectionId: sectionFilter || undefined,
-      type: typeFilter || undefined,
+      sectionIds: sectionFilter,
+      types: typeFilter,
       search: debouncedSearch || undefined,
       offset,
       limit: PAGE_SIZE,
-      videoResolution: resFilter || undefined,
-      videoCodec: vcodecFilter || undefined,
-      audioCodec: acodecFilter || undefined,
-      audioChannels: achFilter ? Number(achFilter) : undefined,
-      container: containerFilter || undefined,
+      videoResolutions: resFilter,
+      videoCodecs: vcodecFilter,
+      audioCodecs: acodecFilter,
+      audioChannels: achFilter.map(Number),
+      containers: containerFilter,
       sort: sortKey,
       sortDir,
     },
@@ -449,11 +430,7 @@ export default function Media() {
   }
 
   return (
-    <PageShell
-      title="Media"
-      count={total > 0 ? total.toLocaleString() : undefined}
-      subtitle="Every item in the libraries Tinkerbell manages, with the filters and columns you choose."
-    >
+    <PageShell title="Media" count={total > 0 ? total.toLocaleString() : undefined}>
       <div className={styles.filters}>
         <input
           type="text"
@@ -463,21 +440,20 @@ export default function Media() {
           value={search}
           onChange={(e) => setParam("q", e.target.value)}
         />
-        <select className={styles.select} value={sectionFilter} onChange={(e) => setParam("section", e.target.value)}>
-          <option value="">All sections</option>
-          {sections.map((s) => (
-            <option key={s.key} value={s.key}>
-              {s.title}
-            </option>
-          ))}
-        </select>
-        <select className={styles.select} value={typeFilter} onChange={(e) => setParam("type", e.target.value)}>
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <MultiSelect
+          allLabel="All sections"
+          ariaLabel="Filter by library section"
+          options={sections.map((s) => ({ value: s.key, label: s.title }))}
+          selected={sectionFilter}
+          onChange={(next) => setListParam("section", next)}
+        />
+        <MultiSelect
+          allLabel="All types"
+          ariaLabel="Filter by media type"
+          options={TYPE_OPTIONS}
+          selected={typeFilter}
+          onChange={(next) => setListParam("type", next)}
+        />
         <button
           className={`${styles.advancedFilterToggle} ${showAdvanced ? styles.advancedFilterToggleActive : ""}`}
           onClick={() => setShowAdvanced((v) => !v)}
@@ -550,45 +526,36 @@ export default function Media() {
 
       {showAdvanced && (
         <div className={styles.advancedFilters}>
-          <select className={styles.select} value={resFilter} onChange={(e) => setParam("res", e.target.value)}>
-            {RESOLUTION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <select className={styles.select} value={vcodecFilter} onChange={(e) => setParam("vcodec", e.target.value)}>
-            {VIDEO_CODEC_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <select className={styles.select} value={acodecFilter} onChange={(e) => setParam("acodec", e.target.value)}>
-            {AUDIO_CODEC_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <select className={styles.select} value={achFilter} onChange={(e) => setParam("ach", e.target.value)}>
-            {AUDIO_CHANNELS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
-            value={containerFilter}
-            onChange={(e) => setParam("container", e.target.value)}
-          >
-            {CONTAINER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          <MultiSelect
+            allLabel="Any resolution"
+            options={RESOLUTION_OPTIONS}
+            selected={resFilter}
+            onChange={(next) => setListParam("res", next)}
+          />
+          <MultiSelect
+            allLabel="Any video codec"
+            options={VIDEO_CODEC_OPTIONS}
+            selected={vcodecFilter}
+            onChange={(next) => setListParam("vcodec", next)}
+          />
+          <MultiSelect
+            allLabel="Any audio codec"
+            options={AUDIO_CODEC_OPTIONS}
+            selected={acodecFilter}
+            onChange={(next) => setListParam("acodec", next)}
+          />
+          <MultiSelect
+            allLabel="Any channels"
+            options={AUDIO_CHANNELS_OPTIONS}
+            selected={achFilter}
+            onChange={(next) => setListParam("ach", next)}
+          />
+          <MultiSelect
+            allLabel="Any container"
+            options={CONTAINER_OPTIONS}
+            selected={containerFilter}
+            onChange={(next) => setListParam("container", next)}
+          />
           {activeFilterCount > 0 && (
             <button className={styles.clearFilters} onClick={clearAdvancedFilters}>
               Clear filters

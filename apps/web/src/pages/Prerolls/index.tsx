@@ -185,7 +185,6 @@ export default function Prerolls() {
     <PageShell
       title="Prerolls"
       count={prerolls.length > 0 ? prerolls.length : undefined}
-      subtitle="Short videos Plex plays before every movie. Tinkerbell transcodes anything Plex wouldn't direct play, then points the server's pre-roll setting at the results."
       actions={
         <>
           <button

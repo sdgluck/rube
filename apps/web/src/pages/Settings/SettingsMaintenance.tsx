@@ -59,10 +59,7 @@ export default function SettingsMaintenance() {
 
   return (
     <div>
-      <SettingsPageHeader
-        title="Maintenance"
-        description="One-shot escape hatches that undo Tinkerbell-applied changes to your Plex server."
-      />
+      <SettingsPageHeader title="Maintenance" />
 
       {jobsQuery.error && (
         <ErrorState

@@ -87,10 +87,7 @@ export default function SettingsPrerolls() {
 
   return (
     <div className={styles.form}>
-      <SettingsPageHeader
-        title="Prerolls"
-        description="Where preroll videos are stored, and how Plex is told to find them."
-      />
+      <SettingsPageHeader title="Prerolls" />
 
       {env && env.ffmpeg === null && (
         <Banner variant="error">

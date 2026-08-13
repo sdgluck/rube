@@ -9,6 +9,7 @@ import BulkLabelsModal from "#components/BulkLabelsModal";
 import { CollectionsSkeleton } from "#components/Skeleton";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import MultiSelect from "#components/MultiSelect";
 import Pagination from "#components/Pagination";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
@@ -30,18 +31,23 @@ const PAGE_SIZE = 50;
 export default function Collections() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const sectionFilter = searchParams.get("section") ?? "";
-  // Backward-compat: older links used `?label=Rule:<id>` for the rule filter.
-  const rawLabel = searchParams.get("label") ?? "";
-  const labelFilter = rawLabel.startsWith("Rule:") ? "" : rawLabel;
-  const ruleIdFilter = searchParams.get("ruleId") ?? (rawLabel.startsWith("Rule:") ? rawLabel.slice(5) : "");
   const search = searchParams.get("q") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const { sortKey, sortDir, toggleSort, setPage } = useListParams<SortKey>({
+  const { sortKey, sortDir, listParam, toggleSort, setPage } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
     defaultSortKey: "title",
     descFirst: ["addedAt", "childCount"],
   });
+
+  const sectionFilter = listParam("section");
+  const rawLabels = listParam("label");
+  const labelFilter = rawLabels.filter((l) => !l.startsWith("Rule:"));
+  // Backward-compat: older links carried the rule filter as `?label=Rule:<id>`.
+  const ruleIdFilter = [
+    ...new Set([...listParam("ruleId"), ...rawLabels.filter((l) => l.startsWith("Rule:")).map((l) => l.slice(5))]),
+  ];
+  /** Stable identity for the filter set, for effects that reset when it changes. */
+  const filterKey = JSON.stringify([sectionFilter, labelFilter, ruleIdFilter]);
   const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("collections-view", VIEW_MODES, "table"));
 
   const setParam = useCallback(
@@ -66,40 +72,33 @@ export default function Collections() {
     [setSearchParams],
   );
 
-  const setSectionFilter = useCallback((v: string) => setParam("section", v), [setParam]);
-  const setLabelFilter = useCallback(
-    (v: string) => {
-      // When picking a label, drop any rule-shaped param so filters don't double-up.
+  /**
+   * Writes all three value filters at once, always in canonical form: plain
+   * labels in `label`, rule ids in `ruleId`.
+   *
+   * Every write goes through here so the legacy `label=Rule:<id>` spelling is
+   * normalised away the first time any filter is touched. Writing one param in
+   * isolation would leave a legacy link's rule filter behind in `label`, where
+   * unticking that rule in the menu couldn't reach it.
+   */
+  const setFilters = useCallback(
+    (next: { sections?: string[]; labels?: string[]; ruleIds?: string[] }) => {
+      const sections = next.sections ?? sectionFilter;
+      const labels = next.labels ?? labelFilter;
+      const ruleIds = next.ruleIds ?? ruleIdFilter;
       setSearchParams(
         (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete("ruleId");
-          if (v) next.set("label", v);
-          else next.delete("label");
-          next.delete("page");
-          return next;
+          const params = new URLSearchParams(prev);
+          for (const key of ["section", "label", "ruleId", "page"]) params.delete(key);
+          for (const value of sections) params.append("section", value);
+          for (const value of labels) params.append("label", value);
+          for (const value of ruleIds) params.append("ruleId", value);
+          return params;
         },
         { replace: true },
       );
     },
-    [setSearchParams],
-  );
-  const setRuleFilter = useCallback(
-    (id: string) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          // Strip any legacy `label=Rule:*` form too.
-          if (next.get("label")?.startsWith("Rule:")) next.delete("label");
-          if (id) next.set("ruleId", id);
-          else next.delete("ruleId");
-          next.delete("page");
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
+    [setSearchParams, sectionFilter, labelFilter, ruleIdFilter],
   );
   const setSearch = useCallback((v: string) => setParam("q", v), [setParam]);
 
@@ -116,9 +115,9 @@ export default function Collections() {
 
   const collectionsQuery = trpc.collections.list.useQuery(
     {
-      sectionId: sectionFilter || undefined,
-      label: labelFilter || undefined,
-      ruleId: ruleIdFilter || undefined,
+      sectionIds: sectionFilter,
+      labels: labelFilter,
+      ruleIds: ruleIdFilter,
       search: debouncedSearch || undefined,
       offset,
       limit: PAGE_SIZE,
@@ -148,8 +147,19 @@ export default function Collections() {
     [filtersQuery.data?.labels],
   );
   const rules = rulesQuery.data ?? [];
-  const activeRule = ruleIdFilter ? rules.find((r) => r.id === ruleIdFilter) : null;
   const ruleNameById = useMemo(() => new Map(rules.map((r) => [r.id, r.name])), [rules]);
+  /**
+   * Rule options: every rule, plus any filtered-on id that no longer resolves
+   * to one. A link to a since-deleted rule still filters, so the menu has to be
+   * able to show it ticked and let the user untick it.
+   */
+  const ruleOptions = useMemo(() => {
+    const options = rules.map((r) => ({ value: r.id, label: r.name }));
+    for (const id of ruleIdFilter) {
+      if (!ruleNameById.has(id)) options.push({ value: id, label: `Rule ${id} (deleted)` });
+    }
+    return options;
+  }, [rules, ruleNameById, filterKey]);
 
   const findRuleId = (labels: string[]): string | null => {
     for (const l of labels) {
@@ -167,7 +177,7 @@ export default function Collections() {
   useEffect(() => {
     setSelected(new Set());
     setLabelEditing(false);
-  }, [sectionFilter, labelFilter, ruleIdFilter, debouncedSearch]);
+  }, [filterKey, debouncedSearch]);
 
   const handleDelete = (ratingKey: string, title: string) => {
     setPendingConfirm({
@@ -318,11 +328,7 @@ export default function Collections() {
         filtersQuery.refetch();
       }}
     >
-      <PageShell
-        title="Collections"
-        count={total > 0 ? total.toLocaleString() : undefined}
-        subtitle="Every collection Tinkerbell can see in Plex, whether it built it or you did."
-      >
+      <PageShell title="Collections" count={total > 0 ? total.toLocaleString() : undefined}>
         {(selected.size > 0 || bulkProgress) && (
           <div className={styles.bulkBar}>
             {bulkProgress ? (
@@ -369,31 +375,27 @@ export default function Collections() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <select className={styles.select} value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
-            <option value="">All sections</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-          <select className={styles.select} value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)}>
-            <option value="">All labels</option>
-            {allLabels.map((label) => (
-              <option key={label} value={label}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select className={styles.select} value={ruleIdFilter} onChange={(e) => setRuleFilter(e.target.value)}>
-            <option value="">All rules</option>
-            {rules.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-            {ruleIdFilter && !activeRule && <option value={ruleIdFilter}>Rule {ruleIdFilter} (deleted)</option>}
-          </select>
+          <MultiSelect
+            allLabel="All sections"
+            ariaLabel="Filter by library section"
+            options={sections.map((s) => ({ value: s.id, label: s.title }))}
+            selected={sectionFilter}
+            onChange={(sections) => setFilters({ sections })}
+          />
+          <MultiSelect
+            allLabel="All labels"
+            ariaLabel="Filter by label"
+            options={allLabels.map((label) => ({ value: label, label }))}
+            selected={labelFilter}
+            onChange={(labels) => setFilters({ labels })}
+          />
+          <MultiSelect
+            allLabel="All rules"
+            ariaLabel="Filter by rule"
+            options={ruleOptions}
+            selected={ruleIdFilter}
+            onChange={(ruleIds) => setFilters({ ruleIds })}
+          />
           <div className={styles.filtersSpacer} />
           <div className={styles.viewToggle}>
             <button
@@ -418,7 +420,7 @@ export default function Collections() {
         </div>
 
         {collections.length === 0 ? (
-          search || sectionFilter || labelFilter || ruleIdFilter ? (
+          search || sectionFilter.length > 0 || labelFilter.length > 0 || ruleIdFilter.length > 0 ? (
             <EmptyState icon="search" title="No collections match your filters" />
           ) : (
             <EmptyState icon="stack" title="No collections synced yet" />

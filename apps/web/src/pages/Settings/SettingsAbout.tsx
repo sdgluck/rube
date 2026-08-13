@@ -9,9 +9,9 @@ export default function SettingsAbout() {
     <div className={local.page}>
       <SettingsPageHeader
         title="Tinkerbell"
-        description={
+        meta={
           <>
-            Version {VERSION}
+            {VERSION}
             {IS_BETA && <span className="version-pill"> beta</span>}
           </>
         }

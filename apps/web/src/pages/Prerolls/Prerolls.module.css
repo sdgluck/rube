@@ -39,8 +39,12 @@
 }
 
 .dropzoneButton {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
   margin-top: 8px;
-  padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+  height: var(--control-h);
+  padding: 0 var(--btn-pad-x-sm);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);

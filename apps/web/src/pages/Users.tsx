@@ -135,11 +135,7 @@ export default function Users() {
   }
 
   return (
-    <PageShell
-      title="Users"
-      count={total > 0 ? total.toLocaleString() : undefined}
-      subtitle="Everyone your Plex server is shared with, and whether they opted into personalisation."
-    >
+    <PageShell title="Users" count={total > 0 ? total.toLocaleString() : undefined}>
       {users.length === 0 && !search ? (
         <EmptyState
           icon="person"

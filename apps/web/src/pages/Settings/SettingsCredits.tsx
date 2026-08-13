@@ -93,10 +93,7 @@ const SECTIONS: Section[] = [
 export default function SettingsCredits() {
   return (
     <div className={local.page}>
-      <SettingsPageHeader
-        title="Credits"
-        description="Tinkerbell is built on the work of many open-source projects. Thanks to all the maintainers below."
-      />
+      <SettingsPageHeader title="Credits" />
 
       {SECTIONS.map((section) => (
         <section key={section.title} className={local.section}>

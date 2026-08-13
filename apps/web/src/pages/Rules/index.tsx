@@ -537,7 +537,6 @@ export default function Rules() {
     <PageShell
       title="Rules"
       count={allRules.length > 0 ? allRules.length.toLocaleString() : undefined}
-      subtitle="Rules define how the Generate Collections job creates collections. Each enabled rule runs during generation."
       actions={
         <>
           <DropdownButton

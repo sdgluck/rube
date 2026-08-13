@@ -7,7 +7,7 @@ export const eventsRouter = t.router({
   list: t.procedure
     .input(
       paginationInput.extend({
-        type: z.string().optional(),
+        types: z.array(z.string()).default([]),
         search: z.string().optional(),
         sort: z.string().optional(),
         sortDir: z.enum(["asc", "desc"]).default("desc"),

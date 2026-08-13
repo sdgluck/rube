@@ -38,10 +38,7 @@ export default function SettingsMigrate() {
 
   return (
     <div className={styles.form} style={{ maxWidth: 880 }}>
-      <SettingsPageHeader
-        title="Migrate"
-        description="Import existing collections from other tools (e.g. Kometa) into Tinkerbell rules."
-      />
+      <SettingsPageHeader title="Migrate" />
       {providers.length > 1 && (
         <nav className={styles.subTabs} aria-label="Migration providers">
           {providers.map((p) => (

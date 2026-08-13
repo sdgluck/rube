@@ -1,6 +1,9 @@
 /* Standard per-page header (title + description) used by every settings page
  * via <SettingsPageHeader> for consistent information hierarchy. */
 .pageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
@@ -10,11 +13,12 @@
   margin: 0;
 }
 
-.pageDescription {
-  margin: 5px 0 0;
+/* A fact about the pane — the version, a count. Never prose. */
+.pageMeta {
+  font: var(--t-data);
+  font-size: 11.5px;
   color: var(--ink-3);
-  font: var(--t-body-sm);
-  max-width: 72ch;
+  white-space: nowrap;
 }
 
 .toast {
