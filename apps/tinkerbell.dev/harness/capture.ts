@@ -6,12 +6,14 @@
  *
  * Pipeline:
  *   1. recreate an isolated DATA_DIR (never the repo-root tinkerbell.db)
- *   2. migrate that DB via the migrate script (per repo rule, never inline)
- *   3. start the in-process mock Plex (serves synthetic poster bytes)
- *   4. seed the DB (config → mock origin, sections, collections, media, …)
- *   5. start apps/server + apps/web vite, both with a frozen clock
- *   6. Playwright walks each shot at each viewport
- *   7. write only the files whose bytes actually changed, plus the manifest
+ *   2. start the in-process mock Plex (serves synthetic poster bytes)
+ *   3. put a migrated, seeded database there — copied from the one the image
+ *      prepared, or built here via the migrate script (per repo rule, never
+ *      inline) when running natively
+ *   4. start apps/server with a frozen clock; it serves the built admin UI
+ *      itself, on the same origin as the API, exactly as production does
+ *   5. Playwright walks the shots in parallel, one page per worker
+ *   6. write only the files whose bytes actually changed, plus the manifest
  *
  * Two properties this file exists to protect:
  *
@@ -32,7 +34,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { createServer as createNetServer } from "node:net";
-import { rm, mkdir, readFile, writeFile, readdir, unlink } from "node:fs/promises";
+import { cpus } from "node:os";
+import { rm, mkdir, cp, readFile, writeFile, readdir, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, join } from "node:path";
@@ -56,7 +59,6 @@ const siteDir = resolve(appDir, "public/screenshots");
  * screenshots now on the pre-commit path that would be constant friction.
  */
 const SERVER_PORT = 39_301;
-const WEB_PORT = 39_302;
 const MOCK_PORT = 39_303;
 
 const VIEWPORTS: Record<Viewport, { width: number; height: number }> = {
@@ -68,6 +70,10 @@ const VIEWPORTS: Record<Viewport, { width: number; height: number }> = {
 const SITE_SCALE = 2;
 
 const children: ChildProcess[] = [];
+
+/** Phase log with elapsed time, so a slow run says where it went. */
+const started = Date.now();
+const step = (message: string) => console.log(`→ ${message} (+${((Date.now() - started) / 1000).toFixed(1)}s)`);
 
 function run(cmd: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv }) {
   return new Promise<void>((res, rej) => {
@@ -123,7 +129,7 @@ async function waitForHttp(url: string, timeoutMs = 60_000) {
     } catch {
       /* not up yet */
     }
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error(`Timed out waiting for ${url}`);
 }
@@ -136,7 +142,9 @@ async function teardown() {
       /* ignore */
     }
   }
-  await new Promise((r) => setTimeout(r, 500));
+  // Long enough for a SIGTERM to be delivered; the container is torn down right
+  // behind us either way.
+  await new Promise((r) => setTimeout(r, 100));
 }
 
 // ─── Browser setup ───────────────────────────────────────────────────────────
@@ -195,23 +203,84 @@ async function newContext(browser: Browser, viewport: Viewport, scale: number): 
   return context;
 }
 
+/**
+ * Playwright's `networkidle` is 500ms of silence, and the harness waits for it
+ * on each of ~100 loads — nearly a minute of work spent doing nothing. This is
+ * the same idea with the window as an argument: long enough for react-query to
+ * chain a dependent request off the response before it, short enough not to
+ * dominate the run.
+ *
+ * Attach before navigating, or the requests the page fires on the way up are
+ * never counted.
+ */
+const QUIET_MS = 150;
+
+function watchNetwork(page: Page): (quietMs?: number) => Promise<void> {
+  let inflight = 0;
+  let lastChange = Date.now();
+  const bump = (delta: number) => {
+    inflight += delta;
+    lastChange = Date.now();
+  };
+  page.on("request", () => bump(1));
+  page.on("requestfinished", () => bump(-1));
+  page.on("requestfailed", () => bump(-1));
+
+  return async function quiet(quietMs = QUIET_MS, timeoutMs = 30_000) {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      if (inflight <= 0 && Date.now() - lastChange >= quietMs) return;
+      if (Date.now() > deadline) throw new Error(`Timed out waiting for the network to go quiet (${inflight} pending)`);
+      await new Promise((r) => setTimeout(r, 25));
+    }
+  };
+}
+
 // ─── Per-shot driving ────────────────────────────────────────────────────────
 
 async function applySteps(page: Page, steps: Step[]) {
-  for (const step of steps) {
+  // Steps drive a live app, so wait for React to have mounted and painted
+  // before touching it. Locators auto-wait, but a keystroke doesn't: the
+  // shortcut handlers are bound in effects, and a key pressed before they exist
+  // is dropped with nothing to retry against.
+  await page.waitForSelector("#root > *", { state: "attached", timeout: 15_000 });
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+
+  for (const [index, step] of steps.entries()) {
     if ("click" in step) {
       // Buttons first, then anything else carrying the name — several controls
-      // are labelled inputs rather than buttons.
+      // are labelled inputs rather than buttons. Whichever appears wins: asking
+      // which one exists *now* assumed the page had finished rendering, and the
+      // controls behind fetched data hadn't.
       const button = page.getByRole("button", { name: step.click, exact: false }).first();
       const labelled = page.getByLabel(step.click, { exact: false }).first();
-      const target = (await button.count()) > 0 ? button : labelled;
+      const target = await Promise.any([
+        button.waitFor({ state: "visible", timeout: 10_000 }).then(() => button),
+        labelled.waitFor({ state: "visible", timeout: 10_000 }).then(() => labelled),
+      ]).catch(() => {
+        throw new Error(`No button or labelled control named "${step.click}" appeared`);
+      });
       await target.click({ timeout: 10_000 });
     } else if ("clickSelector" in step) {
       await page.locator(step.clickSelector).first().click({ timeout: 10_000 });
     } else if ("clickText" in step) {
       await page.getByText(step.clickText, { exact: false }).first().click({ timeout: 10_000 });
     } else if ("press" in step) {
-      await page.keyboard.press(step.press);
+      // A dropped keystroke leaves no trace, so when the shot says what the key
+      // should produce, press again until it does — checking first, so a press
+      // that did land isn't toggled straight back off. If it never appears the
+      // following `wait` step reports it.
+      const next = steps[index + 1];
+      const expected = next && "wait" in next ? next.wait : undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await page.keyboard.press(step.press);
+        if (!expected) break;
+        const landed = await page
+          .waitForSelector(expected, { state: "visible", timeout: 3_000 })
+          .then(() => true)
+          .catch(() => false);
+        if (landed) break;
+      }
     } else if ("wait" in step) {
       await page.waitForSelector(step.wait, { state: "visible", timeout: 10_000 });
     } else if ("fill" in step) {
@@ -231,28 +300,41 @@ async function applySteps(page: Page, steps: Step[]) {
  * timeout, which is how a 0-byte screenshot of a broken page ended up committed
  * and stayed there; failures here are thrown.
  */
-async function settle(page: Page, shot: Shot) {
-  await page.waitForLoadState("networkidle");
+async function settle(page: Page, shot: Shot, quiet: (quietMs?: number) => Promise<void>) {
+  await quiet();
 
   if (shot.waitFor) {
     await page.waitForSelector(shot.waitFor, { state: "visible", timeout: 15_000 });
   }
 
-  // Posters are `loading="lazy"`, so anything below the fold never starts
-  // loading and captures as a blank tile. Walk the page and come back.
-  await page.evaluate(async () => {
-    const height = document.documentElement.scrollHeight;
-    for (let y = 0; y < height; y += window.innerHeight) {
-      window.scrollTo(0, y);
-      await new Promise((r) => requestAnimationFrame(r));
-    }
-    window.scrollTo(0, 0);
-    await new Promise((r) => requestAnimationFrame(r));
-  });
-
-  await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete), null, {
-    timeout: 20_000,
-  });
+  /**
+   * Get every image on the page loaded.
+   *
+   * Two things make this more than one wait. Posters are `loading="lazy"`, so
+   * anything below the fold never starts loading and captures as a blank tile —
+   * this used to walk the whole page a viewport at a time and scroll back, but
+   * asking the images directly says the same thing without laying out and
+   * painting a hundred pages to do it. And some images don't exist yet: the
+   * poster preview in Settings is rendered from a query's response, so "the
+   * network is quiet and every image is complete" can both be true a frame
+   * before the image is even in the document. So it repeats, and stops when a
+   * whole pass finds nothing new.
+   */
+  let seen = -1;
+  for (let pass = 0; pass < 4; pass++) {
+    await quiet();
+    const count = await page.evaluate(() => {
+      for (const img of document.images) {
+        if (img.loading === "lazy") img.loading = "eager";
+      }
+      return document.images.length;
+    });
+    await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete), null, {
+      timeout: 20_000,
+    });
+    if (count === seen) break;
+    seen = count;
+  }
   await page.evaluate(() => Promise.all(Array.from(document.images).map((img) => img.decode().catch(() => {}))));
 
   // Self-hosted fonts are `font-display: swap` and only two faces are
@@ -273,6 +355,22 @@ async function settle(page: Page, shot: Shot) {
   await page.waitForTimeout(shot.settleMs ?? 250);
 }
 
+/**
+ * Every shot loads its own page against the same read-only seed, so nothing
+ * orders them — running one at a time left eleven of twelve cores idle for
+ * three minutes. The cap is CPU-bound: rasterisation is on the CPU here (no
+ * GPU in the container), so oversubscribing just makes each page slower.
+ */
+const CONCURRENCY = Number(process.env.TB_CAPTURE_CONCURRENCY) || Math.max(2, Math.min(12, cpus().length));
+
+async function pool<T>(items: T[], limit: number, worker: (item: T, index: number, slot: number) => Promise<void>) {
+  let next = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async (_, slot) => {
+    for (let i = next++; i < items.length; i = next++) await worker(items[i]!, i, slot);
+  });
+  await Promise.all(runners);
+}
+
 async function capture(context: BrowserContext, shot: Shot, base: string): Promise<Buffer> {
   const page = await context.newPage();
   try {
@@ -283,16 +381,22 @@ async function capture(context: BrowserContext, shot: Shot, base: string): Promi
       await page.route(`**/*${fragment}*`, (route) => route.abort());
     }
 
-    if (shot.storage) {
-      const entries = Object.entries(shot.storage);
-      await page.addInitScript((pairs: [string, string][]) => {
+    // Stated from scratch, always. localStorage belongs to the context, not the
+    // page, and contexts are reused across shots — a view toggle left behind by
+    // an earlier shot would otherwise decide what this one renders.
+    await page.addInitScript(
+      (pairs: [string, string][]) => {
+        localStorage.clear();
         for (const [k, v] of pairs) localStorage.setItem(k, v);
-      }, entries);
-    }
+      },
+      Object.entries(shot.storage ?? {}),
+    );
 
-    await page.goto(`${base}${shot.path}`, { waitUntil: "networkidle", timeout: 45_000 });
+    const quiet = watchNetwork(page);
+    await page.goto(`${base}${shot.path}`, { waitUntil: "load", timeout: 45_000 });
+    await quiet();
     if (shot.steps) await applySteps(page, shot.steps);
-    await settle(page, shot);
+    await settle(page, shot, quiet);
 
     const raw = await page.screenshot({
       fullPage: false,
@@ -348,7 +452,6 @@ async function pruneStale(dir: string, keep: Set<string>) {
 
 async function main() {
   await assertPortFree(SERVER_PORT, "harness server");
-  await assertPortFree(WEB_PORT, "harness web");
   await assertPortFree(MOCK_PORT, "mock Plex");
 
   assertHarnessData(dataDir);
@@ -358,22 +461,46 @@ async function main() {
     await mkdir(dir, { recursive: true });
   }
 
+  // Chromium takes about as long to come up as the whole migrate-seed-boot
+  // sequence, and it needs none of it. Start it first and it costs nothing.
+  const browserReady = launch();
+
   const childEnv = { DATA_DIR: dataDir, TB_FIXED_NOW: String(FIXED_NOW), TZ: "UTC" };
   const preload = resolve(__dirname, "deterministic.mjs");
 
-  console.log("→ migrating isolated DB");
-  await run("pnpm", ["--filter", "@tinkerbell/db", "migrate"], { cwd: repoRoot, env: childEnv });
-
-  console.log("→ starting mock Plex");
+  step("starting mock Plex");
   const mock = await startMockPlex(MOCK_PORT);
 
-  console.log("→ seeding demo data");
-  await run("node", ["--import", preload, "--experimental-strip-types", "harness/seed.ts"], {
-    cwd: appDir,
-    env: { ...childEnv, MOCK_PLEX_URL: mock.origin },
-  });
+  // The migrate-and-seed produces identical bytes every time, so the image
+  // bakes the result into a layer and this copies it. The origin check is the
+  // guard: the seeded config stores the Plex URL, so a template prepared
+  // against a different mock would point the app somewhere that isn't serving.
+  const template = process.env.TB_SEED_TEMPLATE;
+  if (template && process.env.TB_SEED_ORIGIN === mock.origin && existsSync(template)) {
+    step("copying prepared demo data");
+    await cp(template, dataDir, { recursive: true });
+  } else {
+    step("migrating and seeding demo data");
+    await run("node", ["--experimental-strip-types", resolve(__dirname, "prepare-data.ts"), dataDir, mock.origin], {
+      cwd: appDir,
+      env: childEnv,
+    });
+  }
 
-  console.log("→ starting server + web");
+  // A dev server would hand the browser several hundred unbundled modules on
+  // every one of ~100 page loads, which dominated the run. The image bakes the
+  // bundle into the layer that already invalidates on a source edit, so only a
+  // native run pays for it here.
+  const webBuilt =
+    process.env.TB_WEB_PREBUILT === "1"
+      ? Promise.resolve()
+      : (step("building web bundle"),
+        run("pnpm", ["exec", "vite", "build"], {
+          cwd: resolve(repoRoot, "apps/web"),
+          env: { VITE_TB_CAPTURE: "1" },
+        }));
+
+  step("starting server");
   startProcess("node", ["--import", preload, "src/server.ts"], {
     cwd: resolve(repoRoot, "apps/server"),
     env: {
@@ -386,82 +513,110 @@ async function main() {
     },
     tag: "server",
   });
-  startProcess("pnpm", ["exec", "vite", "--host", "127.0.0.1", "--port", String(WEB_PORT), "--strictPort"], {
-    cwd: resolve(repoRoot, "apps/web"),
-    env: {
-      // Turns off react-query's polling and retries for this build only.
-      VITE_TB_CAPTURE: "1",
-      // Point the dev proxy at the harness server rather than :3000.
-      TB_API_TARGET: `http://127.0.0.1:${SERVER_PORT}`,
-    },
-    tag: "web",
-  });
+  await webBuilt;
 
   await waitForHttp(`http://127.0.0.1:${SERVER_PORT}/api/trpc/plexSections`);
-  await waitForHttp(`http://127.0.0.1:${WEB_PORT}/`);
 
-  console.log("→ launching browser\n");
-  const browser = await launch();
-  const base = `http://127.0.0.1:${WEB_PORT}`;
+  const browser = await browserReady;
+  step("browser and server ready");
+  // The admin server serves apps/web/dist itself, exactly as the production
+  // image does, so the UI and the API share one origin and there is no second
+  // web process to start or proxy through.
+  const base = `http://127.0.0.1:${SERVER_PORT}`;
 
+  /**
+   * A context per (viewport, scale) *per worker*, rather than one shared by
+   * all of them. localStorage is context-wide, so two shots running side by
+   * side in one context overwrite each other's view toggles; a worker only
+   * ever has one page open, so nothing races. They are made on demand and
+   * reused, which keeps the bundle in each one's HTTP cache.
+   */
+  const contexts = new Map<string, BrowserContext>();
+  async function contextFor(group: "desktop" | "mobile" | "site", slot: number): Promise<BrowserContext> {
+    const key = `${group}#${slot}`;
+    let context = contexts.get(key);
+    if (!context) {
+      context = await newContext(browser, group === "mobile" ? "mobile" : "desktop", group === "site" ? SITE_SCALE : 1);
+      contexts.set(key, context);
+    }
+    return context;
+  }
+
+  interface Task {
+    shot: Shot;
+    group: "desktop" | "mobile" | "site";
+    label: string;
+    path: string;
+  }
+
+  const tasks: Task[] = [];
+  for (const viewport of ["desktop", "mobile"] as Viewport[]) {
+    for (const shot of SHOTS.filter((s) => (s.viewports ?? ["desktop", "mobile"]).includes(viewport))) {
+      tasks.push({ shot, group: viewport, label: shot.name, path: join(suiteDir, viewport, `${shot.name}.png`) });
+    }
+  }
+  // The marketing site's slugs, at retina, from the same run.
+  for (const shot of SHOTS.filter((s) => s.site)) {
+    tasks.push({ shot, group: "site", label: shot.site!, path: join(siteDir, `${shot.site}.png`) });
+  }
+
+  const results = Array.from<{ changed: boolean } | { error: string } | undefined>({ length: tasks.length });
+
+  step(`capturing ${tasks.length} shots, ${CONCURRENCY} at a time`);
+  console.log();
+  const captureStart = Date.now();
+  await pool(tasks, CONCURRENCY, async (task, i, slot) => {
+    try {
+      const bytes = await capture(await contextFor(task.group, slot), task.shot, base);
+      results[i] = { changed: await writeIfChanged(task.path, bytes) };
+    } catch (err) {
+      // Carry on: one run should report everything that is broken, not just
+      // the first thing. The run still fails at the end.
+      results[i] = { error: (err as Error).message.split("\n")[0] };
+    }
+  });
+
+  // Reported in task order rather than completion order, so the log reads the
+  // same on every run however the pool happened to interleave.
   const manifestShots: Array<{ file: string; name: string; description: string; path: string }> = [];
   const failures: Array<{ shot: string; viewport: string; error: string }> = [];
   let written = 0;
   let unchanged = 0;
+  let group = "";
 
-  for (const viewport of ["desktop", "mobile"] as Viewport[]) {
-    const context = await newContext(browser, viewport, 1);
-    const dir = join(suiteDir, viewport);
-    const shots = SHOTS.filter((s) => (s.viewports ?? ["desktop", "mobile"]).includes(viewport));
-    console.log(`${viewport} (${shots.length} shots)`);
-
-    for (const shot of shots) {
-      process.stdout.write(`  • ${shot.name} … `);
-      try {
-        const bytes = await capture(context, shot, base);
-        const changed = await writeIfChanged(join(dir, `${shot.name}.png`), bytes);
-        if (changed) written++;
-        else unchanged++;
-        manifestShots.push({
-          file: `screenshots/${viewport}/${shot.name}.png`,
-          name: shot.name,
-          description: shot.description,
-          path: shot.path,
-        });
-        console.log(changed ? "updated" : "unchanged");
-      } catch (err) {
-        // Carry on: one run should report everything that is broken, not just
-        // the first thing. The run still fails at the end.
-        failures.push({ shot: shot.name, viewport, error: (err as Error).message.split("\n")[0] });
-        console.log("FAILED");
-      }
+  for (const [i, task] of tasks.entries()) {
+    if (task.group !== group) {
+      group = task.group;
+      const count = tasks.filter((t) => t.group === group).length;
+      console.log(group === "site" ? `marketing site (${count} shots @${SITE_SCALE}x)` : `${group} (${count} shots)`);
     }
-
-    // Only when the run was clean — otherwise a transient failure would delete
-    // a screenshot that is still perfectly good.
-    if (failures.length === 0) await pruneStale(dir, new Set(shots.map((s) => `${s.name}.png`)));
-    await context.close();
+    const result = results[i]!;
+    if ("error" in result) {
+      failures.push({ shot: task.label, viewport: task.group, error: result.error });
+      console.log(`  • ${task.label} … FAILED`);
+      continue;
+    }
+    if (result.changed) written++;
+    else unchanged++;
+    if (task.group !== "site") {
+      manifestShots.push({
+        file: `screenshots/${task.group}/${task.shot.name}.png`,
+        name: task.shot.name,
+        description: task.shot.description,
+        path: task.shot.path,
+      });
+    }
+    console.log(`  • ${task.label} … ${result.changed ? "updated" : "unchanged"}`);
   }
+  console.log(`\n(captured in ${((Date.now() - captureStart) / 1000).toFixed(1)}s)`);
 
-  // The marketing site's eight slugs, at retina, from the same run.
-  const siteShots = SHOTS.filter((s) => s.site);
-  if (siteShots.length > 0) {
-    console.log(`\nmarketing site (${siteShots.length} shots @${SITE_SCALE}x)`);
-    const context = await newContext(browser, "desktop", SITE_SCALE);
-    for (const shot of siteShots) {
-      process.stdout.write(`  • ${shot.site} … `);
-      try {
-        const bytes = await capture(context, shot, base);
-        const changed = await writeIfChanged(join(siteDir, `${shot.site}.png`), bytes);
-        if (changed) written++;
-        else unchanged++;
-        console.log(changed ? "updated" : "unchanged");
-      } catch (err) {
-        failures.push({ shot: shot.site!, viewport: "site", error: (err as Error).message.split("\n")[0] });
-        console.log("FAILED");
-      }
+  // Only when the run was clean — otherwise a transient failure would delete a
+  // screenshot that is still perfectly good.
+  if (failures.length === 0) {
+    for (const viewport of ["desktop", "mobile"] as Viewport[]) {
+      const keep = tasks.filter((t) => t.group === viewport).map((t) => `${t.shot.name}.png`);
+      await pruneStale(join(suiteDir, viewport), new Set(keep));
     }
-    await context.close();
   }
 
   await browser.close();
@@ -506,9 +661,12 @@ async function computeUiHash(): Promise<string> {
 
 main()
   .then(teardown)
-  .then(() => process.exit(0))
   .catch(async (err) => {
     console.error("\n✗ capture failed:", err);
     await teardown();
-    process.exit(1);
+    // Set the code and let the process end on its own: `process.exit()` here
+    // dropped the message above, because writes to a pipe are asynchronous and
+    // exiting doesn't wait for them. A failing run that says nothing is worse
+    // than a slow one.
+    process.exitCode = 1;
   });

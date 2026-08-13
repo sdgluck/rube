@@ -14,6 +14,12 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(rootPkg.version),
     __CHANGELOG__: JSON.stringify(changelog),
+    // The screenshot harness serves a *built* bundle, but the suite documents
+    // the dev-only pages (Settings → Stress Test and the nav entry that reaches
+    // it) because it used to capture from the dev server. `vite build` pins
+    // import.meta.env.DEV to false whatever the mode, which silently dropped
+    // them, so capture builds say what they mean.
+    ...(process.env.VITE_TB_CAPTURE === "1" ? { "import.meta.env.DEV": "true", "import.meta.env.PROD": "false" } : {}),
   },
   server: {
     // Fixed port so localias can map web.tinkerbell.localhost to it (.localias.yaml).

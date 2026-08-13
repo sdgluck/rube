@@ -16,13 +16,52 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 // Resolve from the workspace that actually depends on Playwright — pnpm's
 // strict layout means the repo root can't see it.
 const require = createRequire(join(repoRoot, "apps/tinkerbell.dev/package.json"));
+
+const t0 = Date.now();
+const since = () => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;
+
+// The suite is committed and the pre-commit hook hashes formatted source, so
+// the capture has to run against formatted files.
+//
+// Only the files this worktree has touched can be unformatted — everything else
+// went through the pre-commit hook — so that is all this formats. The full sweep
+// is still `pnpm format`; it reads 578 files to rewrite none of them, which is
+// most of a second on a run that is trying to stay under half a minute.
+//
+// The extensions come from the root `format` script rather than a second list
+// here, and if that script is ever written in a way this can't read, it runs
+// whole. `oxfmt` lives in the workspace bin directory, which is only on PATH
+// when pnpm put it there, so this puts it there itself.
+const formatCommand = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).scripts.format;
+const formatEnv = { ...process.env, PATH: `${join(repoRoot, "node_modules/.bin")}:${process.env.PATH}` };
+const extensions = [...formatCommand.matchAll(/'\*(\.[a-z]+)'/g)].map((m) => m[1]);
+
+function changedFiles() {
+  const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).split("\n").filter(Boolean);
+  return [
+    ...git(["diff", "--name-only", "--diff-filter=d", "HEAD"]),
+    ...git(["ls-files", "--others", "--exclude-standard"]),
+  ].filter((file) => extensions.some((ext) => file.endsWith(ext)));
+}
+
+const targets = extensions.length > 0 ? changedFiles() : null;
+const format =
+  targets === null
+    ? spawnSync(formatCommand, { cwd: repoRoot, shell: true, stdio: "inherit", env: formatEnv })
+    : targets.length === 0
+      ? { status: 0 }
+      : spawnSync("oxfmt", targets, { cwd: repoRoot, stdio: "inherit", env: formatEnv });
+if (format.status !== 0) {
+  process.stderr.write("\ncapture-docker: formatting failed; not capturing against unformatted source.\n\n");
+  process.exit(1);
+}
 
 function fail(message) {
   process.stderr.write(`\ncapture-docker: ${message}\n\n`);
@@ -51,7 +90,7 @@ const playwrightVersion = require("playwright/package.json").version;
 // Cheap after the first run: dependencies key on the lockfile, so a UI edit
 // only invalidates the source layer.
 const image = `tinkerbell-capture:${playwrightVersion}`;
-console.log(`→ building ${image}`);
+console.log(`→ building ${image} (${since()})`);
 const build = spawnSync(
   "docker",
   [
@@ -85,7 +124,7 @@ const uiHash = uiHashFromWorktree(repoRoot);
 const uid = typeof process.getuid === "function" ? process.getuid() : null;
 const gid = typeof process.getgid === "function" ? process.getgid() : null;
 
-console.log(`→ capturing in ${image}\n`);
+console.log(`→ capturing in ${image} (${since()})`);
 const run = spawnSync(
   "docker",
   [
@@ -101,6 +140,7 @@ const run = spawnSync(
     "HOME=/tmp",
     "-e",
     `TB_UI_HASH=${uiHash}`,
+    ...(process.env.TB_CAPTURE_CONCURRENCY ? ["-e", `TB_CAPTURE_CONCURRENCY=${process.env.TB_CAPTURE_CONCURRENCY}`] : []),
     "-v",
     `${join(repoRoot, "screenshots")}:/repo/screenshots`,
     "-v",
@@ -109,4 +149,5 @@ const run = spawnSync(
   ],
   { cwd: repoRoot, stdio: "inherit" },
 );
+console.log(`\n→ done (${since()})`);
 process.exit(run.status ?? 1);

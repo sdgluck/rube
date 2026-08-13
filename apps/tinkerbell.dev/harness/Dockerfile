@@ -7,9 +7,9 @@
 # same page produces different pixels on different machines. Nothing inside
 # Chromium can fix that. The renderer itself has to be the same.
 #
-# So the whole pipeline runs in here: the mock Plex, the server, Vite and
-# Chromium. Only `screenshots/` and the marketing site's copies are mounted
-# back out.
+# So the whole pipeline runs in here: the mock Plex, the server that serves both
+# the API and the built admin UI, and Chromium. Only `screenshots/` and the
+# marketing site's copies are mounted back out.
 #
 # The base tag must match the `playwright` version in the lockfile or the
 # driver and the browser disagree about the protocol; scripts/capture-docker.mjs
@@ -52,15 +52,40 @@ RUN pnpm install --frozen-lockfile --ignore-scripts=false
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Source last, so a UI edit only invalidates from this line down.
-COPY apps/ ./apps/
+# Source next, so a UI edit only invalidates from here down.
+COPY apps/web/ ./apps/web/
+COPY apps/server/ ./apps/server/
+COPY apps/portal/ ./apps/portal/
 RUN pnpm install --frozen-lockfile --offline --ignore-scripts=false
 
+# The admin UI is served to the browser as a built bundle, not from the dev
+# server: unbundled modules cost several hundred requests on each of ~100 page
+# loads. Built here rather than at capture time so it lands in a layer, and a
+# rerun that changed nothing pays nothing.
+# VITE_TB_CAPTURE turns off react-query's polling and retries and keeps the
+# dev-only pages the suite documents (see the `define` block in
+# apps/web/vite.config.ts). It has to be set now, because Vite inlines it.
+RUN VITE_TB_CAPTURE=1 pnpm --filter @tinkerbell/web build
+ENV TB_WEB_PREBUILT=1
+
+# The harness itself last: editing a shot shouldn't rebuild the bundle.
+COPY apps/tinkerbell.dev/ ./apps/tinkerbell.dev/
+
+# Migrating and seeding the throwaway database writes the same bytes on every
+# run, so do it once here and let the capture copy the result. The origin below
+# is the mock Plex address the harness binds (MOCK_PORT in capture.ts); it is
+# recorded so the harness can check the two still agree, and seed for itself if
+# they ever don't.
+ENV TB_SEED_TEMPLATE=/repo/.harness-seed
+ENV TB_SEED_ORIGIN=http://127.0.0.1:39303
+RUN node --experimental-strip-types apps/tinkerbell.dev/harness/prepare-data.ts "$TB_SEED_TEMPLATE" "$TB_SEED_ORIGIN"
+
 # The container runs as the host's uid so the PNGs it writes aren't owned by
-# root, but that uid doesn't exist in here and owns none of these files. The
-# harness needs to write its throwaway database, and Vite its cache, so open
-# the tree up rather than guess at a uid at build time.
-RUN chmod -R a+rwX /repo
+# root, but that uid doesn't exist in here and owns none of these files. Only
+# the harness's throwaway database needs to be writable — a recursive chmod over
+# /repo rewrote every file's metadata, which meant a whole-tree layer to export
+# on every build.
+RUN chmod a+rwx /repo/apps/tinkerbell.dev
 
 # Chromium's sandbox needs privileges the container doesn't have, and the
 # alternative is running the whole thing as root.

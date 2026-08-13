@@ -19,6 +19,9 @@ screenshots
 posters
 prerolls
 apps/*/dist
+# A previous native capture's throwaway database. Copying it in made the
+# container start from a tree it then had to delete, as a file it did not own.
+**/.harness-data
 *.db
 *.db-shm
 *.db-wal
