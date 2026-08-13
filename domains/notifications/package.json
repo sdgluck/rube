@@ -10,15 +10,13 @@
   "files": [
     "src"
   ],
-  "scripts": {
-    "typecheck": "tsc"
-  },
+  "scripts": {},
   "dependencies": {
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/http": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

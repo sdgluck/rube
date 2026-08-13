@@ -12,7 +12,6 @@
     "drizzle"
   ],
   "scripts": {
-    "typecheck": "tsc",
     "generate": "drizzle-kit generate",
     "migrate": "node src/migrate.ts"
   },
@@ -24,6 +23,6 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.2.3",
     "drizzle-kit": "^0.31.9",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

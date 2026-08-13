@@ -11,11 +11,10 @@
     "src"
   ],
   "scripts": {
-    "typecheck": "tsc",
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

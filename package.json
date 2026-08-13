@@ -11,7 +11,7 @@
     "proxy:down": "node scripts/proxy.mjs down",
     "proxy:status": "localias status",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "node scripts/typecheck.mjs",
     "test": "turbo run test",
     "screenshots": "node scripts/capture-docker.mjs",
     "screenshots:local": "pnpm format && pnpm --filter @tinkerbell/tinkerbell.dev capture",
@@ -29,6 +29,6 @@
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
     "turbo": "^2.10.7",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

@@ -11,14 +11,12 @@
   "files": [
     "src"
   ],
-  "scripts": {
-    "typecheck": "tsc"
-  },
+  "scripts": {},
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

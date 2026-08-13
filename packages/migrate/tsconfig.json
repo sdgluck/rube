@@ -1,16 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "ES2024",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true
-  },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }
