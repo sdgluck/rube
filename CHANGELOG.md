@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-08-13
+
+### Fixed
+
+- Server now logs a reachable URL when running outside dev environment
+
 ## [0.6.2] - 2026-08-13
 
 ### Added
