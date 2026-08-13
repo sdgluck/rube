@@ -25,12 +25,14 @@ export function withItemCache(client: PlexClient): PlexClient {
   };
 }
 
-function memoizeBySection<T>(fetch: (sectionId: string) => Promise<T>): (sectionId: string) => Promise<T> {
+// `walk`, not `fetch`: shadowing the global trips `scripts/check-fetch.mjs`,
+// which reads `fetch(…)` here as an un-deadlined HTTP call.
+function memoizeBySection<T>(walk: (sectionId: string) => Promise<T>): (sectionId: string) => Promise<T> {
   const bySection = new Map<string, Promise<T>>();
   return (sectionId: string) => {
     const hit = bySection.get(sectionId);
     if (hit) return hit;
-    const pending = fetch(sectionId).catch((err: unknown) => {
+    const pending = walk(sectionId).catch((err: unknown) => {
       bySection.delete(sectionId);
       throw err;
     });

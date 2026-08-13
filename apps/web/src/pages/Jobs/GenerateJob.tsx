@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { RULE_CONCURRENCY_DEFAULT, RULE_CONCURRENCY_MAX } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useJobActions } from "./shared/useJobActions";
 import JobPageShell from "./shared/JobPageShell";
@@ -14,11 +15,13 @@ export default function GenerateJob({ job }: JobPageProps) {
   const utils = trpc.useUtils();
   const actions = useJobActions(job);
   const [sections, setSections] = useState<string[]>([]);
+  const [concurrency, setConcurrency] = useState<number>(RULE_CONCURRENCY_DEFAULT);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    const cfg = (job.config ?? {}) as { sections?: string[] };
+    const cfg = (job.config ?? {}) as { sections?: string[]; ruleConcurrency?: number };
     setSections(cfg.sections ?? []);
+    setConcurrency(cfg.ruleConcurrency ?? RULE_CONCURRENCY_DEFAULT);
     setDirty(false);
   }, [job.config]);
 
@@ -29,6 +32,8 @@ export default function GenerateJob({ job }: JobPageProps) {
   const handleSave = () => {
     const config: Record<string, unknown> = {};
     if (sections.length > 0) config.sections = sections;
+    // Left unset at the default, so the job keeps following it if it changes.
+    if (concurrency !== RULE_CONCURRENCY_DEFAULT) config.ruleConcurrency = concurrency;
     updateMutation.mutate({ jobId: job.id, config }, { onSuccess: () => setDirty(false) });
   };
 
@@ -46,6 +51,28 @@ export default function GenerateJob({ job }: JobPageProps) {
               },
             }}
           />
+          <tr>
+            <td className={styles.fieldLabel}>Rules at a time</td>
+            <td>
+              <input
+                type="number"
+                className={styles.configNumberInput}
+                min={1}
+                max={RULE_CONCURRENCY_MAX}
+                value={concurrency}
+                onChange={(e) => {
+                  const next = parseInt(e.target.value, 10) || RULE_CONCURRENCY_DEFAULT;
+                  setConcurrency(Math.max(1, Math.min(RULE_CONCURRENCY_MAX, next)));
+                  setDirty(true);
+                }}
+              />
+              <div className={styles.fieldHelp}>
+                {concurrency === 1
+                  ? "One rule at a time — slowest, gentlest on your Plex server"
+                  : `Up to ${concurrency} rules run together. Faster, but more load on Plex and the metadata APIs.`}
+              </div>
+            </td>
+          </tr>
           <tr>
             <td className={styles.fieldLabel}>Rules</td>
             <td>

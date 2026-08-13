@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RULE_CONCURRENCY_MAX } from "@tinkerbell/contracts";
 
 /**
  * Per-job resumable state.
@@ -47,7 +48,7 @@ export const generateJobConfigSchema = commonJobConfigSchema.extend({
    * one Plex server and the external APIs behind it, so this is capped low
    * and defaults conservatively — see `RULE_CONCURRENCY_DEFAULT`.
    */
-  ruleConcurrency: z.number().int().min(1).max(8).optional(),
+  ruleConcurrency: z.number().int().min(1).max(RULE_CONCURRENCY_MAX).optional(),
 });
 export type GenerateJobConfig = z.infer<typeof generateJobConfigSchema>;
 

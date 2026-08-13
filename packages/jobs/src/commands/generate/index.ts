@@ -16,19 +16,12 @@ import { runHandlerWithCommits } from "./dispatch.ts";
 import { resolveArrAdds } from "./arr.ts";
 import { llmUnavailableReason } from "./ai/llm.ts";
 import { withItemCache } from "./item-cache.ts";
+import { RULE_CONCURRENCY_DEFAULT } from "@tinkerbell/contracts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
 export { testRule } from "./preview.ts";
 
 const runRuleLog = createLogger("run-rule");
-
-/**
- * Rules in flight at once. Independent of each other, but they share one
- * Plex server (and, through it, one home NAS's disks) plus rate-limited
- * external APIs, so this stays deliberately low. Override per job with
- * `ruleConcurrency`.
- */
-const RULE_CONCURRENCY_DEFAULT = 3;
 
 /**
  * Batch entry point: run every enabled rule against the configured Plex

@@ -21,6 +21,7 @@
   "dependencies": {
     "@sidequest/sqlite-backend": "^1.14.0",
     "@tinkerbell/arr": "workspace:*",
+    "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.collections": "workspace:*",
