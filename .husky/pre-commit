@@ -1,4 +1,1 @@
 pnpm exec lint-staged
-# After lint-staged, never before: oxfmt re-stages formatted files, which is
-# exactly the content check-screenshots hashes.
-node scripts/check-screenshots.mjs

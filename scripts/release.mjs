@@ -114,6 +114,36 @@ for (const group of ["apps", "packages", "clients", "domains"]) {
   }
 }
 
+// ── Screenshots ─────────────────────────────────────────────────────────────
+// After the version bump, never before: the sidebar renders a `v0.0.0` pill on
+// every page, so capturing first would bake the *previous* version into all 50-
+// odd images and they'd be stale the moment the release commit landed.
+//
+// This is the only place the suite is regenerated. It used to be enforced per
+// commit by a pre-commit hook, which meant every UI one-liner paid for a
+// three-minute containerised capture — so the images now move with releases
+// instead, which is the granularity anyone reading them actually cares about.
+if (process.env.SKIP_SCREENSHOTS === "1") {
+  console.error("release: SKIP_SCREENSHOTS=1 — shipping whatever is in screenshots/ (they will be stale)");
+} else {
+  console.error("release: regenerating screenshots…");
+  const capture = spawnSync(process.execPath, [join(ROOT, "scripts/capture-docker.mjs")], {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
+  if (capture.status !== 0) {
+    // The version bump and CHANGELOG entry are already written at this point,
+    // so say how to get back to a clean tree rather than leaving it to guesswork.
+    die(
+      "screenshot capture failed.\n" +
+        `  The v${next} version bump and CHANGELOG entry are already in your working tree.\n` +
+        "  Undo with:      git checkout -- .\n" +
+        "  Or release without fresh screenshots:  SKIP_SCREENSHOTS=1 pnpm release <bump>",
+    );
+  }
+  updated.push(join(ROOT, "screenshots"), join(ROOT, "apps/tinkerbell.dev/public/screenshots"));
+}
+
 sh("git", ["add", ...updated]);
 sh("git", ["commit", "-m", `v${next}`]);
 sh("git", ["tag", "-a", `v${next}`, "-m", `v${next}`]);
