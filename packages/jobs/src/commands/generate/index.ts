@@ -15,11 +15,20 @@ import { parseRuleConfig } from "./config.ts";
 import { runHandlerWithCommits } from "./dispatch.ts";
 import { resolveArrAdds } from "./arr.ts";
 import { llmUnavailableReason } from "./ai/llm.ts";
+import { withItemCache } from "./item-cache.ts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
 export { testRule } from "./preview.ts";
 
 const runRuleLog = createLogger("run-rule");
+
+/**
+ * Rules in flight at once. Independent of each other, but they share one
+ * Plex server (and, through it, one home NAS's disks) plus rate-limited
+ * external APIs, so this stays deliberately low. Override per job with
+ * `ruleConcurrency`.
+ */
+const RULE_CONCURRENCY_DEFAULT = 3;
 
 /**
  * Batch entry point: run every enabled rule against the configured Plex
@@ -80,13 +89,13 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
   // recorded per rule and summarised at the end instead.
   const failures: { name: string; error: string }[] = [];
 
-  for (let i = 0; i < enabledRules.length; i++) {
-    const rule = enabledRules[i];
-    if (completedRuleIds.has(rule.id)) continue;
-    const ruleConfig = parseRuleConfig(rule);
+  const concurrency = Math.min(config.ruleConcurrency ?? RULE_CONCURRENCY_DEFAULT, enabledRules.length);
+  if (concurrency > 1) ctx.log(`Running up to ${concurrency} rules at a time.`);
 
-    ctx.progress(i + 1, enabledRules.length, `Processing rule "${rule.name}"...`);
-    ctx.log(`\n--- Rule: "${rule.name}" (${rule.type}) ---`);
+  /** Everything one rule does, start to finish. Never throws except on abort. */
+  const runOneRule = async (rule: (typeof enabledRules)[number], ruleCtx: JobContext): Promise<void> => {
+    const ruleConfig = parseRuleConfig(rule);
+    ruleCtx.log(`\n--- Rule: "${rule.name}" (${rule.type}) ---`);
 
     // AI rules need a working provider. Without one every such rule fails
     // identically, so check once up front and skip rather than delete the
@@ -94,40 +103,40 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     if (rule.type === "ai_prompt") {
       const unavailable = llmUnavailableReason();
       if (unavailable) {
-        ctx.log(`Skipping AI rule — ${unavailable}.`);
+        ruleCtx.log(`Skipping AI rule — ${unavailable}.`);
         completedRuleIds.add(rule.id);
         saveCheckpoint();
-        continue;
+        return;
       }
     }
 
     // Rule-level section override beats job-level.
     const ruleSectionsOrNull = filterSections(allSections, ruleConfig.sections);
     if (ruleSectionsOrNull === null) {
-      ctx.log(`No matching sections for rule config, skipping.`);
+      ruleCtx.log(`No matching sections for rule config, skipping.`);
       // A rule with nothing to do is done — don't re-evaluate it on a resume.
       completedRuleIds.add(rule.id);
       saveCheckpoint();
-      continue;
+      return;
     }
     const sections = ruleSectionsOrNull ?? jobSections;
-    ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
+    ruleCtx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
 
     const labels = ["Tinkerbell", `Rule:${rule.id}`];
     const ruleStartedAt = Date.now();
     try {
       // Inside the try: a Plex hiccup while clearing one rule's old
       // collections is no more fatal than the rule's own handler failing.
-      await deleteOldCollections(ctx, client, sections, rule.id);
+      await deleteOldCollections(ruleCtx, client, sections, rule.id);
 
       const { lastCollectionKey, collectionCount, itemCount } = await runHandlerWithCommits(
-        { ctx, client, sections, rule, ruleConfig },
+        { ctx: ruleCtx, client, sections, rule, ruleConfig },
         machineId,
         labels,
       );
       if (lastCollectionKey) setRuleLastCollection(rule.id, lastCollectionKey);
 
-      const arrResult = await resolveArrAdds(ctx, client, sections, rule, ruleConfig);
+      const arrResult = await resolveArrAdds(ruleCtx, client, sections, rule, ruleConfig);
       if (ruleConfig.arr?.enabled) {
         setRuleArrCounts(rule.id, arrResult.added, arrResult.skipped, arrResult.failed);
       }
@@ -156,11 +165,42 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
       if (ctx.signal.aborted) throw err;
 
       failures.push({ name: rule.name, error: message });
-      ctx.log(`Rule "${rule.name}" failed: ${message}`);
-      ctx.log("Continuing with the remaining rules.");
+      ruleCtx.log(`Rule "${rule.name}" failed: ${message}`);
+      ruleCtx.log("Continuing with the remaining rules.");
       // Deliberately not checkpointed as complete: a resume should retry it.
     }
-  }
+  };
+
+  // Rules are independent, so the pool is a plain shared cursor over the
+  // list — no locking needed, since only one worker runs between awaits.
+  const pending = enabledRules.filter((r) => !completedRuleIds.has(r.id));
+  let started = 0;
+  let finished = 0;
+
+  const worker = async (): Promise<void> => {
+    while (started < pending.length && !ctx.signal.aborted) {
+      const rule = pending[started++];
+      // With rules interleaved, streaming every line straight to the job log
+      // would braid them together and make the log unreadable. Each rule's
+      // output is buffered and flushed as one block when it finishes.
+      const buffered = concurrency > 1 ? bufferLog(ctx) : { ctx, flush: () => {} };
+      try {
+        await runOneRule(rule, buffered.ctx);
+      } finally {
+        buffered.flush();
+        finished++;
+        ctx.progress(finished, pending.length, `Completed ${finished}/${pending.length} rules`);
+      }
+    }
+  };
+
+  // `allSettled`, not `all`: a worker rejecting (only ever an abort) must not
+  // leave its siblings' rejections unhandled — those surface as an
+  // unhandled rejection inside the Sidequest worker thread, where nothing
+  // catches them. Every worker is waited for, then the first failure wins.
+  const outcomes = await Promise.allSettled(Array.from({ length: concurrency }, worker));
+  const aborted = outcomes.find((o) => o.status === "rejected");
+  if (aborted) throw aborted.reason;
 
   // Clear on success, so a stale checkpoint can never silently skip a rule on
   // the next nightly run.
@@ -170,6 +210,26 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     for (const { name, error } of failures) ctx.log(`  - "${name}": ${error}`);
   }
   ctx.log("\nAll done!");
+}
+
+/**
+ * A context whose log is collected rather than emitted, so one rule's output
+ * lands in the job log as a single contiguous block. Mirrors the real
+ * context's stringification so buffered lines read identically to live ones.
+ */
+function bufferLog(ctx: JobContext): { ctx: JobContext; flush: () => void } {
+  const lines: string[] = [];
+  return {
+    ctx: {
+      ...ctx,
+      log: (...args: unknown[]) =>
+        lines.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")),
+    },
+    flush: () => {
+      if (lines.length > 0) ctx.log(lines.join("\n"));
+      lines.length = 0;
+    },
+  };
 }
 
 interface GenerateCheckpoint {
@@ -247,12 +307,17 @@ async function connectPlex(
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
   if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
 
-  const client = createPlexClient({
-    url: PLEX_URL,
-    token: PLEX_TOKEN,
-    signal: signal ?? ctx.signal,
-    onHealth: plexHealthCallback,
-  });
+  // Memoized for the lifetime of this run: the library can't change under us
+  // mid-job, and every rule that walks it was previously paying for its own
+  // full pass over the same few thousand items.
+  const client = withItemCache(
+    createPlexClient({
+      url: PLEX_URL,
+      token: PLEX_TOKEN,
+      signal: signal ?? ctx.signal,
+      onHealth: plexHealthCallback,
+    }),
+  );
 
   ctx.log(`tinkerbell generate`);
   ctx.log(`Server: ${PLEX_URL}`);

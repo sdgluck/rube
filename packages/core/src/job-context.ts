@@ -41,7 +41,14 @@ export const commonJobConfigSchema = z.object({
 });
 export type CommonJobConfig = z.infer<typeof commonJobConfigSchema>;
 
-export const generateJobConfigSchema = commonJobConfigSchema;
+export const generateJobConfigSchema = commonJobConfigSchema.extend({
+  /**
+   * How many rules to run at once. Rules are independent, but they share
+   * one Plex server and the external APIs behind it, so this is capped low
+   * and defaults conservatively — see `RULE_CONCURRENCY_DEFAULT`.
+   */
+  ruleConcurrency: z.number().int().min(1).max(8).optional(),
+});
 export type GenerateJobConfig = z.infer<typeof generateJobConfigSchema>;
 
 export const bywJobConfigSchema = commonJobConfigSchema.extend({

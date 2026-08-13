@@ -10,6 +10,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setTimeout } from "node:timers/promises";
 import { setupTempDb } from "../../test-support/temp-db.ts";
 import type { JobContext } from "@tinkerbell/core";
 
@@ -18,6 +19,7 @@ setupTempDb();
 const { db, rules, config } = await import("@tinkerbell/db");
 const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
 const { llmUnavailableReason } = await import("./ai/llm.ts");
+const { withItemCache } = await import("./item-cache.ts");
 const run = (await import("./index.ts")).default;
 
 const SECTIONS = [
@@ -27,22 +29,45 @@ const SECTIONS = [
 
 const realFetch = globalThis.fetch;
 
+interface PlexStub {
+  /** Every path requested, in order. */
+  paths: string[];
+  /** High-water mark of overlapping section requests — the concurrency probe. */
+  maxOverlap: number;
+}
+
 /**
  * Minimal Plex server. Every library-content request comes back empty, so
  * nothing is deleted and nothing is created — the rules under test either
  * skip, throw in their handler, or no-op.
+ *
+ * `delayMs` holds section requests open long enough for overlap to be
+ * observable: a rule issues its section requests one at a time, so any
+ * overlap at all means two rules were running at once.
  */
-function stubPlex(): void {
+function stubPlex({ delayMs = 0 }: { delayMs?: number } = {}): PlexStub {
+  const stub: PlexStub = { paths: [], maxOverlap: 0 };
+  let inFlight = 0;
+
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     const json = (body: unknown) =>
       new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
 
+    stub.paths.push(url.pathname);
     if (url.pathname === "/") return json({ MediaContainer: { friendlyName: "Test", machineIdentifier: "machine-1" } });
     if (url.pathname === "/library/sections") return json({ MediaContainer: { Directory: SECTIONS } });
-    if (url.pathname.startsWith("/library/sections/")) return json({ MediaContainer: { Metadata: [] } });
+    if (url.pathname.startsWith("/library/sections/")) {
+      inFlight++;
+      stub.maxOverlap = Math.max(stub.maxOverlap, inFlight);
+      if (delayMs > 0) await setTimeout(delayMs);
+      inFlight--;
+      return json({ MediaContainer: { Metadata: [] } });
+    }
     throw new Error(`unexpected Plex request: ${url.pathname}`);
   }) as typeof fetch;
+
+  return stub;
 }
 
 /**
@@ -157,9 +182,102 @@ describe("generate: one bad rule", () => {
       if (args.map(String).join(" ").includes("Fetching trakt")) controller.abort();
     };
 
-    await assert.rejects(run(ctx, {}), /Trakt/i);
+    // Serial, so "the rules after it" is a meaningful claim — at the default
+    // concurrency the later rule would already be in flight.
+    await assert.rejects(run(ctx, { ruleConcurrency: 1 }), /Trakt/i);
     assert.equal(ruleRow(broken).lastRunStatus, "error");
     // Cancellation means the rules after it are not attempted.
     assert.equal(ruleRow(after).lastRunStatus, null);
+  });
+});
+
+describe("generate: rule concurrency", () => {
+  it("overlaps rules by default and still runs every one", async () => {
+    const ids = [1, 2, 3].map((n) => seedRule(`Rule ${n}`, "no_such_type", {}, n));
+    const stub = stubPlex({ delayMs: 20 });
+
+    const { ctx } = testContext();
+    await run(ctx, {});
+
+    assert.ok(stub.maxOverlap > 1, `expected overlapping section requests, saw ${stub.maxOverlap}`);
+    for (const id of ids) assert.equal(ruleRow(id).lastRunStatus, "ok");
+  });
+
+  it("runs strictly one rule at a time at concurrency 1", async () => {
+    const ids = [1, 2, 3].map((n) => seedRule(`Rule ${n}`, "no_such_type", {}, n));
+    const stub = stubPlex({ delayMs: 5 });
+
+    const { ctx } = testContext();
+    await run(ctx, { ruleConcurrency: 1 });
+
+    assert.equal(stub.maxOverlap, 1);
+    for (const id of ids) assert.equal(ruleRow(id).lastRunStatus, "ok");
+  });
+
+  it("keeps each rule's log contiguous when they interleave", async () => {
+    seedRule("Alpha", "no_such_type", {}, 1);
+    seedRule("Beta", "no_such_type", {}, 2);
+    stubPlex({ delayMs: 20 });
+
+    const { ctx, log } = testContext();
+    await run(ctx, { ruleConcurrency: 2 });
+
+    // Each rule flushes as a single log call, so its header and its section
+    // line land in the same entry rather than braided with the other rule's.
+    const alpha = log.find((entry) => entry.includes('--- Rule: "Alpha"'));
+    assert.ok(alpha, "no log block for Alpha");
+    assert.match(alpha, /Sections: Films, Shows/);
+    assert.doesNotMatch(alpha, /Beta/);
+  });
+});
+
+describe("withItemCache", () => {
+  function fakeClient(onWalk: () => void) {
+    return {
+      allItemsWithGuids: async (sectionId: string) => {
+        onWalk();
+        await setTimeout(1);
+        return [{ ratingKey: `${sectionId}-1`, title: "A", guids: [] }];
+      },
+      fetchAllItems: async () => [],
+    } as unknown as Parameters<typeof withItemCache>[0];
+  }
+
+  it("walks each section once, however many rules ask", async () => {
+    let walks = 0;
+    const client = withItemCache(fakeClient(() => walks++));
+
+    await client.allItemsWithGuids("1");
+    await client.allItemsWithGuids("1");
+    await client.allItemsWithGuids("2");
+
+    assert.equal(walks, 2, "one walk per section");
+  });
+
+  it("shares a single in-flight walk between concurrent rules", async () => {
+    let walks = 0;
+    const client = withItemCache(fakeClient(() => walks++));
+
+    const [a, b] = await Promise.all([client.allItemsWithGuids("1"), client.allItemsWithGuids("1")]);
+
+    assert.equal(walks, 1);
+    assert.equal(a, b, "both callers get the same array");
+  });
+
+  it("does not cache a failed walk", async () => {
+    let attempts = 0;
+    const client = withItemCache({
+      allItemsWithGuids: async () => {
+        attempts++;
+        if (attempts === 1) throw new Error("plex blipped");
+        return [];
+      },
+      fetchAllItems: async () => [],
+    } as unknown as Parameters<typeof withItemCache>[0]);
+
+    await assert.rejects(client.allItemsWithGuids("1"), /blipped/);
+    // The retry gets a real attempt rather than the memoized rejection.
+    assert.deepEqual(await client.allItemsWithGuids("1"), []);
+    assert.equal(attempts, 2);
   });
 });

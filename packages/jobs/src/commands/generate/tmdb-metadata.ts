@@ -9,6 +9,14 @@ const CACHE_TTL_MS = MONTH_MS;
 const FETCH_CONCURRENCY = 8;
 const PROGRESS_INTERVAL = 50;
 
+/**
+ * Module-scoped, so `FETCH_CONCURRENCY` is a ceiling on TMDB requests in
+ * flight *in total* rather than per call. Rules run concurrently, and a
+ * per-call queue would multiply the burst by the rule concurrency — TMDB
+ * would see 8× that and start handing back 429s.
+ */
+const tmdbQueue = new PQueue({ concurrency: FETCH_CONCURRENCY });
+
 function cacheId(tmdbId: number, mediaType: "movie" | "tv"): string {
   return `${mediaType}:${tmdbId}`;
 }
@@ -76,42 +84,45 @@ export async function hydrateTmdbDetails(
 
   ctx.log(`[tmdb-cache] cache hits: ${result.size}, fetching ${toFetch.length} from TMDB...`);
 
-  const queue = new PQueue({ concurrency: FETCH_CONCURRENCY });
-  if (ctx.signal) {
-    ctx.signal.addEventListener("abort", () => queue.clear(), { once: true });
-  }
-
   let fetched = 0;
   let failed = 0;
   const insertRows: Array<typeof tmdbCache.$inferInsert> = [];
 
-  for (const target of toFetch) {
-    void queue.add(async () => {
-      ctx.signal?.throwIfAborted();
-      try {
-        const details = await fetchItemDetails(cfg, target.tmdbId, target.mediaType);
-        const cached = toCached(details);
-        result.set(target.id, cached);
-        insertRows.push({
-          id: target.id,
-          tmdbId: target.tmdbId,
-          mediaType: target.mediaType,
-          data: cached,
-          fetchedAt: now,
-        });
-      } catch (err) {
-        failed++;
-        const msg = err instanceof Error ? err.message : String(err);
-        ctx.log(`[tmdb-cache] fetch failed for ${target.id}: ${msg}`);
-      }
-      fetched++;
-      if (fetched % PROGRESS_INTERVAL === 0) {
-        ctx.log(`[tmdb-cache] ${fetched}/${toFetch.length} fetched (${failed} failed)`);
-      }
-    });
-  }
+  // Awaiting our own tasks rather than `queue.onIdle()`: the queue is shared
+  // with any other rule running right now, and "the queue is empty" would
+  // mean waiting on their work too.
+  const tasks = toFetch.map((target) =>
+    tmdbQueue.add(
+      async () => {
+        ctx.signal?.throwIfAborted();
+        try {
+          const details = await fetchItemDetails(cfg, target.tmdbId, target.mediaType);
+          const cached = toCached(details);
+          result.set(target.id, cached);
+          insertRows.push({
+            id: target.id,
+            tmdbId: target.tmdbId,
+            mediaType: target.mediaType,
+            data: cached,
+            fetchedAt: now,
+          });
+        } catch (err) {
+          failed++;
+          const msg = err instanceof Error ? err.message : String(err);
+          ctx.log(`[tmdb-cache] fetch failed for ${target.id}: ${msg}`);
+        }
+        fetched++;
+        if (fetched % PROGRESS_INTERVAL === 0) {
+          ctx.log(`[tmdb-cache] ${fetched}/${toFetch.length} fetched (${failed} failed)`);
+        }
+      },
+      { signal: ctx.signal },
+    ),
+  );
 
-  await queue.onIdle();
+  // `signal` above rejects tasks still queued when the job is cancelled, so
+  // this settles promptly on abort instead of draining thousands of fetches.
+  await Promise.all(tasks);
   ctx.signal?.throwIfAborted();
 
   // Bulk-upsert. SQLite limits ~999 bound parameters per statement; tmdb_cache
