@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-08-13
+
+### Fixed
+
+- TypeScript base configuration is now correctly copied into Docker images
+- Overlapping runs no longer create duplicate collections
+
+### Changed
+
+- Improved type checking performance from 122s to 6s by upgrading to TypeScript 7
+
 ## [0.7.1] - 2026-08-13
 
 ### Fixed
