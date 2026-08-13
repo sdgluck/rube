@@ -51,6 +51,16 @@ const HOST = process.env.HOST || "127.0.0.1";
 // loopback like the admin server; the Docker image opens this one to the host.
 const USER_PORT = parseInt(process.env.USER_PORT || "3100", 10);
 const USER_HOST = process.env.USER_HOST || HOST;
+// The address to print at boot. `api.tinkerbell.localhost` is the localias
+// proxy from `pnpm dev` and resolves nowhere else, so it is dev-only — in a
+// container it sent people to a hostname their browser can't resolve. A
+// wildcard bind isn't a dialable host either, so report loopback for those.
+function listenUrl(): string {
+  if (process.env.NODE_ENV !== "production") return "https://api.tinkerbell.localhost";
+  const host = HOST === "0.0.0.0" || HOST === "::" ? "localhost" : HOST;
+  return `http://${host.includes(":") ? `[${host}]` : host}:${PORT}`;
+}
+
 const DIST_DIR = join(import.meta.dirname, "..", "..", "web", "dist");
 const PORTAL_DIST_DIR = join(import.meta.dirname, "..", "..", "portal", "dist");
 
@@ -257,7 +267,7 @@ async function main() {
     process.exit(1);
   }
   server.listen(PORT, HOST, () => {
-    log.info("admin server listening", { host: HOST, port: PORT, url: "https://api.tinkerbell.localhost" });
+    log.info("admin server listening", { host: HOST, port: PORT, url: listenUrl() });
     if (HOST !== "127.0.0.1" && HOST !== "localhost" && HOST !== "::1") {
       log.warn(
         `Listening on ${HOST}: every tRPC mutation is reachable without authentication. ` +
