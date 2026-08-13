@@ -15,6 +15,7 @@ import PrerollCard from "./PrerollCard";
 import PrerollDetailModal from "./PrerollDetailModal";
 import PlexSyncBar from "./PlexSyncBar";
 import ImportUrlModal from "./ImportUrlModal";
+import ImportExistingModal from "./ImportExistingModal";
 import { uploadPreroll, stripExtension } from "./upload";
 import { hasWorkInFlight } from "./utils";
 import type { PrerollMode, UploadItem } from "./types";
@@ -32,6 +33,7 @@ export default function Prerolls() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [importExistingOpen, setImportExistingOpen] = useState(false);
   const lastClickedRef = useRef<string | null>(null);
   const dragRef = useRef<{ from: string; over: string | null }>({ from: "", over: null });
 
@@ -46,6 +48,9 @@ export default function Prerolls() {
   const invalidateAll = useCallback(() => {
     utils.prerolls.list.invalidate();
     utils.prerolls.plexStatus.invalidate();
+    // A delete puts nothing back in the folder, but an adopt takes something
+    // out of it — either way the scan result is stale after a mutation.
+    utils.prerolls.scanExisting.invalidate();
     utils.nav.metrics.invalidate();
   }, [utils]);
 
@@ -182,14 +187,24 @@ export default function Prerolls() {
       count={prerolls.length > 0 ? prerolls.length : undefined}
       subtitle="Short videos Plex plays before every movie. Tinkerbell transcodes anything Plex wouldn't direct play, then points the server's pre-roll setting at the results."
       actions={
-        <button
-          type="button"
-          className={`${controls.btn} ${controls.btnSecondary}`}
-          onClick={() => setImportOpen(true)}
-          disabled={ffmpegMissing}
-        >
-          Import from URL
-        </button>
+        <>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnSecondary}`}
+            onClick={() => setImportExistingOpen(true)}
+            disabled={ffmpegMissing}
+          >
+            Import existing
+          </button>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnSecondary}`}
+            onClick={() => setImportOpen(true)}
+            disabled={ffmpegMissing}
+          >
+            Import from URL
+          </button>
+        </>
       }
     >
       {ffmpegMissing && (
@@ -205,7 +220,7 @@ export default function Prerolls() {
         <EmptyState
           icon="film"
           title="No prerolls yet"
-          description="Upload a clip above, or import one from a URL, and it'll be ready to play before your next movie."
+          description="Upload a clip above, import one from a URL, or pull in videos already sitting in the prerolls folder, and it'll be ready to play before your next movie."
         />
       ) : (
         <div className={styles.grid} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
@@ -268,6 +283,10 @@ export default function Prerolls() {
       )}
 
       {importOpen && <ImportUrlModal onClose={() => setImportOpen(false)} onImported={invalidateAll} />}
+
+      {importExistingOpen && (
+        <ImportExistingModal onClose={() => setImportExistingOpen(false)} onImported={invalidateAll} />
+      )}
 
       {confirmDelete && (
         <ConfirmModal

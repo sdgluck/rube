@@ -35,24 +35,28 @@ class ErrorBoundaryInner extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className={styles.container} role="alert">
-          <h2 className={styles.title}>Something went wrong</h2>
-          <p className={styles.message}>
-            This page hit an unexpected error. Reloading usually clears it; if it keeps happening the details below are
-            worth including in a bug report.
-          </p>
-          {this.state.error?.message && <pre className={styles.detail}>{this.state.error.message}</pre>}
-          <div className={styles.actions}>
-            <button type="button" className={styles.primary} onClick={() => window.location.reload()}>
-              Reload page
-            </button>
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={() => this.setState({ hasError: false, error: null })}
-            >
-              Try again
-            </button>
+        // The outer div is what `.content > *` styles — it takes the column's
+        // height and centres the card, which stays sized to its own content.
+        <div className={styles.wrap}>
+          <div className={styles.container} role="alert">
+            <h2 className={styles.title}>Something went wrong</h2>
+            <p className={styles.message}>
+              This page hit an unexpected error. Reloading usually clears it; if it keeps happening the details below
+              are worth including in a bug report.
+            </p>
+            {this.state.error?.message && <pre className={styles.detail}>{this.state.error.message}</pre>}
+            <div className={styles.actions}>
+              <button type="button" className={styles.primary} onClick={() => window.location.reload()}>
+                Reload page
+              </button>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => this.setState({ hasError: false, error: null })}
+              >
+                Try again
+              </button>
+            </div>
           </div>
         </div>
       );

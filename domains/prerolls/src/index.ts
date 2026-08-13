@@ -27,6 +27,8 @@ export {
   filenameFromUrl,
   writeIncoming,
 } from "./ingest.ts";
+export { OrphanNotFoundError, adoptOrphan, scanOrphans } from "./adopt.ts";
+export type { OrphanFile } from "./adopt.ts";
 
 export type PrerollStatus = "pending" | "processing" | "ready" | "failed";
 

@@ -5,8 +5,10 @@ import { createLogger, errorMessage, setConfig } from "@tinkerbell/core";
 import { startJob } from "@tinkerbell/jobs";
 import { UnsafeUrlError } from "@tinkerbell/http";
 import {
+  OrphanNotFoundError,
   UnsupportedFormatError,
   UploadTooLargeError,
+  adoptOrphan,
   assertSupportedFilename,
   createPreroll,
   deletePreroll,
@@ -21,6 +23,7 @@ import {
   listPrerolls,
   reorderPrerolls,
   retryPreroll,
+  scanOrphans,
   syncToPlex,
   updatePreroll,
 } from "@tinkerbell/domain.prerolls";
@@ -136,6 +139,40 @@ export const prerollsRouter = t.router({
 
       await triggerProcessing();
       return { id: row.id };
+    }),
+
+  /** Videos already sitting in the prerolls folder that no row claims. */
+  scanExisting: procedure.query(() => scanOrphans()),
+
+  /**
+   * Adopt files from the prerolls folder.
+   *
+   * Per-file rather than all-or-nothing: one unreadable file in a batch of
+   * fifty shouldn't cost the user the other forty-nine, so failures are
+   * collected and reported alongside the successes.
+   */
+  importExisting: procedure
+    .input(z.object({ filenames: z.array(z.string()).min(1).max(500) }))
+    .mutation(async ({ input }) => {
+      const imported: string[] = [];
+      const failed: { filename: string; error: string }[] = [];
+
+      for (const filename of input.filenames) {
+        try {
+          await adoptOrphan(filename);
+          imported.push(filename);
+        } catch (err) {
+          if (err instanceof OrphanNotFoundError || err instanceof UnsupportedFormatError) {
+            failed.push({ filename, error: err.message });
+          } else {
+            log.warn("failed to adopt preroll", { filename, err: errorMessage(err) });
+            failed.push({ filename, error: errorMessage(err) });
+          }
+        }
+      }
+
+      if (imported.length > 0) await triggerProcessing();
+      return { imported: imported.length, failed };
     }),
 
   /** Push the current pool into Plex's preference and report whether it stuck. */

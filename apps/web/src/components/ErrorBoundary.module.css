@@ -1,6 +1,15 @@
+/* The boundary renders directly under `.content`, which stretches its child to
+   the full column height. Absorb that here so the card can size to content. */
+.wrap {
+  display: flex;
+}
+
+/* `margin: auto` rather than `align-items: center`, so a card taller than the
+   column overflows downward and stays scrollable instead of losing its top. */
 .container {
+  margin: auto;
+  width: 100%;
   max-width: 560px;
-  margin: 48px auto;
   padding: 28px;
   border: none;
   border-radius: var(--r-panel);
