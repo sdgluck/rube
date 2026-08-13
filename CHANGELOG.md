@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-08-13
+
+### Added
+
+- Expose generate rule concurrency configuration in the admin UI
+
+### Changed
+
+- Improved performance of rule generation through library walk memoization and concurrent rule execution
+
 ## [0.6.4] - 2026-08-13
 
 ### Fixed
