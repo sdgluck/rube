@@ -160,8 +160,12 @@ LABEL org.opencontainers.image.source="https://github.com/sdgluck/tinkerbell"
 # /etc/hosts maps localhost to ::1 as well and busybox wget tries that first.
 # The connection is refused, and the container sits in `unhealthy` forever even
 # though it is serving normally.
+#
+# ${PORT:-3000}, not a literal 3000: the server reads PORT, so a container
+# started with PORT set to anything else would otherwise sit `unhealthy`
+# forever while serving normally.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/ || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/" || exit 1
 
 WORKDIR /app/apps/server
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]

@@ -192,9 +192,62 @@ you ship container logs to a collector.
 
 ## Production
 
+Images are published to GHCR for `linux/amd64` and `linux/arm64` by
+`.github/workflows/docker-publish.yml`: `latest` and the semver tags on each
+`v*` tag, `edge` on every push to `master`.
+
 ```sh
-docker build -t tinkerbell .
-docker run -v /path/to/config:/config -v /path/to/prerolls:/prerolls -p 3000:3000 tinkerbell
+docker run -d --name tinkerbell \
+  -v /path/to/config:/config \
+  -v /path/to/prerolls:/prerolls \
+  -p 3000:3000 -p 3100:3100 \
+  -e PUID=99 -e PGID=100 -e TZ=Europe/London \
+  ghcr.io/sdgluck/tinkerbell:latest
 ```
 
+Or build it yourself with `docker build -t tinkerbell .`.
+
 The container serves the built web app and tRPC API from a single Node process. Persistent state (SQLite, config) lives in `/config`. The `/prerolls` volume is only needed if you use the Prerolls feature, and must also be mounted into Plex — see above.
+
+Files in `/config` and `/prerolls` are chowned to `PUID:PGID` (default `99:100`,
+Unraid's `nobody:users`) by the entrypoint, which then drops from root before
+running migrations and the server.
+
+## Unraid
+
+`unraid/tinkerbell.xml` is a Community Applications template. Until it is
+listed in the CA appfeed, install it by hand:
+
+1. Copy the template onto the array at
+   `/boot/config/plugins/dockerMan/templates-user/my-Tinkerbell.xml`:
+
+   ```sh
+   wget -O /boot/config/plugins/dockerMan/templates-user/my-Tinkerbell.xml \
+     https://raw.githubusercontent.com/sdgluck/tinkerbell/master/unraid/tinkerbell.xml
+   ```
+
+2. **Docker → Add Container**, and pick `Tinkerbell` from the _Template_
+   dropdown (under "User templates").
+3. Check the paths and hit **Apply**. Unraid pulls the image and starts it.
+
+The template's defaults:
+
+| Setting            | Default                        | Notes                                                                                  |
+| ------------------ | ------------------------------ | -------------------------------------------------------------------------------------- |
+| WebUI port (admin) | `3000`                         | Unauthenticated — LAN only. See [Network exposure](#network-exposure).                 |
+| User Portal port   | `3100`                         | Sign in with Plex; safe to expose. Only listens while Personalized Home Screens is on. |
+| `/config`          | `/mnt/user/appdata/tinkerbell` | SQLite database and settings. Back this up.                                            |
+| `/prerolls`        | `/mnt/user/prerolls`           | Optional. Map the **same host path** into the Plex container.                          |
+| `PUID` / `PGID`    | `99` / `100`                   | Unraid's `nobody:users`.                                                               |
+| `TZ`               | `Europe/London`                | The zone cron schedules are evaluated in; Settings → Schedules overrides it.           |
+
+Two Unraid-specific things worth repeating:
+
+- **Do not forward port 3000.** The admin UI has no login: anyone who reaches
+  it can call every mutation. If you want remote access, put it behind an
+  authenticating reverse proxy, or expose only the portal on `3100`.
+- **Prerolls need the same path in both containers.** Add
+  `/mnt/user/prerolls` to your Plex container too (read-only is fine), then
+  set Settings → Prerolls → "The same directory, as Plex sees it" to the path
+  _Plex_ mounts it at. A wrong mapping fails silently — Plex accepts the
+  setting and plays nothing.

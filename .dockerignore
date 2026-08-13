@@ -6,8 +6,10 @@
 # image leaves dangling links and the Vite build fails to resolve its imports.
 **/node_modules
 .git
+.github
 .husky
 .claude
+unraid
 
 # Build-context weight. The pnpm store alone is ~300 MB and none of this is
 # needed by either image; the capture image mounts screenshots back in at run

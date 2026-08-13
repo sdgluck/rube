@@ -1,0 +1,137 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Tinkerbell</Name>
+  <Repository>ghcr.io/sdgluck/tinkerbell:latest</Repository>
+  <Registry>https://ghcr.io/sdgluck/tinkerbell</Registry>
+  <Branch>
+    <Tag>latest</Tag>
+    <TagDescription>Latest tagged release</TagDescription>
+  </Branch>
+  <Branch>
+    <Tag>edge</Tag>
+    <TagDescription>Built from master — unreleased, may break</TagDescription>
+  </Branch>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sdgluck/tinkerbell/issues</Support>
+  <Project>https://github.com/sdgluck/tinkerbell</Project>
+  <Overview>
+    A self-hosted Plex companion for automating library curation. Define rules over your Plex media (using metadata from IMDb/OMDb and requests from Overseerr) to drive collections, overlays, prerolls, labels and notifications on a schedule.&#13;
+    &#13;
+    Features:&#13;
+    [b]Rules engine[/b] &#8212; rules that produce Plex collections from your library, refreshed on a schedule with full run history.&#13;
+    [b]Smart filters[/b] &#8212; compose criteria over Plex metadata, IMDb ratings and Overseerr requests; AI-assisted filter generation.&#13;
+    [b]Collections[/b] &#8212; auto-managed Plex collections with sort order, pinning and shuffle hubs.&#13;
+    [b]Overlays[/b] &#8212; stamp ratings, badges and labels onto poster artwork.&#13;
+    [b]Personalized home screens[/b] &#8212; per-user recommendations, with a self-service portal where each user tunes their own tastes.&#13;
+    [b]Prerolls[/b] &#8212; upload the videos Plex plays before a movie; anything Plex would not direct play is transcoded automatically.&#13;
+    [b]Notifications[/b] &#8212; Discord, Slack, Telegram, Gotify, Pushbullet, Pushover, LunaSea and generic webhooks.&#13;
+    &#13;
+    [b]IMPORTANT &#8212; Tinkerbell's admin UI is unauthenticated.[/b] Anyone who can reach the WebUI port can change every setting. Keep port 3000 on your LAN or behind an authenticating reverse proxy; never forward it to the internet. The separate [b]User Portal[/b] port (3100) is the one designed to be exposed &#8212; it requires Sign in with Plex.&#13;
+    &#13;
+    [b]Prerolls path mapping.[/b] Plex stores prerolls as paths on [i]its own[/i] filesystem, so Tinkerbell and Plex must share a directory. Map the same host share into both containers, then set Settings &#8594; Prerolls &#8594; "The same directory, as Plex sees it" to whatever path the Plex container mounts it at. If both use /prerolls, the default is already correct. Prerolls are a Plex Pass feature.
+  </Overview>
+  <Category>MediaApp:Video Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/sdgluck/tinkerbell/master/unraid/tinkerbell.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdgluck/tinkerbell/master/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config
+    Name="WebUI Port (admin)"
+    Target="3000"
+    Default="3000"
+    Mode="tcp"
+    Description="The admin UI and API. UNAUTHENTICATED — keep this on your LAN, behind a firewall or an authenticating reverse proxy. Do not port-forward it."
+    Type="Port"
+    Display="always"
+    Required="true"
+    Mask="false">3000</Config>
+  <Config
+    Name="User Portal Port"
+    Target="3100"
+    Default="3100"
+    Mode="tcp"
+    Description="The self-service 'Sign in with Plex' portal where users set their own recommendation preferences. Safe to expose publicly. Only listens while Personalized Home Screens is enabled in Settings."
+    Type="Port"
+    Display="always"
+    Required="false"
+    Mask="false">3100</Config>
+  <Config
+    Name="Config"
+    Target="/config"
+    Default="/mnt/user/appdata/tinkerbell"
+    Mode="rw"
+    Description="Persistent state: the SQLite database, settings and cached artwork. Back this up."
+    Type="Path"
+    Display="always"
+    Required="true"
+    Mask="false">/mnt/user/appdata/tinkerbell</Config>
+  <Config
+    Name="Prerolls"
+    Target="/prerolls"
+    Default="/mnt/user/prerolls"
+    Mode="rw"
+    Description="Videos Plex plays before a movie. Only needed for the Prerolls feature. Map this SAME host path into your Plex container (read access is enough there), then tell Tinkerbell the Plex-side path under Settings → Prerolls."
+    Type="Path"
+    Display="always"
+    Required="false"
+    Mask="false">/mnt/user/prerolls</Config>
+  <Config
+    Name="PUID"
+    Target="PUID"
+    Default="99"
+    Mode=""
+    Description="User ID that owns files in /config and /prerolls. Unraid's default is 99 (nobody)."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false">99</Config>
+  <Config
+    Name="PGID"
+    Target="PGID"
+    Default="100"
+    Mode=""
+    Description="Group ID that owns files in /config and /prerolls. Unraid's default is 100 (users)."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false">100</Config>
+  <Config
+    Name="TZ"
+    Target="TZ"
+    Default="Europe/London"
+    Mode=""
+    Description="Timezone used to evaluate cron schedules, so '3am' stays 3am across daylight-saving changes. Can also be set in Settings → Schedules, which takes precedence."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false">Europe/London</Config>
+  <Config
+    Name="LOG_LEVEL"
+    Target="LOG_LEVEL"
+    Default="info"
+    Mode=""
+    Description="debug | info | warn | error. Raise to debug to see per-job detail in the container log."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false">info</Config>
+  <Config
+    Name="LOG_FORMAT"
+    Target="LOG_FORMAT"
+    Default=""
+    Mode=""
+    Description="Set to 'json' for one JSON object per line, if you ship container logs to a collector. Leave empty for human-readable output."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"></Config>
+</Container>
