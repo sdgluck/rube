@@ -155,6 +155,35 @@ export const rules = sqliteTable("rules", {
     .default({}),
 });
 
+/**
+ * Cross-context mutex for "this rule is generating collections right now".
+ *
+ * A rule run is delete-then-recreate: it removes every collection labelled
+ * `Rule:<id>` and then creates fresh ones. Two overlapping runs of the same
+ * rule therefore both delete before either creates, and both creations
+ * survive as duplicate same-title collections in Plex. The runs that overlap
+ * live in different execution contexts — the `generate` command runs in a
+ * Sidequest worker thread, ad-hoc single-rule runs execute in the API process
+ * — so an in-process Map cannot see both. SQLite can.
+ *
+ * The lock is a *lease*: `expiresAt` is pushed forward periodically while the
+ * holder is alive, and a lock whose lease has run out is free for the taking.
+ * That is deliberate — a worker thread killed with its process has no chance
+ * to release, and a permanent lock would wedge the rule forever.
+ *
+ * No FK to `rules`: a lock belonging to a rule deleted mid-run is harmless
+ * and expires on its own.
+ */
+export const ruleLocks = sqliteTable("rule_locks", {
+  ruleId: text("rule_id").primaryKey(),
+  /** Opaque owner token — only the holder that wrote it may renew or release. */
+  holder: text("holder").notNull(),
+  /** Human-readable owner ("generate job", "single-rule run"), for error messages. */
+  holderLabel: text("holder_label").notNull().default(""),
+  acquiredAt: integer("acquired_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
 export const ruleHistory = sqliteTable(
   "rule_history",
   {

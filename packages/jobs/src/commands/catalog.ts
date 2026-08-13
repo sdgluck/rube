@@ -77,6 +77,13 @@ export const COMMANDS = {
     lane: "interactive",
     timeoutMs: HOUR_MS,
   },
+  // One metadata fetch per collection on the server, so the budget is sized
+  // for a large library rather than the common case.
+  "collections-sweep": {
+    load: () => import("./collections-sweep.ts"),
+    lane: "interactive",
+    timeoutMs: HOUR_MS,
+  },
 } as const satisfies Record<string, CommandDescriptor>;
 
 export type CommandName = keyof typeof COMMANDS;

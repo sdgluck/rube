@@ -2,6 +2,18 @@ import { randomUUID } from "node:crypto";
 import { eq, type InferSelectModel } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
 
+export {
+  acquireRuleLock,
+  renewRuleLock,
+  releaseRuleLock,
+  getRuleLock,
+  withRuleLock,
+  RuleLockedError,
+  RULE_LOCK_LEASE_MS,
+  type RuleLockHandle,
+  type RuleLockInfo,
+} from "./lock.ts";
+
 export type Rule = InferSelectModel<typeof rules>;
 
 export function getRules(): Rule[] {

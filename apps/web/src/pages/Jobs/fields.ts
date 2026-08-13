@@ -32,6 +32,9 @@ const fields: Record<string, JobFieldsConfig> = {
   "posters-refresh": { kind: "system", enabled: "required", sections: true },
   generate: { kind: "system", enabled: "required", sections: true },
   healthcheck: { kind: "system", enabled: "required" },
+  // Manual maintenance: shown so there's a Run button, always-on so it can't
+  // be toggled into a state where the button does nothing.
+  "collections-sweep": { kind: "system", enabled: "required", sections: true },
 
   // ── Features (opt-in) ────────────────────────────────────────────────────
   "because-you-watched": { kind: "feature", sections: true },

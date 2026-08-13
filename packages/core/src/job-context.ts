@@ -63,6 +63,16 @@ export const bywJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type BywJobConfig = z.infer<typeof bywJobConfigSchema>;
 
+export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
+  /**
+   * Report what would be deleted and stop. Off by default — the job's own log
+   * lists every collection before it deletes anything, so the normal run is
+   * already auditable after the fact.
+   */
+  dryRun: z.boolean().optional(),
+});
+export type CollectionsSweepJobConfig = z.infer<typeof collectionsSweepJobConfigSchema>;
+
 export const overlaysJobConfigSchema = commonJobConfigSchema.extend({
   mode: z.enum(["apply", "remove"]).optional(),
 });

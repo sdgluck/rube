@@ -59,6 +59,15 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
+  // No schedule by default: it deletes collections off the Plex server, so it
+  // runs when a human asks it to. A schedule can still be set from the UI.
+  {
+    id: "collections-sweep",
+    name: "Clean Up Duplicate Collections",
+    command: "collections-sweep",
+    schedule: "",
+    enabled: 1,
+  },
   {
     id: "posters-refresh",
     name: "Refresh Poster Cache",
