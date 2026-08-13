@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-08-13
+
+### Added
+
+- Unraid Community Applications template for installation
+- Prerolls folder video adoption
+- Homepage collection rotation
+- Automatic screenshot capture on every UI change
+- Studio redesign for admin app and portal
+
+### Changed
+
+- Development environment now uses localias (replaces portless)
+- Screenshot capture optimization (parallel execution)
+
+### Fixed
+
+- UI failure message legibility, filter bar alignment, and sortable tables
+- Page bottom gutter positioning below long content
+- Production Docker image build and runtime
+- Filter grammar and mobile role display refinements
+
 ## [0.6.1] - 2026-08-04
 
 Hardening pass over the background job system, so it can be left running
