@@ -62,7 +62,7 @@ export default function RulesToolbar({
           ref={searchInputRef}
           type="text"
           className={styles.search}
-          placeholder="Search rules…  (press / to focus)"
+          placeholder="Search rules…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
