@@ -1,4 +1,4 @@
-import type { PlexHttp } from "./http.ts";
+import { PlexApiError, type PlexHttp } from "./http.ts";
 import {
   PLEX_COLLECTION_TYPE,
   SECTION_TYPE_MAP,
@@ -7,6 +7,11 @@ import {
   type PlexCollectionDetail,
   type PlexLabel,
 } from "./types.ts";
+
+/** True for the 404 Plex returns once a ratingKey no longer exists. */
+function isGone(err: unknown): boolean {
+  return err instanceof PlexApiError && err.status === 404;
+}
 
 export function createCollectionsModule(http: PlexHttp) {
   async function getCollections(sectionId: string): Promise<PlexCollection[]> {
@@ -23,6 +28,17 @@ export function createCollectionsModule(http: PlexHttp) {
 
   async function deleteItem(ratingKey: string): Promise<void> {
     await http.request(`/library/metadata/${ratingKey}`, { method: "DELETE" });
+  }
+
+  /** Delete, treating an already-deleted key as success. Reports whether we did it. */
+  async function deleteItemIfPresent(ratingKey: string): Promise<boolean> {
+    try {
+      await deleteItem(ratingKey);
+      return true;
+    } catch (err) {
+      if (isGone(err)) return false;
+      throw err;
+    }
   }
 
   async function getCollectionDetail(ratingKey: string): Promise<PlexCollectionDetail> {
@@ -74,13 +90,23 @@ export function createCollectionsModule(http: PlexHttp) {
   }
 
   async function deleteCollectionsByLabel(sectionId: string, label: string): Promise<number> {
+    // The listing is a snapshot: with several rules generating into one section
+    // at once, a sibling can delete its own collections while we're still
+    // walking ours. A key that has vanished by the time we reach it isn't a
+    // failure — it's already in the state we wanted — so 404s are skipped
+    // rather than aborting the whole rule.
     const collections = await getCollections(sectionId);
     let deleted = 0;
     for (const col of collections) {
-      const labels = await getCollectionLabels(col.ratingKey);
+      let labels: PlexLabel[];
+      try {
+        labels = await getCollectionLabels(col.ratingKey);
+      } catch (err) {
+        if (isGone(err)) continue;
+        throw err;
+      }
       if (labels.some((l: PlexLabel) => l.tag.toLowerCase() === label.toLowerCase())) {
-        await deleteItem(col.ratingKey);
-        deleted++;
+        if (await deleteItemIfPresent(col.ratingKey)) deleted++;
       }
     }
     return deleted;

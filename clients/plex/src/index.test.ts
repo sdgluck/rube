@@ -55,6 +55,129 @@ function createMockPlex() {
   };
 }
 
+/**
+ * Mock Plex server backed by a mutable set of collections, so a test can make
+ * a ratingKey disappear mid-walk the way a concurrently-running rule does.
+ */
+function createCollectionMockPlex(collections: { ratingKey: string; labels: string[] }[]) {
+  const live = new Map(collections.map((c) => [c.ratingKey, c.labels]));
+  const requests: { method: string; path: string }[] = [];
+  /** ratingKeys to drop from `live` the moment they're fetched (read 404s). */
+  const vanishOnRead = new Set<string>();
+  /** ratingKeys to drop from `live` just after a successful read (delete 404s). */
+  const vanishAfterRead = new Set<string>();
+
+  function handler(req: IncomingMessage, res: ServerResponse) {
+    const url = new URL(req.url!, `http://localhost`);
+    requests.push({ method: req.method!, path: url.pathname });
+
+    const json = (body: unknown) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(body));
+    };
+
+    if (url.pathname.endsWith("/all") && req.method === "GET") {
+      json({ MediaContainer: { Metadata: [...live.keys()].map((ratingKey) => ({ ratingKey })) } });
+      return;
+    }
+
+    const metaMatch = url.pathname.match(/^\/library\/metadata\/([^/]+)$/);
+    if (metaMatch) {
+      const key = metaMatch[1];
+      if (req.method === "DELETE") {
+        if (!live.delete(key)) {
+          res.writeHead(404);
+          res.end();
+          return;
+        }
+        json({});
+        return;
+      }
+      const labels = live.get(key);
+      if (!labels) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      // Simulate the sibling rule's delete landing between our list and our read.
+      if (vanishOnRead.delete(key)) {
+        live.delete(key);
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      if (vanishAfterRead.delete(key)) live.delete(key);
+      json({ MediaContainer: { Metadata: [{ ratingKey: key, Label: labels.map((tag) => ({ tag })) }] } });
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  }
+
+  const server = createServer(handler);
+
+  return {
+    requests,
+    live,
+    vanishOnRead,
+    vanishAfterRead,
+    start(): Promise<number> {
+      return new Promise((resolve) => {
+        server.listen(0, () => resolve((server.address() as { port: number }).port));
+      });
+    },
+    stop(): Promise<void> {
+      return new Promise((resolve) => server.close(() => resolve()));
+    },
+  };
+}
+
+describe("deleteCollectionsByLabel", () => {
+  let mock: ReturnType<typeof createCollectionMockPlex>;
+  let client: ReturnType<typeof createPlexClient>;
+
+  const start = async (collections: { ratingKey: string; labels: string[] }[]) => {
+    mock = createCollectionMockPlex(collections);
+    const port = await mock.start();
+    client = createPlexClient({ url: `http://localhost:${port}`, token: "test-token" });
+  };
+
+  afterEach(async () => {
+    await mock?.stop();
+  });
+
+  it("deletes only collections carrying the label", async () => {
+    await start([
+      { ratingKey: "1", labels: ["Rule:a"] },
+      { ratingKey: "2", labels: ["Rule:b"] },
+    ]);
+
+    assert.equal(await client.deleteCollectionsByLabel("1", "Rule:a"), 1);
+    assert.deepEqual([...mock.live.keys()], ["2"]);
+  });
+
+  it("skips a collection another rule deletes mid-walk instead of failing", async () => {
+    await start([
+      { ratingKey: "1", labels: ["Rule:b"] },
+      { ratingKey: "2", labels: ["Rule:a"] },
+    ]);
+    mock.vanishOnRead.add("1");
+
+    assert.equal(await client.deleteCollectionsByLabel("1", "Rule:a"), 1);
+    assert.deepEqual([...mock.live.keys()], [], "our own collection is still deleted");
+  });
+
+  it("does not count a collection deleted by another rule between read and delete", async () => {
+    await start([{ ratingKey: "1", labels: ["Rule:a"] }]);
+    // The label read succeeds and matches, then the key is gone before our
+    // DELETE lands — nothing was deleted by us, so nothing is counted.
+    mock.vanishAfterRead.add("1");
+
+    assert.equal(await client.deleteCollectionsByLabel("1", "Rule:a"), 0);
+  });
+});
+
 describe("setCollectionLabels", () => {
   let mock: ReturnType<typeof createMockPlex>;
   let client: ReturnType<typeof createPlexClient>;
