@@ -189,6 +189,21 @@ export const configSchema = z.object({
     submittedAt: z.number(),
   }),
   /**
+   * Last successful fetch of the public rule registry, cached so browsing the
+   * catalogue doesn't hit tinkerbell.dev on every render. Stored loosely
+   * (`z.unknown()` for the payload) because the authority on the registry's
+   * shape is `registryIndexSchema` in `@tinkerbell/contracts`, which
+   * `domains/registry` re-validates on read — duplicating it here would mean
+   * two schemas to keep in step, and a format bump would fail as an opaque
+   * config-parse error rather than the actionable "update Tinkerbell" message.
+   * `url` is recorded so a changed `REGISTRY_URL` invalidates the cache.
+   */
+  registry_cache: z.object({
+    fetchedAt: z.number(),
+    url: z.string(),
+    index: z.unknown(),
+  }),
+  /**
    * Legacy single-provider slots, kept readable for one release so a
    * one-shot migration in `domains/migration` can fold them into the
    * provider-keyed slots above. Safe to remove once shipped users have

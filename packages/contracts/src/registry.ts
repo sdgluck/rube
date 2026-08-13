@@ -1,0 +1,117 @@
+import { z } from "zod";
+import { RULE_TYPE_VALUES } from "./rule-config.ts";
+
+/**
+ * Wire format for the public rule registry served from tinkerbell.dev.
+ *
+ * The registry is static and git-backed: packs are authored as typed TS in
+ * `apps/tinkerbell.dev/src/registry/`, built into `dist/registry/index.json`,
+ * and fetched by instances over HTTPS. This schema is the contract between
+ * those two halves, so it is validated on both sides — at build time (a bad
+ * pack fails CI) and at fetch time (a Tinkerbell that predates a format
+ * change refuses the payload rather than misreading it).
+ */
+export const REGISTRY_FORMAT_VERSION = 1;
+
+const slugSchema = z
+  .string()
+  .min(1)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slugs are lowercase, digits, and single hyphens");
+
+export const registryRequirementSchema = z.enum(["omdb", "seerr", "tmdb", "llm", "mdblist"]);
+
+/**
+ * A rule as published. Deliberately missing everything instance-local:
+ * no `id` (regenerated on import), no `config.sections` (the importing user
+ * picks target libraries), and no `config.arr` (quality-profile ids and root
+ * folder paths mean nothing on another host).
+ */
+export const registryRuleSchema = z.object({
+  slug: slugSchema,
+  name: z.string().min(1),
+  description: z.string().min(1),
+  type: z.enum(RULE_TYPE_VALUES),
+  config: z.record(z.string(), z.unknown()),
+  /**
+   * Integrations the importing instance needs for this rule to do anything.
+   * Derived from the rule type, but stated explicitly so the import preview
+   * can warn without knowing the type table.
+   */
+  requires: z.array(registryRequirementSchema).default([]),
+  /** Library kinds this rule makes sense for; filters the library picker. */
+  mediaTypes: z
+    .array(z.enum(["movie", "show"]))
+    .min(1)
+    .default(["movie", "show"]),
+});
+
+export const registryPackSchema = z.object({
+  slug: slugSchema,
+  title: z.string().min(1),
+  tagline: z.string().min(1),
+  description: z.string().min(1),
+  /** Bumped whenever any member rule's config changes. Drives update prompts. */
+  version: z.number().int().positive(),
+  tags: z.array(z.string()).default([]),
+  ruleSlugs: z.array(slugSchema).min(1),
+});
+
+export const registryIndexSchema = z.object({
+  formatVersion: z.literal(REGISTRY_FORMAT_VERSION),
+  generatedAt: z.number(),
+  packs: z.array(registryPackSchema),
+  rules: z.array(registryRuleSchema),
+});
+
+export type RegistryRequirement = z.infer<typeof registryRequirementSchema>;
+export type RegistryRule = z.infer<typeof registryRuleSchema>;
+export type RegistryPack = z.infer<typeof registryPackSchema>;
+export type RegistryIndex = z.infer<typeof registryIndexSchema>;
+
+/** Input shape for authoring — `requires` and `mediaTypes` are optional here
+ *  and defaulted by the schema, so pack files stay terse. */
+export type RegistryRuleInput = z.input<typeof registryRuleSchema>;
+export type RegistryPackInput = z.input<typeof registryPackSchema>;
+
+export const DEFAULT_REGISTRY_URL = "https://tinkerbell.dev/registry/index.json";
+
+/** One tag value in a published rule that this server has no equivalent for.
+ *  Surfaced in the import preview — the rule still imports, but the user is
+ *  told up front that a clause won't match anything. */
+export interface ResolutionWarning {
+  ruleSlug: string;
+  field: string;
+  value: string;
+  sectionTitle: string;
+}
+
+export interface ImportPlanItem {
+  rule: RegistryRule;
+  /** Config after tag resolution and section injection — what will be written. */
+  config: Record<string, unknown>;
+  /** Name after collision de-duplication against existing rules. */
+  name: string;
+  nameCollision: boolean;
+  resolutionWarnings: ResolutionWarning[];
+  missingRequirements: RegistryRequirement[];
+}
+
+export interface ImportPlan {
+  packSlug: string | null;
+  packVersion: number | null;
+  sectionTitles: string[];
+  items: ImportPlanItem[];
+}
+
+export interface RegistryUpdate {
+  ruleId: string;
+  ruleName: string;
+  ruleSlug: string;
+  packSlug: string | null;
+  fromVersion: number;
+  toVersion: number;
+  /** True when the local config no longer hashes to what was imported.
+   *  These are reported but never updated automatically — the user's own
+   *  edits outrank a registry bump. */
+  locallyModified: boolean;
+}

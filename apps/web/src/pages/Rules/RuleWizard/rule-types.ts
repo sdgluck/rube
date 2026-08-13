@@ -1,3 +1,4 @@
+import type { RuleTypeValue } from "@tinkerbell/contracts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import { hasSourceStep } from "./sources/index.ts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
@@ -27,7 +28,9 @@ function smartFilterIsComplete(group: SmartFilterGroup): boolean {
 }
 
 export interface RuleType {
-  value: string;
+  /** Constrained to the canonical list in `@tinkerbell/contracts` so a type
+   *  the generate job can't dispatch can't be offered in the wizard. */
+  value: RuleTypeValue;
   label: string;
   description: string;
   requires?: "omdb" | "seerr" | "tmdb";

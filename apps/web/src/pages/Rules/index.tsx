@@ -18,6 +18,7 @@ import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
+import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
 import BulkActionsBar from "./BulkActionsBar";
 import BulkEditModal from "./BulkEditModal";
 import { EMPTY_FORM, defaultLimitForType, typeHasLimit } from "./constants";
@@ -570,6 +571,7 @@ export default function Rules() {
       }
     >
       <MigrationBanner />
+      <RegistryUpdatesBanner />
 
       {allRules.length > 0 && (
         <RulesToolbar

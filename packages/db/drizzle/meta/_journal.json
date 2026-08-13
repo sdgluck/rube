@@ -134,6 +134,13 @@
       "when": 1786628589819,
       "tag": "0018_needy_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1786631400408,
+      "tag": "0019_colossal_bishop",
+      "breakpoints": true
     }
   ]
 }

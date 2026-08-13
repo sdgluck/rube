@@ -1,0 +1,63 @@
+name: Deploy site
+
+# tinkerbell.dev is more than a brochure now: it also serves the rule registry
+# that instances fetch at `/registry/index.json`. So the site needs a real
+# deploy target, which it previously didn't have — the Docker image explicitly
+# excludes it.
+#
+# GitHub Pages serves `Access-Control-Allow-Origin: *`, which is what lets a
+# self-hosted Tinkerbell fetch the index cross-origin without any extra config.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# One deploy at a time; don't cancel a running one mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the same pnpm as mise.toml / packageManager. A bare `pnpm`
+      # from some other source is how this repo previously ended up with a
+      # pnpm 8 lockfile.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.2.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The gate between an authored pack and somebody's Plex server: every
+      # rule config is parsed against the real ruleConfigSchema here.
+      - name: Validate the registry
+        run: pnpm --filter @tinkerbell/tinkerbell.dev test
+
+      # `prebuild` regenerates public/registry/ before vite copies it to dist/.
+      - run: pnpm --filter @tinkerbell/tinkerbell.dev build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/tinkerbell.dev/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

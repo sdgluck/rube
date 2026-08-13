@@ -27,6 +27,8 @@
     "@tinkerbell/domain.rule-progress": "workspace:*",
     "@tinkerbell/domain.rules": "workspace:*",
     "@tinkerbell/domain.search": "workspace:*",
+    "@tinkerbell/contracts": "workspace:*",
+    "@tinkerbell/domain.registry": "workspace:*",
     "@tinkerbell/domain.sections": "workspace:*",
     "@tinkerbell/domain.shuffle-hubs": "workspace:*",
     "@tinkerbell/domain.stats": "workspace:*",
