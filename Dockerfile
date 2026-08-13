@@ -9,7 +9,11 @@ RUN apk add --no-cache python3 make g++
 
 # CHANGELOG.md is here because apps/web/vite.config.ts inlines it into the
 # bundle for the Changelog page, and Vite refuses to start without it.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json CHANGELOG.md ./
+#
+# tsconfig.base.json is what every packages/*, clients/*, domains/* and
+# apps/server tsconfig `extends`. Without it at the context root, Vite's esbuild
+# pass fails to resolve the extends chain of the first workspace file it loads.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json CHANGELOG.md tsconfig.base.json tsconfig.node.json ./
 
 # Every workspace member the server's graph touches has to be present before
 # `--frozen-lockfile` can resolve it. apps/server pulls in six `domains/*`,
@@ -49,7 +53,7 @@ RUN pnpm --filter @tinkerbell/portal run build
 FROM base AS prod-deps
 RUN apk add --no-cache python3 make g++
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json tsconfig.node.json ./
 COPY packages/ ./packages/
 COPY clients/ ./clients/
 COPY domains/ ./domains/
