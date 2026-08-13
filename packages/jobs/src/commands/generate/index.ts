@@ -14,6 +14,7 @@ import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig }
 import { parseRuleConfig } from "./config.ts";
 import { runHandlerWithCommits } from "./dispatch.ts";
 import { resolveArrAdds } from "./arr.ts";
+import { llmUnavailableReason } from "./ai/llm.ts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
 export { testRule } from "./preview.ts";
@@ -74,6 +75,11 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     }
   }
 
+  // A rule that blows up shouldn't cost the rest of the batch — one bad
+  // rule out of 34 used to abandon every rule after it. Failures are
+  // recorded per rule and summarised at the end instead.
+  const failures: { name: string; error: string }[] = [];
+
   for (let i = 0; i < enabledRules.length; i++) {
     const rule = enabledRules[i];
     if (completedRuleIds.has(rule.id)) continue;
@@ -81,6 +87,19 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
 
     ctx.progress(i + 1, enabledRules.length, `Processing rule "${rule.name}"...`);
     ctx.log(`\n--- Rule: "${rule.name}" (${rule.type}) ---`);
+
+    // AI rules need a working provider. Without one every such rule fails
+    // identically, so check once up front and skip rather than delete the
+    // rule's existing collections and replace them with nothing.
+    if (rule.type === "ai_prompt") {
+      const unavailable = llmUnavailableReason();
+      if (unavailable) {
+        ctx.log(`Skipping AI rule — ${unavailable}.`);
+        completedRuleIds.add(rule.id);
+        saveCheckpoint();
+        continue;
+      }
+    }
 
     // Rule-level section override beats job-level.
     const ruleSectionsOrNull = filterSections(allSections, ruleConfig.sections);
@@ -94,11 +113,13 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     const sections = ruleSectionsOrNull ?? jobSections;
     ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
 
-    await deleteOldCollections(ctx, client, sections, rule.id);
-
     const labels = ["Tinkerbell", `Rule:${rule.id}`];
     const ruleStartedAt = Date.now();
     try {
+      // Inside the try: a Plex hiccup while clearing one rule's old
+      // collections is no more fatal than the rule's own handler failing.
+      await deleteOldCollections(ctx, client, sections, rule.id);
+
       const { lastCollectionKey, collectionCount, itemCount } = await runHandlerWithCommits(
         { ctx, client, sections, rule, ruleConfig },
         machineId,
@@ -123,18 +144,31 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
       completedRuleIds.add(rule.id);
       saveCheckpoint();
     } catch (err) {
+      const message = errorMessage(err);
       setRuleLastRun(rule.id, {
         status: "error",
         durationMs: Date.now() - ruleStartedAt,
-        error: errorMessage(err),
+        error: message,
       });
-      throw err;
+
+      // Cancellation and budget timeouts abort `ctx.signal` — that's the whole
+      // job ending, not this rule failing, so it still propagates.
+      if (ctx.signal.aborted) throw err;
+
+      failures.push({ name: rule.name, error: message });
+      ctx.log(`Rule "${rule.name}" failed: ${message}`);
+      ctx.log("Continuing with the remaining rules.");
+      // Deliberately not checkpointed as complete: a resume should retry it.
     }
   }
 
   // Clear on success, so a stale checkpoint can never silently skip a rule on
   // the next nightly run.
   ctx.checkpoint.clear();
+  if (failures.length > 0) {
+    ctx.log(`\n${failures.length} of ${enabledRules.length} rule(s) failed:`);
+    for (const { name, error } of failures) ctx.log(`  - "${name}": ${error}`);
+  }
   ctx.log("\nAll done!");
 }
 

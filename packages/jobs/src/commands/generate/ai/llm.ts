@@ -83,6 +83,26 @@ export async function askLlm(prompt: string, itemList: string, signal?: AbortSig
   }
 }
 
+/**
+ * Why the LLM can't be used right now, or null if it looks usable. Building
+ * the client is where per-provider config validation lives (missing API key,
+ * missing base URL), so this is a cheap pre-flight that costs no request.
+ *
+ * Callers that run many rules use this to skip AI rules instead of failing:
+ * an unconfigured provider is a settings gap, not a reason to abandon the
+ * non-AI rules in the same batch.
+ */
+export function llmUnavailableReason(): string | null {
+  const cfg = getLlmConfig();
+  if (!cfg) return "no LLM provider is configured (Settings → AI)";
+  try {
+    createLlmClient(cfg);
+    return null;
+  } catch (err) {
+    return errorMessage(err);
+  }
+}
+
 /** Fisher-Yates shuffle, used to randomize the item list we send the LLM. */
 export function shuffled<T>(input: readonly T[]): T[] {
   const out = [...input];
