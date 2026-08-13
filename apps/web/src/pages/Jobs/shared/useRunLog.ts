@@ -33,8 +33,15 @@ export function useRunLog(runId: string | null | undefined, isActive: boolean): 
   useEffect(() => {
     if (!runId) return;
     let cancelled = false;
+    // The offset only advances once a response lands, so two polls in flight at
+    // once would both request the same byte range and both append it. A tick is
+    // dropped rather than queued: the next one is a second away and picks up
+    // whatever accumulated meanwhile.
+    let inFlight = false;
 
     const poll = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
         const res = await trpcClient.jobs.runLog.query({ runId, offset: offsetRef.current });
         if (cancelled) return;
@@ -53,6 +60,8 @@ export function useRunLog(runId: string | null | undefined, isActive: boolean): 
       } catch {
         // A failed poll just means this tick shows stale text; the next one
         // picks up from the same offset.
+      } finally {
+        inFlight = false;
       }
     };
 
