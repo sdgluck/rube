@@ -32,7 +32,10 @@ WORKDIR /repo
 # be present for `--frozen-lockfile` to resolve the graph.
 # CHANGELOG.md is here because apps/web/vite.config.ts inlines it into the
 # bundle for the Changelog page, and Vite refuses to start without it.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json CHANGELOG.md ./
+#
+# tsconfig.base.json is what every workspace tsconfig `extends`; without it
+# Vite's esbuild pass fails resolving that chain, same as in the root image.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json CHANGELOG.md tsconfig.base.json tsconfig.node.json ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
 COPY apps/portal/package.json ./apps/portal/
