@@ -1,6 +1,7 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback, errorMessage, getConfig, setConfig } from "@tinkerbell/core";
 import { db, sharingRestrictionBackups } from "@tinkerbell/db";
+import { forgetCollections } from "@tinkerbell/domain.collections";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 const BASELINE_LABEL = "Tinkerbell";
@@ -56,6 +57,7 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
         const labels = await client.getCollectionLabels(col.ratingKey);
         if (!labels.some((l) => l.tag.startsWith("User:"))) continue;
         await client.deleteItem(col.ratingKey);
+        forgetCollections([col.ratingKey]);
         ctx.log(`Deleted "${col.title}"`);
         deleted++;
       }

@@ -89,14 +89,20 @@ export function createCollectionsModule(http: PlexHttp) {
     await http.request(`/library/metadata/${ratingKey}`, { method: "PUT", params });
   }
 
-  async function deleteCollectionsByLabel(sectionId: string, label: string): Promise<number> {
+  /**
+   * Returns the rating keys actually deleted, not just how many. Callers need
+   * the keys to evict the matching rows from the local collections cache —
+   * a Plex-side delete that leaves its row behind shows up in the UI as a
+   * collection that still exists.
+   */
+  async function deleteCollectionsByLabel(sectionId: string, label: string): Promise<string[]> {
     // The listing is a snapshot: with several rules generating into one section
     // at once, a sibling can delete its own collections while we're still
     // walking ours. A key that has vanished by the time we reach it isn't a
     // failure — it's already in the state we wanted — so 404s are skipped
     // rather than aborting the whole rule.
     const collections = await getCollections(sectionId);
-    let deleted = 0;
+    const deleted: string[] = [];
     for (const col of collections) {
       let labels: PlexLabel[];
       try {
@@ -106,7 +112,7 @@ export function createCollectionsModule(http: PlexHttp) {
         throw err;
       }
       if (labels.some((l: PlexLabel) => l.tag.toLowerCase() === label.toLowerCase())) {
-        if (await deleteItemIfPresent(col.ratingKey)) deleted++;
+        if (await deleteItemIfPresent(col.ratingKey)) deleted.push(col.ratingKey);
       }
     }
     return deleted;

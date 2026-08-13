@@ -7,7 +7,7 @@ import {
   listOptedInUserPreferences,
 } from "@tinkerbell/core";
 import { getEnabledRules } from "@tinkerbell/domain.rules";
-import { upsertCollectionByKey } from "@tinkerbell/domain.collections";
+import { upsertCollectionByKey, forgetCollections } from "@tinkerbell/domain.collections";
 import { handlerForRule } from "./generate/dispatch.ts";
 import { parseRuleConfig } from "./generate/config.ts";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
@@ -154,6 +154,7 @@ async function deleteUserRuleCollections(
       const tags = labels.map((l) => l.tag);
       if (tags.includes(userLabel) && tags.includes(ruleLabel)) {
         await client.deleteItem(col.ratingKey);
+        forgetCollections([col.ratingKey]);
         ctx.log(`Removed stale "${col.title}".`);
       }
     }

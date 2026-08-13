@@ -5,7 +5,7 @@ import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, getLlmConfig } from "@tinkerbell/core";
 import { getOptedInPreferencesByUsername, preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
 import { reportHealth } from "@tinkerbell/domain.health";
-import { upsertCollectionByKey } from "@tinkerbell/domain.collections";
+import { upsertCollectionByKey, forgetCollections } from "@tinkerbell/domain.collections";
 import { z } from "zod";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 
@@ -230,6 +230,7 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
         }
         ctx.log(`Deleting collection "${col.title}" (${col.ratingKey})`);
         await client.deleteItem(col.ratingKey);
+        forgetCollections([col.ratingKey]);
         deleted++;
       }
       ctx.log(`Deleted ${deleted} old collection(s).`);

@@ -10,6 +10,7 @@ import {
   withRuleLock,
   RuleLockedError,
 } from "@tinkerbell/domain.rules";
+import { forgetCollections } from "@tinkerbell/domain.collections";
 import { errorMessage } from "@tinkerbell/core";
 import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
 
@@ -82,8 +83,9 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
   // One-time migration: delete old "Generated"-labeled collections.
   for (const section of jobSections) {
     const deleted = await client.deleteCollectionsByLabel(section.key, "Generated");
-    if (deleted > 0) {
-      ctx.log(`Migrated: deleted ${deleted} old "Generated"-labeled collection(s) from "${section.title}".`);
+    forgetCollections(deleted);
+    if (deleted.length > 0) {
+      ctx.log(`Migrated: deleted ${deleted.length} old "Generated"-labeled collection(s) from "${section.title}".`);
     }
   }
 
@@ -394,8 +396,13 @@ async function deleteOldCollections(
   const ruleLabel = `Rule:${ruleId}`;
   for (const section of sections) {
     const deleted = await client.deleteCollectionsByLabel(section.key, ruleLabel);
-    if (deleted > 0) {
-      ctx.log(`Deleted ${deleted} old collection(s) with label "${ruleLabel}" from "${section.title}".`);
+    // Evict the cache rows in the same breath. Without this the run's own
+    // output looks duplicated on the Collections page — the collections it
+    // just deleted linger alongside the ones it creates next, until the
+    // nightly sync notices they're gone from Plex.
+    forgetCollections(deleted);
+    if (deleted.length > 0) {
+      ctx.log(`Deleted ${deleted.length} old collection(s) with label "${ruleLabel}" from "${section.title}".`);
     }
   }
 }

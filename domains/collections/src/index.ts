@@ -356,6 +356,27 @@ export async function deleteCollection(client: PlexClient, ratingKey: string): P
 }
 
 /**
+ * Drop local rows for collections that have already been deleted from Plex.
+ *
+ * Jobs that delete straight through the Plex client (rule runs clearing their
+ * old collections, BYW teardown, personalization sweeps) leave the cache
+ * holding rows for collections the server no longer has. Nothing else prunes
+ * them until the nightly `sync-collections`, so until then the Collections
+ * page lists both the collection a run just deleted and the one it created to
+ * replace it — which reads exactly like the run produced a duplicate.
+ *
+ * Returns the number of rows removed.
+ */
+export function forgetCollections(ratingKeys: string[]): number {
+  if (ratingKeys.length === 0) return 0;
+  return db.transaction((tx) => {
+    const result = tx.delete(collections).where(inArray(collections.plexRatingKey, ratingKeys)).run();
+    tx.delete(collectionItems).where(inArray(collectionItems.collectionRatingKey, ratingKeys)).run();
+    return Number(result.changes ?? 0);
+  });
+}
+
+/**
  * Group collections labelled by the Because-You-Watched job by user. Used by
  * the jobs UI to render BYW output per Plex user. Keeps the LIKE-on-JSON
  * shape pinned in one place.

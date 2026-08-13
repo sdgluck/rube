@@ -1,5 +1,6 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback, errorMessage, getConfig } from "@tinkerbell/core";
+import { forgetCollections } from "@tinkerbell/domain.collections";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 const BYW_LABEL = "BecauseYouWatched";
@@ -50,10 +51,13 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
     const section = sections[i];
     ctx.progress(i, sections.length, `Scanning "${section.title}"...`);
     const deleted = await client.deleteCollectionsByLabel(section.key, BYW_LABEL);
-    if (deleted > 0) {
-      ctx.log(`Deleted ${deleted} BYW collection(s) in "${section.title}"`);
+    // Drop the cache rows too, or the Collections page keeps listing BYW
+    // collections that are no longer on the server.
+    forgetCollections(deleted);
+    if (deleted.length > 0) {
+      ctx.log(`Deleted ${deleted.length} BYW collection(s) in "${section.title}"`);
     }
-    totalDeleted += deleted;
+    totalDeleted += deleted.length;
   }
   ctx.log(`Deleted ${totalDeleted} BYW collection(s) total.`);
 

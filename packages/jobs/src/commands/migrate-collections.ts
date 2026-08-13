@@ -2,6 +2,7 @@ import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { deleteConfig, getConfig } from "@tinkerbell/core";
 import { createRule } from "@tinkerbell/domain.rules";
+import { forgetCollections } from "@tinkerbell/domain.collections";
 import { markProviderCompleted, scanProviderState } from "@tinkerbell/domain.migration";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
 
@@ -60,6 +61,7 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
         for (const ratingKey of item.replacesRatingKeys) {
           try {
             await client.deleteItem(ratingKey);
+            forgetCollections([ratingKey]);
             deleted++;
           } catch (err) {
             failed++;

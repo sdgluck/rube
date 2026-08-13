@@ -153,7 +153,7 @@ describe("deleteCollectionsByLabel", () => {
       { ratingKey: "2", labels: ["Rule:b"] },
     ]);
 
-    assert.equal(await client.deleteCollectionsByLabel("1", "Rule:a"), 1);
+    assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), ["1"]);
     assert.deepEqual([...mock.live.keys()], ["2"]);
   });
 
@@ -164,7 +164,7 @@ describe("deleteCollectionsByLabel", () => {
     ]);
     mock.vanishOnRead.add("1");
 
-    assert.equal(await client.deleteCollectionsByLabel("1", "Rule:a"), 1);
+    assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), ["2"]);
     assert.deepEqual([...mock.live.keys()], [], "our own collection is still deleted");
   });
 
@@ -174,7 +174,7 @@ describe("deleteCollectionsByLabel", () => {
     // DELETE lands — nothing was deleted by us, so nothing is counted.
     mock.vanishAfterRead.add("1");
 
-    assert.equal(await client.deleteCollectionsByLabel("1", "Rule:a"), 0);
+    assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), []);
   });
 });
 
