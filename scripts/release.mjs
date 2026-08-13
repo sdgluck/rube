@@ -149,4 +149,21 @@ sh("git", ["commit", "-m", `v${next}`]);
 sh("git", ["tag", "-a", `v${next}`, "-m", `v${next}`]);
 
 console.error(`\nrelease: committed and tagged v${next}`);
-console.error(`release: review with 'git show v${next}', then 'git push --follow-tags' when ready`);
+
+// A release that only exists locally isn't one, and the manual push was easy
+// to forget. `--follow-tags` sends the annotated tag along with the commit.
+// The commit and tag are already made by this point, so a push failure is
+// recoverable by hand rather than fatal to the release.
+if (process.env.SKIP_PUSH === "1") {
+  console.error(`release: SKIP_PUSH=1 — push it yourself with 'git push --follow-tags'`);
+} else {
+  console.error("release: pushing…");
+  const push = spawnSync("git", ["push", "--follow-tags"], { cwd: ROOT, stdio: "inherit" });
+  if (push.status !== 0) {
+    die(
+      `push failed — v${next} is committed and tagged locally.\n` +
+        "  Retry with:  git push --follow-tags",
+    );
+  }
+  console.error(`release: pushed v${next}`);
+}
