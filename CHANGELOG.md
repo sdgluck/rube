@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-08-14
+
+### Added
+
+- A new Settings → Tools → Bandwidth Test page measures your server's upload and download speed, latency, and which Cloudflare edge answered, with 90 days of past results charted (failed runs marked rather than hidden) and a live progress view you can cancel mid-run.
+- The Bandwidth Test page shows how much data a run will use before you start it, and warns if something is currently playing, since the test competes with live playback for the same connection.
+- Bandwidth tests are limited to one every fifteen minutes, matching the cooldown Cloudflare enforces after repeated large tests.
+- A new "bandwidth tested" event now appears on the Events page, flagging when a result comes back materially slower than usual, and can be routed to notification agents.
+- The Bandwidth Test is listed as a system task so it can be scheduled to run nightly if you want a regular figure; it ships with no schedule by default so it doesn't compete with your own streaming.
+
+### Changed
+
+- **The Stats bandwidth tile now shows live session bandwidth as a fraction of your measured upload speed** (e.g. "8 Mbps / 100 Mbps", "8% of measured") once you've run a Bandwidth Test; until you run one it shows the same raw total as before, with a link to go run a test. After a month, it stops quoting a stale percentage and instead shows when the measurement was taken.
+- The scheduled cleanup of old job history now also prunes bandwidth test results after 90 days, the same retention window already used for health checks.
+
 ## [0.13.1] - 2026-08-14
 
 ### Added
