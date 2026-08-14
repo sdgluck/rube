@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { RULE_TYPE_VALUES } from "./rule-config.ts";
+import { collectLocalLeaves, smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
+import { isNonPortableField, RULE_TYPE_VALUES } from "./rule-config.ts";
 
 /**
  * Wire format for the public rule registry served from tinkerbell.dev.
@@ -26,24 +27,41 @@ export const registryRequirementSchema = z.enum(["omdb", "seerr", "tmdb", "llm",
  * picks target libraries), and no `config.arr` (quality-profile ids and root
  * folder paths mean nothing on another host).
  */
-export const registryRuleSchema = z.object({
-  slug: slugSchema,
-  name: z.string().min(1),
-  description: z.string().min(1),
-  type: z.enum(RULE_TYPE_VALUES),
-  config: z.record(z.string(), z.unknown()),
-  /**
-   * Integrations the importing instance needs for this rule to do anything.
-   * Derived from the rule type, but stated explicitly so the import preview
-   * can warn without knowing the type table.
-   */
-  requires: z.array(registryRequirementSchema).default([]),
-  /** Library kinds this rule makes sense for; filters the library picker. */
-  mediaTypes: z
-    .array(z.enum(["movie", "show"]))
-    .min(1)
-    .default(["movie", "show"]),
-});
+export const registryRuleSchema = z
+  .object({
+    slug: slugSchema,
+    name: z.string().min(1),
+    description: z.string().min(1),
+    type: z.enum(RULE_TYPE_VALUES),
+    config: z.record(z.string(), z.unknown()),
+    /**
+     * Integrations the importing instance needs for this rule to do anything.
+     * Derived from the rule type, but stated explicitly so the import preview
+     * can warn without knowing the type table.
+     */
+    requires: z.array(registryRequirementSchema).default([]),
+    /** Library kinds this rule makes sense for; filters the library picker. */
+    mediaTypes: z
+      .array(z.enum(["movie", "show"]))
+      .min(1)
+      .default(["movie", "show"]),
+  })
+  .superRefine((rule, ctx) => {
+    // A pack crosses an instance boundary, and some field values simply don't.
+    // Tag keys are translated on import; a Plex account id can't be, because it
+    // identifies a person rather than a per-server row. Fail the build with the
+    // field named, rather than shipping a rule that filters against a stranger.
+    const parsed = smartFilterGroupSchema.safeParse(rule.config?.smartFilter);
+    if (!parsed.success) return;
+    for (const leaf of collectLocalLeaves(parsed.data)) {
+      if (!isNonPortableField(leaf.field)) continue;
+      ctx.addIssue({
+        code: "custom",
+        path: ["config", "smartFilter"],
+        message: `"${leaf.field}" is not portable between servers — it names a Plex account, which is meaningless on the importing user's server. Remove it before publishing.`,
+      });
+    }
+  });
 
 export const registryPackSchema = z.object({
   slug: slugSchema,

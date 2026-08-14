@@ -39,6 +39,16 @@ export interface SmartFilterFieldDef {
   /** Hidden from the field pickers, but still labelled and formatted if a
    *  stored filter references it. */
   advanced?: boolean;
+  /**
+   * `plex` — emitted into the Plex query string (every field that exists
+   *   today, so it is also the default).
+   * `local` — stripped from the query and evaluated against `watch_state`
+   *   after Plex returns. Local fields carry multi-user semantics Plex's
+   *   token-scoped view state cannot express.
+   */
+  source?: "plex" | "local";
+  /** One-line explanation, shown beside the field in the picker. */
+  hint?: string;
 }
 
 export const SMART_FILTER_FIELD_DEFS: readonly SmartFilterFieldDef[] = [
@@ -91,9 +101,65 @@ export const SMART_FILTER_FIELD_DEFS: readonly SmartFilterFieldDef[] = [
   // doesn't appear in it twice.
   { field: "titleSort", label: "Title", kind: "string", advanced: true },
   { field: "summary", label: "Summary", kind: "string" },
+
+  // ─── Local — evaluated against Tinkerbell's own `watch_state` ─────────────
+  //
+  // Plex answers view state for whichever token asked, and Tinkerbell asks with
+  // the server owner's. `unwatched=1` above therefore means "the owner hasn't
+  // watched it", which on a family server is almost never the question anyone
+  // wants answered. These fields ask it properly, across every user, and are
+  // stripped from the Plex query and applied afterwards — see `splitLocalLeaves`.
+  {
+    field: "tb.watchedByAll",
+    label: "Watched by everyone",
+    kind: "boolean",
+    source: "local",
+    hint: "Every user in scope has a completed play.",
+  },
+  {
+    field: "tb.watchedByNobody",
+    label: "Watched by nobody",
+    kind: "boolean",
+    source: "local",
+    hint: "No user has a completed play.",
+  },
+  {
+    field: "tb.watchedBy",
+    label: "Watched by",
+    kind: "tag",
+    source: "local",
+    hint: "A specific user has a completed play.",
+  },
+  {
+    field: "tb.playCount",
+    label: "Plays (all users)",
+    kind: "number",
+    source: "local",
+    hint: "Completed plays summed across every user.",
+  },
+  {
+    field: "tb.lastPlayedAt",
+    label: "Last played (any user)",
+    kind: "date",
+    source: "local",
+    hint: "The most recent play by anyone.",
+  },
+  {
+    field: "tb.abandonedPct",
+    label: "Abandoned below",
+    kind: "number",
+    unit: "%",
+    source: "local",
+    hint: "Highest completion any user reached. Only matches items someone actually started.",
+  },
 ];
 
 const BY_FIELD = new Map(SMART_FILTER_FIELD_DEFS.map((d) => [d.field, d]));
+
+/** Field defs evaluated locally rather than emitted to Plex. */
+export const LOCAL_FIELD_DEFS: readonly SmartFilterFieldDef[] = SMART_FILTER_FIELD_DEFS.filter(
+  (d) => d.source === "local",
+);
 
 /**
  * On a TV section Plex qualifies a field with the level it applies to —

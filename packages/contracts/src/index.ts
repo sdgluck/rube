@@ -16,7 +16,9 @@ export {
   EXTERNAL_GROUP_RULE_TYPES,
   GROUPED_RULE_TYPES,
   isGroupedRuleType,
+  isNonPortableField,
   isTagField,
+  NON_PORTABLE_FIELDS,
   producesManyCollections,
   RULE_TYPE_REQUIRES,
   RULE_TYPE_VALUES,
@@ -25,7 +27,7 @@ export {
 } from "./rule-config.ts";
 export type { RuleConfig, RuleRequirement, RuleTypeValue } from "./rule-config.ts";
 
-export { fieldDef, fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
+export { fieldDef, fieldKind, fieldLabel, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 export type { SmartFilterFieldDef, SmartFilterFieldKind } from "./smart-filter-fields.ts";
 
 export {
