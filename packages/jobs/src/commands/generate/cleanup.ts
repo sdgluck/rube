@@ -21,7 +21,13 @@
  */
 import { DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
 import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
-import { dueForAction, markActioned, recordMatches, type CleanupCandidate } from "@tinkerbell/domain.cleanup";
+import {
+  dueForAction,
+  listCandidates,
+  markActioned,
+  recordMatches,
+  type CleanupCandidate,
+} from "@tinkerbell/domain.cleanup";
 import { emitEvent } from "@tinkerbell/domain.events";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { commitCollection } from "./finalize.ts";
@@ -107,6 +113,9 @@ export async function runHandlerWithCleanup(
   // 3. The queue collection — in every mode, dry run included.
   await commitQueueCollections(ctx, client, machineId, labels, rule.name, bySection);
 
+  // 3b. Warn about what goes next time, while there is still time to say no.
+  notifyPending(rule, action);
+
   const due = dueForAction(rule.id, action.consecutiveRuns, action.maxActionsPerRun);
   if (due.length === 0) {
     ctx.log(
@@ -143,6 +152,38 @@ export async function runHandlerWithCleanup(
   }
 
   return { matched: matches.length, queued: matches.length, actioned: actioned.length };
+}
+
+/**
+ * Tell the user what goes on the *next* run, not what just went.
+ *
+ * A notification after the fact is a report; one beforehand is a chance to
+ * intervene, and that is the difference between an automated deletion people
+ * tolerate and one they turn off. Only fires for modes that actually remove
+ * something — nobody needs a push notification about a label.
+ */
+function notifyPending(rule: { id: string; name: string }, action: CleanupActionConfig): void {
+  if (!isDestructiveMode(action.mode) || action.dryRun) return;
+
+  // One short of the threshold: these are actioned on the next run.
+  const nextUp = listCandidates(rule.id).filter(
+    (c) =>
+      c.actionedAt == null &&
+      c.streak === action.consecutiveRuns - 1 &&
+      (c.heldUntil == null || c.heldUntil <= Date.now()),
+  );
+  if (nextUp.length === 0) return;
+
+  const titles = nextUp.map((c) => c.title);
+  const base = getConfig("user_app_public_url");
+  const link = base ? ` Review them at ${base.replace(/\/$/, "")}/cleanup` : "";
+
+  emitEvent(
+    "cleanup.pending",
+    `"${rule.name}" will ${action.mode} ${nextUp.length} item(s) on its next run unless you keep them:` +
+      ` ${titles.slice(0, 10).join(", ")}${titles.length > 10 ? `, and ${titles.length - 10} more` : ""}.${link}`,
+    { ruleId: rule.id, ruleName: rule.name, count: nextUp.length, mode: action.mode, titles },
+  );
 }
 
 /**

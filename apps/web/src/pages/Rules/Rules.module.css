@@ -836,3 +836,22 @@ td.previewBlockCell {
     flex-basis: 100%;
   }
 }
+
+/*
+ * Cleanup preview summary. Sits above the poster rows because the counts are
+ * the answer — the posters are just what the counts refer to.
+ */
+.cleanupPreview {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+}
+
+.cleanupPreviewTitles {
+  color: var(--text-muted);
+  margin-top: 6px;
+}

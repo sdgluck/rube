@@ -1,6 +1,7 @@
 import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
 import { describeCondition } from "#components/smart-filter/format.ts";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
+import { DEFAULT_OUTCOME_FORM, type OutcomeFormState } from "./RuleWizard/types.ts";
 import { typeProducesManyCollections } from "./RuleWizard/rule-types.ts";
 import styles from "./Rules.module.css";
 
@@ -165,8 +166,22 @@ export const EMPTY_FORM: RuleFormState = {
   filter: "all",
   pinToHomepage: true,
   pinRotationCount: 0,
+  outcome: { ...DEFAULT_OUTCOME_FORM },
   arr: { ...DEFAULT_ARR_FORM },
 };
+
+/**
+ * Read a stored `config.action` back into wizard form state.
+ *
+ * An absent or unrecognised action is a collection rule — the same reading the
+ * generate job takes. Erring the other way would silently turn an ordinary
+ * rule into a cleanup rule in the editor.
+ */
+export function outcomeFromConfig(action: unknown): OutcomeFormState {
+  const a = action as { kind?: string } | null | undefined;
+  if (a?.kind !== "cleanup") return { ...DEFAULT_OUTCOME_FORM };
+  return { ...DEFAULT_OUTCOME_FORM, ...(a as Partial<OutcomeFormState>), kind: "cleanup" };
+}
 
 // Single source of truth lives with the wizard — re-exported here because
 // the Rules page has always imported these from `./constants`.

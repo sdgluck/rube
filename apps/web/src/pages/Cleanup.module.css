@@ -1,0 +1,50 @@
+.intro {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 16px;
+  max-width: 70ch;
+}
+
+.toggle {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 12.5px;
+  gap: 6px;
+}
+
+/* An actioned row is history, not a queue entry — recede it rather than
+   dropping it, since "what did this rule remove" is the question people ask
+   after the fact. */
+.rowActioned {
+  opacity: 0.55;
+}
+
+.modeDestructive {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.statusDue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.statusWaiting {
+  color: var(--text-muted);
+}
+
+.statusHeld {
+  color: var(--accent-text);
+}
+
+.statusActioned {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.actionsCell {
+  text-align: right;
+  white-space: nowrap;
+}

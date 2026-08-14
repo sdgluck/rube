@@ -32,6 +32,7 @@ const SettingsPortalAppearance = lazy(() => import("#pages/Settings/Portal/Setti
 const Collections = lazy(() => import("#pages/Collections"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const Rules = lazy(() => import("#pages/Rules"));
+const Cleanup = lazy(() => import("#pages/Cleanup"));
 const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
@@ -121,6 +122,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <Rules />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/cleanup"
+                  element={
+                    <LazyPage>
+                      <Cleanup />
                     </LazyPage>
                   }
                 />

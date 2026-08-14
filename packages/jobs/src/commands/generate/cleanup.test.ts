@@ -18,10 +18,10 @@ import type { JobContext } from "@tinkerbell/core";
 
 setupTempDb("tinkerbell-cleanup-job-test-");
 
-const { db, rules, config, jobs, jobRuns, cleanupCandidates } = await import("@tinkerbell/db");
+const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await import("@tinkerbell/db");
 const { setConfig } = await import("@tinkerbell/core");
 const { noopCheckpoint } = await import("@tinkerbell/core");
-const { recordMatches, listCandidates } = await import("@tinkerbell/domain.cleanup");
+const { recordMatches, listCandidates, holdCandidate } = await import("@tinkerbell/domain.cleanup");
 const { runHandlerWithCleanup, createCleanupBudget, CLEANUP_LABEL } = await import("./cleanup.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
 
@@ -198,6 +198,7 @@ function seedSyncRun(agoMs: number | null): void {
 
 beforeEach(() => {
   db.delete(cleanupCandidates).run();
+  db.delete(events).run();
   db.delete(rules).run();
   db.delete(config).run();
   db.insert(rules)
@@ -560,6 +561,108 @@ describe("viaArr", () => {
 
     assert.equal(out.actioned, 1);
     assert.deepEqual(calls.deletes, ["/library/metadata/100"]);
+  });
+});
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+describe("cleanup.pending", () => {
+  function eventTypes(): string[] {
+    return db
+      .select({ type: events.type })
+      .from(events)
+      .all()
+      .map((r) => r.type);
+  }
+
+  it("warns the run before, while there is still time to say no", async () => {
+    // One short of the threshold: these go on the *next* run.
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 1);
+    stubServers();
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ consecutiveRuns: 3, dryRun: false }),
+      "machine-1",
+      ["Tinkerbell"],
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(eventTypes().includes("cleanup.pending"));
+    const row = db.select().from(events).all().at(-1);
+    assert.match(row?.message ?? "", /will delete 1 item\(s\) on its next run/);
+    assert.match(row?.message ?? "", /The Matrix/);
+  });
+
+  it("says nothing when the rule is in preview-only mode", async () => {
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 1);
+    stubServers();
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ consecutiveRuns: 3, dryRun: true }),
+      "machine-1",
+      ["Tinkerbell"],
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(!eventTypes().includes("cleanup.pending"));
+  });
+
+  it("says nothing for a non-destructive mode", async () => {
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 1);
+    stubServers();
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ mode: "label", consecutiveRuns: 3, dryRun: false }),
+      "machine-1",
+      ["Tinkerbell"],
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(!eventTypes().includes("cleanup.pending"));
+  });
+
+  it("does not warn about an item somebody has kept", async () => {
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 1);
+    holdCandidate(RULE_ID, "100", Date.now() + 30 * DAY);
+    stubServers();
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ consecutiveRuns: 3, dryRun: false }),
+      "machine-1",
+      ["Tinkerbell"],
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(!eventTypes().includes("cleanup.pending"));
+  });
+
+  it("reports what was actioned after the fact", async () => {
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 2);
+    stubServers({ allowDestructive: true });
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction(),
+      "machine-1",
+      ["Tinkerbell"],
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(eventTypes().includes("cleanup.actioned"));
   });
 });
 

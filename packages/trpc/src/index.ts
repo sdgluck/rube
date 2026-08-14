@@ -36,6 +36,7 @@ import { prerollsRouter } from "./prerolls.router.ts";
 import { migrationRouter } from "./migration.router.ts";
 import { registryRouter } from "./registry.router.ts";
 import { navRouter } from "./nav.router.ts";
+import { cleanupRouter } from "./cleanup.router.ts";
 import { personalizationRouter } from "./personalization.router.ts";
 
 export const appRouter = t.router({
@@ -47,6 +48,7 @@ export const appRouter = t.router({
   users: usersRouter,
   stats: statsRouter,
   overlays: overlaysRouter,
+  cleanup: cleanupRouter,
   events: eventsRouter,
   health: healthRouter,
   bandwidth: bandwidthRouter,

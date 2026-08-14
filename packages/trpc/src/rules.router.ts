@@ -112,6 +112,7 @@ export const rulesRouter = t.router({
         collections: result.collections,
         tokensIn: result.tokensIn,
         tokensOut: result.tokensOut,
+        cleanup: result.cleanup,
       };
       setLastTestResult(persisted);
       setRuleLastTest(input.id, {

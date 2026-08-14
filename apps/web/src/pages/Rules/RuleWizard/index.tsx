@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isDestructiveMode } from "@tinkerbell/contracts";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
@@ -28,7 +29,40 @@ import {
   type StepId,
 } from "./rule-types.ts";
 import { SOURCE_STEPS } from "./sources/index.ts";
-import type { ArrFormState, RuleFormState, SmartFilterGroup, SmartFilterNode } from "./types.ts";
+
+import type {
+  ArrFormState,
+  CleanupMode,
+  OutcomeFormState,
+  RuleFormState,
+  SmartFilterGroup,
+  SmartFilterNode,
+} from "./types.ts";
+
+/** The review row — the last place the outcome is stated before saving. */
+function describeOutcome(o: OutcomeFormState): string {
+  if (o.kind === "collection") return "Build a collection";
+  const verb =
+    o.mode === "collection_only"
+      ? "Queue only"
+      : o.mode === "label"
+        ? "Label"
+        : o.mode === "unmonitor"
+          ? "Unmonitor"
+          : "Delete";
+  const after = ` after ${o.consecutiveRuns} matching run${o.consecutiveRuns === 1 ? "" : "s"}`;
+  // Dry run is called out first because it is the difference between a rule
+  // that does something and one that only says it would.
+  return o.dryRun ? `${verb}${after} — preview only` : `${verb}${after}, max ${o.maxActionsPerRun}/run`;
+}
+
+/** One line per mode, saying what it actually does rather than restating it. */
+const CLEANUP_MODE_HINTS: Record<CleanupMode, string> = {
+  collection_only: "Nothing is removed. The queue collection is the whole point — a shelf you review yourself.",
+  label: "Stamps a Tinkerbell:Cleanup label on each item. Nothing is removed; useful as a dry run with a paper trail.",
+  unmonitor: "Leaves the files alone but stops Radarr/Sonarr upgrading or re-grabbing them.",
+  delete: "Removes the files from disk. There is no undo.",
+};
 
 // Re-export the public types so existing `import { ... } from "#pages/Rules/RuleWizard"`
 // call sites keep working.
@@ -542,6 +576,194 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     );
   }
 
+  /**
+   * "What should happen to matches?"
+   *
+   * Collection is preselected and is what every rule did before this step
+   * existed. Choosing Cleanup reveals the knobs and a confirmation panel that
+   * spells out, in plain English, what one run will actually do — this is the
+   * last screen where somebody can notice they've built a scheduled deletion.
+   */
+  function renderOutcomeStep() {
+    const o = form.outcome;
+    const setOutcome = (patch: Partial<OutcomeFormState>) => setForm({ ...form, outcome: { ...o, ...patch } });
+    const destructive = isDestructiveMode(o.mode);
+
+    return (
+      <>
+        <h3 className={styles.stepHeading}>What should happen to matches?</h3>
+        <p className={styles.stepSub}>
+          Every rule selects items the same way. This is what it does with them once it has.
+        </p>
+
+        <div className={styles.outcomeChoices}>
+          <button
+            type="button"
+            className={`${styles.outcomeCard} ${o.kind === "collection" ? styles.outcomeCardActive : ""}`}
+            onClick={() => setOutcome({ kind: "collection" })}
+            aria-pressed={o.kind === "collection"}
+          >
+            <input type="radio" checked={o.kind === "collection"} readOnly tabIndex={-1} />
+            <span>
+              <span className={styles.outcomeCardTitle}>Build a collection</span>
+              <span className={styles.outcomeCardBody}>
+                Create or refresh a Plex collection from the matching items. This is what rules normally do.
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.outcomeCard} ${o.kind === "cleanup" ? styles.outcomeCardActive : ""}`}
+            onClick={() => setOutcome({ kind: "cleanup" })}
+            aria-pressed={o.kind === "cleanup"}
+          >
+            <input type="radio" checked={o.kind === "cleanup"} readOnly tabIndex={-1} />
+            <span>
+              <span className={styles.outcomeCardTitle}>Clean up</span>
+              <span className={styles.outcomeCardBody}>
+                Track matching items over several runs, then label, unmonitor, or delete them. Always builds a queue
+                collection first so you can see what's on the chopping block.
+              </span>
+            </span>
+          </button>
+        </div>
+
+        {o.kind === "cleanup" && (
+          <>
+            <div className={styles.field}>
+              <label htmlFor="cleanup-mode">Action</label>
+              <select
+                id="cleanup-mode"
+                className={shared.input}
+                value={o.mode}
+                onChange={(e) => {
+                  const mode = e.target.value as CleanupMode;
+                  // Stepping up to a destructive mode re-arms dry run and the
+                  // streak floor. Someone who switches from "label" to "delete"
+                  // on an existing rule should not inherit settings that were
+                  // only safe for labelling.
+                  setOutcome(
+                    isDestructiveMode(mode)
+                      ? { mode, dryRun: true, consecutiveRuns: Math.max(o.consecutiveRuns, 3) }
+                      : { mode },
+                  );
+                }}
+              >
+                <option value="collection_only">Queue only — just build the collection</option>
+                <option value="label">Label matching items in Plex</option>
+                <option value="unmonitor">Unmonitor in Radarr/Sonarr</option>
+                <option value="delete">Delete the files</option>
+              </select>
+              <span className={styles.hint}>{CLEANUP_MODE_HINTS[o.mode]}</span>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="cleanup-runs">Consecutive matching runs before acting</label>
+              <input
+                id="cleanup-runs"
+                type="number"
+                min={destructive ? 2 : 1}
+                className={shared.input}
+                value={o.consecutiveRuns}
+                onChange={(e) => setOutcome({ consecutiveRuns: parseInt(e.target.value, 10) || 1 })}
+              />
+              <span className={styles.hint}>
+                An item that stops matching loses its streak and starts over, so a one-off metadata glitch can never
+                trigger this rule.
+              </span>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="cleanup-cap">Most items to action in one run</label>
+              <input
+                id="cleanup-cap"
+                type="number"
+                min={1}
+                className={shared.input}
+                value={o.maxActionsPerRun}
+                onChange={(e) => setOutcome({ maxActionsPerRun: parseInt(e.target.value, 10) || 1 })}
+              />
+            </div>
+
+            {o.mode === "delete" && (
+              <>
+                <div className={styles.field}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={o.viaArr}
+                      onChange={(e) => setOutcome({ viaArr: e.target.checked })}
+                    />{" "}
+                    Delete through Radarr/Sonarr
+                  </label>
+                  <span className={styles.hint}>
+                    Strongly recommended. Deleting in Plex alone leaves the Radarr/Sonarr record behind, and it will
+                    re-download the same file. With this on, an item with no matching record is skipped rather than
+                    half-deleted.
+                  </span>
+                </div>
+                <div className={styles.field}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={o.addImportExclusion}
+                      onChange={(e) => setOutcome({ addImportExclusion: e.target.checked })}
+                    />{" "}
+                    Add to the import exclusion list
+                  </label>
+                  <span className={styles.hint}>
+                    Stops a list you subscribe to from re-adding it later. Undo means editing the exclusion list in
+                    Radarr/Sonarr by hand.
+                  </span>
+                </div>
+              </>
+            )}
+
+            <div className={styles.field}>
+              <label>
+                <input type="checkbox" checked={o.dryRun} onChange={(e) => setOutcome({ dryRun: e.target.checked })} />{" "}
+                Preview only — don't touch anything yet
+              </label>
+              <span className={styles.hint}>
+                Leave this on until you've run the rule and read the log. The queue collection is built either way.
+              </span>
+            </div>
+
+            {destructive && !o.dryRun && (
+              <div className={styles.dangerPanel} role="alert">
+                <p className={styles.dangerPanelHeading}>
+                  This rule will {o.mode === "delete" ? "delete" : "change"} things on its own
+                </p>
+                <p className={styles.dangerPanelBody}>
+                  Every time this rule runs, any item that has matched{" "}
+                  <strong>
+                    {o.consecutiveRuns} run{o.consecutiveRuns === 1 ? "" : "s"} in a row
+                  </strong>{" "}
+                  will be{" "}
+                  <strong>
+                    {o.mode === "delete"
+                      ? o.viaArr
+                        ? "deleted from Radarr/Sonarr, along with its files"
+                        : "deleted from Plex"
+                      : "unmonitored in Radarr/Sonarr"}
+                  </strong>
+                  , up to {o.maxActionsPerRun} item{o.maxActionsPerRun === 1 ? "" : "s"} per run.{" "}
+                  {o.mode === "delete" && "There is no undo."}
+                </p>
+                <p className={styles.dangerPanelBody}>
+                  Cleanup also has to be switched on globally in Settings before any of this happens, and it is skipped
+                  entirely if the library hasn't synced in the last two days or if the rule suddenly matches more than a
+                  quarter of your library.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    );
+  }
+
   function renderActionsStep() {
     const service = arrService;
     const profilesQuery = arrProfilesQuery;
@@ -789,6 +1011,13 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               Edit
             </button>
           </div>
+          <div className={styles.summaryRow}>
+            <span className={styles.summaryLabel}>Outcome</span>
+            <span className={styles.summaryValue}>{describeOutcome(form.outcome)}</span>
+            <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("outcome")}>
+              Edit
+            </button>
+          </div>
           {typeHasActionsStep(form.type) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Send to *arr</span>
@@ -812,6 +1041,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (currentStep.id === "type") return renderTypeStep();
     if (currentStep.id === "source") return renderSourceStep();
     if (currentStep.id === "scope") return renderScopeStep();
+    if (currentStep.id === "outcome") return renderOutcomeStep();
     if (currentStep.id === "actions") return renderActionsStep();
     if (currentStep.id === "review") return renderReviewStep();
     return null;

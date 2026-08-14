@@ -17,6 +17,7 @@
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.bandwidth": "workspace:*",
+    "@tinkerbell/domain.cleanup": "workspace:*",
     "@tinkerbell/domain.collections": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",

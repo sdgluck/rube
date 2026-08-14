@@ -24,6 +24,7 @@ import BulkEditModal from "./BulkEditModal";
 import { useTagLabels } from "#components/smart-filter/TagValueSelect.tsx";
 import {
   EMPTY_FORM,
+  outcomeFromConfig,
   defaultLimitForType,
   smartFilterLeaves,
   typeHasLimit,
@@ -38,6 +39,12 @@ import { downloadJson } from "./utils";
 
 export default function Rules() {
   const utils = trpc.useUtils();
+  // Queued/actioned tallies for cleanup rules, one query for the whole table.
+  const cleanupCountsQuery = trpc.cleanup.counts.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
+  const cleanupCounts = cleanupCountsQuery.data ?? {};
   const rulesQuery = trpc.rules.list.useQuery();
   const createMutation = trpc.rules.create.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const updateMutation = trpc.rules.update.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
@@ -251,6 +258,7 @@ export default function Rules() {
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
+      outcome: outcomeFromConfig(config.action),
       arr: {
         ...DEFAULT_ARR_FORM,
         ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
@@ -293,6 +301,13 @@ export default function Rules() {
     if (!next.pinToHomepage) config.pinToHomepage = false;
     if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
     if (next.arr.enabled) config.arr = next.arr;
+    // Absent means "build a collection" — the same reading the job takes — so
+    // a collection rule writes no action key at all and stays byte-identical
+    // to how it was stored before this existed.
+    if (next.outcome.kind === "cleanup") {
+      const { kind: _kind, ...cleanup } = next.outcome;
+      config.action = { kind: "cleanup", ...cleanup };
+    }
 
     if (isEditing && next.id) {
       updateMutation.mutate({ id: next.id, name: next.name, config }, { onSuccess: () => cancelForm() });
@@ -705,6 +720,7 @@ export default function Rules() {
                     onCancelRun={handleCancelRun}
                     onTest={() => handleTest(rule)}
                     resolveTag={resolveTag}
+                    cleanup={cleanupCounts[rule.id]}
                     onCancelTest={handleCancelTest}
                     onEdit={() => startEdit(rule)}
                     onDuplicate={() => handleDuplicate(rule)}

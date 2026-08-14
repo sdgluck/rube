@@ -37,6 +37,8 @@ interface RuleTableRowProps {
   onDetailCleared: () => void;
   /** Resolves per-server tag keys to names for the Config summary. */
   resolveTag?: (field: string, value: string) => string;
+  /** Queue tallies, set only when this rule's outcome is cleanup. */
+  cleanup?: { queued: number; actioned: number };
 }
 
 export default function RuleTableRow({
@@ -64,6 +66,7 @@ export default function RuleTableRow({
   onDelete,
   onDetailCleared,
   resolveTag,
+  cleanup,
 }: RuleTableRowProps) {
   const navigate = useNavigate();
   const c = rule.config ?? {};
@@ -118,7 +121,7 @@ export default function RuleTableRow({
           <ToggleSwitch checked={!!rule.enabled} onChange={onToggleEnabled} size="sm" />
         </td>
         <td className={styles.statusCell} data-cell="meta">
-          <StatusCell rule={rule} isTesting={isTesting} isRunning={isRunning} />
+          <StatusCell rule={rule} isTesting={isTesting} isRunning={isRunning} cleanup={cleanup} />
         </td>
         <td data-cell="hide">
           <span className={styles.configSummary}>{configSummary}</span>

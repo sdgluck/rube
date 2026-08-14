@@ -1071,6 +1071,9 @@ importers:
       '@tinkerbell/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
+      '@tinkerbell/domain.cleanup':
+        specifier: workspace:*
+        version: link:../../domains/cleanup
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections

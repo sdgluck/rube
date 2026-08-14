@@ -219,6 +219,25 @@ export function queuedCandidates(opts: { includeActioned?: boolean; limit?: numb
   });
 }
 
+/**
+ * Queued and actioned counts per rule, for the Rules table.
+ *
+ * A collection count means nothing for a cleanup rule — it builds one shelf
+ * and that's it. "12 queued / 3 removed" is the status someone actually wants.
+ */
+export function countsByRule(): Map<string, { queued: number; actioned: number }> {
+  const rows = db
+    .select({
+      ruleId: cleanupCandidates.ruleId,
+      actioned: sql<number>`sum(case when ${cleanupCandidates.actionedAt} is null then 0 else 1 end)`,
+      queued: sql<number>`sum(case when ${cleanupCandidates.actionedAt} is null then 1 else 0 end)`,
+    })
+    .from(cleanupCandidates)
+    .groupBy(cleanupCandidates.ruleId)
+    .all();
+  return new Map(rows.map((r) => [r.ruleId, { queued: r.queued, actioned: r.actioned }]));
+}
+
 /** Queue size for the sidebar badge — items due now or on the next run. */
 export function dueSoonCount(): number {
   const rows = queuedCandidates({ limit: 1000 });

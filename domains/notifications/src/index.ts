@@ -7,6 +7,11 @@ export const EVENT_TYPES = [
   { id: "health.failed", label: "Health Check Failed" },
   { id: "health.recovered", label: "Health Check Recovered" },
   { id: "bandwidth.tested", label: "Bandwidth Tested" },
+  // `cleanup.pending` is the one that matters: a message saying "these six
+  // films go tomorrow unless you keep them" is what turns an automated
+  // deletion from frightening into routine.
+  { id: "cleanup.pending", label: "Cleanup Pending" },
+  { id: "cleanup.actioned", label: "Cleanup Actioned" },
 ] as const;
 
 export const NOTIFICATION_SERVICES = [

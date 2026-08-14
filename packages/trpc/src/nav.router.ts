@@ -2,7 +2,17 @@ import { desc, eq, sql } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import { db, collections, mediaItems, rules, plexUsers, jobRuns, events, prerolls } from "@tinkerbell/db";
 import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
+import { dueSoonCount } from "@tinkerbell/domain.cleanup";
 import { t, procedure } from "./_base.ts";
+
+/** The sidebar must render even if one metric query throws. */
+function safeDueSoonCount(): number {
+  try {
+    return dueSoonCount();
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * Fresh-status threshold: a tick / cross next to a sidebar item is only
@@ -71,6 +81,9 @@ export const navRouter = t.router({
       users: countOf(plexUsers),
       prerolls: countOf(prerolls),
       eventsErrors24h: recentErrorEventCount(DAY_MS),
+      // Items due now or on the very next run. A count of everything queued
+      // would sit at a permanent non-zero and stop meaning anything.
+      cleanupDueSoon: safeDueSoonCount(),
       overlaysStatus: lastJobStatus("overlays"),
       jobsStatus: lastJobStatus("healthcheck"),
     };
