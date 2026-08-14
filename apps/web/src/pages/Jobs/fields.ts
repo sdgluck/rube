@@ -34,6 +34,11 @@ const fields: Record<string, JobFieldsConfig> = {
   // Manual maintenance: shown so there's a Run button, always-on so it can't
   // be toggled into a state where the button does nothing.
   "collections-sweep": { kind: "system", enabled: "required", sections: true },
+  // Playback tracking is infrastructure, not an opt-in capability: the poller is
+  // what every watch statistic is derived from, and the import is a one-shot
+  // seed for it. Neither is something you "install".
+  "playback-poll": { kind: "system" },
+  "playback-backfill": { kind: "system", enabled: "required", schedule: "hidden" },
 
   // ── Features (opt-in) ────────────────────────────────────────────────────
   "because-you-watched": { kind: "feature", sections: true },

@@ -6,7 +6,7 @@ import {
   getActivitySummary,
   getOpsSummary,
 } from "@tinkerbell/domain.stats";
-import { allUserTotals, serverHistory, userTotals, watchedBy } from "@tinkerbell/domain.playback";
+import { allUserTotals, HISTORY_SORTS, serverHistory, userTotals, watchedBy } from "@tinkerbell/domain.playback";
 import { DAY_MS } from "@tinkerbell/core";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
@@ -44,6 +44,8 @@ export const statsRouter = t.router({
         ratingKey: z.string().optional(),
         limit: z.number().int().min(1).max(200).default(50),
         offset: z.number().int().min(0).default(0),
+        sort: z.enum(HISTORY_SORTS).default("when"),
+        dir: z.enum(["asc", "desc"]).default("desc"),
       }),
     )
     .query(({ input }) =>
@@ -53,6 +55,8 @@ export const statsRouter = t.router({
         ratingKey: input.ratingKey,
         limit: input.limit,
         offset: input.offset,
+        sort: input.sort,
+        dir: input.dir,
       }),
     ),
 

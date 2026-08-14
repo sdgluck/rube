@@ -390,6 +390,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The pager's own controls sit at its 11px scale rather than the app-wide
+   control height, which would tower over a single line of pager text. */
+.pageSize {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.pageSizeSelect {
+  composes: select from "../../styles/controls.module.css";
+  height: 24px;
+  padding: 0 22px 0 6px;
+  font-size: 11px;
+  background-position:
+    calc(100% - 12px) 50%,
+    calc(100% - 8px) 50%;
+}
+
 /* Backfilled rows carry no completion or watch-time data, so the cell shows a
    dash. The tooltip is what explains why, rather than leaving it looking broken. */
 .unknownCell {

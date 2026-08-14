@@ -11,7 +11,7 @@
  * (item, user) rollup maintained as sessions close. Read paths use the rollup;
  * only the history UI reads the log.
  */
-import { and, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getConfig, DAY_MS } from "@tinkerbell/core";
 import { db, playbackSessions, plexUsers, watchState } from "@tinkerbell/db";
@@ -274,6 +274,31 @@ export function topPlayed(opts: { since: number; limit: number; userId?: number;
 
 export type PlaybackRow = typeof playbackSessions.$inferSelect;
 
+/** Columns the history panel can order by. */
+export const HISTORY_SORTS = ["when", "title", "user", "device", "play", "watched"] as const;
+export type HistorySort = (typeof HISTORY_SORTS)[number];
+
+/**
+ * Sort expressions per column. `title` orders by what the UI actually renders
+ * (show first for episodes) rather than the bare episode title, which would
+ * scatter a show's episodes across the list.
+ */
+const HISTORY_SORT_COLUMNS = {
+  when: playbackSessions.startedAt,
+  title: sql`coalesce(${playbackSessions.grandparentTitle}, '') || ${playbackSessions.title}`,
+  user: sql`coalesce(nullif(${plexUsers.name}, ''), nullif(${plexUsers.username}, ''), nullif(${playbackSessions.username}, ''), 'User ' || ${playbackSessions.userId})`,
+  device: playbackSessions.player,
+  play: playbackSessions.decision,
+  watched: playbackSessions.watchedMs,
+} as const;
+
+/**
+ * Columns where a blank cell means "we never recorded this" (backfilled rows
+ * carry no device or transcode decision). Those sort to the end in both
+ * directions — an ascending sort by Device otherwise opens on a page of dashes.
+ */
+const HISTORY_SORT_BLANKS_LAST: Partial<Record<HistorySort, boolean>> = { device: true, play: true };
+
 /** Paginated raw history, newest first — the Stats history panel. */
 export function serverHistory(opts: {
   since?: number;
@@ -282,6 +307,8 @@ export function serverHistory(opts: {
   ratingKey?: string;
   limit: number;
   offset: number;
+  sort?: HistorySort;
+  dir?: "asc" | "desc";
 }): { rows: PlaybackRow[]; total: number } {
   const filters = [];
   if (opts.since != null) filters.push(gte(playbackSessions.startedAt, opts.since));
@@ -297,16 +324,36 @@ export function serverHistory(opts: {
       .where(where)
       .get()?.count ?? 0;
 
+  const sort = opts.sort ?? "when";
+  const sortColumn = HISTORY_SORT_COLUMNS[sort];
+  const direction = opts.dir === "asc" ? asc : desc;
+  const orderBy = [];
+  if (HISTORY_SORT_BLANKS_LAST[sort]) orderBy.push(asc(sql`case when ${sortColumn} = '' then 1 else 0 end`));
+  orderBy.push(direction(sortColumn));
+  // Ties (a show's episodes, a user's run of plays) keep a stable, meaningful
+  // order rather than whatever SQLite happens to return.
+  if (sort !== "when") orderBy.push(desc(playbackSessions.startedAt));
+
+  // `username` on the session is whatever Plex reported at play time — empty for
+  // rows reconstructed by backfill. Resolving against `plex_users` here means
+  // every caller gets a name rather than an account id.
   const rows = db
-    .select()
+    .select({ ...getTableColumns(playbackSessions), name: plexUsers.name, pusername: plexUsers.username })
     .from(playbackSessions)
+    .leftJoin(plexUsers, eq(plexUsers.userId, playbackSessions.userId))
     .where(where)
-    .orderBy(desc(playbackSessions.startedAt))
+    .orderBy(...orderBy)
     .limit(opts.limit)
     .offset(opts.offset)
     .all();
 
-  return { rows, total };
+  return {
+    rows: rows.map(({ name, pusername, ...row }) => ({
+      ...row,
+      username: name || pusername || row.username || `User ${row.userId}`,
+    })),
+    total,
+  };
 }
 
 export interface WatchedByRow extends WatchStateRow {
