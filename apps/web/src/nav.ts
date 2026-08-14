@@ -47,5 +47,3 @@ export const MORE_SECTIONS: NavSection[] = NAV_SECTIONS.map((s) => ({
   label: s.label,
   items: s.items.filter((i) => !BOTTOM_TAB_ROUTES.has(i.to)),
 })).filter((s) => s.items.length > 0);
-
-export const MORE_PAGES = MORE_SECTIONS.flatMap((s) => s.items);

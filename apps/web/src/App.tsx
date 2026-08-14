@@ -43,6 +43,7 @@ const Events = lazy(() => import("#pages/Events"));
 const StressTest = lazy(() => import("#pages/StressTest"));
 const Preview = lazy(() => import("#pages/Preview"));
 const Changelog = lazy(() => import("#pages/Changelog"));
+const More = lazy(() => import("#pages/More"));
 const SettingsAbout = lazy(() => import("#pages/Settings/SettingsAbout"));
 const SettingsPosters = lazy(() => import("#pages/Settings/SettingsPosters"));
 const SettingsPrerolls = lazy(() => import("#pages/Settings/SettingsPrerolls"));
@@ -376,6 +377,14 @@ export default function App() {
                 element={
                   <LazyPage>
                     <Changelog />
+                  </LazyPage>
+                }
+              />
+              <Route
+                path="/more"
+                element={
+                  <LazyPage>
+                    <More />
                   </LazyPage>
                 }
               />

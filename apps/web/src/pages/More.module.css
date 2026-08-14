@@ -1,0 +1,90 @@
+/* The list is only ever reached from the mobile tab bar, but the route works at
+   any width — cap it so it doesn't stretch into a single absurd line on a
+   desktop viewport. */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 560px;
+}
+
+.sectionTitle {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+
+/* One card per section: rows are separated by a hairline rather than a gap, so
+   the group reads as a single object the way a settings list does. */
+.list {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 14px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover,
+.row:active {
+  background: var(--fill-quiet);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font: var(--t-data);
+  font-size: 12px;
+  color: var(--ink-4);
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotOk {
+  background: var(--status-ok-dot);
+}
+
+.dotError {
+  background: var(--status-error-dot);
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
