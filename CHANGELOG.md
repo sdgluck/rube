@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-14
+
+### Added
+
+- **/more page:** on mobile, the fourth "More" nav tab now opens `/more`, a regular page instead of a bottom sheet. It's deep-linkable, works with the back button, and supports scroll restoration.
+
+### Changed
+
+- On mobile, the More page's per-page metrics now load directly instead of only when the old sheet was open.
+
+### Fixed
+
+- **Mobile pages no longer scroll sideways.** Dashboard panels using the dense table style (Stats, Jobs lists, run history) were pushing the page up to 230px wider than the screen; they now scroll within their own panel instead. The rules bulk-action bar now wraps instead of overflowing, the rule preview row no longer bleeds off the right edge, the smart filter editor fits inside its drawer, the overlay catalog no longer forces three columns on narrow screens, and dropdown menus no longer grow off-screen behind long names.
+- Fixed the mobile capture step that screenshots the More page, which was still trying to click the old bottom-sheet button and broke the release capture run.
+- The auto-generated changelog for each release now summarizes the full reasoning from commit messages instead of just their one-line subjects, so entries are more specific about what changed and what (if anything) needs reconfiguring after upgrading.
+
+### Removed
+
+- Removed the mobile bottom-sheet "More" menu (replaced by the `/more` page above).
+
 ## [0.8.0] - 2026-08-14
 
 ### Added
