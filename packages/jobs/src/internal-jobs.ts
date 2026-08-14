@@ -11,7 +11,7 @@ import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
-import { syncRecentlyAdded, syncMostWatched } from "@tinkerbell/domain.stats";
+import { syncRecentlyAdded } from "@tinkerbell/domain.stats";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { JOB_RUN_RETENTION_MS } from "./limits.ts";
 
@@ -55,7 +55,6 @@ export const internalJobs = {
     timeoutMs: 10 * MINUTE_MS,
   },
   "sync-recently-added": { run: (ctx: JobContext) => syncRecentlyAdded(ctx.signal), timeoutMs: 10 * MINUTE_MS },
-  "sync-most-watched": { run: (ctx: JobContext) => syncMostWatched(ctx.signal), timeoutMs: 15 * MINUTE_MS },
   healthcheck: {
     run: (ctx: JobContext) => checkAllConfiguredServices(ctx.signal),
     // Runs every minute. Anything past 5 is wedged, not slow.

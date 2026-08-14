@@ -14,6 +14,7 @@
   "dependencies": {
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.playback": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "zod": "^4.3.6"

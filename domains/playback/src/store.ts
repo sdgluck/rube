@@ -14,7 +14,7 @@
 import { and, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getConfig, DAY_MS } from "@tinkerbell/core";
-import { db, playbackSessions, watchState } from "@tinkerbell/db";
+import { db, playbackSessions, plexUsers, watchState } from "@tinkerbell/db";
 import type { PlexSession } from "@tinkerbell/plex";
 import { diffSnapshot, staleCloses, type OpenSession, type SessionClose } from "./diff.ts";
 
@@ -309,14 +309,61 @@ export function serverHistory(opts: {
   return { rows, total };
 }
 
-/** Who has watched an item, for the Media detail "Watched by" line. */
-export function watchedBy(ratingKey: string): WatchStateRow[] {
-  return db
-    .select()
+export interface WatchedByRow extends WatchStateRow {
+  /** Resolved from `plex_users`; falls back to the raw id for accounts we've never synced. */
+  username: string;
+}
+
+/**
+ * Who has watched an item, for the Media detail "Watched by" line.
+ *
+ * Resolves display names here rather than in the UI: `watch_state` is keyed by
+ * account id only, and every caller would otherwise have to join `plex_users`
+ * itself.
+ */
+export function watchedBy(ratingKey: string): WatchedByRow[] {
+  const rows = db
+    .select({
+      ratingKey: watchState.ratingKey,
+      userId: watchState.userId,
+      plays: watchState.plays,
+      completedPlays: watchState.completedPlays,
+      firstPlayedAt: watchState.firstPlayedAt,
+      lastPlayedAt: watchState.lastPlayedAt,
+      totalWatchedMs: watchState.totalWatchedMs,
+      name: plexUsers.name,
+      pusername: plexUsers.username,
+    })
     .from(watchState)
+    .leftJoin(plexUsers, eq(plexUsers.userId, watchState.userId))
     .where(and(eq(watchState.ratingKey, ratingKey), gte(watchState.plays, 1)))
     .orderBy(desc(watchState.lastPlayedAt))
     .all();
+
+  return rows.map(({ name, pusername, ...row }) => ({
+    ...row,
+    username: name || pusername || `User ${row.userId}`,
+  }));
+}
+
+/**
+ * Plays and watch time for every user in one query.
+ *
+ * The Users page renders a row per user; asking per row would be N round trips
+ * for what SQLite answers as a single grouped scan.
+ */
+export function allUserTotals(since?: number): Map<number, { plays: number; watchedMs: number }> {
+  const rows = db
+    .select({
+      userId: playbackSessions.userId,
+      plays: sql<number>`count(*)`,
+      watchedMs: sql<number>`coalesce(sum(${playbackSessions.watchedMs}), 0)`,
+    })
+    .from(playbackSessions)
+    .where(since == null ? undefined : gte(playbackSessions.startedAt, since))
+    .groupBy(playbackSessions.userId)
+    .all();
+  return new Map(rows.map((r) => [r.userId, { plays: r.plays, watchedMs: r.watchedMs }]));
 }
 
 /** Lifetime totals for one user — the Users page. */

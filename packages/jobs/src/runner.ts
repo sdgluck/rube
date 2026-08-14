@@ -50,13 +50,6 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "*/15 * * * *",
     enabled: 1,
   },
-  {
-    id: "sync-most-watched",
-    name: "Sync Most Watched",
-    command: "sync-most-watched",
-    schedule: "0 * * * *",
-    enabled: 1,
-  },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
   // Six-field schedule — croner reads a leading seconds field, which every
@@ -140,7 +133,11 @@ const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
   "overlays-remove": { mode: "remove" },
 };
 
-const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa"];
+// `sync-most-watched` retired in favour of playback history: most-watched and
+// the activity summary are now derived from playback_sessions at query time
+// rather than cached by a job. Its row must be deleted on upgrade or the
+// scheduler would keep firing a command that no longer exists.
+const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa", "sync-most-watched"];
 
 function seedDefaultJobs(): void {
   const existing = new Map(

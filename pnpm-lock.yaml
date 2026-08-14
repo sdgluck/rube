@@ -692,6 +692,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/domain.playback':
+        specifier: workspace:*
+        version: link:../playback
       '@tinkerbell/plex':
         specifier: workspace:*
         version: link:../../clients/plex
@@ -1033,6 +1036,9 @@ importers:
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
+      '@tinkerbell/domain.playback':
+        specifier: workspace:*
+        version: link:../../domains/playback
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls

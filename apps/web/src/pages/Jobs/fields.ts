@@ -27,7 +27,6 @@ const fields: Record<string, JobFieldsConfig> = {
   "sync-collections": { kind: "system", enabled: "required", sections: true },
   "sync-users": { kind: "system", enabled: "required" },
   "sync-recently-added": { kind: "system", enabled: "required" },
-  "sync-most-watched": { kind: "system", enabled: "required" },
   "purge-runs": { kind: "system", enabled: "required" },
   "posters-refresh": { kind: "system", enabled: "required", sections: true },
   generate: { kind: "system", enabled: "required", sections: true },
