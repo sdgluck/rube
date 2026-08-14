@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-14
+
+### Added
+
+- The Jobs page is now a customisable dashboard, like Stats: drag its five panels (Recent Runs, Upcoming, System Tasks, Your Features, Recent Logs) into your preferred order and pick from 13 summary tiles (Features, Paused, Next Run, Last Duration, Failing, Never Run, and more) to show at the top. Your layout is saved per install.
+- Job feature rows now have a Run button for running them on demand.
+
+### Changed
+
+- Every page now shows its title, breadcrumb, and action buttons (Import/Export, library picker, etc.) in a single sticky bar at the top instead of a separate heading on each page. Drill-in pages (e.g. a job's runs, a media item's detail) show the record's name in the back link instead of a page heading.
+- **Enable/Disable Personalized Home Screens and Process Prerolls are no longer listed as features you can enable on the Jobs/Features page.** They're still there, just moved: trigger them from Settings → Portal → Personalization and from the Prerolls page respectively. Their runs still show up in Recent Runs and Recent Logs as before.
+- Row actions across all list pages (Rules, Collections, Jobs) are now consistent: the main action is an icon button on the row, everything else is behind a "…" menu with destructive actions separated at the bottom. Rules rows go from seven separate buttons to a Run button plus a menu, and Collections' bare red Delete button is now in the menu.
+- Bulk selection toolbars are now the same across every list page, and the button to clear a selection is labeled "Clear" everywhere (it was "Cancel" on Rules).
+
+### Fixed
+
+- The Jobs "Upcoming" panel no longer reads "in in 51s" for scheduled runs.
+
 ## [0.11.0] - 2026-08-14
 
 ### Changed
