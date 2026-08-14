@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-08-14
+
+### Added
+
+- The rule wizard's smart-filter editor now offers watch-history fields: watched by everyone, watched by nobody, watched by a specific person, total plays across all users, last played by anyone, and abandoned below a given percentage. They sit in their own group with a note, because Plex only ever reports the server owner's view state — so its "Unplayed" and Tinkerbell's "Watched by nobody" answer genuinely different questions. Inside an OR group they are shown disabled with the reason rather than hidden, since the local half of such a filter could never be recombined with what Plex returned.
+- The collection drawer deliberately does **not** offer these fields. It edits a Plex smart collection, which Plex re-evaluates itself and cannot evaluate a field it has never heard of — so the drawer and its API reject them outright rather than letting the collection silently widen to whatever the remaining clauses matched.
+- Smart-filter rules can now use those watch-history clauses, evaluated against Tinkerbell's own playback history after Plex returns its matches. The job log records both counts — what Plex returned and what survived the local pass — plus the resolved list of users counted as "everyone", so it is clear what a rule matched and why. Rules using a watch-history field warn in the editor while the playback record is still filling up, since a young history makes "watched by nobody" match almost everything.
+
+### Changed
+
+- **"Watched by everyone" now means everyone who has been granted access to the library, not just users who have opted into personalized home-screen recommendations.** Most people sharing a server never touch that setting, so on a typical install this previously matched nobody at all, making the rule silently useless. Existing rules using this condition will now match more users. The server owner is excluded from "everyone" by default — the new `watch_state_all_users_include_owner` setting includes them.
+
+### Fixed
+
+- Packs that reference a non-portable field (such as a filter tied to a specific user's Plex account id) are now rejected by the registry instead of being accepted and failing unpredictably for other users later.
+
 ## [0.14.3] - 2026-08-14
 
 ### Added
