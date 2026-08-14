@@ -14,7 +14,7 @@
 import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getConfig, DAY_MS } from "@tinkerbell/core";
-import { db, playbackSessions, plexUsers, watchState } from "@tinkerbell/db";
+import { db, playbackSessions, plexUsers, userPreferences, watchState } from "@tinkerbell/db";
 import type { PlexSession } from "@tinkerbell/plex";
 import { diffSnapshot, staleCloses, type OpenSession, type SessionClose } from "./diff.ts";
 
@@ -86,6 +86,7 @@ function applyToWatchState(close: SessionClose, row: { ratingKey: string; userId
         firstPlayedAt: close.endedAt,
         lastPlayedAt: close.endedAt,
         totalWatchedMs: close.watchedMs,
+        maxCompletionPct: close.completionPct,
       })
       .run();
     return;
@@ -98,6 +99,10 @@ function applyToWatchState(close: SessionClose, row: { ratingKey: string; userId
       firstPlayedAt: Math.min(existing.firstPlayedAt ?? close.endedAt, close.endedAt),
       lastPlayedAt: Math.max(existing.lastPlayedAt ?? close.endedAt, close.endedAt),
       totalWatchedMs: existing.totalWatchedMs + close.watchedMs,
+      // High-water mark, including stale closes: we lost the session, but the
+      // offset we last saw was genuinely reached, and under-reporting it would
+      // wrongly file the item under "everyone bounced off this".
+      maxCompletionPct: Math.max(existing.maxCompletionPct, close.completionPct),
     })
     .where(and(eq(watchState.ratingKey, row.ratingKey), eq(watchState.userId, row.userId)))
     .run();
@@ -188,6 +193,8 @@ export interface WatchStateRow {
   firstPlayedAt: number | null;
   lastPlayedAt: number | null;
   totalWatchedMs: number;
+  /** 0–1. Furthest this user got in any single play. */
+  maxCompletionPct: number;
 }
 
 /** Watch state for a set of items, optionally narrowed to one user. */
@@ -230,6 +237,76 @@ export function isWatchedByAll(ratingKey: string, userIds: number[]): boolean {
     .all();
   const watched = new Set(rows.map((r) => r.userId));
   return userIds.every((id) => watched.has(id));
+}
+
+export interface WatchStateUserScope {
+  userIds: number[];
+  /** Resolved names, in the same order — for the run log. */
+  usernames: string[];
+  includeOwner: boolean;
+}
+
+/**
+ * Who "everyone" means for `tb.watchedByAll`.
+ *
+ * Opted-in users from `plex_users`, with the owner excluded unless
+ * `watch_state_all_users_include_owner` says otherwise. Opting in is the same
+ * portal switch personalization uses: a user who has never engaged with
+ * Tinkerbell shouldn't silently become a vote on whether a film gets deleted.
+ *
+ * The caller is expected to log the resolved list. A rule that deletes things
+ * has to make its definition of "everyone" visible in the run log, and an
+ * empty list — which makes `watchedByAll` false for everything — is otherwise
+ * indistinguishable from a library nobody has finished.
+ */
+export function watchStateUserScope(): WatchStateUserScope {
+  const includeOwner = getConfig("watch_state_all_users_include_owner") ?? false;
+  const rows = db
+    .select({ userId: plexUsers.userId, username: plexUsers.username, name: plexUsers.name })
+    .from(plexUsers)
+    .innerJoin(userPreferences, eq(userPreferences.userId, plexUsers.userId))
+    .where(and(eq(userPreferences.optedIn, 1), includeOwner ? undefined : eq(plexUsers.isOwner, 0)))
+    .orderBy(asc(plexUsers.username))
+    .all();
+
+  return {
+    userIds: rows.map((r) => r.userId),
+    usernames: rows.map((r) => r.name || r.username || `User ${r.userId}`),
+    includeOwner,
+  };
+}
+
+export interface WatchHistoryCoverage {
+  sessions: number;
+  /** Epoch ms of the earliest recorded play, or null when there are none. */
+  earliestAt: number | null;
+  /** Whole days between the earliest play and now. */
+  days: number;
+}
+
+/**
+ * How much history there is to filter on.
+ *
+ * The single most likely support question about watch-state filters is a user
+ * adding "watched by nobody", getting their entire library back, and concluding
+ * it's broken — when in fact the poller has been running for two days. The
+ * editors read this to warn before that happens.
+ */
+export function watchHistoryCoverage(now: number = Date.now()): WatchHistoryCoverage {
+  const row = db
+    .select({
+      sessions: sql<number>`count(*)`,
+      earliestAt: sql<number | null>`min(${playbackSessions.startedAt})`,
+    })
+    .from(playbackSessions)
+    .get();
+
+  const earliestAt = row?.earliestAt ?? null;
+  return {
+    sessions: row?.sessions ?? 0,
+    earliestAt,
+    days: earliestAt == null ? 0 : Math.max(0, Math.floor((now - earliestAt) / DAY_MS)),
+  };
 }
 
 export interface WatchSummary {
@@ -378,6 +455,7 @@ export function watchedBy(ratingKey: string): WatchedByRow[] {
       firstPlayedAt: watchState.firstPlayedAt,
       lastPlayedAt: watchState.lastPlayedAt,
       totalWatchedMs: watchState.totalWatchedMs,
+      maxCompletionPct: watchState.maxCompletionPct,
       name: plexUsers.name,
       pusername: plexUsers.username,
     })
@@ -460,6 +538,7 @@ export function rebuildWatchState(): number {
           firstPlayedAt: at,
           lastPlayedAt: at,
           totalWatchedMs: row.watchedMs,
+          maxCompletionPct: row.completionPct,
         });
         continue;
       }
@@ -468,6 +547,7 @@ export function rebuildWatchState(): number {
       existing.firstPlayedAt = Math.min(existing.firstPlayedAt ?? at, at);
       existing.lastPlayedAt = Math.max(existing.lastPlayedAt ?? at, at);
       existing.totalWatchedMs = (existing.totalWatchedMs ?? 0) + row.watchedMs;
+      existing.maxCompletionPct = Math.max(existing.maxCompletionPct ?? 0, row.completionPct);
     }
 
     for (const value of acc.values()) db.insert(watchState).values(value).run();

@@ -219,6 +219,7 @@ function foldIntoWatchState(row: typeof playbackSessions.$inferInsert): void {
         firstPlayedAt: at,
         lastPlayedAt: at,
         totalWatchedMs: 0,
+        maxCompletionPct: 1,
       })
       .run();
     return;
@@ -230,6 +231,9 @@ function foldIntoWatchState(row: typeof playbackSessions.$inferInsert): void {
       completedPlays: existing.completedPlays + 1,
       firstPlayedAt: Math.min(existing.firstPlayedAt ?? at, at),
       lastPlayedAt: Math.max(existing.lastPlayedAt ?? at, at),
+      // Plex only logs a history entry for a play it considered finished, so
+      // this is a completion — the one thing a backfilled row does tell us.
+      maxCompletionPct: 1,
     })
     .where(and(eq(watchState.ratingKey, row.ratingKey), eq(watchState.userId, row.userId)))
     .run();

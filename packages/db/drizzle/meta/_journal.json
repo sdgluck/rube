@@ -162,6 +162,20 @@
       "when": 1786721689709,
       "tag": "0022_bandwidth_streams",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1786738263117,
+      "tag": "0023_furry_midnight",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1786738589801,
+      "tag": "0024_colorful_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

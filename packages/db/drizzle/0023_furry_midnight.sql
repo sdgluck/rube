@@ -1,0 +1,1 @@
+ALTER TABLE `watch_state` ADD `max_completion_pct` real DEFAULT 0 NOT NULL;
