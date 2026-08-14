@@ -515,3 +515,104 @@ export const tmdbCache = sqliteTable(
   },
   (table) => [index("idx_tmdb_cache_fetched_at").on(table.fetchedAt)],
 );
+
+/**
+ * One row per observed play. Written by the playback poller, which samples
+ * `/status/sessions` every 30 seconds and diffs the result against the rows it
+ * left open on the previous tick.
+ *
+ * This is the table Plex does not give us. `/status/sessions/history/all` is a
+ * real historical log and we backfill from it (see `source` below), but it
+ * carries only "account X viewed rating key Y at time T" — no completion
+ * percentage, no watched duration, no player or transcode decision. Those come
+ * only from sampling the live session, which is why the poller exists at all.
+ *
+ * Nullable: `endedAt` (null while the session is still open — the poller's hot
+ * path is exactly this predicate) and `grandparentRatingKey` (null for movies).
+ */
+export const playbackSessions = sqliteTable(
+  "playback_sessions",
+  {
+    /**
+     * Ours, not Plex's. Plex reuses `sessionKey` values freely across plays, so
+     * keying on it would silently merge two unrelated sessions into one row.
+     */
+    id: text("id").primaryKey(),
+    plexSessionKey: text("plex_session_key").notNull().default(""),
+    userId: integer("user_id").notNull(), // matches plex_users.userId; 0 when unknown
+    username: text("username").notNull(),
+    ratingKey: text("rating_key").notNull(),
+    /** For episodes: the show. Denormalised so per-show queries need no Plex round trip. */
+    grandparentRatingKey: text("grandparent_rating_key"),
+    sectionId: text("section_id").notNull().default(""),
+    title: text("title").notNull(),
+    grandparentTitle: text("grandparent_title"),
+    type: text("type").notNull(), // movie | episode | track
+    /** Playback facts, kept because they are the whole point of a history panel. */
+    player: text("player").notNull().default(""),
+    platform: text("platform").notNull().default(""),
+    decision: text("decision").notNull().default(""), // directplay | copy | transcode
+    local: integer("local").notNull().default(0),
+    startedAt: integer("started_at").notNull(),
+    lastSeenAt: integer("last_seen_at").notNull(),
+    endedAt: integer("ended_at"),
+    durationMs: integer("duration_ms").notNull().default(0),
+    /**
+     * Sum of observed forward progress, not wall-clock. A paused session accrues
+     * nothing and a seek backwards never subtracts, so this stays a lower bound
+     * on time actually watched rather than drifting either way.
+     */
+    watchedMs: integer("watched_ms").notNull().default(0),
+    viewOffsetMs: integer("view_offset_ms").notNull().default(0),
+    completionPct: real("completion_pct").notNull().default(0),
+    /** playing | paused | completed | abandoned | stale */
+    state: text("state").notNull().default("playing"),
+    /**
+     * `poller` for rows we observed live, `plex-history` for rows reconstructed
+     * from `/status/sessions/history/all` during backfill. Backfilled rows have
+     * no completion or duration data and must never be treated as if they do —
+     * consumers that need `watchedMs` filter on this.
+     */
+    source: text("source").notNull().default("poller"),
+  },
+  (table) => [
+    index("idx_playback_user_started").on(table.userId, table.startedAt),
+    index("idx_playback_rating_key").on(table.ratingKey),
+    index("idx_playback_started").on(table.startedAt),
+    // Open rows are read on every poll tick; this is the poller's hot path.
+    index("idx_playback_open").on(table.endedAt),
+    // Backfill dedupes against already-observed plays on this triple.
+    index("idx_playback_dedupe").on(table.userId, table.ratingKey, table.startedAt),
+  ],
+);
+
+/**
+ * Per (item, user) rollup of `playback_sessions`, maintained incrementally as
+ * sessions close rather than recomputed on read.
+ *
+ * The questions rules and collections ask are almost never "list the plays" but
+ * "has this been watched, by whom, when" — and answering those by aggregating
+ * the session log on every rule evaluation would put a full table scan inside
+ * the generate loop. `rebuildWatchState()` in the playback domain recomputes it
+ * from scratch for repair; it is a maintenance action, never automatic.
+ *
+ * Never pruned. `playback_sessions` ages out under `playback_retention_days`;
+ * this is the summary that has to survive it.
+ */
+export const watchState = sqliteTable(
+  "watch_state",
+  {
+    ratingKey: text("rating_key").notNull(),
+    userId: integer("user_id").notNull(),
+    plays: integer("plays").notNull().default(0),
+    completedPlays: integer("completed_plays").notNull().default(0),
+    firstPlayedAt: integer("first_played_at"),
+    lastPlayedAt: integer("last_played_at"),
+    totalWatchedMs: integer("total_watched_ms").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("idx_watch_state_pk").on(table.ratingKey, table.userId),
+    index("idx_watch_state_user_last").on(table.userId, table.lastPlayedAt),
+    index("idx_watch_state_rating_key").on(table.ratingKey),
+  ],
+);
