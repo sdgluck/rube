@@ -368,10 +368,9 @@ export const SHOTS: Shot[] = [
     steps: [{ press: "?" }, { wait: "text=Navigation" }],
   },
   {
-    name: "19-mobile-more-sheet",
-    description: "Mobile — the More sheet as a two-column card grid over the bottom nav",
-    path: "/stats",
+    name: "19-mobile-more",
+    description: "Mobile — the More page listing every destination the bottom nav doesn't hold",
+    path: "/more",
     viewports: MOBILE,
-    steps: [{ click: "More pages" }, { wait: ".bottom-sheet-open" }],
   },
 ];
