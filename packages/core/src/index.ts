@@ -2,6 +2,7 @@ export * from "./util.ts";
 export * from "./config.ts";
 export * from "./preferences.ts";
 export * from "./sessions.ts";
+export * from "./admin-auth.ts";
 export * from "./job-context.ts";
 export * from "./paths.ts";
 export * from "./posters.ts";
