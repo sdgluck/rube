@@ -64,6 +64,10 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "*/30 * * * * *",
     enabled: 1,
   },
+  // No schedule by default: the test saturates the very link people are
+  // streaming over, so it runs when a human asks. A schedule can still be set
+  // from the UI for anyone who wants a nightly figure.
+  { id: "bandwidth-test", name: "Bandwidth Test", command: "bandwidth-test", schedule: "", enabled: 1 },
   // No schedule by default: it deletes collections off the Plex server, so it
   // runs when a human asks it to. A schedule can still be set from the UI.
   {

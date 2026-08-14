@@ -6,6 +6,7 @@ export const EVENT_TYPES = [
   { id: "job.failed", label: "Job Failed" },
   { id: "health.failed", label: "Health Check Failed" },
   { id: "health.recovered", label: "Health Check Recovered" },
+  { id: "bandwidth.tested", label: "Bandwidth Tested" },
 ] as const;
 
 export const NOTIFICATION_SERVICES = [

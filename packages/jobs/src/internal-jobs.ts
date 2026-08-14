@@ -9,6 +9,7 @@
 import { and, lt, notInArray } from "drizzle-orm";
 import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
+import { pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwidth";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
 import { syncRecentlyAdded } from "@tinkerbell/domain.stats";
@@ -48,8 +49,9 @@ export const internalJobs = {
         // executing and still owns the row until it writes its terminal status.
         .where(and(notInArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]), lt(jobRuns.startedAt, cutoff)))
         .run();
-      ctx.progress(1, 2, "Pruning health checks");
+      ctx.progress(1, 2, "Pruning health checks and bandwidth history");
       pruneHealthChecks();
+      pruneBandwidthTests();
       return `Purged ${result.changes} job run(s) older than 7 days.`;
     },
     timeoutMs: 10 * MINUTE_MS,
@@ -60,6 +62,12 @@ export const internalJobs = {
     // Runs every minute. Anything past 5 is wedged, not slow.
     timeoutMs: 5 * MINUTE_MS,
     quiet: true,
+  },
+  "bandwidth-test": {
+    run: (ctx: JobContext) => runBandwidthTest(ctx),
+    // The test bounds itself at 90s. Past three minutes it is wedged on a
+    // socket that never closed, not measuring a very slow link.
+    timeoutMs: 3 * MINUTE_MS,
   },
   "playback-poll": {
     run: async (ctx: JobContext) => {
