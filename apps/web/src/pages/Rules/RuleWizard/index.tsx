@@ -254,9 +254,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {RULE_TYPES.map((t) => {
             const missing = t.requires === "omdb" && !omdbConfigured ? "Requires OMDB API key (Settings → AI)" : null;
             const seerrMissing =
-              t.requires === "seerr" && !seerrConfigured
-                ? "Requires Jellyseerr/Overseerr (Settings → Media Managers)"
-                : null;
+              t.requires === "seerr" && !seerrConfigured ? "Requires Seerr (Settings → Media Managers)" : null;
             const tmdbMissing =
               t.requires === "tmdb" && !tmdbConfigured ? "Requires TMDb API key (Settings → AI)" : null;
             const warn = missing || seerrMissing || tmdbMissing;

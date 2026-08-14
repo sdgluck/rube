@@ -29,7 +29,7 @@ export const ARRS_SERVICES: Record<string, ArrsServiceConfig> = {
   },
   seerr: {
     service: "seerr",
-    title: "Jellyseerr / Overseerr",
+    title: "Seerr",
     serviceName: "Seerr",
     urlLabel: "Seerr URL",
     urlPlaceholder: "http://localhost:5055",

@@ -1,6 +1,6 @@
 export const REQUIREMENT_LABELS: Record<string, string> = {
   omdb: "OMDb",
-  seerr: "Overseerr",
+  seerr: "Seerr",
   tmdb: "TMDb",
   llm: "an AI provider",
   mdblist: "MDBList",
@@ -12,7 +12,7 @@ export const REQUIREMENT_SETTINGS: Record<string, string> = {
   omdb: "/settings/databases/omdb",
   tmdb: "/settings/databases/tmdb",
   mdblist: "/settings/databases/mdblist",
-  // Overseerr lives under Arrs, not Databases — it's a request service.
+  // Seerr lives under Arrs, not Databases — it's a request service.
   seerr: "/settings/arrs/seerr",
   llm: "/settings/ai",
 };

@@ -130,7 +130,7 @@ export const RULE_TYPES: RuleType[] = [
   {
     value: "seerr_requests",
     label: "Seerr Requests",
-    description: "Group items requested via Jellyseerr/Overseerr.",
+    description: "Group items requested via Seerr.",
     requires: "seerr",
     producesExternalItems: true,
   },
