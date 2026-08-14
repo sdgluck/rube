@@ -74,6 +74,10 @@ const plexPlayerRawSchema = z
 
 const plexUserRawSchema = z
   .object({
+    // Plex serialises this as a string in XML-derived JSON; the playback
+    // history keys on it numerically, so coerce once here rather than at
+    // every call site.
+    id: z.coerce.number().optional(),
     title: z.string().optional(),
     thumb: z.string().optional(),
   })
@@ -106,6 +110,12 @@ const plexCollectionRefRawSchema = z.object({ id: z.coerce.number().optional(), 
 export const plexMetadataRawSchema = z
   .object({
     ratingKey: z.string().optional(),
+    /**
+     * Present only on `/status/sessions`. Identifies a live session for as long
+     * as it is open — Plex reuses the value across later, unrelated plays, so
+     * it identifies a session but never a play.
+     */
+    sessionKey: z.string().optional(),
     title: z.string().optional(),
     type: z.string().optional(),
     year: z.number().optional(),

@@ -127,8 +127,11 @@ export interface PlexHomeHub {
 
 export interface PlexSession {
   ratingKey?: string;
+  /** Plex's live-session identifier. Reused across unrelated plays over time. */
+  sessionKey?: string;
   parentRatingKey?: string;
   grandparentRatingKey?: string;
+  librarySectionId?: string;
   title: string;
   type: string;
   year?: number;
@@ -141,6 +144,8 @@ export interface PlexSession {
   duration?: number;
   viewOffset?: number;
   user: string;
+  /** Plex account id. Matches `plex_users.userId`; absent when Plex omits `User`. */
+  userId?: number;
   userThumb?: string;
   player: string;
   playerMachineId?: string;
