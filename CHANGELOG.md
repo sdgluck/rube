@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-08-14
+
+### Fixed
+
+- The bandwidth test failed immediately on every run, logging an error before any data was transferred. It now works end to end.
+
 ## [0.14.1] - 2026-08-14
 
 ### Fixed
