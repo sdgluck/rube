@@ -18,6 +18,9 @@ export default function Nav() {
           <NavLink to="/screenshots" className={({ isActive }) => (isActive ? styles.active : undefined)}>
             Screenshots
           </NavLink>
+          <NavLink to="/registry" className={({ isActive }) => (isActive ? styles.active : undefined)}>
+            Registry
+          </NavLink>
           <a href={GITHUB_URL} className={styles.github} target="_blank" rel="noreferrer">
             <GithubIcon size={16} />
             GitHub

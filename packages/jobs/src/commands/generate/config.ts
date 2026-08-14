@@ -1,58 +1,12 @@
-import { z } from "zod";
-import { smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
+import { ruleConfigSchema, type RuleConfig } from "@tinkerbell/contracts";
 import type { Rule } from "@tinkerbell/domain.rules";
 
-export const ruleConfigSchema = z.object({
-  prompt: z.string().optional(),
-  themes: z.array(z.string()).optional(),
-  customThemes: z.array(z.string()).optional(),
-  vibe: z.enum(["playful", "serious", "mixed"]).optional(),
-  nameStyle: z.enum(["short_punchy", "descriptive"]).optional(),
-  limit: z.number().optional(),
-  minItems: z.number().optional(),
-  sections: z.array(z.string()).optional(),
-  chart: z.string().optional(),
-  listId: z.string().optional(),
-  /** list_source: which external list provider supplies the items. */
-  listProvider: z.enum(["mdblist", "trakt", "imdb"]).optional(),
-  /** list_source / smart_filter: optional override for the generated collection name. */
-  collectionName: z.string().optional(),
-  /**
-   * smart_filter: recursive boolean tree of clauses translated to a Plex
-   * query string at run time. AND/OR groups can nest arbitrarily so any
-   * Plex smart-collection filter (including OR-within-field via repeated
-   * equality and OR groups via push/or/pop) round-trips cleanly.
-   */
-  smartFilter: smartFilterGroupSchema.optional(),
-  /** seerr-requests: status filter ("all" / "approved" / "pending" / …). */
-  filter: z.string().optional(),
-  pinToHomepage: z.boolean().optional(),
-  /**
-   * Pin only this many of the rule's collections per library, rotating a
-   * different set in on each run. Unset (or 0) pins every collection, which
-   * is the original behaviour.
-   */
-  pinRotationCount: z.number().int().positive().optional(),
-  /**
-   * When true, the personalize job also runs this rule per opted-in user,
-   * producing a `User:<name>`-labelled variant on their home shaped by their
-   * preferences (in addition to the shared collection this rule produces).
-   */
-  personalizable: z.boolean().optional(),
-  arr: z
-    .object({
-      enabled: z.boolean(),
-      monitor: z.boolean(),
-      searchOnAdd: z.boolean(),
-      qualityProfileId: z.number(),
-      rootFolderPath: z.string(),
-      maxAddsPerRun: z.number(),
-      dryRun: z.boolean(),
-    })
-    .optional(),
-});
-
-export type RuleConfig = z.infer<typeof ruleConfigSchema>;
+// The schema itself lives in `@tinkerbell/contracts` so the admin UI and the
+// registry build validate against the same definition the job parses with.
+// Re-exported here because every server-side call site already imports it
+// from this module.
+export { ruleConfigSchema };
+export type { RuleConfig };
 
 export const VIBE_HINTS: Record<NonNullable<RuleConfig["vibe"]>, string> = {
   playful: "Playful, witty, irreverent — names can be cheeky.",

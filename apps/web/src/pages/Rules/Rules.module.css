@@ -25,6 +25,21 @@
   animation: rowHighlightPulse 2.4s ease-out;
 }
 
+/* Provenance marker on rules that came from the public registry, so it's
+   obvious which rules an update prompt is talking about. */
+.registryBadge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  font: 600 9.5px/1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  vertical-align: middle;
+}
+
 .typeLabel {
   display: inline-flex;
   align-items: center;

@@ -28,17 +28,42 @@ export function getEnabledRules(): Rule[] {
   return db.select().from(rules).where(eq(rules.enabled, 1)).orderBy(rules.createdAt).all();
 }
 
-export function createRule(input: {
-  name: string;
-  type: string;
-  config: Record<string, unknown>;
-  enabled?: boolean;
-}): Rule {
+/** Where an imported rule came from. Null throughout for hand-made rules —
+ *  see the column comments in the schema for how these drive update prompts. */
+export interface RuleProvenance {
+  registryRuleSlug?: string | null;
+  registryPackSlug?: string | null;
+  registryVersion?: number | null;
+  registryConfigHash?: string | null;
+}
+
+export function createRule(
+  input: {
+    name: string;
+    type: string;
+    config: Record<string, unknown>;
+    enabled?: boolean;
+  } & RuleProvenance,
+): Rule {
   const id = randomUUID();
   const now = Date.now();
   const enabled = input.enabled === false ? 0 : 1;
+  const provenance = {
+    registryRuleSlug: input.registryRuleSlug ?? null,
+    registryPackSlug: input.registryPackSlug ?? null,
+    registryVersion: input.registryVersion ?? null,
+    registryConfigHash: input.registryConfigHash ?? null,
+  };
   db.insert(rules)
-    .values({ id, name: input.name, type: input.type, config: input.config, enabled, createdAt: now })
+    .values({
+      id,
+      name: input.name,
+      type: input.type,
+      config: input.config,
+      enabled,
+      createdAt: now,
+      ...provenance,
+    })
     .run();
   return {
     id,
@@ -47,6 +72,7 @@ export function createRule(input: {
     enabled,
     config: input.config,
     createdAt: now,
+    ...provenance,
     lastCollectionRatingKey: null,
     lastRunAt: null,
     lastRunDurationMs: null,
@@ -69,12 +95,14 @@ export function createRule(input: {
 
 export function updateRule(
   id: string,
-  updates: { name?: string; enabled?: number; config?: Record<string, unknown> },
+  updates: { name?: string; enabled?: number; config?: Record<string, unknown> } & RuleProvenance,
 ): void {
   const sets: Record<string, unknown> = {};
   if (updates.name !== undefined) sets.name = updates.name;
   if (updates.enabled !== undefined) sets.enabled = updates.enabled;
   if (updates.config !== undefined) sets.config = updates.config;
+  if (updates.registryVersion !== undefined) sets.registryVersion = updates.registryVersion;
+  if (updates.registryConfigHash !== undefined) sets.registryConfigHash = updates.registryConfigHash;
   if (Object.keys(sets).length === 0) return;
   db.update(rules).set(sets).where(eq(rules.id, id)).run();
 }

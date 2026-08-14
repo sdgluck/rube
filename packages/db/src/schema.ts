@@ -153,6 +153,20 @@ export const rules = sqliteTable("rules", {
     .$type<Record<string, string[]>>()
     .notNull()
     .default({}),
+  /**
+   * Provenance for rules imported from the public registry (tinkerbell.dev).
+   * All null for hand-made rules.
+   *
+   * `registryConfigHash` is the hash of the config *as imported*, after tag
+   * resolution and section injection. Comparing it against a hash of the
+   * live config is how the update check tells "untouched, safe to update"
+   * from "the user has edited this" — the latter is reported but never
+   * overwritten.
+   */
+  registryRuleSlug: text("registry_rule_slug"),
+  registryPackSlug: text("registry_pack_slug"),
+  registryVersion: integer("registry_version"),
+  registryConfigHash: text("registry_config_hash"),
 });
 
 /**

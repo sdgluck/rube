@@ -115,6 +115,12 @@ importers:
 
   apps/tinkerbell.dev:
     dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/plex-smart-filter':
+        specifier: workspace:*
+        version: link:../../packages/plex-smart-filter
       lucide-react:
         specifier: ^1.14.0
         version: 1.16.0(react@19.2.6)
@@ -529,6 +535,37 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/registry:
+    dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.rules':
+        specifier: workspace:*
+        version: link:../rules
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+      '@tinkerbell/plex-smart-filter':
+        specifier: workspace:*
+        version: link:../../packages/plex-smart-filter
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/rule-history:
     dependencies:
       '@tinkerbell/db':
@@ -674,6 +711,12 @@ importers:
       '@tinkerbell/overlays':
         specifier: workspace:*
         version: link:../overlays
+      '@tinkerbell/plex-smart-filter':
+        specifier: workspace:*
+        version: link:../plex-smart-filter
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
     devDependencies:
       typescript:
         specifier: ^7.0.2
@@ -932,6 +975,9 @@ importers:
       '@tinkerbell/arr':
         specifier: workspace:*
         version: link:../../clients/arr
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../core
@@ -965,6 +1011,9 @@ importers:
       '@tinkerbell/domain.preview':
         specifier: workspace:*
         version: link:../../domains/preview
+      '@tinkerbell/domain.registry':
+        specifier: workspace:*
+        version: link:../../domains/registry
       '@tinkerbell/domain.rule-progress':
         specifier: workspace:*
         version: link:../../domains/rule-progress

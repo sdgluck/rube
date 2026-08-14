@@ -6,16 +6,23 @@
     "#/*": "./src/*",
     "#pages/*": "./src/pages/*",
     "#components/*": "./src/components/*",
-    "#data/*": "./src/data/*"
+    "#data/*": "./src/data/*",
+    "#registry/*": "./src/registry/*"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm build:registry && vite",
+    "prebuild": "pnpm build:registry",
     "build": "vite build",
+    "postbuild": "node -e \"require('node:fs').copyFileSync('dist/index.html','dist/404.html')\"",
+    "build:registry": "node --experimental-strip-types scripts/build-registry.ts",
+    "test": "node --test --experimental-strip-types 'src/registry/**/*.test.ts'",
     "typecheck": "tsc",
     "capture": "node --experimental-strip-types harness/capture.ts",
     "serve": "node --experimental-strip-types harness/serve.ts"
   },
   "dependencies": {
+    "@tinkerbell/contracts": "workspace:*",
+    "@tinkerbell/plex-smart-filter": "workspace:*",
     "lucide-react": "^1.14.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -20,7 +20,26 @@ import {
   type PersistedTestResult,
 } from "@tinkerbell/domain.rule-progress";
 import { errorMessage } from "@tinkerbell/core";
+import { ruleConfigSchema } from "@tinkerbell/contracts";
 import { t, procedure } from "./_base.ts";
+
+/**
+ * Reject a config the generate job couldn't parse, without rewriting it.
+ *
+ * Validation is deliberately a check rather than a transform: `ruleConfigSchema`
+ * is a plain object schema, so parsing and storing its output would silently
+ * drop any key it doesn't know about — including keys written by a newer
+ * version of Tinkerbell that a rolled-back instance is now editing. Callers
+ * keep storing exactly what they sent; they just can't store nonsense.
+ */
+function assertValidRuleConfig(config: Record<string, unknown>): Record<string, unknown> {
+  const parsed = ruleConfigSchema.safeParse(config);
+  if (!parsed.success) {
+    const detail = parsed.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`).join("; ");
+    throw new Error(`Invalid rule config: ${detail}`);
+  }
+  return config;
+}
 
 const testControllers = new Map<string, AbortController>();
 const runControllers = new Map<string, AbortController>();
@@ -45,7 +64,7 @@ export const rulesRouter = t.router({
   create: t.procedure
     .input(z.object({ name: z.string(), type: z.string(), config: z.record(z.string(), z.unknown()) }))
     .mutation(({ input }) => {
-      return createRule(input);
+      return createRule({ ...input, config: assertValidRuleConfig(input.config) });
     }),
 
   update: t.procedure
@@ -61,6 +80,7 @@ export const rulesRouter = t.router({
       const { id, ...updates } = input;
       updateRule(id, {
         ...updates,
+        config: updates.config !== undefined ? assertValidRuleConfig(updates.config) : undefined,
         enabled: updates.enabled !== undefined ? (updates.enabled ? 1 : 0) : undefined,
       });
       return { ok: true };

@@ -23,4 +23,8 @@ export type RuleRow = {
   lastTestStatus: string | null;
   lastTestError: string | null;
   hasTestResult: boolean;
+  /** Set when the rule came from the public registry; null otherwise. */
+  registryRuleSlug?: string | null;
+  registryPackSlug?: string | null;
+  registryVersion?: number | null;
 };

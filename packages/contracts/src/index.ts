@@ -11,6 +11,30 @@
 export const RULE_CONCURRENCY_DEFAULT = 3;
 export const RULE_CONCURRENCY_MAX = 8;
 
+export { isTagField, RULE_TYPE_REQUIRES, RULE_TYPE_VALUES, ruleConfigSchema, TAG_FIELDS } from "./rule-config.ts";
+export type { RuleConfig, RuleRequirement, RuleTypeValue } from "./rule-config.ts";
+
+export {
+  DEFAULT_REGISTRY_URL,
+  REGISTRY_FORMAT_VERSION,
+  registryIndexSchema,
+  registryPackSchema,
+  registryRequirementSchema,
+  registryRuleSchema,
+} from "./registry.ts";
+export type {
+  ImportPlan,
+  ImportPlanItem,
+  RegistryIndex,
+  RegistryPack,
+  RegistryPackInput,
+  RegistryRequirement,
+  RegistryRule,
+  RegistryRuleInput,
+  RegistryUpdate,
+  ResolutionWarning,
+} from "./registry.ts";
+
 export type {
   Badge,
   BadgeShape,

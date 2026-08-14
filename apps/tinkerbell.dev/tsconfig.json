@@ -14,8 +14,9 @@
       "#/*": ["./src/*"],
       "#pages/*": ["./src/pages/*"],
       "#components/*": ["./src/components/*"],
-      "#data/*": ["./src/data/*"]
+      "#data/*": ["./src/data/*"],
+      "#registry/*": ["./src/registry/*"]
     }
   },
-  "include": ["src", "harness"]
+  "include": ["src", "harness", "scripts"]
 }

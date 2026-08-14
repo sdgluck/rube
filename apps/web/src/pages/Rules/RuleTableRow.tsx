@@ -97,7 +97,14 @@ export default function RuleTableRow({
             }}
           />
         </td>
-        <td data-cell="title">{rule.name}</td>
+        <td data-cell="title">
+          {rule.name}
+          {rule.registryPackSlug && (
+            <span className={styles.registryBadge} title={`Imported from the "${rule.registryPackSlug}" registry pack`}>
+              registry
+            </span>
+          )}
+        </td>
         <td data-cell="pill">
           <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
         </td>
