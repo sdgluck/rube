@@ -25,6 +25,9 @@ export {
 } from "./rule-config.ts";
 export type { RuleConfig, RuleRequirement, RuleTypeValue } from "./rule-config.ts";
 
+export { fieldDef, fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
+export type { SmartFilterFieldDef, SmartFilterFieldKind } from "./smart-filter-fields.ts";
+
 export {
   DEFAULT_REGISTRY_URL,
   REGISTRY_FORMAT_VERSION,

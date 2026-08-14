@@ -346,10 +346,6 @@
   box-shadow: var(--input-focus-ring);
 }
 
-.smartSelectGrow {
-  flex: 1;
-}
-
 /* Each level of nesting spends 18px of indent plus a 26px join slot, so by
    depth 3 the controls have to give ground rather than push the row past the
    drawer's edge. These are the floors below which they stop shrinking — sized
@@ -468,6 +464,19 @@
 .smartChipPicker:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* Wraps the not-yet-committed value while it's being entered. Typed controls
+   (dates, durations) are several inputs wide, so this keeps them on one line
+   inside the chip field. */
+.smartChipPending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.smartChipPending .smartChipPicker {
+  min-width: 0;
 }
 
 .smartRemoveBtn {

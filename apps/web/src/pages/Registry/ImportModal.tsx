@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { producesManyCollections } from "@tinkerbell/contracts";
+import { fieldLabel, producesManyCollections } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
 import ToggleSwitch from "#components/ToggleSwitch";
@@ -253,10 +253,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
                   <ul className={styles.warnList}>
                     {warnings.map((w, i) => (
                       <li key={i}>
-                        <code>
-                          {w.field} = {w.value}
-                        </code>{" "}
-                        in {w.sectionTitle}
+                        {fieldLabel(w.field)} <strong>{w.value}</strong> in {w.sectionTitle}
                       </li>
                     ))}
                   </ul>

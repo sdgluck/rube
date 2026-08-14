@@ -1,3 +1,5 @@
+import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import { describeCondition } from "#components/smart-filter/format.ts";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
 import { typeProducesManyCollections } from "./RuleWizard/rule-types.ts";
 import styles from "./Rules.module.css";
@@ -12,6 +14,42 @@ function listSlug(listId: unknown): string {
   } catch {
     return raw;
   }
+}
+
+/** Every leaf in a smart_filter tree, in document order. */
+export function smartFilterLeaves(value: unknown): SmartFilterLeaf[] {
+  const root = value as SmartFilterGroup | undefined;
+  if (!root || root.kind !== "group") return [];
+  const leaves: SmartFilterLeaf[] = [];
+  const walk = (node: SmartFilterNode) => {
+    if (node.kind === "leaf") leaves.push(node);
+    else node.children.forEach(walk);
+  };
+  walk(root);
+  return leaves;
+}
+
+/**
+ * One line of English for a smart_filter tree, for the rules table's Config
+ * column. The column is narrow, so only the leading clauses are spelled out
+ * and the rest are counted.
+ *
+ * `resolveTag` turns a per-server tag key into its name where the caller has
+ * the lookup to hand; without it the key shows through.
+ */
+export function summarizeSmartFilterTree(
+  value: unknown,
+  resolveTag?: (field: string, value: string) => string,
+): string {
+  const root = value as SmartFilterGroup | undefined;
+  const leaves = smartFilterLeaves(value);
+  if (leaves.length === 0) return "no filters";
+
+  const shown = leaves
+    .slice(0, 2)
+    .map((l) => describeCondition(l.field, l.op, [l.value], resolveTag ? [resolveTag(l.field, l.value)] : undefined));
+  const rest = leaves.length - shown.length;
+  return shown.join(root?.combinator === "any" ? " or " : " and ") + (rest > 0 ? ` +${rest} more` : "");
 }
 
 export const RULE_TYPES = [
@@ -82,10 +120,10 @@ export const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => stri
   imdb_chart: (c) => IMDB_CHART_LABELS[c.chart as string] || (c.chart as string) || "—",
   imdb_list: (c) => (c.listId as string) || "—",
   list_source: (c) => `List: ${listSlug(c.listId)}`,
-  smart_filter: (c) => {
-    const filters = (c.filters as Array<{ field: string; op: string; value: string }> | undefined) ?? [];
-    return filters.length === 0 ? "no filters" : `${filters.length} clause${filters.length !== 1 ? "s" : ""}`;
-  },
+  // The wizard writes `smartFilter` as an AND/OR tree. This read `c.filters`
+  // — a flat array that no longer exists — so every smart_filter rule in the
+  // list claimed to have no filters.
+  smart_filter: (c) => summarizeSmartFilterTree(c.smartFilter),
   rt_top_rated: (c) => `Top ${c.limit ?? 100} items`,
   seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
 };

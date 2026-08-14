@@ -3,6 +3,7 @@ import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import Modal from "#components/Modal";
+import { describeCondition } from "#components/smart-filter/format.ts";
 import styles from "./RuleWizard.module.css";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
@@ -45,9 +46,10 @@ export {
 } from "./types.ts";
 
 /**
- * Render a compact one-line summary of a smart_filter tree for the
- * review pane. Leaves render as `field op value`; groups join their
- * children with the appropriate connector and bracket when nested.
+ * Render a compact one-line summary of a smart_filter tree for the review
+ * pane, in the same English the editor uses — "Genre is Horror AND Year is at
+ * least 2000". Groups join their children with the appropriate connector and
+ * bracket when nested.
  */
 function summarizeSmartFilter(group: SmartFilterGroup): string {
   if (group.children.length === 0) return EMPTY;
@@ -55,7 +57,9 @@ function summarizeSmartFilter(group: SmartFilterGroup): string {
 }
 
 function summarizeNode(node: SmartFilterNode, isRoot: boolean): string {
-  if (node.kind === "leaf") return `${node.field} ${node.op} ${node.value || "?"}`;
+  // Rules store tag values as display names already, so no lookup is needed
+  // to render them — unlike the collection editor's per-server keys.
+  if (node.kind === "leaf") return describeCondition(node.field, node.op, [node.value]);
   const conn = node.combinator === "all" ? " AND " : " OR ";
   const inside = node.children.map((c) => summarizeNode(c, false)).join(conn);
   return isRoot ? inside : `(${inside})`;
@@ -132,6 +136,17 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     [sections, requiredSectionType],
   );
   const sectionsLocked = form.type === "imdb_chart" && !!requiredSectionType;
+
+  /**
+   * The section whose tag values populate the smart-filter pickers. A rule
+   * can span several libraries (or all of them) and stores tag *names*, not
+   * per-server keys, so any one representative library gives the right list
+   * of genres, studios and so on — prefer one the user actually picked.
+   */
+  const tagSectionId = useMemo(() => {
+    const selected = availableSections.find((s) => form.sections.includes(s.title));
+    return (selected ?? availableSections[0])?.key ?? null;
+  }, [availableSections, form.sections]);
 
   useEffect(() => {
     if (form.type !== "imdb_chart" || !requiredSectionType || sections.length === 0) return;
@@ -277,7 +292,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   function renderSourceStep() {
     const SourceComponent = SOURCE_STEPS[form.type];
     if (!SourceComponent) return null;
-    return <SourceComponent form={form} setForm={setForm} config={{ seerrConfigured }} />;
+    return <SourceComponent form={form} setForm={setForm} config={{ seerrConfigured }} tagSectionId={tagSectionId} />;
   }
 
   function renderScopeStep() {

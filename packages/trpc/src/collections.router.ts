@@ -114,6 +114,41 @@ export const collectionsRouter = t.router({
       return client.getFilterFieldValues(input.sectionId, input.field);
     }),
 
+  /**
+   * Key → title for several tag fields at once, as one `{ field: { key: title } }`
+   * map. Callers that render many filters at once (the rules list) resolve
+   * every clause from a single query instead of one per clause.
+   *
+   * With no `sectionId` the maps are merged across every section, because a
+   * list of rules spans libraries and Plex tag keys are unique server-wide.
+   * Only ask for small facets this way — `actor` on a large library is tens of
+   * thousands of rows.
+   */
+  filterFieldValuesBatch: procedure
+    .input(z.object({ sectionId: z.string().optional(), fields: z.array(z.string()).max(12) }))
+    .query(async ({ input }) => {
+      const client = getPlexClient();
+      const sectionIds = input.sectionId ? [input.sectionId] : (await client.getSections()).map((s) => s.key);
+      const out: Record<string, Record<string, string>> = {};
+
+      await Promise.all(
+        [...new Set(input.fields)].flatMap((field) =>
+          sectionIds.map(async (sectionId) => {
+            try {
+              const values = await client.getFilterFieldValues(sectionId, field);
+              const bucket = (out[field] ??= {});
+              for (const v of values) bucket[v.key] = v.title;
+            } catch {
+              // A facet Plex doesn't expose for this section type 404s. Falling
+              // back to the raw value beats failing the whole query.
+              out[field] ??= {};
+            }
+          }),
+        ),
+      );
+      return out;
+    }),
+
   updateSmartFilters: t.procedure
     .input(z.object({ ratingKey: z.string(), contentUri: z.string() }))
     .mutation(async ({ input }) => {

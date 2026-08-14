@@ -21,7 +21,15 @@ import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
 import BulkActionsBar from "./BulkActionsBar";
 import BulkEditModal from "./BulkEditModal";
-import { EMPTY_FORM, defaultLimitForType, typeHasLimit, typeHasMinItems, typeHasOptionalLimit } from "./constants";
+import { useTagLabels } from "#components/smart-filter/TagValueSelect.tsx";
+import {
+  EMPTY_FORM,
+  defaultLimitForType,
+  smartFilterLeaves,
+  typeHasLimit,
+  typeHasMinItems,
+  typeHasOptionalLimit,
+} from "./constants";
 import RuleTableRow from "./RuleTableRow";
 import styles from "./Rules.module.css";
 import RulesToolbar from "./Toolbar";
@@ -138,6 +146,19 @@ export default function Rules() {
     });
     return out;
   }, [allRules, search, typeFilter, enabledFilter, sortKey, sortDir]);
+
+  // Smart-filter rules imported from Plex store per-server tag keys, so the
+  // Config column would otherwise read "Genre is 92". One lookup covers every
+  // row — the tag fields used across all of them, resolved together.
+  const smartFilterTagFields = useMemo(
+    () =>
+      allRules
+        .filter((r) => r.type === "smart_filter")
+        .flatMap((r) => smartFilterLeaves((r.config as { smartFilter?: unknown } | null)?.smartFilter))
+        .map((l) => l.field),
+    [allRules],
+  );
+  const resolveTag = useTagLabels(smartFilterTagFields);
 
   function getExportData() {
     return allRules.map((r) => ({
@@ -671,6 +692,7 @@ export default function Rules() {
                     onRun={() => handleRun(rule)}
                     onCancelRun={handleCancelRun}
                     onTest={() => handleTest(rule)}
+                    resolveTag={resolveTag}
                     onCancelTest={handleCancelTest}
                     onEdit={() => startEdit(rule)}
                     onDuplicate={() => handleDuplicate(rule)}

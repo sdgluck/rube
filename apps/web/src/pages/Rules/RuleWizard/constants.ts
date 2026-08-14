@@ -1,4 +1,4 @@
-import type { AiVibe, AiNameStyle, SmartFilterOp } from "./types.ts";
+import type { AiVibe, AiNameStyle } from "./types.ts";
 
 export const VIBES: { value: AiVibe; label: string }[] = [
   { value: "playful", label: "Playful" },
@@ -34,34 +34,6 @@ export const SEERR_FILTERS = [
 export const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(
   SEERR_FILTERS.map((f) => [f.value, f.label]),
 );
-
-/**
- * Plex smart-filter fields the wizard exposes. Far from exhaustive — Plex
- * supports many more — but covers the common 80% and matches what the
- * Plex Smart Collections importer can round-trip cleanly. New fields can
- * be added here as the importer's parser learns to handle them.
- */
-export const SMART_FILTER_FIELDS: { value: string; label: string }[] = [
-  { value: "genre", label: "Genre" },
-  { value: "year", label: "Year" },
-  { value: "studio", label: "Studio" },
-  { value: "country", label: "Country" },
-  { value: "contentRating", label: "Content rating" },
-  { value: "actor", label: "Actor" },
-  { value: "director", label: "Director" },
-  { value: "label", label: "Label" },
-  { value: "addedAt", label: "Added at" },
-];
-
-export const SMART_FILTER_OPS: { value: SmartFilterOp; label: string }[] = [
-  { value: "=", label: "contains" },
-  { value: "==", label: "is exactly" },
-  { value: "!=", label: "is not" },
-  { value: ">", label: ">" },
-  { value: ">=", label: "≥" },
-  { value: "<", label: "<" },
-  { value: "<=", label: "≤" },
-];
 
 /**
  * Available `list_source` providers. Marked `disabled` until their backing

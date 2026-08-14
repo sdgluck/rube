@@ -1,4 +1,4 @@
-import { isGroupedRuleType, producesManyCollections, type RuleTypeValue } from "@tinkerbell/contracts";
+import { fieldLabel, isGroupedRuleType, producesManyCollections, type RuleTypeValue } from "@tinkerbell/contracts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import { hasSourceStep } from "./sources/index.ts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
@@ -364,7 +364,7 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
     if (form.collectionName.trim()) return form.collectionName.trim();
     const head = firstLeaf(form.smartFilter);
     if (!head) return "Smart Filter";
-    return head.value.trim() ? `${head.field}: ${head.value.trim()}` : "Smart Filter";
+    return head.value.trim() ? `${fieldLabel(head.field)}: ${head.value.trim()}` : "Smart Filter";
   }
   if (form.type === "seerr_requests") return `Seerr — ${SEERR_FILTER_LABELS[form.filter] || "Requests"}`;
   if (form.type === "ai_prompt") {

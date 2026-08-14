@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { EMPTY } from "#/format";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "#components/ToggleSwitch";
-import { CONFIG_SUMMARY, TYPE_BADGE, TYPE_LABELS } from "./constants";
+import { CONFIG_SUMMARY, summarizeSmartFilterTree, TYPE_BADGE, TYPE_LABELS } from "./constants";
 import RuleDetailRow from "./DetailRow";
 import RulePreviewRow from "./RulePreviewRow";
 import StatusCell from "./StatusCell";
@@ -33,6 +33,8 @@ interface RuleTableRowProps {
   onDuplicate: () => void;
   onDelete: () => void;
   onDetailCleared: () => void;
+  /** Resolves per-server tag keys to names for the Config summary. */
+  resolveTag?: (field: string, value: string) => string;
 }
 
 export default function RuleTableRow({
@@ -59,10 +61,12 @@ export default function RuleTableRow({
   onDuplicate,
   onDelete,
   onDetailCleared,
+  resolveTag,
 }: RuleTableRowProps) {
   const navigate = useNavigate();
   const c = rule.config ?? {};
-  const summary = CONFIG_SUMMARY[rule.type]?.(c);
+  const summary =
+    rule.type === "smart_filter" ? summarizeSmartFilterTree(c.smartFilter, resolveTag) : CONFIG_SUMMARY[rule.type]?.(c);
   const sections = (c as { sections?: string[] }).sections;
   const parts: string[] = [];
   if (summary) parts.push(summary);

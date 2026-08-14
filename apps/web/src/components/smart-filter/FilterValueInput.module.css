@@ -1,0 +1,45 @@
+/* Layout only — the actual input chrome comes from whichever editor renders
+   the control, passed down as `inputClassName`, so the shared value input
+   looks native in both the collection drawer and the rule wizard. */
+
+/* A real flex-basis, not `flex: 1` — with a zero basis the composite controls
+   only get the row's leftover space, so the field and operator selects keep
+   their full content width and the unit select truncates to "days a…". Given
+   a basis, the row shares the shortfall between all three. */
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 11rem;
+  min-width: 0;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Two controls share the slot a single value input normally gets, so both have
+   to be allowed below the editors' own min-widths — hence the descendant
+   selectors, which outrank the single-class rules they're composed with.
+   Without this the unit select is pushed past the drawer's right edge, taking
+   the row's remove button with it. */
+.wrap .num {
+  flex: 0 1 3.25rem;
+  min-width: 0;
+}
+
+/* The unit takes the slack: a truncated "days a…" is worse than a narrow
+   number box, since the number is legible at almost any width. */
+.wrap .unit {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.suffix {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}

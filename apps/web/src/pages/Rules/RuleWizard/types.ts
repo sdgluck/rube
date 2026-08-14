@@ -83,4 +83,11 @@ export interface SourceStepProps {
   config?: {
     seerrConfigured?: boolean;
   };
+  /**
+   * A Plex section to read tag values (genres, studios, …) from when
+   * populating pickers. Rules can target several sections, or all of them —
+   * this is whichever one is representative, not part of the saved rule.
+   * Null when Plex hasn't been reached yet.
+   */
+  tagSectionId?: string | null;
 }

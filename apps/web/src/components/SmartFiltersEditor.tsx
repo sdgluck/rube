@@ -8,8 +8,13 @@ import {
   type SmartFilterNode,
   type SmartFilterOp,
 } from "@tinkerbell/plex-smart-filter";
+import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
+import FilterValueInput from "#components/smart-filter/FilterValueInput.tsx";
+import { useTagOptions, tagTitle } from "#components/smart-filter/TagValueSelect.tsx";
+import { opsFor, opLabel, withFallbackOp } from "#components/smart-filter/ops.ts";
+import { describeCondition, formatFilterValue } from "#components/smart-filter/format.ts";
 import shared from "#/styles/shared.module.css";
 import styles from "./SmartFiltersEditor.module.css";
 
@@ -28,90 +33,13 @@ const SORT_FIELDS = [
   "viewCount",
 ];
 
-const TAG_FIELDS = new Set([
-  "label",
-  "genre",
-  "director",
-  "actor",
-  "writer",
-  "studio",
-  "country",
-  "contentRating",
-  "resolution",
-  "collection",
-]);
+/** Field names offered in the picker, labelled and typed by the shared table. */
+const ALL_KNOWN_FIELDS = SMART_FILTER_FIELD_DEFS.filter((d) => !d.advanced)
+  .map((d) => d.field)
+  .sort();
 
-const NUMERIC_FIELDS = new Set([
-  "year",
-  "decade",
-  "rating",
-  "audienceRating",
-  "userRating",
-  "duration",
-  "originallyAvailableAt",
-  "addedAt",
-  "lastViewedAt",
-  "viewCount",
-  "unviewedLeafCount",
-]);
-
-const TAG_OPS: { op: SmartFilterOp; label: string }[] = [
-  { op: "=", label: "is" },
-  { op: "!=", label: "is not" },
-];
-
-const NUMERIC_OPS: { op: SmartFilterOp; label: string }[] = [
-  { op: "=", label: "=" },
-  { op: "!=", label: "≠" },
-  { op: ">=", label: "≥" },
-  { op: "<=", label: "≤" },
-  { op: ">", label: ">" },
-  { op: "<", label: "<" },
-];
-
-const STRING_OPS: { op: SmartFilterOp; label: string }[] = [
-  { op: "=", label: "contains" },
-  { op: "==", label: "is" },
-  { op: "!=", label: "is not" },
-];
-
-const FIELD_LABELS: Record<string, string> = {
-  label: "Label",
-  genre: "Genre",
-  director: "Director",
-  actor: "Actor",
-  writer: "Writer",
-  studio: "Studio",
-  country: "Country",
-  contentRating: "Content Rating",
-  resolution: "Resolution",
-  collection: "Collection",
-  year: "Year",
-  decade: "Decade",
-  rating: "Rating",
-  audienceRating: "Audience Rating",
-  userRating: "User Rating",
-  duration: "Duration",
-  originallyAvailableAt: "Release Date",
-  addedAt: "Date Added",
-  lastViewedAt: "Last Played",
-  unviewedLeafCount: "Unplayed Episodes",
-  viewCount: "Plays",
-  titleSort: "Title",
-  mediaHeight: "Resolution",
-  mediaBitrate: "Bitrate",
-};
-
-function fieldLabel(field: string): string {
-  return FIELD_LABELS[field] || field.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
-}
-
-const ALL_KNOWN_FIELDS = [...TAG_FIELDS, ...NUMERIC_FIELDS].sort();
-
-function getOps(field: string): { op: SmartFilterOp; label: string }[] {
-  if (NUMERIC_FIELDS.has(field)) return NUMERIC_OPS;
-  if (TAG_FIELDS.has(field)) return TAG_OPS;
-  return STRING_OPS;
+function isTagField(field: string): boolean {
+  return fieldKind(field) === "tag";
 }
 
 function extractSectionId(basePath: string): string | null {
@@ -479,14 +407,13 @@ function LeafRow({
   onChange: (next: SmartFilterLeaf) => void;
   onRemove: () => void;
 }) {
-  const opOptions = withFallbackOp(getOps(leaf.field), leaf.op);
-  const isTag = TAG_FIELDS.has(leaf.field);
+  const opOptions = withFallbackOp(opsFor(leaf.field), leaf.op);
 
   const updateField = (field: string) => {
-    const oldNumeric = NUMERIC_FIELDS.has(leaf.field);
-    const newNumeric = NUMERIC_FIELDS.has(field);
-    const op: SmartFilterOp = oldNumeric !== newNumeric ? "=" : leaf.op;
-    onChange({ ...leaf, field, op, value: "" });
+    // An operator only survives a field change if it still means something for
+    // the new field's kind — "contains" makes no sense once the field is a date.
+    const op: SmartFilterOp = opsFor(field).some((o) => o.op === leaf.op) ? leaf.op : "=";
+    onChange({ ...leaf, field, op, value: defaultValueFor(field) });
   };
 
   return (
@@ -512,21 +439,14 @@ function LeafRow({
           </option>
         ))}
       </select>
-      {isTag ? (
-        <TagValueSelect
-          field={leaf.field}
-          value={leaf.value}
-          sectionId={sectionId}
-          onChange={(v) => onChange({ ...leaf, value: v })}
-        />
-      ) : (
-        <input
-          type="text"
-          className={styles.smartInput}
-          value={leaf.value}
-          onChange={(e) => onChange({ ...leaf, value: e.target.value })}
-        />
-      )}
+      <FilterValueInput
+        field={leaf.field}
+        value={leaf.value}
+        sectionId={sectionId}
+        inputClassName={styles.smartInput}
+        selectClassName={styles.smartSelect}
+        onChange={(v) => onChange({ ...leaf, value: v })}
+      />
       <button className={styles.smartRemoveBtn} onClick={onRemove} title="Remove" aria-label="Remove filter">
         ×
       </button>
@@ -534,12 +454,9 @@ function LeafRow({
   );
 }
 
-function withFallbackOp(
-  ops: { op: SmartFilterOp; label: string }[],
-  current: SmartFilterOp,
-): { op: SmartFilterOp; label: string }[] {
-  if (ops.some((o) => o.op === current)) return ops;
-  return [...ops, { op: current, label: current }];
+/** Booleans have no empty state — an unset Yes/No select would read as "No". */
+function defaultValueFor(field: string): string {
+  return fieldKind(field) === "boolean" ? "1" : "";
 }
 
 // ─── Multi-value chip row ────────────────────────────────────────────────────
@@ -564,27 +481,22 @@ function MultiValueRow({
   onChange: (field: string, op: SmartFilterOp, values: string[]) => void;
   onRemove: () => void;
 }) {
-  const opOptions = withFallbackOp(getOps(field), op);
-  const isTag = TAG_FIELDS.has(field);
+  const opOptions = withFallbackOp(opsFor(field), op);
+  const isTag = isTagField(field);
 
-  const fieldQuery = trpc.collections.filterFieldValues.useQuery(
-    { sectionId: sectionId!, field },
-    { enabled: !!sectionId && isTag, staleTime: 5 * 60_000 },
-  );
-
-  const options = fieldQuery.data ?? [];
-  const labelFor = (v: string) => options.find((o) => o.key === v)?.title ?? v;
+  const options = useTagOptions(sectionId, field);
+  const labelFor = (v: string) => (isTag ? tagTitle(options, v) : formatFilterValue(field, v));
 
   const [adding, setAdding] = useState(false);
   const [pending, setPending] = useState("");
 
   const updateField = (nextField: string) => {
-    const oldNumeric = NUMERIC_FIELDS.has(field);
-    const newNumeric = NUMERIC_FIELDS.has(nextField);
-    if (oldNumeric !== newNumeric) {
+    // Values are only meaningful for the field they were picked for — a list
+    // of genre keys means nothing once the field is Year.
+    if (fieldKind(nextField) !== fieldKind(field)) {
       onChange(nextField, "=", []);
     } else {
-      onChange(nextField, op, values);
+      onChange(nextField, opsFor(nextField).some((o) => o.op === op) ? op : "=", values);
     }
     setAdding(false);
     setPending("");
@@ -666,21 +578,18 @@ function MultiValueRow({
                 ))}
             </select>
           ) : (
-            <input
-              autoFocus
-              type="text"
-              className={styles.smartChipPicker}
+            // Non-tag fields (or a tag Plex has no values for) get the typed
+            // control, committed on blur or Enter so a multi-part control like
+            // the date picker isn't committed halfway through being set.
+            <PendingValue
+              field={field}
               value={pending}
-              onChange={(e) => setPending(e.target.value)}
-              onBlur={() => addValue(pending)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addValue(pending);
-                } else if (e.key === "Escape") {
-                  setAdding(false);
-                  setPending("");
-                }
+              sectionId={sectionId}
+              onChange={setPending}
+              onCommit={() => addValue(pending)}
+              onCancel={() => {
+                setAdding(false);
+                setPending("");
               }}
             />
           )
@@ -697,43 +606,61 @@ function MultiValueRow({
   );
 }
 
-// ─── Tag value combobox (single-value variant) ───────────────────────────────
+// ─── Uncommitted chip value ──────────────────────────────────────────────────
 
-function TagValueSelect({
+/**
+ * A value being typed into a chip row, held apart from the committed list.
+ *
+ * Blur is the commit signal, but a date or duration control is several focusable
+ * parts — tabbing from the number to the unit fires focusout on the wrapper, so
+ * a bubbled blur only commits when focus has genuinely left the whole control.
+ */
+function PendingValue({
   field,
   value,
   sectionId,
   onChange,
+  onCommit,
+  onCancel,
 }: {
   field: string;
   value: string;
   sectionId: string | null;
   onChange: (value: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
 }) {
-  const fieldQuery = trpc.collections.filterFieldValues.useQuery(
-    { sectionId: sectionId!, field },
-    { enabled: !!sectionId && TAG_FIELDS.has(field), staleTime: 5 * 60_000 },
-  );
+  const wrapRef = useRef<HTMLSpanElement>(null);
 
-  const options = fieldQuery.data ?? [];
-
-  if (options.length === 0) {
-    return <input type="text" className={styles.smartInput} value={value} onChange={(e) => onChange(e.target.value)} />;
-  }
+  useEffect(() => {
+    wrapRef.current?.querySelector<HTMLElement>("input, select")?.focus();
+  }, []);
 
   return (
-    <select
-      className={`${styles.smartSelect} ${styles.smartSelectGrow}`}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+    <span
+      ref={wrapRef}
+      className={styles.smartChipPending}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onCommit();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onCommit();
+        } else if (e.key === "Escape") {
+          onCancel();
+        }
+      }}
     >
-      {!options.some((o) => o.key === value) && value && <option value={value}>{value}</option>}
-      {options.map((o) => (
-        <option key={o.key} value={o.key}>
-          {o.title}
-        </option>
-      ))}
-    </select>
+      <FilterValueInput
+        field={field}
+        value={value}
+        sectionId={sectionId}
+        inputClassName={styles.smartChipPicker}
+        selectClassName={styles.smartChipPicker}
+        onChange={onChange}
+      />
+    </span>
   );
 }
 
@@ -764,10 +691,6 @@ export interface SmartSummary {
   sectionId: string | null;
 }
 
-function opLabel(field: string, op: SmartFilterOp): string {
-  return getOps(field).find((o) => o.op === op)?.label ?? op;
-}
-
 function summarizeGroup(group: SmartFilterGroup, isRoot: boolean): SmartSummaryCondition[] {
   const buckets = bucketChildren(group);
   const out: SmartSummaryCondition[] = [];
@@ -782,7 +705,7 @@ function summarizeGroup(group: SmartFilterGroup, isRoot: boolean): SmartSummaryC
           op: c.op,
           opLabel: opLabel(c.field, c.op),
           values: [c.value],
-          isTag: TAG_FIELDS.has(c.field),
+          isTag: isTagField(c.field),
         });
       } else {
         const inner = summarizeGroup(c, false);
@@ -806,7 +729,7 @@ function summarizeGroup(group: SmartFilterGroup, isRoot: boolean): SmartSummaryC
         op: b.op,
         opLabel: opLabel(b.field, b.op),
         values: b.leaves.map((l) => l.value),
-        isTag: TAG_FIELDS.has(b.field),
+        isTag: isTagField(b.field),
       });
     }
   }
@@ -815,8 +738,7 @@ function summarizeGroup(group: SmartFilterGroup, isRoot: boolean): SmartSummaryC
 
 function conditionText(c: SmartSummaryCondition): string {
   if (c.kind === "group") return c.text;
-  const vals = c.values.map((v) => v || "?").join(", ");
-  return `${c.fieldLabel} ${c.opLabel} ${vals}`;
+  return describeCondition(c.field, c.op, c.values);
 }
 
 export function summarizeSmartContent(content: string): SmartSummary | null {
@@ -837,50 +759,6 @@ export function summarizeSmartContent(content: string): SmartSummary | null {
     tagFields,
     sectionId: extractSectionId(envelope.basePath),
   };
-}
-
-// ─── Value formatting ───────────────────────────────────────────────────────
-
-const DATE_FIELDS = new Set(["originallyAvailableAt", "addedAt", "lastViewedAt"]);
-const DURATION_FIELDS = new Set(["duration"]);
-
-/** Plex relative date offset: -7d, -2w, -3mon, -20y. */
-const RELATIVE_DATE = /^-(\d+)(d|w|mon|y)$/;
-
-function formatRelativeDate(value: string): string | null {
-  const m = value.match(RELATIVE_DATE);
-  if (!m) return null;
-  const n = Number(m[1]);
-  const unit = m[2];
-  const d = new Date();
-  if (unit === "d") d.setDate(d.getDate() - n);
-  else if (unit === "w") d.setDate(d.getDate() - n * 7);
-  else if (unit === "mon") d.setMonth(d.getMonth() - n);
-  else d.setFullYear(d.getFullYear() - n);
-  return unit === "y" ? String(d.getFullYear()) : d.toISOString().slice(0, 10);
-}
-
-function formatDuration(value: string): string {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return value;
-  const totalMinutes = Math.round(n / 60_000);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h && m) return `${h}h ${m}m`;
-  if (h) return `${h}h`;
-  return `${m}m`;
-}
-
-/** Format a non-tag filter value (tag values resolve via the network). */
-function formatScalarValue(field: string, value: string): string {
-  if (!value) return "?";
-  if (DATE_FIELDS.has(field)) {
-    return formatRelativeDate(value) ?? value;
-  }
-  if (DURATION_FIELDS.has(field)) {
-    return formatDuration(value);
-  }
-  return value;
 }
 
 // ─── Summary component ──────────────────────────────────────────────────────
@@ -924,25 +802,20 @@ export function SmartFilterSummary({ content, maxChips = 4, onEdit }: SummaryPro
 }
 
 function ConditionChip({ condition, sectionId }: { condition: SmartSummaryCondition; sectionId: string | null }) {
-  // Hook called unconditionally; gated by `enabled`. Same query key as
-  // MultiValueRow uses, so tRPC dedupes the request.
+  // Hook called unconditionally; gated inside on an empty field. Same query
+  // key as MultiValueRow uses, so tRPC dedupes the request.
   const tagField = condition.kind === "leaf" && condition.isTag ? condition.field : "";
-  const valuesQuery = trpc.collections.filterFieldValues.useQuery(
-    { sectionId: sectionId ?? "", field: tagField },
-    { enabled: !!sectionId && !!tagField, staleTime: 5 * 60_000 },
-  );
+  const options = useTagOptions(sectionId, tagField);
 
-  let text: string;
-  if (condition.kind === "group") {
-    text = condition.text;
-  } else if (condition.isTag) {
-    const opts = valuesQuery.data ?? [];
-    const vals = condition.values.map((v) => opts.find((o) => o.key === v)?.title ?? v ?? "?").join(", ");
-    text = `${condition.fieldLabel} ${condition.opLabel} ${vals}`;
-  } else {
-    const vals = condition.values.map((v) => formatScalarValue(condition.field, v)).join(", ");
-    text = `${condition.fieldLabel} ${condition.opLabel} ${vals}`;
-  }
+  const text =
+    condition.kind === "group"
+      ? condition.text
+      : describeCondition(
+          condition.field,
+          condition.op,
+          condition.values,
+          condition.isTag ? condition.values.map((v) => tagTitle(options, v)) : undefined,
+        );
 
   return (
     <span className={styles.smartSummaryChip} title={text}>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
+import { fieldKind, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 
 /**
  * The canonical shape of `rules.config`.
@@ -202,27 +203,14 @@ export const RULE_TYPE_REQUIRES: Partial<Record<RuleTypeValue, RuleRequirement>>
  * crossing an instance boundary (import, export, the registry) has to
  * translate these via `/library/sections/:id/:field`.
  *
- * Mirrors `TAG_FIELDS` in `apps/web/src/components/SmartFiltersEditor.tsx`,
- * plus the `show.`-prefixed advanced variants Plex exposes for TV sections.
+ * Derived from the field table in `./smart-filter-fields.ts` so there is
+ * only one place to add a field. Scope-qualified variants (`show.genre`,
+ * `episode.genre`) aren't listed but are recognised by `isTagField`.
  */
-export const TAG_FIELDS: readonly string[] = [
-  "label",
-  "genre",
-  "director",
-  "actor",
-  "writer",
-  "studio",
-  "country",
-  "contentRating",
-  "resolution",
-  "collection",
-  "show.genre",
-  "show.studio",
-  "show.network",
-  "show.collection",
-  "show.contentRating",
-];
+export const TAG_FIELDS: readonly string[] = SMART_FILTER_FIELD_DEFS.filter((d) => d.kind === "tag").map(
+  (d) => d.field,
+);
 
 export function isTagField(field: string): boolean {
-  return TAG_FIELDS.includes(field);
+  return fieldKind(field) === "tag";
 }
