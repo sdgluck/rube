@@ -430,6 +430,37 @@ export const stressTestRuns = sqliteTable("stress_test_runs", {
   finishedAt: integer("finished_at"),
 });
 
+// One row per bandwidth test. Nullable: every measurement — a run that fails
+// or is cancelled part-way still records the legs it did complete, which is
+// what makes "download fine, upload timed out" readable after the fact.
+export const bandwidthTests = sqliteTable(
+  "bandwidth_tests",
+  {
+    id: text("id").primaryKey(),
+    /** Megabits/sec. */
+    downMbps: real("down_mbps"),
+    upMbps: real("up_mbps"),
+    /** Median TTFB and its mean absolute deviation, in ms. */
+    latencyMs: real("latency_ms"),
+    jitterMs: real("jitter_ms"),
+    /** What was measured against, and the edge PoP that answered. */
+    endpoint: text("endpoint").notNull(),
+    pop: text("pop"),
+    bytesDown: integer("bytes_down").notNull().default(0),
+    bytesUp: integer("bytes_up").notNull().default(0),
+    /** "ok" | "error" | "cancelled" */
+    status: text("status").notNull(),
+    error: text("error"),
+    // Live session bandwidth (kbps) when the test started. A test run while
+    // three people are streaming under-reports, and without this the row is
+    // unexplainable a week later.
+    concurrentKbps: integer("concurrent_kbps").notNull().default(0),
+    startedAt: integer("started_at").notNull(),
+    finishedAt: integer("finished_at"),
+  },
+  (table) => [index("idx_bandwidth_tests_started").on(table.startedAt)],
+);
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),
