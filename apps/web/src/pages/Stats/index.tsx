@@ -23,6 +23,7 @@ import { MostWatchedPanel } from "./MostWatchedPanel";
 import { RecentlyAddedPanel } from "./RecentlyAddedPanel";
 import { StreamsPanel } from "./StreamsPanel";
 import { SystemPanel } from "./SystemPanel";
+import styles from "./Stats.module.css";
 
 // ─── Panel order ────────────────────────────────────────────────────────────
 
@@ -117,7 +118,12 @@ export default function Stats() {
         if (sessionsQuery.isLoading) {
           value = <SkeletonLine width="40px" />;
         } else if (measured && capacity > 0) {
-          value = `${inUse} / ${formatMbps(capacity)}`;
+          value = (
+            <span className={styles.bandwidthRatio}>
+              {inUse}
+              <span className={styles.bandwidthCapacity}> / {formatMbps(capacity)}</span>
+            </span>
+          );
           // Past a month the denominator is a claim about the past, so say
           // when it was made rather than quoting a percentage of it.
           sub =

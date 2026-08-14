@@ -98,7 +98,10 @@ export default function SettingsBandwidth() {
     const timer = setTimeout(tick, Math.min(cooldownLeftMs, 30_000));
     return () => clearTimeout(timer);
   }, [cooldownLeftMs]);
-  const peak = Math.max(1, ...history.map((h) => h.upMbps ?? 0), ...history.map((h) => h.downMbps ?? 0));
+  // Upload only, because upload is what the bars plot. Including download
+  // scaled every bar against a number four times larger than any of them — a
+  // row of slivers under an axis label claiming a peak the chart never showed.
+  const peak = Math.max(1, ...history.map((h) => h.upMbps ?? 0));
 
   return (
     <div>

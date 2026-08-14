@@ -414,3 +414,29 @@
 .unknownCell {
   color: var(--ink-3);
 }
+
+/* ─── Bandwidth tile ────────────────────────────────────────────────────── */
+
+/* "8 Mbps / 1613 Mbps" is two numbers in a slot sized for one. At full metric
+   size a gigabit denominator wraps onto a second line, which turns a tile into
+   the tallest thing on the row. The measured capacity is context for the live
+   figure rather than the number being read, so it takes the smaller size.
+
+   Deliberately not `white-space: nowrap`. That fits the common cases and then
+   overflows the tile on the widest one — a live stream against a gigabit link,
+   "8.2 Mbps / 1613 Mbps", is wider than a tile even at this size. Wrapping
+   between the two halves at the smaller size is the graceful version of the
+   same failure.
+
+   One flex item, though: `.summaryValue` is a column flex container, so a bare
+   text node beside a span would become two rows every time, wrapping even when
+   there is room. */
+.bandwidthRatio {
+  display: inline;
+}
+
+.bandwidthCapacity {
+  font-size: 0.62em;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}

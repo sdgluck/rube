@@ -19,6 +19,7 @@ import {
   jobRuns,
   prerolls,
   healthChecks,
+  bandwidthTests,
   userPreferences,
 } from "@tinkerbell/db";
 import { setConfig } from "@tinkerbell/core";
@@ -237,6 +238,37 @@ for (const h of HEALTH) {
       })
       .run();
   }
+}
+
+// ── Bandwidth history ───────────────────────────────────────────────────────
+// Without a result the Stats bandwidth tile falls back to "run a test" and the
+// tool page is two empty states, so neither screenshot shows what the feature
+// does. Weekly runs on an asymmetric connection — the shape most people have,
+// and the reason the tile divides by upload rather than download.
+for (let i = 0; i < 8; i++) {
+  db.insert(bandwidthTests)
+    .values({
+      id: `bandwidth-${i}`,
+      // Gently varied so the chart has a profile rather than a flat wall, and
+      // deterministic so an unrelated capture doesn't rewrite the image.
+      downMbps: 920 + (fnv1a(`down-${i}`) % 80),
+      upMbps: 108 + (fnv1a(`up-${i}`) % 24),
+      latencyMs: 11 + (fnv1a(`lat-${i}`) % 6),
+      jitterMs: 1 + (fnv1a(`jit-${i}`) % 3),
+      endpoint: "https://speed.cloudflare.com",
+      pop: "LHR",
+      bytesDown: 120_000_000,
+      bytesUp: 80_000_000,
+      status: "ok",
+      error: null,
+      concurrentKbps: 0,
+      // Offset from the frozen instant, or the newest row reads "measured 0s
+      // ago" — which is not a state anybody's dashboard is ever really in.
+      startedAt: now - (i * 7 + 2) * DAY,
+      finishedAt: now - (i * 7 + 2) * DAY + 42 * 1000,
+    })
+    .onConflictDoNothing()
+    .run();
 }
 
 // ── Portal opt-in, so Users shows both pill states ──────────────────────────
