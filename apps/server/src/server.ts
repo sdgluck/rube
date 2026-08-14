@@ -4,9 +4,11 @@ import { pipeline } from "node:stream/promises";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter, portalRouter, createPortalContext } from "@tinkerbell/trpc";
+import { appRouter, portalRouter, createPortalContext, createAdminContext } from "@tinkerbell/trpc";
 import { initJobs, stopSidequest } from "@tinkerbell/jobs";
 import {
+  adminAuthRequired,
+  authDisabledByEnv,
   createLogger,
   errorMessage,
   getConfig,
@@ -15,6 +17,7 @@ import {
   setHealthReporter,
   setLocalCollectionsReader,
   setPostCollectionSyncHook,
+  startAuthDisabledWarning,
 } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
 import { reportHealth } from "@tinkerbell/domain.health";
@@ -22,6 +25,7 @@ import { scanAllProviders } from "@tinkerbell/domain.migration";
 import { getLocalCollections } from "@tinkerbell/domain.collections";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
+import { clientIp, rejectIfNotAdmin } from "./auth.ts";
 import { handlePrerollRoute } from "./prerolls.ts";
 
 const log = createLogger("server");
@@ -129,8 +133,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   const url = new URL(req.url!, `http://${req.headers.host}`);
   const path = url.pathname;
 
-  // Plex image proxy
+  // Plex image proxy. Gated: it fetches arbitrary thumbs using the server's
+  // own Plex token, so leaving it open would hand an anonymous caller a
+  // readable window onto the library even with the tRPC API locked.
   if (path === "/api/plex-image") {
+    if (rejectIfNotAdmin(req, res)) return;
     const imageUrl = buildPlexImageUrl({
       thumbPath: url.searchParams.get("path"),
       plexUrl: getConfig("global_plex_url"),
@@ -173,7 +180,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // Preroll upload/playback — streaming routes that tRPC's batch link can't
   // carry. Returns false when the path isn't one of them.
+  // Gated in full, upload and playback alike. Plex never fetches prerolls over
+  // HTTP — it reads them from the shared filesystem path (`prerolls_plex_path`),
+  // so these routes only ever serve the admin SPA.
   if (path.startsWith("/api/prerolls/")) {
+    if (rejectIfNotAdmin(req, res)) return;
     try {
       if (await handlePrerollRoute(req, res, url)) return;
     } catch (err) {
@@ -190,7 +201,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       endpoint: "/api/trpc",
       req: fetchReq,
       router: appRouter,
-      createContext: () => ({}),
+      createContext: ({ req: r, resHeaders }) => createAdminContext({ req: r, resHeaders, ip: clientIp(req) }),
     });
     await sendFetchResponse(fetchRes, res);
     return;
@@ -266,12 +277,19 @@ async function main() {
     log.error("job init failed", { err: errorMessage(err) });
     process.exit(1);
   }
+  startAuthDisabledWarning();
   server.listen(PORT, HOST, () => {
     log.info("admin server listening", { host: HOST, port: PORT, url: listenUrl() });
-    if (HOST !== "127.0.0.1" && HOST !== "localhost" && HOST !== "::1") {
+    const loopback = HOST === "127.0.0.1" || HOST === "localhost" || HOST === "::1";
+    if (adminAuthRequired()) {
+      log.info("admin authentication is active — sign in with the Plex server owner's account");
+    } else if (!loopback) {
+      // The combination that stays genuinely dangerous, and keeps saying so:
+      // reachable from the network with nothing checking who's calling.
       log.warn(
-        `Listening on ${HOST}: every tRPC mutation is reachable without authentication. ` +
-          `Only expose this port to networks you trust.`,
+        `Listening on ${HOST}: every tRPC mutation is reachable without authentication` +
+          (authDisabledByEnv() ? " (TINKERBELL_DISABLE_AUTH is set)" : "") +
+          `. Only expose this port to networks you trust, or enable admin authentication in the app.`,
       );
     }
   });
