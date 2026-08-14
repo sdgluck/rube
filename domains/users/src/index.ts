@@ -59,11 +59,11 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
 
   let synced = 0;
 
-  const allUsers: Array<{ userId: number; username: string }> = sharings.map((s) => ({
+  const allUsers: Array<{ userId: number; username: string; isOwner?: boolean }> = sharings.map((s) => ({
     userId: s.userId,
     username: s.username,
   }));
-  if (owner) allUsers.unshift({ userId: owner.id, username: owner.username });
+  if (owner) allUsers.unshift({ userId: owner.id, username: owner.username, isOwner: true });
 
   for (const s of allUsers) {
     const userLabel = `User:${s.username}`;
@@ -79,6 +79,7 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
         collectionCount: userCollectionCounts.get(userLabel) || 0,
         lastWatchedTitle: lastWatched?.title ?? null,
         lastWatchedAt: lastWatched?.viewedAt ?? null,
+        isOwner: s.isOwner ? 1 : 0,
         syncedAt: now,
       })
       .onConflictDoUpdate({
@@ -89,6 +90,7 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
           collectionCount: userCollectionCounts.get(userLabel) || 0,
           lastWatchedTitle: lastWatched?.title ?? null,
           lastWatchedAt: lastWatched?.viewedAt ?? null,
+          isOwner: s.isOwner ? 1 : 0,
           syncedAt: now,
         },
       })

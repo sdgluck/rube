@@ -376,6 +376,14 @@ export const plexUsers = sqliteTable(
     collectionCount: integer("collection_count").notNull().default(0),
     lastWatchedTitle: text("last_watched_title"),
     lastWatchedAt: integer("last_watched_at"),
+    /**
+     * The server owner. Recorded at sync time because the alternative — asking
+     * plex.tv on every rule evaluation — puts a network round trip inside the
+     * generate loop for a fact that changes approximately never. Rules that
+     * define "everyone" need it: the owner's consumption pattern is usually
+     * nothing like a shared user's, so they are excluded by default.
+     */
+    isOwner: integer("is_owner").notNull().default(0),
     syncedAt: integer("synced_at").notNull(),
   },
   (table) => [index("idx_plex_users_username").on(table.username)],
@@ -646,6 +654,18 @@ export const watchState = sqliteTable(
     firstPlayedAt: integer("first_played_at"),
     lastPlayedAt: integer("last_played_at"),
     totalWatchedMs: integer("total_watched_ms").notNull().default(0),
+    /**
+     * Furthest this user ever got, as a fraction of runtime — the high-water
+     * mark across their plays, not an average and not the last one.
+     *
+     * Cannot be derived from the columns above: `totalWatchedMs` is cumulative,
+     * so three ten-minute attempts at a two-hour film look identical to one
+     * half-watched sitting. It also cannot be read back off `playback_sessions`
+     * on demand, because that table ages out under `playback_retention_days`
+     * and this one never does — the thing "abandoned below 20%" asks about is
+     * precisely the play nobody has repeated in a year.
+     */
+    maxCompletionPct: real("max_completion_pct").notNull().default(0),
   },
   (table) => [
     uniqueIndex("idx_watch_state_pk").on(table.ratingKey, table.userId),

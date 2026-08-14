@@ -141,6 +141,16 @@ export const configSchema = z.object({
   playback_completion_threshold: z.number().min(0.5).max(1),
   /** Days of raw session rows to keep. 0 = keep forever. `watch_state` is never pruned. */
   playback_retention_days: z.number().int().min(0),
+  /**
+   * Whether the server owner counts towards "watched by everyone".
+   *
+   * Off by default: the owner is usually the person curating the library
+   * rather than watching it end to end, so including them makes
+   * `tb.watchedByAll` mean "and the admin got round to it too" — which on a
+   * cleanup rule is the difference between deleting a finished show and never
+   * deleting anything.
+   */
+  watch_state_all_users_include_owner: z.boolean(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),

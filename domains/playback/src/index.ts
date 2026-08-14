@@ -15,8 +15,11 @@
  *   poller.ts   the 30-second tick that feeds the state machine
  *   backfill.ts one-shot import of Plex's own view log, so a fresh install
  *               isn't blind for the weeks it takes the poller to accumulate
+ *   evaluate.ts the `tb.` smart-filter predicates, pure — the questions Plex
+ *               cannot answer because it only ever sees one token's view state
  */
 export * from "./diff.ts";
 export * from "./store.ts";
 export * from "./poller.ts";
 export * from "./backfill.ts";
+export * from "./evaluate.ts";

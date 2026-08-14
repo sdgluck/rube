@@ -6,7 +6,14 @@ import {
   getActivitySummary,
   getOpsSummary,
 } from "@tinkerbell/domain.stats";
-import { allUserTotals, HISTORY_SORTS, serverHistory, userTotals, watchedBy } from "@tinkerbell/domain.playback";
+import {
+  allUserTotals,
+  HISTORY_SORTS,
+  serverHistory,
+  userTotals,
+  watchedBy,
+  watchHistoryCoverage,
+} from "@tinkerbell/domain.playback";
 import { DAY_MS } from "@tinkerbell/core";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
@@ -34,6 +41,16 @@ export const statsRouter = t.router({
   overview: procedure.query(() => getLibraryOverview()),
   activity: procedure.query(() => getActivitySummary()),
   ops: procedure.query(() => getOpsSummary()),
+
+  /**
+   * How much playback history there is to filter on.
+   *
+   * Read by the smart-filter editors: a rule using a watch-history field on a
+   * server that has been recording for two days will behave nothing like the
+   * user expects, and "it's still filling up" is a far better answer than
+   * silence followed by a whole library of results.
+   */
+  watchHistoryCoverage: procedure.query(() => watchHistoryCoverage()),
 
   /** Paginated playback history — the Stats history panel. */
   history: procedure

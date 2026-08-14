@@ -1,6 +1,13 @@
 import { z } from "zod";
-import { smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
-import { fieldKind, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
+import {
+  collectLocalLeaves,
+  isLocalField,
+  smartFilterGroupSchema,
+  splitLocalLeaves,
+} from "@tinkerbell/plex-smart-filter";
+import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
+
+const LOCAL_FIELDS = new Set(LOCAL_FIELD_DEFS.map((d) => d.field));
 
 /**
  * The canonical shape of `rules.config`.
@@ -11,7 +18,7 @@ import { fieldKind, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
  * validates published packs against it before they ever reach a Plex server.
  * `@tinkerbell/jobs` re-exports it so server-side call sites are unchanged.
  */
-export const ruleConfigSchema = z.object({
+const baseRuleConfigSchema = z.object({
   prompt: z.string().optional(),
   themes: z.array(z.string()).optional(),
   customThemes: z.array(z.string()).optional(),
@@ -71,6 +78,41 @@ export const ruleConfigSchema = z.object({
       dryRun: z.boolean(),
     })
     .optional(),
+});
+
+/**
+ * Reject a filter tree the generate job could only run wrongly.
+ *
+ * Splitting a boolean tree into "the part Plex can do" and "the part we do" is
+ * only valid when the two are AND'd at every level — see `splitLocalLeaves`.
+ * The wizard disables local fields inside an OR group, but a rule can also
+ * arrive by import or from a registry pack, and neither goes through the
+ * wizard. Failing here means the rule is refused at save time with a reason,
+ * rather than running and quietly returning the wrong set.
+ */
+export const ruleConfigSchema = baseRuleConfigSchema.superRefine((config, ctx) => {
+  if (!config.smartFilter) return;
+
+  if (splitLocalLeaves(config.smartFilter).error === "local-leaf-in-or-group") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["smartFilter"],
+      message:
+        "Watch-history fields can only be combined with AND. Inside an OR group Plex would never return the items the local filter needs, so the result would be silently incomplete.",
+    });
+  }
+
+  // A `tb.` field nobody implements is stripped from the Plex query and then
+  // evaluated by nothing — the rule would run clean and ignore the clause.
+  // Cheaper to catch here than to explain later.
+  for (const leaf of collectLocalLeaves(config.smartFilter)) {
+    if (LOCAL_FIELDS.has(leaf.field)) continue;
+    ctx.addIssue({
+      code: "custom",
+      path: ["smartFilter"],
+      message: `Unknown watch-history field "${leaf.field}".`,
+    });
+  }
 });
 
 export type RuleConfig = z.infer<typeof ruleConfigSchema>;
@@ -207,10 +249,39 @@ export const RULE_TYPE_REQUIRES: Partial<Record<RuleTypeValue, RuleRequirement>>
  * only one place to add a field. Scope-qualified variants (`show.genre`,
  * `episode.genre`) aren't listed but are recognised by `isTagField`.
  */
-export const TAG_FIELDS: readonly string[] = SMART_FILTER_FIELD_DEFS.filter((d) => d.kind === "tag").map(
-  (d) => d.field,
-);
+export const TAG_FIELDS: readonly string[] = SMART_FILTER_FIELD_DEFS.filter(
+  (d) => d.kind === "tag" && d.source !== "local",
+).map((d) => d.field);
 
+/**
+ * Local fields are excluded even when their `kind` is `tag`. `tb.watchedBy`
+ * holds a Plex account id, not a per-section tag key — running it through the
+ * `/library/sections/:id/:field` translation would look up a value that facet
+ * has never heard of and silently rewrite or warn on a perfectly good clause.
+ * The same exclusion keeps the tag *picker* off it in the UI, which is right
+ * for a different reason: it needs a user picker.
+ */
 export function isTagField(field: string): boolean {
-  return fieldKind(field) === "tag";
+  return !isLocalField(field) && fieldKind(field) === "tag";
 }
+
+/**
+ * Fields whose values mean nothing on somebody else's Plex server.
+ *
+ * Tag keys are per-server but *translatable* — the registry resolver swaps
+ * display names for local keys on import. These aren't translatable at all:
+ * a Plex account id identifies a person, and the people sharing one server
+ * are not the people sharing another. A pack referencing one would import
+ * cleanly and filter against a stranger's account. The registry build rejects
+ * them rather than resolving them.
+ */
+export const NON_PORTABLE_FIELDS: readonly string[] = ["tb.watchedBy"];
+
+const NON_PORTABLE = new Set<string>(NON_PORTABLE_FIELDS);
+
+export function isNonPortableField(field: string): boolean {
+  return NON_PORTABLE.has(field);
+}
+
+/** Local field defs, re-exported so callers need only one import. */
+export { LOCAL_FIELD_DEFS };

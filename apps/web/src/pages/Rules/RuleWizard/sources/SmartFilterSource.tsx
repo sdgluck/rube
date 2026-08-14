@@ -1,6 +1,13 @@
 import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@tinkerbell/contracts";
+import { hasLocalLeaves, isLocalField } from "@tinkerbell/plex-smart-filter";
 import shared from "#/styles/shared.module.css";
+import { trpc } from "#/trpc";
 import FilterValueInput from "#components/smart-filter/FilterValueInput.tsx";
+import {
+  LOCAL_FIELD_GROUP_LABEL,
+  LOCAL_FIELD_GROUP_NOTE,
+  LOCAL_FIELD_HINTS,
+} from "#components/smart-filter/UserValueSelect.tsx";
 import { opsFor, withFallbackOp } from "#components/smart-filter/ops.ts";
 import styles from "#pages/Rules/RuleWizard/RuleWizard.module.css";
 import type {
@@ -26,6 +33,7 @@ import type {
  */
 export default function SmartFilterSource({ form, setForm, tagSectionId = null }: SourceStepProps) {
   const setRoot = (next: SmartFilterGroup) => setForm({ ...form, smartFilter: next });
+  const usesWatchHistory = hasLocalLeaves(form.smartFilter);
 
   return (
     <>
@@ -35,6 +43,7 @@ export default function SmartFilterSource({ form, setForm, tagSectionId = null }
         complex queries (e.g. <em>(director = Lynch OR Nolan) AND year ≥ 2000</em>). One collection per section is
         created from the matching items each time the rule runs.
       </p>
+      {usesWatchHistory && <WatchHistoryWarning />}
       <div className={styles.field}>
         <label htmlFor="rule-smart-filter-name">Collection name (optional)</label>
         <input
@@ -53,6 +62,45 @@ export default function SmartFilterSource({ form, setForm, tagSectionId = null }
   );
 }
 
+// ─── Watch-history coverage ──────────────────────────────────────────────────
+
+/** Below either of these, a watch-history filter is answering from thin air. */
+const MIN_SESSIONS = 50;
+const MIN_DAYS = 7;
+
+/**
+ * The single most likely support question about this feature.
+ *
+ * A user adds "watched by nobody", gets their entire library back, and
+ * concludes the filter is broken — when in fact Tinkerbell has been recording
+ * plays for two days. Saying so up front costs one line.
+ */
+function WatchHistoryWarning() {
+  const coverage = trpc.stats.watchHistoryCoverage.useQuery(undefined, {
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  if (!coverage.data) return null;
+
+  const { sessions, days } = coverage.data;
+  if (sessions >= MIN_SESSIONS && days >= MIN_DAYS) return null;
+
+  const recorded =
+    sessions === 0
+      ? "no plays yet"
+      : `${sessions} play${sessions === 1 ? "" : "s"} over ${days} day${days === 1 ? "" : "s"}`;
+
+  return (
+    <p className={styles.hint} role="status">
+      ⚠︎ Watch-history filters read Tinkerbell's own playback record, which is still filling up — {recorded}. Until it
+      has a representative stretch of history, "watched by nobody" will match almost everything and "watched by
+      everyone" almost nothing. Backfilling from Plex's view log (Settings → Playback) gives it a head start.
+    </p>
+  );
+}
+
+// ─── Groups ──────────────────────────────────────────────────────────────────
+
 interface GroupEditorProps {
   group: SmartFilterGroup;
   onChange: (next: SmartFilterGroup) => void;
@@ -60,10 +108,15 @@ interface GroupEditorProps {
   depth: number;
   /** Section whose tag values populate the genre/studio/… pickers. */
   sectionId: string | null;
+  /**
+   * True when this group, or one containing it, combines with OR. Watch-history
+   * fields can't live there — see `splitLocalLeaves`.
+   */
+  underOr?: boolean;
   onRemove?: () => void;
 }
 
-function GroupEditor({ group, onChange, depth, sectionId, onRemove }: GroupEditorProps) {
+function GroupEditor({ group, onChange, depth, sectionId, underOr = false, onRemove }: GroupEditorProps) {
   const updateChild = (i: number, next: SmartFilterNode) => {
     onChange({ ...group, children: group.children.map((c, idx) => (idx === i ? next : c)) });
   };
@@ -88,6 +141,12 @@ function GroupEditor({ group, onChange, depth, sectionId, onRemove }: GroupEdito
   const flipCombinator = () => {
     onChange({ ...group, combinator: group.combinator === "all" ? "any" : "all" });
   };
+
+  // A combinator only means something once the group has two children — `any`
+  // of one is identity, and a freshly added group starts empty. Matching the
+  // rule `splitLocalLeaves` applies keeps the editor and the validator from
+  // disagreeing about whether a tree is savable.
+  const childrenUnderOr = underOr || (group.combinator === "any" && group.children.length > 1);
 
   // Visual nesting: alternate left-border tint per depth so deeply-nested
   // groups read as a hierarchy rather than a wall of inputs.
@@ -126,6 +185,7 @@ function GroupEditor({ group, onChange, depth, sectionId, onRemove }: GroupEdito
             key={i}
             leaf={child}
             sectionId={sectionId}
+            underOr={childrenUnderOr}
             onChange={(next) => updateChild(i, next)}
             onRemove={() => removeChild(i)}
           />
@@ -136,6 +196,7 @@ function GroupEditor({ group, onChange, depth, sectionId, onRemove }: GroupEdito
             onChange={(next) => updateChild(i, next)}
             depth={depth + 1}
             sectionId={sectionId}
+            underOr={childrenUnderOr}
             onRemove={() => removeChild(i)}
           />
         ),
@@ -155,14 +216,24 @@ function GroupEditor({ group, onChange, depth, sectionId, onRemove }: GroupEdito
 interface LeafEditorProps {
   leaf: SmartFilterLeaf;
   sectionId: string | null;
+  /** True when the enclosing group — or one above it — combines with OR. */
+  underOr: boolean;
   onChange: (next: SmartFilterLeaf) => void;
   onRemove: () => void;
 }
 
-const FIELD_OPTIONS = SMART_FILTER_FIELD_DEFS.filter((d) => !d.advanced);
+const FIELD_OPTIONS = SMART_FILTER_FIELD_DEFS.filter((d) => !d.advanced && d.source !== "local");
+const LOCAL_FIELD_OPTIONS = SMART_FILTER_FIELD_DEFS.filter((d) => d.source === "local");
 
-function LeafEditor({ leaf, sectionId, onChange, onRemove }: LeafEditorProps) {
+const OR_DISABLED_REASON =
+  "Watch-history fields only work with AND. Inside an OR group, Plex would never return the items this filter needs to check.";
+
+function LeafEditor({ leaf, sectionId, underOr, onChange, onRemove }: LeafEditorProps) {
   const ops = withFallbackOp(opsFor(leaf.field), leaf.op);
+  const isLocal = isLocalField(leaf.field);
+  // An existing local leaf whose group was flipped to OR after the fact. The
+  // save will be refused, so say why here rather than at the end of the wizard.
+  const invalid = isLocal && underOr;
 
   const updateField = (field: string) => {
     // Keep the operator only if it still means something for the new field's
@@ -172,22 +243,38 @@ function LeafEditor({ leaf, sectionId, onChange, onRemove }: LeafEditorProps) {
   };
 
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       <select
         className={shared.input}
-        style={{ flex: "0 0 140px" }}
+        style={{ flex: "0 0 180px" }}
         value={leaf.field}
         onChange={(e) => updateField(e.target.value)}
         aria-label="Field"
+        aria-invalid={invalid || undefined}
       >
         {FIELD_OPTIONS.map((f) => (
           <option key={f.field} value={f.field}>
             {f.label}
           </option>
         ))}
+        {/* Grouped separately, and disabled rather than hidden inside an OR:
+            a field that vanishes reads as a bug, where a greyed one with a
+            reason attached reads as a rule. */}
+        <optgroup label={underOr ? `${LOCAL_FIELD_GROUP_LABEL} (needs AND)` : LOCAL_FIELD_GROUP_LABEL}>
+          {LOCAL_FIELD_OPTIONS.map((f) => (
+            <option
+              key={f.field}
+              value={f.field}
+              disabled={underOr && f.field !== leaf.field}
+              title={underOr ? OR_DISABLED_REASON : LOCAL_FIELD_HINTS.get(f.field)}
+            >
+              {f.label}
+            </option>
+          ))}
+        </optgroup>
         {/* Preserve the imported field even if it's outside the curated list, so
             migrated rules with fields like `show.network` round-trip cleanly. */}
-        {!FIELD_OPTIONS.some((f) => f.field === leaf.field) && (
+        {!SMART_FILTER_FIELD_DEFS.some((f) => f.field === leaf.field) && (
           <option value={leaf.field}>{fieldLabel(leaf.field)}</option>
         )}
       </select>
@@ -219,6 +306,17 @@ function LeafEditor({ leaf, sectionId, onChange, onRemove }: LeafEditorProps) {
       <button type="button" className={styles.summaryEdit} onClick={onRemove} aria-label="Remove clause">
         Remove
       </button>
+      {invalid ? (
+        <p className={styles.hint} style={{ margin: 0, flexBasis: "100%", color: "var(--danger, #c33)" }} role="alert">
+          {OR_DISABLED_REASON} Switch this group to AND, or remove the clause.
+        </p>
+      ) : (
+        isLocal && (
+          <p className={styles.hint} style={{ margin: 0, flexBasis: "100%" }}>
+            {LOCAL_FIELD_HINTS.get(leaf.field)} {LOCAL_FIELD_GROUP_NOTE}
+          </p>
+        )
+      )}
     </div>
   );
 }

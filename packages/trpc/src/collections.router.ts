@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
 import { getConfig } from "@tinkerbell/core";
+import { LOCAL_FIELD_DEFS } from "@tinkerbell/contracts";
 import {
   syncCollections,
   getLocalCollections,
@@ -152,6 +154,21 @@ export const collectionsRouter = t.router({
   updateSmartFilters: t.procedure
     .input(z.object({ ratingKey: z.string(), contentUri: z.string() }))
     .mutation(async ({ input }) => {
+      // A Plex smart collection is evaluated by Plex, on demand, forever — so
+      // it can only reference fields Plex knows. A `tb.` field would be sent
+      // as a query parameter Plex ignores, and the collection would silently
+      // widen to everything the remaining clauses match. Watch-history fields
+      // are only valid on Tinkerbell rules, which build static collections.
+      const localField = LOCAL_FIELD_DEFS.map((d) => d.field).find(
+        (f) => input.contentUri.includes(`${encodeURIComponent(f)}=`) || input.contentUri.includes(`${f}=`),
+      );
+      if (localField) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `"${localField}" is a Tinkerbell watch-history field. Plex evaluates smart collections itself and has no such field, so it can only be used on a Tinkerbell rule that builds a static collection.`,
+        });
+      }
+
       const client = getPlexClient();
       await client.updateSmartCollectionContent(input.ratingKey, input.contentUri);
       return { ok: true };

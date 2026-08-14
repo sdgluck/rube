@@ -11,7 +11,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   isGroupedRuleType,
+  isNonPortableField,
   isTagField,
+  NON_PORTABLE_FIELDS,
   producesManyCollections,
   ruleConfigSchema,
   RULE_TYPE_REQUIRES,
@@ -127,6 +129,25 @@ test("tag values are display names, not this-server tag keys", () => {
       assert.ok(
         !/^\d+$/.test(leaf.value.trim()),
         `rule "${rule.slug}" uses a numeric Plex tag key for ${leaf.field} ("${leaf.value}") — use the display name`,
+      );
+    }
+  }
+});
+
+test("no published rule references a non-portable field", () => {
+  // Tag keys are per-server but translatable — the resolver swaps display
+  // names for local keys on import. A Plex account id is not translatable at
+  // all: it identifies a person, and the people sharing one server are not the
+  // people sharing another. Such a pack would import cleanly and then filter
+  // against a stranger's account.
+  assert.ok(NON_PORTABLE_FIELDS.length > 0, "the non-portable list should not be empty");
+  for (const rule of REGISTRY.rules) {
+    if (rule.type !== "smart_filter") continue;
+    const tree = smartFilterGroupSchema.parse(rule.config.smartFilter);
+    for (const leaf of leaves(tree)) {
+      assert.ok(
+        !isNonPortableField(leaf.field),
+        `rule "${rule.slug}" references "${leaf.field}", which means nothing on another person's server — packs cannot ship it`,
       );
     }
   }

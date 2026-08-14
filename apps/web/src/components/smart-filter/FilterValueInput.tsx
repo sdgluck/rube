@@ -8,6 +8,7 @@ import {
   type RelativeUnit,
 } from "./format.ts";
 import TagValueSelect, { type TagValueMode } from "./TagValueSelect.tsx";
+import UserValueSelect from "./UserValueSelect.tsx";
 import styles from "./FilterValueInput.module.css";
 
 /**
@@ -38,6 +39,13 @@ export default function FilterValueInput({
   selectClassName?: string;
   onChange: (value: string) => void;
 }) {
+  // `tb.watchedBy` is kind "tag" so it gets a picker rather than a text box,
+  // but its values are Plex account ids — there is no section facet to resolve
+  // them against, so it can't go through TagValueSelect.
+  if (field === "tb.watchedBy") {
+    return <UserValueSelect value={value} className={`${selectClassName ?? ""} ${styles.grow}`} onChange={onChange} />;
+  }
+
   switch (fieldKind(field)) {
     case "tag":
       return (
