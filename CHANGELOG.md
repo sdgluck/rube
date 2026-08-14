@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-14
+
+### Changed
+
+- **Jellyseerr/Overseerr is now labelled just "Seerr" throughout the UI** — the Media Managers tab title, the registry requirement label, the rule wizard's requirement hint and not-configured warning, and the requested-items rule type description all use the shorter name. No config keys or routes change, so no action is needed on upgrade.
+- The Personalization pane now shows status as a coloured pill (Off / On / mid-job) with enabled-since and last-reconciled details next to it, instead of a plain status line.
+- Turning personalization on or off now shows the actual numbered steps each job performs, in two cards ("Turning it on" / "Turning it off"), with the card matching the button you'd press highlighted and each ending with its real consequence: enabling doesn't remove anyone's access, and disabling leaves the server as if it was never on.
+- Caveats about personalization — that the owner can't be restricted, that new shared users are picked up by Sync Plex Users, that both jobs are long-running but resumable, and that you should re-run after changing library selection — now live in a "Worth knowing" card instead of a footnote.
+- The Reconcile users button in the Personalization pane now explains what it does.
+- Personalization buttons and confirmations now read "Turn on" / "Turn off" to match the status pill.
+
 ## [0.10.0] - 2026-08-14
 
 ### Added
