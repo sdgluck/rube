@@ -406,7 +406,7 @@ export default function Jobs() {
             <div className={styles.panel}>
               <div className={styles.panelHeader}>Recent Runs</div>
               {recentRunsQuery.data && recentRunsQuery.data.length > 0 ? (
-                <div className="table-scroll in-panel">
+                <div className="table-scroll in-panel" data-scroll="x">
                   <table className={styles.compactTable}>
                     <thead>
                       <tr>
@@ -463,7 +463,7 @@ export default function Jobs() {
             <div className={styles.panel}>
               <div className={styles.panelHeader}>Upcoming</div>
               {upcoming.length > 0 ? (
-                <div className="table-scroll in-panel">
+                <div className="table-scroll in-panel" data-scroll="x">
                   <table className={styles.compactTable}>
                     <thead>
                       <tr>
@@ -504,7 +504,7 @@ export default function Jobs() {
                 <p className={styles.muted} style={{ marginTop: 0, marginBottom: 8 }}>
                   Infrastructure that keeps Tinkerbell in sync with Plex. Always on; schedules are tweakable.
                 </p>
-                <div className="table-scroll in-panel">
+                <div className="table-scroll in-panel" data-scroll="x">
                   <table className={styles.compactTable}>
                     <thead>
                       <tr>
@@ -665,7 +665,7 @@ export default function Jobs() {
                 </div>
               )}
 
-              <div className="table-scroll in-panel">
+              <div className="table-scroll in-panel" data-scroll="x">
                 <table className={styles.compactTable}>
                   <thead>
                     <tr>

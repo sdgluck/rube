@@ -381,8 +381,10 @@ export default function CollectionDetail() {
                     className={styles.clickableRow}
                     onClick={() => navigate(`/media/${item.ratingKey}`)}
                   >
-                    <td>{item.title}</td>
-                    <td className={styles.itemYear}>{item.year || EMPTY}</td>
+                    <td data-cell="title">{item.title}</td>
+                    <td data-cell="meta" className={styles.itemYear}>
+                      {item.year || EMPTY}
+                    </td>
                   </tr>
                 ))}
               </tbody>

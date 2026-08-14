@@ -1033,6 +1033,14 @@
     left: 12px;
     right: 12px;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+    /* Status text plus three nowrap buttons don't fit 351px on one line. */
+    flex-wrap: wrap;
+  }
+
+  /* Give the status its own line so the buttons pack from the left rather
+     than from wherever the sentence happens to end. */
+  .actionBarStatus {
+    flex-basis: 100%;
   }
 }
 
@@ -1214,6 +1222,7 @@
   bottom: calc(100% + 8px);
   right: 0;
   min-width: 240px;
+  max-width: calc(100vw - 32px);
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -1352,8 +1361,17 @@
   align-self: flex-start;
 }
 
+/* Below 1100px the inspector stops being a side rail, so the catalog gets the
+   full width back and can afford a third column. That reasoning runs out on a
+   phone, where three columns is ~110px each for a label plus a sample. */
 @media (max-width: 1100px) {
   .chipList {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .chipList {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

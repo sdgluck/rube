@@ -1269,7 +1269,20 @@
     align-items: stretch;
   }
 
-  .searchInput {
+  .searchInput,
+  .itemSearch {
     width: auto;
+  }
+
+  /* A 100px nowrap label beside a flex input leaves the input ~200px on a
+     phone, and long field names blow past it. Stack them instead. */
+  .labelEditorRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .labelEditorRow label {
+    min-width: 0;
   }
 }

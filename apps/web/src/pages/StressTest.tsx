@@ -245,13 +245,13 @@ export default function StressTest() {
                     isLast && ((step.avgTranscodeSpeed != null && step.avgTranscodeSpeed < 1.0) || step.errors > 0);
                   return (
                     <tr key={step.step} className={isFailed ? styles.stepFailed : ""}>
-                      <td>{step.step}</td>
-                      <td>{step.sessions}</td>
-                      <td>
+                      <td data-cell="title">{step.step}</td>
+                      <td data-cell="meta">{step.sessions}</td>
+                      <td data-cell="meta">
                         <SpeedCell speed={step.avgTranscodeSpeed} />
                       </td>
-                      <td>{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : EMPTY}</td>
-                      <td>{step.errors}</td>
+                      <td data-cell="meta">{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : EMPTY}</td>
+                      <td data-cell="meta">{step.errors}</td>
                     </tr>
                   );
                 })}
@@ -296,12 +296,12 @@ export default function StressTest() {
                     className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
                     onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
                   >
-                    <td>{formatTime(run.startedAt)}</td>
-                    <td>
+                    <td data-cell="title">{formatTime(run.startedAt)}</td>
+                    <td data-cell="pill">
                       <span className={styles.badge}>{run.config.mode}</span>
                     </td>
-                    <td>{run.maxSessions ?? "?"}</td>
-                    <td className={styles.duration}>
+                    <td data-cell="meta">{run.maxSessions ?? "?"}</td>
+                    <td data-cell="meta" className={styles.duration}>
                       {run.finishedAt ? formatElapsed(run.startedAt, run.finishedAt) : "…"}
                     </td>
                   </tr>

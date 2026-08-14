@@ -352,7 +352,9 @@
 
 /* Each level of nesting spends 18px of indent plus a 26px join slot, so by
    depth 3 the controls have to give ground rather than push the row past the
-   drawer's edge. These are the floors below which they stop shrinking. */
+   drawer's edge. These are the floors below which they stop shrinking — sized
+   for the 560px drawer, and lifted entirely on a phone (see the bottom of this
+   file), where they add up to more than the viewport. */
 .smartSelect {
   flex-shrink: 1;
   min-width: 88px;
@@ -510,4 +512,35 @@
 
 .smartLinkBtn:hover {
   text-decoration: underline;
+}
+
+/* ─── Narrow viewports ───────────────────────────────────────────────────────
+ * The floors above total 378px across a row (26 join + 88 field + 88 operator
+ * + 120 value + 24 remove + 4 gaps) before any nesting indent, against ~321px
+ * inside the drawer on a 375px phone. Rather than shrink five controls into
+ * illegibility, let the row become two lines and give the indent back.
+ */
+@media (max-width: 768px) {
+  .smartRow {
+    flex-wrap: wrap;
+  }
+
+  .smartSelect,
+  .smartInput,
+  .smartChipField,
+  .smartChipPicker {
+    min-width: 0;
+  }
+
+  /* The value field takes the second line to itself — it's the one that
+     actually needs the width. */
+  .smartInput,
+  .smartChipField {
+    flex-basis: 100%;
+  }
+
+  .smartGroup[data-depth="2"],
+  .smartGroup[data-depth="3"] {
+    margin-left: 8px;
+  }
 }

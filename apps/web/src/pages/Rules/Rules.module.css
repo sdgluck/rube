@@ -168,30 +168,47 @@ td.previewBlockCell {
   position: relative;
 }
 
-/* Bleed the dark canvas past the layout's right edge so it reaches the
-   viewport edge. We can't simply increase the previewStack width inside the
-   table cell (that would push the table wider than the viewport — see
-   `.tableBleedRight` below for why we have to also disable the wrapper's
-   horizontal clipping). The pseudo paints a #1f1f1f strip extending right of
-   the previewStack, picked at 80px to comfortably cover .content's 40px
-   padding plus any rounding. */
-.previewStack::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 100%;
-  width: 80px;
-  background: var(--sidebar);
-  pointer-events: none;
+/* Desktop only, both of these. The bleed paints 80px past the right edge of
+   the content column and nothing downstream clips it — `.table-scroll` is
+   `visible`, `.content` is `overflow-y` only. On desktop that 80px lands in
+   `.content`'s 40px gutter and reads as the canvas reaching the window edge.
+   On a phone the gutter is 16px, so the same strip is ~64px of unconditional
+   horizontal page scroll for a decoration nobody asked for. Mobile also gets
+   the wrapper's `overflow-x: visible` from App.css already, so scoping
+   `.tableBleedRight` here changes nothing there. */
+@media (min-width: 769px) {
+  /* We can't simply widen the previewStack inside the table cell — that would
+     push the table wider than the viewport — so the pseudo paints a strip
+     extending right of it, at 80px to comfortably cover .content's 40px
+     padding plus any rounding. */
+  .previewStack::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: 80px;
+    background: var(--sidebar);
+    pointer-events: none;
+  }
+
+  /* Let the bleed escape the wrapper. Native `.table-scroll` uses
+     `overflow-x: auto` for narrow-viewport horizontal scroll; at this width
+     the table fits comfortably so the bleed is the more important
+     consideration. */
+  .tableBleedRight {
+    overflow-x: visible !important;
+  }
 }
 
-/* When applied to the rules-page table-scroll wrapper, allow the preview
-   row's right-side bleed to escape the wrapper. Native `.table-scroll` uses
-   `overflow-x: auto` for narrow-viewport horizontal scroll; on this page the
-   table fits comfortably so the bleed is the more important consideration. */
-.tableBleedRight {
-  overflow-x: visible !important;
+/* Both stacks are sized from the `.table-scroll` wrapper's clientWidth by a
+   ResizeObserver, which is right while the row is a table row. On mobile the
+   row becomes a card with 12px of its own side padding (shared.module.css), so
+   the measured width overshoots its new parent by 24px. Cap it rather than
+   teaching the observer about the reflow. */
+.previewStack,
+.testPreviewStack {
+  max-width: 100%;
 }
 
 /* `.table-scroll` normally gets its rounded corners for free: `overflow-x:
@@ -797,5 +814,25 @@ td.previewBlockCell {
 
   .tableBleedRight td[data-cell="title"] {
     min-width: 160px;
+  }
+}
+
+/* Eight children, every one of them `white-space: nowrap` — the bar has a
+   ~500px floor against 343px of phone. Let it become two or three rows. */
+@media (max-width: 768px) {
+  .bulkBar {
+    flex-wrap: wrap;
+  }
+
+  /* The spacer exists to push Cancel to the far right of a single line. Once
+     the bar wraps it would instead claim a whole row of its own. */
+  .bulkBar > .bulkSpacer {
+    display: none;
+  }
+
+  /* "N rules selected" takes the first line to itself so the buttons pack
+     from the left rather than starting halfway across. */
+  .bulkBar > span:first-child {
+    flex-basis: 100%;
   }
 }

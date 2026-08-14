@@ -39,7 +39,7 @@ export function MostWatchedPanel({
         <div className={styles.muted}>No watch history this week</div>
       )}
       {mostWatchedQuery.data && mostWatchedQuery.data.length > 0 && (
-        <div className="table-scroll in-panel">
+        <div className="table-scroll in-panel" data-scroll="x">
           <table className={styles.compactTable}>
             <thead>
               <tr>

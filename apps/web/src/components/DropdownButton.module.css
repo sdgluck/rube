@@ -40,6 +40,7 @@
   box-shadow: var(--e-float);
   z-index: var(--z-dropdown);
   min-width: 160px;
+  max-width: calc(100vw - 32px);
   padding: 4px;
   overflow: hidden;
   transform-origin: top right;
@@ -63,6 +64,8 @@
   cursor: pointer;
   color: var(--ink);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menuItem:hover:not(:disabled) {
