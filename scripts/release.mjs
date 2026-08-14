@@ -50,27 +50,48 @@ try {
   prevRef = versionCommit || sh("git", ["rev-list", "--max-parents=0", "HEAD"]);
 }
 
-const log = sh("git", [
+// Bodies, not just subjects. A subject line is a label — "feat(registry): pack
+// pin defaults" — and summarising a list of labels produces a changelog of
+// labels: technically accurate, useless to somebody deciding whether to
+// upgrade. The reasoning, the behaviour change and the upgrade note all live
+// in the body, so that's what the summariser gets.
+const commits = sh("git", [
   "log",
   `${prevRef}..HEAD`,
   "--no-merges",
-  "--pretty=format:- %s (%h)",
+  "--pretty=format:=== %s%n%b",
 ]);
-if (!log) die(`no commits since ${prevRef}`);
+if (!commits) die(`no commits since ${prevRef}`);
 
+const commitCount = commits.split("\n").filter((l) => l.startsWith("=== ")).length;
 console.error(`release: prev=${prevRef} next=${next}`);
-console.error(`release: summarising ${log.split("\n").length} commits via claude…`);
+console.error(`release: summarising ${commitCount} commits via claude…`);
 
-const prompt = `You are writing a CHANGELOG entry in Keep a Changelog format.
+const prompt = `You are writing the CHANGELOG entry for a new release of Tinkerbell, a self-hosted tool that generates Plex collections from rules. Its readers are the people who run it: they read this to decide whether to upgrade and what will change on their server when they do.
 
-Below is the list of commits since the last release. Group them under \`### Added\`, \`### Changed\`, \`### Fixed\`, \`### Removed\` (omit any section with no entries). Rewrite each as a user-facing bullet — no commit hashes, no internal refactor noise unless user-visible. Output ONLY the section markdown, no preamble or version header.
+Below are the commits since the last release, each starting with "=== " followed by its subject and then its body.
+
+Write the entry as Keep a Changelog sections — \`### Added\`, \`### Changed\`, \`### Fixed\`, \`### Removed\` — omitting any section with nothing in it.
+
+Rules:
+- One bullet per user-visible change. Say what is different for the user now, not what was refactored. Skip commits with no user-visible effect (build, CI, internal cleanup).
+- Be specific. "Grouped rules now build a collection for every group by default" — not "grouped rule caps are now opt-in". Name the feature, the page, or the rule types involved so a reader can tell whether it affects them.
+- Never merge unrelated changes into one bullet. If a commit did three things, give it three bullets.
+- A bullet must be readable on its own by someone who has not seen the commits. No commit hashes, no file or symbol names, no "as described above".
+- When a change alters behaviour for existing installs — different defaults, a migration, something that has to be reconfigured — say so plainly in the bullet and lead the sentence with it. Bold the leading clause with ** for those.
+- Prefer the commit body's own reasoning over inventing new framing. Do not claim anything the commits don't support.
+
+Output ONLY the section markdown. No preamble, no version header, no closing commentary.
 
 Commits:
-${log}`;
+${commits}`;
 
+// Sonnet, not Haiku: this is the one artefact of a release that users read, and
+// the cost of a bad summary is a changelog nobody trusts. Two dollars of model
+// time is cheaper than the version bump it describes.
 const claude = spawnSync(
   "claude",
-  ["-p", "--output-format", "text", "--model", "claude-haiku-4-5"],
+  ["-p", "--output-format", "text", "--model", "claude-sonnet-5"],
   {
     cwd: ROOT,
     encoding: "utf8",
@@ -81,8 +102,37 @@ const claude = spawnSync(
 );
 if (claude.signal === "SIGTERM") die("claude timed out after 3min — likely a global hook stalling the subprocess; check ~/.claude/settings.json");
 if (claude.status !== 0) die("claude summarisation failed");
-const sections = claude.stdout.trim();
-if (!sections) die("claude returned empty summary");
+
+// Strip anything before the first heading — a stray "Here's the changelog:"
+// would otherwise land in the file verbatim.
+const raw = claude.stdout.trim();
+const firstHeading = raw.indexOf("### ");
+const sections = firstHeading === -1 ? "" : raw.slice(firstHeading).trim();
+
+// The failures worth catching are the quiet ones: a summary that parses as
+// markdown but says nothing. Both of these produced a shipped release before
+// they were checks.
+if (!sections) die("claude returned no `### ` sections — rerun, or write the entry by hand");
+const bullets = sections.split("\n").filter((l) => l.trimStart().startsWith("- "));
+if (bullets.length === 0) die("claude returned headings with no bullets");
+// Eight words is where "Pin rotation is now required" sits — a label, not a
+// changelog entry. Anything shorter can't have said what changed for whom.
+const vague = bullets.filter((l) => l.replace(/^\s*-\s*/, "").split(/\s+/).length < 8);
+if (vague.length > 0) {
+  die(
+    `claude returned ${vague.length} bullet(s) too terse to be useful:\n` +
+      vague.map((l) => `  ${l.trim()}`).join("\n") +
+      "\n  Rerun the release, or write CHANGELOG.md by hand and re-run with the entry in place.",
+  );
+}
+
+// Printed in full because this is the last point where it costs nothing to
+// fix: after this the entry is committed, tagged and pushed.
+console.error(`\nrelease: changelog entry for v${next} —\n\n${sections}\n`);
+if (process.env.CHANGELOG_DRY_RUN === "1") {
+  console.error("release: CHANGELOG_DRY_RUN=1 — nothing written");
+  process.exit(0);
+}
 
 const today = new Date().toISOString().slice(0, 10);
 const changelogPath = join(ROOT, "CHANGELOG.md");
