@@ -24,7 +24,7 @@ import {
   throughputMbps,
 } from "./math.ts";
 import { recentUpMbps, recordBandwidthTest } from "./store.ts";
-import { download, ENDPOINT, LATENCY_PROBES, runPhase, upload } from "./transfer.ts";
+import { download, ENDPOINT, LATENCY_PROBES, runPhase, STREAMS, upload } from "./transfer.ts";
 
 export { getBandwidthHistory, getLatestBandwidthTest, pruneBandwidthTests, type BandwidthTest } from "./store.ts";
 export { isSlowerThanUsual, summarise, throughputMbps } from "./math.ts";
@@ -114,6 +114,7 @@ export async function runBandwidthTest(ctx: JobContext): Promise<string> {
       jitterMs,
       endpoint: ENDPOINT,
       pop,
+      streams: STREAMS,
       bytesDown,
       bytesUp,
       status,

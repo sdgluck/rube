@@ -155,6 +155,13 @@
       "when": 1786710579262,
       "tag": "0021_bandwidth_tests",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1786721689709,
+      "tag": "0022_bandwidth_streams",
+      "breakpoints": true
     }
   ]
 }

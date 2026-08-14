@@ -446,6 +446,12 @@ export const bandwidthTests = sqliteTable(
     /** What was measured against, and the edge PoP that answered. */
     endpoint: text("endpoint").notNull(),
     pop: text("pop"),
+    // How many connections ran at once. A parallel-stream figure and a
+    // single-stream one differ by more than 2x on a multi-gig link — the same
+    // server measured 736 Mbps on one connection and 1613 Mbps on four — so a
+    // result without its parallelism can't be compared against anything.
+    // Nullable: rows written before this column was added didn't record it.
+    streams: integer("streams"),
     bytesDown: integer("bytes_down").notNull().default(0),
     bytesUp: integer("bytes_up").notNull().default(0),
     /** "ok" | "error" | "cancelled" */

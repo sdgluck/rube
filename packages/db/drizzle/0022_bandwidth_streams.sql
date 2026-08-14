@@ -1,0 +1,1 @@
+ALTER TABLE `bandwidth_tests` ADD `streams` integer;

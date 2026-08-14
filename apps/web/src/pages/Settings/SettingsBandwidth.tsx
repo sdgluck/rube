@@ -114,6 +114,18 @@ export default function SettingsBandwidth() {
         connection is metered.
       </p>
 
+      {/* Expect this to read higher than a browser speed test, and say why
+          before someone concludes the tool is broken. Both halves matter: the
+          machine (a wired server, not a laptop on Wi-Fi) and the method
+          (parallel connections, which is also what several viewers streaming
+          at once looks like — so it is the right measure for this number). */}
+      <p className={styles.intro}>
+        Expect a higher figure than a speed test run in your browser. This measures the machine Tinkerbell runs on,
+        which is usually wired, rather than the device you're reading this on; and it uses several connections at once,
+        the way several people streaming at once would. A single connection often can't saturate a fast line, so
+        one-connection tests can report less than half of what the link will actually carry.
+      </p>
+
       <div className={styles.header}>
         <button
           className={styles.runBtn}
@@ -181,7 +193,10 @@ export default function SettingsBandwidth() {
             <ResultCard label="Edge" value={latest.pop ?? EMPTY} sub="Cloudflare PoP" />
           </div>
           <p className={styles.caveat}>
-            Measured <RelativeTime timestamp={latest.startedAt} />, moving{" "}
+            Measured <RelativeTime timestamp={latest.startedAt} />
+            {/* Omitted for rows written before the column existed, rather than
+                assuming a parallelism that was never recorded. */}
+            {latest.streams != null && ` over ${latest.streams} connections`}, moving{" "}
             {formatFileSize(latest.bytesDown + latest.bytesUp)}.
             {latest.concurrentKbps > 0 &&
               ` ${formatBandwidth(latest.concurrentKbps)} of playback was in flight at the time, so this reads low.`}

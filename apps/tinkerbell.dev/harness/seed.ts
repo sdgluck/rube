@@ -257,6 +257,7 @@ for (let i = 0; i < 8; i++) {
       jitterMs: 1 + (fnv1a(`jit-${i}`) % 3),
       endpoint: "https://speed.cloudflare.com",
       pop: "LHR",
+      streams: 4,
       bytesDown: 120_000_000,
       bytesUp: 80_000_000,
       status: "ok",
