@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-14
+
+### Added
+
+- **Tinkerbell now keeps its own playback history.** A new "Poll Playback Sessions" job samples what is playing every 30 seconds and records each play — who watched, how much of it they got through, on what device, and whether it was transcoded. It is enabled by default and starts recording as soon as you upgrade. Plex can tell you what is playing right now and that something was viewed, but not how much of it was actually watched; this is the data that watch-based collection rules and cleanup rules will be built on.
+- A new "Import Plex Watch History" job seeds that history from Plex's own view log, so you are not starting from nothing. **It does not run on a schedule — run it once from the Jobs page after upgrading.** It is safe to re-run: it resumes from where it stopped and will not double-count plays already recorded live.
+- New Stats panel showing recent plays with user, device, transcode decision and completion, paginated and filterable by period.
+- Most Watched gains a 7d / 30d / 90d / All period selector, replacing the hardcoded "This Week".
+- Media detail pages show a "Watched by" section — which users have watched the item, how many times, and when. This is the quickest way to confirm playback recording is working.
+- The Users page shows a Plays column with each user's play count and total watch time.
+- Two new settings: the completion threshold that decides when a play counts as "watched" (default 85% of runtime), and how long to keep raw session rows (default: forever).
+
+### Changed
+
+- **Most Watched and the dashboard activity tiles will read empty immediately after upgrading.** They previously came from an hourly cached snapshot of Plex's view log, capped at whatever fitted in its last 1,000 entries; they now read Tinkerbell's own playback history, which starts empty. Running "Import Plex Watch History" once fills them back in — after which the counts are exact rather than capped and up to an hour stale.
+- History entries imported from Plex's view log are shown differently from plays recorded live, because Plex's log records only that something was watched — no completion percentage, no watch time, no device. A tooltip explains the distinction rather than showing a misleading 0%.
+
+### Removed
+
+- The hourly `sync-most-watched` job. Its job row is deleted automatically on upgrade, so the scheduler stops firing it.
+
 ## [0.12.0] - 2026-08-14
 
 ### Added
