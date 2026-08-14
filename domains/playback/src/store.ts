@@ -14,7 +14,7 @@
 import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getConfig, DAY_MS } from "@tinkerbell/core";
-import { db, playbackSessions, plexUsers, userPreferences, watchState } from "@tinkerbell/db";
+import { db, playbackSessions, plexUsers, watchState } from "@tinkerbell/db";
 import type { PlexSession } from "@tinkerbell/plex";
 import { diffSnapshot, staleCloses, type OpenSession, type SessionClose } from "./diff.ts";
 
@@ -249,10 +249,16 @@ export interface WatchStateUserScope {
 /**
  * Who "everyone" means for `tb.watchedByAll`.
  *
- * Opted-in users from `plex_users`, with the owner excluded unless
- * `watch_state_all_users_include_owner` says otherwise. Opting in is the same
- * portal switch personalization uses: a user who has never engaged with
- * Tinkerbell shouldn't silently become a vote on whether a film gets deleted.
+ * Every user synced from Plex, with the owner excluded unless
+ * `watch_state_all_users_include_owner` says otherwise.
+ *
+ * Deliberately *not* gated on the personalization opt-in, though that was the
+ * obvious candidate: opting in is a portal switch about home-screen
+ * personalization, and most people sharing a server never open the portal at
+ * all. Scoping to it would make "everyone" mean nobody on a typical install —
+ * `watchedByAll` would match nothing, permanently and silently. Sharing the
+ * library is the consent that matters here; whether someone customised their
+ * home screen says nothing about whether they've watched a film.
  *
  * The caller is expected to log the resolved list. A rule that deletes things
  * has to make its definition of "everyone" visible in the run log, and an
@@ -264,8 +270,7 @@ export function watchStateUserScope(): WatchStateUserScope {
   const rows = db
     .select({ userId: plexUsers.userId, username: plexUsers.username, name: plexUsers.name })
     .from(plexUsers)
-    .innerJoin(userPreferences, eq(userPreferences.userId, plexUsers.userId))
-    .where(and(eq(userPreferences.optedIn, 1), includeOwner ? undefined : eq(plexUsers.isOwner, 0)))
+    .where(includeOwner ? undefined : eq(plexUsers.isOwner, 0))
     .orderBy(asc(plexUsers.username))
     .all();
 

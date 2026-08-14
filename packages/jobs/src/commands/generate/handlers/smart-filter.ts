@@ -111,8 +111,8 @@ function localEvalContext(log: (...args: unknown[]) => void, localLeaves: SmartF
 
   if (scope.userIds.length === 0) {
     log(
-      "[Smart Filter] No opted-in users resolved for watch-state filtering" +
-        (scope.includeOwner ? "" : " (the owner is excluded — see watch_state_all_users_include_owner)") +
+      "[Smart Filter] No users resolved for watch-state filtering — sync users in Settings" +
+        (scope.includeOwner ? "" : ", or set watch_state_all_users_include_owner on a server with no shared users") +
         (needsUserSet ? '. "Watched by everyone" will match nothing.' : "."),
     );
   } else {
