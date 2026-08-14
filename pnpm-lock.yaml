@@ -356,6 +356,25 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/cleanup:
+    dependencies:
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/collections:
     dependencies:
       '@tinkerbell/core':
@@ -866,6 +885,9 @@ importers:
       '@tinkerbell/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
+      '@tinkerbell/domain.cleanup':
+        specifier: workspace:*
+        version: link:../../domains/cleanup
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections

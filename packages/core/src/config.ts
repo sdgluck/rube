@@ -151,6 +151,21 @@ export const configSchema = z.object({
    * deleting anything.
    */
   watch_state_all_users_include_owner: z.boolean(),
+  /**
+   * Master switch for every destructive cleanup action, across every rule.
+   *
+   * Default false, and checked at the moment of action rather than at save
+   * time, so a user who panics has one switch to flip instead of N rules to
+   * find and disable. Non-destructive modes (label, collection-only) are not
+   * gated on it — they are how someone sensibly tries the feature out.
+   */
+  cleanup_enabled: z.boolean(),
+  /**
+   * Ceiling on destructive actions across *all* cleanup rules in one generate
+   * run. Per-rule caps don't compose: five rules each staying under their own
+   * limit of 30 can still empty a library overnight.
+   */
+  cleanup_max_deletes_per_run: z.number().int().positive(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),

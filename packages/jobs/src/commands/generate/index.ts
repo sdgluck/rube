@@ -15,7 +15,8 @@ import { errorMessage } from "@tinkerbell/core";
 import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
 
 import { parseRuleConfig } from "./config.ts";
-import { runHandlerWithCommits } from "./dispatch.ts";
+import { runHandler } from "./dispatch.ts";
+import { createCleanupBudget } from "./cleanup.ts";
 import { resolveArrAdds } from "./arr.ts";
 import { llmUnavailableReason } from "./ai/llm.ts";
 import { withItemCache } from "./item-cache.ts";
@@ -99,6 +100,12 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
   const concurrency = Math.min(config.ruleConcurrency ?? RULE_CONCURRENCY_DEFAULT, enabledRules.length);
   if (concurrency > 1) ctx.log(`Running up to ${concurrency} rules at a time.`);
 
+  // One destructive-action budget for the whole run, shared by every cleanup
+  // rule. Per-rule caps don't compose — five rules each under their own limit
+  // of 30 can still empty a library — so the ceiling has to be global, which
+  // means a single mutable object threaded through the concurrent rule loop.
+  const cleanupBudget = createCleanupBudget();
+
   /** Everything one rule does, start to finish. Never throws except on abort. */
   const runOneRule = async (rule: (typeof enabledRules)[number], ruleCtx: JobContext): Promise<void> => {
     const ruleConfig = parseRuleConfig(rule);
@@ -147,7 +154,7 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
           // collections is no more fatal than the rule's own handler failing.
           await deleteOldCollections(ruleCtx, client, sections, rule.id);
 
-          return runHandlerWithCommits({ ctx: ruleCtx, client, sections, rule, ruleConfig }, machineId, labels);
+          return runHandler({ ctx: ruleCtx, client, sections, rule, ruleConfig }, machineId, labels, cleanupBudget);
         },
         { signal: ctx.signal },
       );
@@ -318,7 +325,7 @@ export async function runSingleRule(
 
       ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
       const labels = ["Tinkerbell", `Rule:${rule.id}`];
-      return runHandlerWithCommits({ ctx, client, sections, rule, ruleConfig }, machineId, labels);
+      return runHandler({ ctx, client, sections, rule, ruleConfig }, machineId, labels, createCleanupBudget());
     },
     { waitMs: SINGLE_RUN_LOCK_WAIT_MS, signal },
   );

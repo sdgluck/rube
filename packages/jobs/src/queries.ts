@@ -3,7 +3,7 @@
  * runner.ts so the lifecycle code doesn't share a file with persistence
  * formatting (GET-122).
  */
-import { eq, desc, inArray, sql, type InferSelectModel } from "drizzle-orm";
+import { and, eq, desc, inArray, sql, type InferSelectModel } from "drizzle-orm";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 
@@ -50,6 +50,25 @@ export function getJobRuns(jobId: string, limit = 20): Array<Omit<JobRun, "log">
     .orderBy(desc(jobRuns.startedAt))
     .limit(limit)
     .all();
+}
+
+/**
+ * When a job last finished successfully, or null if it never has.
+ *
+ * Cleanup uses this to decide whether the local library index is fresh enough
+ * to act on: "nobody has watched this" is exactly the claim that goes wrong
+ * against stale data, and a scheduled deletion built on it is the worst place
+ * to find that out.
+ */
+export function lastSuccessfulRunAt(jobId: string): number | null {
+  const row = db
+    .select({ finishedAt: jobRuns.finishedAt })
+    .from(jobRuns)
+    .where(and(eq(jobRuns.jobId, jobId), eq(jobRuns.status, "completed")))
+    .orderBy(desc(jobRuns.finishedAt))
+    .limit(1)
+    .get();
+  return row?.finishedAt ?? null;
 }
 
 /**
