@@ -10,6 +10,7 @@ import { and, lt, notInArray } from "drizzle-orm";
 import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
+import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
 import { syncRecentlyAdded, syncMostWatched } from "@tinkerbell/domain.stats";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { JOB_RUN_RETENTION_MS } from "./limits.ts";
@@ -59,6 +60,24 @@ export const internalJobs = {
     run: (ctx: JobContext) => checkAllConfiguredServices(ctx.signal),
     // Runs every minute. Anything past 5 is wedged, not slow.
     timeoutMs: 5 * MINUTE_MS,
+    quiet: true,
+  },
+  "playback-poll": {
+    run: async (ctx: JobContext) => {
+      const result = await pollPlaybackOnce(ctx.signal);
+      if (!result.polled) return "Playback poll skipped.";
+      const parts = [];
+      if (result.recovered) parts.push(`recovered ${result.recovered} session(s) after restart`);
+      if (result.opened) parts.push(`opened ${result.opened}`);
+      if (result.closed) parts.push(`closed ${result.closed}`);
+      // The quiet flag suppresses the event only when this text is unchanged,
+      // so a tick where nothing happened must produce a stable string — hence
+      // one phrasing for "no change" rather than counts that are always zero.
+      return parts.length ? `Playback: ${parts.join(", ")}.` : "Playback poll: no change.";
+    },
+    // Runs every 30 seconds. A poll that takes more than a minute has wedged;
+    // the poller's own in-flight latch drops overlapping ticks before then.
+    timeoutMs: MINUTE_MS,
     quiet: true,
   },
 } as const satisfies Record<string, InternalJobDescriptor>;

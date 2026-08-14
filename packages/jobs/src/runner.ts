@@ -59,6 +59,18 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
+  // Six-field schedule — croner reads a leading seconds field, which every
+  // other job here omits. 30s is Tautulli's default and the trade-off is
+  // sampling density against API load: a 22-minute episode gets ~44 samples
+  // for one small request per tick. Anything slower starts missing short items
+  // entirely, which silently under-counts exactly the content people rewatch.
+  {
+    id: "playback-poll",
+    name: "Poll Playback Sessions",
+    command: "playback-poll",
+    schedule: "*/30 * * * * *",
+    enabled: 1,
+  },
   // No schedule by default: it deletes collections off the Plex server, so it
   // runs when a human asks it to. A schedule can still be set from the UI.
   {

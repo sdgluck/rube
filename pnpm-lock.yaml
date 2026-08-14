@@ -850,6 +850,9 @@ importers:
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
+      '@tinkerbell/domain.playback':
+        specifier: workspace:*
+        version: link:../../domains/playback
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
