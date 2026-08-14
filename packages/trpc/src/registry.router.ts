@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { registryImportOverridesSchema } from "@tinkerbell/contracts";
 import {
   applyUpdate,
   buildImportPlan,
@@ -35,6 +36,8 @@ const importInput = z.object({
   packSlug: z.string().nullable().default(null),
   ruleSlugs: z.array(z.string()).min(1),
   sectionTitles: z.array(z.string()).min(1),
+  /** Import-time tweaks to the pack's published config — see contracts. */
+  overrides: registryImportOverridesSchema.default({}),
 });
 
 export const registryRouter = t.router({
@@ -56,7 +59,10 @@ export const registryRouter = t.router({
     if (targets.length === 0) {
       throw new Error("None of the selected libraries exist on this Plex server. Refresh libraries and try again.");
     }
-    return buildImportPlan({ packSlug: input.packSlug, ruleSlugs: input.ruleSlugs, targets }, plexTagLookup());
+    return buildImportPlan(
+      { packSlug: input.packSlug, ruleSlugs: input.ruleSlugs, targets, overrides: input.overrides },
+      plexTagLookup(),
+    );
   }),
 
   import: procedure.input(importInput.extend({ enabled: z.boolean().default(false) })).mutation(async ({ input }) => {
@@ -67,7 +73,7 @@ export const registryRouter = t.router({
     // Re-planned rather than trusting a plan round-tripped through the
     // client: the preview is a UI affordance, not an authorisation token.
     const plan = await buildImportPlan(
-      { packSlug: input.packSlug, ruleSlugs: input.ruleSlugs, targets },
+      { packSlug: input.packSlug, ruleSlugs: input.ruleSlugs, targets, overrides: input.overrides },
       plexTagLookup(),
     );
     const created = importPlan(plan, { enabled: input.enabled });

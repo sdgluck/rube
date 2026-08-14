@@ -295,6 +295,36 @@
   font-size: 0.78rem;
 }
 
+/* Import options: a toggle or number, then a label with a hint under it. */
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.optionRow + .optionRow {
+  margin-top: 12px;
+}
+
+.optionRow > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.numberInput {
+  width: 84px;
+  flex: none;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
 @media (max-width: 620px) {
   .footer {
     flex-direction: column;

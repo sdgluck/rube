@@ -11,6 +11,7 @@ import { getRules, updateRule, type Rule } from "@tinkerbell/domain.rules";
 import type { RegistryUpdate } from "@tinkerbell/contracts";
 import { getRegistry } from "./fetch.ts";
 import { hashConfig } from "./hash.ts";
+import { carryOverUserChoices } from "./overrides.ts";
 import { resolveRuleForImport, type ResolveTarget, type TagLookup } from "./resolve.ts";
 
 function linkedRules(): Rule[] {
@@ -55,6 +56,10 @@ export async function checkForUpdates(): Promise<RegistryUpdate[]> {
  * second-guess them. A rule scoped to no section can't be resolved (tag keys
  * are per-section), so it's refused with an explanation rather than silently
  * updated with unresolvable clauses.
+ *
+ * The same reasoning covers the knobs the import modal offers — pinning,
+ * rotation size, limit, min-items. Those are answers about *this* library, so
+ * `carryOverUserChoices` keeps them and the update only refreshes the rest.
  */
 export async function applyUpdate(
   ruleId: string,
@@ -82,7 +87,10 @@ export async function applyUpdate(
     );
   }
 
-  const { config } = await resolveRuleForImport(published, targets, lookup);
+  const { config: republished } = await resolveRuleForImport(published, targets, lookup);
+  // An update refreshes what the rule matches; it never revisits the choices
+  // the user made when they imported it.
+  const config = carryOverUserChoices(rule.config ?? {}, republished);
   updateRule(ruleId, {
     config,
     registryVersion: pack?.version ?? rule.registryVersion,

@@ -75,6 +75,32 @@ export type RegistryPackInput = z.input<typeof registryPackSchema>;
 
 export const DEFAULT_REGISTRY_URL = "https://tinkerbell.dev/registry/index.json";
 
+/**
+ * Per-import tweaks to a pack's published config.
+ *
+ * Packs ship opinionated defaults — grouped rules build a collection per
+ * director/genre/… and rotate ten of them onto the homepage — but those are
+ * the author's guesses about somebody else's library. These four knobs let
+ * the importing user reshape that at the moment of import instead of editing
+ * every rule afterwards. Omitted fields keep whatever the pack published.
+ *
+ * Applied per rule and only where meaningful: `limit` and `minItems` mean
+ * nothing to a single-collection rule like a smart filter, and are ignored
+ * there rather than silently written into its config.
+ */
+export const registryImportOverridesSchema = z.object({
+  /** `false` unpins everything in the pack; `true` pins the grouped rules. */
+  pinToHomepage: z.boolean().optional(),
+  /** How many of a grouped rule's collections sit on the homepage at once. */
+  pinRotationCount: z.number().int().positive().optional(),
+  /** Cap collections per grouped rule. Omitted keeps the pack's setting. */
+  limit: z.number().int().positive().optional(),
+  /** Smallest group worth a collection, for grouped rules. */
+  minItems: z.number().int().positive().optional(),
+});
+
+export type RegistryImportOverrides = z.infer<typeof registryImportOverridesSchema>;
+
 /** One tag value in a published rule that this server has no equivalent for.
  *  Surfaced in the import preview — the rule still imports, but the user is
  *  told up front that a clause won't match anything. */

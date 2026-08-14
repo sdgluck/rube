@@ -72,7 +72,7 @@ export default function RegistryUpdatesBanner() {
       {updatable.length > 0 && (
         <>
           <strong>{updatable.length}</strong> imported rule{updatable.length === 1 ? " has" : "s have"} a newer version
-          in the registry.
+          in the registry. Your libraries, homepage pinning, and collection limits are kept.
         </>
       )}
       {modified.length > 0 && (

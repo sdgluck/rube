@@ -18,7 +18,7 @@ export const PACKS: RegistryPackInput[] = [
       "Recreates the shape of a commercial streaming home screen: something trending, something new, something " +
       "acclaimed, and a personalized row per user. The closest thing to a one-click 'make my Plex look like " +
       "Netflix' — start here if you're not sure which pack to try.",
-    version: 1,
+    version: 2,
     tags: ["starter", "home screen", "popular"],
     ruleSlugs: ["trending-now", "new-arrivals", "top-rated", "award-winners", "picked-for-you"],
   },
@@ -29,7 +29,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "For libraries curated rather than accumulated. Auteur shelves from TMDb crew data, world cinema by country " +
       "of origin, decade sections, and a source-material breakdown for the adaptations.",
-    version: 1,
+    version: 2,
     tags: ["film", "curated"],
     ruleSlugs: ["auteur-directors", "by-country", "by-decade", "top-rated", "based-on", "modern-classics"],
   },
@@ -40,7 +40,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Content-rating shelves so the safe material is obvious, animation studios because that's genuinely how kids " +
       "browse, a runtime cap for the nights that need one, and an AI-curated comfort-watch row.",
-    version: 1,
+    version: 2,
     tags: ["family", "kids"],
     ruleSlugs: ["kid-safe", "animation-studios", "family-genres", "date-night-runtime", "sunday-afternoon"],
   },
@@ -51,7 +51,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Horror by decade and subgenre, a shelf of horror you own but have never started, and TMDb-keyword seasonal " +
       "picks. Enable it in September, disable it in November — the rules stay put for next year.",
-    version: 1,
+    version: 2,
     tags: ["seasonal", "horror"],
     ruleSlugs: ["horror-by-decade", "horror-subgenres", "unwatched-horror", "seasonal-picks", "spooky-ai"],
   },
@@ -62,7 +62,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Resolution and source-format collections, plus a high-bitrate 'reference quality' shelf built from a smart " +
       "filter. Tune the bitrate threshold after import — 30 Mbps suits a 4K-heavy library, less so a 1080p one.",
-    version: 1,
+    version: 2,
     tags: ["quality", "4k", "hdr"],
     ruleSlugs: ["resolutions", "video-formats", "reference-quality", "atmos-and-surround"],
   },
@@ -73,7 +73,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Network shelves, Rotten Tomatoes acclaim via OMDb, award winners, and a shelf of series nobody has started " +
       "yet. Point this at a TV section — several of its rules are show-only.",
-    version: 1,
+    version: 2,
     tags: ["tv", "prestige"],
     ruleSlugs: ["by-network", "critically-acclaimed-tv", "unstarted-series", "tv-award-winners"],
   },
@@ -85,7 +85,7 @@ export const PACKS: RegistryPackInput[] = [
       "Aimed at large libraries where good material disappears below the fold. Unwatched-and-well-rated, year " +
       "shelves that surface older titles, an affectionate worst-of, and an AI row for combinations you'd never " +
       "think to build.",
-    version: 1,
+    version: 2,
     tags: ["backlog", "discovery"],
     ruleSlugs: ["hidden-gems", "forgotten-years", "lowest-rated", "unexpected-pairings"],
   },
@@ -107,7 +107,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Franchise and studio-universe collections from TMDb, plus adaptation and streaming-original shelves. Pairs " +
       "well with the arr action if you want Tinkerbell to fill in the films you're missing.",
-    version: 1,
+    version: 2,
     tags: ["franchise", "tmdb"],
     ruleSlugs: ["franchises", "studio-universes", "based-on", "streaming-originals"],
   },
@@ -118,7 +118,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Country of origin, audio language, and subtitle availability — the three things that actually determine " +
       "whether a non-English title gets watched — plus an AI shelf that groups by movement rather than by border.",
-    version: 1,
+    version: 2,
     tags: ["world cinema", "languages"],
     ruleSlugs: ["by-country", "by-audio-language", "by-subtitle-language", "international-acclaim"],
   },

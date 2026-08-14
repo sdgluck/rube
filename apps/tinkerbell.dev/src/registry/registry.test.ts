@@ -9,7 +9,14 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTagField, ruleConfigSchema, RULE_TYPE_REQUIRES, RULE_TYPE_VALUES } from "@tinkerbell/contracts";
+import {
+  isGroupedRuleType,
+  isTagField,
+  producesManyCollections,
+  ruleConfigSchema,
+  RULE_TYPE_REQUIRES,
+  RULE_TYPE_VALUES,
+} from "@tinkerbell/contracts";
 import { smartFilterGroupSchema, type SmartFilterNode } from "@tinkerbell/plex-smart-filter";
 import { PACKS_BY_SLUG, REGISTRY, RULES_BY_SLUG, rulesForPack } from "./index.ts";
 
@@ -66,10 +73,36 @@ test("no rule ships instance-local config", () => {
   }
 });
 
-test("no rule pins to the homepage by default", () => {
-  // Importing a pack must never rearrange somebody's Plex home screen for them.
+test("only rotating rules pin to the homepage", () => {
+  // A pack may put its grouped rules on the home screen — that's the point of
+  // "By Decade" — but only as a rotating subset, and only for rule types that
+  // produce enough collections for rotation to mean anything. Everything else
+  // ships unpinned: importing a pack shouldn't reorder somebody's home for the
+  // sake of one smart filter. The import modal can override either way.
   for (const rule of REGISTRY.rules) {
-    assert.equal(rule.config.pinToHomepage, false, `rule "${rule.slug}" should ship pinToHomepage: false`);
+    if (rule.config.pinToHomepage !== true) {
+      assert.equal(rule.config.pinToHomepage, false, `rule "${rule.slug}" should ship pinToHomepage: false`);
+      continue;
+    }
+    assert.ok(
+      producesManyCollections(rule.type),
+      `rule "${rule.slug}" pins to the homepage but doesn't build enough collections to rotate`,
+    );
+    assert.ok(
+      typeof rule.config.pinRotationCount === "number" && rule.config.pinRotationCount > 0,
+      `rule "${rule.slug}" pins to the homepage without a pinRotationCount`,
+    );
+  }
+});
+
+test("grouped rules ship uncapped", () => {
+  // The pack author doesn't know how big the target library is. A `limit` or
+  // `minItems` here would quietly drop the long tail on every server that
+  // imports it — those are the importing user's call, via the import modal.
+  for (const rule of REGISTRY.rules) {
+    if (!isGroupedRuleType(rule.type)) continue;
+    assert.ok(!("limit" in rule.config), `grouped rule "${rule.slug}" must not ship a limit`);
+    assert.ok(!("minItems" in rule.config), `grouped rule "${rule.slug}" must not ship minItems`);
   }
 });
 

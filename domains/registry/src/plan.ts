@@ -8,8 +8,15 @@
  */
 import { getConfig } from "@tinkerbell/core";
 import { getRules } from "@tinkerbell/domain.rules";
-import type { ImportPlan, ImportPlanItem, RegistryRequirement, RegistryRule } from "@tinkerbell/contracts";
+import type {
+  ImportPlan,
+  ImportPlanItem,
+  RegistryImportOverrides,
+  RegistryRequirement,
+  RegistryRule,
+} from "@tinkerbell/contracts";
 import { getRegistry } from "./fetch.ts";
+import { applyImportOverrides } from "./overrides.ts";
 import { resolveRuleForImport, type ResolveTarget, type TagLookup } from "./resolve.ts";
 
 /** Integrations a rule can depend on, and how to tell if they're set up. */
@@ -50,6 +57,8 @@ export interface BuildPlanInput {
   packSlug?: string | null;
   ruleSlugs: string[];
   targets: ResolveTarget[];
+  /** The importing user's tweaks to the pack's published config. */
+  overrides?: RegistryImportOverrides;
 }
 
 export async function buildImportPlan(input: BuildPlanInput, lookup: TagLookup): Promise<ImportPlan> {
@@ -74,12 +83,15 @@ export async function buildImportPlan(input: BuildPlanInput, lookup: TagLookup):
     if (!rule) throw new Error(`Unknown registry rule "${slug}".`);
 
     const { config, warnings } = await resolveRuleForImport(rule, input.targets, lookup);
+    // Overrides land after resolution so the preview shows exactly what gets
+    // written — the plan is the contract, and import does no thinking.
+    const overridden = applyImportOverrides(rule.type, config, input.overrides);
     const { name, collided } = dedupeName(rule.name, taken);
     taken.add(name);
 
     items.push({
       rule,
-      config,
+      config: overridden,
       name,
       nameCollision: collided,
       resolutionWarnings: warnings,

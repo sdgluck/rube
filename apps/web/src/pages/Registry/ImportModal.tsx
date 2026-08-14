@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { producesManyCollections } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
 import ToggleSwitch from "#components/ToggleSwitch";
@@ -30,10 +31,30 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
   const [sectionTitles, setSectionTitles] = useState<string[]>([]);
   const [enabled, setEnabled] = useState(false);
 
+  // Pack defaults, editable before anything is written: grouped rules build a
+  // collection per director/genre/… and rotate ten onto the homepage.
+  const [pin, setPin] = useState(true);
+  const [rotation, setRotation] = useState(10);
+  const [limit, setLimit] = useState(0);
+  const [minItems, setMinItems] = useState(0);
+
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { staleTime: 5 * 60_000 });
+  const indexQuery = trpc.registry.index.useQuery({ force: false }, { staleTime: 60 * 60_000 });
+
+  // Only worth asking about when the pack actually contains a rule whose
+  // collection count scales with the library.
+  const hasGroupedRules = (indexQuery.data?.rules ?? []).some(
+    (r) => ruleSlugs.includes(r.slug) && producesManyCollections(r.type),
+  );
+
+  const overrides = {
+    ...(pin ? { pinToHomepage: true, pinRotationCount: rotation } : { pinToHomepage: false as const }),
+    ...(limit > 0 ? { limit } : {}),
+    ...(minItems > 0 ? { minItems } : {}),
+  };
 
   const previewQuery = trpc.registry.previewImport.useQuery(
-    { packSlug, ruleSlugs, sectionTitles },
+    { packSlug, ruleSlugs, sectionTitles, overrides },
     { enabled: sectionTitles.length > 0, retry: false },
   );
 
@@ -88,7 +109,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
               type="button"
               className={styles.primary}
               disabled={sectionTitles.length === 0 || previewQuery.isFetching || importMutation.isPending}
-              onClick={() => importMutation.mutate({ packSlug, ruleSlugs, sectionTitles, enabled })}
+              onClick={() => importMutation.mutate({ packSlug, ruleSlugs, sectionTitles, enabled, overrides })}
             >
               {importMutation.isPending ? <Spinner size="xs" /> : null}
               Import {plan ? `${plan.items.length} rule${plan.items.length === 1 ? "" : "s"}` : "rules"}
@@ -120,6 +141,82 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
           <p className={styles.warn}>No Plex libraries found. Check Settings → Plex, then refresh libraries.</p>
         )}
       </section>
+
+      {hasGroupedRules && (
+        <section className={styles.step}>
+          <h3>Collections & homepage</h3>
+          <p className={styles.stepHint}>
+            Applies to the rules in this pack that build one collection per director, genre, decade, and so on. The
+            pack's other rules keep their own settings.
+          </p>
+
+          <label className={styles.optionRow}>
+            <ToggleSwitch checked={pin} onChange={setPin} size="sm" />
+            <span>
+              Pin to the homepage
+              <span className={styles.enableHint}>
+                {pin
+                  ? "A different set is pinned on each run, so one rule can't take over the home screen."
+                  : "Collections are still created in Plex, but your home screen is left alone."}
+              </span>
+            </span>
+          </label>
+
+          {pin && (
+            <label className={styles.optionRow}>
+              <input
+                type="number"
+                className={styles.numberInput}
+                min={1}
+                value={rotation}
+                onChange={(e) => setRotation(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              />
+              <span>
+                On the homepage at a time
+                <span className={styles.enableHint}>Per library, per rule.</span>
+              </span>
+            </label>
+          )}
+
+          <label className={styles.optionRow}>
+            <input
+              type="number"
+              className={styles.numberInput}
+              min={0}
+              value={limit || ""}
+              placeholder="All"
+              onChange={(e) => setLimit(Math.max(0, parseInt(e.target.value, 10) || 0))}
+            />
+            <span>
+              Most collections per rule
+              <span className={styles.enableHint}>
+                {limit > 0
+                  ? `Keeps the ${limit} biggest and skips the rest.`
+                  : "Blank builds one for every group in the library — the pack's default."}
+              </span>
+            </span>
+          </label>
+
+          <label className={styles.optionRow}>
+            <input
+              type="number"
+              className={styles.numberInput}
+              min={0}
+              value={minItems || ""}
+              placeholder="Any"
+              onChange={(e) => setMinItems(Math.max(0, parseInt(e.target.value, 10) || 0))}
+            />
+            <span>
+              Fewest items per collection
+              <span className={styles.enableHint}>
+                {minItems > 0
+                  ? `Skips groups with fewer than ${minItems} items.`
+                  : "Blank keeps groups of any size, including one-item ones."}
+              </span>
+            </span>
+          </label>
+        </section>
+      )}
 
       {sectionTitles.length > 0 && (
         <section className={styles.step}>
