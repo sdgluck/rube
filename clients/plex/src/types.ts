@@ -47,7 +47,9 @@ export interface PlexHistoryItem {
   grandparentTitle?: string;
   grandparentRatingKey?: string;
   accountID?: number;
+  /** Unix *seconds*, unlike everything else in this codebase. */
   viewedAt?: number;
+  librarySectionID?: string;
 }
 
 export interface PlexCollection {
@@ -353,4 +355,8 @@ export interface WatchHistoryOptions {
   accountID?: string;
   librarySectionID?: string;
   limit?: number;
+  /** `X-Plex-Container-Start`, for walking the full history rather than the head of it. */
+  offset?: number;
+  /** Only entries at or after this Unix *second* — Plex's `viewedAt` unit, not ms. */
+  viewedAfter?: number;
 }

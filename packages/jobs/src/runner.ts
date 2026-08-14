@@ -87,6 +87,15 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "0 4 * * 0",
     enabled: 1,
   },
+  // No schedule — a one-shot import that resumes where it left off. Re-running
+  // it on a timer would walk Plex's history forever for nothing.
+  {
+    id: "playback-backfill",
+    name: "Import Plex Watch History",
+    command: "playback-backfill",
+    schedule: "",
+    enabled: 1,
+  },
   // ── Background / escape-hatch (hidden from UI, invoked via Settings or BYW lifecycle) ──
   { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
   { id: "label-undo", name: "Clear Tinkerbell Labels", command: "label-undo", schedule: "", enabled: 1 },

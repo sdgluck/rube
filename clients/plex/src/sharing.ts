@@ -206,15 +206,23 @@ export function createSharingModule(http: PlexHttp) {
     return out;
   }
 
-  async function getWatchHistory({ accountID, librarySectionID, limit = 50 }: WatchHistoryOptions = {}): Promise<
-    PlexHistoryItem[]
-  > {
+  async function getWatchHistory({
+    accountID,
+    librarySectionID,
+    limit = 50,
+    offset,
+    viewedAfter,
+  }: WatchHistoryOptions = {}): Promise<PlexHistoryItem[]> {
     const params: Record<string, string | number> = {
       sort: "viewedAt:desc",
       "X-Plex-Container-Size": limit,
     };
+    if (offset) params["X-Plex-Container-Start"] = offset;
     if (accountID) params.accountID = accountID;
     if (librarySectionID) params.librarySectionID = librarySectionID;
+    // Plex's filter operator suffix. `viewedAt>=` narrows server-side, which
+    // keeps an incremental backfill from walking years of history every run.
+    if (viewedAfter) params["viewedAt>"] = viewedAfter;
 
     const data = await http.request("/status/sessions/history/all", { params });
     return (data?.MediaContainer?.Metadata || []).map((item: Record<string, unknown>) => ({
@@ -226,6 +234,7 @@ export function createSharingModule(http: PlexHttp) {
       grandparentRatingKey: item.grandparentRatingKey as string | undefined,
       accountID: item.accountID as number | undefined,
       viewedAt: item.viewedAt as number | undefined,
+      librarySectionID: item.librarySectionID == null ? undefined : String(item.librarySectionID),
     }));
   }
 

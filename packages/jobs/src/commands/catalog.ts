@@ -46,6 +46,13 @@ export const COMMANDS = {
   "sync-media": { load: () => import("./sync-media.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
   "sync-collections": { load: () => import("./sync-collections.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "sync-users": { load: () => import("./sync-users.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+  // Interactive: a human enables it from Settings and watches it fill in. A
+  // long history walk is legitimately slow, hence the wider budget.
+  "playback-backfill": {
+    load: () => import("./playback-backfill.ts"),
+    lane: "interactive",
+    timeoutMs: HOUR_MS,
+  },
   "posters-refresh": { load: () => import("./posters-refresh.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
   shuffle: { load: () => import("./shuffle.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "because-you-watched": {
