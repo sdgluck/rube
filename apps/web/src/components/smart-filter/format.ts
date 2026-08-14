@@ -134,6 +134,49 @@ export function formatFilterValue(field: string, value: string, resolvedTag?: st
 }
 
 /**
+ * Watch-history clauses that read as nonsense through the generic
+ * label-op-value path.
+ *
+ * `tb.watchedByAll = 1` is a whole English sentence on its own — gluing an
+ * operator into it produces "Watched by everyone is Yes", and "Abandoned below
+ * is less than 20 %" is worse. Returns null for the local fields the generic
+ * path already handles well (`tb.playCount is at least 3`, `tb.lastPlayedAt in
+ * the last 30 days`).
+ */
+function describeLocalCondition(
+  field: string,
+  op: SmartFilterOp,
+  values: string[],
+  resolved?: string[],
+): string | null {
+  const negated = op === "!=";
+
+  switch (field) {
+    case "tb.watchedByAll": {
+      const yes = isTruthyBoolean(values[0] ?? "1") !== negated;
+      return yes ? "Watched by everyone" : "Not watched by everyone";
+    }
+    case "tb.watchedByNobody": {
+      const yes = isTruthyBoolean(values[0] ?? "1") !== negated;
+      return yes ? "Watched by nobody" : "Watched by someone";
+    }
+    case "tb.watchedBy": {
+      const who = values.map((v, i) => resolved?.[i] || (v ? `user ${v}` : UNSET)).join(", ") || UNSET;
+      return negated ? `Not watched by ${who}` : `Watched by ${who}`;
+    }
+    case "tb.abandonedPct": {
+      const pct = values[0] || UNSET;
+      // The field name already says "below"; the operator picks the direction.
+      if (op === "<" || op === "<=") return `Abandoned below ${pct}%`;
+      if (op === ">" || op === ">=") return `Watched past ${pct}%`;
+      return `Highest completion ${opLabel(field, op)} ${pct}%`;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
  * A whole clause as a sentence fragment: "Genre is Horror",
  * "Date added in the last 30 days".
  *
@@ -143,6 +186,9 @@ export function formatFilterValue(field: string, value: string, resolvedTag?: st
  */
 export function describeCondition(field: string, op: SmartFilterOp, values: string[], resolved?: string[]): string {
   const label = fieldLabel(field);
+
+  const local = describeLocalCondition(field, op, values, resolved);
+  if (local) return local;
 
   if (fieldKind(field) === "date" && values.length === 1) {
     const rel = parseRelativeDate(values[0]);

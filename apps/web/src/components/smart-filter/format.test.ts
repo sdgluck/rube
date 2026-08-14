@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fieldLabel } from "@tinkerbell/contracts";
+import { fieldLabel, LOCAL_FIELD_DEFS } from "@tinkerbell/contracts";
 import { describeCondition, formatFilterValue, parseRelativeDate, toRelativeDate } from "./format.ts";
 import { opsFor, opLabel, withFallbackOp } from "./ops.ts";
 
@@ -124,5 +124,45 @@ describe("fieldLabel", () => {
       describeCondition("episode.originallyAvailableAt", ">=", ["-5y"]),
       "Episode release date in the last 5 years",
     );
+  });
+});
+
+/**
+ * Watch-history fields are the ones most likely to read as machine output —
+ * they're the only fields whose key isn't a Plex field name, so a miss shows
+ * up as a literal `tb.` in the summary chips.
+ */
+describe("describeCondition — watch-history fields", () => {
+  it("reads the boolean pair as sentences, not label-is-Yes", () => {
+    assert.equal(describeCondition("tb.watchedByAll", "=", ["1"]), "Watched by everyone");
+    assert.equal(describeCondition("tb.watchedByAll", "=", ["0"]), "Not watched by everyone");
+    assert.equal(describeCondition("tb.watchedByAll", "!=", ["1"]), "Not watched by everyone");
+    assert.equal(describeCondition("tb.watchedByNobody", "=", ["1"]), "Watched by nobody");
+    assert.equal(describeCondition("tb.watchedByNobody", "=", ["0"]), "Watched by someone");
+  });
+
+  it("names the user when one has been resolved", () => {
+    assert.equal(describeCondition("tb.watchedBy", "=", ["42"], ["Sam"]), "Watched by Sam");
+    assert.equal(describeCondition("tb.watchedBy", "!=", ["42"], ["Sam"]), "Not watched by Sam");
+    // Unresolved ids are labelled rather than shown bare.
+    assert.equal(describeCondition("tb.watchedBy", "=", ["42"]), "Watched by user 42");
+  });
+
+  it("phrases the abandonment threshold in the direction the operator implies", () => {
+    assert.equal(describeCondition("tb.abandonedPct", "<", ["20"]), "Abandoned below 20%");
+    assert.equal(describeCondition("tb.abandonedPct", ">=", ["80"]), "Watched past 80%");
+  });
+
+  it("lets the generic path handle the fields it already reads well", () => {
+    assert.equal(describeCondition("tb.playCount", ">=", ["3"]), "Plays (all users) is at least 3");
+    assert.equal(describeCondition("tb.lastPlayedAt", ">=", ["-30d"]), "Last played (any user) in the last 30 days");
+  });
+
+  it("no local field falls through to the camelCase fallback", () => {
+    for (const def of LOCAL_FIELD_DEFS) {
+      const text = describeCondition(def.field, "=", ["1"]);
+      assert.ok(!text.includes("tb."), `"${def.field}" rendered as "${text}"`);
+      assert.ok(!text.startsWith("Tb"), `"${def.field}" rendered as "${text}"`);
+    }
   });
 });

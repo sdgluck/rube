@@ -33,8 +33,17 @@ const SORT_FIELDS = [
   "viewCount",
 ];
 
-/** Field names offered in the picker, labelled and typed by the shared table. */
-const ALL_KNOWN_FIELDS = SMART_FILTER_FIELD_DEFS.filter((d) => !d.advanced)
+/**
+ * Field names offered in the picker, labelled and typed by the shared table.
+ *
+ * Watch-history (`source: "local"`) fields are excluded outright, and this is a
+ * hard exclusion rather than a disabled state: this editor writes a *Plex*
+ * smart collection, which Plex re-evaluates itself on every view. A field Plex
+ * has never heard of would be dropped from the query, and the collection would
+ * quietly widen to whatever the remaining clauses matched. Those fields only
+ * work on a Tinkerbell rule, which builds a static collection.
+ */
+const ALL_KNOWN_FIELDS = SMART_FILTER_FIELD_DEFS.filter((d) => !d.advanced && d.source !== "local")
   .map((d) => d.field)
   .sort();
 
