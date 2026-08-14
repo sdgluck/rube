@@ -299,7 +299,7 @@ export const SHOTS: Shot[] = [
   },
   {
     name: "16-settings-portal-personalization",
-    description: "Settings → Portal → Personalization — status card with Reconcile and Disable",
+    description: "Settings → Portal → Personalization — status card and what turning it on or off does",
     path: "/settings/portal/personalization",
   },
   {
