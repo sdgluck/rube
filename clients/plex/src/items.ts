@@ -122,6 +122,50 @@ export function createItemsModule(http: PlexHttp) {
     return results;
   }
 
+  /**
+   * How many items a section holds, without paging through it.
+   *
+   * Plex reports `totalSize` on any listing, so a request for a single item is
+   * enough. The cleanup sanity check needs a denominator for every section on
+   * every run, and walking a 20,000-item library to count it would cost more
+   * than the rule it is guarding.
+   */
+  async function getSectionItemCount(sectionId: string): Promise<number> {
+    const data = await http.request(`/library/sections/${sectionId}/all`, {
+      params: { "X-Plex-Container-Start": 0, "X-Plex-Container-Size": 0 },
+    });
+    return data?.MediaContainer?.totalSize ?? 0;
+  }
+
+  /** Provider ids (`tmdb://…`, `imdb://…`) for one item. */
+  async function getItemGuids(ratingKey: string): Promise<string[]> {
+    const data = await http.request(`/library/metadata/${ratingKey}`, { params: { includeGuids: 1 } });
+    const meta = data?.MediaContainer?.Metadata?.[0];
+    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+    return (meta.Guid ?? []).map((g: { id: string }) => g.id);
+  }
+
+  /**
+   * Add one label to one item, preserving whatever it already carries.
+   *
+   * Plex's tag PUT replaces the whole set, so the existing labels have to be
+   * read and resent — omitting them silently strips every other label on the
+   * item, including ones the user set by hand.
+   */
+  async function addItemLabel(ratingKey: string, label: string): Promise<void> {
+    const data = await http.request(`/library/metadata/${ratingKey}`);
+    const meta = data?.MediaContainer?.Metadata?.[0];
+    if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
+
+    const existing: string[] = (meta.Label ?? []).map((l: { tag: string }) => l.tag);
+    if (existing.some((l) => l.toLowerCase() === label.toLowerCase())) return;
+
+    const labelParams: Record<string, string | number> = { "label.locked": 1 };
+    const next = [...existing, label];
+    for (let i = 0; i < next.length; i++) labelParams[`label[${i}].tag.tag`] = next[i];
+    await http.request(`/library/metadata/${ratingKey}`, { method: "PUT", params: labelParams });
+  }
+
   async function addLabelToAllItems(
     sectionId: string,
     sectionType: string,
@@ -477,6 +521,9 @@ export function createItemsModule(http: PlexHttp) {
     fetchGroupedByField,
     fetchItemsByFilter,
     allItemsWithGuids,
+    getSectionItemCount,
+    getItemGuids,
+    addItemLabel,
     addLabelToAllItems,
     removeLabelFromAllItems,
     getFilterFieldValues,
