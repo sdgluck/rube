@@ -10,6 +10,69 @@ import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-fi
 const LOCAL_FIELDS = new Set(LOCAL_FIELD_DEFS.map((d) => d.field));
 
 /**
+ * What a cleanup rule does to a matched item, ordered least to most
+ * destructive. The wizard defaults to `label` and requires an explicit
+ * confirmation to move past `unmonitor`.
+ */
+export const CLEANUP_MODES = ["label", "collection_only", "unmonitor", "delete"] as const;
+export type CleanupMode = (typeof CLEANUP_MODES)[number];
+
+/** Modes that remove or alter something outside Tinkerbell's own bookkeeping. */
+export const DESTRUCTIVE_CLEANUP_MODES: readonly CleanupMode[] = ["unmonitor", "delete"];
+
+export function isDestructiveMode(mode: string): boolean {
+  return (DESTRUCTIVE_CLEANUP_MODES as readonly string[]).includes(mode);
+}
+
+/** Runs an item must match in a row before anything happens to it. */
+export const DEFAULT_CONSECUTIVE_RUNS = 3;
+/** Per-rule ceiling on actions in a single run, mirroring `arr.maxAddsPerRun`. */
+export const DEFAULT_MAX_ACTIONS_PER_RUN = 25;
+
+const cleanupActionSchema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("collection") }),
+    z.object({
+      kind: z.literal("cleanup"),
+      mode: z.enum(CLEANUP_MODES),
+      /**
+       * The safety valve that makes a scheduled destructive rule tolerable: a
+       * metadata blip that makes an item match once can never delete anything,
+       * because the streak resets the moment it stops matching.
+       */
+      consecutiveRuns: z.number().int().min(1).default(DEFAULT_CONSECUTIVE_RUNS),
+      maxActionsPerRun: z.number().int().positive().default(DEFAULT_MAX_ACTIONS_PER_RUN),
+      /**
+       * Delete the file through Radarr/Sonarr rather than Plex alone.
+       * Strongly preferred: a Plex-only delete leaves the *Arr record behind,
+       * and Radarr will re-download the same film that night.
+       */
+      viaArr: z.boolean().default(true),
+      addImportExclusion: z.boolean().default(false),
+      /**
+       * Defaults to true, and the only acceptable shape here is a destructive
+       * behaviour you have to switch *on*. The wizard shows it as "Preview
+       * only — don't touch anything yet" and keeps it checked until the user
+       * has seen at least one preview.
+       */
+      dryRun: z.boolean().default(true),
+    }),
+  ])
+  .optional();
+
+export type RuleAction = NonNullable<z.infer<typeof cleanupActionSchema>>;
+export type CleanupActionConfig = Extract<RuleAction, { kind: "cleanup" }>;
+
+/** Normalised action for a rule config. Absent means the collection path. */
+export function ruleAction(config: { action?: RuleAction }): RuleAction {
+  return config.action ?? { kind: "collection" };
+}
+
+export function isCleanupRule(config: { action?: RuleAction }): boolean {
+  return config.action?.kind === "cleanup";
+}
+
+/**
  * The canonical shape of `rules.config`.
  *
  * This lives in contracts rather than next to the generate job because three
@@ -67,6 +130,19 @@ const baseRuleConfigSchema = z.object({
    * preferences (in addition to the shared collection this rule produces).
    */
   personalizable: z.boolean().optional(),
+  /**
+   * What happens to the items a rule selects.
+   *
+   * Deliberately an action on the existing rule types rather than a `cleanup`
+   * entry in `RULE_TYPE_VALUES`: selection is already general — a smart filter
+   * translates an arbitrary boolean tree into a Plex query — and forking every
+   * selection mechanism in two to get a second ending would double the surface
+   * for no gain.
+   *
+   * `undefined` means `{ kind: "collection" }`, so every rule that predates
+   * this keeps working untouched and no migration is needed.
+   */
+  action: cleanupActionSchema,
   arr: z
     .object({
       enabled: z.boolean(),
