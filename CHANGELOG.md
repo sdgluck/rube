@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-08-14
+
+### Added
+
+- Playback history columns can now be sorted, with sorting done server-side against the full history rather than just the visible page.
+- The playback history page size is now selectable, from 10 to 25 rows.
+
+### Changed
+
+- **The playback history panel now defaults to showing 10 rows per page instead of 25.**
+- Backfilled playback history rows (imported from Plex's watch history) now show the actual Plex username instead of a raw account ID like "User 548853984".
+- Rows with blank Device/Play data, which come from backfilled history, now sort to the bottom of the playback history list in both sort directions instead of cluttering the first page.
+- "Poll Playback Sessions" and "Import Plex Watch History" are no longer listed under Features, since they're not standalone installable features but the underlying poller and one-time seed for watch statistics.
+
 ## [0.13.0] - 2026-08-14
 
 ### Added
