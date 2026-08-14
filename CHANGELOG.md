@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-14
+
+### Added
+
+- Public rule registry: browse curated rule packs from tinkerbell.dev and import them in-app, with a dry-run preview that reports filter values your server has no tag for, integrations you haven't configured, and rule names that would collide.
+- Import options for packs: choose homepage pinning, how many collections rotate onto the home at a time, a cap on collections per rule, and a minimum items per collection — all before anything is written, and shown in the preview.
+- Grouped rules (Directors, Studios, Genres, Decades, Resolutions, …) now expose their collection cap and minimum-items floor in the rule wizard, with a warning about how many collections an uncapped rule can build.
+- The TMDb-sourced rules (Popular Actors, Popular Directors, Franchises) expose how many people or franchise groups they fetch per run, which previously wasn't reachable from the UI.
+
+### Changed
+
+- **Grouped rules now build a collection for every group by default.** Previously they silently kept only the largest 10–20 groups and skipped anything with fewer than 3 items, with no way to see or change either number. Existing rules have no saved cap, so their next run will build many more collections than before — open them in the wizard and set a cap or a minimum if you'd rather keep the old shape.
+- Rules that can produce hundreds of collections now require a homepage rotation count when pinning is on, instead of pinning every collection they build. Rules saved before this rotate 10 per library.
+- Registry packs ship their grouped rules pinned with 10 collections rotating, and uncapped — a pack author can't know how large your library is, so the long tail is left to you rather than dropped.
+- Applying a pack update keeps your libraries, pinning, rotation size, collection cap and minimum-items setting. Updates refresh what a rule matches, never how you configured it to behave.
+
+### Fixed
+
+- Registry cache keys containing a NUL separator are now escaped, so two different rules can't collide on one cache entry.
+- Collection cache rows are evicted when a job deletes the collection from Plex, instead of lingering as phantom entries.
+
 ## [0.7.2] - 2026-08-13
 
 ### Fixed
