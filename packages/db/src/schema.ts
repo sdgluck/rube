@@ -673,3 +673,54 @@ export const watchState = sqliteTable(
     index("idx_watch_state_rating_key").on(table.ratingKey),
   ],
 );
+
+/**
+ * Items a cleanup rule has matched, and for how many runs in a row.
+ *
+ * A cleanup rule must never act on a first match. A metadata blip, a
+ * half-finished library scan, or a smart filter that briefly matched too much
+ * would otherwise be enough to delete a file, and there is no undo. So a match
+ * is recorded here and the action only fires once the item has matched on
+ * `consecutiveRuns` successive runs — the row is the memory that makes that
+ * possible, and the surface the cleanup queue page reads to answer "what is
+ * about to happen, and when".
+ *
+ * Rows are kept after the action fires rather than deleted: this doubles as the
+ * audit trail for what a rule removed, which is the first thing anyone asks
+ * afterwards. `ON DELETE CASCADE` on the rule is deliberate — a deleted rule's
+ * queue is meaningless, and leaving orphans would resurrect them if an id were
+ * ever reused.
+ */
+export const cleanupCandidates = sqliteTable(
+  "cleanup_candidates",
+  {
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
+    ratingKey: text("rating_key").notNull(),
+    sectionId: text("section_id").notNull(),
+    title: text("title").notNull(),
+    /** Consecutive runs matched. An item that stops matching has its row deleted. */
+    streak: integer("streak").notNull().default(1),
+    firstMatchedAt: integer("first_matched_at").notNull(),
+    lastMatchedAt: integer("last_matched_at").notNull(),
+    /** Set when the action fired. The row survives as an audit trail. */
+    actionedAt: integer("actioned_at"),
+    /** "" until actioned, then the mode that ran: label | collection_only | unmonitor | delete. */
+    action: text("action").notNull().default(""),
+    /**
+     * User-set reprieve — never action this item before this timestamp.
+     *
+     * Without it the only way to rescue one film from a rule is to edit the
+     * rule itself, which nobody is going to do carefully at 1am.
+     */
+    heldUntil: integer("held_until"),
+  },
+  (table) => [
+    uniqueIndex("idx_cleanup_candidates_pk").on(table.ruleId, table.ratingKey),
+    index("idx_cleanup_candidates_rule_streak").on(table.ruleId, table.streak),
+    // The queue page reads across every rule, ordered by what is closest to
+    // being actioned.
+    index("idx_cleanup_candidates_actioned").on(table.actionedAt, table.streak),
+  ],
+);
