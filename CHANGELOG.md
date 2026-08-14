@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-08-14
+
+### Fixed
+
+- Fixed the "Last 90 days" heading on the Bandwidth Test settings page sitting flush against the block above it, which made it read as a caption for that block instead of the label for the chart below.
+- The Bandwidth Test page's data ceiling is now shown as a whole number instead of a value like "200.0 MB", since it represents a limit to accept rather than a precise measurement.
+
+```
+
+
 ## [0.14.0] - 2026-08-14
 
 ### Added
@@ -386,3 +396,4 @@ First public beta.
 ### Notes
 
 - Tinkerbell is beta — expect rough edges and breaking changes before 1.0. Back up `tinkerbell.db` before upgrading.
+```
