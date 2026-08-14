@@ -1,0 +1,115 @@
+.primary {
+  composes: btn btnPrimary from "../../styles/controls.module.css";
+}
+
+.secondary {
+  composes: btn btnSecondary from "../../styles/controls.module.css";
+}
+
+.danger {
+  composes: btn btnDangerOutline from "../../styles/controls.module.css";
+}
+
+.card {
+  composes: group from "./Settings.module.css";
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Capped so the explanation stays readable on a wide settings pane. */
+.lede {
+  max-width: 72ch;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.statusBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Same shape as the personalization pane's pill, spelled out locally so the
+   tone modifiers below win regardless of bundle order. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font: 600 10.5px/1.4 var(--font-mono);
+  white-space: nowrap;
+}
+
+.pillDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pillOk {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.pillNeutral {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.muted {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.hint {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.warn {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--status-warn-fg);
+}
+
+.warn code,
+.hint code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

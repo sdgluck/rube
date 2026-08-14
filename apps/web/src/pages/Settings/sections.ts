@@ -29,6 +29,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     heading: "Tools",
     links: [
+      { to: "/settings/security", label: "Security" },
       { to: "/settings/migrate", label: "Migrate" },
       { to: "/settings/maintenance", label: "Maintenance" },
       { to: "/settings/bandwidth", label: "Bandwidth Test" },
