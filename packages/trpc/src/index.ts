@@ -17,6 +17,7 @@ import { reportHealth, testArrConnection } from "@tinkerbell/domain.health";
 import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
 import { t, procedure, getPlexClient } from "./_base.ts";
 import { configRouter } from "./config.router.ts";
+import { bandwidthRouter } from "./bandwidth.router.ts";
 import { collectionsRouter } from "./collections.router.ts";
 import { mediaRouter } from "./media.router.ts";
 import { jobsRouter } from "./jobs.router.ts";
@@ -48,6 +49,7 @@ export const appRouter = t.router({
   overlays: overlaysRouter,
   events: eventsRouter,
   health: healthRouter,
+  bandwidth: bandwidthRouter,
   stressTest: stressTestRouter,
   preview: previewRouter,
   search: searchRouter,
