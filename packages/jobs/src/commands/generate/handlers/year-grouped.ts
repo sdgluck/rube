@@ -1,6 +1,5 @@
+import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
-
-const MIN_ITEMS_PER_GROUP = 3;
 
 export type YearGroupedField = "decades" | "years";
 
@@ -16,7 +15,8 @@ function decadeOf(year: number): number {
 export function yearGroupedHandler(field: YearGroupedField) {
   return async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
     const { ctx, client, sections, ruleConfig } = deps;
-    const maxCollections = ruleConfig.limit ?? 20;
+    const maxCollections = collectionLimit(ruleConfig);
+    const minItems = minItemsPerGroup(ruleConfig);
 
     for (const section of sections) {
       ctx.signal?.throwIfAborted();
@@ -46,13 +46,13 @@ export function yearGroupedHandler(field: YearGroupedField) {
       }
 
       const ranked = [...groups.values()]
-        .filter((g) => g.items.length >= MIN_ITEMS_PER_GROUP)
+        .filter((g) => g.items.length >= minItems)
         // Newest first — most users care about recent decades / years before
         // 1920s historicals.
         .sort((a, b) => b.sortKey - a.sortKey);
 
       ctx.log(
-        `[${field}] "${section.title}" — ${total} items, ${groups.size} group(s), ${ranked.length} pass min-items (${MIN_ITEMS_PER_GROUP}).`,
+        `[${field}] "${section.title}" — ${total} items, ${groups.size} group(s), ${ranked.length} to build (${describeLimits(ruleConfig)}).`,
       );
 
       for (const group of ranked.slice(0, maxCollections)) {

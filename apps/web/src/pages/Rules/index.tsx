@@ -21,7 +21,7 @@ import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
 import BulkActionsBar from "./BulkActionsBar";
 import BulkEditModal from "./BulkEditModal";
-import { EMPTY_FORM, defaultLimitForType, typeHasLimit } from "./constants";
+import { EMPTY_FORM, defaultLimitForType, typeHasLimit, typeHasMinItems, typeHasOptionalLimit } from "./constants";
 import RuleTableRow from "./RuleTableRow";
 import styles from "./Rules.module.css";
 import RulesToolbar from "./Toolbar";
@@ -214,7 +214,8 @@ export default function Rules() {
       vibe: ((config.vibe as AiVibe) || "mixed") satisfies AiVibe,
       nameStyle: ((config.nameStyle as AiNameStyle) || "short_punchy") satisfies AiNameStyle,
       limit: (config.limit as number) ?? defaultLimitForType(rule.type),
-      minItems: (config.minItems as number) ?? 15,
+      // Absent means "off" for grouped rules; ai_prompt keeps its 15 floor.
+      minItems: (config.minItems as number) ?? (rule.type === "ai_prompt" ? 15 : 0),
       sections: (config.sections as string[]) || [],
       chart: (config.chart as string) || "top_250_movies",
       listId: (config.listId as string) || "",
@@ -244,7 +245,10 @@ export default function Rules() {
 
   function handleSave(next: RuleFormState) {
     const config: Record<string, unknown> = {};
-    if (typeHasLimit(next.type)) config.limit = next.limit;
+    // Optional knobs are written only when enabled — an absent key is what
+    // the job reads as "no cap" / "no minimum".
+    if (typeHasLimit(next.type) && (!typeHasOptionalLimit(next.type) || next.limit > 0)) config.limit = next.limit;
+    if (typeHasMinItems(next.type) && next.minItems > 0) config.minItems = next.minItems;
     if (next.type === "ai_prompt") {
       config.themes = next.themes;
       config.customThemes = next.customThemes.filter((t) => t.trim().length > 0);

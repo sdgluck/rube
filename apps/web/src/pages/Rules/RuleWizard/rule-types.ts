@@ -1,4 +1,4 @@
-import type { RuleTypeValue } from "@tinkerbell/contracts";
+import { isGroupedRuleType, producesManyCollections, type RuleTypeValue } from "@tinkerbell/contracts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import { hasSourceStep } from "./sources/index.ts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
@@ -220,12 +220,41 @@ const TYPE_BY_VALUE: Record<string, RuleType> = Object.fromEntries(RULE_TYPES.ma
 
 // ─── Per-type helpers ───────────────────────────────────────────────────
 
+/**
+ * Which types build one collection per group — and of those, which take a
+ * real cap vs. a TMDb fetch budget — is shared with the job via contracts,
+ * so the wizard can't drift from what the handlers actually do.
+ */
+export function typeIsGrouped(type: string): boolean {
+  return isGroupedRuleType(type);
+}
+
+/** Collections-per-rule can run into the hundreds — pin rotation is required. */
+export function typeProducesManyCollections(type: string): boolean {
+  return producesManyCollections(type);
+}
+
+/** Whether the wizard offers the optional "only groups with N+ items" floor. */
+export function typeHasMinItems(type: string): boolean {
+  return typeProducesManyCollections(type);
+}
+
+/** Pre-filled value when the user switches the optional min-items floor on. */
+export function defaultMinItemsForType(type: string): number {
+  if (type === "ai_prompt") return 15;
+  if (type === "tmdb_franchises") return 2;
+  return 3;
+}
+
 export function defaultLimitForType(type: string): number {
   if (type === "ai_prompt") return 8;
   if (type === "top_rated" || type === "lowest_rated") return 50;
   if (type === "rt_top_rated") return 100;
   if (type === "seerr_requests") return 50;
-  return 10;
+  if (type === "tmdb_popular_actors" || type === "tmdb_popular_directors") return 10;
+  if (type === "tmdb_franchises") return 25;
+  // Grouped rules: 0 means "no cap", the default.
+  return 0;
 }
 
 export function typeHasLimit(type: string): boolean {
@@ -234,8 +263,14 @@ export function typeHasLimit(type: string): boolean {
     type === "top_rated" ||
     type === "lowest_rated" ||
     type === "rt_top_rated" ||
-    type === "seerr_requests"
+    type === "seerr_requests" ||
+    producesManyCollections(type)
   );
+}
+
+/** Grouped rules render the limit as an opt-in checkbox + number. */
+export function typeHasOptionalLimit(type: string): boolean {
+  return isGroupedRuleType(type);
 }
 
 /**
@@ -268,7 +303,37 @@ export function limitFieldLabel(type: string): string {
   if (type === "ai_prompt") return "Collections per section";
   if (type === "top_rated" || type === "lowest_rated" || type === "rt_top_rated") return "Items per collection";
   if (type === "seerr_requests") return "Items in collection";
+  if (type === "tmdb_popular_actors") return "Popular actors to fetch";
+  if (type === "tmdb_popular_directors") return "Popular directors to fetch";
+  if (type === "tmdb_franchises") return "Franchise groups to scan";
   return "Max collections";
+}
+
+/** Noun for the thing a grouped rule builds one collection per. */
+export function groupNounForType(type: string): string {
+  const nouns: Record<string, string> = {
+    actors: "actor",
+    directors: "director",
+    studios: "studio",
+    networks: "network",
+    genres: "genre",
+    countries: "country",
+    content_ratings: "content rating",
+    streaming: "streaming service",
+    decades: "decade",
+    years: "year",
+    resolutions: "resolution",
+    audio_languages: "audio language",
+    subtitle_languages: "subtitle language",
+    video_formats: "video format",
+    based_on: "source type",
+    seasonal: "season",
+    awards: "award",
+    tmdb_popular_actors: "actor",
+    tmdb_popular_directors: "director",
+    tmdb_franchises: "franchise",
+  };
+  return nouns[type] ?? "group";
 }
 
 // ─── Wizard-level helpers ───────────────────────────────────────────────
@@ -340,6 +405,17 @@ export function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; l
 
 // ─── Validation ─────────────────────────────────────────────────────────
 
+/**
+ * A rule that can produce hundreds of collections has to say how many of
+ * them are on the homepage at once — pinning all of them buries every other
+ * row. So for those types "pin" and "rotate N" are one decision, not two.
+ */
+export function pinRotationError(form: RuleFormState): string | null {
+  if (!form.pinToHomepage) return null;
+  if (!typeProducesManyCollections(form.type)) return null;
+  return form.pinRotationCount > 0 ? null : "Choose how many collections to keep on the homepage at a time.";
+}
+
 export function validateStep(step: StepId, form: RuleFormState): string | null {
   if (step === "type") return form.type ? null : "Pick a rule type.";
   if (step === "source") {
@@ -356,7 +432,7 @@ export function validateStep(step: StepId, form: RuleFormState): string | null {
     }
     return null;
   }
-  if (step === "scope") return null;
+  if (step === "scope") return pinRotationError(form);
   if (step === "actions") {
     if (form.arr.enabled) {
       if (!form.arr.qualityProfileId) return "Pick a quality profile.";
@@ -376,6 +452,7 @@ export function isFormValid(form: RuleFormState): boolean {
     (form.type !== "imdb_list" || !!form.listId.trim()) &&
     (form.type !== "list_source" || (!!form.listProvider && !!form.listId.trim())) &&
     (form.type !== "smart_filter" || smartFilterIsComplete(form.smartFilter)) &&
+    !pinRotationError(form) &&
     (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
   );
 }

@@ -1,4 +1,5 @@
 import type { PlexSection } from "@tinkerbell/plex";
+import { DEFAULT_PIN_ROTATION, producesManyCollections } from "@tinkerbell/contracts";
 import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rule-history";
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
 import { commitCollection } from "./finalize.ts";
@@ -93,7 +94,18 @@ export async function runHandlerWithCommits(
   // With a rotation count set we can't decide what to pin as collections
   // stream past — the choice is "N of all of them", and we only know the
   // full set once the handler is done. So commit unpinned and pin at the end.
-  const rotationCount = pinToHomepage ? (ruleConfig.pinRotationCount ?? 0) : 0;
+  //
+  // Grouped rules build one collection per director/studio/decade, which in a
+  // large library is hundreds. Pinning all of them buries every other homepage
+  // row, so they always rotate — the wizard makes the count mandatory, and
+  // rules saved before it did fall back to the same default.
+  let rotationCount = pinToHomepage ? (ruleConfig.pinRotationCount ?? 0) : 0;
+  if (pinToHomepage && rotationCount === 0 && producesManyCollections(rule.type)) {
+    rotationCount = DEFAULT_PIN_ROTATION;
+    ctx.log(
+      `[pin] No rotation count set for a "${rule.type}" rule — pinning ${rotationCount} per library instead of every collection.`,
+    );
+  }
   const rotating = rotationCount > 0;
   const rotationCandidates: RotationCandidate[] = [];
   let lastCollectionKey: string | null = null;

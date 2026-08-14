@@ -1,10 +1,10 @@
 import { getConfig } from "@tinkerbell/core";
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
+import { minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 const MAX_PEOPLE = 50;
 const DEFAULT_PEOPLE = 10;
-const MIN_ITEMS_PER_PERSON = 3;
 
 /**
  * "Popular actors" / "Popular directors" — fetch the top N people from
@@ -18,7 +18,11 @@ export function tmdbPopularPeopleHandler(role: "cast" | "crew") {
     if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
 
     const { fetchPopularPeople, fetchPersonCredits } = await import("@tinkerbell/tmdb");
+    // `limit` here is a TMDb fetch budget (how many popular people to pull),
+    // not a collection cap — so it keeps its default rather than meaning
+    // "unlimited" the way it does for library-grouped rules.
     const peopleLimit = Math.min(ruleConfig.limit ?? DEFAULT_PEOPLE, MAX_PEOPLE);
+    const minItems = minItemsPerGroup(ruleConfig);
     const department = role === "cast" ? "Acting" : "Directing";
     const crewJob = role === "crew" ? "Director" : undefined;
 
@@ -50,7 +54,7 @@ export function tmdbPopularPeopleHandler(role: "cast" | "crew") {
           matched.push(item);
         }
 
-        if (matched.length < MIN_ITEMS_PER_PERSON) {
+        if (matched.length < minItems) {
           ctx.log(`[tmdb_popular] Skipping "${person.name}" in "${section.title}" — ${matched.length} item(s).`);
           continue;
         }

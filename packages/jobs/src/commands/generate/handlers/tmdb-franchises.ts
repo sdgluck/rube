@@ -1,11 +1,11 @@
 import { getConfig } from "@tinkerbell/core";
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { lookupBelongsToCollection } from "#commands/generate/sources/tmdb.ts";
+import { minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 const MAX_GROUPS = 100;
 const DEFAULT_GROUPS = 25;
-const MIN_MEMBERS_TO_BUILD = 2;
 
 /**
  * Build franchise collections (Marvel, Bond, etc.) from TMDb's "belongs to
@@ -27,7 +27,10 @@ export async function* tmdbFranchisesHandler(deps: HandlerDeps): AsyncGenerator<
   if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
 
   const { fetchCollection } = await import("@tinkerbell/tmdb");
+  // As with popular people, `limit` bounds how many Plex collection-groups we
+  // sample (each costs TMDb round-trips), not how many collections we build.
   const limitGroups = Math.min(ruleConfig.limit ?? DEFAULT_GROUPS, MAX_GROUPS);
+  const minMembers = minItemsPerGroup(ruleConfig);
 
   for (const section of sections) {
     if (section.type !== "movie") {
@@ -69,7 +72,7 @@ export async function* tmdbFranchisesHandler(deps: HandlerDeps): AsyncGenerator<
         if (item) matched.push(item);
       }
 
-      if (matched.length < MIN_MEMBERS_TO_BUILD) {
+      if (matched.length < minMembers) {
         ctx.log(`[tmdb_franchises] "${franchise.name}" — only ${matched.length} match(es), skipping.`);
         continue;
       }

@@ -1,4 +1,5 @@
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
+import { typeProducesManyCollections } from "./RuleWizard/rule-types.ts";
 import styles from "./Rules.module.css";
 
 function listSlug(listId: unknown): string {
@@ -89,6 +90,17 @@ export const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => stri
   seerr_requests: (c) => `${SEERR_FILTER_LABELS[c.filter as string] || "All Requests"} | ${c.limit ?? 50} items`,
 };
 
+/** Grouped rules all read the same two optional knobs — both off by default. */
+function groupedSummary(c: Record<string, unknown>): string {
+  const limit = typeof c.limit === "number" && c.limit > 0 ? `Max ${c.limit}` : "No cap";
+  const min = typeof c.minItems === "number" && c.minItems > 1 ? `${c.minItems}+ items` : "Any size";
+  return `${limit} | ${min}`;
+}
+
+for (const { value } of RULE_TYPES) {
+  if (typeProducesManyCollections(value) && !CONFIG_SUMMARY[value]) CONFIG_SUMMARY[value] = groupedSummary;
+}
+
 export const TYPE_BADGE: Record<string, string> = {
   ai_prompt: styles.typeAi,
   imdb_chart: styles.typeImdb,
@@ -118,20 +130,14 @@ export const EMPTY_FORM: RuleFormState = {
   arr: { ...DEFAULT_ARR_FORM },
 };
 
-export function defaultLimitForType(type: string): number {
-  if (type === "ai_prompt") return 8;
-  if (type === "top_rated" || type === "lowest_rated") return 50;
-  if (type === "rt_top_rated") return 100;
-  if (type === "seerr_requests") return 50;
-  return 10;
-}
-
-export function typeHasLimit(type: string): boolean {
-  return (
-    type === "ai_prompt" ||
-    type === "top_rated" ||
-    type === "lowest_rated" ||
-    type === "rt_top_rated" ||
-    type === "seerr_requests"
-  );
-}
+// Single source of truth lives with the wizard — re-exported here because
+// the Rules page has always imported these from `./constants`.
+export {
+  defaultLimitForType,
+  defaultMinItemsForType,
+  typeHasLimit,
+  typeHasMinItems,
+  typeHasOptionalLimit,
+  typeIsGrouped,
+  typeProducesManyCollections,
+} from "./RuleWizard/rule-types.ts";

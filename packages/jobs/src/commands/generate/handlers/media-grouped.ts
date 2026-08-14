@@ -1,6 +1,5 @@
+import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
-
-const MIN_ITEMS_PER_GROUP = 3;
 
 export type MediaGroupedField = "resolutions" | "audio_languages" | "subtitle_languages" | "video_formats";
 
@@ -49,7 +48,8 @@ function videoFormatLabel(media: NonNullable<NonNullable<ReturnType<() => unknow
 export function mediaGroupedHandler(field: MediaGroupedField) {
   return async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
     const { ctx, client, sections, ruleConfig } = deps;
-    const maxCollections = ruleConfig.limit ?? 15;
+    const maxCollections = collectionLimit(ruleConfig);
+    const minItems = minItemsPerGroup(ruleConfig);
 
     for (const section of sections) {
       ctx.signal?.throwIfAborted();
@@ -82,11 +82,11 @@ export function mediaGroupedHandler(field: MediaGroupedField) {
       }
 
       const ranked = [...groups.values()]
-        .filter((g) => g.items.length >= MIN_ITEMS_PER_GROUP)
+        .filter((g) => g.items.length >= minItems)
         .sort((a, b) => b.items.length - a.items.length);
 
       ctx.log(
-        `[${field}] "${section.title}" — ${total} items (${withMedia} with media), ${groups.size} group(s), ${ranked.length} pass min-items (${MIN_ITEMS_PER_GROUP}).`,
+        `[${field}] "${section.title}" — ${total} items (${withMedia} with media), ${groups.size} group(s), ${ranked.length} to build (${describeLimits(ruleConfig)}).`,
       );
 
       for (const group of ranked.slice(0, maxCollections)) {

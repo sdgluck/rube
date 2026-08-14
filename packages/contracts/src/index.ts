@@ -11,12 +11,24 @@
 export const RULE_CONCURRENCY_DEFAULT = 3;
 export const RULE_CONCURRENCY_MAX = 8;
 
-export { isTagField, RULE_TYPE_REQUIRES, RULE_TYPE_VALUES, ruleConfigSchema, TAG_FIELDS } from "./rule-config.ts";
+export {
+  DEFAULT_PIN_ROTATION,
+  EXTERNAL_GROUP_RULE_TYPES,
+  GROUPED_RULE_TYPES,
+  isGroupedRuleType,
+  isTagField,
+  producesManyCollections,
+  RULE_TYPE_REQUIRES,
+  RULE_TYPE_VALUES,
+  ruleConfigSchema,
+  TAG_FIELDS,
+} from "./rule-config.ts";
 export type { RuleConfig, RuleRequirement, RuleTypeValue } from "./rule-config.ts";
 
 export {
   DEFAULT_REGISTRY_URL,
   REGISTRY_FORMAT_VERSION,
+  registryImportOverridesSchema,
   registryIndexSchema,
   registryPackSchema,
   registryRequirementSchema,
@@ -25,6 +37,7 @@ export {
 export type {
   ImportPlan,
   ImportPlanItem,
+  RegistryImportOverrides,
   RegistryIndex,
   RegistryPack,
   RegistryPackInput,

@@ -16,7 +16,19 @@ export const ruleConfigSchema = z.object({
   customThemes: z.array(z.string()).optional(),
   vibe: z.enum(["playful", "serious", "mixed"]).optional(),
   nameStyle: z.enum(["short_punchy", "descriptive"]).optional(),
+  /**
+   * How many collections (or items, for single-collection rules) to build.
+   * For grouped rules — directors, studios, decades, … — this is opt-in:
+   * absent means every group becomes a collection. For the TMDb-sourced
+   * rules (popular people, franchises) it's a fetch budget with its own
+   * default, since those pay API calls per group.
+   */
   limit: z.number().optional(),
+  /**
+   * Smallest group worth a collection. Absent means no floor, so a director
+   * with a single film still gets one — the wizard warns about the volume
+   * that implies before saving.
+   */
   minItems: z.number().optional(),
   sections: z.array(z.string()).optional(),
   chart: z.string().optional(),
@@ -101,6 +113,61 @@ export const RULE_TYPE_VALUES = [
 ] as const;
 
 export type RuleTypeValue = (typeof RULE_TYPE_VALUES)[number];
+
+/**
+ * Rule types that slice a library into groups and build one collection per
+ * group. Their `limit` and `minItems` are opt-in caps — left unset, every
+ * director/studio/decade in the library becomes a collection.
+ */
+export const GROUPED_RULE_TYPES: readonly RuleTypeValue[] = [
+  "actors",
+  "directors",
+  "studios",
+  "networks",
+  "genres",
+  "countries",
+  "content_ratings",
+  "streaming",
+  "decades",
+  "years",
+  "resolutions",
+  "audio_languages",
+  "subtitle_languages",
+  "video_formats",
+  "based_on",
+  "seasonal",
+  "awards",
+];
+
+/**
+ * Also one-collection-per-group, but the groups come from TMDb rather than
+ * the library — so their `limit` is a fetch budget with a real default, not
+ * a collection cap that can be switched off.
+ */
+export const EXTERNAL_GROUP_RULE_TYPES: readonly RuleTypeValue[] = [
+  "tmdb_popular_actors",
+  "tmdb_popular_directors",
+  "tmdb_franchises",
+];
+
+const GROUPED = new Set<string>(GROUPED_RULE_TYPES);
+const EXTERNAL_GROUPED = new Set<string>(EXTERNAL_GROUP_RULE_TYPES);
+
+export function isGroupedRuleType(type: string): boolean {
+  return GROUPED.has(type);
+}
+
+/**
+ * True for rule types whose collection count scales with library size.
+ * Pinning every one of those would bury the rest of the homepage, so they
+ * pin a rotating subset instead — see `pinRotationCount`.
+ */
+export function producesManyCollections(type: string): boolean {
+  return GROUPED.has(type) || EXTERNAL_GROUPED.has(type);
+}
+
+/** Rotation size assumed for a many-collection rule that pins without one. */
+export const DEFAULT_PIN_ROTATION = 10;
 
 /** Integrations a rule type cannot run without. `ai_prompt` needs an LLM
  *  provider, which isn't an "integration" in the wizard's sense but gates

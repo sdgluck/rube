@@ -2,9 +2,8 @@ import type { TmdbCachedDetails } from "@tinkerbell/db";
 import { getConfig } from "@tinkerbell/core";
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { hydrateTmdbDetails } from "#commands/generate/tmdb-metadata.ts";
+import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
-
-const MIN_ITEMS_PER_GROUP = 3;
 
 /**
  * Field a TMDB-grouped rule slices the library by. Each value picks an
@@ -78,7 +77,8 @@ export function tmdbGroupedHandler(field: TmdbGroupedField) {
     if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
     const region = getConfig("global_tmdb_region") || "US";
 
-    const maxCollections = ruleConfig.limit ?? 10;
+    const maxCollections = collectionLimit(ruleConfig);
+    const minItems = minItemsPerGroup(ruleConfig);
 
     for (const section of sections) {
       ctx.signal?.throwIfAborted();
@@ -119,11 +119,11 @@ export function tmdbGroupedHandler(field: TmdbGroupedField) {
 
       // Filter, sort by item count desc, take top N.
       const ranked = Array.from(groups.values())
-        .filter((g) => g.items.length >= MIN_ITEMS_PER_GROUP)
+        .filter((g) => g.items.length >= minItems)
         .sort((a, b) => b.items.length - a.items.length);
 
       ctx.log(
-        `[${field}] "${section.title}" — ${groups.size} group(s), ${ranked.length} pass min-items (${MIN_ITEMS_PER_GROUP}).`,
+        `[${field}] "${section.title}" — ${groups.size} group(s), ${ranked.length} to build (${describeLimits(ruleConfig)}).`,
       );
 
       for (const group of ranked.slice(0, maxCollections)) {

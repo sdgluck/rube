@@ -8,6 +8,8 @@ import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./
 import {
   arrServiceForType,
   defaultLimitForType,
+  defaultMinItemsForType,
+  groupNounForType,
   isFormValid,
   limitFieldLabel,
   requiredSectionTypeForRule,
@@ -17,6 +19,10 @@ import {
   TYPE_LABELS,
   typeHasActionsStep,
   typeHasLimit,
+  pinRotationError,
+  typeHasMinItems,
+  typeHasOptionalLimit,
+  typeProducesManyCollections,
   validateStep,
   type StepId,
 } from "./rule-types.ts";
@@ -107,10 +113,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     nameTouchedRef.current = mode === "edit" || !!initial.name.trim();
   }, [open, initial, mode]);
 
-  // When type changes (create mode), reset limit to type default.
+  // When type changes (create mode), reset limit / min-items to type defaults.
+  // Grouped types default both to 0 — "no cap, no floor".
   useEffect(() => {
     if (mode === "edit") return;
-    setForm((prev) => ({ ...prev, limit: defaultLimitForType(prev.type) }));
+    setForm((prev) => ({
+      ...prev,
+      limit: defaultLimitForType(prev.type),
+      minItems: prev.type === "ai_prompt" ? defaultMinItemsForType(prev.type) : 0,
+    }));
   }, [form.type, mode]);
 
   // Restrict the Scope step to sections relevant to the chosen rule type.
@@ -341,27 +352,88 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           </div>
         ) : null}
 
-        {typeHasLimit(form.type) && (
+        {typeHasLimit(form.type) &&
+          (typeHasOptionalLimit(form.type) ? (
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.limit > 0}
+                  onChange={(e) => setForm({ ...form, limit: e.target.checked ? 25 : 0 })}
+                />{" "}
+                Cap the number of collections
+              </label>
+              {form.limit > 0 && (
+                <input
+                  type="number"
+                  className={shared.input}
+                  style={{ maxWidth: 140 }}
+                  min={1}
+                  value={form.limit}
+                  onChange={(e) => setForm({ ...form, limit: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                  aria-label={limitFieldLabel(form.type)}
+                />
+              )}
+              <span className={styles.hint}>
+                {form.limit > 0
+                  ? `Builds the ${form.limit} largest ${groupNounForType(form.type)} collections per library; the rest are skipped.`
+                  : `Off — one collection per ${groupNounForType(form.type)}, however many that turns out to be.`}
+              </span>
+            </div>
+          ) : (
+            <div className={styles.field}>
+              <label htmlFor="rule-limit">{limitFieldLabel(form.type)}</label>
+              <input
+                id="rule-limit"
+                type="number"
+                className={shared.input}
+                style={{ maxWidth: 140 }}
+                min={1}
+                value={form.limit}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    limit: Math.max(1, parseInt(e.target.value, 10) || 1),
+                  })
+                }
+              />
+              <span className={styles.hint}>
+                {form.type === "seerr_requests"
+                  ? "We'll fetch as many Seerr requests as needed to fill the collection up to this many items."
+                  : typeProducesManyCollections(form.type)
+                    ? "How many to pull from TMDb each run. Each one costs API calls, so this is a fetch budget rather than a collection cap."
+                    : "Collections replace those generated in previous runs."}
+              </span>
+            </div>
+          ))}
+
+        {typeHasMinItems(form.type) && (
           <div className={styles.field}>
-            <label htmlFor="rule-limit">{limitFieldLabel(form.type)}</label>
-            <input
-              id="rule-limit"
-              type="number"
-              className={shared.input}
-              style={{ maxWidth: 140 }}
-              min={1}
-              value={form.limit}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  limit: Math.max(1, parseInt(e.target.value, 10) || 1),
-                })
-              }
-            />
+            <label>
+              <input
+                type="checkbox"
+                checked={form.minItems > 0}
+                onChange={(e) =>
+                  setForm({ ...form, minItems: e.target.checked ? defaultMinItemsForType(form.type) : 0 })
+                }
+              />{" "}
+              Skip small collections
+            </label>
+            {form.minItems > 0 && (
+              <input
+                type="number"
+                className={shared.input}
+                style={{ maxWidth: 140 }}
+                min={1}
+                value={form.minItems}
+                onChange={(e) => setForm({ ...form, minItems: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                aria-label="Minimum items per collection"
+              />
+            )}
             <span className={styles.hint}>
-              {form.type === "seerr_requests"
-                ? "We'll fetch as many Seerr requests as needed to fill the collection up to this many items."
-                : "Collections replace those generated in previous runs."}
+              {form.minItems > 0
+                ? `Only builds a collection for a ${groupNounForType(form.type)} with ${form.minItems}+ items in the library.`
+                : `Off — every ${groupNounForType(form.type)} gets a collection, including ones with a single item. Large libraries can produce hundreds or thousands of collections this way.`}
             </span>
           </div>
         )}
@@ -375,7 +447,19 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             <input
               type="checkbox"
               checked={form.pinToHomepage}
-              onChange={(e) => setForm({ ...form, pinToHomepage: e.target.checked })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  pinToHomepage: e.target.checked,
+                  // This rule type can produce hundreds of collections, so
+                  // pinning always means "rotate a handful" — seed a count
+                  // rather than letting the user pin the lot.
+                  pinRotationCount:
+                    e.target.checked && typeProducesManyCollections(form.type) && form.pinRotationCount === 0
+                      ? 10
+                      : form.pinRotationCount,
+                })
+              }
             />{" "}
             Pin generated collections to homepage
           </label>
@@ -385,7 +469,29 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           </span>
         </div>
 
-        {form.pinToHomepage && (
+        {form.pinToHomepage && typeProducesManyCollections(form.type) && (
+          <div className={styles.field}>
+            <label htmlFor="rule-pin-rotation">Collections on the homepage at a time</label>
+            <input
+              id="rule-pin-rotation"
+              type="number"
+              className={shared.input}
+              style={{ maxWidth: 140 }}
+              min={1}
+              value={form.pinRotationCount || ""}
+              onChange={(e) => setForm({ ...form, pinRotationCount: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+            />
+            <span className={styles.hint}>
+              {form.pinRotationCount > 0
+                ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
+                  "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
+                  `${form.pinRotationCount * 2} collections.`
+                : "Required — this rule type can build far more collections than a homepage can show."}
+            </span>
+          </div>
+        )}
+
+        {form.pinToHomepage && !typeProducesManyCollections(form.type) && (
           <div className={styles.field}>
             <label>
               <input
@@ -638,17 +744,21 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {typeHasLimit(form.type) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>{limitFieldLabel(form.type)}</span>
-              <span className={styles.summaryValue}>{form.limit}</span>
+              <span className={styles.summaryValue}>{form.limit > 0 ? form.limit : "No cap"}</span>
               <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
                 Edit
               </button>
             </div>
           )}
-          {form.type === "ai_prompt" && (
+          {(form.type === "ai_prompt" || typeHasMinItems(form.type)) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Min items</span>
-              <span className={styles.summaryValue}>{form.minItems}</span>
-              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("source")}>
+              <span className={styles.summaryValue}>{form.minItems > 0 ? form.minItems : "No minimum"}</span>
+              <button
+                type="button"
+                className={styles.summaryEdit}
+                onClick={() => jumpTo(form.type === "ai_prompt" ? "source" : "scope")}
+              >
                 Edit
               </button>
             </div>
@@ -660,7 +770,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 ? "Off"
                 : form.pinRotationCount > 0
                   ? `On — ${form.pinRotationCount}/library, rotating`
-                  : "On"}
+                  : (pinRotationError(form) ?? "On")}
             </span>
             <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
               Edit

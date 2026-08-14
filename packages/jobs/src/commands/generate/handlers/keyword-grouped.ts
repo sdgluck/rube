@@ -2,9 +2,8 @@ import type { TmdbCachedDetails } from "@tinkerbell/db";
 import { getConfig } from "@tinkerbell/core";
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { hydrateTmdbDetails } from "#commands/generate/tmdb-metadata.ts";
+import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
-
-const MIN_ITEMS_PER_GROUP = 3;
 
 export type KeywordGroupedField = "based_on" | "seasonal" | "awards";
 
@@ -80,7 +79,8 @@ export function keywordGroupedHandler(field: KeywordGroupedField) {
     if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
 
     const buckets = BUCKETS[field];
-    const maxCollections = ruleConfig.limit ?? buckets.length;
+    const maxCollections = collectionLimit(ruleConfig);
+    const minItems = minItemsPerGroup(ruleConfig);
 
     for (const section of sections) {
       ctx.signal?.throwIfAborted();
@@ -116,11 +116,11 @@ export function keywordGroupedHandler(field: KeywordGroupedField) {
       }
 
       const ranked = [...groups.values()]
-        .filter((g) => g.items.length >= MIN_ITEMS_PER_GROUP)
+        .filter((g) => g.items.length >= minItems)
         .sort((a, b) => b.items.length - a.items.length);
 
       ctx.log(
-        `[${field}] "${section.title}" — ${withSignal}/${tmdbToItem.size} items matched a bucket; ${ranked.length} bucket(s) pass min-items (${MIN_ITEMS_PER_GROUP}).`,
+        `[${field}] "${section.title}" — ${withSignal}/${tmdbToItem.size} items matched a bucket; ${ranked.length} bucket(s) to build (${describeLimits(ruleConfig)}).`,
       );
 
       for (const group of ranked.slice(0, maxCollections)) {
