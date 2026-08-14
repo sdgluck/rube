@@ -324,6 +324,11 @@ export const SHOTS: Shot[] = [
     allowSpinner: true,
   },
   {
+    name: "16-settings-bandwidth",
+    description: "Settings → Bandwidth Test — last result, and 90 days of upload figures",
+    path: "/settings/bandwidth",
+  },
+  {
     name: "16-settings-maintenance",
     description: "Settings → Maintenance — five tool rows, the destructive two outlined",
     path: "/settings/maintenance",

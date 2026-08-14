@@ -31,6 +31,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     links: [
       { to: "/settings/migrate", label: "Migrate" },
       { to: "/settings/maintenance", label: "Maintenance" },
+      { to: "/settings/bandwidth", label: "Bandwidth Test" },
       { to: "/settings/health", label: "Health" },
       // Load-testing tool: useful while developing, noise (and a footgun)
       // for someone running a release build against their real server.

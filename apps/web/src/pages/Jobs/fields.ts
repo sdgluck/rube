@@ -34,6 +34,9 @@ const fields: Record<string, JobFieldsConfig> = {
   // Manual maintenance: shown so there's a Run button, always-on so it can't
   // be toggled into a state where the button does nothing.
   "collections-sweep": { kind: "system", enabled: "required", sections: true },
+  // Driven from Settings → Bandwidth Test, but listed here so its schedule is
+  // editable by anyone who wants a nightly figure. Unscheduled by default.
+  "bandwidth-test": { kind: "system", enabled: "required" },
   // Playback tracking is infrastructure, not an opt-in capability: the poller is
   // what every watch statistic is derived from, and the import is a one-shot
   // seed for it. Neither is something you "install".

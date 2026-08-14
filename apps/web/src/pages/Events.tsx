@@ -21,6 +21,7 @@ const BADGE_MAP: Record<string, { label: string; className: string }> = {
   "job.failed": { label: "Job Failed", className: styles.badgeJobFailed },
   "health.failed": { label: "Health Failed", className: styles.badgeHealthFailed },
   "health.recovered": { label: "Health Recovered", className: styles.badgeHealthRecovered },
+  "bandwidth.tested": { label: "Bandwidth Tested", className: styles.badgeBandwidthTested },
 };
 
 const PAGE_SIZE = 50;

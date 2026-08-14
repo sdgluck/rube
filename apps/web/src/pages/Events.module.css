@@ -29,6 +29,13 @@
   color: var(--status-ok-fg);
 }
 
+/* Informational, not a health verdict — a slow result is still a successful
+ * measurement, so this stays neutral rather than borrowing the warning tone. */
+.badgeBandwidthTested {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
 .badgeDefault {
   background: var(--status-neutral-bg);
   color: var(--status-neutral-fg);

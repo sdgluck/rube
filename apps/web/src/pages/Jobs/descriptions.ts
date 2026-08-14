@@ -5,7 +5,8 @@ const descriptions: Record<string, string> = {
   "because-you-watched":
     "Generates personalised “Because You Watched” collections for each Plex user using their recent watch history.",
   shuffle: "Randomises the order of items in shuffled hub collections so the homescreen stays fresh.",
-  "purge-runs": "Deletes job run records older than 7 days and prunes old health-check entries.",
+  "purge-runs":
+    "Deletes job run records older than 7 days, and prunes health-check entries and bandwidth test results past their retention.",
   label:
     "Labels managed items and configures Plex sharing so each user only sees the collections they're permitted to.",
   "label-undo":
@@ -17,6 +18,8 @@ const descriptions: Record<string, string> = {
   "sync-recently-added": "Refreshes the cached “Recently Added” stats shown on the dashboard.",
   "sync-users": "Pulls the list of Plex users and their library access into the local database.",
   healthcheck: "Pings every configured external service and records its current health status.",
+  "bandwidth-test":
+    "Measures this server's internet download and upload speed against Cloudflare, and records the result. Moves up to 200 MB per run, and only on a link fast enough to do so in seconds.",
   "posters-refresh": "Re-fetches cached poster images and detects when artwork has changed in Plex.",
   "migrate-collections":
     "Imports existing Plex collections into Tinkerbell rule-based collections, optionally deleting the originals.",
