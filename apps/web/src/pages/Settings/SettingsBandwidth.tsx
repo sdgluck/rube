@@ -22,6 +22,18 @@ const JOB_ID = "bandwidth-test";
  */
 const COOLDOWN_MS = 15 * 60 * 1000;
 
+/**
+ * The ceiling, in whole megabytes.
+ *
+ * `formatFileSize` is right for the bytes a run actually moved — that's a
+ * measurement, and its decimal place is real. Here the number is a limit
+ * someone is being asked to accept before clicking, and "200.0 MB" implies a
+ * precision the figure doesn't have.
+ */
+function formatCeiling(bytes: number | undefined): string {
+  return bytes ? `${Math.round(bytes / 1_000_000)} MB` : "a few hundred MB";
+}
+
 function ResultCard({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
   return (
     <div className={styles.resultCard}>
@@ -95,7 +107,7 @@ export default function SettingsBandwidth() {
       <p className={styles.intro}>
         Measures this server's internet connection against Cloudflare's speed endpoints. The upload figure is what
         remote streams actually consume, so it's the capacity the Stats bandwidth tile divides live playback by. A run
-        takes under a minute and moves up to {formatFileSize(maxTransferQuery.data)} of data — worth knowing if this
+        takes under a minute and moves up to {formatCeiling(maxTransferQuery.data)} of data — worth knowing if this
         connection is metered.
       </p>
 
