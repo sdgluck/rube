@@ -113,6 +113,19 @@ export function formatBandwidth(kbps: number): string {
   return `${Math.round(kbps)} kbps`;
 }
 
+/**
+ * Measured link speed, given Mbps: `18.1 Mbps`, `940 Mbps`.
+ *
+ * Separate from `formatBandwidth` because the two speak different units —
+ * Plex reports session bandwidth in kbps, a bandwidth test reports Mbps — and
+ * the Stats tile renders them side by side, where an 8x unit slip would read
+ * as a plausible number rather than an obvious bug.
+ */
+export function formatMbps(mbps: number | null | undefined): string {
+  if (mbps == null || mbps <= 0) return EMPTY;
+  return mbps >= 100 ? `${Math.round(mbps)} Mbps` : `${mbps.toFixed(1)} Mbps`;
+}
+
 /** Track bitrate, given kbps: `640 kbps`, `18.2 Mbps`. */
 export function formatBitrate(kbps: number | null | undefined): string {
   if (!kbps) return EMPTY;

@@ -1,4 +1,5 @@
 import type React from "react";
+import { Link } from "react-router-dom";
 import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
@@ -15,7 +16,7 @@ import {
   type TileDef,
 } from "#components/dashboard";
 import { trpc } from "#/trpc";
-import { EMPTY, formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
+import { EMPTY, formatBandwidth, formatMbps, formatNumber, formatRelativeShort, formatUptime } from "#/format";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
 import { HistoryPanel } from "./HistoryPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
@@ -68,6 +69,8 @@ export default function Stats() {
   const overviewQuery = trpc.stats.overview.useQuery();
   const activityQuery = trpc.stats.activity.useQuery();
   const opsQuery = trpc.stats.ops.useQuery(undefined, { refetchInterval: 30000 });
+  // Not polled: this changes only when someone runs a bandwidth test.
+  const bandwidthQuery = trpc.bandwidth.latest.useQuery(undefined, { refetchOnWindowFocus: false });
 
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const utils = trpc.useUtils();
@@ -84,6 +87,7 @@ export default function Stats() {
   const handleRefresh = () => {
     utils.stats.invalidate();
     utils.health.invalidate();
+    utils.bandwidth.invalidate();
     utils.jobs.invalidate();
     utils.events.invalidate();
   };
@@ -102,15 +106,30 @@ export default function Stats() {
         value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : transcodingCount;
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
-      case "bandwidth":
-        value = sessionsQuery.isLoading ? (
-          <SkeletonLine width="40px" />
-        ) : totalBandwidth > 0 ? (
-          formatBandwidth(totalBandwidth)
-        ) : (
-          EMPTY
-        );
+      case "bandwidth": {
+        // In use over capacity. The denominator is the measured *upload*
+        // figure: serving a remote stream is this server uploading, so an
+        // asymmetric connection would look permanently idle against its
+        // download speed.
+        const measured = bandwidthQuery.data;
+        const capacity = measured?.upMbps ?? 0;
+        const inUse = totalBandwidth > 0 ? formatBandwidth(totalBandwidth) : EMPTY;
+        if (sessionsQuery.isLoading) {
+          value = <SkeletonLine width="40px" />;
+        } else if (measured && capacity > 0) {
+          value = `${inUse} / ${formatMbps(capacity)}`;
+          // Past a month the denominator is a claim about the past, so say
+          // when it was made rather than quoting a percentage of it.
+          sub =
+            measured.staleDays > 30 || totalBandwidth === 0
+              ? `measured ${formatRelativeShort(measured.startedAt)}`
+              : `${Math.round((totalBandwidth / 1000 / capacity) * 100)}% of measured`;
+        } else {
+          value = inUse;
+          sub = <Link to="/settings/bandwidth">Test bandwidth →</Link>;
+        }
         break;
+      }
       case "playsToday":
         value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.playsToday ?? 0);
         if (activityQuery.data && activityQuery.data.playsWeek > 0) sub = `${activityQuery.data.playsWeek} this week`;
