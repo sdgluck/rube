@@ -103,6 +103,19 @@ describe("runPhase", () => {
     assert.equal(result.movedBytes - result.measuredBytes, 1 * MB);
   });
 
+  it("runs on its own clock when the caller doesn't supply one", async () => {
+    // The default argument is the only line of this function the other tests
+    // never execute — they all inject a clock — and it shipped broken: a bare
+    // `performance.now` reference throws `Value of "this" must be of type
+    // Performance` the moment it's called detached from `performance`. Every
+    // real run failed on the first phase while the suite stayed green.
+    const transfer = async (size: number): Promise<Transfer> => ({ bytes: size, pop: null });
+    const result = await runPhase(5 * MB, transfer, never);
+
+    assert.ok(result.movedBytes > 0);
+    assert.ok(result.measuredMs >= 0);
+  });
+
   it("never launches more than the configured number of streams at once", async () => {
     let inFlight = 0;
     let peak = 0;

@@ -117,7 +117,11 @@ export async function runPhase(
   capBytes: number,
   transfer: (size: number, deadline: AbortSignal) => Promise<Transfer>,
   deadline: AbortSignal,
-  now: () => number = performance.now,
+  // Wrapped, not passed as `performance.now`: detached from its object the
+  // method throws `Value of "this" must be of type Performance` on the first
+  // call, which is precisely what shipped in v0.14.0 — every test injected a
+  // clock, so the default this line exists to provide was never once run.
+  now: () => number = () => performance.now(),
 ): Promise<PhaseResult> {
   const warmStarted = now();
   const warmup = await transfer(WARMUP_BYTES, deadline);
