@@ -107,7 +107,16 @@ if (claude.status !== 0) die("claude summarisation failed");
 // would otherwise land in the file verbatim.
 const raw = claude.stdout.trim();
 const firstHeading = raw.indexOf("### ");
-const sections = firstHeading === -1 ? "" : raw.slice(firstHeading).trim();
+// …and anything after the last bullet. Slicing from the first heading removes
+// an opening ```markdown fence but leaves its closing one, which is how a bare
+// ``` ended up committed in the middle of CHANGELOG.md for v0.14.1 (and, it
+// turned out, at the end of the file since the very first release).
+const sections = firstHeading === -1
+  ? ""
+  : raw
+      .slice(firstHeading)
+      .replace(/\n\s*```+\s*$/, "")
+      .trim();
 
 // The failures worth catching are the quiet ones: a summary that parses as
 // markdown but says nothing. Both of these produced a shipped release before
