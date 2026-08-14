@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-14
+
+### Added
+
+- Both smart-filter editors (runtime filters and the rule wizard) now show filters in plain English instead of Plex's raw wire format — for example, a duration filter reads "Duration is 2h" instead of `duration = 7200000`, and a date filter reads "in the last 30 days" instead of `-30d`.
+- Boolean smart-filter fields (like "unwatched") now get a proper toggle control instead of falling back to a free-text box expecting `1`.
+- The rule wizard now shows a tag lookup for tag-type fields instead of a bare text input, so values like genres display by name instead of as raw internal IDs.
+- The rule wizard's review pane now shows readable field names and operators instead of raw field keys and operator symbols.
+- TV-scoped smart filter fields (such as show genre or episode watched status) are now correctly typed and labelled instead of falling back to generic string handling.
+
+### Fixed
+
+- The rules table now correctly counts filters for smart-filter rules; it previously always showed no filters because it was reading an old data format the wizard no longer writes.
+- Tag values (e.g. genres) shown in the rules table now resolve to their actual names via a single batched lookup instead of being left unresolved.
+
 ## [0.9.0] - 2026-08-14
 
 ### Added
