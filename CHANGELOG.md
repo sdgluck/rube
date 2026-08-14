@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.14.3] - 2026-08-14
+
+### Added
+
+- The bandwidth test page now explains why its readings run higher than a browser speed test: it measures the server Tinkerbell runs on over multiple simultaneous connections, the way concurrent streams would, rather than one connection on your local device.
+- Bandwidth test results now record how many parallel connections were used, so a figure can be compared against other tools or against future runs with a different connection count. Results saved before this change show as not recorded rather than guessing a value.
+
+### Fixed
+
+- The bandwidth tile on the Stats page no longer wraps onto a second line and grows the row when showing both the live and measured-capacity figures.
+- The bandwidth history chart now scales its bars against the correct axis: it previously plotted upload bars using the download peak, making every bar far shorter than the axis label implied.
+
 ## [0.14.2] - 2026-08-14
 
 ### Fixed
