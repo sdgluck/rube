@@ -6,7 +6,7 @@ import { t, procedure, getPlexClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
 
 export const mediaRouter = t.router({
-  list: t.procedure
+  list: procedure
     .input(
       paginationInput.extend({
         // Value filters are lists: the page's controls are multi-selects, so

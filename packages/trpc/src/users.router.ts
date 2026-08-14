@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { syncUsers, getLocalUsers, updateUser } from "@tinkerbell/domain.users";
-import { t, getPlexClient } from "./_base.ts";
+import { t, procedure, getPlexClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
 
 export const usersRouter = t.router({
-  list: t.procedure
+  list: procedure
     .input(
       paginationInput.extend({
         search: z.string().optional(),
@@ -41,12 +41,12 @@ export const usersRouter = t.router({
       return result;
     }),
 
-  update: t.procedure.input(z.object({ userId: z.number(), name: z.string().optional() })).mutation(({ input }) => {
+  update: procedure.input(z.object({ userId: z.number(), name: z.string().optional() })).mutation(({ input }) => {
     updateUser(input.userId, { name: input.name || null });
     return { ok: true };
   }),
 
-  sync: t.procedure.mutation(async () => {
+  sync: procedure.mutation(async () => {
     const client = getPlexClient();
     return syncUsers(client);
   }),

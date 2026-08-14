@@ -16,6 +16,7 @@ import { syncSections, getLocalSections } from "@tinkerbell/domain.sections";
 import { reportHealth, testArrConnection } from "@tinkerbell/domain.health";
 import { sendNotification, EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
 import { t, procedure, getPlexClient } from "./_base.ts";
+import { adminAuthRouter } from "./admin-auth.router.ts";
 import { configRouter } from "./config.router.ts";
 import { bandwidthRouter } from "./bandwidth.router.ts";
 import { collectionsRouter } from "./collections.router.ts";
@@ -39,6 +40,7 @@ import { navRouter } from "./nav.router.ts";
 import { personalizationRouter } from "./personalization.router.ts";
 
 export const appRouter = t.router({
+  auth: adminAuthRouter,
   config: configRouter,
   collections: collectionsRouter,
   media: mediaRouter,
@@ -86,28 +88,26 @@ export const appRouter = t.router({
   // message from the rejection's `.message`. This matches the contract
   // used by every other router in the app (SDG-18).
 
-  testPlex: t.procedure
-    .input(z.object({ plex_url: z.string(), plex_token: z.string() }))
-    .mutation(async ({ input }) => {
-      const plex_token = unredact(input.plex_token, "global_plex_token");
-      try {
-        const testUrl = new URL("/", input.plex_url);
-        testUrl.searchParams.set("X-Plex-Token", plex_token);
-        const pRes = await fetch(testUrl.toString(), {
-          headers: { Accept: "application/json" },
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!pRes.ok) throw new Error(`Plex returned ${pRes.status} ${pRes.statusText}`);
-        const data = await pRes.json();
-        const name = data?.MediaContainer?.friendlyName || "Unknown";
-        reportHealth("Plex", "ok", `Connected — ${name}`);
-        return { serverName: name as string };
-      } catch (err) {
-        const message = errorMessage(err);
-        reportHealth("Plex", "error", message);
-        throw new TRPCError({ code: "BAD_GATEWAY", message });
-      }
-    }),
+  testPlex: procedure.input(z.object({ plex_url: z.string(), plex_token: z.string() })).mutation(async ({ input }) => {
+    const plex_token = unredact(input.plex_token, "global_plex_token");
+    try {
+      const testUrl = new URL("/", input.plex_url);
+      testUrl.searchParams.set("X-Plex-Token", plex_token);
+      const pRes = await fetch(testUrl.toString(), {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!pRes.ok) throw new Error(`Plex returned ${pRes.status} ${pRes.statusText}`);
+      const data = await pRes.json();
+      const name = data?.MediaContainer?.friendlyName || "Unknown";
+      reportHealth("Plex", "ok", `Connected — ${name}`);
+      return { serverName: name as string };
+    } catch (err) {
+      const message = errorMessage(err);
+      reportHealth("Plex", "error", message);
+      throw new TRPCError({ code: "BAD_GATEWAY", message });
+    }
+  }),
 
   testRadarr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
     const api_key = unredact(input.api_key, "global_radarr_api_key");
@@ -263,3 +263,5 @@ export const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 
 export { portalRouter, createPortalContext, type PortalRouter, type PortalContext } from "./portal.router.ts";
+export { createAdminContext } from "./admin-auth.router.ts";
+export { type AdminContext } from "./_base.ts";
