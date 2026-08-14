@@ -50,15 +50,20 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "*/15 * * * *",
     enabled: 1,
   },
-  {
-    id: "sync-most-watched",
-    name: "Sync Most Watched",
-    command: "sync-most-watched",
-    schedule: "0 * * * *",
-    enabled: 1,
-  },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
+  // Six-field schedule — croner reads a leading seconds field, which every
+  // other job here omits. 30s is Tautulli's default and the trade-off is
+  // sampling density against API load: a 22-minute episode gets ~44 samples
+  // for one small request per tick. Anything slower starts missing short items
+  // entirely, which silently under-counts exactly the content people rewatch.
+  {
+    id: "playback-poll",
+    name: "Poll Playback Sessions",
+    command: "playback-poll",
+    schedule: "*/30 * * * * *",
+    enabled: 1,
+  },
   // No schedule by default: it deletes collections off the Plex server, so it
   // runs when a human asks it to. A schedule can still be set from the UI.
   {
@@ -73,6 +78,15 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     name: "Refresh Poster Cache",
     command: "posters-refresh",
     schedule: "0 4 * * 0",
+    enabled: 1,
+  },
+  // No schedule — a one-shot import that resumes where it left off. Re-running
+  // it on a timer would walk Plex's history forever for nothing.
+  {
+    id: "playback-backfill",
+    name: "Import Plex Watch History",
+    command: "playback-backfill",
+    schedule: "",
     enabled: 1,
   },
   // ── Background / escape-hatch (hidden from UI, invoked via Settings or BYW lifecycle) ──
@@ -119,7 +133,11 @@ const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
   "overlays-remove": { mode: "remove" },
 };
 
-const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa"];
+// `sync-most-watched` retired in favour of playback history: most-watched and
+// the activity summary are now derived from playback_sessions at query time
+// rather than cached by a job. Its row must be deleted on upgrade or the
+// scheduler would keep firing a command that no longer exists.
+const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa", "sync-most-watched"];
 
 function seedDefaultJobs(): void {
   const existing = new Map(

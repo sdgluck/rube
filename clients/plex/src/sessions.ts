@@ -18,8 +18,10 @@ export function createSessionsModule(http: PlexHttp) {
 
       return {
         ratingKey: item.ratingKey,
+        sessionKey: item.sessionKey,
         parentRatingKey: item.parentRatingKey,
         grandparentRatingKey: item.grandparentRatingKey,
+        librarySectionId: item.librarySectionID == null ? undefined : String(item.librarySectionID),
         title: item.title ?? "",
         type: item.type ?? "",
         year: item.year,
@@ -32,6 +34,7 @@ export function createSessionsModule(http: PlexHttp) {
         duration: item.duration ?? media?.duration,
         viewOffset: item.viewOffset,
         user: user?.title || "Unknown",
+        userId: user?.id,
         userThumb: user?.thumb,
         player: player?.title || "Unknown",
         playerMachineId: player?.machineIdentifier,

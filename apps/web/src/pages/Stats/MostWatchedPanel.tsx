@@ -6,9 +6,12 @@ import styles from "#pages/Stats/Stats.module.css";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
+import { PeriodSelector } from "./PeriodSelector";
+import { usePeriod } from "./usePeriod";
 
 export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps) {
-  const mostWatchedQuery = trpc.stats.mostWatched.useQuery();
+  const { periodDays, setPeriodDays, label } = usePeriod();
+  const mostWatchedQuery = trpc.stats.mostWatched.useQuery({ periodDays });
   const maxPlays = mostWatchedQuery.data?.[0]?.plays ?? 1;
 
   const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
@@ -23,13 +26,22 @@ export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps)
   });
 
   return (
-    <PanelShell title="Most Watched This Week" dragHandle={dragHandle} dragProps={dragProps}>
+    <PanelShell
+      title="Most Watched"
+      actions={<PeriodSelector value={periodDays} onChange={setPeriodDays} />}
+      dragHandle={dragHandle}
+      dragProps={dragProps}
+    >
       {mostWatchedQuery.isLoading && <ListSkeleton rows={3} />}
       {mostWatchedQuery.error && (
         <ErrorState inline title="Couldn't load watch history" onRetry={() => mostWatchedQuery.refetch()} />
       )}
       {mostWatchedQuery.data && mostWatchedQuery.data.length === 0 && (
-        <div className={styles.muted}>No watch history this week</div>
+        <div className={styles.muted}>
+          {periodDays === 0
+            ? "No watch history yet — it fills in as things are played, or run Import Plex Watch History from Jobs."
+            : `No watch history in the last ${label}`}
+        </div>
       )}
       {mostWatchedQuery.data && mostWatchedQuery.data.length > 0 && (
         <div className="table-scroll in-panel" data-scroll="x">

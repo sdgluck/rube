@@ -47,7 +47,9 @@ export interface PlexHistoryItem {
   grandparentTitle?: string;
   grandparentRatingKey?: string;
   accountID?: number;
+  /** Unix *seconds*, unlike everything else in this codebase. */
   viewedAt?: number;
+  librarySectionID?: string;
 }
 
 export interface PlexCollection {
@@ -127,8 +129,11 @@ export interface PlexHomeHub {
 
 export interface PlexSession {
   ratingKey?: string;
+  /** Plex's live-session identifier. Reused across unrelated plays over time. */
+  sessionKey?: string;
   parentRatingKey?: string;
   grandparentRatingKey?: string;
+  librarySectionId?: string;
   title: string;
   type: string;
   year?: number;
@@ -141,6 +146,8 @@ export interface PlexSession {
   duration?: number;
   viewOffset?: number;
   user: string;
+  /** Plex account id. Matches `plex_users.userId`; absent when Plex omits `User`. */
+  userId?: number;
   userThumb?: string;
   player: string;
   playerMachineId?: string;
@@ -348,4 +355,8 @@ export interface WatchHistoryOptions {
   accountID?: string;
   librarySectionID?: string;
   limit?: number;
+  /** `X-Plex-Container-Start`, for walking the full history rather than the head of it. */
+  offset?: number;
+  /** Only entries at or after this Unix *second* — Plex's `viewedAt` unit, not ms. */
+  viewedAfter?: number;
 }

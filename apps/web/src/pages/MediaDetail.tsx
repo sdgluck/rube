@@ -37,6 +37,11 @@ export default function MediaDetail() {
     { ratingKey: ratingKey! },
     { enabled: !!ratingKey, refetchOnWindowFocus: false },
   );
+  const watchedByQuery = trpc.stats.watchedBy.useQuery(
+    { ratingKey: ratingKey! },
+    { enabled: !!ratingKey, refetchOnWindowFocus: false },
+  );
+  const watchers = watchedByQuery.data ?? [];
 
   if (detailQuery.isLoading) return <DetailSkeleton />;
   if (detailQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media item</div>;
@@ -201,6 +206,28 @@ export default function MediaDetail() {
                   </div>
                 );
               })}
+            </section>
+          )}
+
+          {/* Watched by — the quickest way to confirm playback tracking works */}
+          {watchers.length > 0 && (
+            <section className={mediaStyles.section}>
+              <h3 className={mediaStyles.sectionTitle}>
+                Watched by
+                <span className={mediaStyles.sectionCount}>{watchers.length}</span>
+              </h3>
+              <ul className={mediaStyles.collectionList}>
+                {watchers.map((w) => (
+                  <li key={w.userId} className={mediaStyles.collectionItem}>
+                    <span>{w.username}</span>
+                    <span className={mediaStyles.collectionSection}>
+                      {w.plays} play{w.plays === 1 ? "" : "s"}
+                      {w.completedPlays > 0 ? ` · ${w.completedPlays} finished` : ""}
+                      {w.lastPlayedAt ? ` · last ${new Date(w.lastPlayedAt).toLocaleDateString()}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

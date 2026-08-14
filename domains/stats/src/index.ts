@@ -1,18 +1,25 @@
 /**
- * Stats module — background sync of Plex stats to local SQLite cache.
+ * Stats module.
  *
- * Recently added and most watched are synced via jobs.
- * Sessions are fetched real-time (not cached here).
+ * Three different freshness strategies, deliberately:
+ *   • Recently added — cached by a job, because it is a Plex call we don't
+ *     want to make on every dashboard render.
+ *   • Most watched and the activity tiles — queried live from
+ *     `playback_sessions`, because we own that data locally and a cache would
+ *     only add staleness.
+ *   • Sessions — read straight from Plex, since "what is playing right now"
+ *     is meaningless a minute later.
  */
 
 import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, statsCache, jobs, jobRuns, mediaItems, plexUsers } from "@tinkerbell/db";
+import { db, statsCache, jobs, jobRuns, mediaItems, playbackSessions, plexUsers } from "@tinkerbell/db";
 
 const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, DAY_MS, WEEK_MS } from "@tinkerbell/core";
+import { topPlayed } from "@tinkerbell/domain.playback";
 import type { PlexRecentItem } from "@tinkerbell/plex";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
@@ -29,22 +36,6 @@ const plexRecentItemSchema = z.object({
   container: z.string().optional(),
   videoResolution: z.string().optional(),
   fileSize: z.number().optional(),
-});
-
-const mostWatchedItemSchema = z.object({
-  ratingKey: z.string().optional(),
-  title: z.string(),
-  year: z.number().optional(),
-  type: z.string(),
-  grandparentTitle: z.string().optional(),
-  plays: z.number(),
-});
-
-const activitySummarySchema = z.object({
-  playsToday: z.number(),
-  playsWeek: z.number(),
-  activeUsersWeek: z.number(),
-  topUserToday: z.object({ name: z.string(), plays: z.number() }).nullable().optional(),
 });
 
 function writeCache(key: string, data: unknown): void {
@@ -96,70 +87,6 @@ export interface MostWatchedItem {
   plays: number;
 }
 
-export async function syncMostWatched(signal?: AbortSignal): Promise<string> {
-  const client = tryGetPlexClient(signal);
-  if (!client) throw new Error("Plex not configured");
-
-  const history = await client.getWatchHistory({ limit: 1000 });
-  const nowSec = Math.floor(Date.now() / 1000);
-  const weekCutoff = nowSec - WEEK_MS / 1000;
-  const todayCutoff = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
-  const recentHistory = history.filter((item) => (item.viewedAt ?? 0) >= weekCutoff);
-
-  let playsToday = 0;
-  const usersThisWeek = new Set<number>();
-  const playsByUserToday = new Map<number, number>();
-  for (const item of recentHistory) {
-    const isToday = (item.viewedAt ?? 0) >= todayCutoff;
-    if (isToday) {
-      playsToday++;
-      if (item.accountID != null) {
-        playsByUserToday.set(item.accountID, (playsByUserToday.get(item.accountID) ?? 0) + 1);
-      }
-    }
-    if (item.accountID != null) usersThisWeek.add(item.accountID);
-  }
-
-  let topUserToday: { name: string; plays: number } | null = null;
-  if (playsByUserToday.size > 0) {
-    const [topId, topPlays] = [...playsByUserToday.entries()].sort((a, b) => b[1] - a[1])[0];
-    const userRow = db
-      .select({ name: plexUsers.name, username: plexUsers.username })
-      .from(plexUsers)
-      .where(eq(plexUsers.userId, topId))
-      .get();
-    topUserToday = { name: userRow?.name ?? userRow?.username ?? `User ${topId}`, plays: topPlays };
-  }
-
-  writeCache("activitySummary", {
-    playsToday,
-    playsWeek: recentHistory.length,
-    activeUsersWeek: usersThisWeek.size,
-    topUserToday,
-  });
-
-  const counts = new Map<string, MostWatchedItem>();
-  for (const item of recentHistory) {
-    const existing = counts.get(item.ratingKey);
-    if (existing) {
-      existing.plays++;
-    } else {
-      counts.set(item.ratingKey, {
-        ratingKey: item.ratingKey,
-        title: item.title,
-        year: item.year,
-        type: item.type,
-        grandparentTitle: item.grandparentTitle,
-        plays: 1,
-      });
-    }
-  }
-
-  const result = [...counts.values()].sort((a, b) => b.plays - a.plays).slice(0, 10);
-  writeCache("mostWatched", result);
-  return `Synced most watched: ${result.length} items from ${recentHistory.length} plays in the last 7 days`;
-}
-
 // ─── Read functions (called by tRPC endpoints) ───────────────────────────────
 
 export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled: boolean } {
@@ -168,22 +95,82 @@ export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled:
   return { items, jobEnabled: job?.enabled === 1 };
 }
 
-export function getCachedMostWatched(): MostWatchedItem[] {
-  return readCache("mostWatched", z.array(mostWatchedItemSchema)) ?? [];
+/**
+ * Most-played items in a period.
+ *
+ * Was a cached hourly snapshot of Plex's view log, capped at whatever the last
+ * 1,000 history entries happened to cover. Now a direct query over our own
+ * playback history, which makes the period selectable and the numbers exact —
+ * and removes an entire scheduled job.
+ */
+export function getMostWatched(opts: { since?: number; limit?: number } = {}): MostWatchedItem[] {
+  const since = opts.since ?? Date.now() - WEEK_MS;
+  return topPlayed({ since, limit: opts.limit ?? 10 }).map((row) => ({
+    ratingKey: row.ratingKey,
+    title: row.title,
+    type: row.type,
+    grandparentTitle: row.grandparentTitle ?? undefined,
+    plays: row.plays,
+  }));
 }
 
-export function getCachedActivitySummary(): {
+/**
+ * Dashboard activity tiles.
+ *
+ * Derived from `playback_sessions` rather than a cached job result. On an
+ * install that has just upgraded these read zero until either the poller has
+ * ticked or `playback-backfill` has run — which is honest, where the old cache
+ * would have gone stale and kept showing last hour's numbers forever.
+ */
+export function getActivitySummary(now: number = Date.now()): {
   playsToday: number;
   playsWeek: number;
   activeUsersWeek: number;
   topUserToday: { name: string; plays: number } | null;
 } {
-  const cached = readCache("activitySummary", activitySummarySchema);
+  const weekCutoff = now - WEEK_MS;
+  const todayCutoff = new Date(now).setHours(0, 0, 0, 0);
+
+  const week = db
+    .select({
+      plays: sql<number>`count(*)`,
+      users: sql<number>`count(distinct ${playbackSessions.userId})`,
+    })
+    .from(playbackSessions)
+    .where(gte(playbackSessions.startedAt, weekCutoff))
+    .get() ?? { plays: 0, users: 0 };
+
+  const playsToday =
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(playbackSessions)
+      .where(gte(playbackSessions.startedAt, todayCutoff))
+      .get()?.count ?? 0;
+
+  const top = db
+    .select({ userId: playbackSessions.userId, plays: sql<number>`count(*)` })
+    .from(playbackSessions)
+    .where(gte(playbackSessions.startedAt, todayCutoff))
+    .groupBy(playbackSessions.userId)
+    .orderBy(sql`count(*) desc`)
+    .limit(1)
+    .get();
+
+  let topUserToday: { name: string; plays: number } | null = null;
+  if (top) {
+    const userRow = db
+      .select({ name: plexUsers.name, username: plexUsers.username })
+      .from(plexUsers)
+      .where(eq(plexUsers.userId, top.userId))
+      .get();
+    topUserToday = { name: userRow?.name ?? userRow?.username ?? `User ${top.userId}`, plays: top.plays };
+  }
+
   return {
-    playsToday: cached?.playsToday ?? 0,
-    playsWeek: cached?.playsWeek ?? 0,
-    activeUsersWeek: cached?.activeUsersWeek ?? 0,
-    topUserToday: cached?.topUserToday ?? null,
+    playsToday,
+    playsWeek: week.plays,
+    activeUsersWeek: week.users,
+    topUserToday,
   };
 }
 

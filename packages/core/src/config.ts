@@ -130,6 +130,17 @@ export const configSchema = z.object({
   global_webhook_events: z.array(z.string()),
   global_webhook_jobs: z.array(z.string()),
   global_webhook_health_targets: z.array(z.string()),
+  /**
+   * Fraction of an item's runtime past which a play counts as "watched".
+   *
+   * This is the definition every downstream consumer inherits — watched-by-all
+   * filters, cleanup rules, digests — so it is deliberately one setting rather
+   * than a per-feature threshold. 0.85 matches Tautulli's default and leaves
+   * room for credits.
+   */
+  playback_completion_threshold: z.number().min(0.5).max(1),
+  /** Days of raw session rows to keep. 0 = keep forever. `watch_state` is never pruned. */
+  playback_retention_days: z.number().int().min(0),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),

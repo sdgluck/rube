@@ -17,6 +17,7 @@ import {
 import { trpc } from "#/trpc";
 import { EMPTY, formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
+import { HistoryPanel } from "./HistoryPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
 import { RecentlyAddedPanel } from "./RecentlyAddedPanel";
 import { StreamsPanel } from "./StreamsPanel";
@@ -24,7 +25,7 @@ import { SystemPanel } from "./SystemPanel";
 
 // ─── Panel order ────────────────────────────────────────────────────────────
 
-const PANEL_IDS = ["streams", "system", "recentlyAdded", "mostWatched", "libraryBreakdown"] as const;
+const PANEL_IDS = ["streams", "system", "recentlyAdded", "mostWatched", "history", "libraryBreakdown"] as const;
 type PanelId = (typeof PANEL_IDS)[number];
 
 const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>> = {
@@ -32,6 +33,7 @@ const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>
   system: SystemPanel,
   recentlyAdded: RecentlyAddedPanel,
   mostWatched: MostWatchedPanel,
+  history: HistoryPanel,
   libraryBreakdown: LibraryBreakdownPanel,
 };
 

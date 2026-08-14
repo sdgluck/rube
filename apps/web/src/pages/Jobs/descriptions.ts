@@ -15,7 +15,6 @@ const descriptions: Record<string, string> = {
   overlays: "Renders configured overlays onto poster artwork and uploads the composited posters to Plex.",
   "overlays-remove": "Restores original poster artwork by removing previously applied overlays.",
   "sync-recently-added": "Refreshes the cached “Recently Added” stats shown on the dashboard.",
-  "sync-most-watched": "Refreshes the cached “Most Watched” stats shown on the dashboard.",
   "sync-users": "Pulls the list of Plex users and their library access into the local database.",
   healthcheck: "Pings every configured external service and records its current health status.",
   "posters-refresh": "Re-fetches cached poster images and detects when artwork has changed in Plex.",

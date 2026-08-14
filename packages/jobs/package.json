@@ -33,6 +33,7 @@
     "@tinkerbell/domain.rule-history": "workspace:*",
     "@tinkerbell/domain.rules": "workspace:*",
     "@tinkerbell/domain.shuffle-hubs": "workspace:*",
+    "@tinkerbell/domain.playback": "workspace:*",
     "@tinkerbell/domain.stats": "workspace:*",
     "@tinkerbell/domain.users": "workspace:*",
     "@tinkerbell/http": "workspace:*",

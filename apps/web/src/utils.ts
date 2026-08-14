@@ -1,6 +1,14 @@
 export function describeCron(expr: string): string {
   if (!expr) return "";
   const parts = expr.trim().split(/\s+/);
+  // Croner accepts a leading seconds field. Only the playback poller uses one,
+  // but it would otherwise render as a raw expression in the Jobs UI.
+  if (parts.length === 6) {
+    const [sec, ...rest] = parts;
+    if (sec.startsWith("*/") && rest.every((p) => p === "*")) return `Every ${sec.slice(2)} seconds`;
+    if (sec === "*" && rest.every((p) => p === "*")) return "Every second";
+    return describeCron(rest.join(" "));
+  }
   if (parts.length !== 5) return expr;
   const [min, hour, dom, mon, dow] = parts;
 

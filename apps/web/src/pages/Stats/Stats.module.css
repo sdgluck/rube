@@ -362,3 +362,36 @@
 .compactTable {
   composes: compactTable from "../../styles/shared.module.css";
 }
+
+/* ─── Period selector ─────────────────────────────────────────────────────── */
+
+.segmented {
+  composes: segmented from "../../styles/controls.module.css";
+}
+
+.segmentedBtn {
+  composes: segmentedItem from "../../styles/controls.module.css";
+}
+
+.segmentedBtnActive {
+  composes: segmentedItemActive from "../../styles/controls.module.css";
+}
+
+/* ─── History panel ───────────────────────────────────────────────────────── */
+
+.historyPager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Backfilled rows carry no completion or watch-time data, so the cell shows a
+   dash. The tooltip is what explains why, rather than leaving it looking broken. */
+.unknownCell {
+  color: var(--ink-3);
+}

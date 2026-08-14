@@ -11,6 +11,7 @@ import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import { formatRuntime } from "#/format";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Users.module.css";
 
@@ -117,6 +118,11 @@ export default function Users() {
     placeholderData: keepPreviousData,
   });
 
+  // One grouped query for the whole table rather than one per row. All-time,
+  // matching the lifetime framing of the neighbouring Collections count.
+  const playbackQuery = trpc.stats.allUserPlayback.useQuery(undefined, { refetchOnWindowFocus: false });
+  const playbackByUser = new Map((playbackQuery.data ?? []).map((r) => [r.userId, r]));
+
   const syncMutation = trpc.users.sync.useMutation({
     onSuccess: () => {
       utils.users.list.invalidate();
@@ -188,6 +194,7 @@ export default function Users() {
                       <SortableTh sortKey="collectionCount" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Collections
                       </SortableTh>
+                      <th>Plays</th>
                       <SortableTh sortKey="lastWatchedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Last Watched
                       </SortableTh>
@@ -233,6 +240,20 @@ export default function Users() {
                         </td>
                         <td data-cell="meta" className={`${sharedStyles.cellNum} ${styles.collectionsCell}`}>
                           {user.collectionCount}
+                        </td>
+                        <td data-cell="meta" className={sharedStyles.cellNum}>
+                          {(() => {
+                            const totals = playbackByUser.get(user.userId);
+                            if (!totals || totals.plays === 0) return <span className={styles.hint}>—</span>;
+                            return (
+                              <span>
+                                {totals.plays}
+                                {totals.watchedMs > 0 && (
+                                  <span className={styles.hint}> &middot; {formatRuntime(totals.watchedMs)}</span>
+                                )}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td data-cell="meta">
                           {user.lastWatchedTitle ? (
