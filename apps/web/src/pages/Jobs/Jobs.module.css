@@ -1,110 +1,5 @@
-/* ─── Dashboard layout ──────────────────────────────────────────────────── */
-
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ─── Summary bar ───────────────────────────────────────────────────────── */
-
-.summaryBar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
-  gap: 12px;
-}
-
-.summaryItem {
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border-radius: var(--r-card);
-  box-shadow: var(--e-card);
-  padding: 12px 14px 13px;
-  min-width: 0;
-}
-
-.summaryLabel {
-  font: var(--t-label);
-  letter-spacing: var(--t-label-tracking);
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
-.summaryValue {
-  margin-top: 2px;
-  font: var(--t-metric);
-  letter-spacing: var(--t-metric-tracking);
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-
-.summarySmall {
-  font-size: 15px;
-}
-
-.summaryAccent {
-  color: var(--accent-text);
-}
-
-/* ─── Grid ──────────────────────────────────────────────────────────────── */
-
-/* Masonry-style two-column flow: each panel is sized to its own content
- * rather than stretched to match a row peer. Mirrors the Stats grid. */
-.grid {
-  column-count: 2;
-  column-gap: 16px;
-}
-
-.grid > * {
-  break-inside: avoid;
-  margin-bottom: 16px;
-}
-
-/* ─── Panel ─────────────────────────────────────────────────────────────── */
-
-.panel {
-  border: none;
-  border-radius: var(--r-panel);
-  padding: 15px 18px 16px;
-  background: var(--surface);
-  box-shadow: var(--e-card);
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.panelHeader {
-  font: var(--t-panel);
-  letter-spacing: var(--t-panel-tracking);
-  color: var(--ink);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.panelHeaderRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.panelHeaderRow .panelHeader {
-  margin-bottom: 0;
-}
-
-.countBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 7px;
-  background: var(--status-neutral-bg);
-  color: var(--status-neutral-fg);
-  font: 600 10.5px/1.4 var(--font-mono);
-  border-radius: var(--r-pill);
-}
+/* Jobs page styles. The dashboard frame — grid, panels, summary tiles, tile
+ * picker — lives in components/dashboard/Dashboard.module.css. */
 
 .headerActions {
   display: flex;
@@ -115,19 +10,6 @@
   composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
 }
 
-/* ─── Log tabs header ───────────────────────────────────────────────────── */
-
-.logTabsHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.logTabsHeader .panelHeader {
-  margin-bottom: 0;
-}
-
 /* ─── Log tabs ──────────────────────────────────────────────────────────── */
 
 .logTabs {
@@ -135,6 +17,7 @@
   gap: 4px;
   flex-wrap: wrap;
   overflow: hidden;
+  margin-bottom: 10px;
 }
 
 .logTab {
@@ -947,29 +830,6 @@
 /* ─── Responsive ────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
-  .summaryBar {
-    flex-wrap: wrap;
-    gap: 0;
-    padding: 10px;
-  }
-
-  .summaryItem {
-    flex-basis: 50%;
-    padding: 6px 0;
-  }
-
-  .summaryDivider {
-    display: none;
-  }
-
-  .summaryValue {
-    font-size: 15px;
-  }
-
-  .grid {
-    column-count: 1;
-  }
-
   .jobDetailColumns {
     grid-template-columns: 1fr;
   }

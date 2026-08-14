@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import { DetailSkeleton } from "#components/Skeleton";
+import { BackLink } from "#components/PageShell";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
 import { formatDuration, formatElapsed } from "#/format";
@@ -104,12 +105,11 @@ export default function JobRun() {
 
   return (
     <div ref={swipeRef} className={styles.runDetail}>
-      <Link to={`/jobs/${run.jobId}`} className={styles.backLink}>
-        &larr; Back to Job
-      </Link>
+      <BackLink to={`/jobs/${run.jobId}`} parent="Job">
+        Run
+      </BackLink>
 
       <div className={styles.runHeader}>
-        <h2 className={styles.runTitle}>Job Run</h2>
         <StatusBadge status={run.status} />
         {run.status === "running" && (
           // Only a `running` run can be cancelled — one already `cancelling`

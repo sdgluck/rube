@@ -7,8 +7,8 @@ import ErrorState from "#components/ErrorState";
 import PageShell from "#components/PageShell";
 import ConfirmModal from "#components/ConfirmModal";
 import Banner from "#components/Banner";
+import BulkBar from "#components/BulkBar";
 import { PrerollsSkeleton } from "#components/Skeleton";
-import shared from "#/styles/shared.module.css";
 import controls from "#/styles/controls.module.css";
 import UploadDropzone from "./UploadDropzone";
 import PrerollCard from "./PrerollCard";
@@ -183,7 +183,6 @@ export default function Prerolls() {
 
   return (
     <PageShell
-      title="Prerolls"
       count={prerolls.length > 0 ? prerolls.length : undefined}
       actions={
         <>
@@ -245,23 +244,14 @@ export default function Prerolls() {
       )}
 
       {selected.size > 0 && (
-        <div className={shared.bulkBar}>
-          <span className={shared.bulkCount}>{selected.size} selected</span>
-          <button
-            type="button"
-            className={`${controls.btn} ${controls.btnDanger} ${controls.btnSm}`}
-            onClick={() => setConfirmDelete([...selected])}
-          >
-            Delete {selected.size}
-          </button>
-          <button
-            type="button"
-            className={`${controls.btn} ${controls.btnGhost} ${controls.btnSm}`}
-            onClick={() => setSelected(new Set())}
-          >
-            Clear
-          </button>
-        </div>
+        <BulkBar
+          count={selected.size}
+          noun="preroll"
+          onClear={() => setSelected(new Set())}
+          actions={[
+            { label: `Delete ${selected.size}`, tone: "danger", onClick: () => setConfirmDelete([...selected]) },
+          ]}
+        />
       )}
 
       <PlexSyncBar

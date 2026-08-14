@@ -1,30 +1,33 @@
-import { LayoutGrid } from "lucide-react";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
 import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
+import {
+  DashboardGrid,
+  DashboardLayout,
+  SummaryBar,
+  SummaryTile,
+  TilePicker,
+  resolveTiles,
+  usePanelOrder,
+  type DashboardPanelProps,
+  type TileDef,
+} from "#components/dashboard";
 import { trpc } from "#/trpc";
 import { EMPTY, formatBandwidth, formatNumber, formatRelativeShort, formatUptime } from "#/format";
-import { DragHandle, type PanelDragProps } from "./PanelShell";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
 import { RecentlyAddedPanel } from "./RecentlyAddedPanel";
 import { StreamsPanel } from "./StreamsPanel";
 import { SystemPanel } from "./SystemPanel";
-import styles from "./Stats.module.css";
 
 // ─── Panel order ────────────────────────────────────────────────────────────
 
 const PANEL_IDS = ["streams", "system", "recentlyAdded", "mostWatched", "libraryBreakdown"] as const;
 type PanelId = (typeof PANEL_IDS)[number];
-const DEFAULT_PANEL_ORDER: PanelId[] = [...PANEL_IDS];
 
-const PANEL_COMPONENTS: Record<
-  PanelId,
-  React.ComponentType<{ dragHandle: React.ReactNode; dragProps: PanelDragProps }>
-> = {
+const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>> = {
   streams: StreamsPanel,
   system: SystemPanel,
   recentlyAdded: RecentlyAddedPanel,
@@ -36,12 +39,6 @@ const PANEL_COMPONENTS: Record<
 
 const DEFAULT_TILES = ["streams", "bandwidth", "playsToday", "library", "users"];
 const MAX_TILES = 6;
-
-interface TileDef {
-  id: string;
-  label: string;
-  group: string;
-}
 
 const TILE_REGISTRY: TileDef[] = [
   { id: "streams", label: "Streams", group: "Live" },
@@ -60,159 +57,6 @@ const TILE_REGISTRY: TileDef[] = [
   { id: "lastSync", label: "Last Sync", group: "Ops" },
   { id: "uptime", label: "Uptime", group: "Ops" },
 ];
-
-// ─── Tile picker ────────────────────────────────────────────────────────────
-
-function TilePicker({ selected, onSave }: { selected: string[]; onSave: (ids: string[]) => void }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<string[]>(selected);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setDraft(selected), [selected.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
-
-  const toggle = (id: string) => {
-    setDraft((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= MAX_TILES) return prev;
-      return [...prev, id];
-    });
-  };
-
-  const move = (from: number, to: number) => {
-    setDraft((prev) => {
-      if (to < 0 || to >= prev.length) return prev;
-      const next = [...prev];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
-    });
-  };
-
-  const dragIndex = useRef<number | null>(null);
-
-  const groups: Record<string, TileDef[]> = {};
-  for (const t of TILE_REGISTRY) {
-    (groups[t.group] ||= []).push(t);
-  }
-
-  return (
-    <div className={styles.tilePicker} ref={ref}>
-      <button
-        className={styles.tilePickerButton}
-        onClick={() => setOpen((v) => !v)}
-        title="Customize tiles"
-        aria-label="Customize tiles"
-      >
-        <LayoutGrid size={16} strokeWidth={2} />
-      </button>
-      {open && (
-        <div className={styles.tilePickerPopover}>
-          <div className={styles.tilePickerHeader}>
-            <span>Choose up to {MAX_TILES} tiles</span>
-            <span className={styles.tilePickerCount}>
-              {draft.length} / {MAX_TILES}
-            </span>
-          </div>
-          {draft.length > 0 && (
-            <div className={styles.tilePickerOrder}>
-              <div className={styles.tilePickerGroupLabel}>Order (drag or use arrows)</div>
-              {draft.map((id, i) => {
-                const def = TILE_REGISTRY.find((t) => t.id === id);
-                if (!def) return null;
-                return (
-                  <div
-                    key={id}
-                    className={styles.tilePickerOrderItem}
-                    draggable
-                    onDragStart={(e) => {
-                      dragIndex.current = i;
-                      e.dataTransfer.effectAllowed = "move";
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "move";
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const from = dragIndex.current;
-                      dragIndex.current = null;
-                      if (from == null || from === i) return;
-                      move(from, i);
-                    }}
-                  >
-                    <span className={styles.tilePickerHandle} aria-hidden>
-                      ⋮⋮
-                    </span>
-                    <span className={styles.tilePickerOrderLabel}>{def.label}</span>
-                    <button
-                      className={styles.tilePickerArrow}
-                      onClick={() => move(i, i - 1)}
-                      disabled={i === 0}
-                      aria-label="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      className={styles.tilePickerArrow}
-                      onClick={() => move(i, i + 1)}
-                      disabled={i === draft.length - 1}
-                      aria-label="Move down"
-                    >
-                      ↓
-                    </button>
-                    <button className={styles.tilePickerRemove} onClick={() => toggle(id)} aria-label="Remove">
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div className={styles.tilePickerList}>
-            {Object.entries(groups).map(([group, items]) => (
-              <div key={group} className={styles.tilePickerGroup}>
-                <div className={styles.tilePickerGroupLabel}>{group}</div>
-                {items.map((t) => {
-                  const isSel = draft.includes(t.id);
-                  const disabled = !isSel && draft.length >= MAX_TILES;
-                  return (
-                    <label
-                      key={t.id}
-                      className={`${styles.tilePickerOption} ${disabled ? styles.tilePickerOptionDisabled : ""}`}
-                    >
-                      <input type="checkbox" checked={isSel} disabled={disabled} onChange={() => toggle(t.id)} />
-                      <span>{t.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          <div className={styles.tilePickerActions}>
-            <button
-              className={styles.tilePickerSave}
-              onClick={() => {
-                onSave(draft);
-                setOpen(false);
-              }}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
@@ -233,10 +77,7 @@ export default function Stats() {
   const totalBandwidth = sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
   const transcodingCount = sessions.filter((s) => s.videoDecision === "transcode").length;
 
-  const selectedTiles =
-    configQuery.data?.stats_summary_tiles && configQuery.data.stats_summary_tiles.length > 0
-      ? configQuery.data.stats_summary_tiles.filter((id) => TILE_REGISTRY.some((t) => t.id === id)).slice(0, MAX_TILES)
-      : DEFAULT_TILES;
+  const selectedTiles = resolveTiles(configQuery.data?.stats_summary_tiles, TILE_REGISTRY, DEFAULT_TILES, MAX_TILES);
 
   const handleRefresh = () => {
     utils.stats.invalidate();
@@ -335,88 +176,14 @@ export default function Stats() {
         value = opsQuery.data?.uptimeSec != null ? formatUptime(opsQuery.data.uptimeSec) : EMPTY;
         break;
     }
-    return (
-      <div className={styles.summaryItem} key={id}>
-        <span className={styles.summaryLabel}>{def.label}</span>
-        <span className={styles.summaryValue}>
-          {value}
-          {sub != null && <span className={styles.summarySub}>{sub}</span>}
-        </span>
-      </div>
-    );
+    return <SummaryTile key={id} label={def.label} value={value} sub={sub} />;
   };
 
-  const saveTiles = (next: string[]) => {
-    saveConfigMutation.mutate({ stats_summary_tiles: next.slice(0, MAX_TILES) });
-  };
-
-  // ─── Panel reordering ───────────────────────────────────────────────────
-  const savedPanelOrder = configQuery.data?.stats_panel_order;
-  const resolvedPanelOrder = useMemo<PanelId[]>(() => {
-    const known = new Set(PANEL_IDS as readonly string[]);
-    const seen = new Set<string>();
-    const out: PanelId[] = [];
-    for (const id of savedPanelOrder ?? []) {
-      if (known.has(id) && !seen.has(id)) {
-        out.push(id as PanelId);
-        seen.add(id);
-      }
-    }
-    for (const id of DEFAULT_PANEL_ORDER) {
-      if (!seen.has(id)) out.push(id);
-    }
-    return out;
-  }, [savedPanelOrder?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const [panelOrder, setPanelOrder] = useState<PanelId[]>(resolvedPanelOrder);
-  useEffect(() => setPanelOrder(resolvedPanelOrder), [resolvedPanelOrder]);
-
-  const panelDragIndex = useRef<number | null>(null);
-  const [dragOverPanel, setDragOverPanel] = useState<PanelId | null>(null);
-
-  const movePanel = (from: number, to: number) => {
-    if (from === to || from < 0 || to < 0 || from >= panelOrder.length || to >= panelOrder.length) return;
-    const next = [...panelOrder];
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
-    setPanelOrder(next);
-    saveConfigMutation.mutate({ stats_panel_order: next });
-  };
-
-  const buildDragProps = (id: PanelId, index: number): PanelDragProps => ({
-    onDragOver: (e) => {
-      if (panelDragIndex.current == null) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (dragOverPanel !== id) setDragOverPanel(id);
-    },
-    onDragLeave: () => {
-      if (dragOverPanel === id) setDragOverPanel(null);
-    },
-    onDrop: (e) => {
-      e.preventDefault();
-      const from = panelDragIndex.current;
-      panelDragIndex.current = null;
-      setDragOverPanel(null);
-      if (from == null) return;
-      movePanel(from, index);
-    },
-    "data-drag-over": dragOverPanel === id ? "true" : undefined,
+  const { order, dragHandleFor, dragPropsFor } = usePanelOrder<PanelId>({
+    ids: PANEL_IDS,
+    saved: configQuery.data?.stats_panel_order,
+    onSave: (next) => saveConfigMutation.mutate({ stats_panel_order: next }),
   });
-
-  const buildDragHandle = (index: number) => (
-    <DragHandle
-      onDragStart={(e) => {
-        panelDragIndex.current = index;
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", String(index));
-      }}
-      onDragEnd={() => {
-        panelDragIndex.current = null;
-        setDragOverPanel(null);
-      }}
-    />
-  );
 
   // Individual panels report their own failures. When every core stat query is
   // down the server itself is unreachable, and a page of empty panels reads as
@@ -431,7 +198,6 @@ export default function Stats() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <PageShell
-        title="Stats"
         chip={
           sessions.length > 0 ? (
             <StatusChip tone="ok" dot>
@@ -439,20 +205,27 @@ export default function Stats() {
             </StatusChip>
           ) : undefined
         }
-        actions={<TilePicker selected={selectedTiles} onSave={saveTiles} />}
+        actions={
+          <TilePicker
+            registry={TILE_REGISTRY}
+            selected={selectedTiles}
+            max={MAX_TILES}
+            onSave={(next) => saveConfigMutation.mutate({ stats_summary_tiles: next.slice(0, MAX_TILES) })}
+          />
+        }
       >
-        <div className={styles.dashboard}>
+        <DashboardLayout>
           {/* ─── Metric tiles ─────────────────────────────────────────── */}
-          <div className={styles.summaryBar}>{selectedTiles.map(renderTile)}</div>
+          <SummaryBar>{selectedTiles.map(renderTile)}</SummaryBar>
 
           {/* ─── Two-column masonry ───────────────────────────────────── */}
-          <div className={styles.grid}>
-            {panelOrder.map((id, i) => {
+          <DashboardGrid>
+            {order.map((id, i) => {
               const Panel = PANEL_COMPONENTS[id];
-              return <Panel key={id} dragHandle={buildDragHandle(i)} dragProps={buildDragProps(id, i)} />;
+              return <Panel key={id} dragHandle={dragHandleFor(i)} dragProps={dragPropsFor(id, i)} />;
             })}
-          </div>
-        </div>
+          </DashboardGrid>
+        </DashboardLayout>
       </PageShell>
     </PullToRefresh>
   );

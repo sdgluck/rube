@@ -1,4 +1,3 @@
-import type React from "react";
 import RelativeTime from "#components/RelativeTime";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
@@ -6,9 +5,9 @@ import ErrorState from "#components/ErrorState";
 import { formatDuration } from "#/format";
 import { stripDurationFromMessage } from "#/utils";
 import styles from "#pages/Stats/Stats.module.css";
-import { type PanelDragProps, PanelShell } from "./PanelShell";
+import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 
-export function SystemPanel({ dragHandle, dragProps }: { dragHandle: React.ReactNode; dragProps: PanelDragProps }) {
+export function SystemPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const healthQuery = trpc.health.status.useQuery();
   const activeJobsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 10000 });
   const eventsQuery = trpc.events.list.useQuery({ limit: 5 });

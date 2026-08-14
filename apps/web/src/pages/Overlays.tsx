@@ -422,7 +422,6 @@ export default function Overlays() {
 
   return (
     <PageShell
-      title="Overlays"
       actions={
         sections.length > 1 ? (
           <select

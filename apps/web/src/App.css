@@ -696,6 +696,13 @@ p {
   padding: 0;
 }
 
+/* The app bar is chrome, not a page: it manages its own padding and must not
+   stretch to fill the column. */
+.content > .app-bar {
+  flex: 0 0 auto;
+  padding: 8px 28px;
+}
+
 .content > .page-shell-flush,
 .content > *:has(.page-shell-flush) {
   min-height: 0;
@@ -762,6 +769,10 @@ p {
   .content > .page-shell,
   .content > *:has(.page-shell) {
     padding: 0;
+  }
+
+  .content > .app-bar {
+    padding: 8px 16px;
   }
 
   /* Rows become their own cards on mobile, so the wrapper stops being one. */
@@ -937,6 +948,10 @@ button:active:not(:disabled),
   .content > .page-shell,
   .content > *:has(.page-shell) {
     padding: 0;
+  }
+
+  .content > .app-bar {
+    padding: 8px 12px;
   }
 }
 

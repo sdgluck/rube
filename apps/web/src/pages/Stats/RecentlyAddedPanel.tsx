@@ -1,4 +1,3 @@
-import type React from "react";
 import { Link } from "react-router-dom";
 import RelativeTime from "#components/RelativeTime";
 import { ListSkeleton } from "#components/Skeleton";
@@ -8,15 +7,9 @@ import { EMPTY, formatFileSize } from "#/format";
 import styles from "#pages/Stats/Stats.module.css";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
-import { type PanelDragProps, PanelShell } from "./PanelShell";
+import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 
-export function RecentlyAddedPanel({
-  dragHandle,
-  dragProps,
-}: {
-  dragHandle: React.ReactNode;
-  dragProps: PanelDragProps;
-}) {
+export function RecentlyAddedPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const recentQuery = trpc.stats.recentlyAdded.useQuery();
 
   const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({

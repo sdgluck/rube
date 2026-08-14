@@ -43,7 +43,7 @@ export default function More() {
   const metrics = metricsQuery.data as NavMetrics | undefined;
 
   return (
-    <PageShell title="More">
+    <PageShell>
       <nav aria-label="More pages" className={styles.sections}>
         {MORE_SECTIONS.map((section) => (
           <section key={section.label}>

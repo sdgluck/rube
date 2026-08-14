@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
+import BulkBar from "#components/BulkBar";
 import BulkLabelsModal from "#components/BulkLabelsModal";
 import { CollectionsSkeleton } from "#components/Skeleton";
 import EmptyState from "#components/EmptyState";
@@ -15,6 +17,7 @@ import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
 import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
+import RowActions from "#components/RowActions";
 import { useToast } from "#components/Toast";
 import PullToRefresh from "#components/PullToRefresh";
 import PageShell from "#components/PageShell";
@@ -328,42 +331,18 @@ export default function Collections() {
         filtersQuery.refetch();
       }}
     >
-      <PageShell title="Collections" count={total > 0 ? total.toLocaleString() : undefined}>
+      <PageShell count={total > 0 ? total.toLocaleString() : undefined}>
         {(selected.size > 0 || bulkProgress) && (
-          <div className={styles.bulkBar}>
-            {bulkProgress ? (
-              <>
-                <span className={styles.bulkCount}>
-                  {bulkProgress.label || "Deleting"} {bulkProgress.done}/{bulkProgress.total}...
-                </span>
-                <div className={styles.bulkProgressBar}>
-                  <div
-                    className={styles.bulkProgressFill}
-                    style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <span className={styles.bulkCount}>{selected.size} selected</span>
-                <button
-                  className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
-                  onClick={() => setLabelEditing(true)}
-                >
-                  Edit Labels
-                </button>
-                <button className={`${styles.buttonDanger} ${styles.buttonSmall}`} onClick={handleBulkDelete}>
-                  Delete {selected.size}
-                </button>
-                <button
-                  className={`${styles.buttonSmall} ${styles.buttonSecondary}`}
-                  onClick={() => setSelected(new Set())}
-                >
-                  Clear
-                </button>
-              </>
-            )}
-          </div>
+          <BulkBar
+            count={selected.size}
+            noun="collection"
+            progress={bulkProgress ? { ...bulkProgress, label: bulkProgress.label || "Deleting" } : null}
+            onClear={() => setSelected(new Set())}
+            actions={[
+              { label: "Edit labels", onClick: () => setLabelEditing(true) },
+              { label: `Delete ${selected.size}`, tone: "danger", onClick: handleBulkDelete },
+            ]}
+          />
         )}
 
         <div className={styles.filters}>
@@ -546,15 +525,22 @@ export default function Collections() {
                             {col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : ""}
                           </td>
                           <td data-cell="hide">
-                            <button
-                              className={`${styles.buttonDanger} ${styles.buttonSmall}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(col.plexRatingKey, col.title);
-                              }}
-                            >
-                              Delete
-                            </button>
+                            <RowActions
+                              label={`Actions for ${col.title}`}
+                              actions={[
+                                {
+                                  label: "Open",
+                                  icon: ExternalLink,
+                                  onSelect: () => navigate(`/collections/${col.plexRatingKey}`),
+                                },
+                                {
+                                  label: "Delete",
+                                  icon: Trash2,
+                                  danger: true,
+                                  onSelect: () => handleDelete(col.plexRatingKey, col.title),
+                                },
+                              ]}
+                            />
                           </td>
                         </tr>
                       );

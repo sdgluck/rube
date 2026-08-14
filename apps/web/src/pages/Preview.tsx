@@ -247,7 +247,6 @@ export default function Preview() {
 
   return (
     <PageShell
-      title="Preview"
       chip={<StatusChip tone="advisory">Approximate</StatusChip>}
       actions={
         <>

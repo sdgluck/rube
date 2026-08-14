@@ -1,12 +1,8 @@
 /* ─── Page shell ───────────────────────────────────────────────────────────
  *
- * The frame every page adopts: a fixed-height header row carrying the title,
- * count and actions, and a body with the page gutter.
- *
- * The header scrolls away with the body. It used to stick to the top of
- * `.content`, which cost a band of every screen to a title that never changes
- * — on a laptop viewport that is the difference between five table rows and
- * eight. The page title is one glance up in the sidebar nav anyway.
+ * The frame every page adopts: just a body with the page gutter. Pages carry
+ * no header of their own — the app bar names the route and hosts whatever
+ * counts, chips and buttons the page contributes.
  */
 
 /* The shell grows with its body by default (`min-height: auto`) so a long page
@@ -22,52 +18,11 @@
   min-height: 0;
 }
 
-.header {
-  flex-shrink: 0;
-  border-bottom: 1px solid #e4e9e8;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  height: 56px;
-  padding: 0 28px;
-}
-
-.titleGroup {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.title {
-  font: var(--t-page);
-  letter-spacing: var(--t-page-tracking);
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .count {
   font: var(--t-data);
   font-size: 11.5px;
   color: var(--ink-3);
   white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.spacer {
-  flex: 1;
-}
-
-/* Ghost → secondary → primary, left to right. */
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -131,6 +86,32 @@
 
 /* ─── Drill-in back link ─────────────────────────────────────────────────── */
 
+/* Doubles as the record's identity: "← Jobs / Shuffle Hubs". */
+.backRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+
+.backRow .backLink {
+  margin-bottom: 0;
+}
+
+.backSep {
+  color: var(--ink-faint);
+}
+
+.backCurrent {
+  font: var(--t-data);
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -147,23 +128,11 @@
 }
 
 @media (max-width: 768px) {
-  .row {
-    height: auto;
-    min-height: 52px;
-    padding: 10px 16px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
   .body {
     padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 76px);
   }
 
   .bodyFlush {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
-  }
-
-  .actions {
-    flex-wrap: wrap;
   }
 }

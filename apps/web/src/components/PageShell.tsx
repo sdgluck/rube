@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { PageActions } from "#layout/AppBar";
 import styles from "./PageShell.module.css";
 
 export type StatusChipTone = "advisory" | "running" | "error" | "ok";
@@ -29,19 +30,57 @@ export function StatusChip({
   );
 }
 
-/** The mono `← Parent` link that opens the body of a drill-in route. */
-export function BackLink({ to, children }: { to: string; children: ReactNode }) {
+/**
+ * The `← Parent / This record` link that opens a drill-in route. It carries the
+ * record's name because the page no longer has a heading to put it in.
+ */
+export function BackLink({
+  to,
+  parent,
+  onBack,
+  children,
+}: {
+  to: string;
+  parent?: ReactNode;
+  /** Go back through history instead of to `to` — the drill-in came from a
+   *  filtered list and `to` would throw the filters away. */
+  onBack?: () => void;
+  children: ReactNode;
+}) {
   return (
-    <Link to={to} className={styles.backLink}>
-      <span aria-hidden="true">←</span>
-      {children}
-    </Link>
+    <div className={styles.backRow}>
+      {onBack ? (
+        <a
+          href={to}
+          className={styles.backLink}
+          onClick={(e) => {
+            e.preventDefault();
+            onBack();
+          }}
+        >
+          <span aria-hidden="true">←</span>
+          {parent ?? children}
+        </a>
+      ) : (
+        <Link to={to} className={styles.backLink}>
+          <span aria-hidden="true">←</span>
+          {parent ?? children}
+        </Link>
+      )}
+      {parent != null && (
+        <>
+          <span className={styles.backSep} aria-hidden="true">
+            /
+          </span>
+          <span className={styles.backCurrent}>{children}</span>
+        </>
+      )}
+    </div>
   );
 }
 
 type PageShellProps = {
-  title: ReactNode;
-  /** Total the page is showing, in mono beside the title. */
+  /** Total the page is showing, in mono beside the breadcrumb. */
   count?: ReactNode;
   /** A <StatusChip>, or anything else that belongs beside the count. */
   chip?: ReactNode;
@@ -56,16 +95,11 @@ type PageShellProps = {
 /**
  * The frame every page adopts. `page-shell` is a global marker class: App.css
  * uses it to hand the page gutter over from `.content` to this component.
+ *
+ * There is no page header: the app bar names the route once, for every page,
+ * and a page's counts, chips and buttons are portalled up into it.
  */
-export default function PageShell({
-  title,
-  count,
-  chip,
-  actions,
-  flush = false,
-  bodyClassName,
-  children,
-}: PageShellProps) {
+export default function PageShell({ count, chip, actions, flush = false, bodyClassName, children }: PageShellProps) {
   const bodyClasses = [styles.body, flush ? styles.bodyFlush : "", bodyClassName ?? ""].filter(Boolean).join(" ");
   const shellClasses = ["page-shell", styles.shell, flush ? `page-shell-flush ${styles.shellFlush}` : ""]
     .filter(Boolean)
@@ -73,17 +107,13 @@ export default function PageShell({
 
   return (
     <div className={shellClasses}>
-      <header className={styles.header}>
-        <div className={styles.row}>
-          <div className={styles.titleGroup}>
-            <h1 className={styles.title}>{title}</h1>
-            {count != null && <span className={styles.count}>{count}</span>}
-          </div>
+      {(count != null || chip != null) && (
+        <PageActions slot="meta">
+          {count != null && <span className={styles.count}>{count}</span>}
           {chip}
-          <div className={styles.spacer} />
-          {actions && <div className={styles.actions}>{actions}</div>}
-        </div>
-      </header>
+        </PageActions>
+      )}
+      {actions != null && <PageActions>{actions}</PageActions>}
       <div className={bodyClasses}>{children}</div>
     </div>
   );

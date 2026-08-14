@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { BackLink } from "#components/PageShell";
 import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
@@ -45,16 +46,9 @@ export default function MediaDetail() {
 
   return (
     <div ref={swipeRef}>
-      <a
-        href="#"
-        className={styles.backLink}
-        onClick={(e) => {
-          e.preventDefault();
-          navigate(-1);
-        }}
-      >
-        &larr; Back to Media
-      </a>
+      <BackLink to="/media" parent="Media" onBack={() => navigate(-1)}>
+        {item.title}
+      </BackLink>
 
       <div className={styles.detailLayout}>
         <div className={styles.detailPoster}>
@@ -70,8 +64,6 @@ export default function MediaDetail() {
         </div>
 
         <div className={styles.detailMain}>
-          <h2 className={`${styles.heading} ${mediaStyles.title}`}>{item.title}</h2>
-
           <div className={mediaStyles.metaLine}>
             {[
               item.year && String(item.year),

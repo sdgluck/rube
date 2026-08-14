@@ -1,0 +1,87 @@
+/* The one bar every page shares. Pages no longer carry a title of their own —
+ * this is where you are, and where a page's actions land (via PageActions). */
+
+/* `app-bar` is a global marker: the bar is a direct child of `.content`, which
+   otherwise hands it the page gutter meant for the route. */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky, 20);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 28px;
+  background: var(--bg-page);
+  /* The bar floats over scrolling content; a hairline keeps table headers from
+     appearing to belong to it. */
+  box-shadow: 0 1px 0 var(--border-light);
+  flex-shrink: 0;
+}
+
+.trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.crumbLink {
+  color: var(--ink-3);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.crumbLink:hover {
+  color: var(--accent-text);
+}
+
+.crumbCurrent {
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sep {
+  color: var(--ink-faint);
+}
+
+/* Counts and status chips a page contributes, beside the trail. */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .bar {
+    padding: 8px 16px;
+  }
+
+  .actions {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bar {
+    padding: 8px 12px;
+  }
+}

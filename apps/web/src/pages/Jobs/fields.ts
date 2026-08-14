@@ -50,6 +50,15 @@ const fields: Record<string, JobFieldsConfig> = {
   "byw-remove": { kind: "hidden", enabled: "required", sections: true },
   "overlays-remove": { kind: "hidden", sections: true },
   "migrate-collections": { kind: "hidden" },
+  // One-shot actions, not installable capabilities: these are the buttons on
+  // Settings → Portal → Personalization, and listing them as features invited
+  // people to "enable" a job whose whole job is to be pressed once. Their run
+  // status belongs on the page that triggers them.
+  "personalize-enable": { kind: "hidden", enabled: "required" },
+  "personalize-disable": { kind: "hidden", enabled: "required" },
+  // Triggered by the Prerolls page on upload/import; there is nothing to
+  // schedule and nothing to toggle.
+  "preroll-process": { kind: "hidden", enabled: "required" },
 };
 
 const DEFAULTS: JobFieldsConfig = {};

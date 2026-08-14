@@ -19,7 +19,7 @@ export default function Registry() {
   if (query.isLoading && !query.data) return <PageSkeleton />;
   if (query.error && !query.data) {
     return (
-      <PageShell title="Registry">
+      <PageShell>
         <ErrorState
           title="Couldn't reach the rule registry"
           error={query.error}
@@ -36,7 +36,6 @@ export default function Registry() {
 
   return (
     <PageShell
-      title="Registry"
       count={index.packs.length.toLocaleString()}
       actions={
         <button

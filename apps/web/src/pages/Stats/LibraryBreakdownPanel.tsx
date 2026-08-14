@@ -1,18 +1,11 @@
-import type React from "react";
 import { trpc } from "#/trpc";
 import ErrorState from "#components/ErrorState";
 import { DistributionBar, RESOLUTION_COLORS } from "./DistributionBar";
 import styles from "#pages/Stats/Stats.module.css";
 import { formatCodec, formatResolution } from "#/format";
-import { type PanelDragProps, PanelShell } from "./PanelShell";
+import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 
-export function LibraryBreakdownPanel({
-  dragHandle,
-  dragProps,
-}: {
-  dragHandle: React.ReactNode;
-  dragProps: PanelDragProps;
-}) {
+export function LibraryBreakdownPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const overviewQuery = trpc.stats.overview.useQuery();
 
   if (overviewQuery.error) {

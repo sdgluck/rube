@@ -19,7 +19,7 @@ import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
-import BulkActionsBar from "./BulkActionsBar";
+import BulkBar from "#components/BulkBar";
 import BulkEditModal from "./BulkEditModal";
 import { useTagLabels } from "#components/smart-filter/TagValueSelect.tsx";
 import {
@@ -561,7 +561,6 @@ export default function Rules() {
 
   return (
     <PageShell
-      title="Rules"
       count={allRules.length > 0 ? allRules.length.toLocaleString() : undefined}
       actions={
         <>
@@ -618,19 +617,32 @@ export default function Rules() {
       )}
 
       {selected.size > 0 && (
-        <BulkActionsBar
+        <BulkBar
           count={selected.size}
-          onEnable={() => handleBulkSetEnabled(true)}
-          onDisable={() => handleBulkSetEnabled(false)}
-          onTest={handleBulkTest}
-          onRun={handleBulkRun}
-          onEdit={() => setBulkEditOpen(true)}
-          onDelete={handleBulkDelete}
-          onCancel={() => setSelected(new Set())}
-          editDisabled={!allRules.some((r) => selected.has(r.id) && typeHasLimit(r.type))}
-          updatePending={updateMutation.isPending}
-          testPending={testMutation.isPending}
-          runPending={runMutation.isPending}
+          noun="rule"
+          onClear={() => setSelected(new Set())}
+          actions={[
+            { label: "Enable", onClick: () => handleBulkSetEnabled(true), disabled: updateMutation.isPending },
+            { label: "Disable", onClick: () => handleBulkSetEnabled(false), disabled: updateMutation.isPending },
+            {
+              label: "Test",
+              onClick: handleBulkTest,
+              disabled: testMutation.isPending || runMutation.isPending,
+            },
+            {
+              label: "Run",
+              tone: "primary",
+              onClick: handleBulkRun,
+              disabled: testMutation.isPending || runMutation.isPending,
+            },
+            {
+              label: "Edit…",
+              onClick: () => setBulkEditOpen(true),
+              disabled: !allRules.some((r) => selected.has(r.id) && typeHasLimit(r.type)) || updateMutation.isPending,
+              title: "Edit common config options",
+            },
+            { label: "Delete", tone: "danger", onClick: handleBulkDelete },
+          ]}
         />
       )}
 

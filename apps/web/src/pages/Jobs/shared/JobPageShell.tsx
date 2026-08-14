@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import useSwipeBack from "#hooks/useSwipeBack";
 import RelativeTime from "#components/RelativeTime";
 import ConfirmModal from "#components/ConfirmModal";
+import { BackLink } from "#components/PageShell";
 import { useToast } from "#components/Toast";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { Job } from "#pages/Jobs/types";
@@ -49,13 +50,12 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
   return (
     <div ref={swipeRef} className={styles.jobDetail}>
-      <Link to="/jobs" className={styles.backLink}>
-        &larr; Back to Jobs
-      </Link>
+      <BackLink to="/jobs" parent="Jobs">
+        {job.name}
+      </BackLink>
 
       <div className={styles.jobDetailHeader}>
         <div className={styles.jobDetailHeading}>
-          <h2 className={styles.heading}>{job.name}</h2>
           {status && (
             <span className={styles.statusPill} data-status={status}>
               <span className={styles.statusDot} data-status={status} />

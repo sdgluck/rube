@@ -135,7 +135,7 @@ export default function Users() {
   }
 
   return (
-    <PageShell title="Users" count={total > 0 ? total.toLocaleString() : undefined}>
+    <PageShell count={total > 0 ? total.toLocaleString() : undefined}>
       {users.length === 0 && !search ? (
         <EmptyState
           icon="person"

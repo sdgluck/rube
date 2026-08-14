@@ -430,7 +430,7 @@ export default function Media() {
   }
 
   return (
-    <PageShell title="Media" count={total > 0 ? total.toLocaleString() : undefined}>
+    <PageShell count={total > 0 ? total.toLocaleString() : undefined}>
       <div className={styles.filters}>
         <input
           type="text"

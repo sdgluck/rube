@@ -1,19 +1,20 @@
 import type { ReactNode } from "react";
-import styles from "./Settings.module.css";
+import { PageActions } from "#layout/AppBar";
 
 /**
- * Standard header for every settings page: the pane's title, and optionally a
- * fact about it (the version, a count) set beside the title in mono.
+ * Every settings pane's identity, without a visible heading: the app bar's
+ * breadcrumb already reads "Settings / Plex", so a title here only repeated it
+ * and pushed the first real control down the fold. The name survives for
+ * assistive tech, and the optional `meta` (a version, a count) is portalled up
+ * into the bar beside the breadcrumb.
  *
- * There is deliberately no description slot. Every pane used to carry a line of
- * prose under its title restating what the controls below already said, which
- * pushed the first real control down the fold on short viewports.
+ * There is deliberately no description slot — the controls say what they do.
  */
 export default function SettingsPageHeader({ title, meta }: { title: string; meta?: ReactNode }) {
   return (
-    <header className={styles.pageHeader}>
-      <h3 className={styles.pageTitle}>{title}</h3>
-      {meta != null && <span className={styles.pageMeta}>{meta}</span>}
-    </header>
+    <>
+      <h2 className="sr-only">{title}</h2>
+      {meta != null && <PageActions slot="meta">{meta}</PageActions>}
+    </>
   );
 }

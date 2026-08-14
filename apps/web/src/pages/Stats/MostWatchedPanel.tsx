@@ -1,4 +1,3 @@
-import type React from "react";
 import { Link } from "react-router-dom";
 import { ListSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
@@ -6,15 +5,9 @@ import { trpc } from "#/trpc";
 import styles from "#pages/Stats/Stats.module.css";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
-import { type PanelDragProps, PanelShell } from "./PanelShell";
+import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 
-export function MostWatchedPanel({
-  dragHandle,
-  dragProps,
-}: {
-  dragHandle: React.ReactNode;
-  dragProps: PanelDragProps;
-}) {
+export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const mostWatchedQuery = trpc.stats.mostWatched.useQuery();
   const maxPlays = mostWatchedQuery.data?.[0]?.plays ?? 1;
 

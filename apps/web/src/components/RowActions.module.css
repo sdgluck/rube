@@ -1,0 +1,113 @@
+/* One row-actions pattern for every list in the app: the row's main verb as an
+ * inline icon button, everything else — and anything destructive — one click
+ * deeper in an overflow menu. */
+
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--fill-quiet);
+  color: var(--ink);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  color: var(--accent-text);
+}
+
+.btnActive {
+  background: var(--fill-quiet);
+  color: var(--ink);
+}
+
+.btnDanger:hover:not(:disabled) {
+  color: var(--status-error-fg);
+}
+
+/* ─── Overflow menu ─────────────────────────────────────────────────────── */
+
+.menu {
+  position: fixed;
+  z-index: var(--z-dropdown);
+  min-width: 168px;
+  padding: 4px;
+  background: var(--surface);
+  border-radius: var(--r-panel);
+  box-shadow: var(--e-float);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+}
+
+.item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.itemIcon {
+  display: inline-flex;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.itemDanger {
+  color: var(--status-error-fg);
+}
+
+.itemDanger .itemIcon {
+  color: var(--status-error-fg);
+}
+
+/* Destructive items sit below a hairline so they're never the click you meant
+   to make on the item above. */
+.separator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border-light);
+}

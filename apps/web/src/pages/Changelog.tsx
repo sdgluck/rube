@@ -104,11 +104,7 @@ export default function Changelog() {
   }, []);
 
   return (
-    <PageShell
-      title="Changelog"
-      count={`v${VERSION}`}
-      chip={IS_BETA ? <StatusChip tone="advisory">Beta</StatusChip> : undefined}
-    >
+    <PageShell count={`v${VERSION}`} chip={IS_BETA ? <StatusChip tone="advisory">Beta</StatusChip> : undefined}>
       <div className={styles.releases}>
         {releases.map((release) => (
           <article key={release.version} className={styles.release}>

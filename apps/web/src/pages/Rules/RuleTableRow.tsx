@@ -1,6 +1,8 @@
 import { Fragment } from "react";
+import { Copy, ExternalLink, Eye, FlaskConical, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { EMPTY } from "#/format";
 import { useNavigate } from "react-router-dom";
+import RowActions from "#components/RowActions";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { CONFIG_SUMMARY, summarizeSmartFilterTree, TYPE_BADGE, TYPE_LABELS } from "./constants";
 import RuleDetailRow from "./DetailRow";
@@ -122,78 +124,67 @@ export default function RuleTableRow({
           <span className={styles.configSummary}>{configSummary}</span>
         </td>
         <td data-cell="hide">
-          <div className={styles.actions}>
-            {/* Preview / View only make sense when the last run actually
-             * produced a collection. A `lastCollectionRatingKey` left over
-             * from a cancelled or failed run points at metadata that no
-             * longer exists on Plex (or never did) — gate on `lastRunStatus`
-             * so users don't get a 404 the moment they click. */}
-            {hasGeneratedCollection && (
-              <button
-                className={`${styles.actionBtn} ${previewExpanded ? styles.actionBtnActive : ""}`}
-                onClick={onTogglePreview}
-                title={previewExpanded ? "Hide preview" : "Preview last generated collection"}
-              >
-                Preview
-              </button>
-            )}
-            {hasGeneratedCollection &&
-              ((rule.lastRunCollectionCount ?? 0) > 1 ? (
-                <button
-                  className={styles.actionBtn}
-                  onClick={() => navigate(`/collections?ruleId=${encodeURIComponent(rule.id)}`)}
-                  title={`View ${rule.lastRunCollectionCount} collections from this rule`}
-                >
-                  View
-                </button>
-              ) : (
-                <button
-                  className={styles.actionBtn}
-                  onClick={() => navigate(`/collections/${rule.lastCollectionRatingKey}`)}
-                  title="View last generated collection"
-                >
-                  View
-                </button>
-              ))}
-            {isRunning ? (
-              <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={onCancelRun}>
-                Cancel
-              </button>
-            ) : (
-              <button
-                className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-                onClick={onRun}
-                disabled={runPending || testPending}
-                title={runPending || testPending ? "Another rule is running" : "Generate collections in Plex"}
-              >
-                Run
-              </button>
-            )}
-            {isTesting ? (
-              <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={onCancelTest}>
-                Cancel
-              </button>
-            ) : (
-              <button
-                className={styles.actionBtn}
-                onClick={onTest}
-                disabled={testPending || runPending}
-                title={testPending || runPending ? "Another rule is running" : "Preview without writing to Plex"}
-              >
-                Test
-              </button>
-            )}
-            <span className={styles.actionsDivider} />
-            <button className={styles.actionBtn} onClick={onEdit} disabled={formActive} title="Edit rule">
-              Edit
-            </button>
-            <button className={styles.actionBtn} onClick={onDuplicate} disabled={createPending} title="Duplicate rule">
-              Duplicate
-            </button>
-            <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={onDelete} title="Delete rule">
-              Delete
-            </button>
-          </div>
+          <RowActions
+            label={`Actions for ${rule.name}`}
+            actions={[
+              // Run is the row's verb, so it stays inline; while a run is in
+              // flight the same slot is how you stop it.
+              isRunning
+                ? {
+                    label: "Cancel run",
+                    icon: Square,
+                    inline: true,
+                    danger: true,
+                    onSelect: onCancelRun,
+                  }
+                : {
+                    label: "Run",
+                    title: runPending || testPending ? "Another rule is running" : "Generate collections in Plex",
+                    icon: Play,
+                    inline: true,
+                    primary: true,
+                    disabled: runPending || testPending,
+                    onSelect: onRun,
+                  },
+              isTesting
+                ? { label: "Cancel test", icon: Square, danger: true, onSelect: onCancelTest }
+                : {
+                    label: "Test",
+                    title: testPending || runPending ? "Another rule is running" : "Preview without writing to Plex",
+                    icon: FlaskConical,
+                    disabled: testPending || runPending,
+                    onSelect: onTest,
+                  },
+              // Preview / View only make sense when the last run actually
+              // produced a collection. A `lastCollectionRatingKey` left over
+              // from a cancelled or failed run points at metadata that no
+              // longer exists on Plex (or never did) — gate on `lastRunStatus`
+              // so users don't get a 404 the moment they click.
+              ...(hasGeneratedCollection
+                ? [
+                    {
+                      label: previewExpanded ? "Hide preview" : "Preview",
+                      icon: Eye,
+                      onSelect: onTogglePreview,
+                    },
+                    (rule.lastRunCollectionCount ?? 0) > 1
+                      ? {
+                          label: `View ${rule.lastRunCollectionCount} collections`,
+                          icon: ExternalLink,
+                          onSelect: () => navigate(`/collections?ruleId=${encodeURIComponent(rule.id)}`),
+                        }
+                      : {
+                          label: "View collection",
+                          icon: ExternalLink,
+                          onSelect: () => navigate(`/collections/${rule.lastCollectionRatingKey}`),
+                        },
+                  ]
+                : []),
+              { label: "Edit", icon: Pencil, disabled: formActive, onSelect: onEdit },
+              { label: "Duplicate", icon: Copy, disabled: createPending, onSelect: onDuplicate },
+              { label: "Delete", icon: Trash2, danger: true, onSelect: onDelete },
+            ]}
+          />
         </td>
       </tr>
       {showDetail && (

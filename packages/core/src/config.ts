@@ -133,6 +133,8 @@ export const configSchema = z.object({
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),
+  jobs_summary_tiles: z.array(z.string()).max(6),
+  jobs_panel_order: z.array(z.string()).max(20),
   /**
    * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
    * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its

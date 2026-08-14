@@ -79,7 +79,6 @@ export default function Events() {
       }}
     >
       <PageShell
-        title="Events"
         count={total > 0 ? total.toLocaleString() : undefined}
         chip={
           errors24h > 0 ? (

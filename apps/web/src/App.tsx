@@ -2,6 +2,7 @@ import { lazy, Suspense, useState, useCallback } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ErrorBoundary from "#components/ErrorBoundary";
 import ScrollRestoration from "#layout/ScrollRestoration";
+import { AppBarProvider } from "#layout/AppBar";
 import CommandPalette from "#components/CommandPalette";
 import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
 import useDocumentTitle from "#hooks/useDocumentTitle";
@@ -78,320 +79,322 @@ export default function App() {
       <BottomNav />
       <main className="content">
         <ScrollRestoration />
-        <ErrorBoundary>
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes>
-              <Route
-                path="/stats"
-                element={
-                  <LazyPage>
-                    <Stats />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/preview"
-                element={
-                  <LazyPage>
-                    <Preview />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/collections"
-                element={
-                  <LazyPage>
-                    <Collections />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/collections/:ratingKey"
-                element={
-                  <LazyPage>
-                    <CollectionDetail />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/rules"
-                element={
-                  <LazyPage>
-                    <Rules />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/registry"
-                element={
-                  <LazyPage>
-                    <Registry />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/media"
-                element={
-                  <LazyPage>
-                    <Media />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/media/:ratingKey"
-                element={
-                  <LazyPage>
-                    <MediaDetail />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/overlays"
-                element={
-                  <LazyPage>
-                    <Overlays />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/prerolls"
-                element={
-                  <LazyPage>
-                    <Prerolls />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/users"
-                element={
-                  <LazyPage>
-                    <Users />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/events"
-                element={
-                  <LazyPage>
-                    <Events />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/jobs"
-                element={
-                  <LazyPage>
-                    <Jobs />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/jobs/:jobId"
-                element={
-                  <LazyPage>
-                    <JobDetail />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/jobs/runs/:runId"
-                element={
-                  <LazyPage>
-                    <JobRun />
-                  </LazyPage>
-                }
-              />
-              <Route path="/settings" element={<Settings />}>
-                <Route index element={<Navigate to="/settings/plex" replace />} />
+        <AppBarProvider>
+          <ErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <Routes>
                 <Route
-                  path="plex"
+                  path="/stats"
                   element={
                     <LazyPage>
-                      <SettingsPlex />
+                      <Stats />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="ai"
+                  path="/preview"
                   element={
                     <LazyPage>
-                      <SettingsAi />
+                      <Preview />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="arrs"
+                  path="/collections"
                   element={
                     <LazyPage>
-                      <SettingsArrs />
+                      <Collections />
                     </LazyPage>
                   }
-                >
-                  <Route index element={<Navigate to="/settings/arrs/radarr" replace />} />
+                />
+                <Route
+                  path="/collections/:ratingKey"
+                  element={
+                    <LazyPage>
+                      <CollectionDetail />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/rules"
+                  element={
+                    <LazyPage>
+                      <Rules />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/registry"
+                  element={
+                    <LazyPage>
+                      <Registry />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/media"
+                  element={
+                    <LazyPage>
+                      <Media />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/media/:ratingKey"
+                  element={
+                    <LazyPage>
+                      <MediaDetail />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/overlays"
+                  element={
+                    <LazyPage>
+                      <Overlays />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/prerolls"
+                  element={
+                    <LazyPage>
+                      <Prerolls />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <LazyPage>
+                      <Users />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/events"
+                  element={
+                    <LazyPage>
+                      <Events />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/jobs"
+                  element={
+                    <LazyPage>
+                      <Jobs />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/jobs/:jobId"
+                  element={
+                    <LazyPage>
+                      <JobDetail />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/jobs/runs/:runId"
+                  element={
+                    <LazyPage>
+                      <JobRun />
+                    </LazyPage>
+                  }
+                />
+                <Route path="/settings" element={<Settings />}>
+                  <Route index element={<Navigate to="/settings/plex" replace />} />
                   <Route
-                    path=":service"
+                    path="plex"
                     element={
                       <LazyPage>
-                        <SettingsArrsService />
+                        <SettingsPlex />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="ai"
+                    element={
+                      <LazyPage>
+                        <SettingsAi />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="arrs"
+                    element={
+                      <LazyPage>
+                        <SettingsArrs />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<Navigate to="/settings/arrs/radarr" replace />} />
+                    <Route
+                      path=":service"
+                      element={
+                        <LazyPage>
+                          <SettingsArrsService />
+                        </LazyPage>
+                      }
+                    />
+                  </Route>
+                  <Route
+                    path="databases"
+                    element={
+                      <LazyPage>
+                        <SettingsDatabases />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<Navigate to="/settings/databases/omdb" replace />} />
+                    <Route
+                      path=":service"
+                      element={
+                        <LazyPage>
+                          <SettingsDatabasesService />
+                        </LazyPage>
+                      }
+                    />
+                  </Route>
+                  <Route
+                    path="notifications"
+                    element={
+                      <LazyPage>
+                        <SettingsNotifications />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
+                    <Route
+                      path=":service"
+                      element={
+                        <LazyPage>
+                          <SettingsNotificationsService />
+                        </LazyPage>
+                      }
+                    />
+                  </Route>
+                  <Route
+                    path="health"
+                    element={
+                      <LazyPage>
+                        <SettingsHealth />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="schedules"
+                    element={
+                      <LazyPage>
+                        <SettingsSchedules />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="maintenance"
+                    element={
+                      <LazyPage>
+                        <SettingsMaintenance />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="portal"
+                    element={
+                      <LazyPage>
+                        <SettingsPortal />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<Navigate to="/settings/portal/personalization" replace />} />
+                    <Route
+                      path="personalization"
+                      element={
+                        <LazyPage>
+                          <SettingsPortalPersonalization />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="appearance"
+                      element={
+                        <LazyPage>
+                          <SettingsPortalAppearance />
+                        </LazyPage>
+                      }
+                    />
+                  </Route>
+                  <Route
+                    path="stress-test"
+                    element={
+                      <LazyPage>
+                        <StressTest />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="posters"
+                    element={
+                      <LazyPage>
+                        <SettingsPosters />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="prerolls"
+                    element={
+                      <LazyPage>
+                        <SettingsPrerolls />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="migrate"
+                    element={
+                      <LazyPage>
+                        <SettingsMigrate />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="credits"
+                    element={
+                      <LazyPage>
+                        <SettingsCredits />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="about"
+                    element={
+                      <LazyPage>
+                        <SettingsAbout />
                       </LazyPage>
                     }
                   />
                 </Route>
                 <Route
-                  path="databases"
+                  path="/changelog"
                   element={
                     <LazyPage>
-                      <SettingsDatabases />
-                    </LazyPage>
-                  }
-                >
-                  <Route index element={<Navigate to="/settings/databases/omdb" replace />} />
-                  <Route
-                    path=":service"
-                    element={
-                      <LazyPage>
-                        <SettingsDatabasesService />
-                      </LazyPage>
-                    }
-                  />
-                </Route>
-                <Route
-                  path="notifications"
-                  element={
-                    <LazyPage>
-                      <SettingsNotifications />
-                    </LazyPage>
-                  }
-                >
-                  <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
-                  <Route
-                    path=":service"
-                    element={
-                      <LazyPage>
-                        <SettingsNotificationsService />
-                      </LazyPage>
-                    }
-                  />
-                </Route>
-                <Route
-                  path="health"
-                  element={
-                    <LazyPage>
-                      <SettingsHealth />
+                      <Changelog />
                     </LazyPage>
                   }
                 />
                 <Route
-                  path="schedules"
+                  path="/more"
                   element={
                     <LazyPage>
-                      <SettingsSchedules />
+                      <More />
                     </LazyPage>
                   }
                 />
-                <Route
-                  path="maintenance"
-                  element={
-                    <LazyPage>
-                      <SettingsMaintenance />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="portal"
-                  element={
-                    <LazyPage>
-                      <SettingsPortal />
-                    </LazyPage>
-                  }
-                >
-                  <Route index element={<Navigate to="/settings/portal/personalization" replace />} />
-                  <Route
-                    path="personalization"
-                    element={
-                      <LazyPage>
-                        <SettingsPortalPersonalization />
-                      </LazyPage>
-                    }
-                  />
-                  <Route
-                    path="appearance"
-                    element={
-                      <LazyPage>
-                        <SettingsPortalAppearance />
-                      </LazyPage>
-                    }
-                  />
-                </Route>
-                <Route
-                  path="stress-test"
-                  element={
-                    <LazyPage>
-                      <StressTest />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="posters"
-                  element={
-                    <LazyPage>
-                      <SettingsPosters />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="prerolls"
-                  element={
-                    <LazyPage>
-                      <SettingsPrerolls />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="migrate"
-                  element={
-                    <LazyPage>
-                      <SettingsMigrate />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="credits"
-                  element={
-                    <LazyPage>
-                      <SettingsCredits />
-                    </LazyPage>
-                  }
-                />
-                <Route
-                  path="about"
-                  element={
-                    <LazyPage>
-                      <SettingsAbout />
-                    </LazyPage>
-                  }
-                />
-              </Route>
-              <Route
-                path="/changelog"
-                element={
-                  <LazyPage>
-                    <Changelog />
-                  </LazyPage>
-                }
-              />
-              <Route
-                path="/more"
-                element={
-                  <LazyPage>
-                    <More />
-                  </LazyPage>
-                }
-              />
-              <Route path="*" element={<Navigate to="/stats" replace />} />
-            </Routes>
-          </Suspense>
-        </ErrorBoundary>
+                <Route path="*" element={<Navigate to="/stats" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
+        </AppBarProvider>
       </main>
       <CommandPalette
         open={commandPaletteOpen}

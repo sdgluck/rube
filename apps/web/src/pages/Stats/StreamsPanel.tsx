@@ -1,4 +1,3 @@
-import type React from "react";
 import { Link } from "react-router-dom";
 import { ListSkeleton } from "#components/Skeleton";
 import { trpc } from "#/trpc";
@@ -6,9 +5,9 @@ import styles from "#pages/Stats/Stats.module.css";
 import { formatBandwidth, formatClock, formatCodec, formatResolution } from "#/format";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
-import { type PanelDragProps, PanelShell } from "./PanelShell";
+import { PanelCountBadge, PanelShell, type DashboardPanelProps } from "#components/dashboard";
 
-export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.ReactNode; dragProps: PanelDragProps }) {
+export function StreamsPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, { refetchInterval: 5000 });
   const allSessions = sessionsQuery.data ?? [];
 
@@ -33,7 +32,7 @@ export function StreamsPanel({ dragHandle, dragProps }: { dragHandle: React.Reac
   return (
     <PanelShell
       title="Active Streams"
-      badge={sessions.length > 0 ? <span className={styles.countBadge}>{sessions.length}</span> : null}
+      badge={sessions.length > 0 ? <PanelCountBadge>{sessions.length}</PanelCountBadge> : null}
       dragHandle={dragHandle}
       dragProps={dragProps}
     >
