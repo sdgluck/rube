@@ -102,7 +102,7 @@ export default function Cleanup() {
           description="No cleanup rule has matched anything yet. Rules with a Cleanup outcome track what they match here before acting on it."
         />
       ) : (
-        <div className={sharedStyles.tableWrap}>
+        <div className="table-scroll">
           <table className={sharedStyles.table}>
             <thead>
               <tr>

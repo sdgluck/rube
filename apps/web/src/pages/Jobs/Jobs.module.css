@@ -70,10 +70,11 @@
   width: 100%;
 }
 
+/* Truncation, not emphasis: the name column is the leftmost thing in the row
+   and doesn't need bolding to be found — no other table in the app bolds one.
+   Size comes from the cell so a panel row and a list row read the same. */
 .jobNameText {
   display: inline-block;
-  font-weight: 600;
-  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -692,21 +693,13 @@
   margin: 0;
 }
 
+/* Not a list table — a two-column label/field layout for a config form, which
+   is why it doesn't compose `.table`: its rows are as tall as whatever control
+   is in them and it has no header row at all. (It used to carry styling for a
+   `<thead>` it has never rendered.) */
 .configTable {
   width: 100%;
   border-collapse: collapse;
-}
-
-.configTable th {
-  text-align: left;
-  padding: 0 12px;
-  height: 32px;
-  border-bottom: 1px solid var(--border-color);
-  font-weight: 600;
-  color: var(--text-muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .configTable td {

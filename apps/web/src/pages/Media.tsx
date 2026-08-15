@@ -614,9 +614,7 @@ export default function Media() {
                               ? `${styles.cellNum} ${styles.itemYear}`
                               : col.mono
                                 ? styles.cellMuted
-                                : colIdx === 0
-                                  ? styles.cellStrong
-                                  : undefined
+                                : undefined
                           }
                         >
                           {colIdx === 0 && isShow && (

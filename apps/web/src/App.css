@@ -824,25 +824,34 @@ p {
 /* A list page's table is a floating white card; the wrapper is what carries
    the surface, because a <table> can't clip its own corners. Tables that are
    already inside a card or panel add `in-panel` to opt out of the second
-   surface — nothing in this design stacks two elevations. */
+   surface — nothing in this design stacks two elevations.
+
+   The edge is a real border rather than --e-card's inset ring: an inset ring
+   paints on the wrapper's own background, so the opaque cell backgrounds of a
+   hovered or selected row paint straight over it and the card's left and right
+   edges vanish for that one row. A border sits outside the padding box, where
+   nothing inside the table can reach it. It also matches the pager beneath,
+   which has always drawn a real border. */
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-card);
-  box-shadow: var(--e-card);
 }
 
 /* The pager is that card's footer. When one follows a table, the wrapper
-   squares its bottom edge so the pair reads as a single block. */
+   squares its bottom edge and drops its bottom border — the pager's own top
+   border is the seam — so the pair reads as a single block. */
 .table-scroll:has(+ [data-table-footer]) {
   border-radius: var(--r-card) var(--r-card) 0 0;
+  border-bottom: none;
 }
 
 .table-scroll.in-panel {
   background: none;
+  border: none;
   border-radius: 0;
-  box-shadow: none;
 }
 
 .count-badge {
@@ -890,8 +899,8 @@ p {
   .table-scroll {
     overflow-x: visible;
     background: none;
+    border: none;
     border-radius: 0;
-    box-shadow: none;
   }
 
   .table-scroll:has(+ [data-table-footer]) {

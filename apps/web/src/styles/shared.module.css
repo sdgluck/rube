@@ -157,17 +157,17 @@
   background: var(--surface);
 }
 
-/* The header rule is the same --line-soft the body rows draw, not a heavier
-   one of its own: the header is the first row of the table, not a separate
-   band above it, and a darker line under it read as a divider between two
-   things. (It was a hardcoded #ecefee, which also meant it stayed near-white
-   in dark mode while every row below it went dark.) */
+/* The header is a row of the table, so it stands the same 38px its rows do —
+   a shorter header band reads as a separate strip pasted on top. Its rule is
+   --line, the one the card's own border draws: the header is the one division
+   in the table that separates two different kinds of thing, so it is the one
+   that earns a line you can see. Body rows keep --line-soft. */
 .table th {
   text-align: left;
   padding: 0 16px;
-  height: 32px;
+  height: 38px;
   background: var(--surface-header);
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line);
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
   color: var(--ink-3);
@@ -202,11 +202,10 @@
 }
 
 /* Cell kinds. The split is the rule the whole redesign runs on: anything the
-   machine produced is mono, anything a human wrote is Archivo. */
-
-.cellStrong {
-  font-weight: 600;
-}
+   machine produced is mono, anything a human wrote is Archivo. There is no
+   emphatic kind: a title column is already the leftmost thing on the row, and
+   bolding it in one table and not the other four is what made Media look like
+   a different app. */
 
 .cellMuted {
   font: var(--t-data);
@@ -252,7 +251,11 @@
 }
 
 /* ─── Compact table ───────────────────────────────────────────────────────
- * Denser variant of .table for dashboard panels and run lists. */
+ * Denser variant of .table for dashboard panels and run lists. Same anatomy,
+ * one size down: a 34px row, a header that matches it, the same header band
+ * and the same pair of rules (--line under the header, --line-soft between
+ * rows). The only thing it doesn't carry is the card — it lives inside a
+ * panel that is already one. */
 
 .compactTable {
   width: 100%;
@@ -262,12 +265,13 @@
 .compactTable th {
   text-align: left;
   padding: 0 10px;
-  height: 26px;
+  height: 34px;
+  background: var(--surface-header);
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 
@@ -279,11 +283,11 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.compactTable tr:last-child td {
+.compactTable tbody tr:last-child td {
   border-bottom: none;
 }
 
-.compactTable tbody tr:hover {
+.compactTable tbody tr:hover td {
   background: var(--surface-sunken);
 }
 

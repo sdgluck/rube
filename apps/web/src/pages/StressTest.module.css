@@ -130,42 +130,20 @@
   color: var(--text-badge);
 }
 
+/* This page used to carry its own near-copy of the list table — 32px header,
+   44px rows, its own borders — which is exactly the drift the shared table
+   exists to prevent. It composes now; anything it needs on top belongs in
+   shared.module.css so every other table gets it too. */
 .table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th {
-  text-align: left;
-  padding: 0 12px;
-  height: 32px;
-  border-bottom: 1px solid var(--border-color);
-  font-weight: 600;
-  color: var(--text-muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.table td {
-  padding: 0 12px;
-  height: 44px;
-  border-bottom: 1px solid var(--border-light);
-  vertical-align: middle;
-  font-size: 12.5px;
+  composes: table from "../styles/shared.module.css";
 }
 
 .clickableRow {
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.clickableRow:hover {
-  background: var(--bg-surface-hover);
+  composes: clickableRow from "../styles/shared.module.css";
 }
 
 .selectedRow {
-  background: var(--bg-bulk) !important;
+  composes: selectedRow from "../styles/shared.module.css";
 }
 
 .speedBar {
@@ -193,8 +171,12 @@
   background: var(--status-error-dot);
 }
 
-.stepFailed {
-  background: var(--status-error-bg) !important;
+/* Painted on the cells, not the row: the shared table hover paints cell
+   backgrounds, and a row-level tint sits underneath them — the step that
+   failed would lose its colour the moment you pointed at it. The element
+   selector outweighs `.table tr:hover td` without needing !important. */
+tr.stepFailed td {
+  background: var(--status-error-bg);
 }
 
 .runsSection {

@@ -28,12 +28,13 @@
   overflow: hidden;
 }
 
+/* Truncation only — a title cell weighs the same as every other table's, and
+   `.epLabel` beside it already had to undo the weight this used to add. */
 .titleText {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
 }
 
 .titleLink {
@@ -49,7 +50,6 @@
 }
 
 .epLabel {
-  font-weight: 400;
   color: var(--ink-3);
   font-size: 11px;
 }
