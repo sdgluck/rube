@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-08-15
+
+### Added
+
+- **Tinkerbell now requires signing in with your Plex account to access the app.** Existing installs will be prompted to sign in on their next visit; each sign-in is bound to the browser that started it, and the admin and public-portal sign-in flows are kept fully separate.
+- A new "Cleanup" action for rules: instead of only building a collection, a rule can now label or delete matching items in Plex (and, optionally, remove and unmonitor them in Radarr/Sonarr, with the option to delete files). It ships with safety rails — nothing is ever acted on the run it first matches, a rule that suddenly matches more than 25% of a section is treated as a filter mistake and refuses to act, a global per-run cap limits how much can be deleted across all rules combined, and the job refuses to run on a library index older than 48 hours.
+- The rule wizard has a new Outcome step where you choose between building a Collection (the previous default behavior) or the new Cleanup action; choosing Cleanup shows a plain-English summary of what the next run will actually do once dry run is turned off, and switching from label to delete re-arms dry run rather than carrying over settings that were only safe for labelling.
+- A new /cleanup page lists everything currently queued for a cleanup action and when it's due, and lets you grant any single item a 90-day reprieve ("Keep") — there is no button to action items early from this page.
+- Notifications: a "cleanup pending" alert is sent before a cleanup run removes or labels anything, listing what's about to happen and linking to the queue page so it can be stopped; a "cleanup actioned" notification records what was actually removed.
+- Settings gained a Cleanup section with the switch that enables cleanup actions across the app; without it, destructive cleanup rules refuse to run.
+- Rules that pin generated collections to the homepage can now set a minimum item count a collection must reach before it earns a homepage row (off by default). Collections below the floor are still created in Plex, just not pinned. The registry's library pack ships its pinned rules with a floor of 3, which can be raised when importing.
+
+### Changed
+
+- **Links that used to jump to and briefly highlight a single rule (`?focus=`) now instead filter the Rules list down to that rule via the same `?q=` search used elsewhere**, so the link is shareable and survives a page reload; the list's type, enabled, and sort filters are now also saved in the URL.
+- Collection generation is noticeably faster on libraries with many collections or rules with many groups: Plex collection listings are now filtered by label on the server instead of fetching every collection's labels one at a time, TMDb lookups are batched instead of made one request at a time, and a rule's collections are committed to Plex concurrently instead of strictly one after another.
+
 ## [0.15.0] - 2026-08-14
 
 ### Added
