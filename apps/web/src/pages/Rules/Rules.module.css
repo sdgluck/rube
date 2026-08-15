@@ -419,50 +419,6 @@ td.previewBlockCell {
   flex-wrap: wrap;
 }
 
-.searchWrap {
-  position: relative;
-  flex: 1;
-  min-width: 220px;
-  max-width: 320px;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.search {
-  width: 100%;
-  height: var(--control-h);
-  padding: 0 10px 0 30px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-
-.search::placeholder {
-  color: var(--text-muted);
-}
-
-.search:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--input-focus-ring);
-}
-
 .segmented {
   display: inline-flex;
   height: var(--control-h);
@@ -841,4 +797,12 @@ td.previewBlockCell {
 .cleanupPreviewTitles {
   color: var(--text-muted);
   margin-top: 6px;
+}
+
+/* Pointer to the rules this list doesn't show. Quiet — it is a signpost, not
+   a warning. */
+.otherOutcomeHint {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }

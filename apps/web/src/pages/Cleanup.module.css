@@ -1,3 +1,14 @@
+/* The tab bar sits outside the child's PageShell, which is what carries the
+   page gutter (App.css hands it over via `:has(.page-shell)`). So the inset is
+   restated here to line the tabs up with the body beneath them — 28px is the
+   same horizontal gutter `.body` uses. */
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 28px 0;
+}
+
 .intro {
   color: var(--text-muted);
   font-size: 13px;

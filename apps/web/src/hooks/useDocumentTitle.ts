@@ -11,7 +11,8 @@ import { SETTINGS_SECTIONS } from "#pages/Settings/sections";
 const ROUTE_TITLES: [prefix: string, title: string][] = [
   ...SETTINGS_SECTIONS.flatMap((s) => s.links.map((l) => [l.to, `Settings: ${l.label}`] as [string, string])),
   ...NAV_SECTIONS.flatMap((s) => s.items.map((i) => [i.to, i.label] as [string, string])),
-  ["/changelog", "Changelog"],
+  ["/settings/changelog", "Changelog"],
+  ["/cleanup/rules", "Cleanup rules"],
   ["/more", "More"],
 ];
 

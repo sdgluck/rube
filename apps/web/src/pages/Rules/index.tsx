@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useListParams } from "#hooks/useListParams";
 import { readEnum } from "#/storage";
 import ConfirmModal from "#components/ConfirmModal";
@@ -38,7 +39,18 @@ import RulesToolbar from "./Toolbar";
 import { ENABLED_FILTERS, SORT_KEYS, type EnabledFilter, type RuleRow, type SortKey } from "./types";
 import { downloadJson } from "./utils";
 
-export default function Rules() {
+/**
+ * Which rules this instance of the list shows.
+ *
+ * A cleanup rule and a collection rule stopped resembling each other when
+ * cleanup landed — the Config and Status columns mean different things for
+ * each, and the wizard already asks Outcome before anything that depends on
+ * it. So the two get their own lists: collection rules stay on /rules, cleanup
+ * rules live next to the queue they feed, on /cleanup/rules.
+ */
+export type RulesOutcome = "collection" | "cleanup";
+
+export default function Rules({ outcome = "collection" }: { outcome?: RulesOutcome } = {}) {
   const utils = trpc.useUtils();
   // Queued/actioned tallies for cleanup rules, one query for the whole table.
   const cleanupCountsQuery = trpc.cleanup.counts.useQuery(undefined, {
@@ -112,7 +124,24 @@ export default function Rules() {
       return next;
     });
   };
-  const allRules = (rulesQuery.data ?? []) as RuleRow[];
+  // Narrowed before anything else reads it: the type filter's options, the
+  // bulk-selection set and the duplicate-name check should all see the list
+  // the user is actually looking at.
+  const allRules = useMemo(
+    () =>
+      ((rulesQuery.data ?? []) as RuleRow[]).filter(
+        (r) => outcomeFromConfig((r.config as { action?: unknown } | null)?.action).kind === outcome,
+      ),
+    [rulesQuery.data, outcome],
+  );
+
+  const hiddenCleanupCount = useMemo(
+    () =>
+      ((rulesQuery.data ?? []) as RuleRow[]).filter(
+        (r) => outcomeFromConfig((r.config as { action?: unknown } | null)?.action).kind === "cleanup",
+      ).length,
+    [rulesQuery.data],
+  );
 
   const presentTypes = useMemo(() => {
     const s = new Set<string>();
@@ -213,7 +242,10 @@ export default function Rules() {
   }
 
   function startCreate() {
-    setForm({ ...EMPTY_FORM });
+    // Seeded to match the list you started from — creating a rule from the
+    // cleanup list and getting a collection rule you then can't find would be
+    // its own bug report. The Outcome step still shows, and still switches.
+    setForm({ ...EMPTY_FORM, outcome: { ...EMPTY_FORM.outcome, kind: outcome } });
     setIsEditing(false);
   }
 
@@ -653,7 +685,15 @@ export default function Rules() {
       )}
 
       {allRules.length === 0 && !form ? (
-        <EmptyState icon="cog" title="No rules yet" description="Add a rule to start generating collections." />
+        outcome === "cleanup" ? (
+          <EmptyState
+            icon="cog"
+            title="No cleanup rules yet"
+            description="A cleanup rule finds items to remove instead of building a collection. What it matches is queued here first, and nothing is acted on until an item has matched several runs in a row."
+          />
+        ) : (
+          <EmptyState icon="cog" title="No rules yet" description="Add a rule to start generating collections." />
+        )
       ) : rules.length === 0 ? (
         <EmptyState icon="cog" title="No matching rules" description="Try a different search or filter." />
       ) : (
@@ -722,6 +762,17 @@ export default function Rules() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Rules that exist but aren't in this list. Without this line, a cleanup
+          rule created before the split just isn't where its author left it. */}
+      {outcome === "collection" && hiddenCleanupCount > 0 && (
+        <p className={styles.otherOutcomeHint}>
+          <Link to="/cleanup/rules">
+            {hiddenCleanupCount} cleanup rule{hiddenCleanupCount === 1 ? "" : "s"}
+          </Link>{" "}
+          {hiddenCleanupCount === 1 ? "lives" : "live"} on the Cleanup page.
+        </p>
       )}
 
       {form && (

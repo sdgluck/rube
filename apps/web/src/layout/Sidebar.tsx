@@ -177,7 +177,7 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
         <img src="/favicon.svg" alt="" className="sidebar-mark" width={22} height={22} />
         Tinkerbell
         {IS_BETA && (
-          <Link to="/changelog" className="version-pill" title={`v${VERSION} — view changelog`}>
+          <Link to="/settings/changelog" className="version-pill" title={`v${VERSION} — view changelog`}>
             beta
           </Link>
         )}
@@ -213,7 +213,7 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
       <SidebarActiveJobs />
       <div className="sidebar-footer">
         <SidebarHealthDot />
-        <Link to="/changelog" className="sidebar-version" title="View changelog">
+        <Link to="/settings/changelog" className="sidebar-version" title="View changelog">
           v{VERSION}
         </Link>
       </div>

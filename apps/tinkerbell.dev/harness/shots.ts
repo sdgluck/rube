@@ -190,6 +190,17 @@ export const SHOTS: Shot[] = [
     steps: [{ fill: "Search rules…", text: "zzzznothingmatches" }],
   },
   {
+    name: "09-cleanup-queue",
+    description: "Cleanup — what the rules have matched, with the streak each item is on",
+    path: "/cleanup",
+  },
+  {
+    name: "09-cleanup-rules",
+    description: "Cleanup — the rules themselves, on their own tab beside the queue",
+    path: "/cleanup/rules",
+    steps: [{ wait: "text=Queue" }],
+  },
+  {
     name: "10-rule-wizard-1-type",
     description: "Rule wizard step 1 — the 28 rule types as selectable cards",
     path: "/rules",
@@ -351,17 +362,11 @@ export const SHOTS: Shot[] = [
     description: "Settings → Credits",
     path: "/settings/credits",
   },
-  {
-    name: "16-settings-about",
-    description: "Settings → About — version and the beta advisory",
-    path: "/settings/about",
-  },
-
   // ── Everything else ──────────────────────────────────────────────────────
   {
     name: "17-changelog",
     description: "Changelog — one card per release with added/changed/fixed tags",
-    path: "/changelog",
+    path: "/settings/changelog",
   },
   {
     name: "18-command-palette",

@@ -1,25 +1,16 @@
+/* Card surface, title and the gap between cards come from `.group` /
+   `.groupTitle` in Settings.module.css, the same as every other settings
+   page. Only what's specific to a credits list lives here. */
 .page {
   max-width: 720px;
-}
-
-.section {
-  margin-bottom: 28px;
-}
-
-.title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.titleWithBlurb {
-  composes: title;
-  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .blurb {
   color: var(--text-muted);
-  margin: 0 0 12px;
+  margin: 0;
   line-height: 1.5;
 }
 

@@ -125,7 +125,7 @@ export default function Cleanup() {
                       <Link to={`/media/${row.ratingKey}`}>{row.title}</Link>
                     </td>
                     <td>
-                      <Link to={`/rules?highlight=${row.ruleId}`}>{row.ruleName}</Link>
+                      <Link to={`/cleanup/rules?q=${encodeURIComponent(row.ruleName)}`}>{row.ruleName}</Link>
                     </td>
                     <td>
                       <span className={DESTRUCTIVE.has(row.mode) ? styles.modeDestructive : undefined}>

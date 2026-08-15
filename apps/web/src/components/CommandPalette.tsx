@@ -42,7 +42,8 @@ const NAVIGATION: SearchHit[] = [
     subtitle: GO_HINTS[link.to],
     href: link.to,
   })),
-  { kind: "navigation", id: "nav:/changelog", title: "Changelog", href: "/changelog" },
+  { kind: "navigation", id: "nav:/settings/changelog", title: "Changelog", href: "/settings/changelog" },
+  { kind: "navigation", id: "nav:/cleanup/rules", title: "Cleanup rules", href: "/cleanup/rules" },
 ];
 
 interface Props {

@@ -86,10 +86,64 @@
   composes: select selectSm from "./controls.module.css";
 }
 
-.searchInput {
-  composes: input inputSm inputSearch from "./controls.module.css";
-  width: 236px;
-  flex-shrink: 0;
+/* ─── Sub-tabs ────────────────────────────────────────────────────────────
+ * A segmented control for switching between sibling views of one page. The
+ * look was defined by the settings sub-pages first (Portal, Arrs, Databases,
+ * Notifications); it lives here now that Cleanup uses it too, and
+ * Settings.module.css composes these rather than restating them. Margin is
+ * deliberately absent — spacing to what follows belongs to the page. */
+
+.pageTabs {
+  display: inline-flex;
+  /* `inline-flex` still stretches as the child of a flex column, which made
+     the strip run the full width of the page instead of hugging its tabs. */
+  align-self: flex-start;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+  flex-wrap: wrap;
+}
+
+.pageTab {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.pageTab:hover {
+  color: var(--ink);
+}
+
+.pageTabActive,
+.pageTabActive:hover {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(19, 28, 27, 0.08);
+}
+
+/* A count beside a tab label — how many rows the tab would show. */
+.pageTabCount {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.pageTabActive .pageTabCount {
+  color: inherit;
 }
 
 /* ─── Table ───────────────────────────────────────────────────────────────
@@ -793,11 +847,6 @@
   flex: 1;
 }
 
-.itemSearch {
-  composes: input inputSm inputSearch from "./controls.module.css";
-  width: 220px;
-}
-
 /* ─── Denser grid + hover overlay ────────────────────────────────────────── */
 
 .gridDense {
@@ -1267,11 +1316,6 @@
   .filters {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .searchInput,
-  .itemSearch {
-    width: auto;
   }
 
   /* A 100px nowrap label beside a flex input leaves the input ~200px on a

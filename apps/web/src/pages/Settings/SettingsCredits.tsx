@@ -1,4 +1,6 @@
+import CardSection from "#components/CardSection";
 import SettingsPageHeader from "./SettingsPageHeader";
+import styles from "./Settings.module.css";
 import local from "./SettingsCredits.module.css";
 
 type Credit = {
@@ -96,8 +98,12 @@ export default function SettingsCredits() {
       <SettingsPageHeader title="Credits" />
 
       {SECTIONS.map((section) => (
-        <section key={section.title} className={local.section}>
-          <h3 className={section.blurb ? local.titleWithBlurb : local.title}>{section.title}</h3>
+        <CardSection
+          key={section.title}
+          className={styles.group}
+          titleClassName={styles.groupTitle}
+          title={section.title}
+        >
           {section.blurb && <p className={local.blurb}>{section.blurb}</p>}
           <ul className={local.list}>
             {section.items.map((item) => (
@@ -109,7 +115,7 @@ export default function SettingsCredits() {
               </li>
             ))}
           </ul>
-        </section>
+        </CardSection>
       ))}
     </div>
   );

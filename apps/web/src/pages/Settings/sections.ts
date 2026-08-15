@@ -43,8 +43,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     heading: "About",
     links: [
+      { to: "/settings/changelog", label: "Changelog" },
       { to: "/settings/credits", label: "Credits" },
-      { to: "/settings/about", label: "About" },
     ],
   },
 ];

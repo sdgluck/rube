@@ -36,6 +36,7 @@ const Collections = lazy(() => import("#pages/Collections"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const Rules = lazy(() => import("#pages/Rules"));
 const Cleanup = lazy(() => import("#pages/Cleanup"));
+const CleanupLayout = lazy(() => import("#pages/CleanupLayout"));
 const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
@@ -50,7 +51,6 @@ const StressTest = lazy(() => import("#pages/StressTest"));
 const Preview = lazy(() => import("#pages/Preview"));
 const Changelog = lazy(() => import("#pages/Changelog"));
 const More = lazy(() => import("#pages/More"));
-const SettingsAbout = lazy(() => import("#pages/Settings/SettingsAbout"));
 const SettingsPosters = lazy(() => import("#pages/Settings/SettingsPosters"));
 const SettingsPrerolls = lazy(() => import("#pages/Settings/SettingsPrerolls"));
 const SettingsCredits = lazy(() => import("#pages/Settings/SettingsCredits"));
@@ -136,10 +136,13 @@ export default function App() {
                   path="/cleanup"
                   element={
                     <LazyPage>
-                      <Cleanup />
+                      <CleanupLayout />
                     </LazyPage>
                   }
-                />
+                >
+                  <Route index element={<Cleanup />} />
+                  <Route path="rules" element={<Rules outcome="cleanup" />} />
+                </Route>
                 <Route
                   path="/registry"
                   element={
@@ -407,22 +410,19 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="about"
+                    path="changelog"
                     element={
                       <LazyPage>
-                        <SettingsAbout />
+                        <Changelog />
                       </LazyPage>
                     }
                   />
                 </Route>
-                <Route
-                  path="/changelog"
-                  element={
-                    <LazyPage>
-                      <Changelog />
-                    </LazyPage>
-                  }
-                />
+                {/* The changelog used to be a top-level page. Redirected rather
+                    than dropped: the sidebar's version pill has pointed here
+                    since the first release, so the path is in people's history
+                    and bookmarks. */}
+                <Route path="/changelog" element={<Navigate to="/settings/changelog" replace />} />
                 <Route
                   path="/more"
                   element={
