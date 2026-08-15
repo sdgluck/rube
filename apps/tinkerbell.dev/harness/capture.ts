@@ -215,6 +215,29 @@ async function newContext(browser: Browser, viewport: Viewport, scale: number): 
  */
 const QUIET_MS = 150;
 
+/**
+ * How long any single step waits for the thing it needs.
+ *
+ * Deliberately far longer than a healthy page takes, because these are deadlock
+ * guards and not performance assertions: a wait costs only as long as the
+ * element takes to appear, so a generous ceiling is free on a good run and the
+ * difference between a flaky suite and a stable one on a loaded machine.
+ *
+ * It used to be 10s, which is a fine budget for one page and not for ~100 of
+ * them sharing a server: the pool runs a dozen at a time against a single
+ * process and one SQLite file, so under load a page can still be showing its
+ * loading skeleton at 10s with nothing whatsoever wrong with it. That is the
+ * flake that failed three rule-wizard shots mid-release and passed on a rerun.
+ */
+const STEP_TIMEOUT = 45_000;
+
+/**
+ * Requests that failed outright or came back non-2xx, per page. A shot that
+ * fails because a query errored should say which request errored — the app
+ * renders the same "couldn't load" block whatever the cause.
+ */
+const failedRequests = new WeakMap<Page, string[]>();
+
 function watchNetwork(page: Page): (quietMs?: number) => Promise<void> {
   let inflight = 0;
   let lastChange = Date.now();
@@ -222,11 +245,22 @@ function watchNetwork(page: Page): (quietMs?: number) => Promise<void> {
     inflight += delta;
     lastChange = Date.now();
   };
+  const failures: string[] = [];
+  failedRequests.set(page, failures);
+  const note = (entry: string) => {
+    if (failures.length < 20) failures.push(entry);
+  };
   page.on("request", () => bump(1));
   page.on("requestfinished", () => bump(-1));
-  page.on("requestfailed", () => bump(-1));
+  page.on("requestfailed", (req) => {
+    bump(-1);
+    note(`${new URL(req.url()).pathname} (${req.failure()?.errorText ?? "failed"})`);
+  });
+  page.on("response", (res) => {
+    if (res.status() >= 400) note(`${new URL(res.url()).pathname} → ${res.status()}`);
+  });
 
-  return async function quiet(quietMs = QUIET_MS, timeoutMs = 30_000) {
+  return async function quiet(quietMs = QUIET_MS, timeoutMs = STEP_TIMEOUT) {
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       if (inflight <= 0 && Date.now() - lastChange >= quietMs) return;
@@ -238,12 +272,40 @@ function watchNetwork(page: Page): (quietMs?: number) => Promise<void> {
 
 // ─── Per-shot driving ────────────────────────────────────────────────────────
 
+/**
+ * What the page was showing when a step gave up, as a clause to append to the
+ * error. Best-effort: a diagnostic that throws would replace the real failure
+ * with its own.
+ */
+async function why(page: Page): Promise<string> {
+  try {
+    const state = await page.evaluate(() => {
+      // Non-empty only: <ToastProvider> keeps an empty sr-only role="alert"
+      // live region mounted at all times, so "an alert exists" is true on every
+      // healthy page and means nothing on its own.
+      const alert = Array.from(document.querySelectorAll("[role='alert']"))
+        .map((el) => (el.textContent ?? "").trim())
+        .find((text) => text.length > 0);
+      if (alert) return `the page is showing an error: "${alert.slice(0, 200)}"`;
+      if (document.querySelector("[class*='skeleton' i]")) return "the page is still showing a loading skeleton";
+      return null;
+    });
+    const failed = failedRequests.get(page);
+    const clauses = [state, failed?.length ? `failed requests: ${failed.slice(0, 3).join(", ")}` : null].filter(
+      Boolean,
+    );
+    return clauses.length > 0 ? ` — ${clauses.join("; ")}` : "";
+  } catch {
+    return "";
+  }
+}
+
 async function applySteps(page: Page, steps: Step[]) {
   // Steps drive a live app, so wait for React to have mounted and painted
   // before touching it. Locators auto-wait, but a keystroke doesn't: the
   // shortcut handlers are bound in effects, and a key pressed before they exist
   // is dropped with nothing to retry against.
-  await page.waitForSelector("#root > *", { state: "attached", timeout: 15_000 });
+  await page.waitForSelector("#root > *", { state: "attached", timeout: STEP_TIMEOUT });
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
   for (const [index, step] of steps.entries()) {
@@ -255,34 +317,57 @@ async function applySteps(page: Page, steps: Step[]) {
       const button = page.getByRole("button", { name: step.click, exact: false }).first();
       const labelled = page.getByLabel(step.click, { exact: false }).first();
       const target = await Promise.any([
-        button.waitFor({ state: "visible", timeout: 10_000 }).then(() => button),
-        labelled.waitFor({ state: "visible", timeout: 10_000 }).then(() => labelled),
-      ]).catch(() => {
-        throw new Error(`No button or labelled control named "${step.click}" appeared`);
+        button.waitFor({ state: "visible", timeout: STEP_TIMEOUT }).then(() => button),
+        labelled.waitFor({ state: "visible", timeout: STEP_TIMEOUT }).then(() => labelled),
+      ]).catch(async () => {
+        // "It never appeared" is the symptom, not the cause. A page whose query
+        // failed renders <ErrorState role="alert"> where the control should be
+        // and stays there, and one still loading renders a skeleton — both
+        // report identically without this, which cost an afternoon.
+        throw new Error(`No button or labelled control named "${step.click}" appeared${await why(page)}`);
       });
-      await target.click({ timeout: 10_000 });
+      await target.click({ timeout: STEP_TIMEOUT });
     } else if ("clickSelector" in step) {
-      await page.locator(step.clickSelector).first().click({ timeout: 10_000 });
+      await page
+        .locator(step.clickSelector)
+        .first()
+        .click({ timeout: STEP_TIMEOUT })
+        .catch(async (err: Error) => {
+          throw new Error(`Clicking "${step.clickSelector}" failed: ${err.message.split("\n")[0]}${await why(page)}`);
+        });
     } else if ("clickText" in step) {
-      await page.getByText(step.clickText, { exact: false }).first().click({ timeout: 10_000 });
+      await page
+        .getByText(step.clickText, { exact: false })
+        .first()
+        .click({ timeout: STEP_TIMEOUT })
+        .catch(async (err: Error) => {
+          throw new Error(`Clicking text "${step.clickText}" failed: ${err.message.split("\n")[0]}${await why(page)}`);
+        });
     } else if ("press" in step) {
       // A dropped keystroke leaves no trace, so when the shot says what the key
       // should produce, press again until it does — checking first, so a press
       // that did land isn't toggled straight back off. If it never appears the
       // following `wait` step reports it.
+      //
+      // The probe is generous for the same reason it exists: these keys open
+      // things (the command palette, the shortcuts sheet), so a press that
+      // landed but rendered slowly is worse than a slow probe — pressing again
+      // would toggle it straight back shut and capture the page behind it.
       const next = steps[index + 1];
       const expected = next && "wait" in next ? next.wait : undefined;
       for (let attempt = 0; attempt < 3; attempt++) {
         await page.keyboard.press(step.press);
         if (!expected) break;
         const landed = await page
-          .waitForSelector(expected, { state: "visible", timeout: 3_000 })
+          .waitForSelector(expected, { state: "visible", timeout: 10_000 })
           .then(() => true)
           .catch(() => false);
         if (landed) break;
       }
     } else if ("wait" in step) {
-      await page.waitForSelector(step.wait, { state: "visible", timeout: 10_000 });
+      await page.waitForSelector(step.wait, { state: "visible", timeout: STEP_TIMEOUT }).catch(async () => {
+        throw new Error(`Waiting for "${step.wait}" timed out${await why(page)}`);
+      });
     } else if ("fill" in step) {
       await page.getByPlaceholder(step.fill, { exact: false }).first().fill(step.text);
       // Let the debounce land, or the shot catches the pre-filter list.
@@ -304,7 +389,7 @@ async function settle(page: Page, shot: Shot, quiet: (quietMs?: number) => Promi
   await quiet();
 
   if (shot.waitFor) {
-    await page.waitForSelector(shot.waitFor, { state: "visible", timeout: 15_000 });
+    await page.waitForSelector(shot.waitFor, { state: "visible", timeout: STEP_TIMEOUT });
   }
 
   /**
@@ -330,7 +415,7 @@ async function settle(page: Page, shot: Shot, quiet: (quietMs?: number) => Promi
       return document.images.length;
     });
     await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete), null, {
-      timeout: 20_000,
+      timeout: STEP_TIMEOUT,
     });
     if (count === seen) break;
     seen = count;
@@ -343,7 +428,7 @@ async function settle(page: Page, shot: Shot, quiet: (quietMs?: number) => Promi
 
   if (!shot.allowSpinner) {
     await page
-      .waitForFunction(() => !document.querySelector("[data-motion='essential']"), null, { timeout: 10_000 })
+      .waitForFunction(() => !document.querySelector("[data-motion='essential']"), null, { timeout: STEP_TIMEOUT })
       .catch(() => {
         // A spinner that never resolves is worth seeing in the screenshot, but
         // not worth failing the run over — `allowSpinner` documents the ones we
@@ -560,7 +645,9 @@ async function main() {
     tasks.push({ shot, group: "site", label: shot.site!, path: join(siteDir, `${shot.site}.png`) });
   }
 
-  const results = Array.from<{ changed: boolean } | { error: string } | undefined>({ length: tasks.length });
+  const results = Array.from<{ changed: boolean; retried?: boolean } | { error: string } | undefined>({
+    length: tasks.length,
+  });
 
   step(`capturing ${tasks.length} shots, ${CONCURRENCY} at a time`);
   console.log();
@@ -575,6 +662,32 @@ async function main() {
       results[i] = { error: (err as Error).message.split("\n")[0] };
     }
   });
+
+  /**
+   * Anything that failed gets one more go, alone.
+   *
+   * The generous step timeouts are what stop a loaded machine failing a shot;
+   * this is the backstop for the rest, and it is deliberately sequential and
+   * deliberately after the pool has drained. A shot starved of CPU by the other
+   * eleven is not reproduced by retrying it while they are still running — it
+   * is reproduced by retrying it on a quiet machine, which is exactly what this
+   * is. A shot that is genuinely broken fails here too, so nothing is masked
+   * beyond the time it costs to prove it.
+   */
+  const retryable = tasks.map((_, i) => i).filter((i) => results[i] && "error" in results[i]!);
+  if (retryable.length > 0) {
+    console.log(`\n  retrying ${retryable.length} failed shot(s) serially…`);
+    for (const i of retryable) {
+      const task = tasks[i]!;
+      try {
+        const bytes = await capture(await contextFor(task.group, 0), task.shot, base);
+        results[i] = { changed: await writeIfChanged(task.path, bytes), retried: true };
+      } catch (err) {
+        results[i] = { error: (err as Error).message.split("\n")[0] };
+      }
+    }
+    console.log();
+  }
 
   // Reported in task order rather than completion order, so the log reads the
   // same on every run however the pool happened to interleave.
@@ -606,7 +719,9 @@ async function main() {
         path: task.shot.path,
       });
     }
-    console.log(`  • ${task.label} … ${result.changed ? "updated" : "unchanged"}`);
+    console.log(
+      `  • ${task.label} … ${result.changed ? "updated" : "unchanged"}${result.retried ? " (on retry)" : ""}`,
+    );
   }
   console.log(`\n(captured in ${((Date.now() - captureStart) / 1000).toFixed(1)}s)`);
 
