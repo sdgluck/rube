@@ -21,12 +21,14 @@ describe("joinPlexPath", () => {
 describe("buildPrefValue", () => {
   const files = ["a.mp4", "b.mp4", "c.mp4"];
 
-  test("random mode joins with commas", () => {
-    assert.equal(buildPrefValue(files, "/prerolls", "random"), "/prerolls/a.mp4,/prerolls/b.mp4,/prerolls/c.mp4");
+  // The separators are Plex's, and they read backwards: a semicolon list is
+  // the one Plex picks a single entry from.
+  test("random mode joins with semicolons", () => {
+    assert.equal(buildPrefValue(files, "/prerolls", "random"), "/prerolls/a.mp4;/prerolls/b.mp4;/prerolls/c.mp4");
   });
 
-  test("sequential mode joins with semicolons", () => {
-    assert.equal(buildPrefValue(files, "/prerolls", "sequential"), "/prerolls/a.mp4;/prerolls/b.mp4;/prerolls/c.mp4");
+  test("sequential mode joins with commas", () => {
+    assert.equal(buildPrefValue(files, "/prerolls", "sequential"), "/prerolls/a.mp4,/prerolls/b.mp4,/prerolls/c.mp4");
   });
 
   test("a single preroll carries no separator at all", () => {

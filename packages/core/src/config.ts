@@ -252,8 +252,8 @@ export const configSchema = z.object({
    */
   prerolls_plex_path: z.string(),
   /**
-   * How Plex plays the pool. `random` joins the paths with `,` (Plex picks
-   * one per playback); `sequential` joins with `;` (Plex plays them in order).
+   * How Plex plays the pool. `random` joins the paths with `;` (Plex picks
+   * one per playback); `sequential` joins with `,` (Plex plays them in order).
    * The separator is Plex's convention, not ours.
    */
   prerolls_mode: z.enum(["random", "sequential"]),

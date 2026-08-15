@@ -10,12 +10,15 @@ export type PrerollMode = "random" | "sequential";
 
 /**
  * Plex's own convention, and the entire reason the mode toggle exists:
- * commas mean "pick one at random per playback", semicolons mean "play all of
+ * semicolons mean "pick one at random per playback", commas mean "play all of
  * these in order".
+ *
+ * They read backwards, which is exactly how they came to be inverted here for
+ * several releases — silently swapping the two modes. Don't "tidy" them.
  */
 export const MODE_SEPARATORS: Record<PrerollMode, string> = {
-  random: ",",
-  sequential: ";",
+  random: ";",
+  sequential: ",",
 };
 
 /**
