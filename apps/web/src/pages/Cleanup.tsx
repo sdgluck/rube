@@ -28,6 +28,14 @@ const MODE_LABELS: Record<string, string> = {
   delete: "Delete",
 };
 
+/** Separate from MODE_LABELS: suffixing "ed" gives "Deleteed", "Queue onlyed". */
+const MODE_PAST_LABELS: Record<string, string> = {
+  collection_only: "Queued",
+  label: "Labelled",
+  unmonitor: "Unmonitored",
+  delete: "Deleted",
+};
+
 /** Modes that remove or change something outside Tinkerbell's bookkeeping. */
 const DESTRUCTIVE = new Set(["unmonitor", "delete"]);
 
@@ -164,7 +172,7 @@ function statusText(
   held: boolean,
   actioned: boolean,
 ): React.ReactNode {
-  if (actioned) return <span className={styles.statusActioned}>{MODE_LABELS[row.action] ?? row.action}ed</span>;
+  if (actioned) return <span className={styles.statusActioned}>{MODE_PAST_LABELS[row.action] ?? row.action}</span>;
   if (held) {
     return (
       <span className={styles.statusHeld}>

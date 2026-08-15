@@ -112,6 +112,25 @@ describe("recordMatches", () => {
     assert.equal(rows[0].action, "delete");
   });
 
+  test("an item matching twice in ONE run still only bumps the streak once", () => {
+    // A grouped rule yields one group per director / language / decade, and an
+    // item belongs to as many as it has credits or tracks. Counting each
+    // appearance would let a film with three audio languages hit a streak of
+    // three on its first run and be deleted immediately.
+    recordMatches(RULE, [match("100", "Dune"), match("100", "Dune"), match("100", "Dune")], T0);
+    assert.equal(streakOf(RULE, "100"), 1);
+    assert.equal(listCandidates(RULE).length, 1);
+
+    recordMatches(RULE, [match("100"), match("100")], T0 + DAY);
+    assert.equal(streakOf(RULE, "100"), 2);
+  });
+
+  test("a duplicated item is still pruned when it stops matching", () => {
+    recordMatches(RULE, [match("100"), match("100")], T0);
+    recordMatches(RULE, [], T0 + DAY);
+    assert.equal(streakOf(RULE, "100"), undefined);
+  });
+
   test("handles a match set larger than SQLite's parameter cap", () => {
     const many = Array.from({ length: 950 }, (_, i) => match(`k${i}`));
     recordMatches(RULE, many, T0);

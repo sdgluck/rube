@@ -88,10 +88,8 @@ function stubServers({
         calls.deletes.push(url.pathname);
         return new Response(null, { status: 200 });
       }
-      if (method === "PUT") {
-        calls.labelPuts.push(url.pathname);
-        return json({});
-      }
+      // A PUT here would be the wrong endpoint for a library item; nothing
+      // should send one, so it is not handled.
       return json({
         MediaContainer: {
           Metadata: [{ ratingKey: "100", title: "The Matrix", Guid: [{ id: "tmdb://603" }], Label: [] }],
@@ -103,7 +101,13 @@ function stubServers({
       return json({ MediaContainer: { Metadata: [{ ratingKey: "col-1" }] } });
     }
     if (url.pathname.startsWith("/library/sections/")) {
-      if (method === "PUT") return json({});
+      // Plex's tag-edit endpoint for a library item is the section `/all` PUT
+      // carrying `type` and `id` — not a PUT to /library/metadata/:key, which
+      // answers 200 and applies nothing.
+      if (method === "PUT") {
+        if (url.searchParams.has("label[0].tag.tag")) calls.labelPuts.push(url.searchParams.get("id") ?? "");
+        return json({});
+      }
       return json({ MediaContainer: { totalSize: sectionTotal, Metadata: [] } });
     }
     return json({ MediaContainer: {} });
@@ -322,7 +326,9 @@ describe("cleanup_enabled", () => {
     );
 
     assert.equal(out.actioned, 1);
-    assert.ok(calls.labelPuts.length > 0);
+    // The shelf collection is labelled through the same endpoint, so assert on
+    // the item's own id being among them rather than on the exact set.
+    assert.ok(calls.labelPuts.includes("100"), `expected a label PUT for item 100, saw ${calls.labelPuts.join(", ")}`);
     assert.deepEqual(calls.deletes, []);
   });
 });
@@ -413,6 +419,73 @@ describe("global per-run ceiling", () => {
 
     assert.equal(budget.remaining, before);
   });
+
+  it("reserves the slot before acting, so concurrent rules can't overshoot", async () => {
+    // The check and the decrement must not straddle the await: up to eight
+    // rules share this object, and checking before while decrementing after
+    // lets all eight pass a `remaining: 1` check and all eight delete.
+    primeStreaks([{ ratingKey: "100", title: "Film 100" }], 2);
+    let inFlight = 0;
+    let sawRemainingDuringDelete: number | null = null;
+    const budget = createCleanupBudget();
+    budget.remaining = 1;
+
+    stubServers({ allowDestructive: true });
+    const inner = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      if ((init?.method ?? "GET").toUpperCase() === "DELETE" && url.port === "7878") {
+        inFlight++;
+        sawRemainingDuringDelete = budget.remaining;
+      }
+      return inner(input as never, init as never);
+    }) as typeof fetch;
+
+    const { ctx } = testContext();
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction(),
+      "machine-1",
+      ["Tinkerbell"],
+      budget,
+      handlerYielding([{ ratingKey: "100", title: "Film 100" }]),
+    );
+
+    assert.equal(inFlight, 1);
+    assert.equal(sawRemainingDuringDelete, 0, "the slot is spent before the request goes out, not after it returns");
+  });
+
+  it("hands the slot back when the action fails", async () => {
+    primeStreaks([{ ratingKey: "100", title: "Film 100" }], 2);
+    // Radarr has no matching record, so the delete refuses.
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      const json = (b: unknown) => new Response(JSON.stringify(b), { headers: { "content-type": "application/json" } });
+      if (url.port === "7878") return json([]);
+      if (url.pathname === "/") return json({ MediaContainer: { machineIdentifier: "m", friendlyName: "t" } });
+      if (url.pathname.startsWith("/library/metadata/")) {
+        return json({ MediaContainer: { Metadata: [{ ratingKey: "100", Guid: [{ id: "tmdb://603" }], Label: [] }] } });
+      }
+      if (url.pathname.startsWith("/library/collections")) {
+        return json({ MediaContainer: { Metadata: [{ ratingKey: "col-1" }] } });
+      }
+      return json({ MediaContainer: { totalSize: 1000, Metadata: [] } });
+    }) as typeof fetch;
+
+    const budget = createCleanupBudget();
+    const before = budget.remaining;
+    const { ctx } = testContext();
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction(),
+      "machine-1",
+      ["Tinkerbell"],
+      budget,
+      handlerYielding([{ ratingKey: "100", title: "Film 100" }]),
+    );
+
+    assert.equal(budget.remaining, before, "a run of failures must not eat the whole budget");
+  });
 });
 
 // ─── The fraction guard ──────────────────────────────────────────────────────
@@ -461,6 +534,41 @@ describe("implausible match fraction", () => {
 
     assert.equal(out.actioned, 5);
     assert.equal(calls.deletes.length, 5);
+  });
+});
+
+describe("unsizeable library", () => {
+  it("refuses rather than skipping the guard when Plex can't be asked how big it is", async () => {
+    // Without a denominator the fraction check has nothing to compare against.
+    // Treating that as "0 items, so 0% matched" would switch the guard off at
+    // exactly the moment Plex is unhealthy and a filter is most suspect.
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 2);
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      const method = (init?.method ?? "GET").toUpperCase();
+      if (method === "DELETE") throw new Error("must not delete with the guard disabled");
+      const json = (b: unknown) => new Response(JSON.stringify(b), { headers: { "content-type": "application/json" } });
+      if (url.pathname === "/") return json({ MediaContainer: { machineIdentifier: "m", friendlyName: "t" } });
+      if (url.pathname.startsWith("/library/collections")) {
+        return json({ MediaContainer: { Metadata: [{ ratingKey: "col-1" }] } });
+      }
+      // Every sizing request fails.
+      if (url.pathname.startsWith("/library/sections/")) return new Response("boom", { status: 500 });
+      return json({ MediaContainer: {} });
+    }) as typeof fetch;
+
+    const { ctx } = testContext();
+    const out = await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction(),
+      "machine-1",
+      ["Tinkerbell"],
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.equal(out.actioned, 0);
+    assert.match(out.refusal ?? "", /could not be asked how large the library is/);
   });
 });
 

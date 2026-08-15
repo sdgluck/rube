@@ -113,8 +113,11 @@ export async function runHandlerWithCleanup(
   // 3. The queue collection — in every mode, dry run included.
   await commitQueueCollections(ctx, client, machineId, labels, rule.name, bySection);
 
-  // 3b. Warn about what goes next time, while there is still time to say no.
-  notifyPending(rule, action);
+  // 3b. Warn about what goes next time. Deliberately before the due check —
+  //     the run where items reach the final streak is usually a run where
+  //     nothing is due yet, and that is precisely when the warning is useful.
+  //     Suppressed when a standing refusal means the deletion will never come.
+  if (!standingRefusal()) notifyPending(rule, action);
 
   const due = dueForAction(rule.id, action.consecutiveRuns, action.maxActionsPerRun);
   if (due.length === 0) {
@@ -237,24 +240,43 @@ async function refusalReason(
   sections: PlexSection[],
   matchCount: number,
 ): Promise<string | null> {
-  if (isDestructiveMode(action.mode) && !(getConfig("cleanup_enabled") ?? false)) {
-    return "cleanup is disabled globally (Settings → Cleanup). One switch stops every rule.";
-  }
-
-  const indexAge = indexAgeMs();
-  if (indexAge != null && indexAge > MAX_INDEX_AGE_MS) {
-    return `the local library index was last synced ${Math.floor(indexAge / DAY_MS)} day(s) ago — "nobody has watched this" is exactly the claim that goes wrong on stale data.`;
-  }
-  if (indexAge == null) {
-    return "the library has never been synced successfully, so local watch and metadata state cannot be trusted.";
-  }
+  const standing = standingRefusal();
+  if (standing && (standing !== KILL_SWITCH_REFUSAL || isDestructiveMode(action.mode))) return standing;
 
   const total = await sectionItemTotal(ctx, client, sections);
+  if (total == null) {
+    return "Plex could not be asked how large the library is, so the sanity check on how much this rule matched cannot run.";
+  }
   if (total > 0 && matchCount / total > IMPLAUSIBLE_MATCH_FRACTION) {
     const pct = Math.round((matchCount / total) * 100);
     return `it matched ${matchCount} of ${total} items (${pct}%), which reads as a filter mistake rather than an instruction. Candidates were recorded; nothing was touched.`;
   }
 
+  return null;
+}
+
+const KILL_SWITCH_REFUSAL = "cleanup is disabled globally (Settings → Cleanup). One switch stops every rule.";
+
+/**
+ * Refusals that hold for the whole run regardless of what matched — the global
+ * switch and a stale library index.
+ *
+ * Split out from the full check because they are cheap (no Plex round trip)
+ * and because they are the ones that persist: a rule blocked by either of
+ * these is blocked every single run, so the pending warning must stay quiet
+ * rather than promising a deletion that never arrives. A channel that cries
+ * wolf nightly is one people mute.
+ */
+function standingRefusal(): string | null {
+  if (!(getConfig("cleanup_enabled") ?? false)) return KILL_SWITCH_REFUSAL;
+
+  const indexAge = indexAgeMs();
+  if (indexAge == null) {
+    return "the library has never been synced successfully, so local watch and metadata state cannot be trusted.";
+  }
+  if (indexAge > MAX_INDEX_AGE_MS) {
+    return `the local library index was last synced ${Math.floor(indexAge / DAY_MS)} day(s) ago — "nobody has watched this" is exactly the claim that goes wrong on stale data.`;
+  }
   return null;
 }
 
@@ -264,18 +286,29 @@ function indexAgeMs(): number | null {
   return at == null ? null : Date.now() - at;
 }
 
-async function sectionItemTotal(ctx: JobContext, client: PlexClient, sections: PlexSection[]): Promise<number> {
+/**
+ * Total items across the rule's sections, or null if we couldn't size any.
+ *
+ * Null rather than zero matters: without a denominator the fraction guard has
+ * nothing to compare against, and treating that as "0 items, so 0% matched"
+ * would silently switch the guard off at exactly the wrong moment — Plex being
+ * unresponsive is when a filter is most likely to be returning nonsense.
+ *
+ * A partial sum is still usable. It under-counts the library, which makes the
+ * guard stricter, and erring strict is the right direction here.
+ */
+async function sectionItemTotal(ctx: JobContext, client: PlexClient, sections: PlexSection[]): Promise<number | null> {
   let total = 0;
+  let sized = 0;
   for (const section of sections) {
     try {
       total += await client.getSectionItemCount(section.key);
+      sized++;
     } catch (err) {
-      // Without a denominator the fraction guard can't run. Say so rather than
-      // silently treating the section as empty, which would disable the guard.
       ctx.log(`[cleanup] Could not size "${section.title}" for the sanity check — ${errorMessage(err)}`);
     }
   }
-  return total;
+  return sized === 0 ? null : total;
 }
 
 /** Apply the configured mode to each due candidate. Returns the titles done. */
@@ -293,19 +326,28 @@ async function applyAction(
 
     // The global ceiling is checked per item, not per rule, because rules run
     // concurrently and each one's share is whatever is left when it gets here.
-    if (isDestructiveMode(action.mode) && budget.remaining <= 0) {
+    const spendsBudget = isDestructiveMode(action.mode);
+    if (spendsBudget && budget.remaining <= 0) {
       ctx.log(`[cleanup] Global per-run limit reached — stopping. The rest stay queued and go on the next run.`);
       break;
     }
+    // Reserve the slot *before* awaiting, not after succeeding. Up to eight
+    // rules run concurrently against this one object, and checking before the
+    // await while decrementing after it lets all eight pass a `remaining: 1`
+    // check and all eight delete.
+    if (spendsBudget) budget.remaining--;
 
     try {
       switch (action.mode) {
         case "collection_only":
           // The shelf was the whole action.
           break;
-        case "label":
-          await client.addItemLabel(candidate.ratingKey, CLEANUP_LABEL);
+        case "label": {
+          const section = deps.sections.find((sec) => sec.key === candidate.sectionId);
+          if (!section) throw new Error(`section ${candidate.sectionId} is not in this rule's scope`);
+          await client.addItemLabel(candidate.ratingKey, section.key, section.type, CLEANUP_LABEL);
           break;
+        }
         case "unmonitor":
           await unmonitorViaArr(deps, candidate);
           break;
@@ -315,10 +357,12 @@ async function applyAction(
       }
 
       markActioned(rule.id, candidate.ratingKey, action.mode);
-      if (isDestructiveMode(action.mode)) budget.remaining--;
       done.push(candidate.title);
       ctx.log(`[cleanup] ${action.mode}: "${candidate.title}" (streak ${candidate.streak})`);
     } catch (err) {
+      // Nothing was removed, so hand the reserved slot back rather than
+      // letting a run of failures eat the whole budget.
+      if (spendsBudget) budget.remaining++;
       // One failure must not abandon the rest — and the row stays un-actioned,
       // so the next run retries it naturally.
       ctx.log(`[cleanup] FAILED to ${action.mode} "${candidate.title}" — ${errorMessage(err)}`);
@@ -373,7 +417,11 @@ async function findArrRecord(
 } | null> {
   const { client, sections } = deps;
   const section = sections.find((s) => s.key === candidate.sectionId);
-  const service: "radarr" | "sonarr" = section?.type === "show" ? "sonarr" : "radarr";
+  // Never guess. Defaulting an unresolvable section to Radarr would look up a
+  // TV series' TMDb id against the movie library, where it can collide with an
+  // unrelated film — which the caller then deletes with `deleteFiles: true`.
+  if (!section) return null;
+  const service: "radarr" | "sonarr" = section.type === "show" ? "sonarr" : "radarr";
 
   const url = getConfig(service === "radarr" ? "global_radarr_url" : "global_sonarr_url");
   const apiKey = getConfig(service === "radarr" ? "global_radarr_api_key" : "global_sonarr_api_key");

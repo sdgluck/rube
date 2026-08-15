@@ -148,11 +148,19 @@ export function createItemsModule(http: PlexHttp) {
   /**
    * Add one label to one item, preserving whatever it already carries.
    *
-   * Plex's tag PUT replaces the whole set, so the existing labels have to be
-   * read and resent — omitting them silently strips every other label on the
-   * item, including ones the user set by hand.
+   * Two things this has to get right. Plex's tag PUT replaces the whole set,
+   * so existing labels are read and resent — omitting them silently strips
+   * every other label on the item, including ones the user set by hand. And
+   * the write goes to the *section* endpoint with `type` and `id`, matching
+   * `addLabelToAllItems` below: a PUT to `/library/metadata/:key` answers 200
+   * for a library item and applies nothing, so the caller would believe it had
+   * labelled something it hadn't. (Collections are the exception and do take
+   * the metadata path — see `setCollectionLabels`.)
    */
-  async function addItemLabel(ratingKey: string, label: string): Promise<void> {
+  async function addItemLabel(ratingKey: string, sectionId: string, sectionType: string, label: string): Promise<void> {
+    const typeNum = SECTION_TYPE_MAP[sectionType];
+    if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
+
     const data = await http.request(`/library/metadata/${ratingKey}`);
     const meta = data?.MediaContainer?.Metadata?.[0];
     if (!meta) throw new Error(`No metadata found for ratingKey ${ratingKey}`);
@@ -160,10 +168,14 @@ export function createItemsModule(http: PlexHttp) {
     const existing: string[] = (meta.Label ?? []).map((l: { tag: string }) => l.tag);
     if (existing.some((l) => l.toLowerCase() === label.toLowerCase())) return;
 
-    const labelParams: Record<string, string | number> = { "label.locked": 1 };
+    const labelParams: Record<string, string | number> = {
+      type: typeNum,
+      id: ratingKey,
+      "label.locked": 1,
+    };
     const next = [...existing, label];
     for (let i = 0; i < next.length; i++) labelParams[`label[${i}].tag.tag`] = next[i];
-    await http.request(`/library/metadata/${ratingKey}`, { method: "PUT", params: labelParams });
+    await http.request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
   }
 
   async function addLabelToAllItems(

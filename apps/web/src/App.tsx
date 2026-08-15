@@ -24,6 +24,7 @@ const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/S
 const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsService"));
 const SettingsBandwidth = lazy(() => import("#pages/Settings/SettingsBandwidth"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
+const SettingsCleanup = lazy(() => import("#pages/Settings/SettingsCleanup"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
 const SettingsSchedules = lazy(() => import("#pages/Settings/SettingsSchedules"));
 const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
@@ -306,6 +307,14 @@ export default function App() {
                     element={
                       <LazyPage>
                         <SettingsSchedules />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="cleanup"
+                    element={
+                      <LazyPage>
+                        <SettingsCleanup />
                       </LazyPage>
                     }
                   />

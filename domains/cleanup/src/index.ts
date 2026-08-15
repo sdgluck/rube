@@ -59,7 +59,15 @@ const CHUNK = 400;
  * counted towards a second action.
  */
 export function recordMatches(ruleId: string, matches: CleanupMatch[], now: number = Date.now()): void {
-  const seen = new Set(matches.map((m) => m.ratingKey));
+  // De-duplicate by rating key first. A grouped rule yields one group per
+  // director, per language, per decade — and an item belongs to as many of
+  // those as it has tracks or credits. Bumping once per appearance would let a
+  // film with three audio languages reach a streak of three on its first run,
+  // which is precisely the protection this whole table exists to provide.
+  const byKey = new Map<string, CleanupMatch>();
+  for (const match of matches) byKey.set(match.ratingKey, match);
+  const unique = [...byKey.values()];
+  const seen = new Set(byKey.keys());
 
   db.transaction(() => {
     const existing = db
@@ -85,7 +93,7 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
 
     const actioned = new Set(existing.filter((r) => r.actionedAt != null).map((r) => r.ratingKey));
 
-    for (const match of matches) {
+    for (const match of unique) {
       if (actioned.has(match.ratingKey)) continue;
       db.insert(cleanupCandidates)
         .values({
