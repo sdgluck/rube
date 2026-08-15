@@ -11,12 +11,13 @@ import {
   withRuleLock,
   RuleLockedError,
 } from "@tinkerbell/domain.rules";
-import { forgetCollections } from "@tinkerbell/domain.collections";
+import { forgetCollections, getCollectionTitlesForRule } from "@tinkerbell/domain.collections";
 import { errorMessage } from "@tinkerbell/core";
 import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
 
 import { isCleanupRule } from "@tinkerbell/contracts";
 import { parseRuleConfig } from "./config.ts";
+import { announceEmptyRule, announceNewCollections } from "./events.ts";
 import { runHandler } from "./dispatch.ts";
 import { createCleanupBudget } from "./cleanup.ts";
 import { resolveArrAdds } from "./arr.ts";
@@ -166,6 +167,12 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
 
     const labels = ["Tinkerbell", `Rule:${rule.id}`];
     const ruleStartedAt = Date.now();
+    // Read before the run deletes them: every run recreates this rule's
+    // collections from scratch, so "what's new" is only answerable against
+    // the names that were there when we started.
+    const collectionsBefore = getCollectionTitlesForRule(rule.id);
+    // Likewise the previous item count — `setRuleLastRun` below overwrites it.
+    const previousItemCount = rule.lastRunItemCount;
     try {
       // The lock spans delete + recreate. A single-rule run started from the
       // Rules page executes in the API process and cannot see anything in this
@@ -199,6 +206,14 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
         collectionCount,
         itemCount,
       });
+
+      announceNewCollections(rule.id, rule.name, collectionsBefore, getCollectionTitlesForRule(rule.id));
+      // Not for cleanup rules: matching nothing is their healthy steady state,
+      // and "your cleanup rule has stopped finding anything to delete" is the
+      // opposite of a warning.
+      if (!isCleanupRule(ruleConfig)) {
+        announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount);
+      }
 
       // Only after the rule has fully committed — a checkpoint written any
       // earlier would let a resume skip work that never actually landed.
@@ -352,6 +367,11 @@ export async function runSingleRule(
   // The wait budget covers the common case rather than queueing behind a long
   // batch — the caller usually just cancelled its own previous run of this
   // rule, and abort takes a moment to unwind.
+  // Same before/after read as the batch path — an ad-hoc run creating a
+  // collection is no less newsworthy for having been started by hand.
+  const collectionsBefore = getCollectionTitlesForRule(rule.id);
+  const previousItemCount = rule.lastRunItemCount;
+
   const { lastCollectionKey, collectionCount, itemCount } = await withRuleLock(
     rule.id,
     `a manual run of "${rule.name}"`,
@@ -369,6 +389,13 @@ export async function runSingleRule(
   const arrResult = await resolveArrAdds(ctx, client, sections, rule, ruleConfig);
   if (ruleConfig.arr?.enabled) {
     setRuleArrCounts(rule.id, arrResult.added, arrResult.skipped, arrResult.failed);
+  }
+
+  announceNewCollections(rule.id, rule.name, collectionsBefore, getCollectionTitlesForRule(rule.id));
+  // The caller (`rules.run`) writes this run's counts afterwards, so
+  // `previousItemCount` is still the previous run's here.
+  if (!isCleanupRule(ruleConfig)) {
+    announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount);
   }
 
   ctx.progress(4, 4, "Done");

@@ -64,6 +64,10 @@ export const COMMANDS = {
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
   personalize: { load: () => import("./personalize.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+  // Local queries plus one network call per recipient. The default budget is
+  // generous for that, and is really bounding a mail server that has stopped
+  // answering rather than the work.
+  digest: { load: () => import("./digest.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
 
   // ── Human-triggered, watched-in-the-UI ────────────────────────────────
   // ffmpeg on a large preroll is legitimately slow, hence the 6h budget.

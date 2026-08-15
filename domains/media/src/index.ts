@@ -5,6 +5,7 @@
 import { eq, and, asc, desc, inArray, lt, sql, type InferSelectModel } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { db, mediaItems, likeContains } from "@tinkerbell/db";
+import { emitEvent } from "@tinkerbell/domain.events";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
 export type MediaItemRow = InferSelectModel<typeof mediaItems>;
@@ -12,6 +13,43 @@ export type MediaItemRow = InferSelectModel<typeof mediaItems>;
 interface SyncStats {
   synced: number;
   removed: number;
+  /** Items this sync saw for the first time, newest-looking first. */
+  added: NewMediaItem[];
+}
+
+export interface NewMediaItem {
+  ratingKey: string;
+  title: string;
+  year: number | null;
+  type: string;
+  sectionTitle: string;
+}
+
+/** How many titles to name in the `media.added` message before "and N more". */
+const ADDED_SAMPLE_SIZE = 5;
+
+/**
+ * Announce what a sync found that wasn't there before.
+ *
+ * One event per sync rather than one per item: a scan that picks up a
+ * 40-episode season is one thing that happened, and a channel that gets 40
+ * pings for it is a channel someone mutes.
+ *
+ * Silent on a library's first sync — `existing` empty means every item is
+ * "new", and announcing an entire library on the run that first indexed it is
+ * noise, not news.
+ */
+function announceAdded(added: NewMediaItem[], hadExisting: boolean): void {
+  if (!hadExisting || added.length === 0) return;
+
+  const sample = added.slice(0, ADDED_SAMPLE_SIZE).map((i) => (i.year ? `${i.title} (${i.year})` : i.title));
+  const more = added.length - sample.length;
+  const list = more > 0 ? `${sample.join(", ")} and ${more} more` : sample.join(", ");
+
+  emitEvent("media.added", `${added.length} new item(s): ${list}`, {
+    count: added.length,
+    titles: sample,
+  });
 }
 
 /**
@@ -61,6 +99,23 @@ export async function syncMedia(
   const skip = new Set(options.skipSectionKeys ?? []);
   let synced = 0;
 
+  // One query, held for the duration of the sync, rather than an existence
+  // check per item — this loop runs tens of thousands of times on a large
+  // library and the whole point is to keep it a single write each.
+  //
+  // A resumed sync under-reports: items the interrupted run already wrote are
+  // in this set and won't be announced again. That is the right trade against
+  // re-announcing them, and a sync that survives to the end is the norm.
+  const existing = new Set(
+    db
+      .select({ ratingKey: mediaItems.ratingKey })
+      .from(mediaItems)
+      .all()
+      .map((r) => r.ratingKey),
+  );
+  const hadExisting = existing.size > 0;
+  const added: NewMediaItem[] = [];
+
   for (const section of sections) {
     if (skip.has(section.key)) continue;
     for await (const { item, totalSize } of client.allItems(section.key)) {
@@ -68,6 +123,7 @@ export async function syncMedia(
       if (!ratingKey) continue;
 
       const media = item.Media?.[0];
+      const genres = item.Genre?.map((g) => g.tag).filter((tag) => tag.length > 0) ?? [];
       const values = {
         ratingKey,
         sectionId: section.key,
@@ -77,6 +133,14 @@ export async function syncMedia(
         thumb: item.thumb ?? null,
         type: item.type ?? "",
         addedAt: item.addedAt ?? null,
+        // All four come free with the listing this loop is already paging
+        // through. An empty genre list is stored as null, not `[]`, so
+        // "Plex told us nothing" and "Plex told us none" don't have to be
+        // distinguished downstream — neither should exclude an item.
+        genres: genres.length > 0 ? genres : null,
+        rating: item.rating ?? item.audienceRating ?? null,
+        contentRating: item.contentRating ?? null,
+        durationMs: item.duration ?? null,
         videoResolution: media?.videoResolution ?? null,
         videoCodec: media?.videoCodec ?? null,
         audioCodec: media?.audioCodec ?? null,
@@ -87,6 +151,17 @@ export async function syncMedia(
 
       db.insert(mediaItems).values(values).onConflictDoUpdate({ target: mediaItems.ratingKey, set: values }).run();
       synced++;
+
+      if (!existing.has(ratingKey)) {
+        existing.add(ratingKey);
+        added.push({
+          ratingKey,
+          title: values.title,
+          year: values.year,
+          type: values.type,
+          sectionTitle: section.title,
+        });
+      }
 
       if (onProgress) {
         onProgress(synced, totalSize, `Syncing ${section.title}...`);
@@ -100,7 +175,9 @@ export async function syncMedia(
   const result = db.delete(mediaItems).where(lt(mediaItems.syncedAt, now)).run();
   const removed = Number(result.changes ?? 0);
 
-  return { synced, removed };
+  announceAdded(added, hadExisting);
+
+  return { synced, removed, added };
 }
 
 const SORT_COLUMNS = {

@@ -10,13 +10,18 @@
   "files": [
     "src"
   ],
-  "scripts": {},
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+  },
   "dependencies": {
     "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/http": "workspace:*"
+    "@tinkerbell/http": "workspace:*",
+    "nodemailer": "^7.0.9"
   },
   "devDependencies": {
+    "@tinkerbell/db": "workspace:*",
     "@types/node": "^25.2.3",
+    "@types/nodemailer": "^7.0.4",
     "typescript": "^7.0.2"
   }
 }

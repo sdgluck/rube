@@ -330,7 +330,28 @@ export const mediaItems = sqliteTable(
     year: integer("year"),
     thumb: text("thumb"),
     type: text("type").notNull(),
+    /**
+     * Plex's `addedAt`, in **seconds** — Plex's unit, kept as-is so a value
+     * read back matches what the server reports. Every other timestamp in this
+     * schema is milliseconds, so anything comparing this against `Date.now()`
+     * has to convert, and forgetting to is a silent off-by-1000x.
+     */
     addedAt: integer("added_at"),
+    /**
+     * Taste columns. Plex returns all four in the section listing that
+     * `syncMedia` already walks, so storing them costs no extra request — and
+     * without them a per-user digest can only filter on title and year, which
+     * is not "5 new things you'd like".
+     *
+     * Nullable throughout: an unmatched item has no genres, no rating and no
+     * certificate, and a digest must treat "unknown" as "don't exclude it"
+     * rather than "fails the filter".
+     */
+    genres: text("genres", { mode: "json" }).$type<string[]>(),
+    /** Critic rating where Plex has one, else audience rating. 0–10. */
+    rating: real("rating"),
+    contentRating: text("content_rating"),
+    durationMs: integer("duration_ms"),
     videoResolution: text("video_resolution"),
     videoCodec: text("video_codec"),
     audioCodec: text("audio_codec"),
@@ -728,5 +749,40 @@ export const cleanupCandidates = sqliteTable(
     // The queue page reads across every rule, ordered by what is closest to
     // being actioned.
     index("idx_cleanup_candidates_actioned").on(table.actionedAt, table.streak),
+  ],
+);
+
+/**
+ * What has been sent, to whom, for which period.
+ *
+ * This is the idempotency guarantee, not a log. A digest job that fails
+ * halfway through its recipients will be retried, and without a ledger the
+ * retry re-sends to everyone it already reached — which for an email digest
+ * means people get the same newsletter twice and stop trusting the channel.
+ * The unique index does the work: an insert that conflicts means "already
+ * sent", full stop, and the send is skipped without any further reasoning.
+ *
+ * `skipped_empty` rows are recorded rather than omitted, so "why didn't I get
+ * one this week" has an answer that isn't a shrug.
+ */
+export const digestDeliveries = sqliteTable(
+  "digest_deliveries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    periodStart: integer("period_start").notNull(),
+    periodEnd: integer("period_end").notNull(),
+    /** 0 for the server-wide digest sent to the admin's own channels. */
+    userId: integer("user_id").notNull().default(0),
+    /** email | discord | slack | … — a notification service, or `email`. */
+    channel: text("channel").notNull(),
+    /** sent | failed | skipped_empty */
+    status: text("status").notNull(),
+    itemCount: integer("item_count").notNull().default(0),
+    error: text("error").notNull().default(""),
+    sentAt: integer("sent_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_digest_deliveries_unique").on(table.periodStart, table.userId, table.channel),
+    index("idx_digest_deliveries_sent").on(table.sentAt),
   ],
 );

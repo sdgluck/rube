@@ -38,6 +38,7 @@ import { migrationRouter } from "./migration.router.ts";
 import { registryRouter } from "./registry.router.ts";
 import { navRouter } from "./nav.router.ts";
 import { cleanupRouter } from "./cleanup.router.ts";
+import { digestRouter } from "./digest.router.ts";
 import { personalizationRouter } from "./personalization.router.ts";
 
 export const appRouter = t.router({
@@ -51,6 +52,7 @@ export const appRouter = t.router({
   stats: statsRouter,
   overlays: overlaysRouter,
   cleanup: cleanupRouter,
+  digest: digestRouter,
   events: eventsRouter,
   health: healthRouter,
   bandwidth: bandwidthRouter,

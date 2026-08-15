@@ -263,6 +263,14 @@ export function reportHealth(service: string, status: "ok" | "error", message: s
   if (prev) {
     if (prev.status === "ok" && status === "error") {
       emitEvent("health.failed", `${service}: ${message}`, { service });
+      // Plex going away stops every job, every rule and the portal, so it gets
+      // its own event type on top of the generic one — a user who routes
+      // `health.failed` to a quiet channel usually wants this one somewhere
+      // they'll actually see it. Both fire; the per-service event selection is
+      // what decides whether either is delivered.
+      if (service === "Plex") {
+        emitEvent("plex.unreachable", `Plex is unreachable: ${message}`, { service });
+      }
     } else if (prev.status === "error" && status === "ok") {
       emitEvent("health.recovered", `${service} recovered`, { service });
     }

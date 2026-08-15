@@ -165,6 +165,37 @@ export const configSchema = z.object({
   global_webhook_jobs: z.array(z.string()),
   global_webhook_health_targets: z.array(z.string()),
   /**
+   * Outbound mail. The ninth notification service, and the only one that can
+   * reach somebody who doesn't use the admin UI — which is the whole point of
+   * a digest.
+   *
+   * `to` is the admin's own address, used for events and the server-wide
+   * digest. Per-user digests are addressed to the address that user typed into
+   * the portal and are never sent to anything else.
+   *
+   * `password` is a nested secret, redacted in `redactSecrets` alongside
+   * `global_llm.apiKey`.
+   */
+  global_smtp: z.object({
+    host: z.string(),
+    /**
+     * 0 means "not set". Deliberately not `.positive()`: the Settings form
+     * saves every field of this object at once, so a blank port would fail
+     * validation and reject the whole save — including the event selection
+     * the user was actually editing. `smtpConfigured()` treats 0 as absent.
+     */
+    port: z.number().int().min(0),
+    /** Implicit TLS (port 465). STARTTLS on 587 is negotiated with this off. */
+    secure: z.boolean(),
+    user: z.string().optional(),
+    password: z.string().optional(),
+    from: z.string(),
+    to: z.string().optional(),
+  }),
+  global_smtp_events: z.array(z.string()),
+  global_smtp_jobs: z.array(z.string()),
+  global_smtp_health_targets: z.array(z.string()),
+  /**
    * Fraction of an item's runtime past which a play counts as "watched".
    *
    * This is the definition every downstream consumer inherits — watched-by-all
@@ -282,6 +313,16 @@ export const configSchema = z.object({
     url: z.string(),
     index: z.unknown(),
   }),
+  /**
+   * Rule id → the pack version we last announced an update for.
+   *
+   * `registry.update_available` is a transition event, and the check that
+   * produces it runs on a schedule — without a record of what has already been
+   * said, every daily run re-announces the same pending update until the user
+   * applies it. Entries for rules that no longer have an update are dropped,
+   * so a re-published version announces again.
+   */
+  registry_announced_updates: z.record(z.string(), z.number()),
   /**
    * Legacy single-provider slots, kept readable for one release so a
    * one-shot migration in `domains/migration` can fold them into the
@@ -433,6 +474,10 @@ export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.
   const llm = all["global_llm"] as ConfigValue<"global_llm"> | undefined;
   if (llm && typeof llm.apiKey === "string" && llm.apiKey !== "") {
     all["global_llm"] = { ...llm, apiKey: REDACTED_SECRET };
+  }
+  const smtp = all["global_smtp"] as ConfigValue<"global_smtp"> | undefined;
+  if (smtp && typeof smtp.password === "string" && smtp.password !== "") {
+    all["global_smtp"] = { ...smtp, password: REDACTED_SECRET };
   }
   return all as Partial<z.infer<ConfigSchema>>;
 }

@@ -82,6 +82,15 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "",
     enabled: 1,
   },
+  // Daily and off-peak. The registry index is cached for an hour, so this is
+  // one small GET a day against tinkerbell.dev.
+  {
+    id: "registry-updates",
+    name: "Check Registry Updates",
+    command: "registry-updates",
+    schedule: "0 6 * * *",
+    enabled: 1,
+  },
   {
     id: "posters-refresh",
     name: "Refresh Poster Cache",

@@ -77,3 +77,25 @@ export const overlaysJobConfigSchema = commonJobConfigSchema.extend({
   mode: z.enum(["apply", "remove"]).optional(),
 });
 export type OverlaysJobConfig = z.infer<typeof overlaysJobConfigSchema>;
+
+export const digestJobConfigSchema = commonJobConfigSchema.extend({
+  /**
+   * How much history the server-wide digest covers, and — via the ledger —
+   * how often it may be sent. Each subscriber's own frequency governs theirs.
+   */
+  frequency: z.enum(["weekly", "monthly"]).optional(),
+  /**
+   * Fewest new items worth sending for. A digest saying "nothing happened"
+   * trains people to ignore the channel, so below this the run records
+   * `skipped_empty` and sends nothing — unless something is about to be
+   * deleted, which is worth a message on its own.
+   */
+  minAddedItems: z.number().int().min(0).optional(),
+  /** Cap on the tailored list in a per-user digest. */
+  userItemCap: z.number().int().min(1).max(25).optional(),
+  /** Send the server-wide digest to the admin's subscribed channels. */
+  includeServerDigest: z.boolean().optional(),
+  /** Send per-user digests by email to portal users who asked for one. */
+  includeUserDigests: z.boolean().optional(),
+});
+export type DigestJobConfig = z.infer<typeof digestJobConfigSchema>;

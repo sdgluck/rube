@@ -168,6 +168,8 @@ interface FormState {
   watchedBias: "new_to_me" | "include_favorites" | "balanced";
   strictHate: boolean;
   optedIn: boolean;
+  digestFrequency: "never" | "weekly" | "monthly";
+  digestEmail: string;
 }
 
 const SEG_LABELS: Record<GenreLevel, string> = { loved: "Love", liked: "Like", hated: "Hate", none: "—" };
@@ -229,6 +231,8 @@ function PreferencesForm() {
       watchedBias: p.watchedBias,
       strictHate: p.strictHate,
       optedIn: prefsQuery.data.optedIn,
+      digestFrequency: p.digest.frequency,
+      digestEmail: p.digest.email,
     });
   }, [prefsQuery.data]);
 
@@ -275,6 +279,13 @@ function PreferencesForm() {
           rowCount: form.rowCount.trim() ? Number(form.rowCount) : undefined,
           watchedBias: form.watchedBias,
           strictHate: form.strictHate,
+          digest: {
+            frequency: form.digestFrequency,
+            // Cleared alongside the subscription: leaving an address stored
+            // for someone who has just unsubscribed is the sort of thing that
+            // makes people distrust an unsubscribe button.
+            email: form.digestFrequency === "never" ? "" : form.digestEmail.trim(),
+          },
         },
       },
       {
@@ -446,6 +457,37 @@ function PreferencesForm() {
         <span className="field-hint">
           When on, hated genres are never included. When off, they're just shown less often.
         </span>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Email digest</span>
+        <span className="field-hint">
+          A summary of what's been added, what people have been watching, and anything about to be removed. Only sent to
+          the address you enter here, and you can stop it at any time by choosing “Never”.
+        </span>
+        <select
+          value={form.digestFrequency}
+          onChange={(e) => setForm({ ...form, digestFrequency: e.target.value as FormState["digestFrequency"] })}
+          style={{ alignSelf: "flex-start" }}
+        >
+          <option value="never">Never</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+        {form.digestFrequency !== "never" && (
+          <>
+            <input
+              type="email"
+              value={form.digestEmail}
+              onChange={(e) => setForm({ ...form, digestEmail: e.target.value })}
+              placeholder="you@example.com"
+              style={{ marginTop: 8 }}
+            />
+            <span className="field-hint">
+              Used for this digest and nothing else. Leave it blank and no email is sent.
+            </span>
+          </>
+        )}
       </div>
 
       <div className="save-row">

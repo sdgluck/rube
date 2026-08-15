@@ -23,6 +23,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { to: "/settings/cleanup", label: "Cleanup" },
       { to: "/settings/portal", label: "Portal" },
       { to: "/settings/notifications", label: "Notifications" },
+      { to: "/settings/digest", label: "Digest" },
       { to: "/settings/posters", label: "Posters" },
       { to: "/settings/prerolls", label: "Prerolls" },
     ],

@@ -1,0 +1,133 @@
+.intro {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 20px;
+  max-width: 72ch;
+}
+
+.field {
+  margin-bottom: 20px;
+  max-width: 72ch;
+}
+
+.field > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.hint {
+  color: var(--text-muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+/* Not styled as an error: an install with no mail server hasn't broken
+   anything, it just can't do the per-user half of this feature yet. */
+.notice {
+  background: var(--status-info-bg);
+  border-radius: var(--r-sm);
+  color: var(--status-info-fg);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+  max-width: 72ch;
+  padding: 10px 12px;
+}
+
+.controls {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control > span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The rendered digest, shown as it would arrive rather than as a form. The
+   border is what makes it read as "a message" instead of "more settings". */
+.preview {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  max-width: 72ch;
+  padding: 18px 20px;
+}
+
+.previewTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.previewText {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+}
+
+.block {
+  margin-top: 14px;
+}
+
+.blockHeading {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.blockLines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.blockLines li {
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+  padding: 5px 0;
+}
+
+.blockLines li:last-child {
+  border-bottom: none;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.table {
+  font-size: 12.5px;
+  margin-top: 8px;
+  max-width: 72ch;
+  width: 100%;
+}
+
+.statusFailed {
+  color: var(--status-error-fg);
+}
+
+.statusSkipped {
+  color: var(--text-muted);
+}

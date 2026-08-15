@@ -53,6 +53,25 @@ export const userPreferencesSchema = z.object({
   rowCount: z.number().int().min(1).max(20).optional(),
   /** When true (default), hated genres are a hard exclude; otherwise a down-weight. */
   strictHate: z.boolean().default(true),
+  /**
+   * The user's own digest subscription, and the only thing that authorises
+   * Tinkerbell to email them.
+   *
+   * Deliberately separate from the `optedIn` column beside this blob: that one
+   * is consent to personalised *home screens*, and reusing it would mean
+   * enabling one silently enabled the other. Someone can want a weekly email
+   * and no reshuffled home, or the reverse.
+   *
+   * `frequency: "never"` is the default, and `email` is only ever set by the
+   * user typing it into the portal — never harvested from plex.tv. A digest
+   * with no address goes nowhere, which is the intended failure mode.
+   */
+  digest: z
+    .object({
+      frequency: z.enum(["never", "weekly", "monthly"]).default("never"),
+      email: z.email().or(z.literal("")).default(""),
+    })
+    .default({ frequency: "never", email: "" }),
 });
 
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
@@ -128,6 +147,41 @@ export function listOptedInUserPreferences(): Array<{
     .where(eq(userPreferences.optedIn, 1))
     .all()
     .map((r) => ({ userId: r.userId, username: r.username, preferences: parsePreferences(r.preferences) }));
+}
+
+export interface DigestSubscriber {
+  userId: number;
+  username: string;
+  email: string;
+  frequency: "weekly" | "monthly";
+  preferences: UserPreferences;
+}
+
+/**
+ * Everyone who has asked for a digest and given somewhere to send it.
+ *
+ * Both halves are required, and neither is inferable: a frequency without an
+ * address has nowhere to go, and an address without a frequency was typed by
+ * someone who then chose "never". Users who have never opened the portal have
+ * no row here at all, which is the correct answer — Tinkerbell has no address
+ * for them and must not go looking for one.
+ */
+export function listDigestSubscribers(): DigestSubscriber[] {
+  return db
+    .select({
+      userId: userPreferences.userId,
+      username: plexUsers.username,
+      preferences: userPreferences.preferences,
+    })
+    .from(userPreferences)
+    .innerJoin(plexUsers, eq(plexUsers.userId, userPreferences.userId))
+    .all()
+    .flatMap((row) => {
+      const preferences = parsePreferences(row.preferences);
+      const { frequency, email } = preferences.digest;
+      if (frequency === "never" || email === "") return [];
+      return [{ userId: row.userId, username: row.username, email, frequency, preferences }];
+    });
 }
 
 /**

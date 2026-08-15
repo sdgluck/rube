@@ -36,6 +36,20 @@
   color: var(--status-info-fg);
 }
 
+/* Library news — something arrived or was built. Informational, like the
+ * bandwidth result: nothing here is a verdict on whether anything is healthy. */
+.badgeLibrary {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+/* A rule that has gone quiet, or a registry update sitting unapplied. Neither
+ * is broken yet — both are things that will bite later if ignored. */
+.badgeAttention {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
 .badgeDefault {
   background: var(--status-neutral-bg);
   color: var(--status-neutral-fg);

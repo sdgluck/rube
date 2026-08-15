@@ -1,192 +1,39 @@
+/**
+ * Which services exist, which events each one wants, and how an event becomes
+ * a delivered message.
+ */
 import { getConfig, emitEventViaHook, errorMessage, type ConfigValue, type ConfigKey } from "@tinkerbell/core";
-import { assertSafeOutboundUrl } from "@tinkerbell/http";
+import {
+  EVENT_TYPES,
+  NOTIFICATION_SERVICES,
+  plainMessage,
+  type NotificationService,
+  type RichMessage,
+} from "./types.ts";
+import {
+  sendDiscord,
+  sendGotify,
+  sendLunaSea,
+  sendPushbullet,
+  sendPushover,
+  sendSlack,
+  sendTelegram,
+  sendWebhook,
+} from "./senders.ts";
+import { sendSmtp } from "./smtp.ts";
 
-export const EVENT_TYPES = [
-  { id: "job.completed", label: "Job Completed" },
-  { id: "job.failed", label: "Job Failed" },
-  { id: "health.failed", label: "Health Check Failed" },
-  { id: "health.recovered", label: "Health Check Recovered" },
-  { id: "bandwidth.tested", label: "Bandwidth Tested" },
-  // `cleanup.pending` is the one that matters: a message saying "these six
-  // films go tomorrow unless you keep them" is what turns an automated
-  // deletion from frightening into routine.
-  { id: "cleanup.pending", label: "Cleanup Pending" },
-  { id: "cleanup.actioned", label: "Cleanup Actioned" },
-] as const;
-
-export const NOTIFICATION_SERVICES = [
-  "pushover",
-  "discord",
-  "gotify",
-  "lunasea",
-  "pushbullet",
-  "slack",
-  "telegram",
-  "webhook",
-] as const;
-
-export type NotificationService = (typeof NOTIFICATION_SERVICES)[number];
-
-// --- Send functions ---
-
-export async function sendPushover(title: string, message: string): Promise<void> {
-  const apiKey = getConfig("global_pushover_api_key");
-  const userKey = getConfig("global_pushover_user_key");
-  if (!apiKey || !userKey) throw new Error("Pushover API key and user key are required");
-
-  const res = await fetch("https://api.pushover.net/1/messages.json", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: apiKey, user: userKey, title, message }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Pushover: ${res.status} ${body}`);
-  }
-}
-
-export async function sendDiscord(title: string, message: string): Promise<void> {
-  const webhookUrl = getConfig("global_discord_webhook_url");
-  if (!webhookUrl) throw new Error("Discord webhook URL is required");
-  assertSafeOutboundUrl(webhookUrl);
-
-  const res = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      embeds: [{ title, description: message, color: 0x237feb }],
-    }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Discord: ${res.status} ${body}`);
-  }
-}
-
-export async function sendGotify(title: string, message: string): Promise<void> {
-  const url = getConfig("global_gotify_url");
-  const token = getConfig("global_gotify_token");
-  if (!url || !token) throw new Error("Gotify URL and application token are required");
-
-  const endpoint = new URL("/message", url);
-  assertSafeOutboundUrl(endpoint);
-  const res = await fetch(endpoint.toString(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Gotify-Key": token },
-    body: JSON.stringify({ title, message, priority: 5 }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Gotify: ${res.status} ${body}`);
-  }
-}
-
-export async function sendLunaSea(title: string, message: string): Promise<void> {
-  const webhookUrl = getConfig("global_lunasea_webhook_url");
-  if (!webhookUrl) throw new Error("LunaSea webhook URL is required");
-  assertSafeOutboundUrl(webhookUrl);
-
-  const res = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, body: message }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`LunaSea: ${res.status} ${body}`);
-  }
-}
-
-export async function sendPushbullet(title: string, message: string): Promise<void> {
-  const token = getConfig("global_pushbullet_token");
-  if (!token) throw new Error("Pushbullet access token is required");
-
-  const res = await fetch("https://api.pushbullet.com/v2/pushes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Access-Token": token },
-    body: JSON.stringify({ type: "note", title, body: message }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Pushbullet: ${res.status} ${body}`);
-  }
-}
-
-export async function sendSlack(title: string, message: string): Promise<void> {
-  const webhookUrl = getConfig("global_slack_webhook_url");
-  if (!webhookUrl) throw new Error("Slack webhook URL is required");
-  assertSafeOutboundUrl(webhookUrl);
-
-  const res = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: `*${title}*\n${message}`,
-    }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Slack: ${res.status} ${body}`);
-  }
-}
-
-export async function sendTelegram(title: string, message: string): Promise<void> {
-  const botToken = getConfig("global_telegram_bot_token");
-  const chatId = getConfig("global_telegram_chat_id");
-  if (!botToken || !chatId) throw new Error("Telegram bot token and chat ID are required");
-
-  const sendSilently = getConfig("global_telegram_send_silently") ?? false;
-
-  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: `<b>${title}</b>\n${message}`,
-      parse_mode: "HTML",
-      disable_notification: sendSilently,
-    }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Telegram: ${res.status} ${body}`);
-  }
-}
-
-export async function sendWebhook(title: string, message: string): Promise<void> {
-  const url = getConfig("global_webhook_url");
-  if (!url) throw new Error("Webhook URL is required");
-  // Webhook URLs are typed in by the admin and the destination is arbitrary,
-  // so this is the most attractive SSRF target in the codebase. The host
-  // check defaults off in dev and can be opted out of in production.
-  assertSafeOutboundUrl(url);
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, message, timestamp: Date.now() }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Webhook: ${res.status} ${body}`);
-  }
-}
+export * from "./types.ts";
+export {
+  sendDiscord,
+  sendGotify,
+  sendLunaSea,
+  sendPushbullet,
+  sendPushover,
+  sendSlack,
+  sendTelegram,
+  sendWebhook,
+} from "./senders.ts";
+export { sendSmtp, smtpConfigured, renderEmailHtml, SmtpNotConfiguredError, type SmtpTarget } from "./smtp.ts";
 
 // --- Agent registry ---
 
@@ -199,7 +46,7 @@ const AGENTS: Array<{
   eventsKey: EventsConfigKey;
   jobsKey: EventsConfigKey;
   healthKey: EventsConfigKey;
-  send: (title: string, message: string) => Promise<void>;
+  send: (message: RichMessage) => Promise<void>;
 }> = [
   {
     name: "pushover",
@@ -257,12 +104,37 @@ const AGENTS: Array<{
     healthKey: "global_webhook_health_targets",
     send: sendWebhook,
   },
+  {
+    name: "smtp",
+    eventsKey: "global_smtp_events",
+    jobsKey: "global_smtp_jobs",
+    healthKey: "global_smtp_health_targets",
+    // Addressed to `global_smtp.to` — the admin's own inbox. Per-user digests
+    // never come through here; they call `sendSmtp` with an explicit
+    // recipient, so there is no path by which an event notification could be
+    // delivered to a shared user.
+    send: (message) => sendSmtp(message),
+  },
 ];
 
+/** Which services currently hold enough configuration to send anything. */
+export function configuredServices(): NotificationService[] {
+  return AGENTS.filter((agent) => (getConfig(agent.eventsKey) ?? []).length > 0).map((agent) => agent.name);
+}
+
+/** Services subscribed to a given event type. */
+export function servicesForEvent(type: string): NotificationService[] {
+  return AGENTS.filter((agent) => (getConfig(agent.eventsKey) ?? []).includes(type)).map((agent) => agent.name);
+}
+
 export function sendNotification(service: NotificationService, title: string, message: string): Promise<void> {
+  return sendRichNotification(service, plainMessage(title, message));
+}
+
+export function sendRichNotification(service: NotificationService, message: RichMessage): Promise<void> {
   const agent = AGENTS.find((a) => a.name === service);
   if (!agent) throw new Error(`Unknown notification service: ${service}`);
-  return agent.send(title, message);
+  return agent.send(message);
 }
 
 export function notifyEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
@@ -284,7 +156,7 @@ export function notifyEvent(type: string, message: string, metadata?: Record<str
       if (targets && targets.length > 0 && (!healthService || !targets.includes(healthService))) continue;
     }
 
-    agent.send(label, message).catch((err) => {
+    agent.send(plainMessage(label, message)).catch((err) => {
       console.error(`[${agent.name}] Error sending notification:`, err);
       // Surface to the activity feed so silent channel failures (dead
       // webhook URL, expired token, etc.) become visible. Guard against
@@ -300,3 +172,5 @@ export function notifyEvent(type: string, message: string, metadata?: Record<str
     });
   }
 }
+
+export { NOTIFICATION_SERVICES };

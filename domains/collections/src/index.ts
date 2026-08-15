@@ -312,6 +312,26 @@ export function getLocalCollection(ratingKey: string): CollectionRow | undefined
   return db.select().from(collections).where(eq(collections.plexRatingKey, ratingKey)).get();
 }
 
+/**
+ * Titles of the collections the local mirror currently attributes to a rule.
+ *
+ * Read either side of a rule run to tell which collections are *new* this
+ * time. Titles rather than rating keys because a run is delete-then-recreate:
+ * every collection gets a fresh rating key each night, so keys can't be
+ * compared across runs but names can — the same reasoning as
+ * `rules.lastPinnedCollections`.
+ */
+export function getCollectionTitlesForRule(ruleId: string): string[] {
+  // Same JSON-quote anchoring as the `ruleIds` filter, so `Rule:1` doesn't
+  // match `Rule:10`.
+  const rows = db
+    .select({ title: collections.title })
+    .from(collections)
+    .where(likeContains(collections.labels, JSON.stringify(`Rule:${ruleId}`)))
+    .all();
+  return rows.map((r) => r.title);
+}
+
 export async function updateCollection(
   client: PlexClient,
   ratingKey: string,
