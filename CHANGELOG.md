@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-08-15
+
+### Added
+
+- Every search field in the app now has a clear button (an X once you've typed something) and supports Escape to clear it.
+- Cleanup rules now have their own tab on the Cleanup page, separate from the queue.
+
+### Changed
+
+- The Rules page now shows only collection rules; cleanup rules have moved to their own tab under Cleanup.
+- The changelog moved from the About page to Settings, and is now linked from the settings rail (the old `/changelog` link still redirects there).
+
+### Fixed
+
+- **If you've previously run the collection migration, it may have created a duplicate, disabled rule for every rule whose collection already existed on your server — a `scripts/dedupe-migrated-rules.mjs` script is now available to clean up the duplicates, and the migration no longer creates them going forward.**
+- Rule links from the cleanup queue now correctly open the matching rule on the Rules tab instead of pointing at a parameter the page no longer reads.
+
+### Removed
+
+- The About page has been removed (the app version now shows in the sidebar, and its changelog link moved to Settings); the beta advisory it displayed is also gone.
+
 ## [0.16.1] - 2026-08-15
 
 ### Fixed
