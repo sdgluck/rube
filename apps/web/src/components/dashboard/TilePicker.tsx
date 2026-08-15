@@ -1,7 +1,9 @@
 import { LayoutGrid } from "lucide-react";
 import type React from "react";
 import { Children, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMediaQuery } from "#hooks/useMediaQuery";
+import { Sparkline } from "./Sparkline";
 import styles from "./Dashboard.module.css";
 
 export interface TileDef {
@@ -28,17 +30,32 @@ export function SummaryTile({
   value,
   sub,
   tone,
+  trend,
+  to,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   sub?: React.ReactNode;
-  /** "small" for text values (times, names); "accent" to draw the eye. */
-  tone?: "small" | "accent";
+  /** "small" for text values (times, names); "accent" or "danger" to draw the eye. */
+  tone?: "small" | "accent" | "danger";
+  /** Recent history for this metric, drawn on the value line. */
+  trend?: number[];
+  /**
+   * Where this metric is explained in full — the filtered list it counts.
+   * Whole-tile link rather than a link inside the sub: an 11px line of text is
+   * a poor tap target, and the tile is already the unit you point at.
+   *
+   * Only worth setting when the destination shows the thing the tile counts. A
+   * tile that links to an empty list has spent a click to say "nothing here",
+   * which the tile already said.
+   */
+  to?: string;
 }) {
   const valueClass = [
     styles.summaryValue,
     tone === "small" ? styles.summaryValueSmall : "",
     tone === "accent" ? styles.summaryValueAccent : "",
+    tone === "danger" ? styles.summaryValueDanger : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -47,14 +64,31 @@ export function SummaryTile({
   // starts — or whose value goes from an 11px skeleton to a 25px metric — would
   // otherwise change height under its neighbours, and every tile in the row
   // stretches to match, so one tile's news moves the whole page.
-  return (
-    <div className={styles.summaryItem}>
+  const body = (
+    <>
       <span className={styles.summaryLabel}>{label}</span>
       <span className={valueClass}>
-        <span className={styles.summaryValueLine}>{value}</span>
-        <span className={styles.summarySub}>{sub}</span>
+        <span className={styles.summaryValueLine}>
+          {value}
+          {trend && trend.length > 1 && <Sparkline values={trend} label="Recent history" />}
+        </span>
+        <span className={styles.summarySub}>
+          {sub}
+          {to != null && (
+            <span className={styles.summarySubArrow} aria-hidden="true">
+              →
+            </span>
+          )}
+        </span>
       </span>
-    </div>
+    </>
+  );
+
+  if (to == null) return <div className={styles.summaryItem}>{body}</div>;
+  return (
+    <Link to={to} className={`${styles.summaryItem} ${styles.summaryItemLink}`}>
+      {body}
+    </Link>
   );
 }
 

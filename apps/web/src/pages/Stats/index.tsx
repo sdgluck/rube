@@ -1,5 +1,4 @@
 import type React from "react";
-import { Link } from "react-router-dom";
 import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
@@ -68,6 +67,10 @@ export default function Stats() {
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, { refetchInterval: 5000 });
   const overviewQuery = trpc.stats.overview.useQuery();
   const activityQuery = trpc.stats.activity.useQuery();
+  // Fourteen days of daily plays, for the sparkline on the two plays tiles. A
+  // fortnight is two weekends, which is the shortest window where "quiet
+  // Tuesday" and "nobody has watched anything since Friday" look different.
+  const activitySeriesQuery = trpc.stats.activitySeries.useQuery({ days: 14 });
   const opsQuery = trpc.stats.ops.useQuery(undefined, { refetchInterval: 30000 });
   // Not polled: this changes only when someone runs a bandwidth test.
   const bandwidthQuery = trpc.bandwidth.latest.useQuery(undefined, { refetchOnWindowFocus: false });
@@ -81,6 +84,7 @@ export default function Stats() {
   const sessions = sessionsQuery.data ?? [];
   const totalBandwidth = sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
   const transcodingCount = sessions.filter((s) => s.videoDecision === "transcode").length;
+  const series = activitySeriesQuery.data;
 
   const selectedTiles = resolveTiles(configQuery.data?.stats_summary_tiles, TILE_REGISTRY, DEFAULT_TILES, MAX_TILES);
 
@@ -97,6 +101,12 @@ export default function Stats() {
     if (!def) return null;
     let value: React.ReactNode = EMPTY;
     let sub: React.ReactNode = null;
+    let tone: "small" | "accent" | "danger" | undefined;
+    let trend: number[] | undefined;
+    // Where this tile is explained in full. Set only when the destination is
+    // filtered down to what the tile counts — the panels below cover streams,
+    // plays and recently-added, so those tiles stay where they are.
+    let to: string | undefined;
     switch (id) {
       case "streams":
         value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : sessions.length;
@@ -129,21 +139,31 @@ export default function Stats() {
               : `of ${formatMbps(capacity)}`;
         } else {
           value = inUse;
-          sub = <Link to="/settings/bandwidth">Test bandwidth →</Link>;
+          sub = "Test bandwidth";
+          to = "/settings/bandwidth";
         }
         break;
       }
       case "playsToday":
         value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.playsToday ?? 0);
         if (activityQuery.data && activityQuery.data.playsWeek > 0) sub = `${activityQuery.data.playsWeek} this week`;
+        trend = series;
         break;
-      case "playsWeek":
-        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.playsWeek ?? 0);
+      case "playsWeek": {
+        const plays = activityQuery.data?.playsWeek ?? 0;
+        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : plays;
+        // The label already says "(7d)", so the sub says the thing seven days
+        // of total doesn't: the rate.
+        if (plays > 0) sub = `~${Math.round(plays / 7)} a day`;
+        trend = series;
         break;
+      }
       case "topUserToday": {
         const u = activityQuery.data?.topUserToday;
         value = u ? u.name : EMPTY;
+        tone = "small";
         sub = u ? `${u.plays} ${u.plays === 1 ? "play" : "plays"}` : null;
+        if (u) to = "/users";
         break;
       }
       case "library":
@@ -154,6 +174,7 @@ export default function Stats() {
         );
         if (overviewQuery.data && overviewQuery.data.addedThisWeek > 0)
           sub = `+${overviewQuery.data.addedThisWeek} this week`;
+        to = "/media";
         break;
       case "addedThisWeek":
         value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : (overviewQuery.data?.addedThisWeek ?? 0);
@@ -168,39 +189,62 @@ export default function Stats() {
         ) : (
           EMPTY
         );
-        if (c4k > 0) sub = `${formatNumber(c4k)} items`;
+        if (c4k > 0) {
+          sub = `${formatNumber(c4k)} items`;
+          to = "/media?res=4k";
+        }
         break;
       }
       case "librarySplit": {
         const m = overviewQuery.data?.movieCount ?? 0;
         const e = overviewQuery.data?.episodeCount ?? 0;
         value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : `${formatNumber(m)} / ${formatNumber(e)}`;
-        sub = "Movies / Episodes";
+        // The sub used to repeat the tile's own label back at it. The split
+        // itself is the thing two counts side by side don't quite say.
+        if (m + e > 0) sub = `${Math.round((m / (m + e)) * 100)}% movies`;
+        to = "/media";
         break;
       }
       case "users":
         value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : (overviewQuery.data?.userCount ?? 0);
         if (activityQuery.data && activityQuery.data.activeUsersWeek > 0)
           sub = `${activityQuery.data.activeUsersWeek} active`;
+        to = "/users";
         break;
-      case "activeUsers":
-        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.activeUsersWeek ?? 0);
-        sub = "this week";
+      case "activeUsers": {
+        const active = activityQuery.data?.activeUsersWeek ?? 0;
+        const total = overviewQuery.data?.userCount ?? 0;
+        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : active;
+        // "this week" was already in the label. The denominator isn't.
+        if (total > 0) sub = `of ${total}`;
+        to = "/users";
         break;
+      }
       case "failedJobs": {
         const n = opsQuery.data?.failedJobs24h ?? 0;
+        const last = opsQuery.data?.lastFailure;
         value = opsQuery.isLoading ? <SkeletonLine width="40px" /> : n;
-        if (n > 0) sub = "needs attention";
+        if (n > 0) {
+          tone = "danger";
+          // The count is the alarm; the sub says which job, which is what you
+          // needed before deciding whether to click.
+          sub = last ? `${last.name}, ${formatRelativeShort(last.startedAt)}` : "needs attention";
+          to = "/jobs?status=failed";
+        }
         break;
       }
       case "lastSync":
         value = opsQuery.data?.lastSyncAt ? formatRelativeShort(opsQuery.data.lastSyncAt) : EMPTY;
+        tone = "small";
+        sub = "Sync jobs";
+        to = "/jobs";
         break;
       case "uptime":
         value = opsQuery.data?.uptimeSec != null ? formatUptime(opsQuery.data.uptimeSec) : EMPTY;
+        tone = "small";
         break;
     }
-    return <SummaryTile key={id} label={def.label} value={value} sub={sub} />;
+    return <SummaryTile key={id} label={def.label} value={value} sub={sub} tone={tone} trend={trend} to={to} />;
   };
 
   const { order, dragHandleFor, dragPropsFor } = usePanelOrder<PanelId>({

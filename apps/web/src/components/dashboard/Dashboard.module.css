@@ -29,6 +29,27 @@
   min-width: 0;
 }
 
+/* A tile that goes somewhere. The affordance is the hover, the arrow on the sub
+   line and the cursor — not a colour, because a permanently blue tile would
+   compete with the one tile on the row that is actually reporting trouble. */
+.summaryItemLink {
+  text-decoration: none;
+  color: inherit;
+  transition:
+    box-shadow 0.12s ease,
+    background 0.12s ease;
+}
+
+.summaryItemLink:hover {
+  background: var(--surface-header);
+  box-shadow: inset 0 0 0 1px var(--line-hover);
+}
+
+.summaryItemLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .summaryLabel {
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
@@ -64,6 +85,37 @@
   color: var(--accent-text);
 }
 
+/* For the count that is a problem rather than a measurement — failures, things
+   overdue. The number itself carries it, so the sub line is free to say which
+   one rather than spending its width on the words "needs attention". */
+.summaryValueDanger {
+  color: var(--status-error-fg);
+}
+
+/* ─── Sparkline ─────────────────────────────────────────────────────────── */
+
+/* Right-aligned on the value line, which is already a flex row and already one
+   line tall — so the trend costs no height, and the tile keeps the single
+   metric-sized number every other tile has. */
+.sparkline {
+  margin-left: auto;
+  flex-shrink: 0;
+  overflow: visible;
+  color: var(--ink-faint);
+}
+
+.sparklineLine {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sparklineHead {
+  fill: var(--accent-text);
+}
+
 /* Held open even when empty: most subs are conditional ("3 transcoding", "+12
    this week"), and a tile that grows a second line when the news arrives drags
    the row — and everything under it — down with it. */
@@ -77,6 +129,20 @@
   font-family: var(--font-sans);
   letter-spacing: 0;
   color: var(--ink-faint);
+}
+
+/* Trails the sub line rather than sitting in a corner of its own: it reads as
+   part of the sentence the sub already is ("Sync Library, 2h ago →"), and on a
+   linked tile with nothing to say it is the whole of the sub line — which is
+   still a line the tile was holding open regardless. */
+.summarySubArrow {
+  margin-left: 4px;
+  color: var(--ink-faint);
+}
+
+.summaryItemLink:hover .summarySub,
+.summaryItemLink:hover .summarySubArrow {
+  color: var(--accent-text);
 }
 
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
@@ -397,5 +463,11 @@
 
   .summaryValueSmall {
     font-size: 14px;
+  }
+
+  /* 132px of tile, most of it spoken for by the metric. The trend is the first
+     thing to go: it is the one element here that nothing else depends on. */
+  .sparkline {
+    display: none;
   }
 }

@@ -3,6 +3,7 @@ import {
   getCachedRecentlyAdded,
   getMostWatched,
   getLibraryOverview,
+  getActivitySeries,
   getActivitySummary,
   getOpsSummary,
 } from "@tinkerbell/domain.stats";
@@ -40,6 +41,9 @@ export const statsRouter = t.router({
   periods: procedure.query(() => PERIOD_DAYS),
   overview: procedure.query(() => getLibraryOverview()),
   activity: procedure.query(() => getActivitySummary()),
+  activitySeries: procedure
+    .input(z.object({ days: z.number().int().min(2).max(90) }).optional())
+    .query(({ input }) => getActivitySeries(input?.days ?? 14)),
   ops: procedure.query(() => getOpsSummary()),
 
   /**

@@ -32,7 +32,7 @@ export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const { addToast } = useToast();
-  const { featureJobs, sortKey, sortDir, toggleSort } = useJobsData();
+  const { featureJobs, statusFilter, sortKey, sortDir, toggleSort } = useJobsData();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastClickedIndex = useRef<number | null>(null);
@@ -236,7 +236,16 @@ export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
     >
       {featureJobs.length === 0 ? (
         <p className={styles.muted} style={{ padding: "16px 0" }}>
-          No features installed yet. Click <strong>+ Add Feature</strong> to pick one.
+          {/* An empty table under a filter is not an empty installation, and
+              telling someone to add their first feature when they have twelve
+              is the kind of wrong that makes people distrust the page. */}
+          {statusFilter ? (
+            <>No features match this filter.</>
+          ) : (
+            <>
+              No features installed yet. Click <strong>+ Add Feature</strong> to pick one.
+            </>
+          )}
         </p>
       ) : (
         <>

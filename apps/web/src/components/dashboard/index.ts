@@ -15,4 +15,5 @@ export {
   resolveTiles,
   type TileDef,
 } from "./TilePicker";
+export { Sparkline } from "./Sparkline";
 export { usePanelOrder } from "./usePanelOrder";

@@ -18,8 +18,10 @@ import {
   type TileDef,
 } from "#components/dashboard";
 import { EMPTY, formatDuration, formatTimeUntil } from "#/format";
+import Banner from "#components/Banner";
 import { isRunActive } from "./shared/useRunLog";
-import { useJobsData } from "./useJobsData";
+import { JOB_STATUS_FILTERS, useJobsData } from "./useJobsData";
+import styles from "./Jobs.module.css";
 import { FeaturesPanel } from "./panels/FeaturesPanel";
 import { RecentLogsPanel } from "./panels/RecentLogsPanel";
 import { RecentRunsPanel } from "./panels/RecentRunsPanel";
@@ -64,7 +66,7 @@ const TILE_REGISTRY: TileDef[] = [
 
 export default function Jobs() {
   const utils = trpc.useUtils();
-  const { jobsQuery, recentRunsQuery, rawJobs, systemJobs, featureJobs } = useJobsData();
+  const { jobsQuery, recentRunsQuery, rawJobs, systemJobs, featureJobs, statusFilter, setStatusFilter } = useJobsData();
   const upcoming = useUpcomingRuns(1);
 
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
@@ -96,7 +98,10 @@ export default function Jobs() {
 
     let value: React.ReactNode = EMPTY;
     let sub: React.ReactNode = null;
-    let tone: "small" | "accent" | undefined;
+    let tone: "small" | "accent" | "danger" | undefined;
+    // The health tiles filter the page they are already on, which is the whole
+    // of what "3 failing" wants you to do next.
+    let to: string | undefined;
 
     switch (id) {
       case "total":
@@ -120,7 +125,10 @@ export default function Jobs() {
         break;
       case "running":
         value = runningCount;
-        if (runningCount > 0) tone = "accent";
+        if (runningCount > 0) {
+          tone = "accent";
+          to = "/jobs?status=running";
+        }
         break;
       case "lastRun": {
         const last = rawJobs
@@ -148,9 +156,15 @@ export default function Jobs() {
         break;
       }
       case "failing": {
-        const n = rawJobs.filter((j) => j.lastRunStatus === "failed").length;
-        value = n;
-        if (n > 0) sub = "needs attention";
+        const failing = rawJobs.filter((j) => j.lastRunStatus === "failed");
+        value = failing.length;
+        if (failing.length > 0) {
+          tone = "danger";
+          // Which job, rather than the words "needs attention" — the tone the
+          // number is drawn in already says that much.
+          sub = failing.length === 1 ? failing[0].name : `${failing[0].name} +${failing.length - 1} more`;
+          to = "/jobs?status=failed";
+        }
         break;
       }
       case "lastFailure": {
@@ -160,14 +174,18 @@ export default function Jobs() {
         value = lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : EMPTY;
         sub = lastFailure?.name ?? null;
         tone = "small";
+        if (lastFailure) to = `/jobs/${lastFailure.id}`;
         break;
       }
-      case "neverRun":
-        value = rawJobs.filter((j) => !j.lastRunStartedAt).length;
+      case "neverRun": {
+        const n = rawJobs.filter((j) => !j.lastRunStartedAt).length;
+        value = n;
+        if (n > 0) to = "/jobs?status=never";
         break;
+      }
     }
 
-    return <SummaryTile key={id} label={def.label} value={value} sub={sub} tone={tone} />;
+    return <SummaryTile key={id} label={def.label} value={value} sub={sub} tone={tone} to={to} />;
   };
 
   const handleRefresh = () => {
@@ -202,6 +220,23 @@ export default function Jobs() {
       >
         <DashboardLayout>
           <SummaryBar>{selectedTiles.map(renderTile)}</SummaryBar>
+
+          {/* Arriving here from the Stats tile lands on a filtered page, and a
+              job table that is quietly missing most of its rows reads as a bug.
+              Say what is being withheld, and offer the way out. */}
+          {statusFilter && (
+            <Banner
+              variant="info"
+              actions={
+                <button type="button" className={styles.headerBtn} onClick={() => setStatusFilter(null)}>
+                  Show all
+                </button>
+              }
+            >
+              Showing {systemJobs.length + featureJobs.length} of {rawJobs.length} jobs{" "}
+              {JOB_STATUS_FILTERS[statusFilter].label}.
+            </Banner>
+          )}
 
           <DashboardGrid>
             {order.map((id, i) => {

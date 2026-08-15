@@ -174,9 +174,42 @@ export function getActivitySummary(now: number = Date.now()): {
   };
 }
 
+/**
+ * Plays per day, oldest first, the last entry being today so far.
+ *
+ * Bucketed by integer division from local midnight rather than SQLite's
+ * `date()`, which buckets by UTC and would cut the day in the wrong place for
+ * anyone west of Greenwich. The boundaries are therefore fixed 24h steps: a DST
+ * change inside the window shifts one of them by an hour, which is invisible in
+ * a sparkline and not worth a per-row timezone conversion.
+ */
+export function getActivitySeries(days: number, now: number = Date.now()): number[] {
+  const start = new Date(now).setHours(0, 0, 0, 0) - (days - 1) * DAY_MS;
+  const rows = db
+    .select({
+      bucket: sql<number>`cast((${playbackSessions.startedAt} - ${start}) / ${DAY_MS} as integer)`,
+      plays: sql<number>`count(*)`,
+    })
+    .from(playbackSessions)
+    .where(gte(playbackSessions.startedAt, start))
+    .groupBy(sql`1`)
+    .all();
+
+  const series: number[] = Array.from({ length: days }, () => 0);
+  for (const row of rows) {
+    if (row.bucket >= 0 && row.bucket < days) series[row.bucket] = row.plays;
+  }
+  return series;
+}
+
 // ─── Operational summary (failed jobs, last sync, uptime) ───────────────────
 
-export function getOpsSummary(): { failedJobs24h: number; lastSyncAt: number | null; uptimeSec: number } {
+export function getOpsSummary(): {
+  failedJobs24h: number;
+  lastFailure: { jobId: string; name: string; startedAt: number } | null;
+  lastSyncAt: number | null;
+  uptimeSec: number;
+} {
   const dayCutoff = Date.now() - DAY_MS;
   const failedJobs24h =
     db
@@ -185,6 +218,18 @@ export function getOpsSummary(): { failedJobs24h: number; lastSyncAt: number | n
       .where(and(eq(jobRuns.status, "failed"), gte(jobRuns.startedAt, dayCutoff)))
       .get()?.count ?? 0;
 
+  // A count on its own says something is wrong without saying what. The most
+  // recent failure names the job, which is the whole of what the dashboard can
+  // usefully say before you click through.
+  const lastFailureRow = db
+    .select({ jobId: jobRuns.jobId, name: jobs.name, startedAt: jobRuns.startedAt })
+    .from(jobRuns)
+    .leftJoin(jobs, eq(jobs.id, jobRuns.jobId))
+    .where(and(eq(jobRuns.status, "failed"), gte(jobRuns.startedAt, dayCutoff)))
+    .orderBy(sql`${jobRuns.startedAt} desc`)
+    .limit(1)
+    .get();
+
   const lastSyncRow = db
     .select({ updatedAt: sql<number>`max(${statsCache.updatedAt})` })
     .from(statsCache)
@@ -192,6 +237,13 @@ export function getOpsSummary(): { failedJobs24h: number; lastSyncAt: number | n
 
   return {
     failedJobs24h,
+    lastFailure: lastFailureRow
+      ? {
+          jobId: lastFailureRow.jobId,
+          name: lastFailureRow.name ?? lastFailureRow.jobId,
+          startedAt: lastFailureRow.startedAt,
+        }
+      : null,
     lastSyncAt: lastSyncRow?.updatedAt ?? null,
     uptimeSec: Math.floor((Date.now() - PROCESS_STARTED_AT_MS) / 1000),
   };
