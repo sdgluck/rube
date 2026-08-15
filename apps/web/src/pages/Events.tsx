@@ -13,6 +13,7 @@ import RelativeTime from "#components/RelativeTime";
 import SortableTh from "#components/SortableTh";
 import { formatDuration } from "#/format";
 import { stripDurationFromMessage } from "#/utils";
+import SearchInput from "#components/SearchInput";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Events.module.css";
 
@@ -90,13 +91,11 @@ export default function Events() {
         }
       >
         <div className={sharedStyles.filters}>
-          <input
-            type="text"
-            className={sharedStyles.searchInput}
+          <SearchInput
             placeholder="Search events…"
-            aria-label="Search events"
+            ariaLabel="Search events"
             value={search}
-            onChange={(e) => setParam("q", e.target.value)}
+            onChange={(v) => setParam("q", v)}
           />
           <MultiSelect
             allLabel="All types"

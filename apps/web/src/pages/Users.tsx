@@ -12,6 +12,7 @@ import { useListParams } from "#hooks/useListParams";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import { formatRuntime } from "#/format";
+import SearchInput from "#components/SearchInput";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Users.module.css";
 
@@ -151,13 +152,11 @@ export default function Users() {
       ) : (
         <>
           <div className={sharedStyles.filters}>
-            <input
-              type="text"
-              className={sharedStyles.searchInput}
+            <SearchInput
               placeholder="Search users…"
-              aria-label="Search users"
+              ariaLabel="Search users"
               value={search}
-              onChange={(e) => setParam("q", e.target.value)}
+              onChange={(v) => setParam("q", v)}
             />
             <button
               className={sharedStyles.buttonSecondary}

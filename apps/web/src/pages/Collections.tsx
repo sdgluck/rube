@@ -23,6 +23,7 @@ import PullToRefresh from "#components/PullToRefresh";
 import PageShell from "#components/PageShell";
 import { readEnumStorage, writeStorage } from "#/storage";
 import { errorMessage } from "#/utils";
+import SearchInput from "#components/SearchInput";
 import styles from "#/styles/shared.module.css";
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
@@ -346,13 +347,11 @@ export default function Collections() {
         )}
 
         <div className={styles.filters}>
-          <input
-            type="text"
-            className={styles.searchInput}
+          <SearchInput
             placeholder="Search collections…"
-            aria-label="Search collections"
+            ariaLabel="Search collections"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
           />
           <MultiSelect
             allLabel="All sections"

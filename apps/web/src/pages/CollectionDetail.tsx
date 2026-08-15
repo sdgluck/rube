@@ -12,6 +12,7 @@ import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
 import { readEnumStorage, writeStorage } from "#/storage";
+import SearchInput from "#components/SearchInput";
 import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer, SmartFilterSummary } from "#components/SmartFiltersEditor";
 
@@ -305,13 +306,7 @@ export default function CollectionDetail() {
             {filteredItems.length !== items.length ? ` of ${items.length}` : ""})
           </span>
           <span className={styles.itemsToolbarSpacer} />
-          <input
-            type="text"
-            className={styles.itemSearch}
-            placeholder="Search items…"
-            value={itemSearch}
-            onChange={(e) => setItemSearch(e.target.value)}
-          />
+          <SearchInput placeholder="Search items…" value={itemSearch} onChange={setItemSearch} />
           <div className={styles.viewToggle}>
             <button
               className={`${styles.viewToggleBtn} ${itemsView === "table" ? styles.viewToggleBtnActive : ""}`}

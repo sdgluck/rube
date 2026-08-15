@@ -15,6 +15,7 @@ import { useListParams } from "#hooks/useListParams";
 import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { readEnumStorage, writeStorage } from "#/storage";
+import SearchInput from "#components/SearchInput";
 import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
 
@@ -432,13 +433,11 @@ export default function Media() {
   return (
     <PageShell count={total > 0 ? total.toLocaleString() : undefined}>
       <div className={styles.filters}>
-        <input
-          type="text"
-          className={styles.searchInput}
+        <SearchInput
           placeholder="Search media…"
-          aria-label="Search media"
+          ariaLabel="Search media"
           value={search}
-          onChange={(e) => setParam("q", e.target.value)}
+          onChange={(v) => setParam("q", v)}
         />
         <MultiSelect
           allLabel="All sections"

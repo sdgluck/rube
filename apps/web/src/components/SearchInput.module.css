@@ -1,0 +1,56 @@
+/* 236px was already the majority width (Events, Users, Media, Collections);
+   CollectionDetail's 220px and the Rules toolbar's flexible 220–320px were the
+   outliers. Wide enough for "Search collections…" without truncating. */
+.wrap {
+  position: relative;
+  width: 236px;
+  flex-shrink: 0;
+}
+
+/* For a toolbar that wants the field to take the slack instead. */
+.grow {
+  width: auto;
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.input {
+  composes: input inputSm inputSearch from "../styles/controls.module.css";
+  width: 100%;
+}
+
+/* Room for the clear button, so a long query doesn't run underneath it. */
+.input:not(:placeholder-shown) {
+  padding-right: 28px;
+}
+
+.clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.clear:hover {
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    width: auto;
+    flex: 1;
+  }
+}
