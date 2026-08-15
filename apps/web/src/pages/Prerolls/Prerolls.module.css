@@ -29,13 +29,13 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .dropzoneHint {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .dropzoneButton {
@@ -56,7 +56,7 @@
 }
 
 .dropzoneButton:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .uploadList {
@@ -80,7 +80,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .uploadError {
@@ -90,7 +90,7 @@
 
 .uploadPercent {
   text-align: right;
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
@@ -98,7 +98,7 @@
   display: block;
   height: 4px;
   border-radius: var(--r-pill);
-  background: #eff2f1;
+  background: var(--fill-track);
   overflow: hidden;
 }
 
@@ -119,16 +119,16 @@
   margin-top: 20px;
 }
 
-.card {
+.prerollCard {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--line);
   border-radius: var(--r-card);
-  background: var(--bg-surface);
+  background: var(--surface);
   overflow: hidden;
 }
 
-.card[draggable="true"] {
+.prerollCard[draggable="true"] {
   cursor: grab;
 }
 
@@ -137,14 +137,14 @@
   box-shadow: var(--input-focus-ring);
 }
 
-.card[data-status="failed"] {
+.prerollCard[data-status="failed"] {
   border-color: var(--status-error-dot);
 }
 
 .cardThumb {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: var(--card-poster-bg);
+  background: var(--surface-poster);
   cursor: pointer;
 }
 
@@ -159,7 +159,7 @@
   width: 100%;
   height: 100%;
   /* A slow shimmer reads as "working on it" without needing a spinner. */
-  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--bg-surface-hover) 50%, var(--bg-muted) 75%);
+  background: linear-gradient(90deg, var(--fill-quiet) 25%, var(--surface-sunken) 50%, var(--fill-quiet) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;
 }
@@ -182,8 +182,8 @@
   bottom: 6px;
   padding: 2px 6px;
   border-radius: var(--r-tag);
-  background: rgba(19, 28, 27, 0.72);
-  color: #fff;
+  background: color-mix(in srgb, var(--shade) 72%, transparent);
+  color: var(--on-accent);
   font: 600 8.5px/1.4 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -223,7 +223,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--text-primary);
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 600;
   text-align: left;
@@ -243,7 +243,7 @@
 }
 
 .cardStatus[data-tone="busy"] {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .cardStatus[data-tone="error"] {
@@ -305,7 +305,7 @@
   align-items: baseline;
   gap: 5px;
   font-size: 12.5px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .modeToggle {
@@ -331,12 +331,12 @@
 }
 
 .modeButton:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .modeButtonActive {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .syncStatus {
@@ -351,7 +351,7 @@
 }
 
 .syncStatus[data-tone="warn"] {
-  color: var(--text-warn);
+  color: var(--status-warn-fg);
 }
 
 .syncStatus[data-tone="error"] {
@@ -364,6 +364,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: var(--r-md);
+  /* stylelint-disable-next-line color-no-hex -- letterbox behind a video, black in every theme */
   background: #000;
   margin-bottom: 16px;
 }
@@ -372,8 +373,8 @@
   margin: 0 0 16px;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  background: var(--bg-muted);
-  color: var(--text-secondary);
+  background: var(--fill-quiet);
+  color: var(--ink-2);
   font-size: 12.5px;
 }
 
@@ -387,7 +388,7 @@
   margin-bottom: 5px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .fieldRow {
@@ -411,13 +412,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .metaGrid dd {
   margin: 2px 0 0;
   font-size: 12.5px;
-  color: var(--text-primary);
+  color: var(--ink);
   word-break: break-word;
 }
 
@@ -425,21 +426,21 @@
   margin-bottom: 16px;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  background: var(--bg-muted);
+  background: var(--fill-quiet);
 }
 
 .reasonsTitle {
   margin: 0 0 6px;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .reasons ul {
   margin: 0;
   padding-left: 18px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .detailActions {
@@ -453,7 +454,7 @@
 .scanEmpty {
   margin: 0;
   font-size: 12.5px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .scanAll {
@@ -464,7 +465,7 @@
   border-bottom: 1px solid var(--line);
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   cursor: pointer;
 }
 
@@ -489,18 +490,18 @@
 }
 
 .scanRow:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .scanName {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .scanSize {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font: 400 11px/1.4 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }

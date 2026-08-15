@@ -110,7 +110,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
       {inline.map((action) => {
         const Icon = action.icon;
         const classes = [
-          styles.btn,
+          styles.trigger,
           action.primary ? styles.btnPrimary : "",
           action.active ? styles.btnActive : "",
           action.danger ? styles.btnDanger : "",
@@ -137,7 +137,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
           <button
             ref={buttonRef}
             type="button"
-            className={`${styles.btn} ${open ? styles.btnActive : ""}`}
+            className={`${styles.trigger} ${open ? styles.btnActive : ""}`}
             aria-label={label}
             aria-haspopup="menu"
             aria-expanded={open}

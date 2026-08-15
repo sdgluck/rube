@@ -81,7 +81,7 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
+      <div className={styles.loginCard}>
         <h1 className={styles.title}>Tinkerbell</h1>
         <p className={styles.lede}>
           {finishing

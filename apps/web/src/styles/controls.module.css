@@ -43,7 +43,7 @@
 .btn:disabled {
   background: var(--surface);
   color: var(--ink-faint);
-  border-color: #e8ecec;
+  border-color: var(--line-soft);
   cursor: not-allowed;
 }
 
@@ -52,7 +52,7 @@
 /* One per view. */
 .btnPrimary {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
   border-color: transparent;
 }
 
@@ -67,7 +67,7 @@
 }
 
 .btnSecondary:hover:not(:disabled) {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
 }
 
 .btnGhost {
@@ -84,7 +84,7 @@
 /* Named for what it destroys, and solid — the confirm-dialog commit. */
 .btnDanger {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--danger);
 }
 
@@ -104,7 +104,7 @@
 .btnDangerOutline:hover:not(:disabled) {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* Size modifier — type and horizontal padding only. Height is --control-h for
@@ -133,8 +133,8 @@
 .btnSpinner {
   width: 11px;
   height: 11px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border: 2px solid color-mix(in srgb, var(--on-accent) 35%, transparent);
+  border-top-color: var(--on-accent);
   border-radius: 50%;
   animation: btnSpin 0.8s linear infinite;
   flex-shrink: 0;
@@ -144,7 +144,7 @@
 .btnSecondary .btnSpinner,
 .btnGhost .btnSpinner,
 .btnDangerOutline .btnSpinner {
-  border-color: rgba(19, 28, 27, 0.18);
+  border-color: color-mix(in srgb, var(--shade) 18%, transparent);
   border-top-color: var(--accent);
 }
 
@@ -161,10 +161,10 @@
 .textarea {
   box-sizing: border-box;
   padding: var(--input-pad-y) var(--input-pad-x);
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--line);
   border-radius: var(--input-radius);
-  background: var(--bg-input);
-  color: var(--text-primary);
+  background: var(--surface);
+  color: var(--ink);
   font-size: var(--input-font-size);
   font-family: var(--font-sans);
   line-height: 1.4;
@@ -190,7 +190,7 @@
 .input:hover:not(:disabled):not(:focus),
 .select:hover:not(:disabled):not(:focus),
 .textarea:hover:not(:disabled):not(:focus) {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
 }
 
 .input:focus,
@@ -224,8 +224,8 @@
 .inputError,
 .inputError:hover:not(:disabled):not(:focus) {
   border-color: var(--danger-line);
-  background: #fffbfb;
-  box-shadow: 0 0 0 3px rgba(176, 51, 44, 0.1);
+  background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 /* Select chevron */
@@ -314,13 +314,13 @@
 
 .segmentedItemActive {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* "Raised": the active item lifts onto white over a darker trough. Used where
    the control is navigation rather than a value — the Settings sub-navs. */
 .segmentedRaised {
-  background: #e4e9e8;
+  background: var(--fill-track);
   border-color: transparent;
 }
 
@@ -335,19 +335,6 @@
 
 /* ─── Toggle ──────────────────────────────────────────────────────────── */
 
-.toggle {
-  appearance: none;
-  position: relative;
-  width: 32px;
-  height: 18px;
-  border: none;
-  border-radius: var(--r-pill);
-  background: #cfd8d7;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
 /* The knob squares off with the track rather than staying a circle. It is not
    a true circle like the radio or the spinner — it is the moving part of a
    rectangular control, and a round knob sliding inside a 2px-cornered track
@@ -361,7 +348,7 @@
   width: 14px;
   height: 14px;
   border-radius: var(--r-tag);
-  background: #fff;
+  background: var(--on-accent);
   transition: transform 0.15s;
 }
 
@@ -376,12 +363,6 @@
 .toggle:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-/* The compact variant used inside cards. */
-.toggleSm {
-  width: 28px;
-  height: 16px;
 }
 
 .toggleSm::after {
@@ -409,8 +390,8 @@
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  border: 1.5px solid #cfd8d7;
-  background: #fff;
+  border: 1.5px solid var(--fill-inert);
+  background: var(--on-accent);
   cursor: pointer;
   flex-shrink: 0;
   transition: border 0.15s;

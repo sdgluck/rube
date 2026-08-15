@@ -1,5 +1,5 @@
 .intro {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.55;
   margin: 0 0 20px;
@@ -36,7 +36,7 @@
 
 .switchHint,
 .hint {
-  color: var(--text-muted);
+  color: var(--ink-3);
   display: block;
   font-size: 12px;
   line-height: 1.5;
@@ -58,7 +58,7 @@
 }
 
 .queueLine {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 12.5px;
   margin: 0 0 20px;
 }

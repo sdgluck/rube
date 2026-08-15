@@ -15,7 +15,7 @@
   align-items: flex-end;
   gap: 16px;
   padding: 16px;
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
   border-radius: var(--r-md);
   margin-bottom: 24px;
   flex-wrap: wrap;
@@ -30,7 +30,7 @@
 .formGroup label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -38,11 +38,11 @@
 .formGroup select,
 .formGroup input {
   padding: 8px 12px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   font-size: 13px;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .activeBanner {
@@ -50,8 +50,8 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: var(--bg-bulk);
-  border: 1px solid var(--bulk-border);
+  background: var(--accent-soft);
+  border: 1px solid var(--line-accent);
   border-radius: var(--r-md);
   margin-bottom: 24px;
 }
@@ -63,7 +63,7 @@
 }
 
 .bannerProgress {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 12.5px;
 }
 
@@ -71,7 +71,7 @@
   flex: 1;
   max-width: 200px;
   height: 6px;
-  background: var(--border-color);
+  background: var(--line);
   border-radius: var(--r-tag);
   overflow: hidden;
 }
@@ -86,14 +86,14 @@
 .resultCard {
   text-align: center;
   padding: 32px;
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
   border-radius: var(--r-card);
   margin-bottom: 24px;
 }
 
 .resultLabel {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -102,14 +102,14 @@
 .resultNumber {
   font-size: 34px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--ink);
   line-height: 1;
 }
 
 .resultUnit {
   font-size: 14px;
   font-weight: 400;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   margin-left: 4px;
 }
 
@@ -126,8 +126,8 @@
   border-radius: var(--r-card);
   font-size: 12px;
   font-weight: 600;
-  background: var(--bg-badge);
-  color: var(--text-badge);
+  background: var(--fill-quiet);
+  color: var(--ink-2);
 }
 
 /* This page used to carry its own near-copy of the list table — 32px header,
@@ -190,14 +190,11 @@ tr.stepFailed td {
 }
 
 .emptyState {
-  text-align: center;
-  padding: 40px;
-  color: var(--text-muted);
-  font-size: 13px;
+  composes: emptyState from "../styles/shared.module.css";
 }
 
 .duration {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 12.5px;
 }
 
@@ -206,9 +203,9 @@ tr.stepFailed td {
 }
 
 .logViewer {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  background: var(--sidebar);
+  color: var(--on-dark-2);
+  font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
   padding: 16px;
@@ -221,5 +218,5 @@ tr.stepFailed td {
 }
 
 .speedNone {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }

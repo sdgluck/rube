@@ -37,13 +37,13 @@
 }
 
 .success {
-  background: var(--bg-success);
-  color: var(--text-success);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .error {
-  background: var(--bg-error);
-  color: var(--text-error);
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .button {
@@ -139,7 +139,7 @@
 .pageTabCount {
   margin-left: 6px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .pageTabActive .pageTabCount {
@@ -393,19 +393,6 @@
   margin-bottom: 12px;
 }
 
-.filterChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  color: var(--ink-2);
-  font-size: 11.5px;
-  white-space: nowrap;
-}
-
 .filterChipRemove {
   background: none;
   border: none;
@@ -435,7 +422,7 @@
   border-radius: var(--r-md);
   box-shadow: var(--e-inverse);
   margin-bottom: 12px;
-  color: #e6f2f0;
+  color: var(--on-inverse);
 }
 
 .bulkCount {
@@ -443,7 +430,7 @@
   z-index: 1;
   font-size: 12.5px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .bulkProgressBar {
@@ -456,7 +443,7 @@
 
 .bulkProgressFill {
   height: 100%;
-  background: rgba(18, 134, 124, 0.4);
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
   transition: width 0.2s ease;
 }
 
@@ -464,7 +451,7 @@
   position: relative;
   z-index: 1;
   font: var(--t-data);
-  color: rgba(230, 242, 240, 0.7);
+  color: color-mix(in srgb, var(--on-inverse) 70%, transparent);
 }
 
 .bulkSpacer {
@@ -481,19 +468,19 @@
 
 .bulkBtn {
   composes: btn btnSm from "./controls.module.css";
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--on-dark-line);
+  color: var(--on-accent);
   border-color: transparent;
 }
 
 .bulkBtn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--on-dark-fill-2);
 }
 
 .bulkBtnDanger {
   composes: btn btnSm from "./controls.module.css";
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   border-color: transparent;
 }
 
@@ -504,13 +491,13 @@
 .bulkBtnClear {
   composes: btn btnSm from "./controls.module.css";
   background: transparent;
-  color: rgba(230, 242, 240, 0.7);
+  color: color-mix(in srgb, var(--on-inverse) 70%, transparent);
   border-color: transparent;
 }
 
 .bulkBtnClear:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: color-mix(in srgb, var(--on-accent) 8%, transparent);
+  color: var(--on-accent);
 }
 
 .checkboxCell {
@@ -643,7 +630,7 @@
   width: 100%;
   aspect-ratio: 2 / 3;
   object-fit: cover;
-  background: var(--card-poster-bg);
+  background: var(--surface-poster);
   display: block;
   border-radius: var(--r-md);
 }
@@ -652,7 +639,7 @@
 .cardPosterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: repeating-linear-gradient(135deg, #e8edec 0 8px, #e0e7e6 8px 16px);
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 8px, var(--checker-b) 8px 16px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -725,7 +712,7 @@
 .detailPosterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: repeating-linear-gradient(135deg, #e8edec 0 8px, #e0e7e6 8px 16px);
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 8px, var(--checker-b) 8px 16px);
   border-radius: var(--r-sunken);
   display: flex;
   align-items: center;
@@ -834,7 +821,7 @@
 
 .stickySaveLabel {
   font-size: 12.5px;
-  color: rgba(230, 242, 240, 0.7);
+  color: color-mix(in srgb, var(--on-inverse) 70%, transparent);
   font-weight: 500;
 }
 
@@ -887,7 +874,12 @@
 .cardOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(19, 28, 27, 0.88) 0%, rgba(19, 28, 27, 0.55) 35%, rgba(19, 28, 27, 0) 70%);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--shade) 88%, transparent) 0%,
+    color-mix(in srgb, var(--shade) 55%, transparent) 35%,
+    color-mix(in srgb, var(--shade) 0%, transparent) 70%
+  );
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -905,7 +897,7 @@
 .cardOverlayTitle {
   font-size: 12.5px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
   line-height: 1.25;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -916,7 +908,7 @@
 .cardOverlayMeta {
   font: var(--t-data);
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--on-accent) 78%, transparent);
   margin-top: 2px;
 }
 
@@ -1090,7 +1082,7 @@
 
 .metaChipLink:hover {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .ruleLink {
@@ -1175,7 +1167,7 @@
 .advancedFilterToggleActive,
 .advancedFilterToggleActive:hover:not(:disabled) {
   background: var(--accent-soft);
-  border-color: #b9e0d9;
+  border-color: var(--line-accent);
   color: var(--accent-ink);
 }
 
@@ -1187,7 +1179,7 @@
   border-radius: var(--r-pill);
   font: 600 10px/1.4 var(--font-mono);
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .advancedFilters {

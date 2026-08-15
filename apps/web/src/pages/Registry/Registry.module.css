@@ -1,5 +1,5 @@
 .intro {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 0.92rem;
   margin-bottom: 20px;
   max-width: 76ch;
@@ -25,12 +25,12 @@
   gap: 16px;
 }
 
-.card {
+.packCard {
   display: flex;
   flex-direction: column;
   text-align: left;
   padding: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--r-card);
   background: var(--surface);
   cursor: pointer;
@@ -39,12 +39,12 @@
     background 0.15s ease;
 }
 
-.card:hover {
+.packCard:hover {
   border-color: var(--accent);
   background: var(--surface-sunken);
 }
 
-.card h2 {
+.packCard h2 {
   font: var(--t-card);
   margin: 0;
 }
@@ -58,7 +58,7 @@
 
 .body {
   margin-top: 10px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 0.88rem;
   flex: 1;
 }
@@ -76,8 +76,8 @@
   font-size: 0.74rem;
   padding: 3px 9px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
   white-space: nowrap;
 }
 
@@ -91,13 +91,13 @@
 .type {
   font: var(--t-data);
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 /* ─── Pack detail ────────────────────────────────────────────────────── */
 
 .packBody {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 0.92rem;
   margin-bottom: 20px;
 }
@@ -114,7 +114,7 @@
   gap: 12px;
   align-items: flex-start;
   padding: 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--r-card);
   cursor: pointer;
 }
@@ -135,7 +135,7 @@
 }
 
 .ruleDesc {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 0.86rem;
 }
 
@@ -152,7 +152,7 @@
 .step + .step {
   margin-top: 28px;
   padding-top: 24px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .step h3 {
@@ -161,7 +161,7 @@
 }
 
 .stepHint {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 0.85rem;
   margin-bottom: 14px;
   display: flex;
@@ -180,7 +180,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--r-pill);
   cursor: pointer;
   font-size: 0.88rem;
@@ -194,30 +194,30 @@
 .sectionType {
   font: var(--t-data);
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .notice {
   padding: 12px 14px;
   border-radius: var(--r-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   font-size: 0.86rem;
   margin-bottom: 12px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .notice[data-tone="warn"] {
-  border-color: color-mix(in srgb, var(--warn, #b8860b) 45%, var(--border));
-  background: color-mix(in srgb, var(--warn, #b8860b) 8%, transparent);
+  border-color: color-mix(in srgb, var(--status-warn-dot) 45%, var(--line));
+  background: color-mix(in srgb, var(--status-warn-dot) 8%, transparent);
 }
 
 .notice[data-tone="ok"] {
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .notice strong {
-  color: var(--ink, var(--text-primary));
+  color: var(--ink, var(--ink));
 }
 
 .warnList {
@@ -234,7 +234,7 @@
 }
 
 .warn {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 0.86rem;
 }
 
@@ -252,7 +252,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
 }
 
@@ -274,7 +274,7 @@
 .footerCount {
   font: var(--t-data);
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .enableRow {
@@ -291,7 +291,7 @@
 }
 
 .enableHint {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 0.78rem;
 }
 
@@ -317,7 +317,7 @@
   width: 84px;
   flex: none;
   padding: 6px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface, transparent);
   color: inherit;

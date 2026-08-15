@@ -27,7 +27,7 @@
 }
 
 .step.stepClickable:hover .stepLabel {
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .stepDot {
@@ -48,12 +48,12 @@
 
 .step.stepActive .stepDot {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .step.stepDone .stepDot {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
   opacity: 0.75;
 }
 
@@ -73,7 +73,7 @@
 .stepSep {
   flex: 1;
   height: 1px;
-  background: #e8ecec;
+  background: var(--line-soft);
   min-width: 8px;
 }
 
@@ -127,12 +127,12 @@
     background 0.15s,
     transform 0.1s;
   font: inherit;
-  color: var(--text-primary);
+  color: var(--ink);
   position: relative;
 }
 
 .typeCard:hover:not(:disabled) {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
 }
 
 .typeCard:active:not(:disabled) {
@@ -276,7 +276,7 @@
 }
 
 .pill:hover:not(:disabled) {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
   color: var(--ink);
 }
 
@@ -318,7 +318,7 @@
 }
 
 .chip:hover:not(:disabled) {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
   color: var(--ink);
 }
 
@@ -425,8 +425,8 @@
 
 .outcomeCard {
   align-items: flex-start;
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   cursor: pointer;
   display: flex;
@@ -448,7 +448,7 @@
 }
 
 .outcomeCardBody {
-  color: var(--text-muted);
+  color: var(--ink-3);
   display: block;
   font-size: 12px;
   margin-top: 2px;

@@ -80,7 +80,7 @@ export function Inspector({
 
       <Section title="Label">
         <input
-          className={styles.input}
+          className={styles.fieldInput}
           placeholder={overlay?.sample ?? ""}
           value={labelDraft}
           onChange={(e) => setLabelDraft(e.target.value)}
@@ -99,11 +99,11 @@ export function Inspector({
       </Section>
 
       <Section title="Font size">
-        <div className={styles.segmented}>
+        <div className={styles.modeSwitch}>
           {FONT_SIZE_OPTIONS.map((s) => (
             <button
               key={s.id}
-              className={`${styles.segmentedBtn} ${(style.fontSize ?? "md") === s.id ? styles.segmentedActive : ""}`}
+              className={`${styles.modeSwitchBtn} ${(style.fontSize ?? "md") === s.id ? styles.modeSwitchActive : ""}`}
               onClick={() => onPatchStyle({ fontSize: s.id })}
             >
               {s.label}
@@ -113,11 +113,11 @@ export function Inspector({
       </Section>
 
       <Section title="Shape">
-        <div className={styles.segmented}>
+        <div className={styles.modeSwitch}>
           {SHAPE_OPTIONS.map((s) => (
             <button
               key={s.id}
-              className={`${styles.segmentedBtn} ${(style.shape ?? "rounded") === s.id ? styles.segmentedActive : ""}`}
+              className={`${styles.modeSwitchBtn} ${(style.shape ?? "rounded") === s.id ? styles.modeSwitchActive : ""}`}
               onClick={() => onPatchStyle({ shape: s.id })}
               title={s.label}
             >

@@ -36,7 +36,7 @@ export default function SortableTh<K extends string>({
       className={`${styles.th} ${className ?? ""}`}
       aria-sort={active ? (activeDir === "asc" ? "ascending" : "descending") : "none"}
     >
-      <button type="button" className={styles.button} onClick={() => onSort(sortKey)}>
+      <button type="button" className={styles.sortBtn} onClick={() => onSort(sortKey)}>
         <span>{children}</span>
         <span className={active ? styles.arrowActive : styles.arrow} aria-hidden="true">
           {active ? (activeDir === "asc" ? "▲" : "▼") : "▾"}

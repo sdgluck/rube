@@ -15,7 +15,7 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.input {
+.queryInput {
   width: 100%;
   padding: 12px 14px;
   border: none;
@@ -31,14 +31,14 @@
   border-radius: var(--input-radius);
 }
 
-.input:focus-visible {
+.queryInput:focus-visible {
   outline: 2px solid var(--accent);
   /* Hugs the field: at the default +2px the ring would collide with the
      wrapper's 6px padding and the panel's rounded top edge. */
   outline-offset: -1px;
 }
 
-.input::placeholder {
+.queryInput::placeholder {
   color: var(--ink-faint);
 }
 

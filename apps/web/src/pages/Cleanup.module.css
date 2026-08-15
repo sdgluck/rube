@@ -10,16 +10,16 @@
 }
 
 .intro {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.55;
   margin: 0 0 16px;
   max-width: 70ch;
 }
 
-.toggle {
+.actionedToggle {
   align-items: center;
-  color: var(--text-muted);
+  color: var(--ink-3);
   display: flex;
   font-size: 12.5px;
   gap: 6px;
@@ -43,7 +43,7 @@
 }
 
 .statusWaiting {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .statusHeld {
@@ -51,7 +51,7 @@
 }
 
 .statusActioned {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-style: italic;
 }
 

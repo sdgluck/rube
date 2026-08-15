@@ -4,7 +4,7 @@
   padding: 0 !important;
 }
 
-.button {
+.sortBtn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -23,11 +23,11 @@
   user-select: none;
 }
 
-.button:hover {
+.sortBtn:hover {
   color: var(--accent-text);
 }
 
-.button:focus-visible {
+.sortBtn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
@@ -39,7 +39,7 @@
   transition: opacity 0.12s;
 }
 
-.button:hover .arrow {
+.sortBtn:hover .arrow {
   opacity: 0.45;
 }
 

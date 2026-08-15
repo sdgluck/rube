@@ -187,7 +187,7 @@ export default function SettingsPlex() {
                 <label key={s.key} className={styles.libraryItem}>
                   <input
                     type="checkbox"
-                    className={styles.toggle}
+                    className={styles.checkbox}
                     checked={selectedLibraries.includes(s.title)}
                     onChange={() => toggleLibrary(s.title)}
                   />

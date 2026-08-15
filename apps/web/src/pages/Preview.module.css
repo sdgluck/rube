@@ -1,5 +1,12 @@
 /* ─── Preview page — styled to closely mirror the Plex web app ───────────── */
 
+/* stylelint-disable color-no-hex, function-disallowed-list, scale-unlimited/declaration-strict-value --
+   This page is a facsimile of the Plex web client: the point of it is that a
+   collection looks here exactly as it will look there. Its greys, its gold and
+   its type stack are Plex's, so they are literals on purpose — putting them in
+   App.css would imply the rest of the app may use them, and it may not. The
+   tokens that ARE ours (--sidebar, --plex, --on-dark, --r-*) are used where the
+   two happen to agree. */
 /* The whole stage is Plex's: dark inside a panel, so the chrome gets out of
  * the way and the posters dominate. */
 .page {
@@ -7,7 +14,7 @@
   display: flex;
   flex-direction: column;
   gap: 30px;
-  color: #f2f6f5;
+  color: var(--on-dark);
   background: var(--sidebar);
   border-radius: var(--r-panel);
   box-shadow: var(--e-card);
@@ -33,7 +40,7 @@
   align-items: center;
   padding: 3px 8px;
   border-radius: var(--r-tag);
-  background: rgba(229, 160, 13, 0.16);
+  background: var(--plex-soft);
   color: var(--plex);
   font: 600 10px/1.3 var(--font-mono);
   letter-spacing: 0.1em;
@@ -74,7 +81,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--on-accent);
   letter-spacing: -0.01em;
 }
 
@@ -85,9 +92,9 @@
   font-weight: 600;
   padding: 3px 8px;
   border-radius: var(--r-tag);
-  background: rgba(229, 160, 13, 0.15);
-  color: #e5a00d;
-  border: 1px solid rgba(229, 160, 13, 0.3);
+  background: color-mix(in srgb, var(--plex) 15%, transparent);
+  color: var(--plex);
+  border: 1px solid color-mix(in srgb, var(--plex) 30%, transparent);
 }
 
 .userPicker {
@@ -101,7 +108,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--on-accent) 50%, transparent);
 }
 
 .shuffleBtn {
@@ -124,7 +131,7 @@
 }
 
 .shuffleBtn:hover:not(:disabled) {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
 }
 
 .shuffleBtn:disabled {
@@ -134,14 +141,14 @@
 
 .userSelect {
   padding: 7px 28px 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--on-dark-line);
   border-radius: var(--r-tag);
   background:
-    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.5) 50%) calc(100% - 12px) calc(50% - 2px) / 5px 5px
-      no-repeat,
-    linear-gradient(135deg, rgba(255, 255, 255, 0.5) 50%, transparent 50%) calc(100% - 7px) calc(50% - 2px) / 5px 5px
-      no-repeat,
-    rgba(255, 255, 255, 0.04);
+    linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--on-accent) 50%, transparent) 50%) calc(100% - 12px)
+      calc(50% - 2px) / 5px 5px no-repeat,
+    linear-gradient(135deg, color-mix(in srgb, var(--on-accent) 50%, transparent) 50%, transparent 50%) calc(100% - 7px)
+      calc(50% - 2px) / 5px 5px no-repeat,
+    color-mix(in srgb, var(--on-accent) 4%, transparent);
   color: #eee;
   font-size: 12.5px;
   min-width: 200px;
@@ -153,12 +160,12 @@
 }
 
 .userSelect:hover {
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: color-mix(in srgb, var(--on-accent) 25%, transparent);
 }
 
 .userSelect:focus {
   outline: none;
-  border-color: #e5a00d;
+  border-color: var(--plex);
 }
 
 .userSelect option {
@@ -175,7 +182,7 @@
   padding: 11px 13px;
   border: none;
   border-radius: var(--r-sunken);
-  background: rgba(229, 160, 13, 0.12);
+  background: color-mix(in srgb, var(--plex) 12%, transparent);
   color: #f0d9a4;
   font-size: 12.5px;
 }
@@ -192,7 +199,7 @@
   margin: 0;
   font-size: 14.5px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
   letter-spacing: -0.012em;
   display: flex;
   align-items: center;
@@ -206,7 +213,7 @@
   margin-left: auto;
   font: var(--t-data);
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
+  color: color-mix(in srgb, var(--on-accent) 35%, transparent);
 }
 
 .hubChip {
@@ -216,10 +223,10 @@
   font: 600 9.5px/1.4 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--on-accent) 55%, transparent);
   text-decoration: none;
   padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid color-mix(in srgb, var(--on-accent) 15%, transparent);
   border-radius: var(--r-tag);
   background: transparent;
   line-height: 1.4;
@@ -232,9 +239,9 @@
 
 a.hubChip:hover,
 button.hubChip:hover:not(:disabled) {
-  color: #e5a00d;
-  border-color: rgba(229, 160, 13, 0.5);
-  background: rgba(229, 160, 13, 0.08);
+  color: var(--plex);
+  border-color: color-mix(in srgb, var(--plex) 50%, transparent);
+  background: color-mix(in srgb, var(--plex) 8%, transparent);
 }
 
 .hubChip:disabled {
@@ -275,7 +282,7 @@ button.hubChip:hover:not(:disabled) {
 
 /* ─── Card ────────────────────────────────────────────────────────────────── */
 
-.card {
+.mediaCard {
   flex: 0 0 auto;
   width: 116px;
   cursor: pointer;
@@ -286,15 +293,15 @@ button.hubChip:hover:not(:disabled) {
   transition: transform 0.18s ease;
 }
 
-.card.cardWide {
+.mediaCard.cardWide {
   width: 228px;
 }
 
-.card:hover {
+.mediaCard:hover {
   transform: translateY(-2px);
 }
 
-/* Unshadowed with the rest of the app. The lift on `.card:hover` stays: the
+/* Unshadowed with the rest of the app. The lift on `.mediaCard:hover` stays: the
    hover ring below is what actually signals the target, so the translate is
    supplementary here rather than the whole effect. */
 .posterWrap {
@@ -319,8 +326,8 @@ button.hubChip:hover:not(:disabled) {
   transition: border-color 0.18s ease;
 }
 
-.card:hover .posterWrap::after {
-  border-color: #e5a00d;
+.mediaCard:hover .posterWrap::after {
+  border-color: var(--plex);
 }
 
 .poster {
@@ -342,7 +349,7 @@ button.hubChip:hover:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.3);
+  color: color-mix(in srgb, var(--on-accent) 30%, transparent);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -358,7 +365,7 @@ button.hubChip:hover:not(:disabled) {
   right: 0;
   bottom: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--on-accent) 16%, transparent);
   z-index: 1;
 }
 
@@ -371,7 +378,7 @@ button.hubChip:hover:not(:disabled) {
 .cardTitle {
   font-size: 12.5px;
   font-weight: 600;
-  color: #f2f6f5;
+  color: var(--on-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -381,7 +388,7 @@ button.hubChip:hover:not(:disabled) {
 .cardMeta {
   font: var(--t-data);
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+  color: color-mix(in srgb, var(--on-accent) 45%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -391,7 +398,7 @@ button.hubChip:hover:not(:disabled) {
 .empty {
   padding: 48px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--on-accent) 40%, transparent);
   font-size: 13px;
 }
 
@@ -408,9 +415,14 @@ button.hubChip:hover:not(:disabled) {
 
 .skeletonShimmer {
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%)
+    linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--on-accent) 4%, transparent) 25%,
+        color-mix(in srgb, var(--on-accent) 8%, transparent) 50%,
+        color-mix(in srgb, var(--on-accent) 4%, transparent) 75%
+      )
       0 0 / 800px 100% no-repeat,
-    rgba(255, 255, 255, 0.04);
+    color-mix(in srgb, var(--on-accent) 4%, transparent);
   animation: previewShimmer 1.4s infinite linear;
   border-radius: var(--r-tag);
 }
@@ -454,10 +466,10 @@ button.hubChip:hover:not(:disabled) {
   .stageChip {
     left: 14px;
   }
-  .card {
+  .mediaCard {
     width: 104px;
   }
-  .card.cardWide {
+  .mediaCard.cardWide {
     width: 196px;
   }
 }

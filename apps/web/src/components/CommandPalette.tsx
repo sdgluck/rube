@@ -128,7 +128,7 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
       <div className={styles.inputWrapper}>
         <input
           ref={inputRef}
-          className={styles.input}
+          className={styles.queryInput}
           placeholder="Search commands, collections, media…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

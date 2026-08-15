@@ -16,7 +16,7 @@
   box-sizing: border-box;
   height: var(--appbar-h);
   padding: var(--appbar-pad-y) 28px;
-  background: var(--bg-page);
+  background: var(--page);
   /* A hairline keeps table headers from appearing to belong to the bar. This
      was a `0 1px 0` box-shadow faking a border — it is a real border now, and
      a full-weight --line, because with nothing else casting shadows the divide

@@ -51,7 +51,7 @@ export function SavePresetModal({
       </label>
       <input
         id="preset-name"
-        className={styles.input}
+        className={styles.fieldInput}
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder="My overlay style"
@@ -62,7 +62,7 @@ export function SavePresetModal({
       </label>
       <input
         id="preset-description"
-        className={styles.input}
+        className={styles.fieldInput}
         value={description}
         onChange={(e) => onDescriptionChange(e.target.value)}
         placeholder="Optional"

@@ -10,12 +10,12 @@
   box-sizing: border-box;
   height: var(--control-h);
   padding: 0 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   font-size: var(--btn-font-size-sm);
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -32,19 +32,19 @@
 .columnConfigBtnActive {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .columnConfigBtnActive:hover {
-  background: var(--accent-hover);
-  color: #fff;
+  background: var(--accent-text);
+  color: var(--on-accent);
 }
 
 .columnConfigDropdown {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  background: var(--bg-surface);
+  background: var(--surface);
   /* An overlay, so --line-strong: this sits over table rows that already carry
      --line borders, and an edge of the same weight would not read as in front
      of them. */
@@ -63,7 +63,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-bottom: 6px;
   padding: 0 4px;
 }
@@ -79,16 +79,16 @@
 }
 
 .columnConfigItem:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .columnConfigItemDragging {
   opacity: 0.5;
-  background: var(--bg-bulk);
+  background: var(--accent-soft);
 }
 
 .dragHandle {
-  color: var(--border-input);
+  color: var(--line);
   font-size: 12.5px;
   cursor: grab;
   flex-shrink: 0;
@@ -120,7 +120,7 @@
   cursor: pointer;
   padding: 0 6px 0 0;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   line-height: 1;
   vertical-align: middle;
 }
@@ -130,12 +130,12 @@
 }
 
 .childRow {
-  background: var(--filter-group-bg);
+  background: var(--surface-sunken);
   cursor: pointer;
 }
 
 .childRow:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .childRowDepth1 {
@@ -148,7 +148,7 @@
 
 .childRowLoading {
   font-style: italic;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .childRowTitle {
@@ -158,7 +158,7 @@
 }
 
 .childEpisodeCount {
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-left: 6px;
   font-size: 0.85em;
 }

@@ -13,7 +13,7 @@
   border-radius: var(--r-card);
   box-shadow: var(--e-inverse);
   margin-bottom: 12px;
-  color: #e6f2f0;
+  color: var(--on-inverse);
 }
 
 .count {
@@ -21,7 +21,7 @@
   z-index: 1;
   font-size: 12.5px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
   white-space: nowrap;
 }
 
@@ -57,7 +57,7 @@
 
 .progressFill {
   height: 100%;
-  background: rgba(18, 134, 124, 0.4);
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
   transition: width 0.2s ease;
 }
 

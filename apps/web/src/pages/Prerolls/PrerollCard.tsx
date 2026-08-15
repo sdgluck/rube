@@ -32,7 +32,7 @@ export default function PrerollCard({
 
   return (
     <article
-      className={`${styles.card} ${selected ? styles.cardSelected : ""}`}
+      className={`${styles.prerollCard} ${selected ? styles.cardSelected : ""}`}
       data-status={preroll.status}
       draggable={ordered && isReady}
       onDragStart={() => onDragStart?.(preroll.id)}

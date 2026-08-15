@@ -132,7 +132,7 @@ export default function FeatureWizard({ onClose }: Props) {
                 <button
                   key={entry.id}
                   type="button"
-                  className={`${styles.card} ${already ? styles.cardDisabled : ""}`}
+                  className={`${styles.wizardCard} ${already ? styles.cardDisabled : ""}`}
                   onClick={() => pick(entry)}
                   disabled={already}
                 >

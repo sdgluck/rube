@@ -82,7 +82,7 @@ export default function Cleanup() {
       actions={
         <>
           {dueNow.length > 0 && <StatusChip tone="error">{dueNow.length} due on the next run</StatusChip>}
-          <label className={styles.toggle}>
+          <label className={styles.actionedToggle}>
             <input type="checkbox" checked={showActioned} onChange={(e) => setShowActioned(e.target.checked)} /> Show
             already actioned
           </label>

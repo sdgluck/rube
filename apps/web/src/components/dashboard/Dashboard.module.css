@@ -234,14 +234,14 @@
   justify-content: space-between;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   padding: 2px 4px 6px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .tilePickerCount {
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-weight: 500;
 }
 
@@ -273,13 +273,13 @@
   gap: 8px;
   padding: 5px 6px;
   font-size: 12px;
-  color: var(--text-primary);
+  color: var(--ink);
   cursor: pointer;
   border-radius: var(--r-tag);
 }
 
 .tilePickerOption:hover {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .tilePickerOptionDisabled {
@@ -296,7 +296,7 @@
   flex-direction: column;
   gap: 2px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .tilePickerOrderItem {
@@ -305,8 +305,8 @@
   gap: 6px;
   padding: 4px 6px;
   font-size: 12px;
-  color: var(--text-primary);
-  background: var(--bg-surface-hover);
+  color: var(--ink);
+  background: var(--surface-sunken);
   border-radius: var(--r-tag);
   cursor: grab;
 }
@@ -317,7 +317,7 @@
 
 .tilePickerHandle {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   letter-spacing: -2px;
   user-select: none;
 }
@@ -332,8 +332,8 @@
 .tilePickerArrow,
 .tilePickerRemove {
   background: transparent;
-  border: 1px solid var(--border-light);
-  color: var(--text-secondary);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-2);
   width: 22px;
   height: 22px;
   border-radius: var(--r-tag);
@@ -346,8 +346,8 @@
 
 .tilePickerArrow:hover:not(:disabled),
 .tilePickerRemove:hover {
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .tilePickerArrow:disabled {
@@ -364,12 +364,12 @@
   display: flex;
   justify-content: flex-end;
   padding-top: 4px;
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid var(--line-soft);
 }
 
 .tilePickerSave {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--r-sm);
   padding: 5px 12px;

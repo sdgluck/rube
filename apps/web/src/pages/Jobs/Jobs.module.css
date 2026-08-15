@@ -25,12 +25,12 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-tag);
   background: none;
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--ink-3);
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -40,26 +40,26 @@
 }
 
 .logTab:hover {
-  border-color: var(--border-input);
-  color: var(--text-secondary);
+  border-color: var(--line);
+  color: var(--ink-2);
 }
 
 .logTabActive {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .logTabActive .statusDot {
-  background: rgba(255, 255, 255, 0.6) !important;
+  background: color-mix(in srgb, var(--on-accent) 60%, transparent) !important;
 }
 
 .clickableRow {
-  cursor: pointer;
+  composes: clickableRow from "../../styles/shared.module.css";
 }
 
 .clickableRow:active td {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
   transition: background 50ms;
 }
 
@@ -87,8 +87,8 @@
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: var(--r-pill);
-  background: var(--bg-badge);
-  color: var(--text-badge);
+  background: var(--fill-quiet);
+  color: var(--ink-2);
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -101,17 +101,17 @@
 
 .scheduleCell {
   white-space: nowrap;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .cronText {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .monoCell {
   white-space: nowrap;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
@@ -125,7 +125,7 @@
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   text-transform: capitalize;
 }
 
@@ -136,7 +136,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #888;
+  background: var(--status-neutral-dot);
   flex-shrink: 0;
 }
 
@@ -153,14 +153,14 @@
 }
 
 .statusDot[data-status="cancelled"] {
-  background: #888;
+  background: var(--status-neutral-dot);
 }
 
 /* ─── Mini progress bar ─────────────────────────────────────────────────── */
 
 .miniProgress {
   height: 3px;
-  background: var(--border-light);
+  background: var(--line-soft);
   border-radius: var(--r-tag);
   overflow: hidden;
   margin-top: 3px;
@@ -177,7 +177,7 @@
 
 .muted {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 /* ─── Status badges (used by JobDetail/JobRun) ──────────────────────────── */
@@ -207,7 +207,7 @@
 }
 
 .badgeCancelled {
-  background: #e5e7eb;
+  background: var(--status-neutral-bg);
   color: var(--status-neutral-fg);
 }
 
@@ -229,13 +229,13 @@
 
 .cronInput {
   composes: input inputSm from "../../styles/controls.module.css";
-  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  font-family: var(--font-mono);
   width: 140px;
 }
 
 .cronHint {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-top: 2px;
 }
 
@@ -247,7 +247,7 @@
 
 .runsContainer {
   padding: 12px 12px 12px 24px;
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .runsList {
@@ -275,7 +275,7 @@
 }
 
 .runMeta {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 12px;
 }
 
@@ -283,8 +283,8 @@
 
 .logViewer {
   background: var(--sidebar);
-  color: #e0e0e0;
-  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  color: var(--on-dark-2);
+  font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
   padding: 16px;
@@ -313,11 +313,11 @@
 
 .logFilterInput {
   padding: 6px 10px;
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--line);
   border-radius: var(--r-tag);
   font-size: 12.5px;
-  background: var(--bg-input);
-  color: var(--text-primary);
+  background: var(--surface);
+  color: var(--ink);
   width: 200px;
 }
 
@@ -333,7 +333,7 @@
   gap: 6px;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -345,8 +345,8 @@
 
 .logToolbarBtn {
   background: none;
-  border: 1px solid var(--border-input);
-  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
   padding: 5px 12px;
   border-radius: var(--r-tag);
   font-size: 12px;
@@ -367,9 +367,9 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ccc;
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  border: 1px solid var(--on-dark-fill-2);
+  color: var(--on-dark-3);
   padding: 4px 10px;
   border-radius: var(--r-tag);
   font-size: 11px;
@@ -381,8 +381,8 @@
 }
 
 .logCopyBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--on-dark-fill-2);
+  color: var(--on-accent);
 }
 
 /* ─── Progress bar (JobDetail) ───────────────────────────────────────────── */
@@ -390,7 +390,7 @@
 .progressBar {
   width: 100%;
   height: 6px;
-  background: var(--bg-badge);
+  background: var(--fill-quiet);
   border-radius: var(--r-tag);
   overflow: hidden;
   margin: 8px 0;
@@ -445,11 +445,11 @@
 
 .metaLabel {
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .noRuns {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 12.5px;
   font-style: italic;
 }
@@ -462,7 +462,7 @@
   gap: 12px;
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .configField {
@@ -474,7 +474,7 @@
 .configLabel {
   font-weight: 600;
   font-size: 12.5px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -497,7 +497,7 @@
 .configNumberInput {
   width: 60px;
   padding: 4px 8px;
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--line);
   border-radius: var(--r-tag);
   font-size: 12.5px;
 }
@@ -510,7 +510,7 @@
 
 .configHint {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .runsSection {
@@ -522,7 +522,7 @@
 .runsTitle {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   margin: 0;
 }
 
@@ -565,16 +565,7 @@
 }
 
 .statusPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: var(--r-pill);
-  font: 600 10.5px/1.4 var(--font-mono);
-  border: none;
-  color: var(--status-neutral-fg);
-  background: var(--status-neutral-bg);
-  white-space: nowrap;
+  composes: statusPill from "../../styles/shared.module.css";
 }
 
 .statusPill[data-status="running"] {
@@ -625,7 +616,7 @@
 
 .jobDescription {
   margin: -12px 0 0;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 13px;
   line-height: 1.45;
   max-width: 70ch;
@@ -639,13 +630,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  background: var(--bg-surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .detailSection {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
   padding: 20px;
   display: flex;
@@ -678,13 +669,13 @@
 .detailSectionFooter {
   flex-shrink: 0;
   padding-top: 12px;
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid var(--line-soft);
 }
 
 .detailSectionTitle {
   font-weight: 600;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   /* No global heading reset, so clear the UA h3 margin and let the card's
      flex `gap` do the spacing. The 6px inline padding that used to be here
      was a legend affordance — breathing room either side of the border the
@@ -704,7 +695,7 @@
 
 .configTable td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
   font-size: 12.5px;
 }
@@ -716,14 +707,14 @@
 
 .fieldLabel {
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   padding-top: 14px !important;
 }
 
 .fieldHelp {
   margin-top: 4px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .fieldHelpError {
@@ -733,7 +724,7 @@
 }
 
 .configSummary {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 12.5px;
 }
 
@@ -744,7 +735,7 @@
 }
 
 .bywGroup {
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   padding: 8px 12px;
 }
@@ -767,16 +758,16 @@
 .bywCard {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   overflow: hidden;
-  background: var(--bg-elevated);
+  background: var(--surface);
 }
 
 .bywCardLink {
   display: block;
   aspect-ratio: 2 / 3;
-  background: var(--bg-muted);
+  background: var(--fill-quiet);
 }
 
 .bywCardPoster {
@@ -793,7 +784,7 @@
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .bywCardBody {
@@ -813,7 +804,7 @@
 
 .bywCardMeta {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .hideOnMobile {
@@ -834,7 +825,7 @@
   .scheduleHintInline {
     display: block;
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--ink-3);
     margin-top: 1px;
   }
 }

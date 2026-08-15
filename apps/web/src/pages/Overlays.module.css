@@ -51,7 +51,7 @@
 }
 
 .subtitle {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 13px;
   margin: 0;
   line-height: 1.5;
@@ -143,7 +143,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-bottom: 6px;
 }
 
@@ -159,8 +159,8 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  background: var(--bg-surface-hover);
-  border: 1px solid var(--border-light);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
   cursor: grab;
   transition:
@@ -182,7 +182,7 @@
 .catalogChipLabel {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .catalogChipSample {
@@ -193,7 +193,7 @@
 /* ─── Collapsible sections ─────────────────────────────────────── */
 
 .collapsible {
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .collapsible:last-child {
@@ -211,7 +211,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--ink);
   cursor: pointer;
   text-align: left;
 }
@@ -222,7 +222,7 @@
 
 .collapsibleChevron {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   width: 12px;
   display: inline-block;
 }
@@ -253,7 +253,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   padding: 6px 4px 2px;
 }
 
@@ -271,8 +271,8 @@
 }
 
 .presetItem:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  border-color: var(--border-light);
+  background: var(--surface-sunken);
+  border-color: var(--line-soft);
 }
 
 .presetItem:disabled {
@@ -283,12 +283,12 @@
 .presetItemName {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .presetItemDesc {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-top: 2px;
 }
 
@@ -300,9 +300,9 @@
 
 .presetSaveBtn {
   margin-top: 8px;
-  background: var(--bg-bulk);
+  background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid var(--bulk-border);
+  border: 1px solid var(--line-accent);
   border-radius: var(--r-md);
   padding: 8px 12px;
   font-size: 12px;
@@ -364,7 +364,7 @@
   aspect-ratio: 2/3;
   border-radius: var(--r-md);
   overflow: hidden;
-  background: repeating-linear-gradient(135deg, #e8edec 0 8px, #e0e7e6 8px 16px);
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 8px, var(--checker-b) 8px 16px);
   box-shadow: var(--e-float);
   flex-shrink: 1;
   min-height: 0;
@@ -383,7 +383,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 13px;
 }
 
@@ -392,8 +392,8 @@
   top: 8px;
   right: 50%;
   transform: translateX(50%);
-  background: rgba(19, 28, 27, 0.72);
-  color: #fff;
+  background: color-mix(in srgb, var(--shade) 72%, transparent);
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 600;
   padding: 4px 10px;
@@ -416,8 +416,8 @@
 }
 
 .dropZoneEmpty {
-  border: 2px dashed rgba(255, 255, 255, 0.6);
-  background: rgba(19, 28, 27, 0.14);
+  border: 2px dashed color-mix(in srgb, var(--on-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--shade) 14%, transparent);
   animation: dropZoneFadeIn 0.12s ease-out;
 }
 
@@ -431,15 +431,15 @@
 }
 
 .dropZoneEmpty:hover {
-  border-color: rgba(255, 255, 255, 0.95);
-  background: rgba(19, 28, 27, 0.24);
+  border-color: color-mix(in srgb, var(--on-accent) 95%, transparent);
+  background: color-mix(in srgb, var(--shade) 24%, transparent);
 }
 
 /* The zone you're about to drop on switches to the accent, so the target is
    never ambiguous when several zones are visible at once. */
 .dropZoneOver {
   border: 2px dashed var(--accent) !important;
-  background: rgba(18, 134, 124, 0.28) !important;
+  background: color-mix(in srgb, var(--accent) 28%, transparent) !important;
 }
 
 .pos_top_left {
@@ -494,7 +494,7 @@
 
 .dropZonePlaceholder {
   font: 600 8.5px/1.3 var(--font-mono);
-  color: rgba(255, 255, 255, 0.75);
+  color: color-mix(in srgb, var(--on-accent) 75%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   white-space: nowrap;
@@ -529,7 +529,7 @@
 }
 
 .hitBox:hover {
-  outline: 1px dashed rgba(255, 255, 255, 0.7);
+  outline: 1px dashed color-mix(in srgb, var(--on-accent) 70%, transparent);
   outline-offset: 2px;
 }
 
@@ -573,8 +573,8 @@
   position: absolute;
   top: -6px;
   right: -6px;
-  background: rgba(19, 28, 27, 0.85);
-  color: #fff;
+  background: color-mix(in srgb, var(--shade) 85%, transparent);
+  color: var(--on-accent);
   border: none;
   width: 16px;
   height: 16px;
@@ -611,8 +611,8 @@
 }
 
 .shortcutsPanel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-card);
   padding: 12px 16px;
   flex-shrink: 0;
@@ -623,7 +623,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-bottom: 8px;
 }
 
@@ -632,7 +632,7 @@
   flex-wrap: wrap;
   gap: 12px;
   font-size: 11.5px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .shortcutsList span {
@@ -642,14 +642,14 @@
 }
 
 .shortcutsList kbd {
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: var(--r-tag);
   padding: 1px 5px;
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .inspectorEmpty {
@@ -657,15 +657,15 @@
 }
 
 .inspectorEmptyText {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 12.5px;
   line-height: 1.5;
   margin: 0 0 16px;
 }
 
 .statusCard {
-  background: var(--bg-surface-hover);
-  border: 1px solid var(--border-light);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
   padding: 12px;
   margin-bottom: 12px;
@@ -675,7 +675,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-weight: 700;
   margin-bottom: 4px;
 }
@@ -683,12 +683,12 @@
 .statusCardValue {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .startCard {
-  background: var(--bg-bulk);
-  border: 1px solid var(--bulk-border);
+  background: var(--accent-soft);
+  border: 1px solid var(--line-accent);
   border-radius: var(--r-md);
   padding: 12px;
 }
@@ -709,8 +709,8 @@
 }
 
 .presetQuickItem {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-light);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   padding: 8px 10px;
   text-align: left;
@@ -727,12 +727,12 @@
 .presetQuickName {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .presetQuickDesc {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .inspectorBody {
@@ -762,7 +762,7 @@
 .iconBtn {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--ink-3);
   cursor: pointer;
   font-size: 15px;
   line-height: 1;
@@ -771,8 +771,8 @@
 }
 
 .iconBtn:hover {
-  color: var(--text-primary);
-  background: var(--bg-surface-hover);
+  color: var(--ink);
+  background: var(--surface-sunken);
 }
 
 .section {
@@ -784,22 +784,22 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-bottom: 6px;
 }
 
-.input {
+.fieldInput {
   width: 100%;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   padding: 6px 10px;
   font-size: 12.5px;
   box-sizing: border-box;
 }
 
-.input:focus {
+.fieldInput:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: var(--accent);
@@ -807,7 +807,7 @@
 
 .fieldHint {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin: 4px 0 0;
 }
 
@@ -815,27 +815,27 @@
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   margin: 8px 0 4px;
 }
 
-.segmented {
+.modeSwitch {
   display: flex;
   gap: 0;
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   padding: 2px;
 }
 
-.segmentedBtn {
+.modeSwitchBtn {
   flex: 1;
   background: none;
   border: none;
   padding: 6px 4px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   cursor: pointer;
   border-radius: var(--r-tag);
   transition:
@@ -843,13 +843,13 @@
     color 0.15s;
 }
 
-.segmentedBtn:hover:not(.segmentedActive) {
-  color: var(--text-primary);
+.modeSwitchBtn:hover:not(.modeSwitchActive) {
+  color: var(--ink);
 }
 
-.segmentedActive {
+.modeSwitchActive {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .colorGrid {
@@ -875,6 +875,7 @@
    Negative inset extends the gold triangle under the transparent border
    so the swatch occupies the same border-box footprint as solid swatches. */
 .colorSwatchAuto {
+  /* stylelint-disable-next-line color-no-hex, scale-unlimited/declaration-strict-value -- a swatch of the colour the renderer picks, not app chrome */
   background-color: #6b7280;
   background-clip: border-box;
 }
@@ -883,6 +884,7 @@
   content: "";
   position: absolute;
   inset: -2px;
+  /* stylelint-disable-next-line color-no-hex -- the gold half of the same swatch */
   background: #d4a017;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
   border-radius: inherit;
@@ -901,7 +903,7 @@
 .colorSwatchActive {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 2px var(--bg-surface),
+    0 0 0 2px var(--surface),
     0 0 0 4px var(--accent);
 }
 
@@ -914,7 +916,7 @@
 .customColorRow input[type="color"] {
   width: 32px;
   height: 32px;
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--line);
   border-radius: var(--r-tag);
   cursor: pointer;
   padding: 0;
@@ -935,9 +937,9 @@
 
 .numberInput {
   width: 70px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
   border-radius: var(--r-tag);
   padding: 4px 6px;
   font-size: 12.5px;
@@ -956,7 +958,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   cursor: pointer;
 }
 
@@ -991,7 +993,7 @@
 
 .dangerBtn:hover {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .inspectorFooter {
@@ -1022,7 +1024,7 @@
   border: none;
   border-radius: var(--r-card);
   box-shadow: var(--e-inverse);
-  color: #e6f2f0;
+  color: var(--on-inverse);
   z-index: var(--z-sticky-bar);
 }
 
@@ -1048,12 +1050,12 @@
   flex: 1;
   font-size: 12.5px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .actionBtnPrimary {
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--r-md);
   padding: 7px 13px;
@@ -1069,14 +1071,14 @@
 }
 
 .actionBtnPrimary:disabled {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(230, 242, 240, 0.5);
+  background: var(--on-dark-line);
+  color: color-mix(in srgb, var(--on-inverse) 50%, transparent);
   cursor: not-allowed;
 }
 
 .actionBtnSecondary {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--on-dark-line);
+  color: var(--on-accent);
   border: none;
   border-radius: var(--r-md);
   padding: 7px 13px;
@@ -1088,17 +1090,17 @@
 }
 
 .actionBtnSecondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--on-dark-fill-2);
 }
 
 .actionBtnSecondary:disabled {
-  color: rgba(230, 242, 240, 0.4);
+  color: color-mix(in srgb, var(--on-inverse) 40%, transparent);
   cursor: not-allowed;
 }
 
 .actionBtnDanger {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--r-md);
   padding: 7px 13px;
@@ -1110,7 +1112,7 @@
 
 .actionBtnDanger:hover:not(:disabled) {
   background: var(--danger-hover);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .actionBtnDanger:disabled {
@@ -1123,7 +1125,7 @@
 
 .modalHint {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ink-3);
   text-align: center;
   margin: 4px 0 0;
 }
@@ -1169,7 +1171,7 @@
 
 .bulkCell span {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1185,9 +1187,9 @@
 /* ─── Icon-only canvas action buttons ──────────────────────────── */
 
 .iconActionBtn {
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   width: 28px;
   height: 28px;
@@ -1202,8 +1204,8 @@
 }
 
 .iconActionBtn:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
-  color: var(--text-primary);
+  background: var(--surface-sunken);
+  color: var(--ink);
 }
 
 .iconActionBtn:disabled {
@@ -1223,8 +1225,8 @@
   right: 0;
   min-width: 240px;
   max-width: calc(100vw - 32px);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--e-float);
   padding: 4px;
@@ -1247,11 +1249,11 @@
   cursor: pointer;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .overflowItem:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .overflowItem:disabled {
@@ -1262,7 +1264,7 @@
 .overflowItemHint {
   font-size: 11px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .overflowItemDanger {
@@ -1286,8 +1288,8 @@
 }
 
 .shortcutsPanel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-card);
   padding: 12px 16px;
   flex-shrink: 0;
@@ -1298,7 +1300,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-bottom: 8px;
 }
 
@@ -1307,7 +1309,7 @@
   flex-wrap: wrap;
   gap: 12px;
   font-size: 11.5px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .shortcutsList span {
@@ -1317,14 +1319,14 @@
 }
 
 .shortcutsList kbd {
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: var(--r-tag);
   padding: 1px 5px;
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 /* ─── Color brand label ────────────────────────────────────────── */
@@ -1334,7 +1336,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin: 4px 0 4px;
 }
 

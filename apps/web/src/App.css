@@ -4,10 +4,17 @@
  * accent that stands beside Plex amber without copying it, Archivo for
  * interface text and IBM Plex Mono for anything the machine produced.
  *
- * Two layers live here. The Studio tokens (--page, --ink, --accent-fill…) are
- * canonical. The role tokens below them (--bg-page, --text-primary…) are the
- * names the rest of the app already spells, remapped onto Studio values so a
- * stylesheet that has not been touched still lands in the new palette.
+ * One vocabulary, defined once. There used to be two — the Studio tokens
+ * (--page, --ink, --line…) and a compatibility layer of role tokens
+ * (--bg-surface, --text-muted, --border-color…) that aliased them, so a
+ * stylesheet written before the redesign still landed in the new palette. The
+ * aliases are gone. Two spellings for one colour is how a stylesheet drifts:
+ * neither one is the wrong answer at the point you type it, and a grep for
+ * "what uses this colour" answers half the question.
+ *
+ * Nothing below is a synonym for anything else above it. Adding a token means
+ * adding a role the app didn't have, in both themes, with a comment saying
+ * when to reach for it — see stylelint.config.mjs for what enforces that.
  *
  * Surfaces are square and unshadowed on purpose. Hierarchy is carried by lines
  * and background steps alone, which is why --line runs darker than a soft
@@ -54,6 +61,45 @@
   --sidebar: #0f1615;
   /* Plex-owned surfaces only: the Preview chrome, watch progress, built-in hubs. */
   --plex: #e5a00d;
+  --plex-soft: rgba(229, 160, 13, 0.16);
+
+  /* ─── On a dark fill ────────────────────────────────────────────────────
+   * The palette for things that sit on a surface which is dark in *both*
+   * themes — the sidebar, a filled button, the bulk bar, the Plex preview
+   * canvas, a log viewer. These deliberately do not flip with the scheme:
+   * the surface underneath them never does either.
+   *
+   * They exist because "white text on the teal button" was spelled `#fff`
+   * in 48 places and "the quiet grey in the sidebar" was three different
+   * rgba()s of two different whites. */
+  --on-accent: #fff;
+  --on-dark: #f2f6f5;
+  /* The bulk bar and the toasts sit on --inverse, which is a green-black
+     rather than a neutral one, so their ink is warmer than --on-dark. */
+  --on-inverse: #e6f2f0;
+  /* Ink on the Plex gold fill. Gold is a light colour: white text on it fails
+     contrast, so this is nearly black. */
+  --on-plex: #1b1200;
+  /* Error text on a surface that is dark in both themes — the sidebar's
+     failure count. --status-error-fg is unreadable there in light mode. */
+  --on-dark-error: #f0a9a2;
+  --on-dark-2: rgba(242, 246, 245, 0.72);
+  --on-dark-3: rgba(242, 246, 245, 0.4);
+  --on-dark-4: rgba(242, 246, 245, 0.32);
+  --on-dark-line: rgba(255, 255, 255, 0.12);
+  --on-dark-fill: rgba(255, 255, 255, 0.06);
+  --on-dark-fill-2: rgba(255, 255, 255, 0.2);
+
+  /* The wash behind a modal. Dark in both themes — it darkens the page, and
+     on dark the page still has to recede. */
+  --scrim: rgba(15, 22, 21, 0.48);
+
+  /* The dark that goes *over artwork* — poster gradients, the overlay editor's
+     canvas, a caption bar on a still. Deliberately not --ink, which inverts to
+     near-white on dark: a poster is a poster in both themes, and a scrim that
+     flipped would erase the title it exists to make readable. Mix it rather
+     than spelling an rgba: `color-mix(in srgb, var(--shade) 72%, transparent)`. */
+  --shade: #131c1b;
 
   /* ─── Data ramp ─────────────────────────────────────────────────────── */
   --ramp-1: #12867c;
@@ -126,23 +172,14 @@
   --e-float: 0 0 0 1px var(--line-strong);
   --e-inverse: 0 0 0 1px var(--line-strong);
 
-  /* ─── Spacing ───────────────────────────────────────────────────────── */
-
-  /* Added with the flat pass. Removing elevation puts the whole burden of
-     "these things are grouped, those are not" onto whitespace and lines, and
-     ad-hoc padding that nobody noticed under a drop shadow becomes the thing
-     that makes a flat layout look unfinished.
-
-     The primitives in styles/shared.module.css and styles/controls.module.css
-     spell these; page-level modules still use literals and inherit their
-     rhythm from the primitives. Converting those is follow-up work. */
-  --sp-1: 4px;
-  --sp-2: 6px;
-  --sp-3: 8px;
-  --sp-4: 12px;
-  --sp-5: 16px;
-  --sp-6: 24px;
-  --sp-7: 32px;
+  /* ─── Spacing ───────────────────────────────────────────────────────────
+   * There isn't a spacing scale, and this is the note saying so rather than a
+   * set of --sp-* tokens nothing spells. Seven of them were defined here for a
+   * flat-design pass and never adopted: every stylesheet, primitives included,
+   * still writes its padding as literals. A scale that exists only in the token
+   * file is worse than none — it reads as the rule while the codebase follows
+   * something else. Reintroduce it by converting the primitives in the same
+   * change. */
 
   /* ─── Focus ─────────────────────────────────────────────────────────── */
 
@@ -151,28 +188,36 @@
      are now the only non-colour feedback a keyboard user gets. */
   --focus-ring: 3px solid rgba(18, 134, 124, 0.14);
 
-  /* ─── Role tokens (the names the rest of the app spells) ────────────── */
-  --bg-page: var(--page);
-  --bg-surface: var(--surface);
-  --bg-surface-hover: var(--surface-sunken);
-  --bg-input: var(--surface);
-  --bg-badge: var(--fill-quiet);
-  --bg-success: #dcf0e7;
-  --bg-error: #fbe1de;
-  --bg-bulk: var(--accent-soft);
-  --text-primary: var(--ink);
-  --text-secondary: var(--ink-2);
-  --text-muted: var(--ink-3);
-  --text-badge: var(--ink-2);
-  --text-success: #0b5940;
-  --text-error: #8c231d;
-  --border-color: var(--line);
-  --border-light: var(--line-soft);
-  --border-input: var(--line);
-  --accent-hover: var(--accent-text);
-  --card-poster-bg: #e8edec;
-  --bulk-border: #b9e0d9;
-  --filter-group-bg: var(--surface-sunken);
+  /* ─── Extra surface and line roles ──────────────────────────────────────
+   * Values in their own right, not second names for the ones above. The
+   * translation layer that used to live here — `--bg-surface`, `--text-muted`,
+   * `--border-color` and eighteen more, each a second name for a token above —
+   * is gone. See the header. */
+
+  /* The hover step for a control's own border. --line is the resting edge;
+     this is the same edge under the pointer, one step darker. */
+  --line-hover: #bcc7c5;
+  /* An accent-tinted edge, for the border that goes with an --accent-soft
+     fill: a selected row, the bulk bar, an active filter chip. */
+  --line-accent: #b9e0d9;
+
+  /* A translucent darkening for hover on something that has no fill of its
+     own — a menu item, an icon button. Translucent rather than a flat grey so
+     it works on whatever it lands on. */
+  --fill-hover: rgba(19, 28, 27, 0.04);
+  /* The empty half of a progress bar, a toggle track, a meter — a fill that
+     exists to be covered up. */
+  --fill-track: #eff2f1;
+  /* A control that is switched off or unavailable: a disabled input, the
+     resting side of a toggle. Darker than --fill-quiet, which is a resting
+     surface rather than a statement about state. */
+  --fill-inert: #cfd8d7;
+
+  /* Poster and artwork placeholders, plus the two greys of the transparency
+     checkerboard behind an overlay preview. */
+  --surface-poster: #e8edec;
+  --checker-a: #e8edec;
+  --checker-b: #e0e7e6;
 
   /* ─── Form-control tokens (used by styles/controls.module.css) ─── */
 
@@ -222,12 +267,6 @@
   --danger: #b0332c;
   --danger-hover: #97241e;
   --danger-line: #eccac6;
-
-  /* ─── Surfaces & text (extra roles) ─────────────────────────────── */
-  --bg-hover: rgba(19, 28, 27, 0.04);
-  --bg-elevated: var(--surface);
-  --bg-muted: var(--fill-quiet);
-  --text-warn: #7a480b;
 
   /* ─── Status palette ────────────────────────────────────────────────
    * One source of truth for every "this thing succeeded / is degraded /
@@ -323,17 +362,20 @@
        borders in --line-strong, which this block already redefines, so they
        follow the theme without a second copy to keep in sync. */
 
-    --bg-hover: rgba(255, 255, 255, 0.06);
-    --card-poster-bg: #1b2524;
-    --bulk-border: #17544c;
+    --line-hover: #3d4a48;
+    --line-accent: #17544c;
+
+    --fill-hover: rgba(255, 255, 255, 0.06);
+    --fill-track: #1b2524;
+    --fill-inert: #2d3837;
+
+    --surface-poster: #1b2524;
+    --checker-a: #1b2524;
+    --checker-b: #141d1c;
+
     --danger: #e0736b;
     --danger-hover: #ec8b84;
     --danger-line: #5a2a26;
-    --text-warn: #f0c46b;
-    --text-success: #6fd3ab;
-    --text-error: #f0a9a2;
-    --bg-success: rgba(18, 134, 124, 0.16);
-    --bg-error: rgba(176, 51, 44, 0.16);
 
     --input-focus-ring: 0 0 0 3px rgba(26, 167, 155, 0.2);
 
@@ -383,8 +425,8 @@ body {
 body {
   font-family: var(--font-sans);
   font-size: 13px;
-  background: var(--bg-page);
-  color: var(--text-primary);
+  background: var(--page);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 

@@ -200,7 +200,7 @@ export default function NotificationServiceForm({
             <label key={field.key} className={styles.libraryItem}>
               <input
                 type="checkbox"
-                className={styles.toggle}
+                className={styles.checkbox}
                 checked={!!values[field.key]}
                 onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.checked }))}
               />
@@ -242,7 +242,7 @@ export default function NotificationServiceForm({
               <label key={evt.id} className={styles.libraryItem}>
                 <input
                   type="checkbox"
-                  className={styles.toggle}
+                  className={styles.checkbox}
                   checked={enabledEvents.includes(evt.id)}
                   onChange={() => toggleEvent(evt.id)}
                 />
@@ -283,7 +283,7 @@ export default function NotificationServiceForm({
                   <label key={job.id} className={styles.libraryItem}>
                     <input
                       type="checkbox"
-                      className={styles.toggle}
+                      className={styles.checkbox}
                       checked={selectedJobs.includes(job.id)}
                       onChange={() => toggleJob(job.id)}
                     />
@@ -326,7 +326,7 @@ export default function NotificationServiceForm({
                   <label key={target.service} className={styles.libraryItem}>
                     <input
                       type="checkbox"
-                      className={styles.toggle}
+                      className={styles.checkbox}
                       checked={selectedHealthTargets.includes(target.service)}
                       onChange={() => toggleHealthTarget(target.service)}
                     />

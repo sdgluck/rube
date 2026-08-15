@@ -14,16 +14,16 @@
 }
 
 .rowHint {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 12.5px;
 }
 
 .muted {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 
 .warnHint {
-  color: var(--text-warn);
+  color: var(--status-warn-fg);
 }
 
 .bullets {

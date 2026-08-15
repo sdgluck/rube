@@ -78,7 +78,7 @@ export function ImportLayoutModal({
         </button>
       </div>
       <textarea
-        className={`${styles.input} ${styles.importTextarea}`}
+        className={`${styles.fieldInput} ${styles.importTextarea}`}
         value={text}
         onChange={(e) => onTextChange(e.target.value)}
         placeholder='{"version":1,"configs":[…]}'

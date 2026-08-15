@@ -14,9 +14,7 @@
 }
 
 .emptyState {
-  text-align: center;
-  padding: 44px 24px;
-  color: var(--ink-3);
+  composes: emptyState from "../styles/shared.module.css";
 }
 
 .emptyState p {

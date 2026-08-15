@@ -120,7 +120,7 @@
 
 .miniProgress {
   height: 4px;
-  background: #eff2f1;
+  background: var(--fill-track);
   border-radius: var(--r-pill);
   overflow: hidden;
   cursor: default;
@@ -207,7 +207,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   padding: 3px 0;
 }
 
@@ -242,7 +242,7 @@
 }
 
 .eventMsg {
-  color: var(--text-secondary);
+  color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

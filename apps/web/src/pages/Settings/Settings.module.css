@@ -5,13 +5,13 @@
 }
 
 .success {
-  background: var(--bg-success);
-  color: var(--text-success);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .error {
-  background: var(--bg-error);
-  color: var(--text-error);
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .layout {
@@ -56,7 +56,7 @@
 }
 
 .railLink:hover {
-  background: var(--bg-hover);
+  background: var(--fill-hover);
   color: var(--ink);
 }
 
@@ -194,9 +194,6 @@
   cursor: pointer;
 }
 
-.toggle {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--accent);
-  cursor: pointer;
+.checkbox {
+  composes: checkbox from "../../styles/shared.module.css";
 }

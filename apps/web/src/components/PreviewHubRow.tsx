@@ -93,7 +93,7 @@ function Card({ item, wide, onClick }: { item: HubItem; wide: boolean; onClick?:
         : item.title
       : (item.year ?? item.librarySectionTitle ?? "");
   return (
-    <div className={`${styles.card} ${wide ? styles.cardWide : ""}`} onClick={() => onClick?.(item)}>
+    <div className={`${styles.mediaCard} ${wide ? styles.cardWide : ""}`} onClick={() => onClick?.(item)}>
       <div className={styles.posterWrap}>
         {src ? (
           <FadeImage className={styles.poster} src={src} alt={item.title} loading="lazy" />

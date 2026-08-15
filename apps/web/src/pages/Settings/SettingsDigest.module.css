@@ -1,5 +1,5 @@
 .intro {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.55;
   margin: 0 0 20px;
@@ -19,7 +19,7 @@
 }
 
 .hint {
-  color: var(--text-muted);
+  color: var(--ink-3);
   display: block;
   font-size: 12px;
   line-height: 1.5;
@@ -61,8 +61,8 @@
 /* The rendered digest, shown as it would arrive rather than as a form. The
    border is what makes it read as "a message" instead of "more settings". */
 .preview {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
   max-width: 72ch;
   padding: 18px 20px;
@@ -75,7 +75,7 @@
 }
 
 .previewText {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.55;
   margin: 0 0 16px;
@@ -87,7 +87,7 @@
 }
 
 .blockHeading {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -102,7 +102,7 @@
 }
 
 .blockLines li {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--line);
   font-size: 13px;
   padding: 5px 0;
 }
@@ -112,16 +112,18 @@
 }
 
 .empty {
-  color: var(--text-muted);
+  color: var(--ink-3);
   font-size: 13px;
   margin: 0;
 }
 
+/* The subscriber and delivery lists are the app's table, narrowed: two short
+   lists inside a settings card, not a page of rows. */
 .table {
+  composes: table from "../../styles/shared.module.css";
   font-size: 12.5px;
   margin-top: 8px;
   max-width: 72ch;
-  width: 100%;
 }
 
 .statusFailed {
@@ -129,5 +131,5 @@
 }
 
 .statusSkipped {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }

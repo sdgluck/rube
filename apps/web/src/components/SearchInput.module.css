@@ -39,12 +39,12 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--text-muted);
+  color: var(--ink-3);
   cursor: pointer;
 }
 
 .clear:hover {
-  color: var(--text-primary);
+  color: var(--ink);
   background: var(--surface-sunken);
 }
 

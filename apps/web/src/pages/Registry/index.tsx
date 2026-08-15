@@ -68,7 +68,7 @@ export default function Registry() {
           });
           const requirements = [...new Set(rules.flatMap((r) => r.requires))].sort();
           return (
-            <button key={pack.slug} type="button" className={styles.card} onClick={() => setOpenPack(pack.slug)}>
+            <button key={pack.slug} type="button" className={styles.packCard} onClick={() => setOpenPack(pack.slug)}>
               <h2>{pack.title}</h2>
               <p className={styles.tagline}>{pack.tagline}</p>
               <p className={styles.body}>{pack.description}</p>

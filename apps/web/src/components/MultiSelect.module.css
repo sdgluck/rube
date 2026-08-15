@@ -28,14 +28,14 @@
 }
 
 .trigger:hover {
-  border-color: #bcc7c5;
+  border-color: var(--line-hover);
 }
 
 /* Any active filter is worth seeing from across the page — same treatment the
    pills used when one was selected. */
 .triggerActive {
   background: var(--accent-soft);
-  border-color: #b9e0d9;
+  border-color: var(--line-accent);
   color: var(--accent-ink);
   font-weight: 600;
 }
@@ -43,7 +43,7 @@
 .count {
   font: 600 10.5px/1.4 var(--font-mono);
   background: var(--accent-fill);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: var(--r-pill);
   padding: 1px 6px;
 }

@@ -16,7 +16,7 @@
 }
 
 .track[data-checked="false"] {
-  background: #cfd8d7;
+  background: var(--fill-inert);
 }
 
 .track[data-checked="true"] {
@@ -29,7 +29,7 @@
 .thumb {
   position: absolute;
   top: 2px;
-  background: #fff;
+  background: var(--on-accent);
   border-radius: var(--r-tag);
   transition:
     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),

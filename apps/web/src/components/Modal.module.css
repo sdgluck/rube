@@ -4,7 +4,7 @@
   /* Deeper than it was. The panel used to sit on a 48px drop shadow that did
      half the work of lifting it off the page; with the shadow gone the scrim
      is the separation, so it has to actually darken what is behind it. */
-  background: rgba(15, 22, 21, 0.48);
+  background: var(--scrim);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
@@ -106,8 +106,8 @@
 }
 
 .close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--fill-hover);
+  color: var(--ink);
 }
 
 .close:focus-visible {

@@ -9,7 +9,7 @@
 }
 
 .blurb {
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin: 0;
   line-height: 1.5;
 }
@@ -21,5 +21,5 @@
 }
 
 .note {
-  color: var(--text-muted);
+  color: var(--ink-3);
 }

@@ -9,7 +9,7 @@
   gap: 2px;
 }
 
-.btn {
+.trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -27,12 +27,12 @@
     color 0.12s;
 }
 
-.btn:hover:not(:disabled) {
+.trigger:hover:not(:disabled) {
   background: var(--fill-quiet);
   color: var(--ink);
 }
 
-.btn:disabled {
+.trigger:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -74,7 +74,7 @@
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--text-primary);
+  color: var(--ink);
   font-family: var(--font-sans);
   font-size: 12px;
   text-align: left;
@@ -82,7 +82,7 @@
 }
 
 .item:hover:not(:disabled) {
-  background: var(--bg-surface-hover);
+  background: var(--surface-sunken);
 }
 
 .item:disabled {
@@ -109,5 +109,5 @@
 .separator {
   height: 1px;
   margin: 4px 2px;
-  background: var(--border-light);
+  background: var(--line-soft);
 }
