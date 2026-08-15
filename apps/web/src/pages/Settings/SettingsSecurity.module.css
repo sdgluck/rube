@@ -87,6 +87,16 @@
   color: var(--status-neutral-fg);
 }
 
+.linkButton {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .muted {
   font-size: 12px;
   color: var(--ink-3);

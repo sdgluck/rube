@@ -82,7 +82,12 @@ export function cachedOwner(): OwnerAccount | undefined {
   // A token change invalidates the cache: the new token may belong to a
   // different account, and admitting the previous owner on the strength of a
   // stale lookup is precisely the failure this guards against.
-  if (token && storedHash && tokenHash(token) !== storedHash) return undefined;
+  //
+  // A *missing* hash fails closed too. `resolveOwner` always writes the id and
+  // the hash together, so an id standing on its own didn't come from there —
+  // it was written directly, and an unbound owner id is a standing admin grant
+  // for whoever chose it.
+  if (!token || !storedHash || tokenHash(token) !== storedHash) return undefined;
   return { userId, username: username ?? "owner" };
 }
 

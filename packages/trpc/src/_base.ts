@@ -12,6 +12,14 @@ export interface AdminContext {
   resHeaders: Headers;
   /** True when the request arrived over HTTPS, so cookies can be `Secure`. */
   secure: boolean;
+  /** In-flight sign-in handshake nonce, from the handshake cookie. */
+  handshakeNonce?: string;
+  /**
+   * This server's own origin as the caller reached it. The sign-in flow sends
+   * the browser back here after Plex, and deriving it from the request rather
+   * than accepting it as input means nobody can aim that return elsewhere.
+   */
+  origin: string;
   /** Best-effort client address, for rate-limiting the auth handshake. */
   ip: string;
   /** False when auth is switched off in config or bypassed by the env var. */

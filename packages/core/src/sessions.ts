@@ -54,6 +54,24 @@ export function ensurePlexClientId(): string {
   return id;
 }
 
+/**
+ * The admin flow's own client identifier, deliberately NOT the portal's.
+ *
+ * plex.tv will hand a PIN's auth token to anyone who asks with the client
+ * identifier that created it. Sharing one identifier between the two flows
+ * therefore means a PIN minted by the public portal is redeemable at the admin
+ * endpoint — a portal login could be converted into an admin session. Separate
+ * identifiers make that impossible at the plex.tv layer rather than relying on
+ * our own bookkeeping.
+ */
+export function ensureAdminPlexClientId(): string {
+  const existing = getConfig("admin_plex_client_id");
+  if (existing) return existing;
+  const id = randomUUID();
+  setConfig("admin_plex_client_id", id);
+  return id;
+}
+
 export interface PlexSession {
   userId: number;
   username: string;

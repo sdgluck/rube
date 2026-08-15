@@ -10,6 +10,7 @@
  */
 import { describe, test, before } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -36,6 +37,13 @@ let appRouter: typeof import("./index.ts").appRouter;
 let t: typeof import("./_base.ts").t;
 
 before(async () => {
+  // Most of this suite is refused by the gate long before the database, but
+  // the `config.save` case below asserts on what was actually written, so the
+  // scratch DB needs a real schema.
+  execFileSync(process.execPath, [join(import.meta.dirname, "..", "..", "db", "src", "migrate.ts")], {
+    env: { ...process.env },
+    stdio: "ignore",
+  });
   ({ appRouter } = await import("./index.ts"));
   ({ t } = await import("./_base.ts"));
 });
@@ -46,6 +54,8 @@ function anonymousContext() {
     rawToken: undefined,
     resHeaders: new Headers(),
     secure: false,
+    handshakeNonce: undefined,
+    origin: "http://tinkerbell.test",
     ip: "test",
     authRequired: true,
   };
@@ -91,6 +101,35 @@ describe("admin router surface", () => {
       assert.ok(path.startsWith("auth."), `${path} is public but isn't part of the auth handshake`);
       assert.ok(path in appRouter._def.procedures, `${path} is listed as public but no longer exists`);
     }
+  });
+
+  test("poll refuses a caller with no handshake cookie instead of reaching plex.tv", async () => {
+    const caller = t.createCallerFactory(appRouter)(anonymousContext());
+    // The PIN id is not an input any more, so there is nothing for a caller to
+    // guess or replay: without the cookie this process handed them, the
+    // handshake doesn't exist. If this ever starts hitting the network, the
+    // binding has been lost.
+    const res = await caller.auth.poll();
+    assert.equal(res.status, "expired");
+  });
+
+  test("poll refuses a handshake nonce this process never issued", async () => {
+    const caller = t.createCallerFactory(appRouter)({
+      ...anonymousContext(),
+      handshakeNonce: "a".repeat(64),
+    });
+    const res = await caller.auth.poll();
+    assert.equal(res.status, "expired");
+  });
+
+  test("config.save cannot write the auth keys", async () => {
+    const caller = t.createCallerFactory(appRouter)({ ...anonymousContext(), authRequired: false });
+    // Omitted from the input schema, so zod strips them and the loop never
+    // sees them — the only writers are the `auth` mutations that check.
+    await caller.config.save({ admin_allowed_user_ids: [999], admin_auth_enabled: true } as never);
+    const { getConfig } = await import("@tinkerbell/core");
+    assert.deepEqual(getConfig("admin_allowed_user_ids"), undefined);
+    assert.equal(getConfig("admin_auth_enabled"), undefined);
   });
 
   test("with auth switched off, the gate stands aside", async () => {

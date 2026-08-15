@@ -6,6 +6,7 @@
  * the portal admits any shared user, this admits only the server owner (and
  * anyone the owner allow-listed).
  */
+import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -17,7 +18,7 @@ import {
   createLogger,
   deletePlexSession,
   deletePlexSessionsInScope,
-  ensurePlexClientId,
+  ensureAdminPlexClientId,
   getConfig,
   getPlexSession,
   isAdminAccount,
@@ -28,13 +29,24 @@ import {
 import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { t, publicProcedure, procedure, type AdminContext } from "./_base.ts";
-import { COOKIE_NAMES, clearSessionCookie, isSecureRequest, parseCookie, setSessionCookie } from "./cookies.ts";
+import {
+  COOKIE_NAMES,
+  HANDSHAKE_COOKIE,
+  HANDSHAKE_MAX_AGE,
+  clearHandshakeCookie,
+  clearSessionCookie,
+  isSecureRequest,
+  parseCookie,
+  setHandshakeCookie,
+  setSessionCookie,
+} from "./cookies.ts";
 
 const log = createLogger("auth");
 
 export function createAdminContext(opts: { req: Request; resHeaders: Headers; ip?: string }): AdminContext {
   const secure = isSecureRequest(opts.req);
-  const rawToken = parseCookie(opts.req.headers.get("cookie") ?? "", COOKIE_NAMES.admin);
+  const cookies = opts.req.headers.get("cookie") ?? "";
+  const rawToken = parseCookie(cookies, COOKIE_NAMES.admin);
   const session = getPlexSession(rawToken, "admin");
 
   // Sliding expiry only moves the DB row; the browser's copy carries its own
@@ -49,14 +61,55 @@ export function createAdminContext(opts: { req: Request; resHeaders: Headers; ip
   // different owner) must stop working immediately, not at expiry.
   const authorised = session && isAdminAccount(session.userId) ? session : undefined;
 
+  // Behind a reverse proxy the Host the browser used is the forwarded one;
+  // the socket's Host is the internal address and would send the user back to
+  // somewhere they can't reach.
+  const forwardedHost = opts.req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || new URL(opts.req.url).host;
+
   return {
     session: authorised && { userId: authorised.userId, username: authorised.username },
     rawToken,
     resHeaders: opts.resHeaders,
     secure,
+    handshakeNonce: parseCookie(cookies, HANDSHAKE_COOKIE),
+    origin: `${secure ? "https" : "http"}://${host}`,
     ip: opts.ip ?? "unknown",
     authRequired: adminAuthRequired(),
   };
+}
+
+// ─── Sign-in handshakes ───────────────────────────────────────────────────
+// A PIN id is not a secret: plex.tv hands its auth token to anyone who asks
+// with the client identifier that created it. So the id never leaves this
+// process. `start` keeps it here against an unguessable nonce and gives the
+// browser only the nonce, in an HttpOnly cookie; `poll` looks the id back up
+// from that cookie and accepts no id from the caller at all.
+//
+// In memory on purpose: a handshake is worthless after 15 minutes, and a
+// restart mid-sign-in costs one click to retry.
+
+const HANDSHAKE_TTL_MS = HANDSHAKE_MAX_AGE * 1000;
+const handshakes = new Map<string, { pinId: number; expiresAt: number }>();
+
+function createHandshake(pinId: number): string {
+  const now = Date.now();
+  for (const [key, value] of handshakes) if (value.expiresAt < now) handshakes.delete(key);
+  const nonce = randomBytes(32).toString("hex");
+  handshakes.set(nonce, { pinId, expiresAt: now + HANDSHAKE_TTL_MS });
+  return nonce;
+}
+
+/** Resolve a nonce to its PIN id, or undefined if unknown or expired. */
+function readHandshake(nonce: string | undefined): number | undefined {
+  if (!nonce) return undefined;
+  const entry = handshakes.get(nonce);
+  if (!entry) return undefined;
+  if (entry.expiresAt < Date.now()) {
+    handshakes.delete(nonce);
+    return undefined;
+  }
+  return entry.pinId;
 }
 
 // ─── Rate limiting ────────────────────────────────────────────────────────
@@ -95,42 +148,69 @@ export const adminAuthRouter = t.router({
    */
   status: publicProcedure.query(({ ctx }) => {
     const owner = cachedOwner();
+    const configured = adminAuthConfigured();
+    // Who the owner is, and who else may administer, are answers for people
+    // who are already in — or for the pre-adoption case, where the setup copy
+    // names the account that's about to become the only way in and there is
+    // no gate to leak past anyway.
+    const maySeeIdentities = !!ctx.session || !configured;
     return {
-      configured: adminAuthConfigured(),
+      configured,
       required: ctx.authRequired,
       disabledByEnv: authDisabledByEnv(),
       signedIn: !!ctx.session,
       username: ctx.session?.username,
-      ownerUsername: owner?.username,
+      // Always present: the SPA needs it to choose a screen.
       ownerResolved: !!owner,
-      allowedUserIds: getConfig("admin_allowed_user_ids") ?? [],
+      ownerUsername: maySeeIdentities ? owner?.username : undefined,
+      allowedUserIds: maySeeIdentities ? (getConfig("admin_allowed_user_ids") ?? []) : undefined,
     };
   }),
 
-  start: publicProcedure
-    .input(z.object({ forwardUrl: z.string().url().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      rateLimit(ctx.ip);
-      // Fail before sending anyone to plex.tv if we couldn't tell who the
-      // owner is — otherwise they'd complete the whole dance only to be
-      // refused at the end.
-      await requireOwner();
-      const clientId = ensurePlexClientId();
-      const pin = await createPlexPin(clientId);
-      return {
-        id: pin.id,
-        authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl: input.forwardUrl ?? "" }),
-      };
-    }),
-
-  poll: publicProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+  /**
+   * Begin a sign-in. Returns only the plex.tv URL to send the browser to —
+   * the PIN id stays here, bound to a nonce in an HttpOnly cookie, so the
+   * handshake can only be completed by the browser that began it.
+   */
+  start: publicProcedure.mutation(async ({ ctx }) => {
     rateLimit(ctx.ip);
-    const clientId = ensurePlexClientId();
-    const token = await checkPlexPin(input.id, clientId);
+    // Fail before sending anyone to plex.tv if we couldn't tell who the
+    // owner is — otherwise they'd complete the whole dance only to be
+    // refused at the end.
+    await requireOwner();
+    const clientId = ensureAdminPlexClientId();
+    const pin = await createPlexPin(clientId);
+    const nonce = createHandshake(pin.id);
+    setHandshakeCookie(ctx.resHeaders, nonce, { secure: ctx.secure });
+    return {
+      // `forwardUrl` is this server's own origin, derived from the request.
+      // It used to be caller-supplied, which let anyone choose where the
+      // browser landed after approving — the last step of a convincing phish.
+      authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl: ctx.origin }),
+    };
+  }),
+
+  poll: publicProcedure.mutation(async ({ ctx }) => {
+    rateLimit(ctx.ip);
+    const pinId = readHandshake(ctx.handshakeNonce);
+    // No cookie, or one this process doesn't recognise: there is nothing to
+    // finish. The client starts over rather than being told anything about
+    // which PINs exist.
+    if (pinId === undefined) {
+      clearHandshakeCookie(ctx.resHeaders, { secure: ctx.secure });
+      return { status: "expired" as const };
+    }
+
+    const clientId = ensureAdminPlexClientId();
+    const token = await checkPlexPin(pinId, clientId);
     if (!token) return { status: "pending" as const };
 
+    // Redeemed — one way or the other this handshake is spent.
+    handshakes.delete(ctx.handshakeNonce!);
+    clearHandshakeCookie(ctx.resHeaders, { secure: ctx.secure });
+
     const account = await getPlexAccount(token, clientId);
-    const owner = await requireOwner();
+    await requireOwner();
 
     if (!isAdminAccount(account.id)) {
       // A real, authenticated Plex account that simply isn't allowed here:
@@ -140,15 +220,19 @@ export const adminAuthRouter = t.router({
         userId: account.id,
         ip: ctx.ip,
       });
+      // Deliberately doesn't name the owner: the caller has proved only that
+      // they hold some Plex account.
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: `${account.username} isn't the owner of this Plex server (${owner.username}).`,
+        message: `${account.username} isn't allowed to administer this server.`,
       });
     }
 
     const raw = createPlexSession(account.id, account.username, "admin");
     setSessionCookie(ctx.resHeaders, raw, { scope: "admin", secure: ctx.secure });
-    emitEvent("auth.signin", `${account.username} signed in`, { userId: account.id });
+    // Recorded with the address that completed the handshake so an unexpected
+    // sign-in is visible in the activity feed.
+    emitEvent("auth.signin", `${account.username} signed in`, { userId: account.id, ip: ctx.ip });
     return { status: "ok" as const, username: account.username };
   }),
 
@@ -172,8 +256,15 @@ export const adminAuthRouter = t.router({
       throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in to continue." });
     }
     const owner = await requireOwner({ force: true });
-    // Any session predating the switch was minted while nothing was checked.
+    // Everything the pre-auth window could have written is reset here, because
+    // until this moment the API answered to anyone who could reach the port.
+    // Sessions were minted while nothing was checked…
     deletePlexSessionsInScope("admin");
+    // …and the allow-list is a standing grant of admin to arbitrary Plex
+    // accounts, so it must not survive the switch either. Adding a second
+    // admin afterwards is one call for the signed-in owner; inheriting one
+    // from before the door was locked is a backdoor.
+    setConfig("admin_allowed_user_ids", []);
     setConfig("admin_auth_enabled", true);
     emitEvent("auth.enabled", `Admin authentication enabled — sign in as ${owner.username}`);
     log.info("admin authentication enabled", { owner: owner.username });

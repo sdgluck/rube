@@ -13,6 +13,7 @@ export default function SettingsSecurity() {
   const enableMutation = trpc.auth.enable.useMutation();
   const disableMutation = trpc.auth.disable.useMutation();
   const logoutMutation = trpc.auth.logout.useMutation();
+  const setAllowedMutation = trpc.auth.setAllowedUserIds.useMutation();
   const [confirming, setConfirming] = useState<"enable" | "disable" | null>(null);
 
   if (statusQuery.error && !statusQuery.data) {
@@ -41,6 +42,19 @@ export default function SettingsSecurity() {
       },
       onError: (err) => addToast(err.message, "error"),
     });
+  }
+
+  function revokeExtras() {
+    setAllowedMutation.mutate(
+      { userIds: [] },
+      {
+        onSuccess: () => {
+          addToast("Additional admins removed", "success");
+          utils.auth.status.invalidate();
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
   }
 
   function signOut() {
@@ -72,6 +86,18 @@ export default function SettingsSecurity() {
               </span>
               {status.signedIn && <span className={styles.muted}>signed in as {status.username}</span>}
             </div>
+            {/* Extra admins are shown whenever there are any. This list is the
+                one grant that isn't the owner, so leaving it invisible would
+                mean an entry nobody ever looks at. */}
+            {!!status.allowedUserIds?.length && (
+              <p className={styles.hint}>
+                Also allowed to sign in: {status.allowedUserIds.length} additional Plex{" "}
+                {status.allowedUserIds.length === 1 ? "account" : "accounts"} ({status.allowedUserIds.join(", ")}).{" "}
+                <button type="button" className={styles.linkButton} onClick={revokeExtras}>
+                  Remove
+                </button>
+              </p>
+            )}
             {status.configured && status.disabledByEnv && (
               <p className={styles.warn}>
                 Authentication is configured but bypassed: <code>TINKERBELL_DISABLE_AUTH</code> is set on the server.

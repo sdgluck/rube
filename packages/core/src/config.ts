@@ -72,6 +72,11 @@ export const configSchema = z.object({
    */
   admin_auth_enabled: z.boolean(),
   /**
+   * The admin flow's X-Plex-Client-Identifier. Separate from the portal's
+   * `global_plex_client_id` on purpose — see `ensureAdminPlexClientId`.
+   */
+  admin_plex_client_id: z.string(),
+  /**
    * The Plex account id of the server owner — the one identity that always
    * gets admin access. Resolved from `global_plex_token` via plex.tv and
    * cached here, because plex.tv being down shouldn't stop you signing in

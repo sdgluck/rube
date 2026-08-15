@@ -13,6 +13,28 @@ import {
 import { restartSchedules, schedulerTimezone } from "@tinkerbell/jobs";
 import { t, procedure } from "./_base.ts";
 
+/**
+ * Auth state is not settings.
+ *
+ * These keys decide who may call this very procedure, and they have their own
+ * mutations in `auth` that check the things that need checking — the owner is
+ * re-resolved from Plex rather than asserted, and enabling auth resets the
+ * allow-list. Reachable through the generic config writer they would be
+ * settable directly, including during the window before auth is switched on,
+ * when this procedure answers to anyone who can reach the port. Omitted from
+ * the input schema so the transport rejects them outright.
+ */
+const AUTH_KEYS = {
+  admin_auth_enabled: true,
+  admin_allowed_user_ids: true,
+  admin_plex_client_id: true,
+  global_plex_owner_id: true,
+  global_plex_owner_username: true,
+  global_plex_owner_token_hash: true,
+} as const;
+
+type SavableKey = Exclude<ConfigKey, keyof typeof AUTH_KEYS>;
+
 export const configRouter = t.router({
   get: procedure.query(() => getAllConfigForClient()),
 
@@ -22,7 +44,7 @@ export const configRouter = t.router({
     explicit: schedulerTimezone() !== undefined,
   })),
 
-  save: procedure.input(configSchema.partial()).mutation(({ input }) => {
+  save: procedure.input(configSchema.partial().omit(AUTH_KEYS)).mutation(({ input }) => {
     // Validated here rather than in `configSchema`, which is also used on read
     // — see the note on `global_timezone`. croner throws when it builds a
     // schedule against an unknown zone, and that throw would happen inside
@@ -36,7 +58,9 @@ export const configRouter = t.router({
 
     const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");
 
-    for (const key of Object.keys(input) as ConfigKey[]) {
+    // Narrower than `ConfigKey` now that the auth keys are omitted from the
+    // input — indexing `input` with a key it can't hold no longer typechecks.
+    for (const key of Object.keys(input) as SavableKey[]) {
       const value = input[key];
       if (value === undefined) continue;
       // The form may echo back the redaction sentinel for secrets the user

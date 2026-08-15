@@ -7,6 +7,7 @@
 import { describe, test, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
@@ -35,13 +36,19 @@ before(async () => {
   core = await import("@tinkerbell/core");
 });
 
+const OWNER_TOKEN = "plex-token-for-tests";
+
 beforeEach(() => {
   delete process.env.TINKERBELL_DISABLE_AUTH;
   core.setConfig("admin_auth_enabled", true);
   // Owner resolution is cached in config; the request path never calls out to
   // plex.tv, so seeding it here is exactly what a resolved install looks like.
+  // The cached owner is only trusted while it is bound to the token it was
+  // resolved from, so the hash has to be seeded with it.
+  core.setConfig("global_plex_token", OWNER_TOKEN);
   core.setConfig("global_plex_owner_id", 42);
   core.setConfig("global_plex_owner_username", "owner");
+  core.setConfig("global_plex_owner_token_hash", createHash("sha256").update(OWNER_TOKEN).digest("hex"));
   core.setConfig("admin_allowed_user_ids", []);
 });
 
@@ -75,6 +82,23 @@ describe("isAdminRequest", () => {
     core.setConfig("admin_allowed_user_ids", [777]);
     const raw = core.createPlexSession(777, "deputy", "admin");
     assert.equal(auth.isAdminRequest(request(`tb_admin_session=${raw}`)), true);
+  });
+
+  test("refuses the owner once the Plex token it was resolved from has changed", () => {
+    const raw = core.createPlexSession(42, "owner", "admin");
+    // A rotated token may belong to a different account entirely, so the
+    // cached owner id stops being evidence of anything.
+    core.setConfig("global_plex_token", "a-different-token");
+    assert.equal(auth.isAdminRequest(request(`tb_admin_session=${raw}`)), false);
+  });
+
+  test("refuses an owner id that was never bound to a token", () => {
+    const raw = core.createPlexSession(42, "owner", "admin");
+    // `resolveOwner` always writes the id and the hash together, so an id
+    // standing alone was written some other way — fail closed rather than
+    // treat it as a standing admin grant.
+    core.deleteConfig("global_plex_owner_token_hash");
+    assert.equal(auth.isAdminRequest(request(`tb_admin_session=${raw}`)), false);
   });
 
   test("admits everyone when auth is switched off — an upgrade changes nothing", () => {

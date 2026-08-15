@@ -12,6 +12,16 @@ export const COOKIE_NAMES: Record<SessionScope, string> = {
   admin: "tb_admin_session",
 };
 
+/**
+ * Carries the in-flight sign-in handshake. Holds an unguessable nonce, never
+ * the plex.tv PIN id — the id stays server-side so no caller can present one
+ * of their choosing.
+ */
+export const HANDSHAKE_COOKIE = "tb_admin_handshake";
+
+/** Long enough for a human to finish signing in, short enough to age out. */
+export const HANDSHAKE_MAX_AGE = 15 * 60; // seconds
+
 export function parseCookie(header: string, name: string): string | undefined {
   for (const part of header.split(";")) {
     const idx = part.indexOf("=");
@@ -48,6 +58,18 @@ export function setSessionCookie(headers: Headers, raw: string, opts: { scope: S
 
 export function clearSessionCookie(headers: Headers, opts: { scope: SessionScope; secure: boolean }): void {
   const attrs = [`${COOKIE_NAMES[opts.scope]}=`, "HttpOnly", "Path=/", "Max-Age=0", "SameSite=Lax"];
+  if (opts.secure) attrs.push("Secure");
+  headers.append("Set-Cookie", attrs.join("; "));
+}
+
+export function setHandshakeCookie(headers: Headers, nonce: string, opts: { secure: boolean }): void {
+  const attrs = [`${HANDSHAKE_COOKIE}=${nonce}`, "HttpOnly", "Path=/", `Max-Age=${HANDSHAKE_MAX_AGE}`, "SameSite=Lax"];
+  if (opts.secure) attrs.push("Secure");
+  headers.append("Set-Cookie", attrs.join("; "));
+}
+
+export function clearHandshakeCookie(headers: Headers, opts: { secure: boolean }): void {
+  const attrs = [`${HANDSHAKE_COOKIE}=`, "HttpOnly", "Path=/", "Max-Age=0", "SameSite=Lax"];
   if (opts.secure) attrs.push("Secure");
   headers.append("Set-Cookie", attrs.join("; "));
 }
