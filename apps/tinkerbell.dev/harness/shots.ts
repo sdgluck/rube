@@ -221,9 +221,12 @@ export const SHOTS: Shot[] = [
     description: "Rule wizard step 3 — library sections and scope",
     path: "/rules",
     viewports: DESKTOP,
+    // Two Nexts, not one: Outcome sits between Type and Scope, because what a
+    // rule does decides what Scope asks it (a cleanup rule is never pinned).
     steps: [
       { click: "Add Rule" },
       { clickText: "Build a collection per production company" },
+      { click: "Next" },
       { click: "Next" },
       { wait: "text=Sections" },
     ],
