@@ -363,27 +363,45 @@ export async function updateCollectionLabels(client: PlexClient, ratingKey: stri
   db.update(collections).set({ labels }).where(eq(collections.plexRatingKey, ratingKey)).run();
 }
 
-export async function deleteCollection(client: PlexClient, ratingKey: string): Promise<void> {
+export interface DeleteCollectionResult {
+  /**
+   * False when Plex 404s the ratingKey — the collection was deleted on the
+   * server behind our back. The local rows still go, since keeping a row for
+   * something Plex doesn't have is what produced the dead entry in the first
+   * place; the caller decides how to tell the user.
+   */
+  existedInPlex: boolean;
+}
+
+export async function deleteCollection(client: PlexClient, ratingKey: string): Promise<DeleteCollectionResult> {
+  let existedInPlex = true;
   try {
     await client.deleteItem(ratingKey);
   } catch (err) {
-    // Plex refuses DELETE on /library/metadata with a bare 403 when the server
-    // has "Allow media deletion" switched off, which is the default on a fresh
-    // install. Nothing about the response says so, and the UI used to render
-    // the whole thing as "Failed to delete" with no reason — the single most
-    // likely way for this to look like a broken button rather than a setting.
-    if (err instanceof PlexApiError && err.status === 403) {
+    // A 404 means the collection is already gone from Plex — someone deleted it
+    // there, or a rule run swept it — and the only thing left to do is the local
+    // cleanup below. Failing the delete just stranded the row on screen.
+    if (err instanceof PlexApiError && err.status === 404) {
+      existedInPlex = false;
+    } else if (err instanceof PlexApiError && err.status === 403) {
+      // Plex refuses DELETE on /library/metadata with a bare 403 when the server
+      // has "Allow media deletion" switched off, which is the default on a fresh
+      // install. Nothing about the response says so, and the UI used to render
+      // the whole thing as "Failed to delete" with no reason — the single most
+      // likely way for this to look like a broken button rather than a setting.
       throw new Error(
         "Plex refused the delete (403). Enable Settings → Library → “Allow media deletion” on the Plex server, " +
           "and check the configured token belongs to the server owner.",
       );
+    } else {
+      throw err;
     }
-    throw err;
   }
   db.transaction((tx) => {
     tx.delete(collections).where(eq(collections.plexRatingKey, ratingKey)).run();
     tx.delete(collectionItems).where(eq(collectionItems.collectionRatingKey, ratingKey)).run();
   });
+  return { existedInPlex };
 }
 
 /**

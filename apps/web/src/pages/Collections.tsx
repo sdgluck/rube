@@ -6,6 +6,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
+import AlertModal from "#components/AlertModal";
 import BulkBar from "#components/BulkBar";
 import BulkLabelsModal from "#components/BulkLabelsModal";
 import { CollectionsSkeleton } from "#components/Skeleton";
@@ -112,6 +113,7 @@ export default function Collections() {
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
   const [labelEditing, setLabelEditing] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
   const navigate = useNavigate();
 
@@ -189,8 +191,18 @@ export default function Collections() {
       onConfirm: async () => {
         setPendingConfirm(null);
         try {
-          await deleteMutation.mutateAsync({ ratingKey });
-          addToast(`Deleted "${title}"`, "success");
+          const { existedInPlex } = await deleteMutation.mutateAsync({ ratingKey });
+          // The collection was already gone from Plex, so all we did was drop
+          // our stale copy of it. That's a different outcome from the one the
+          // user asked for, so it gets a dialog rather than a toast.
+          if (existedInPlex) {
+            addToast(`Deleted "${title}"`, "success");
+          } else {
+            setAlert({
+              title: "Collection no longer in Plex",
+              message: `"${title}" no longer exists on the Plex server — it was probably deleted there. It has been removed from Tinkerbell.`,
+            });
+          }
           collectionsQuery.refetch();
           filtersQuery.refetch();
         } catch (err) {
@@ -213,6 +225,9 @@ export default function Collections() {
         setBulkProgress({ done: 0, total: count });
         let deleted = 0;
         let failed = 0;
+        // Counted apart from `deleted`: nothing was removed from Plex, we only
+        // dropped rows for collections that had already vanished from it.
+        let missing = 0;
         // Bulk deletes fail for one reason far more often than several, so
         // reporting the first one turns "failed 12" into something actionable
         // without stacking a dozen identical toasts.
@@ -221,13 +236,14 @@ export default function Collections() {
           [...selected],
           async (ratingKey) => {
             try {
-              await deleteMutation.mutateAsync({ ratingKey });
-              deleted++;
+              const { existedInPlex } = await deleteMutation.mutateAsync({ ratingKey });
+              if (existedInPlex) deleted++;
+              else missing++;
             } catch (err) {
               failed++;
               if (!firstError) firstError = errorMessage(err);
             }
-            setBulkProgress({ done: deleted + failed, total: count });
+            setBulkProgress({ done: deleted + missing + failed, total: count });
           },
           { concurrency: 5 },
         );
@@ -237,6 +253,12 @@ export default function Collections() {
           addToast(`Deleted ${deleted}, failed ${failed}: ${firstError}`, "error");
         } else {
           addToast(`Deleted ${deleted} collection(s)`, "success");
+        }
+        if (missing > 0) {
+          setAlert({
+            title: "Some collections no longer in Plex",
+            message: `${missing} of the selected collection(s) no longer exist on the Plex server — they were probably deleted there. They have been removed from Tinkerbell.`,
+          });
         }
         collectionsQuery.refetch();
         filtersQuery.refetch();
@@ -570,6 +592,8 @@ export default function Collections() {
             onCancel={() => setPendingConfirm(null)}
           />
         )}
+
+        {alert && <AlertModal title={alert.title} message={alert.message} onDismiss={() => setAlert(null)} />}
 
         {labelEditing && (
           <BulkLabelsModal

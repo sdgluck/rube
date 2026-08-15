@@ -5,6 +5,7 @@ import { EMPTY } from "#/format";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
+import AlertModal from "#components/AlertModal";
 import { DetailSkeleton } from "#components/Skeleton";
 import EmptyState from "#components/EmptyState";
 import FadeImage from "#components/FadeImage";
@@ -37,6 +38,7 @@ export default function CollectionDetail() {
   const [itemSearch, setItemSearch] = useState("");
   const { addToast } = useToast();
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
 
   const collectionQuery = trpc.collections.get.useQuery(
     { ratingKey: ratingKey! },
@@ -148,8 +150,18 @@ export default function CollectionDetail() {
       onConfirm: async () => {
         setPendingConfirm(null);
         try {
-          await deleteMutation.mutateAsync({ ratingKey });
-          navigate("/collections");
+          const { existedInPlex } = await deleteMutation.mutateAsync({ ratingKey });
+          // Already gone from Plex: say so before leaving, since the page the
+          // user is standing on is about to disappear for a reason other than
+          // the one they asked for.
+          if (existedInPlex) {
+            navigate("/collections");
+          } else {
+            setAlert({
+              title: "Collection no longer in Plex",
+              message: `"${collection.title}" no longer exists on the Plex server — it was probably deleted there. It has been removed from Tinkerbell.`,
+            });
+          }
         } catch {
           addToast("Failed to delete collection", "error");
         }
@@ -420,6 +432,17 @@ export default function CollectionDetail() {
           danger
           onConfirm={pendingConfirm.onConfirm}
           onCancel={() => setPendingConfirm(null)}
+        />
+      )}
+
+      {alert && (
+        <AlertModal
+          title={alert.title}
+          message={alert.message}
+          onDismiss={() => {
+            setAlert(null);
+            navigate("/collections");
+          }}
         />
       )}
     </div>

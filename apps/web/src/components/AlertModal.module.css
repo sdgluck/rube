@@ -1,0 +1,17 @@
+.message {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.dismiss {
+  composes: btn btnPrimary from "../styles/controls.module.css";
+}

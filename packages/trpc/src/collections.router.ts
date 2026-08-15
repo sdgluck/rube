@@ -91,8 +91,8 @@ export const collectionsRouter = t.router({
 
   delete: procedure.input(z.object({ ratingKey: z.string() })).mutation(async ({ input }) => {
     const client = getPlexClient();
-    await deleteCollection(client, input.ratingKey);
-    return { ok: true };
+    const { existedInPlex } = await deleteCollection(client, input.ratingKey);
+    return { ok: true, existedInPlex };
   }),
 
   smartConfig: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
