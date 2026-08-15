@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-08-15
+
+### Fixed
+
+- Fixed the app bar's height so it no longer changes by a few pixels when navigating between pages with different controls, which previously caused the page content to jump.
+- The app bar no longer stays pinned to the top of the screen while scrolling; it now scrolls away with the page and returns when scrolling back up.
+
 ## [0.17.0] - 2026-08-15
 
 ### Added
