@@ -15,6 +15,20 @@ export function resolveStaticPath(distDir: string, urlPathname: string): string 
 }
 
 /**
+ * Is this request for a hashed build artefact rather than an app route?
+ *
+ * Vite emits every chunk into `/assets/` under a content hash, so these paths
+ * are never routes and a miss is never something the SPA can render. It has to
+ * be a 404: falling through to `index.html` answers a `<script>` request with
+ * HTML and a 200, and the browser reports that as "failed to fetch dynamically
+ * imported module" — which reads like a network fault rather than what it is,
+ * a client holding an `index.html` from before the last deploy.
+ */
+export function isBuildAsset(urlPathname: string): boolean {
+  return urlPathname.startsWith("/assets/");
+}
+
+/**
  * Read one cookie out of a `Cookie:` header. Lives here rather than beside
  * the session lookup so it can be unit-tested without importing anything that
  * opens the database — the header is attacker-controlled and the parsing has

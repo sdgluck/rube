@@ -24,7 +24,7 @@ import { reportHealth } from "@tinkerbell/domain.health";
 import { scanAllProviders } from "@tinkerbell/domain.migration";
 import { getLocalCollections } from "@tinkerbell/domain.collections";
 import { emitEvent } from "@tinkerbell/domain.events";
-import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
+import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
 import { clientIp, rejectIfNotAdmin } from "./auth.ts";
 import { handlePrerollRoute } from "./prerolls.ts";
 import { guarded, sendFetchResponse, toFetchRequest } from "./http.ts";
@@ -99,6 +99,24 @@ async function serveStatic(res: ServerResponse, filePath: string): Promise<boole
     // we hit this path so the fallback can still write a 200.
     return false;
   }
+}
+
+/**
+ * A hashed chunk that isn't on disk is a client running against a build we no
+ * longer have. 404 rather than the SPA index, and say so in the body — the
+ * message ends up in a browser console, which is where whoever is debugging a
+ * blank page will be looking.
+ */
+function sendStaleAsset(res: ServerResponse): void {
+  const body = "This build asset no longer exists. The app has been updated since this page loaded — reload it.\n";
+  res.writeHead(404, {
+    "Content-Type": "text/plain",
+    "Content-Length": Buffer.byteLength(body),
+    // Never let a proxy or the browser hold on to the miss: the reload that
+    // fixes it fetches a fresh index.html through the same caches.
+    "Cache-Control": "no-store",
+  });
+  res.end(body);
 }
 
 const server = createServer(
@@ -184,6 +202,8 @@ const server = createServer(
     const resolved = resolveStaticPath(DIST_DIR, path);
     if (resolved && (await serveStatic(res, resolved))) return;
 
+    if (isBuildAsset(path)) return sendStaleAsset(res);
+
     // SPA fallback
     await serveStatic(res, join(DIST_DIR, "index.html"));
   }),
@@ -211,6 +231,8 @@ const portalServer = createServer(
 
     const resolved = resolveStaticPath(PORTAL_DIST_DIR, path);
     if (resolved && (await serveStatic(res, resolved))) return;
+
+    if (isBuildAsset(path)) return sendStaleAsset(res);
 
     // Portal SPA fallback — the portal app, never the admin one.
     await serveStatic(res, join(PORTAL_DIST_DIR, "index.html"));

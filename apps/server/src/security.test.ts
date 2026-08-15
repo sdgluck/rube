@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPlexImageUrl, parseCookieHeader, resolvePrerollId, resolveStaticPath } from "./security.ts";
+import { buildPlexImageUrl, isBuildAsset, parseCookieHeader, resolvePrerollId, resolveStaticPath } from "./security.ts";
 
 const DIST = "/srv/web/dist";
 
@@ -28,6 +28,25 @@ describe("resolveStaticPath", () => {
 
   test("trailing slash and dot segments inside dist still resolve to dist", () => {
     assert.equal(resolveStaticPath(DIST, "/foo/./bar"), `${DIST}/foo/bar`);
+  });
+});
+
+describe("isBuildAsset", () => {
+  test("hashed chunks and stylesheets are assets", () => {
+    assert.equal(isBuildAsset("/assets/SettingsPrerolls-BhC939To.js"), true);
+    assert.equal(isBuildAsset("/assets/index-BCjxB70r.css"), true);
+  });
+
+  test("app routes are not, however deep", () => {
+    assert.equal(isBuildAsset("/"), false);
+    assert.equal(isBuildAsset("/settings/prerolls"), false);
+    assert.equal(isBuildAsset("/rules/123"), false);
+  });
+
+  test("does not match a route that merely mentions assets", () => {
+    // These must still reach the SPA fallback, or deep-linking to them 404s.
+    assert.equal(isBuildAsset("/assets"), false);
+    assert.equal(isBuildAsset("/library/assets/42"), false);
   });
 });
 
