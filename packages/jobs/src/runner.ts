@@ -10,6 +10,7 @@ import {
   errorMessage,
   formatDuration,
   logLevel,
+  migrateCleanupBudgetKey,
   noopCheckpoint,
   type JobContext,
 } from "@tinkerbell/core";
@@ -658,6 +659,7 @@ export async function initJobs(): Promise<void> {
   // Wire startJob into the cron-trigger callback before any schedule
   // can fire. See schedule.ts for the dependency-inversion shape.
   initSchedule(startJob);
+  migrateCleanupBudgetKey();
   seedDefaultJobs();
   seedDefaultRules();
   markStaleRunsAsFailed();

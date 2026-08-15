@@ -195,10 +195,17 @@ export const configSchema = z.object({
    */
   cleanup_enabled: z.boolean(),
   /**
-   * Ceiling on destructive actions across *all* cleanup rules in one generate
-   * run. Per-rule caps don't compose: five rules each staying under their own
-   * limit of 30 can still empty a library overnight.
+   * Ceiling on destructive actions across *all* cleanup rules, over a rolling
+   * 24 hours. Per-rule caps don't compose: five rules each staying under their
+   * own limit of 30 can still empty a library overnight.
+   *
+   * Per day rather than the per-run it started as, because "per run" only ever
+   * bounded a single batch — an ad-hoc rule run took a fresh full budget, and
+   * cleanup now has its own job as well. Spend is counted from the candidate
+   * ledger, so it holds however the work was started.
    */
+  cleanup_max_deletes_per_day: z.number().int().positive(),
+  /** @deprecated Read once at startup to seed `cleanup_max_deletes_per_day`. */
   cleanup_max_deletes_per_run: z.number().int().positive(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
@@ -356,6 +363,24 @@ export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): v
 
 export function deleteConfig(key: ConfigKey): void {
   db.delete(config).where(eq(config.key, key)).run();
+}
+
+/**
+ * Carry a configured `cleanup_max_deletes_per_run` over to its replacement.
+ *
+ * The ceiling changed from per-run to per-rolling-day when cleanup got its own
+ * job (a per-run cap bounded one batch and nothing else). The number a user
+ * chose still expresses what they meant — "don't remove more than this without
+ * me looking" — so it moves across rather than silently reverting to the
+ * default. Called once from `initJobs`, before anything reads either key.
+ */
+export function migrateCleanupBudgetKey(): void {
+  const legacy = getConfig("cleanup_max_deletes_per_run");
+  if (legacy === undefined) return;
+  if (getConfig("cleanup_max_deletes_per_day") === undefined) {
+    setConfig("cleanup_max_deletes_per_day", legacy);
+  }
+  deleteConfig("cleanup_max_deletes_per_run");
 }
 
 export type PersonalizedSharingStatus = "disabled" | "enabling" | "enabled" | "disabling";

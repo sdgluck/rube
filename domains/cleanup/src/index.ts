@@ -18,7 +18,7 @@
  * transaction; `recordMatches` opens its own so a crash mid-run cannot leave
  * half the streaks bumped.
  */
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { cleanupCandidates, db, rules } from "@tinkerbell/db";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
@@ -257,6 +257,36 @@ export function countsByRule(): Map<string, { queued: number; actioned: number }
     .groupBy(cleanupCandidates.ruleId)
     .all();
   return new Map(rows.map((r) => [r.ruleId, { queued: r.queued, actioned: r.actioned }]));
+}
+
+/**
+ * How many destructive actions have landed in the last `windowMs`.
+ *
+ * The ceiling on destructive actions used to be a counter held in memory for
+ * the length of one job run, which bounded exactly one batch: an ad-hoc single
+ * rule run minted itself a fresh full budget, so running five rules by hand
+ * granted five budgets, and splitting cleanup into its own job would have
+ * granted another. Counting what actually happened, from the ledger that
+ * already records it, is a ceiling that holds however the work was started —
+ * scheduled, ad-hoc, or after a container restart mid-run.
+ *
+ * `collection_only` and `label` are excluded: nothing was removed, so nothing
+ * was spent. This mirrors `isDestructiveMode` in contracts, expressed here as
+ * the stored `action` values so the ledger stays the single source of truth.
+ */
+export function actionedSince(sinceMs: number): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(cleanupCandidates)
+    .where(
+      and(
+        isNotNull(cleanupCandidates.actionedAt),
+        gte(cleanupCandidates.actionedAt, sinceMs),
+        inArray(cleanupCandidates.action, ["unmonitor", "delete"]),
+      ),
+    )
+    .get();
+  return row?.n ?? 0;
 }
 
 /** Queue size for the sidebar badge — items due now or on the next run. */

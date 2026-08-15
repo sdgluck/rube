@@ -21,7 +21,7 @@ setupTempDb("tinkerbell-cleanup-job-test-");
 const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await import("@tinkerbell/db");
 const { setConfig } = await import("@tinkerbell/core");
 const { noopCheckpoint } = await import("@tinkerbell/core");
-const { recordMatches, listCandidates, holdCandidate } = await import("@tinkerbell/domain.cleanup");
+const { recordMatches, listCandidates, holdCandidate, markActioned } = await import("@tinkerbell/domain.cleanup");
 const { runHandlerWithCleanup, createCleanupBudget, CLEANUP_LABEL } = await import("./cleanup.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
 
@@ -335,7 +335,57 @@ describe("cleanup_enabled", () => {
 
 // ─── The global ceiling ──────────────────────────────────────────────────────
 
-describe("global per-run ceiling", () => {
+describe("global daily ceiling", () => {
+  it("counts spend from the ledger, so a second budget can't refill it", async () => {
+    // The property the per-run counter never had. It bounded one batch: an
+    // ad-hoc `runSingleRule` took a fresh full budget, and cleanup now has its
+    // own job as well. Two budgets in the same day must share one allowance.
+    setConfig("cleanup_max_deletes_per_day", 2);
+    primeStreaks(
+      [
+        { ratingKey: "100", title: "Film 100" },
+        { ratingKey: "200", title: "Film 200" },
+      ],
+      2,
+    );
+    stubServers({ allowDestructive: true });
+    const { ctx } = testContext();
+
+    const first = createCleanupBudget();
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction(),
+      "machine-1",
+      ["Tinkerbell"],
+      first,
+      handlerYielding([
+        { ratingKey: "100", title: "Film 100" },
+        { ratingKey: "200", title: "Film 200" },
+      ]),
+    );
+
+    // A brand-new budget, as a separate job or an ad-hoc run would create.
+    const second = createCleanupBudget();
+    assert.equal(second.remaining(), 0, "the day's allowance is already spent");
+    assert.equal(second.reserve(), false);
+  });
+
+  it("lets spend outside the window age out", () => {
+    setConfig("cleanup_max_deletes_per_day", 2);
+    primeStreaks([{ ratingKey: "100", title: "Film 100" }], 2);
+    markActioned(RULE_ID, "100", "delete", Date.now() - 25 * 60 * 60 * 1000);
+
+    assert.equal(createCleanupBudget().remaining(), 2, "yesterday's deletions don't count against today");
+  });
+
+  it("ignores non-destructive actions when counting spend", () => {
+    setConfig("cleanup_max_deletes_per_day", 2);
+    primeStreaks([{ ratingKey: "100", title: "Film 100" }], 2);
+    markActioned(RULE_ID, "100", "label");
+
+    assert.equal(createCleanupBudget().remaining(), 2, "labelling removed nothing, so it spent nothing");
+  });
+
   it("stops at the shared budget even when each rule is under its own cap", async () => {
     // Three items due, a per-rule cap of 30, but only two left in the run.
     primeStreaks(
@@ -349,8 +399,8 @@ describe("global per-run ceiling", () => {
     const calls = stubServers({ allowDestructive: true });
     const { ctx, log } = testContext();
 
+    setConfig("cleanup_max_deletes_per_day", 2);
     const budget = createCleanupBudget();
-    budget.remaining = 2;
 
     const out = await runHandlerWithCleanup(
       deps(ctx),
@@ -367,8 +417,8 @@ describe("global per-run ceiling", () => {
 
     assert.equal(out.actioned, 2);
     assert.equal(calls.deletes.length, 2);
-    assert.equal(budget.remaining, 0);
-    assert.match(log.join("\n"), /Global per-run limit reached/);
+    assert.equal(budget.remaining(), 0);
+    assert.match(log.join("\n"), /Daily limit reached/);
     // The third is untouched and still queued for next time.
     assert.equal(listCandidates(RULE_ID).filter((c) => c.actionedAt == null).length, 1);
   });
@@ -383,8 +433,8 @@ describe("global per-run ceiling", () => {
     );
     stubServers({ allowDestructive: true });
     const { ctx } = testContext();
+    setConfig("cleanup_max_deletes_per_day", 1);
     const budget = createCleanupBudget();
-    budget.remaining = 1;
 
     await runHandlerWithCleanup(
       deps(ctx),
@@ -398,7 +448,7 @@ describe("global per-run ceiling", () => {
       ]),
     );
 
-    assert.equal(budget.remaining, 0, "the next rule in the run gets nothing");
+    assert.equal(budget.remaining(), 0, "the next rule in the run gets nothing");
   });
 
   it("non-destructive modes don't consume the delete budget", async () => {
@@ -406,7 +456,7 @@ describe("global per-run ceiling", () => {
     stubServers();
     const { ctx } = testContext();
     const budget = createCleanupBudget();
-    const before = budget.remaining;
+    const before = budget.remaining();
 
     await runHandlerWithCleanup(
       deps(ctx),
@@ -417,7 +467,7 @@ describe("global per-run ceiling", () => {
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
 
-    assert.equal(budget.remaining, before);
+    assert.equal(budget.remaining(), before);
   });
 
   it("reserves the slot before acting, so concurrent rules can't overshoot", async () => {
@@ -427,8 +477,8 @@ describe("global per-run ceiling", () => {
     primeStreaks([{ ratingKey: "100", title: "Film 100" }], 2);
     let inFlight = 0;
     let sawRemainingDuringDelete: number | null = null;
+    setConfig("cleanup_max_deletes_per_day", 1);
     const budget = createCleanupBudget();
-    budget.remaining = 1;
 
     stubServers({ allowDestructive: true });
     const inner = globalThis.fetch;
@@ -436,7 +486,7 @@ describe("global per-run ceiling", () => {
       const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
       if ((init?.method ?? "GET").toUpperCase() === "DELETE" && url.port === "7878") {
         inFlight++;
-        sawRemainingDuringDelete = budget.remaining;
+        sawRemainingDuringDelete = budget.remaining();
       }
       return inner(input as never, init as never);
     }) as typeof fetch;
@@ -473,7 +523,7 @@ describe("global per-run ceiling", () => {
     }) as typeof fetch;
 
     const budget = createCleanupBudget();
-    const before = budget.remaining;
+    const before = budget.remaining();
     const { ctx } = testContext();
     await runHandlerWithCleanup(
       deps(ctx),
@@ -484,7 +534,7 @@ describe("global per-run ceiling", () => {
       handlerYielding([{ ratingKey: "100", title: "Film 100" }]),
     );
 
-    assert.equal(budget.remaining, before, "a run of failures must not eat the whole budget");
+    assert.equal(budget.remaining(), before, "a run of failures must not eat the whole budget");
   });
 });
 
