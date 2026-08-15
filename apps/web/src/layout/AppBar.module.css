@@ -14,8 +14,10 @@
   padding: 8px 28px;
   background: var(--bg-page);
   /* The bar floats over scrolling content; a hairline keeps table headers from
-     appearing to belong to it. */
-  box-shadow: 0 1px 0 var(--border-light);
+     appearing to belong to it. This was a `0 1px 0` box-shadow faking a border
+     — it is a real border now, and a full-weight --line, because with nothing
+     else casting shadows the divide has to hold on its own. */
+  border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
 

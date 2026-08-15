@@ -150,7 +150,7 @@
   cursor: pointer;
   color: var(--text-muted);
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
 }
 
 .drawerClose:hover {
@@ -393,7 +393,7 @@
   min-height: 28px;
   padding: 2px 4px;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--r-tag);
 }
 
 .smartChipField:focus-within {
@@ -453,7 +453,7 @@
 
 .smartChipPicker {
   border: 1px solid var(--border-input);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   background: var(--bg-input);
   color: var(--text-primary);
   font-size: 12.5px;
@@ -485,7 +485,7 @@
   color: var(--ink-faint);
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   font-size: 14px;
   cursor: pointer;
   display: flex;

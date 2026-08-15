@@ -10,7 +10,7 @@
 }
 
 .track {
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
@@ -23,12 +23,14 @@
   background: var(--accent);
 }
 
+/* Squared off to match the track, and unshadowed — see the matching note on
+   `.toggle::after` in styles/controls.module.css. The knob is the moving part
+   of a rectangular control, not a true circle like a radio or a spinner. */
 .thumb {
   position: absolute;
   top: 2px;
   background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-radius: var(--r-tag);
   transition:
     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     width 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -94,7 +96,7 @@
 /* Active squish */
 .toggle:active .thumb {
   width: calc(100% * 0.65);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 
 .toggle:active .track[data-checked="true"] .thumb {

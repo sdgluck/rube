@@ -7,6 +7,14 @@ export interface NotificationServiceConfig {
   eventsKey: string;
   jobsKey: string;
   healthTargetsKey: string;
+  /** Set when the service's settings live inside one config object. */
+  objectKey?: string;
+  /**
+   * The fields without which the service cannot send anything. Drives the
+   * "configured" dot in the tab rail. Field keys, so a service with an
+   * `objectKey` names them relative to that object.
+   */
+  credentialKeys: string[];
 }
 
 export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = {
@@ -21,6 +29,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Create a webhook in your Discord server's channel settings under Integrations",
       },
     ],
+    credentialKeys: ["global_discord_webhook_url"],
     eventsKey: "global_discord_events",
     jobsKey: "global_discord_jobs",
     healthTargetsKey: "global_discord_health_targets",
@@ -43,6 +52,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Create an application in Gotify to get a token",
       },
     ],
+    credentialKeys: ["global_gotify_url", "global_gotify_token"],
     eventsKey: "global_gotify_events",
     jobsKey: "global_gotify_jobs",
     healthTargetsKey: "global_gotify_health_targets",
@@ -58,6 +68,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Found in the LunaSea app under Settings > Notifications",
       },
     ],
+    credentialKeys: ["global_lunasea_webhook_url"],
     eventsKey: "global_lunasea_events",
     jobsKey: "global_lunasea_jobs",
     healthTargetsKey: "global_lunasea_health_targets",
@@ -74,6 +85,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Found at pushbullet.com under Settings > Access Tokens",
       },
     ],
+    credentialKeys: ["global_pushbullet_token"],
     eventsKey: "global_pushbullet_events",
     jobsKey: "global_pushbullet_jobs",
     healthTargetsKey: "global_pushbullet_health_targets",
@@ -97,9 +109,54 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Found on your Pushover dashboard",
       },
     ],
+    credentialKeys: ["global_pushover_api_key", "global_pushover_user_key"],
     eventsKey: "global_pushover_events",
     jobsKey: "global_pushover_jobs",
     healthTargetsKey: "global_pushover_health_targets",
+  },
+  smtp: {
+    service: "smtp",
+    title: "Email",
+    objectKey: "global_smtp",
+    fields: [
+      {
+        key: "host",
+        label: "SMTP Host",
+        placeholder: "smtp.example.com",
+        hint: "Your mail provider's outgoing server",
+      },
+      {
+        key: "port",
+        label: "Port",
+        type: "number",
+        placeholder: "587",
+        hint: "587 for STARTTLS, 465 for implicit TLS, 25 for an unauthenticated relay on your LAN",
+      },
+      {
+        key: "secure",
+        label: "Use implicit TLS (port 465)",
+        type: "checkbox",
+        hint: "Leave off for port 587 — STARTTLS is negotiated automatically",
+      },
+      { key: "user", label: "Username", placeholder: "Leave blank for an open relay" },
+      { key: "password", label: "Password", type: "password", placeholder: "Enter SMTP password" },
+      {
+        key: "from",
+        label: "From Address",
+        placeholder: "tinkerbell@example.com",
+        hint: "What recipients see in the From field. Many providers require this to match the authenticated account",
+      },
+      {
+        key: "to",
+        label: "Your Address",
+        placeholder: "you@example.com",
+        hint: "Where event notifications and the server-wide digest go. Per-user digests go to the address each portal user enters themselves",
+      },
+    ],
+    credentialKeys: ["host", "port", "from"],
+    eventsKey: "global_smtp_events",
+    jobsKey: "global_smtp_jobs",
+    healthTargetsKey: "global_smtp_health_targets",
   },
   slack: {
     service: "slack",
@@ -112,6 +169,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Create an Incoming Webhook in your Slack workspace's app settings",
       },
     ],
+    credentialKeys: ["global_slack_webhook_url"],
     eventsKey: "global_slack_events",
     jobsKey: "global_slack_jobs",
     healthTargetsKey: "global_slack_health_targets",
@@ -139,6 +197,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         type: "checkbox",
       },
     ],
+    credentialKeys: ["global_telegram_bot_token", "global_telegram_chat_id"],
     eventsKey: "global_telegram_events",
     jobsKey: "global_telegram_jobs",
     healthTargetsKey: "global_telegram_health_targets",
@@ -154,6 +213,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: 'Receives a POST with JSON body: { "title": "...", "message": "...", "timestamp": ... }',
       },
     ],
+    credentialKeys: ["global_webhook_url"],
     eventsKey: "global_webhook_events",
     jobsKey: "global_webhook_jobs",
     healthTargetsKey: "global_webhook_health_targets",

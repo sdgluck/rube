@@ -21,6 +21,10 @@ const descriptions: Record<string, string> = {
   "bandwidth-test":
     "Measures this server's internet download and upload speed against Cloudflare, and records the result. Moves up to 200 MB per run, and only on a link fast enough to do so in seconds.",
   "posters-refresh": "Re-fetches cached poster images and detects when artwork has changed in Plex.",
+  "registry-updates":
+    "Checks the public rule registry for newer versions of the rules you've imported, and raises an event the first time each one appears. Never applies an update on its own.",
+  digest:
+    "Sends a periodic summary of what was added, watched and is about to be removed — to your own notification channels, and by email to portal users who asked for one.",
   "migrate-collections":
     "Imports existing Plex collections into Tinkerbell rule-based collections, optionally deleting the originals.",
 };

@@ -57,6 +57,20 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     defaultSchedule: "",
     defaultConfig: {},
   },
+  {
+    id: "digest",
+    name: "Digest",
+    command: "digest",
+    // Monday morning. The newsletter convention, and there is no reason to be
+    // original about it.
+    defaultSchedule: "0 9 * * MON",
+    defaultConfig: {
+      frequency: "weekly",
+      minAddedItems: 1,
+      includeServerDigest: true,
+      includeUserDigests: true,
+    },
+  },
 ];
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

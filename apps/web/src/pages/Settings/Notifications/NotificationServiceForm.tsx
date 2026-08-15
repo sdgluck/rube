@@ -23,6 +23,13 @@ interface Props {
   eventsKey: string;
   jobsKey: string;
   healthTargetsKey: string;
+  /**
+   * When set, `fields` are keys *inside* this config object rather than
+   * top-level config keys — SMTP is stored as one `global_smtp` blob, because
+   * its six settings are meaningless apart from each other. The read and write
+   * paths both nest, so the rest of this form is unchanged.
+   */
+  objectKey?: string;
 }
 
 type FilterMode = "all" | "specific";
@@ -34,6 +41,7 @@ export default function NotificationServiceForm({
   eventsKey,
   jobsKey,
   healthTargetsKey,
+  objectKey,
 }: Props) {
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [enabledEvents, setEnabledEvents] = useState<string[]>([]);
@@ -61,12 +69,13 @@ export default function NotificationServiceForm({
   useEffect(() => {
     if (configQuery.data) {
       const data = configQuery.data as Record<string, unknown>;
+      const source = objectKey ? ((data[objectKey] as Record<string, unknown>) ?? {}) : data;
       const vals: Record<string, string | boolean> = {};
       for (const field of fields) {
         if (field.type === "checkbox") {
-          vals[field.key] = (data[field.key] as boolean) ?? false;
+          vals[field.key] = (source[field.key] as boolean) ?? false;
         } else {
-          vals[field.key] = String(data[field.key] ?? "");
+          vals[field.key] = String(source[field.key] ?? "");
         }
       }
       setValues(vals);
@@ -86,7 +95,7 @@ export default function NotificationServiceForm({
         }),
       );
     }
-  }, [configQuery.data, eventsKey, jobsKey, healthTargetsKey, fields]);
+  }, [configQuery.data, eventsKey, jobsKey, healthTargetsKey, fields, objectKey]);
 
   const current = useMemo(
     () =>
@@ -104,15 +113,17 @@ export default function NotificationServiceForm({
 
   function buildConfigPayload(): Record<string, unknown> {
     const payload: Record<string, unknown> = {};
+    const target: Record<string, unknown> = objectKey ? {} : payload;
     for (const field of fields) {
       if (field.type === "number") {
-        payload[field.key] = Number(values[field.key]) || 0;
+        target[field.key] = Number(values[field.key]) || 0;
       } else if (field.type === "checkbox") {
-        payload[field.key] = !!values[field.key];
+        target[field.key] = !!values[field.key];
       } else {
-        payload[field.key] = values[field.key] || "";
+        target[field.key] = values[field.key] || "";
       }
     }
+    if (objectKey) payload[objectKey] = target;
     payload[eventsKey] = enabledEvents;
     payload[jobsKey] = jobsMode === "all" ? [] : selectedJobs;
     payload[healthTargetsKey] = healthMode === "all" ? [] : selectedHealthTargets;

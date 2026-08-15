@@ -165,6 +165,37 @@ export const configSchema = z.object({
   global_webhook_jobs: z.array(z.string()),
   global_webhook_health_targets: z.array(z.string()),
   /**
+   * Outbound mail. The ninth notification service, and the only one that can
+   * reach somebody who doesn't use the admin UI — which is the whole point of
+   * a digest.
+   *
+   * `to` is the admin's own address, used for events and the server-wide
+   * digest. Per-user digests are addressed to the address that user typed into
+   * the portal and are never sent to anything else.
+   *
+   * `password` is a nested secret, redacted in `redactSecrets` alongside
+   * `global_llm.apiKey`.
+   */
+  global_smtp: z.object({
+    host: z.string(),
+    /**
+     * 0 means "not set". Deliberately not `.positive()`: the Settings form
+     * saves every field of this object at once, so a blank port would fail
+     * validation and reject the whole save — including the event selection
+     * the user was actually editing. `smtpConfigured()` treats 0 as absent.
+     */
+    port: z.number().int().min(0),
+    /** Implicit TLS (port 465). STARTTLS on 587 is negotiated with this off. */
+    secure: z.boolean(),
+    user: z.string().optional(),
+    password: z.string().optional(),
+    from: z.string(),
+    to: z.string().optional(),
+  }),
+  global_smtp_events: z.array(z.string()),
+  global_smtp_jobs: z.array(z.string()),
+  global_smtp_health_targets: z.array(z.string()),
+  /**
    * Fraction of an item's runtime past which a play counts as "watched".
    *
    * This is the definition every downstream consumer inherits — watched-by-all
@@ -195,10 +226,17 @@ export const configSchema = z.object({
    */
   cleanup_enabled: z.boolean(),
   /**
-   * Ceiling on destructive actions across *all* cleanup rules in one generate
-   * run. Per-rule caps don't compose: five rules each staying under their own
-   * limit of 30 can still empty a library overnight.
+   * Ceiling on destructive actions across *all* cleanup rules, over a rolling
+   * 24 hours. Per-rule caps don't compose: five rules each staying under their
+   * own limit of 30 can still empty a library overnight.
+   *
+   * Per day rather than the per-run it started as, because "per run" only ever
+   * bounded a single batch — an ad-hoc rule run took a fresh full budget, and
+   * cleanup now has its own job as well. Spend is counted from the candidate
+   * ledger, so it holds however the work was started.
    */
+  cleanup_max_deletes_per_day: z.number().int().positive(),
+  /** @deprecated Read once at startup to seed `cleanup_max_deletes_per_day`. */
   cleanup_max_deletes_per_run: z.number().int().positive(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
@@ -291,6 +329,16 @@ export const configSchema = z.object({
     index: z.unknown(),
   }),
   /**
+   * Rule id → the pack version we last announced an update for.
+   *
+   * `registry.update_available` is a transition event, and the check that
+   * produces it runs on a schedule — without a record of what has already been
+   * said, every daily run re-announces the same pending update until the user
+   * applies it. Entries for rules that no longer have an update are dropped,
+   * so a re-published version announces again.
+   */
+  registry_announced_updates: z.record(z.string(), z.number()),
+  /**
    * Legacy single-provider slots, kept readable for one release so a
    * one-shot migration in `domains/migration` can fold them into the
    * provider-keyed slots above. Safe to remove once shipped users have
@@ -373,6 +421,24 @@ export function deleteConfig(key: ConfigKey): void {
   db.delete(config).where(eq(config.key, key)).run();
 }
 
+/**
+ * Carry a configured `cleanup_max_deletes_per_run` over to its replacement.
+ *
+ * The ceiling changed from per-run to per-rolling-day when cleanup got its own
+ * job (a per-run cap bounded one batch and nothing else). The number a user
+ * chose still expresses what they meant — "don't remove more than this without
+ * me looking" — so it moves across rather than silently reverting to the
+ * default. Called once from `initJobs`, before anything reads either key.
+ */
+export function migrateCleanupBudgetKey(): void {
+  const legacy = getConfig("cleanup_max_deletes_per_run");
+  if (legacy === undefined) return;
+  if (getConfig("cleanup_max_deletes_per_day") === undefined) {
+    setConfig("cleanup_max_deletes_per_day", legacy);
+  }
+  deleteConfig("cleanup_max_deletes_per_run");
+}
+
 export type PersonalizedSharingStatus = "disabled" | "enabling" | "enabled" | "disabling";
 
 /** Current personalization master-switch status (defaults to "disabled"). */
@@ -423,6 +489,10 @@ export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.
   const llm = all["global_llm"] as ConfigValue<"global_llm"> | undefined;
   if (llm && typeof llm.apiKey === "string" && llm.apiKey !== "") {
     all["global_llm"] = { ...llm, apiKey: REDACTED_SECRET };
+  }
+  const smtp = all["global_smtp"] as ConfigValue<"global_smtp"> | undefined;
+  if (smtp && typeof smtp.password === "string" && smtp.password !== "") {
+    all["global_smtp"] = { ...smtp, password: REDACTED_SECRET };
   }
   return all as Partial<z.infer<ConfigSchema>>;
 }

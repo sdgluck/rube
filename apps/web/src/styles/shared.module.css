@@ -132,7 +132,7 @@
 .pageTabActive:hover {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgba(19, 28, 27, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 /* A count beside a tab label — how many rows the tab would show. */
@@ -423,7 +423,7 @@
   gap: 10px;
   padding: 9px 14px;
   background: var(--inverse);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   box-shadow: var(--e-inverse);
   margin-bottom: 12px;
   color: #e6f2f0;
@@ -612,6 +612,10 @@
   box-shadow: var(--e-card);
 }
 
+/* Hover used to lift the card two pixels and lean on its shadow to sell the
+   lift. With no shadow the translate on its own reads as the grid twitching,
+   so hover now dims the artwork instead — as legible, and it does not claim
+   the card is floating above a page that has no depth left in it. */
 .card {
   cursor: pointer;
   text-decoration: none;
@@ -619,13 +623,11 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--r-md);
-  transition:
-    transform 0.15s,
-    box-shadow 0.15s;
 }
 
-.card:hover {
-  transform: translateY(-2px);
+.card:hover .cardPoster,
+.card:hover .cardPosterPlaceholder {
+  opacity: 0.85;
 }
 
 .cardPoster {
@@ -804,7 +806,7 @@
   padding: 9px 14px;
   background: var(--inverse);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   box-shadow: var(--e-inverse);
   z-index: var(--z-sticky-bar);
   animation: stickyBarIn 180ms ease-out;
@@ -855,19 +857,17 @@
   gap: 12px;
 }
 
+/* Same reasoning as .card above: the lift-and-shadow hover becomes a dim. */
 .cardDense {
   position: relative;
   cursor: pointer;
   border-radius: var(--r-md);
   overflow: hidden;
-  transition:
-    transform 0.15s,
-    box-shadow 0.15s;
+  transition: opacity 0.15s;
 }
 
 .cardDense:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(19, 28, 27, 0.18);
+  opacity: 0.85;
 }
 
 .cardDense .cardPoster,

@@ -1,13 +1,18 @@
 /* ─── Studio design tokens ──────────────────────────────────────────────────
  *
- * The "Studio" visual language: floating white cards on a warm-neutral page, a
- * teal accent that stands beside Plex amber without copying it, Archivo for
+ * The "Studio" visual language: bordered panels on a warm-neutral page, a teal
+ * accent that stands beside Plex amber without copying it, Archivo for
  * interface text and IBM Plex Mono for anything the machine produced.
  *
  * Two layers live here. The Studio tokens (--page, --ink, --accent-fill…) are
  * canonical. The role tokens below them (--bg-page, --text-primary…) are the
  * names the rest of the app already spells, remapped onto Studio values so a
  * stylesheet that has not been touched still lands in the new palette.
+ *
+ * Surfaces are square and unshadowed on purpose. Hierarchy is carried by lines
+ * and background steps alone, which is why --line runs darker than a soft
+ * design would want it: with no drop shadow underneath, the border is the only
+ * thing separating a panel from the page.
  */
 
 :root {
@@ -17,8 +22,12 @@
   --surface-sunken: #f6f9f8;
   --surface-header: #fbfcfc;
   --fill-quiet: #f2f5f4;
-  --line: #dfe5e4;
+  --line: #d4dbda;
   --line-soft: #f4f6f6;
+  /* Overlay edges only — dropdowns, popovers, modals. These used to be told
+     apart from the page by a drop shadow; with elevation flattened, the only
+     thing left to do that job is a border heavier than --line. */
+  --line-strong: #b9c4c2;
 
   --ink: #131c1b;
   --ink-2: #5a6866;
@@ -52,15 +61,20 @@
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
 
   /* Usable as `font: var(--t-card)`. Tracking is a separate property, so the
-     matching --t-*-tracking token goes alongside where it is non-zero. */
+     matching --t-*-tracking token goes alongside where it is non-zero.
+
+     Tracking is deliberately looser than it was. Heavily negative optical
+     tracking is a landing-page idiom — it makes a headline look designed. On a
+     console it costs legibility at a glance, which is the only thing these
+     headings are for. */
   --t-display: 600 27px/1.2 var(--font-sans);
-  --t-display-tracking: -0.025em;
+  --t-display-tracking: -0.015em;
   --t-page: 600 18px/1.25 var(--font-sans);
-  --t-page-tracking: -0.018em;
+  --t-page-tracking: -0.012em;
   --t-card: 600 15px/1.3 var(--font-sans);
-  --t-card-tracking: -0.012em;
+  --t-card-tracking: -0.008em;
   --t-panel: 600 14px/1.3 var(--font-sans);
-  --t-panel-tracking: -0.01em;
+  --t-panel-tracking: -0.006em;
   --t-body: 400 13px/1.5 var(--font-sans);
   --t-body-sm: 400 12.5px/1.45 var(--font-sans);
   --t-meta: 400 12px/1.4 var(--font-sans);
@@ -69,24 +83,67 @@
   --t-label-tracking: 0.12em;
   --t-data: 400 11.5px/1.4 var(--font-mono);
   --t-metric: 600 25px/1.1 var(--font-mono);
-  --t-metric-tracking: -0.025em;
+  --t-metric-tracking: -0.015em;
 
   /* ─── Radius ────────────────────────────────────────────────────────── */
-  --r-tag: 5px;
-  --r-sm: 7px;
-  --r-md: 8px;
-  --r-sunken: 9px;
-  --r-card: 12px;
-  --r-panel: 14px;
-  --r-pill: 999px;
 
-  /* ─── Elevation — three levels only ─────────────────────────────────── */
+  /* Every step is 2px. The seven names are kept rather than collapsed to one:
+     they still record which corner belongs to which kind of thing, so the
+     scale can be reintroduced without hunting through 50 stylesheets again.
+     2px rather than 0 because literal 90° corners read as harsh at chip and
+     input scale, where the corner is a large fraction of the element.
+
+     True circles are not on this scale. Status dots, avatars, toggle knobs,
+     radios and spinners keep `border-radius: 50%` — squaring a spinner reads
+     as broken, not as square. */
+  --r-tag: 2px;
+  --r-sm: 2px;
+  --r-md: 2px;
+  --r-sunken: 2px;
+  --r-card: 2px;
+  --r-panel: 2px;
+  --r-pill: 2px;
+
+  /* ─── Elevation — borders, not shadows ──────────────────────────────── */
+
+  /* Nothing casts a shadow. The names are kept because ~40 stylesheets spell
+     them, and because the distinction they encode is still real — it is now
+     expressed as border weight instead of blur radius. Overlays take
+     --line-strong; the modal scrim does the rest of the separating.
+
+     --e-card is an *inset* ring rather than `none` so that the fifteen panels
+     which had no border of their own — they were told apart from the page by
+     their shadow alone — keep an edge without growing a pixel. Anything that
+     already sets a real border should not also set --e-card; that would draw
+     the line twice. */
   --e-flat: inset 0 0 0 1px var(--line);
-  --e-card: 0 1px 2px rgba(19, 28, 27, 0.05), 0 12px 30px -16px rgba(19, 28, 27, 0.3);
-  --e-float: 0 20px 48px -20px rgba(19, 28, 27, 0.55);
-  --e-inverse: 0 14px 32px -12px rgba(15, 38, 36, 0.6);
+  --e-card: inset 0 0 0 1px var(--line);
+  --e-float: 0 0 0 1px var(--line-strong);
+  --e-inverse: 0 0 0 1px var(--line-strong);
+
+  /* ─── Spacing ───────────────────────────────────────────────────────── */
+
+  /* Added with the flat pass. Removing elevation puts the whole burden of
+     "these things are grouped, those are not" onto whitespace and lines, and
+     ad-hoc padding that nobody noticed under a drop shadow becomes the thing
+     that makes a flat layout look unfinished.
+
+     The primitives in styles/shared.module.css and styles/controls.module.css
+     spell these; page-level modules still use literals and inherit their
+     rhythm from the primitives. Converting those is follow-up work. */
+  --sp-1: 4px;
+  --sp-2: 6px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 24px;
+  --sp-7: 32px;
 
   /* ─── Focus ─────────────────────────────────────────────────────────── */
+
+  /* Focus rings are the one place a box-shadow survives. They are an
+     accessibility affordance, not decoration, and with hover lifts gone they
+     are now the only non-colour feedback a keyboard user gets. */
   --focus-ring: 3px solid rgba(18, 134, 124, 0.14);
 
   /* ─── Role tokens (the names the rest of the app spells) ────────────── */
@@ -126,14 +183,14 @@
      vertical padding. `.textarea` is the one exception — it grows. */
   --control-h: 32px;
 
-  --btn-radius: 8px;
+  --btn-radius: var(--r-md);
   --btn-pad-x: 13px;
   --btn-pad-x-sm: 10px;
   --btn-font-size: 12.5px;
   --btn-font-size-sm: 11.5px;
   --btn-font-weight: 600;
 
-  --input-radius: 8px;
+  --input-radius: var(--r-md);
   --input-pad-x: 11px;
   /* Textareas only — every other input takes its height from --control-h. */
   --input-pad-y: 8px;
@@ -209,8 +266,12 @@
     --surface-sunken: #111a19;
     --surface-header: #131d1c;
     --fill-quiet: #1b2524;
-    --line: #26302f;
+    --line: #2d3837;
     --line-soft: #1e2827;
+    /* Proportionally further from --line than the light pair, because the
+       whole dark range is compressed: an overlay edge that only just beats the
+       surface below it disappears entirely on a dim panel. */
+    --line-strong: #46534f;
 
     --ink: #f2f6f5;
     --ink-2: #a6b4b2;
@@ -232,8 +293,9 @@
     --ramp-3: #106a62;
     --ramp-4: #0d4b46;
 
-    --e-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.7);
-    --e-float: 0 20px 48px -20px rgba(0, 0, 0, 0.8);
+    /* No --e-* overrides here any more. The elevation tokens resolve to
+       borders in --line-strong, which this block already redefines, so they
+       follow the theme without a second copy to keep in sync. */
 
     --bg-hover: rgba(255, 255, 255, 0.06);
     --card-poster-bg: #1b2524;
@@ -351,7 +413,7 @@ p {
 .sidebar-mark {
   width: 22px;
   height: 22px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   flex-shrink: 0;
   display: block;
 }
@@ -413,7 +475,7 @@ p {
   color: rgba(242, 246, 245, 0.4);
   padding: 2px 5px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
 }
 
 .sidebar-search-divider {
@@ -616,7 +678,7 @@ p {
   bottom: calc(100% + 8px);
   background: var(--inverse);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 10px 12px;
   min-width: 182px;
   box-shadow: var(--e-inverse);

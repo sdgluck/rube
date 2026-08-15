@@ -26,7 +26,7 @@
   gap: 4px;
   padding: 3px 8px;
   border: 1px solid var(--border-light);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   background: none;
   font-size: 10px;
   font-weight: 600;
@@ -85,7 +85,7 @@
   display: inline-block;
   margin-left: 6px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--bg-badge);
   color: var(--text-badge);
   font-size: 11px;
@@ -160,7 +160,7 @@
 .miniProgress {
   height: 3px;
   background: var(--border-light);
-  border-radius: 2px;
+  border-radius: var(--r-tag);
   overflow: hidden;
   margin-top: 3px;
 }
@@ -168,7 +168,7 @@
 .miniProgressFill {
   height: 100%;
   background: var(--accent);
-  border-radius: 2px;
+  border-radius: var(--r-tag);
   transition: width 0.3s ease;
 }
 
@@ -184,7 +184,7 @@
 .badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   font-size: 11px;
   font-weight: 600;
   text-transform: capitalize;
@@ -287,7 +287,7 @@
   font-size: 12px;
   line-height: 1.5;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -313,7 +313,7 @@
 .logFilterInput {
   padding: 6px 10px;
   border: 1px solid var(--border-input);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   font-size: 12.5px;
   background: var(--bg-input);
   color: var(--text-primary);
@@ -347,7 +347,7 @@
   border: 1px solid var(--border-input);
   color: var(--text-secondary);
   padding: 5px 12px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -370,7 +370,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ccc;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   font-size: 11px;
   cursor: pointer;
   z-index: 1;
@@ -390,7 +390,7 @@
   width: 100%;
   height: 6px;
   background: var(--bg-badge);
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   overflow: hidden;
   margin: 8px 0;
 }
@@ -398,7 +398,7 @@
 .progressFill {
   height: 100%;
   background: var(--accent);
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   transition: width 0.3s ease;
 }
 
@@ -497,7 +497,7 @@
   width: 60px;
   padding: 4px 8px;
   border: 1px solid var(--border-input);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   font-size: 12.5px;
 }
 
@@ -633,7 +633,7 @@
 .requiredPill {
   display: inline-block;
   padding: 1px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -645,7 +645,7 @@
 
 .detailSection {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -752,7 +752,7 @@
 
 .bywGroup {
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 8px 12px;
 }
 
@@ -775,7 +775,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   background: var(--bg-elevated);
 }

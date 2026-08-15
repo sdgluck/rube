@@ -94,6 +94,11 @@ export interface RunHandlerResult {
  *
  * A rule with no `action` in its config is a collection rule, so nothing
  * predating this branch changes behaviour or needs migrating.
+ *
+ * The batch jobs are split by ending — `generate` owns the collection rules,
+ * `cleanup` owns the rest — so in a scheduled run this branch only ever goes
+ * one way. It stays a branch because the ad-hoc path doesn't: "Run" on the
+ * Rules page runs whichever single rule the user clicked.
  */
 export async function runHandler(
   deps: HandlerDeps,

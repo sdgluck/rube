@@ -40,6 +40,7 @@ const fields: Record<string, JobFieldsConfig> = {
   // Playback tracking is infrastructure, not an opt-in capability: the poller is
   // what every watch statistic is derived from, and the import is a one-shot
   // seed for it. Neither is something you "install".
+  "registry-updates": { kind: "system", enabled: "required" },
   "playback-poll": { kind: "system" },
   "playback-backfill": { kind: "system", enabled: "required", schedule: "hidden" },
 
@@ -47,6 +48,7 @@ const fields: Record<string, JobFieldsConfig> = {
   "because-you-watched": { kind: "feature", sections: true },
   shuffle: { kind: "feature" },
   overlays: { kind: "feature", sections: true },
+  digest: { kind: "feature" },
 
   // ── Hidden from the index (background / one-shot / settings-driven) ──────
   // Apply Sharing Restrictions runs behind the scenes alongside BYW; users

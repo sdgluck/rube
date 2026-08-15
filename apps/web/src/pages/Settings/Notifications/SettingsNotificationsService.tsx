@@ -14,6 +14,7 @@ export default function SettingsNotificationsService() {
       eventsKey={cfg.eventsKey}
       jobsKey={cfg.jobsKey}
       healthTargetsKey={cfg.healthTargetsKey}
+      objectKey={cfg.objectKey}
     />
   );
 }

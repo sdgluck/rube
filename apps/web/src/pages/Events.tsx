@@ -23,6 +23,12 @@ const BADGE_MAP: Record<string, { label: string; className: string }> = {
   "health.failed": { label: "Health Failed", className: styles.badgeHealthFailed },
   "health.recovered": { label: "Health Recovered", className: styles.badgeHealthRecovered },
   "bandwidth.tested": { label: "Bandwidth Tested", className: styles.badgeBandwidthTested },
+  "plex.unreachable": { label: "Plex Unreachable", className: styles.badgeHealthFailed },
+  "media.added": { label: "Media Added", className: styles.badgeLibrary },
+  "collection.created": { label: "Collection Created", className: styles.badgeLibrary },
+  "digest.sent": { label: "Digest Sent", className: styles.badgeLibrary },
+  "rule.empty": { label: "Rule Matched Nothing", className: styles.badgeAttention },
+  "registry.update_available": { label: "Registry Update", className: styles.badgeAttention },
 };
 
 const PAGE_SIZE = 50;

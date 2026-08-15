@@ -4,16 +4,12 @@ export function SkeletonLine({ width = "100%" }: { width?: string | number }) {
   return <div className={styles.line} style={{ width }} />;
 }
 
-export function SkeletonBlock({
-  width,
-  height,
-  borderRadius,
-}: {
-  width: string | number;
-  height: string | number;
-  borderRadius?: string | number;
-}) {
-  return <div className={styles.block} style={{ width, height, borderRadius }} />;
+/* The `borderRadius` prop is gone. Callers used to pass 6, 8 or 10 to match
+   whatever the block was standing in for; every one of those corners is now
+   the same 2px, so the radius belongs in Skeleton.module.css where it can
+   follow the token instead of being restated at ten call sites. */
+export function SkeletonBlock({ width, height }: { width: string | number; height: string | number }) {
+  return <div className={styles.block} style={{ width, height }} />;
 }
 
 export function SkeletonTable({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
@@ -92,7 +88,7 @@ export function PrerollsSkeleton() {
   return (
     <div className={styles.wrapper}>
       <SkeletonLine width="150px" />
-      <SkeletonBlock width="100%" height={120} borderRadius={10} />
+      <SkeletonBlock width="100%" height={120} />
       <div
         style={{
           display: "grid",
@@ -102,7 +98,7 @@ export function PrerollsSkeleton() {
         }}
       >
         {Array.from({ length: 6 }).map((_, i) => (
-          <SkeletonBlock key={i} width="100%" height={200} borderRadius={10} />
+          <SkeletonBlock key={i} width="100%" height={200} />
         ))}
       </div>
     </div>
@@ -117,11 +113,11 @@ export function FormSkeleton({ rows = 5 }: { rows?: number }) {
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className={styles.formRow}>
           <SkeletonLine width="120px" />
-          <SkeletonBlock width="100%" height={36} borderRadius={6} />
+          <SkeletonBlock width="100%" height={36} />
         </div>
       ))}
       <div style={{ height: 8 }} />
-      <SkeletonBlock width="120px" height={36} borderRadius={6} />
+      <SkeletonBlock width="120px" height={36} />
     </div>
   );
 }
@@ -132,8 +128,8 @@ export function PageSkeleton() {
       <SkeletonLine width="200px" />
       <SkeletonLine width="60%" />
       <div style={{ height: 8 }} />
-      <SkeletonBlock width="100%" height={120} borderRadius={8} />
-      <SkeletonBlock width="100%" height={240} borderRadius={8} />
+      <SkeletonBlock width="100%" height={120} />
+      <SkeletonBlock width="100%" height={240} />
     </div>
   );
 }
@@ -144,11 +140,11 @@ export function StatsSkeleton() {
       <SkeletonLine width="160px" />
       <div className={styles.statsGrid}>
         {Array.from({ length: 8 }, (_, i) => (
-          <SkeletonBlock key={i} width="100%" height={92} borderRadius={8} />
+          <SkeletonBlock key={i} width="100%" height={92} />
         ))}
       </div>
-      <SkeletonBlock width="100%" height={220} borderRadius={8} />
-      <SkeletonBlock width="100%" height={220} borderRadius={8} />
+      <SkeletonBlock width="100%" height={220} />
+      <SkeletonBlock width="100%" height={220} />
     </div>
   );
 }
@@ -157,7 +153,7 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <div className={styles.wrapper}>
       {Array.from({ length: rows }, (_, i) => (
-        <SkeletonBlock key={i} width="100%" height={56} borderRadius={6} />
+        <SkeletonBlock key={i} width="100%" height={56} />
       ))}
     </div>
   );

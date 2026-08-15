@@ -74,6 +74,17 @@ export const configRouter = t.router({
           continue;
         }
       }
+      // Same nested-secret round trip as `global_llm.apiKey`: the SMTP form
+      // renders the sentinel for a stored password the user didn't retype, and
+      // saving must not erase it.
+      if (key === "global_smtp") {
+        const smtp = value as ConfigValue<"global_smtp">;
+        if (smtp.password === REDACTED_SECRET) {
+          const existing = getConfig("global_smtp");
+          setConfig("global_smtp", { ...smtp, password: existing?.password });
+          continue;
+        }
+      }
       setConfig(key, value);
     }
 

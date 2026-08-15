@@ -23,8 +23,11 @@
   --border: #262635;
   --border-strong: #34344a;
 
-  --radius: 12px;
-  --radius-lg: 18px;
+  /* Square, matching the app and the portal. BrowserFrame is the deliberate
+     exception — it draws a browser chrome around product screenshots, and a
+     square-cornered browser is not a thing. */
+  --radius: 2px;
+  --radius-lg: 2px;
   --maxw: 1080px;
 
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -99,7 +102,7 @@ h3 {
   align-items: center;
   gap: 8px;
   padding: 11px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 0.95rem;
   font-weight: 600;
   border: 1px solid transparent;

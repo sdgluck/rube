@@ -43,6 +43,9 @@ const DEFAULT_TIMEOUT_MS = 30 * MINUTE_MS;
 export const COMMANDS = {
   // ── Scheduled batch work ───────────────────────────────────────────────
   generate: { load: () => import("./generate.ts"), lane: "default", timeoutMs: 4 * HOUR_MS },
+  // Same engine as `generate`, so the same generous budget: selection is the
+  // expensive half and cleanup rules run the same handlers.
+  cleanup: { load: () => import("./cleanup.ts"), lane: "default", timeoutMs: 4 * HOUR_MS },
   "sync-media": { load: () => import("./sync-media.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
   "sync-collections": { load: () => import("./sync-collections.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "sync-users": { load: () => import("./sync-users.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
@@ -65,6 +68,10 @@ export const COMMANDS = {
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
   personalize: { load: () => import("./personalize.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
+  // Local queries plus one network call per recipient. The default budget is
+  // generous for that, and is really bounding a mail server that has stopped
+  // answering rather than the work.
+  digest: { load: () => import("./digest.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
 
   // ── Human-triggered, watched-in-the-UI ────────────────────────────────
   // ffmpeg on a large preroll is legitimately slow, hence the 6h budget.

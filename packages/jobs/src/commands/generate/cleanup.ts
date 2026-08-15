@@ -22,6 +22,7 @@
 import { DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
 import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
 import {
+  actionedSince,
   dueForAction,
   listCandidates,
   markActioned,
@@ -38,8 +39,11 @@ import type { HandlerDeps } from "./types.ts";
 /** Label marking the "on the chopping block" shelf, so it's findable in Plex. */
 export const CLEANUP_LABEL = "Tinkerbell:Cleanup";
 
-/** Default ceiling across every cleanup rule in one generate run. */
-export const DEFAULT_MAX_DELETES_PER_RUN = 50;
+/** Default ceiling on destructive actions across every rule, per rolling day. */
+export const DEFAULT_MAX_DELETES_PER_DAY = 50;
+
+/** The window the ceiling applies over. */
+export const BUDGET_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * A rule matching more than this share of its sections is treated as a
@@ -52,18 +56,50 @@ export const IMPLAUSIBLE_MATCH_FRACTION = 0.25;
 export const MAX_INDEX_AGE_MS = 48 * 60 * 60 * 1000;
 
 /**
- * Budget shared by every cleanup rule in a single generate run.
+ * The ceiling on destructive actions, across every rule and every run.
  *
- * Per-rule caps aren't enough on their own: five rules each staying under
- * their own limit of 30 can still empty a library overnight. Rules run
- * concurrently, so this is one mutable object threaded through them all.
+ * Per-rule caps don't compose — five rules each staying under their own limit
+ * of 30 can still empty a library — so the ceiling has to be global. It used
+ * to be a counter created per job run and threaded through the concurrent rule
+ * loop, which bounded exactly one batch: `runSingleRule` created a fresh full
+ * budget for every ad-hoc run, so running five rules by hand granted five
+ * budgets, and a second cleanup job would have granted another.
+ *
+ * So the ceiling is now a rolling window read from the candidate ledger, which
+ * already timestamps every action. Spend is what *happened*, not what this
+ * process remembers doing, which means it holds across concurrent rules,
+ * ad-hoc runs, a restart mid-run, and any number of jobs.
+ *
+ * `reserve()` still exists, and still reserves before the await rather than
+ * after success: up to eight rules run concurrently, and counting only on
+ * completion lets all eight pass the same check.
  */
 export interface CleanupBudget {
-  remaining: number;
+  /** False when the ceiling is reached. Reserves a slot when true. */
+  reserve: () => boolean;
+  /** Hand a reserved slot back — the action failed, so nothing was spent. */
+  release: () => void;
+  remaining: () => number;
 }
 
-export function createCleanupBudget(): CleanupBudget {
-  return { remaining: getConfig("cleanup_max_deletes_per_run") ?? DEFAULT_MAX_DELETES_PER_RUN };
+export function createCleanupBudget(now: number = Date.now()): CleanupBudget {
+  const ceiling = getConfig("cleanup_max_deletes_per_day") ?? DEFAULT_MAX_DELETES_PER_DAY;
+  // Read once at the start of the run, then tracked in memory. Re-querying per
+  // item would be correct too, but this way a long run can't be widened by its
+  // own oldest actions ageing out of the window while it is still going.
+  const alreadySpent = actionedSince(now - BUDGET_WINDOW_MS);
+  let reserved = 0;
+  return {
+    reserve: () => {
+      if (alreadySpent + reserved >= ceiling) return false;
+      reserved++;
+      return true;
+    },
+    release: () => {
+      reserved--;
+    },
+    remaining: () => Math.max(0, ceiling - alreadySpent - reserved),
+  };
 }
 
 export interface CleanupOutcome {
@@ -328,16 +364,12 @@ async function applyAction(
 
     // The global ceiling is checked per item, not per rule, because rules run
     // concurrently and each one's share is whatever is left when it gets here.
+    // Checking and reserving are one step for the same reason.
     const spendsBudget = isDestructiveMode(action.mode);
-    if (spendsBudget && budget.remaining <= 0) {
-      ctx.log(`[cleanup] Global per-run limit reached — stopping. The rest stay queued and go on the next run.`);
+    if (spendsBudget && !budget.reserve()) {
+      ctx.log(`[cleanup] Daily limit reached — stopping. The rest stay queued and go on the next run.`);
       break;
     }
-    // Reserve the slot *before* awaiting, not after succeeding. Up to eight
-    // rules run concurrently against this one object, and checking before the
-    // await while decrementing after it lets all eight pass a `remaining: 1`
-    // check and all eight delete.
-    if (spendsBudget) budget.remaining--;
 
     try {
       switch (action.mode) {
@@ -364,7 +396,7 @@ async function applyAction(
     } catch (err) {
       // Nothing was removed, so hand the reserved slot back rather than
       // letting a run of failures eat the whole budget.
-      if (spendsBudget) budget.remaining++;
+      if (spendsBudget) budget.release();
       // One failure must not abandon the rest — and the row stays un-actioned,
       // so the next run retries it naturally.
       ctx.log(`[cleanup] FAILED to ${action.mode} "${candidate.title}" — ${errorMessage(err)}`);

@@ -13,6 +13,7 @@ import { pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwi
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
 import { syncRecentlyAdded } from "@tinkerbell/domain.stats";
+import { announceRegistryUpdates } from "./registry-updates.ts";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { JOB_RUN_RETENTION_MS } from "./limits.ts";
 
@@ -68,6 +69,15 @@ export const internalJobs = {
     // The test bounds itself at 90s. Past three minutes it is wedged on a
     // socket that never closed, not measuring a very slow link.
     timeoutMs: 3 * MINUTE_MS,
+  },
+  "registry-updates": {
+    run: () => announceRegistryUpdates(),
+    // One HTTP GET against a cached index. Past a minute the registry host is
+    // hanging on us, and `fetchRegistryIndex` has its own 15s timeout anyway.
+    timeoutMs: 5 * MINUTE_MS,
+    // Daily, and quiet: the interesting outcome is the event it emits, not the
+    // 364 runs a year that find nothing new.
+    quiet: true,
   },
   "playback-poll": {
     run: async (ctx: JobContext) => {

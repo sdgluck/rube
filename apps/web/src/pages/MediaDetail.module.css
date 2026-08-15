@@ -40,7 +40,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 3px 9px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--bg-badge);
   color: var(--text-secondary);
   line-height: 1.4;
@@ -84,7 +84,7 @@
   font-size: 11px;
   font-weight: 500;
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--bg-badge);
   color: var(--text-secondary);
 }
@@ -122,7 +122,7 @@
   color: var(--text-muted);
   background: var(--bg-badge);
   padding: 1px 7px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -136,7 +136,7 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   background: var(--bg-surface-hover);
 }
@@ -173,7 +173,7 @@
   flex-direction: column;
   gap: 4px;
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 10px 12px;
   background: var(--bg-surface);
 }
@@ -217,7 +217,7 @@
   color: var(--text-secondary);
   background: var(--bg-badge);
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   white-space: nowrap;
 }
 
@@ -241,7 +241,7 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   flex-shrink: 0;
   min-width: 58px;
   text-align: center;
@@ -287,7 +287,7 @@
   color: var(--text-secondary);
   background: var(--bg-badge);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   white-space: nowrap;
 }
 
@@ -312,7 +312,7 @@
   color: var(--text-muted);
   background: var(--bg-badge);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--r-tag);
 }
 
 .subtitleItem + .subtitleItem::before {

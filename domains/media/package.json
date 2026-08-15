@@ -10,9 +10,12 @@
   "files": [
     "src"
   ],
-  "scripts": {},
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+  },
   "dependencies": {
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },

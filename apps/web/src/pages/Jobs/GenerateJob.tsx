@@ -11,7 +11,15 @@ import JobConfigRows from "./shared/JobConfigRows";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
+/**
+ * Config page for both batch rule jobs.
+ *
+ * `generate` and `cleanup` run the same engine over different rules, so they
+ * take the same settings — libraries and how many rules at a time. Only the
+ * list they send you to differs.
+ */
 export default function GenerateJob({ job }: JobPageProps) {
+  const isCleanup = job.command === "cleanup";
   const utils = trpc.useUtils();
   const actions = useJobActions(job);
   const [sections, setSections] = useState<string[]>([]);
@@ -76,7 +84,9 @@ export default function GenerateJob({ job }: JobPageProps) {
           <tr>
             <td className={styles.fieldLabel}>Rules</td>
             <td>
-              <Link to="/rules">Manage rules &rarr;</Link>
+              <Link to={isCleanup ? "/cleanup/rules" : "/rules"}>
+                {isCleanup ? "Manage cleanup rules" : "Manage rules"} &rarr;
+              </Link>
             </td>
           </tr>
         </ConfigPanel>

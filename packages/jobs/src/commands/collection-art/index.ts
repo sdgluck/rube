@@ -28,7 +28,7 @@ import {
   recordCollectionArtwork,
   type CollectionArtworkRow,
 } from "@tinkerbell/domain.collections";
-import { resolvePresentation, ruleAction, type PresentationConfig, type RuleConfig } from "@tinkerbell/contracts";
+import { isCleanupRule, resolvePresentation, type PresentationConfig, type RuleConfig } from "@tinkerbell/contracts";
 import { parseRuleConfig } from "../generate/config.ts";
 import { buildCollectionPoster, fetchMemberPosters, posterAlreadyUploaded } from "./poster.ts";
 import { describeRuleFilter, llmSummaryUnavailable, SAMPLE_TITLES, writeLlmSummary } from "./summary.ts";
@@ -322,7 +322,7 @@ function selectRules(config: CollectionArtJobConfig): Rule[] {
   return getEnabledRules().filter((rule) => {
     if (wanted && !wanted.has(rule.id)) return false;
     const ruleConfig = parseRuleConfig(rule);
-    if (ruleAction(ruleConfig).kind !== "collection") return false;
+    if (isCleanupRule(ruleConfig)) return false;
     const presentation = resolvePresentation(ruleConfig);
     return presentation.poster !== "none" || presentation.summary === "llm";
   });

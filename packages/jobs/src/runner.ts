@@ -10,6 +10,7 @@ import {
   errorMessage,
   formatDuration,
   logLevel,
+  migrateCleanupBudgetKey,
   noopCheckpoint,
   type JobContext,
 } from "@tinkerbell/core";
@@ -42,6 +43,10 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   { id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "0 0 * * *", enabled: 1 },
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
+  // 4am: after sync-media (midnight) so the library index the cleanup guards
+  // read is fresh, after generate (1am) so a rule's shelf reflects the night's
+  // collections, and clear of purge-runs (3am).
+  { id: "cleanup", name: "Cleanup", command: "cleanup", schedule: "0 4 * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
   {
     id: "sync-recently-added",
@@ -75,6 +80,15 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     name: "Clean Up Duplicate Collections",
     command: "collections-sweep",
     schedule: "",
+    enabled: 1,
+  },
+  // Daily and off-peak. The registry index is cached for an hour, so this is
+  // one small GET a day against tinkerbell.dev.
+  {
+    id: "registry-updates",
+    name: "Check Registry Updates",
+    command: "registry-updates",
+    schedule: "0 6 * * *",
     enabled: 1,
   },
   {
@@ -671,6 +685,7 @@ export async function initJobs(): Promise<void> {
   // Wire startJob into the cron-trigger callback before any schedule
   // can fire. See schedule.ts for the dependency-inversion shape.
   initSchedule(startJob);
+  migrateCleanupBudgetKey();
   seedDefaultJobs();
   seedDefaultRules();
   markStaleRunsAsFailed();

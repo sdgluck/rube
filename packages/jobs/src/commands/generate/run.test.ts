@@ -20,7 +20,7 @@ const { db, rules, config } = await import("@tinkerbell/db");
 const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
 const { llmUnavailableReason } = await import("./ai/llm.ts");
 const { withItemCache } = await import("./item-cache.ts");
-const run = (await import("./index.ts")).default;
+const { default: run, runCleanup } = await import("./index.ts");
 
 const SECTIONS = [
   { key: "1", title: "Films", type: "movie" },
@@ -217,10 +217,13 @@ describe("generate: rule actions", () => {
   });
 
   it("a cleanup rule routes to the cleanup executor and records rather than acts", async () => {
+    // Through `runCleanup`: the batch jobs are split by ending, so a cleanup
+    // rule is not `generate`'s to run. The two-jobs-own-disjoint-rules pair in
+    // cleanup.integration.test.ts covers that boundary itself.
     seedRule("Reclaim", "top_rated", { limit: 5, action: { kind: "cleanup", mode: "delete" } }, 1);
 
     const { ctx, log } = testContext();
-    await run(ctx, {});
+    await runCleanup(ctx, {});
 
     const text = log.join("\n");
     assert.match(text, /\[cleanup\]/);

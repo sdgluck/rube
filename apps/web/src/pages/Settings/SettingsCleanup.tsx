@@ -35,7 +35,7 @@ export default function SettingsCleanup() {
   useEffect(() => {
     if (configQuery.data) {
       setEnabled(configQuery.data.cleanup_enabled ?? false);
-      setMaxDeletes(configQuery.data.cleanup_max_deletes_per_run ?? DEFAULT_MAX_DELETES);
+      setMaxDeletes(configQuery.data.cleanup_max_deletes_per_day ?? DEFAULT_MAX_DELETES);
     }
   }, [configQuery.data]);
 
@@ -43,7 +43,7 @@ export default function SettingsCleanup() {
     if (!configQuery.data) return false;
     return (
       enabled !== (configQuery.data.cleanup_enabled ?? false) ||
-      maxDeletes !== (configQuery.data.cleanup_max_deletes_per_run ?? DEFAULT_MAX_DELETES)
+      maxDeletes !== (configQuery.data.cleanup_max_deletes_per_day ?? DEFAULT_MAX_DELETES)
     );
   }, [enabled, maxDeletes, configQuery.data]);
 
@@ -59,7 +59,7 @@ export default function SettingsCleanup() {
     try {
       await saveMutation.mutateAsync({
         cleanup_enabled: enabled,
-        cleanup_max_deletes_per_run: maxDeletes,
+        cleanup_max_deletes_per_day: maxDeletes,
       });
       addToast("Cleanup settings saved", "success");
       await utils.config.get.invalidate();
@@ -101,7 +101,7 @@ export default function SettingsCleanup() {
       )}
 
       <div className={styles.field}>
-        <label htmlFor="cleanup-max">Most items to remove per run, across all rules</label>
+        <label htmlFor="cleanup-max">Most items to remove per day, across all rules</label>
         <input
           id="cleanup-max"
           type="number"
@@ -112,7 +112,8 @@ export default function SettingsCleanup() {
         />
         <span className={styles.hint}>
           A backstop over and above each rule's own limit. Per-rule caps don't compose — five rules each staying under
-          thirty can still empty a library in one night.
+          thirty can still empty a library in one night. Counted over a rolling 24 hours from what was actually removed,
+          so scheduled runs and rules you run by hand draw on the same allowance.
         </span>
       </div>
 

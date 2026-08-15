@@ -44,3 +44,4 @@ export {
 } from "./stress-test/index.ts";
 export { runSingleRule, testRule } from "./commands/generate/index.ts";
 export type { TestRuleResult, TestCollectionPreview } from "./commands/generate/index.ts";
+export { previewDigest } from "./commands/digest.ts";

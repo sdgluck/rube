@@ -9,8 +9,8 @@
  * and *Arr clients putting real requests on the wire, and the ledger surviving
  * between separate invocations of the job.
  *
- * So this drives `run()` — the actual entry point the scheduler calls — three
- * times against real HTTP mock servers, and asserts on what those servers were
+ * So this drives `runCleanup()` — the actual entry point the scheduler calls
+ * for a cleanup rule — three times against real HTTP mock servers, and asserts on what those servers were
  * actually asked to do. The manual verification in `media-lifecycle.md` asks
  * for exactly this sequence: run it three times under dry run, confirm the
  * shelf and the logs, then turn dry run off and confirm precisely the expected
@@ -33,7 +33,10 @@ const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
 const { listCandidates } = await import("@tinkerbell/domain.cleanup");
 const { startMockPlex } = await import("../../test-support/mock-plex-server.ts");
 const { startMockRadarr } = await import("../../test-support/mock-arr-server.ts");
-const run = (await import("./index.ts")).default;
+// The batch jobs are split by ending, so there are two entry points: the
+// `cleanup` job owns these rules, and `generate` owns the collection rule the
+// back-compat test at the bottom uses as its control.
+const { runCleanup, default: runGenerateJob } = await import("./index.ts");
 
 const RULE_ID = "e2e-cleanup";
 const SECTIONS = [{ key: "1", title: "Films", type: "movie" }];
@@ -141,7 +144,14 @@ function seedFreshIndex(): void {
 
 async function runGenerate(): Promise<string[]> {
   const { ctx, log } = testContext();
-  await run(ctx, {});
+  await runCleanup(ctx, {});
+  return log;
+}
+
+/** The other job, for asserting a collection rule is unaffected by all this. */
+async function runCollections(): Promise<string[]> {
+  const { ctx, log } = testContext();
+  await runGenerateJob(ctx, {});
   return log;
 }
 
@@ -415,10 +425,33 @@ describe("unmonitor mode, through the real job", () => {
 
 // ─── Back-compat ─────────────────────────────────────────────────────────────
 
+describe("the two jobs own disjoint rules", () => {
+  it("generate leaves a cleanup rule alone — no ledger rows, no shelf", async () => {
+    // The split's whole point. If generate still picked these up, a cleanup
+    // rule would advance its streak twice a night and reach its threshold in
+    // half the runs the user asked for.
+    seedRule({ kind: "cleanup", mode: "delete", consecutiveRuns: 3, dryRun: false });
+    const log = await runCollections();
+
+    assert.match(log.join("\n"), /No enabled collection rule\(s\) found/);
+    assert.deepEqual(listCandidates(RULE_ID), [], "no streak was advanced");
+    assert.deepEqual(plex.journal.createdCollections, [], "no queue shelf was built");
+    assert.deepEqual(arr.journal.deletes, []);
+  });
+
+  it("cleanup leaves a collection rule alone", async () => {
+    seedRule({ kind: "collection" });
+    const log = await runGenerate();
+
+    assert.match(log.join("\n"), /No enabled cleanup rule\(s\) found/);
+    assert.deepEqual(plex.journal.createdCollections, [], "the collection job builds those, not this one");
+  });
+});
+
 describe("a collection rule is untouched by any of this", () => {
   it("builds a collection and writes no ledger rows", async () => {
     seedRule({ kind: "collection" });
-    const log = await runGenerate();
+    const log = await runCollections();
 
     assert.doesNotMatch(log.join("\n"), /\[cleanup\]/);
     assert.deepEqual(listCandidates(RULE_ID), []);
