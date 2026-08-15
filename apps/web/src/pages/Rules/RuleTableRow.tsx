@@ -20,7 +20,6 @@ interface RuleTableRowProps {
   isTesting: boolean;
   isRunning: boolean;
   isExpanded: boolean;
-  highlighted?: boolean;
   previewExpanded: boolean;
   onTogglePreview: () => void;
   formActive: boolean;
@@ -48,7 +47,6 @@ export default function RuleTableRow({
   isTesting,
   isRunning,
   isExpanded,
-  highlighted,
   previewExpanded,
   onTogglePreview,
   formActive,
@@ -91,7 +89,7 @@ export default function RuleTableRow({
 
   return (
     <Fragment>
-      <tr data-rule-id={rule.id} className={highlighted ? styles.rowHighlighted : undefined}>
+      <tr data-rule-id={rule.id}>
         <td className={styles.checkboxCell} data-cell="hide">
           <input
             type="checkbox"

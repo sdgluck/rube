@@ -514,9 +514,16 @@ export default function Collections() {
                               const rid = findRuleId(labels);
                               if (!rid) return <span className={styles.muted}>—</span>;
                               const name = ruleNameById.get(rid);
+                              // A deleted rule has no name to search Rules by,
+                              // so there's nothing to link to.
+                              if (!name) return <span className={styles.muted}>Rule {rid.slice(0, 8)}</span>;
                               return (
-                                <Link to={`/rules?focus=${rid}`} className={styles.ruleLink} title="Open rule">
-                                  {name ?? `Rule ${rid.slice(0, 8)}`}
+                                <Link
+                                  to={`/rules?q=${encodeURIComponent(name)}`}
+                                  className={styles.ruleLink}
+                                  title="Open rule"
+                                >
+                                  {name}
                                 </Link>
                               );
                             })()}

@@ -12,19 +12,6 @@
   text-align: left;
 }
 
-@keyframes rowHighlightPulse {
-  0% {
-    background: var(--accent-soft);
-  }
-  100% {
-    background: transparent;
-  }
-}
-
-.rowHighlighted > td {
-  animation: rowHighlightPulse 2.4s ease-out;
-}
-
 /* Provenance marker on rules that came from the public registry, so it's
    obvious which rules an update prompt is talking about. */
 .registryBadge {

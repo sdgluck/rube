@@ -223,7 +223,7 @@ export default function CollectionDetail() {
             {isSmart && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
             {owningRuleQuery.data && (
               <Link
-                to={`/rules?focus=${owningRuleQuery.data.id}`}
+                to={`/rules?q=${encodeURIComponent(owningRuleQuery.data.name)}`}
                 className={`${styles.metaChip} ${styles.metaChipLink}`}
                 title="Open generating rule"
               >

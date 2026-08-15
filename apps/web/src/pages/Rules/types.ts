@@ -1,6 +1,9 @@
-export type SortKey = "name" | "type" | "enabled" | "lastRun";
+/** Value lists, not bare unions: the URL params are validated against them. */
+export const SORT_KEYS = ["name", "type", "enabled", "lastRun"] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
 
-export type EnabledFilter = "all" | "enabled" | "disabled";
+export const ENABLED_FILTERS = ["all", "enabled", "disabled"] as const;
+export type EnabledFilter = (typeof ENABLED_FILTERS)[number];
 
 export type RuleRow = {
   id: string;

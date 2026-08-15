@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useListParams } from "#hooks/useListParams";
+import { readEnum } from "#/storage";
 import ConfirmModal from "#components/ConfirmModal";
 import DropdownButton from "#components/DropdownButton";
 import EmptyState from "#components/EmptyState";
@@ -33,7 +34,7 @@ import {
 import RuleTableRow from "./RuleTableRow";
 import styles from "./Rules.module.css";
 import RulesToolbar from "./Toolbar";
-import type { EnabledFilter, RuleRow, SortKey } from "./types";
+import { ENABLED_FILTERS, SORT_KEYS, type EnabledFilter, type RuleRow, type SortKey } from "./types";
 import { downloadJson } from "./utils";
 
 export default function Rules() {
@@ -63,31 +64,37 @@ export default function Rules() {
   const lastClickedIndex = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const focusRuleId = searchParams.get("focus");
-  const [highlightedRuleId, setHighlightedRuleId] = useState<string | null>(null);
-
-  const [search, setSearch] = useState("");
-  // Empty = no type filter. Was a single `string | "all"`; the toolbar now
-  // filters on any combination of types.
-  const [typeFilter, setTypeFilter] = useState<string[]>([]);
-  const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
   /**
-   * Column headers and the toolbar's sort dropdown drive the same state, so
+   * Search, filters and sort live in the URL, like every other list page, so
+   * the view is shareable and survives a reload.
+   *
+   * Column headers and the toolbar's sort dropdown drive the same params, so
    * the two controls can never disagree about how the table is ordered.
    * "Status" is the last run, which is most useful newest-first.
    */
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "lastRun" ? "desc" : "asc");
-    }
-  };
+  const { sortKey, sortDir, param, listParam, setParam, setListParam, setParams, toggleSort } = useListParams<SortKey>({
+    sortKeys: SORT_KEYS,
+    defaultSortKey: "name",
+    descFirst: ["lastRun"],
+  });
+
+  /**
+   * Links that point at one specific rule — from Collections, Preview, a
+   * collection's detail page — carry that rule's name as `?q`, so arriving at
+   * the page narrows the table to it and the search box shows what it was
+   * narrowed by.
+   */
+  const search = param("q");
+  const setSearch = useCallback((value: string) => setParam("q", value), [setParam]);
+  // Empty = no type filter. Was a single `string | "all"`; the toolbar now
+  // filters on any combination of types.
+  const typeFilter = listParam("type");
+  const setTypeFilter = useCallback((values: string[]) => setListParam("type", values), [setListParam]);
+  const enabledFilter = readEnum(param("enabled"), ENABLED_FILTERS, "all");
+  const setEnabledFilter = useCallback(
+    (value: EnabledFilter) => setParam("enabled", value === "all" ? "" : value),
+    [setParam],
+  );
 
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
@@ -98,27 +105,6 @@ export default function Rules() {
       return next;
     });
   };
-  useEffect(() => {
-    if (!focusRuleId || rulesQuery.isLoading) return;
-    const exists = (rulesQuery.data ?? []).some((r) => r.id === focusRuleId);
-    if (!exists) {
-      const next = new URLSearchParams(searchParams);
-      next.delete("focus");
-      setSearchParams(next, { replace: true });
-      return;
-    }
-    setHighlightedRuleId(focusRuleId);
-    const node = document.querySelector<HTMLElement>(`[data-rule-id="${focusRuleId}"]`);
-    if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
-    const t = setTimeout(() => {
-      setHighlightedRuleId(null);
-      const next = new URLSearchParams(searchParams);
-      next.delete("focus");
-      setSearchParams(next, { replace: true });
-    }, 2400);
-    return () => clearTimeout(t);
-  }, [focusRuleId, rulesQuery.data, rulesQuery.isLoading, searchParams, setSearchParams]);
-
   const allRules = (rulesQuery.data ?? []) as RuleRow[];
 
   const presentTypes = useMemo(() => {
@@ -609,10 +595,7 @@ export default function Rules() {
           onEnabledFilterChange={setEnabledFilter}
           sortKey={sortKey}
           sortDir={sortDir}
-          onSortChange={(k, d) => {
-            setSortKey(k);
-            setSortDir(d);
-          }}
+          onSortChange={(k, d) => setParams({ sort: k, dir: d })}
         />
       )}
 
@@ -694,7 +677,6 @@ export default function Rules() {
                     isTesting={isTesting}
                     isRunning={isRunning}
                     isExpanded={expandedRow === rule.id}
-                    highlighted={highlightedRuleId === rule.id}
                     previewExpanded={expandedPreview === rule.id}
                     onTogglePreview={() => togglePreviewExpand(rule.id)}
                     formActive={!!form}
