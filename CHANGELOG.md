@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-08-15
+
+### Fixed
+
+- The admin and portal servers now return a proper 404 for a missing build asset instead of serving the app shell, so a browser left open across an update shows an "app was updated" message instead of a confusing "failed to fetch" error with a dead retry button.
+- List pages (Users, Events, Media, Collections) no longer visibly rearrange themselves as their data finishes loading — the loading skeleton now matches the real table's header, card, and filter bar layout. Loading placeholders also now render correctly in dark mode instead of staying near-white.
+- **Random and sequential Plex preroll modes were swapped — a "random" preroll list played every video in order, and "sequential" picked one at random.** This is now corrected; the fix takes effect on each server's next sync, no action needed.
+- The sidebar no longer visibly resettles a few hundred milliseconds after page load as navigation counts and badges arrive.
+- Table header rows now use the same dividing line as the rows beneath them, instead of a mismatched line that stayed light in dark mode.
+- Fixed a bug where a client navigating away mid-request (most noticeably while a collection poster preview was still rendering) could produce a spurious unhandled-rejection error; such disconnects are now handled silently, while genuine failures are logged and reported properly.
+
 ## [0.17.1] - 2026-08-15
 
 ### Fixed
