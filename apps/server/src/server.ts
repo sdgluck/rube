@@ -27,6 +27,7 @@ import { emitEvent } from "@tinkerbell/domain.events";
 import { buildPlexImageUrl, resolveStaticPath } from "./security.ts";
 import { clientIp, rejectIfNotAdmin } from "./auth.ts";
 import { handlePrerollRoute } from "./prerolls.ts";
+import { guarded, sendFetchResponse, toFetchRequest } from "./http.ts";
 
 const log = createLogger("server");
 const portalLog = createLogger("portal");
@@ -100,146 +101,121 @@ async function serveStatic(res: ServerResponse, filePath: string): Promise<boole
   }
 }
 
-function toFetchRequest(req: IncomingMessage): Request {
-  const url = new URL(req.url!, `http://${req.headers.host}`);
-  return new Request(url.toString(), {
-    method: req.method,
-    headers: Object.entries(req.headers).reduce(
-      (h, [k, v]) => {
-        if (v) h[k] = Array.isArray(v) ? v.join(", ") : v;
-        return h;
-      },
-      {} as Record<string, string>,
-    ),
-    body: req.method !== "GET" && req.method !== "HEAD" ? (req as unknown as ReadableStream) : undefined,
-    // @ts-expect-error duplex is required for streaming request bodies
-    duplex: "half",
-  });
-}
+const server = createServer(
+  guarded(log, async (req: IncomingMessage, res: ServerResponse) => {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const path = url.pathname;
 
-async function sendFetchResponse(fetchRes: Response, res: ServerResponse): Promise<void> {
-  res.writeHead(fetchRes.status, Object.fromEntries(fetchRes.headers.entries()));
-  if (!fetchRes.body) {
-    res.end();
-    return;
-  }
-  // `pipeline` honours Node's HTTP backpressure (the previous hand-rolled
-  // loop ignored `res.write()`'s return value and buffered without bound)
-  // and tears down the upstream reader on error.
-  await pipeline(Readable.fromWeb(fetchRes.body as never), res);
-}
-
-const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-  const url = new URL(req.url!, `http://${req.headers.host}`);
-  const path = url.pathname;
-
-  // Plex image proxy. Gated: it fetches arbitrary thumbs using the server's
-  // own Plex token, so leaving it open would hand an anonymous caller a
-  // readable window onto the library even with the tRPC API locked.
-  if (path === "/api/plex-image") {
-    if (rejectIfNotAdmin(req, res)) return;
-    const imageUrl = buildPlexImageUrl({
-      thumbPath: url.searchParams.get("path"),
-      plexUrl: getConfig("global_plex_url"),
-      plexToken: getConfig("global_plex_token"),
-    });
-    if (!imageUrl) {
-      res.writeHead(400);
-      res.end();
-      return;
-    }
-    try {
-      const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
-      if (!pRes.ok || !pRes.body) {
-        res.writeHead(pRes.status);
+    // Plex image proxy. Gated: it fetches arbitrary thumbs using the server's
+    // own Plex token, so leaving it open would hand an anonymous caller a
+    // readable window onto the library even with the tRPC API locked.
+    if (path === "/api/plex-image") {
+      if (rejectIfNotAdmin(req, res)) return;
+      const imageUrl = buildPlexImageUrl({
+        thumbPath: url.searchParams.get("path"),
+        plexUrl: getConfig("global_plex_url"),
+        plexToken: getConfig("global_plex_token"),
+      });
+      if (!imageUrl) {
+        res.writeHead(400);
         res.end();
         return;
       }
-      // Don't trust the upstream MIME — a hostile/compromised Plex could
-      // return text/html and turn this same-origin endpoint into an XSS
-      // vector against the SPA. Coerce anything outside the allow-list
-      // to an opaque download so the browser won't parse it.
-      const upstream = pRes.headers.get("Content-Type") ?? "";
-      const mime = ALLOWED_IMAGE_MIME.has(upstream) ? upstream : "application/octet-stream";
-      res.writeHead(200, {
-        "Content-Type": mime,
-        "Content-Disposition": "inline",
-        "X-Content-Type-Options": "nosniff",
-        "Cache-Control": "public, max-age=86400",
-      });
-      // `pipeline` propagates backpressure and cancels the upstream reader
-      // on error/abort, so we don't need an explicit reader.cancel().
-      await pipeline(Readable.fromWeb(pRes.body as never), res);
-    } catch {
-      // Headers may already have been sent if the stream broke mid-flight.
-      if (!res.headersSent) res.writeHead(502);
-      res.end();
-    }
-    return;
-  }
-
-  // Preroll upload/playback — streaming routes that tRPC's batch link can't
-  // carry. Returns false when the path isn't one of them.
-  // Gated in full, upload and playback alike. Plex never fetches prerolls over
-  // HTTP — it reads them from the shared filesystem path (`prerolls_plex_path`),
-  // so these routes only ever serve the admin SPA.
-  if (path.startsWith("/api/prerolls/")) {
-    if (rejectIfNotAdmin(req, res)) return;
-    try {
-      if (await handlePrerollRoute(req, res, url)) return;
-    } catch (err) {
-      if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
+      try {
+        const pRes = await fetch(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
+        if (!pRes.ok || !pRes.body) {
+          res.writeHead(pRes.status);
+          res.end();
+          return;
+        }
+        // Don't trust the upstream MIME — a hostile/compromised Plex could
+        // return text/html and turn this same-origin endpoint into an XSS
+        // vector against the SPA. Coerce anything outside the allow-list
+        // to an opaque download so the browser won't parse it.
+        const upstream = pRes.headers.get("Content-Type") ?? "";
+        const mime = ALLOWED_IMAGE_MIME.has(upstream) ? upstream : "application/octet-stream";
+        res.writeHead(200, {
+          "Content-Type": mime,
+          "Content-Disposition": "inline",
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "public, max-age=86400",
+        });
+        // `pipeline` propagates backpressure and cancels the upstream reader
+        // on error/abort, so we don't need an explicit reader.cancel().
+        await pipeline(Readable.fromWeb(pRes.body as never), res);
+      } catch {
+        // Headers may already have been sent if the stream broke mid-flight.
+        if (!res.headersSent) res.writeHead(502);
+        res.end();
+      }
       return;
     }
-  }
 
-  // tRPC API routes
-  if (path.startsWith("/api/trpc")) {
-    const fetchReq = toFetchRequest(req);
-    const fetchRes = await fetchRequestHandler({
-      endpoint: "/api/trpc",
-      req: fetchReq,
-      router: appRouter,
-      createContext: ({ req: r, resHeaders }) => createAdminContext({ req: r, resHeaders, ip: clientIp(req) }),
-    });
-    await sendFetchResponse(fetchRes, res);
-    return;
-  }
+    // Preroll upload/playback — streaming routes that tRPC's batch link can't
+    // carry. Returns false when the path isn't one of them.
+    // Gated in full, upload and playback alike. Plex never fetches prerolls over
+    // HTTP — it reads them from the shared filesystem path (`prerolls_plex_path`),
+    // so these routes only ever serve the admin SPA.
+    if (path.startsWith("/api/prerolls/")) {
+      if (rejectIfNotAdmin(req, res)) return;
+      try {
+        if (await handlePrerollRoute(req, res, url)) return;
+      } catch (err) {
+        if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
+        return;
+      }
+    }
 
-  // Static files — `resolveStaticPath` rejects `..`-traversal attempts.
-  const resolved = resolveStaticPath(DIST_DIR, path);
-  if (resolved && (await serveStatic(res, resolved))) return;
+    // tRPC API routes
+    if (path.startsWith("/api/trpc")) {
+      const fetchReq = toFetchRequest(req);
+      const fetchRes = await fetchRequestHandler({
+        endpoint: "/api/trpc",
+        req: fetchReq,
+        router: appRouter,
+        createContext: ({ req: r, resHeaders }) => createAdminContext({ req: r, resHeaders, ip: clientIp(req) }),
+      });
+      await sendFetchResponse(fetchRes, res);
+      return;
+    }
 
-  // SPA fallback
-  await serveStatic(res, join(DIST_DIR, "index.html"));
-});
+    // Static files — `resolveStaticPath` rejects `..`-traversal attempts.
+    const resolved = resolveStaticPath(DIST_DIR, path);
+    if (resolved && (await serveStatic(res, resolved))) return;
+
+    // SPA fallback
+    await serveStatic(res, join(DIST_DIR, "index.html"));
+  }),
+);
 
 // User portal server: only the session-gated portalRouter + the portal SPA.
 // The admin appRouter is intentionally NOT mounted here, so even though it's
 // unauthenticated it stays unreachable on the public port.
-const portalServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-  const url = new URL(req.url!, `http://${req.headers.host}`);
-  const path = url.pathname;
+const portalServer = createServer(
+  guarded(portalLog, async (req: IncomingMessage, res: ServerResponse) => {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const path = url.pathname;
 
-  if (path.startsWith("/api/trpc")) {
-    const fetchReq = toFetchRequest(req);
-    const fetchRes = await fetchRequestHandler({
-      endpoint: "/api/trpc",
-      req: fetchReq,
-      router: portalRouter,
-      createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders }),
-    });
-    await sendFetchResponse(fetchRes, res);
-    return;
-  }
+    if (path.startsWith("/api/trpc")) {
+      const fetchReq = toFetchRequest(req);
+      const fetchRes = await fetchRequestHandler({
+        endpoint: "/api/trpc",
+        req: fetchReq,
+        router: portalRouter,
+        createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders }),
+      });
+      await sendFetchResponse(fetchRes, res);
+      return;
+    }
 
-  const resolved = resolveStaticPath(PORTAL_DIST_DIR, path);
-  if (resolved && (await serveStatic(res, resolved))) return;
+    const resolved = resolveStaticPath(PORTAL_DIST_DIR, path);
+    if (resolved && (await serveStatic(res, resolved))) return;
 
-  // Portal SPA fallback — the portal app, never the admin one.
-  await serveStatic(res, join(PORTAL_DIST_DIR, "index.html"));
-});
+    // Portal SPA fallback — the portal app, never the admin one.
+    await serveStatic(res, join(PORTAL_DIST_DIR, "index.html"));
+  }),
+);
 
 // Keep listening even if a bind fails (e.g. port in use) — the reconciler
 // retries on its interval rather than crashing the admin server.
