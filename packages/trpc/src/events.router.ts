@@ -4,7 +4,7 @@ import { t, procedure } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
 
 export const eventsRouter = t.router({
-  list: t.procedure
+  list: procedure
     .input(
       paginationInput.extend({
         types: z.array(z.string()).default([]),

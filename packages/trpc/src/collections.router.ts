@@ -17,7 +17,7 @@ import { t, procedure, getPlexClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
 
 export const collectionsRouter = t.router({
-  list: t.procedure
+  list: procedure
     .input(
       paginationInput.extend({
         // Value filters are lists — the page's controls are multi-selects.
@@ -72,7 +72,7 @@ export const collectionsRouter = t.router({
     return client.getCollectionChildren(input.ratingKey);
   }),
 
-  update: t.procedure
+  update: procedure
     .input(z.object({ ratingKey: z.string(), title: z.string().optional(), summary: z.string().optional() }))
     .mutation(async ({ input }) => {
       const { ratingKey, ...updates } = input;
@@ -81,7 +81,7 @@ export const collectionsRouter = t.router({
       return { ok: true };
     }),
 
-  updateLabels: t.procedure
+  updateLabels: procedure
     .input(z.object({ ratingKey: z.string(), labels: z.array(z.string()) }))
     .mutation(async ({ input }) => {
       const client = getPlexClient();
@@ -151,7 +151,7 @@ export const collectionsRouter = t.router({
       return out;
     }),
 
-  updateSmartFilters: t.procedure
+  updateSmartFilters: procedure
     .input(z.object({ ratingKey: z.string(), contentUri: z.string() }))
     .mutation(async ({ input }) => {
       // A Plex smart collection is evaluated by Plex, on demand, forever — so

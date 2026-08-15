@@ -21,7 +21,7 @@ import { t, procedure } from "./_base.ts";
 export const jobsRouter = t.router({
   list: procedure.query(() => getJobs()),
 
-  runs: t.procedure
+  runs: procedure
     .input(z.object({ jobId: z.string(), limit: z.number().int().min(1).max(500).optional() }))
     .query(({ input }) => getJobRuns(input.jobId, input.limit)),
 
@@ -62,7 +62,7 @@ export const jobsRouter = t.router({
     .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
     .query(({ input }) => getRecentRuns(input?.limit)),
 
-  update: t.procedure
+  update: procedure
     .input(
       z.object({
         jobId: z.string(),
@@ -110,7 +110,7 @@ export const jobsRouter = t.router({
 
   featureCatalog: procedure.query(() => listFeatureCatalog()),
 
-  install: t.procedure
+  install: procedure
     .input(
       z.object({
         featureId: z.string(),
@@ -123,7 +123,7 @@ export const jobsRouter = t.router({
       return { ok: true };
     }),
 
-  uninstall: t.procedure.input(z.object({ featureId: z.string() })).mutation(async ({ input }) => {
+  uninstall: procedure.input(z.object({ featureId: z.string() })).mutation(async ({ input }) => {
     await uninstallFeature(input.featureId);
     return { ok: true };
   }),

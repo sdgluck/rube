@@ -14,6 +14,23 @@ export function resolveStaticPath(distDir: string, urlPathname: string): string 
   return null;
 }
 
+/**
+ * Read one cookie out of a `Cookie:` header. Lives here rather than beside
+ * the session lookup so it can be unit-tested without importing anything that
+ * opens the database — the header is attacker-controlled and the parsing has
+ * to be right (a `Cookie: other=x; tb_admin_session=…` header must still
+ * yield the second value, and a prefix like `xtb_admin_session` must not
+ * match).
+ */
+export function parseCookieHeader(header: string, name: string): string | undefined {
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === name) return decodeURIComponent(part.slice(idx + 1).trim());
+  }
+  return undefined;
+}
+
 /** Canonical v4 UUID, which is what `randomUUID()` produces. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

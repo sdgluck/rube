@@ -93,11 +93,11 @@ function configHash(
 }
 
 export const overlaysRouter = t.router({
-  configs: t.procedure
+  configs: procedure
     .input(z.object({ sectionId: z.string() }))
     .query(({ input }) => getOverlayConfigs(input.sectionId)),
 
-  addConfig: t.procedure
+  addConfig: procedure
     .input(
       z.object({
         sectionId: z.string(),
@@ -118,7 +118,7 @@ export const overlaysRouter = t.router({
       return row;
     }),
 
-  updateConfig: t.procedure
+  updateConfig: procedure
     .input(
       z.object({
         id: z.number(),
@@ -136,19 +136,19 @@ export const overlaysRouter = t.router({
       return { ok: true };
     }),
 
-  removeConfig: t.procedure.input(z.object({ id: z.number() })).mutation(({ input }) => {
+  removeConfig: procedure.input(z.object({ id: z.number() })).mutation(({ input }) => {
     removeOverlayConfigById(input.id);
     return { ok: true };
   }),
 
-  moveConfig: t.procedure
+  moveConfig: procedure
     .input(z.object({ id: z.number(), position: overlayPositionSchema, order: z.number() }))
     .mutation(({ input }) => {
       moveOverlayConfig(input.id, input.position, input.order);
       return { ok: true };
     }),
 
-  reorderConfigs: t.procedure
+  reorderConfigs: procedure
     .input(z.object({ sectionId: z.string(), position: overlayPositionSchema, ids: z.array(z.number()) }))
     .mutation(({ input }) => {
       reorderOverlayConfigs(input.sectionId, input.position, input.ids);
@@ -160,7 +160,7 @@ export const overlaysRouter = t.router({
     return { ok: true };
   }),
 
-  status: t.procedure
+  status: procedure
     .input(z.object({ sectionId: z.string() }))
     .query(({ input }) => ({ count: getOverlaidItemCount(input.sectionId) })),
 
@@ -175,7 +175,7 @@ export const overlaysRouter = t.router({
     return detail;
   }),
 
-  previewValues: t.procedure
+  previewValues: procedure
     .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
     .query(async ({ input }) => {
       const configs = getOverlayConfigs(input.sectionId);
@@ -222,7 +222,7 @@ export const overlaysRouter = t.router({
       return values;
     }),
 
-  renderPreview: t.procedure
+  renderPreview: procedure
     .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
     .mutation(async ({ input }) => {
       const configs = getOverlayConfigs(input.sectionId);
@@ -290,7 +290,7 @@ export const overlaysRouter = t.router({
     }),
 
   // Bulk preview across multiple random items.
-  bulkPreview: t.procedure
+  bulkPreview: procedure
     .input(z.object({ sectionId: z.string(), count: z.number().min(1).max(12).default(6) }))
     .mutation(async ({ input }) => {
       const configs = getOverlayConfigs(input.sectionId);
@@ -371,9 +371,9 @@ export const overlaysRouter = t.router({
 
   /* ─── Presets ──────────────────────────────────────────────────────────── */
 
-  listPresets: t.procedure.query(() => listPresets()),
+  listPresets: procedure.query(() => listPresets()),
 
-  applyPreset: t.procedure.input(z.object({ sectionId: z.string(), presetId: z.string() })).mutation(({ input }) => {
+  applyPreset: procedure.input(z.object({ sectionId: z.string(), presetId: z.string() })).mutation(({ input }) => {
     const all = listPresets();
     const preset = all.find((p) => p.id === input.presetId);
     if (!preset) throw new Error("Preset not found");
@@ -390,7 +390,7 @@ export const overlaysRouter = t.router({
     return { ok: true };
   }),
 
-  savePreset: t.procedure
+  savePreset: procedure
     .input(
       z.object({
         id: z.string().optional(),
@@ -404,7 +404,7 @@ export const overlaysRouter = t.router({
       return { id };
     }),
 
-  savePresetFromSection: t.procedure
+  savePresetFromSection: procedure
     .input(z.object({ sectionId: z.string(), name: z.string().min(1).max(60), description: z.string().optional() }))
     .mutation(({ input }) => {
       const configs = getOverlayConfigs(input.sectionId);
@@ -424,14 +424,14 @@ export const overlaysRouter = t.router({
       return { id };
     }),
 
-  deletePreset: t.procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+  deletePreset: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     deletePreset(input.id);
     return { ok: true };
   }),
 
   /* ─── Import / Export ──────────────────────────────────────────────────── */
 
-  exportSection: t.procedure.input(z.object({ sectionId: z.string() })).query(({ input }) => {
+  exportSection: procedure.input(z.object({ sectionId: z.string() })).query(({ input }) => {
     const configs = getOverlayConfigs(input.sectionId);
     return {
       version: 1 as const,
@@ -446,7 +446,7 @@ export const overlaysRouter = t.router({
     };
   }),
 
-  importSection: t.procedure
+  importSection: procedure
     .input(
       z.object({
         sectionId: z.string(),

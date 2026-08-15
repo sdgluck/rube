@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPlexImageUrl, resolvePrerollId, resolveStaticPath } from "./security.ts";
+import { buildPlexImageUrl, parseCookieHeader, resolvePrerollId, resolveStaticPath } from "./security.ts";
 
 const DIST = "/srv/web/dist";
 
@@ -111,5 +111,25 @@ describe("buildPlexImageUrl", () => {
     const url = buildPlexImageUrl({ thumbPath: "/foo", plexUrl: "http://plex.local:32400", plexToken });
     assert.ok(url);
     assert.equal(url.origin, "http://plex.local:32400");
+  });
+});
+
+describe("parseCookieHeader", () => {
+  test("finds the named cookie wherever it sits in the header", () => {
+    assert.equal(parseCookieHeader("a=1; tb_admin_session=tok; b=2", "tb_admin_session"), "tok");
+    assert.equal(parseCookieHeader("tb_admin_session=tok", "tb_admin_session"), "tok");
+  });
+
+  test("a name that merely ends with the one asked for is not a match", () => {
+    assert.equal(parseCookieHeader("nottb_admin_session=tok", "tb_admin_session"), undefined);
+  });
+
+  test("returns undefined for an absent cookie or an empty header", () => {
+    assert.equal(parseCookieHeader("a=1", "tb_admin_session"), undefined);
+    assert.equal(parseCookieHeader("", "tb_admin_session"), undefined);
+  });
+
+  test("ignores malformed segments rather than throwing", () => {
+    assert.equal(parseCookieHeader("garbage; tb_admin_session=tok", "tb_admin_session"), "tok");
   });
 });

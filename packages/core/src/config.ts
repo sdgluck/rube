@@ -64,6 +64,40 @@ export const configSchema = z.object({
   }),
   /** Stable X-Plex-Client-Identifier for the Sign-in-with-Plex portal flow. */
   global_plex_client_id: z.string(),
+
+  // ─── Admin authentication ───────────────────────────────────────────────
+  /**
+   * Master switch for admin auth. Off by default so an upgrade never locks
+   * anyone out of a working loopback install; the app offers to turn it on.
+   */
+  admin_auth_enabled: z.boolean(),
+  /**
+   * The admin flow's X-Plex-Client-Identifier. Separate from the portal's
+   * `global_plex_client_id` on purpose — see `ensureAdminPlexClientId`.
+   */
+  admin_plex_client_id: z.string(),
+  /**
+   * The Plex account id of the server owner — the one identity that always
+   * gets admin access. Resolved from `global_plex_token` via plex.tv and
+   * cached here, because plex.tv being down shouldn't stop you signing in
+   * with a cookie you already hold.
+   */
+  global_plex_owner_id: z.number(),
+  /** The owner's Plex username, shown in the UI. Cosmetic. */
+  global_plex_owner_username: z.string(),
+  /**
+   * SHA-256 of the `global_plex_token` the owner id was resolved from. When
+   * the token changes the cached owner is stale and gets re-resolved — a
+   * rotated token pointing at a different account must not keep admitting
+   * the old one.
+   */
+  global_plex_owner_token_hash: z.string(),
+  /**
+   * Additional Plex account ids granted admin access. Empty means owner-only,
+   * which is the expected configuration; this exists so a second admin doesn't
+   * require a schema change later.
+   */
+  admin_allowed_user_ids: z.array(z.number()),
   /** Public base URL of the user portal, used as the Plex auth forwardUrl. */
   user_app_public_url: z.string(),
   /** Admin-customizable look of the user portal (header + background). */

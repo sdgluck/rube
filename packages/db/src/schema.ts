@@ -411,14 +411,20 @@ export const userPreferences = sqliteTable("user_preferences", {
   updatedAt: integer("updated_at").notNull(),
 });
 
-// Portal login sessions for the Sign-in-with-Plex flow. `id` is the SHA-256 of
+// Login sessions for the Sign-in-with-Plex flow. `id` is the SHA-256 of
 // the opaque cookie token (the raw token is only ever in the user's cookie).
+//
+// `scope` separates the two apps that share this table: a "portal" session
+// (any shared user, 30 days) must never authorise an admin call, and an
+// "admin" session (the server owner, 7 days sliding) is issued by a different
+// handshake. Every read passes the scope it requires — see `getPlexSession`.
 export const plexSessions = sqliteTable(
   "plex_sessions",
   {
     id: text("id").primaryKey(),
     userId: integer("user_id").notNull(),
     username: text("username").notNull(),
+    scope: text("scope").notNull().default("portal"),
     createdAt: integer("created_at").notNull(),
     expiresAt: integer("expires_at").notNull(),
   },

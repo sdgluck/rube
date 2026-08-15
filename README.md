@@ -67,27 +67,59 @@ in the CA appfeed, install it by hand:
    dropdown (under "User templates").
 3. Check the paths and hit **Apply**.
 
-| Setting            | Default                        | Notes                                                                  |
-| ------------------ | ------------------------------ | ---------------------------------------------------------------------- |
-| WebUI port (admin) | `3000`                         | Unauthenticated — LAN only. See [Network exposure](#network-exposure). |
-| User Portal port   | `3100`                         | Sign in with Plex; safe to expose.                                     |
-| `/config`          | `/mnt/user/appdata/tinkerbell` | SQLite database and settings. Back this up.                            |
-| `/prerolls`        | `/mnt/user/prerolls`           | Optional. Map the **same host path** into the Plex container.          |
-| `PUID` / `PGID`    | `99` / `100`                   | Unraid's `nobody:users`.                                               |
-| `TZ`               | `Europe/London`                | The zone cron schedules run in; Settings → Schedules overrides it.     |
+| Setting            | Default                        | Notes                                                                              |
+| ------------------ | ------------------------------ | ---------------------------------------------------------------------------------- |
+| WebUI port (admin) | `3000`                         | Unauthenticated until you turn on auth. See [Network exposure](#network-exposure). |
+| User Portal port   | `3100`                         | Sign in with Plex; safe to expose.                                                 |
+| `/config`          | `/mnt/user/appdata/tinkerbell` | SQLite database and settings. Back this up.                                        |
+| `/prerolls`        | `/mnt/user/prerolls`           | Optional. Map the **same host path** into the Plex container.                      |
+| `PUID` / `PGID`    | `99` / `100`                   | Unraid's `nobody:users`.                                                           |
+| `TZ`               | `Europe/London`                | The zone cron schedules run in; Settings → Schedules overrides it.                 |
 
 ## Network exposure
 
-Tinkerbell's admin API is unauthenticated: anyone who can reach the server port
-can call every mutation. So the server binds to `127.0.0.1` by default.
+### Admin authentication
+
+Off by default, and worth turning on. Under **Settings → Security**, "Turn on"
+makes the admin app require a Plex sign-in: Tinkerbell asks plex.tv which
+account owns the server behind your configured Plex token, and lets in that
+account and no other. There's no password to store, no reset flow, and no
+second identity system — you already have a Plex account, and the app is
+useless without a Plex token anyway.
+
+Details worth knowing:
+
+- The session is an opaque cookie; only its SHA-256 reaches the database. It
+  lasts 7 days and slides forward while you're using the app. `Secure` is set
+  when the request arrived over HTTPS — directly, or via
+  `X-Forwarded-Proto: https` from a reverse proxy — and omitted on plain HTTP
+  so a LAN install still works.
+- `/api/plex-image` and `/api/prerolls/…` are gated too. Plex reads preroll
+  files from the shared filesystem path, never over HTTP, so nothing on the
+  Plex side breaks.
+- The user portal on `3100` is unaffected: it has its own sign-in, its own
+  cookie, and its own session scope. A portal session can't authorise an admin
+  call.
+- **Locked out?** Set `TINKERBELL_DISABLE_AUTH=1` and restart. That bypasses
+  the check entirely — it needs shell access on the host, which is the right
+  bar — and logs a warning every 60 seconds for as long as it's set. Unset it
+  once you're back in.
+- Turning auth on doesn't happen on upgrade. An existing install keeps
+  behaving exactly as it did.
+
+### The bind address
+
+With auth off, anyone who can reach the server port can call every mutation.
+So the server binds to `127.0.0.1` by default.
 
 - `HOST=127.0.0.1` (default) — loopback only, safe.
 - `HOST=0.0.0.0` — all interfaces. The Docker image sets this so the container
-  is reachable from the host. Only do this behind a trusted reverse proxy or
-  firewall, and **do not port-forward `3000`**.
+  is reachable from the host. With auth off, only do this behind a trusted
+  reverse proxy or firewall, and **do not port-forward `3000`**.
 
 A `[security]` warning is logged at startup whenever the server binds to a
-non-loopback interface.
+non-loopback interface with auth off — that combination is the dangerous one.
+With auth on, startup notes that instead.
 
 The **user portal** (Sign in with Plex) runs on its own port so it can be
 exposed publicly without exposing the admin API: `USER_PORT` (default `3100`)

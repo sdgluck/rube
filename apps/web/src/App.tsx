@@ -4,6 +4,7 @@ import ErrorBoundary from "#components/ErrorBoundary";
 import ScrollRestoration from "#layout/ScrollRestoration";
 import { AppBarProvider } from "#layout/AppBar";
 import CommandPalette from "#components/CommandPalette";
+import AuthBanner from "#/auth/AuthBanner";
 import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
 import useDocumentTitle from "#hooks/useDocumentTitle";
 import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
@@ -25,6 +26,7 @@ const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifica
 const SettingsBandwidth = lazy(() => import("#pages/Settings/SettingsBandwidth"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
+const SettingsSecurity = lazy(() => import("#pages/Settings/SettingsSecurity"));
 const SettingsSchedules = lazy(() => import("#pages/Settings/SettingsSchedules"));
 const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
 const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
@@ -81,6 +83,7 @@ export default function App() {
       <main className="content">
         <ScrollRestoration />
         <AppBarProvider>
+          <AuthBanner />
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
@@ -305,6 +308,14 @@ export default function App() {
                     element={
                       <LazyPage>
                         <SettingsMaintenance />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="security"
+                    element={
+                      <LazyPage>
+                        <SettingsSecurity />
                       </LazyPage>
                     }
                   />
