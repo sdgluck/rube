@@ -428,9 +428,8 @@
    between the two halves at the smaller size is the graceful version of the
    same failure.
 
-   One flex item, though: `.summaryValue` is a column flex container, so a bare
-   text node beside a span would become two rows every time, wrapping even when
-   there is room. */
+   One flex item, though: the tile's value line is a flex container, so a bare
+   text node beside a span would be two items that can't wrap between them. */
 .bandwidthRatio {
   display: inline;
 }

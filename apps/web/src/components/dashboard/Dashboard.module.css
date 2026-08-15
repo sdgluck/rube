@@ -46,6 +46,15 @@
   color: var(--ink);
 }
 
+/* One line's worth of height whatever is in it, so a loading skeleton and the
+   metric that replaces it occupy the same space. 1.1em is --t-metric's line
+   height, and follows the font-size down at the small and mobile sizes. */
+.summaryValueLine {
+  display: flex;
+  align-items: center;
+  min-height: 1.1em;
+}
+
 /* Timestamps and names don't carry a metric's weight at metric size. */
 .summaryValueSmall {
   font-size: 15px;
@@ -55,9 +64,14 @@
   color: var(--accent-text);
 }
 
+/* Held open even when empty: most subs are conditional ("3 transcoding", "+12
+   this week"), and a tile that grows a second line when the news arrives drags
+   the row — and everything under it — down with it. */
 .summarySub {
   display: block;
   margin-top: 2px;
+  min-height: 1.4em;
+  line-height: 1.4;
   font-size: 11px;
   font-weight: 400;
   font-family: var(--font-sans);
@@ -67,16 +81,22 @@
 
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
 
-/* Masonry-style two-column flow: each panel is sized to its own content
- * rather than stretched to match a row peer. */
+/* Two independent columns, each panel sized to its own content rather than
+ * stretched to match a row peer. Which column a panel lands in is decided in
+ * DashboardGrid and depends only on its position in the order — see the note
+ * there on why this isn't `column-count`. */
 .grid {
-  column-count: 2;
-  column-gap: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
 }
 
-.grid > * {
-  break-inside: avoid;
-  margin-bottom: 16px;
+.gridColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* ─── Panel ─────────────────────────────────────────────────────────────── */
@@ -377,9 +397,5 @@
 
   .summaryValueSmall {
     font-size: 14px;
-  }
-
-  .grid {
-    column-count: 1;
   }
 }

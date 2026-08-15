@@ -1,6 +1,7 @@
 import { LayoutGrid } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { Children, useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "#hooks/useMediaQuery";
 import styles from "./Dashboard.module.css";
 
 export interface TileDef {
@@ -41,12 +42,17 @@ export function SummaryTile({
   ]
     .filter(Boolean)
     .join(" ");
+  // Both the value line and the sub line are always rendered, sub included when
+  // there's nothing to put in it. A tile whose sub appears the moment a stream
+  // starts — or whose value goes from an 11px skeleton to a 25px metric — would
+  // otherwise change height under its neighbours, and every tile in the row
+  // stretches to match, so one tile's news moves the whole page.
   return (
     <div className={styles.summaryItem}>
       <span className={styles.summaryLabel}>{label}</span>
       <span className={valueClass}>
-        {value}
-        {sub != null && <span className={styles.summarySub}>{sub}</span>}
+        <span className={styles.summaryValueLine}>{value}</span>
+        <span className={styles.summarySub}>{sub}</span>
       </span>
     </div>
   );
@@ -60,8 +66,36 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return <div className={styles.dashboard}>{children}</div>;
 }
 
+/**
+ * Two columns of panels, each panel pinned to the slot its order gives it.
+ *
+ * This used to be a CSS `column-count: 2` masonry, which balances the two
+ * columns by *height*: a panel gaining a row — a stream starting, a job
+ * finishing, a query landing — could push the panel below it into the other
+ * column, so panels swapped places under the pointer while you read them.
+ * Assigning odd/even indices to the two columns costs the height balancing and
+ * buys a layout that only moves when the user reorders it.
+ *
+ * Below the breakpoint it's a single column in plain order, which is why the
+ * split is here rather than in CSS: the columns are real elements, so the
+ * two-column DOM order (0, 2, 4, 1, 3, 5) is not the order to read on a phone.
+ */
 export function DashboardGrid({ children }: { children: React.ReactNode }) {
-  return <div className={styles.grid}>{children}</div>;
+  const singleColumn = useMediaQuery("(max-width: 768px)");
+  const panels = Children.toArray(children);
+  const columns = singleColumn
+    ? [panels]
+    : [panels.filter((_, i) => i % 2 === 0), panels.filter((_, i) => i % 2 === 1)];
+
+  return (
+    <div className={styles.grid}>
+      {columns.map((column, i) => (
+        <div key={i} className={styles.gridColumn}>
+          {column}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /**
