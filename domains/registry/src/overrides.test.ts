@@ -45,6 +45,31 @@ test("limit is left alone where it's a TMDb fetch budget", () => {
   assert.equal(out.minItems, 2, "but still take a min-items floor");
 });
 
+test("a pin floor applies to any rule that pins, grouped or not", () => {
+  assert.equal(applyImportOverrides("directors", PUBLISHED, { pinMinItems: 5 }).pinMinItems, 5);
+  assert.equal(
+    applyImportOverrides("smart_filter", { pinToHomepage: true }, { pinMinItems: 5 }).pinMinItems,
+    5,
+    "a two-title smart filter is as thin a homepage row as a two-film director",
+  );
+});
+
+test("a pin floor is not written into an unpinned rule", () => {
+  const out = applyImportOverrides("directors", PUBLISHED, { pinToHomepage: false, pinMinItems: 5 });
+  assert.ok(!("pinMinItems" in out));
+  assert.ok(!("pinMinItems" in applyImportOverrides("smart_filter", { pinToHomepage: false }, { pinMinItems: 5 })));
+});
+
+test("unpinning drops a pin floor the pack shipped", () => {
+  const out = applyImportOverrides("directors", { ...PUBLISHED, pinMinItems: 3 }, { pinToHomepage: false });
+  assert.ok(!("pinMinItems" in out));
+});
+
+test("an update keeps a pin floor the user changed, and one they cleared", () => {
+  assert.equal(carryOverUserChoices({ pinMinItems: 8 }, { ...PUBLISHED, pinMinItems: 3 }).pinMinItems, 8);
+  assert.ok(!("pinMinItems" in carryOverUserChoices({}, { ...PUBLISHED, pinMinItems: 3 })));
+});
+
 test("an update keeps the pinning choice made at import", () => {
   const current = { sections: ["Films"], pinToHomepage: false };
   const out = carryOverUserChoices(current, { ...PUBLISHED, sections: ["Films"] });

@@ -37,6 +37,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
   const [rotation, setRotation] = useState(10);
   const [limit, setLimit] = useState(0);
   const [minItems, setMinItems] = useState(0);
+  const [pinMinItems, setPinMinItems] = useState(0);
 
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { staleTime: 5 * 60_000 });
   const indexQuery = trpc.registry.index.useQuery({ force: false }, { staleTime: 60 * 60_000 });
@@ -51,6 +52,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
     ...(pin ? { pinToHomepage: true, pinRotationCount: rotation } : { pinToHomepage: false as const }),
     ...(limit > 0 ? { limit } : {}),
     ...(minItems > 0 ? { minItems } : {}),
+    ...(pin && pinMinItems > 0 ? { pinMinItems } : {}),
   };
 
   const previewQuery = trpc.registry.previewImport.useQuery(
@@ -174,6 +176,27 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
               <span>
                 On the homepage at a time
                 <span className={styles.enableHint}>Per library, per rule.</span>
+              </span>
+            </label>
+          )}
+
+          {pin && (
+            <label className={styles.optionRow}>
+              <input
+                type="number"
+                className={styles.numberInput}
+                min={0}
+                value={pinMinItems || ""}
+                placeholder="Pack"
+                onChange={(e) => setPinMinItems(Math.max(0, parseInt(e.target.value, 10) || 0))}
+              />
+              <span>
+                Fewest items to reach the homepage
+                <span className={styles.enableHint}>
+                  {pinMinItems > 0
+                    ? `Collections with fewer than ${pinMinItems} items are still created, just not pinned.`
+                    : "Blank keeps the pack's own floor — these packs ship a small one so one- and two-item shelves stay off your home."}
+                </span>
               </span>
             </label>
           )}

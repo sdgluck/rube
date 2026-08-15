@@ -9,6 +9,7 @@ import {
 import { getEnabledRules } from "@tinkerbell/domain.rules";
 import { upsertCollectionByKey, forgetCollections } from "@tinkerbell/domain.collections";
 import { handlerForRule } from "./generate/dispatch.ts";
+import { meetsPinFloor } from "./generate/rotation.ts";
 import { parseRuleConfig } from "./generate/config.ts";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
@@ -75,6 +76,7 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
       }
 
       const ruleConfig = parseRuleConfig(rule);
+      const pinMinItems = ruleConfig.pinMinItems ?? 0;
       const ruleLabel = `Rule:${rule.id}`;
       const sections = filterSectionsForRule(allSections, ruleConfig.sections);
       if (sections.length === 0) continue;
@@ -100,6 +102,18 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
           if (rowsCreated >= rowCap) break;
           const matched = pending.matched.filter((m) => !excluded.has(m.title.toLowerCase()));
           if (matched.length === 0) continue;
+
+          // Every collection this job creates exists to be a row on one
+          // person's home, so the rule's pin floor decides whether it's built
+          // at all — unlike the shared pass, where an unpinned collection is
+          // still worth having in the library. Excluded titles are already
+          // out of `matched`, so a user who hid enough of a shelf loses it.
+          if (!meetsPinFloor(matched.length, pinMinItems)) {
+            ctx.log(
+              `Skipped "${pending.name}" for ${user.username} — ${matched.length} item(s), floor is ${pinMinItems}.`,
+            );
+            continue;
+          }
 
           const key = await client.createCollectionWithLabel(
             pending.section.key,

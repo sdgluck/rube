@@ -51,6 +51,13 @@ export function applyImportOverrides(
     next.minItems = overrides.minItems;
   }
 
+  // A pin floor is meaningful for anything that pins, grouped or not — a
+  // smart filter that matched two titles is as thin a homepage row as a
+  // director with two films. It's dead config only on an unpinned rule.
+  if (overrides.pinMinItems !== undefined && next.pinToHomepage !== false) {
+    next.pinMinItems = overrides.pinMinItems;
+  }
+
   return next;
 }
 

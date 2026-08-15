@@ -98,7 +98,7 @@ export const DEFAULT_REGISTRY_URL = "https://tinkerbell.dev/registry/index.json"
  *
  * Packs ship opinionated defaults — grouped rules build a collection per
  * director/genre/… and rotate ten of them onto the homepage — but those are
- * the author's guesses about somebody else's library. These four knobs let
+ * the author's guesses about somebody else's library. These knobs let
  * the importing user reshape that at the moment of import instead of editing
  * every rule afterwards. Omitted fields keep whatever the pack published.
  *
@@ -115,6 +115,13 @@ export const registryImportOverridesSchema = z.object({
   limit: z.number().int().positive().optional(),
   /** Smallest group worth a collection, for grouped rules. */
   minItems: z.number().int().positive().optional(),
+  /**
+   * Smallest collection worth a homepage row. Unlike `minItems` this doesn't
+   * decide whether the collection is built — the thin ones are still created,
+   * they just don't get promoted — so it applies to every pinned rule in the
+   * pack, not only the grouped ones.
+   */
+  pinMinItems: z.number().int().positive().optional(),
 });
 
 export type RegistryImportOverrides = z.infer<typeof registryImportOverridesSchema>;
