@@ -58,10 +58,22 @@ function createMockPlex() {
 /**
  * Mock Plex server backed by a mutable set of collections, so a test can make
  * a ratingKey disappear mid-walk the way a concurrently-running rule does.
+ *
+ * `filterByLabel` mirrors a real server, which narrows a section listing to a
+ * `label=` query param. `labelsInListing` is the opposite of what real Plex
+ * does — no version tested returns labels with the listing — and exists to
+ * pin the shortcut that would apply if one ever did.
+ *
+ * Both default to off, which is the pessimal server: it ignores the filter and
+ * volunteers nothing, so the tests that don't opt in are also the proof that
+ * correctness never depended on either.
  */
-function createCollectionMockPlex(collections: { ratingKey: string; labels: string[] }[]) {
+function createCollectionMockPlex(
+  collections: { ratingKey: string; labels: string[] }[],
+  { labelsInListing = false, filterByLabel = false }: { labelsInListing?: boolean; filterByLabel?: boolean } = {},
+) {
   const live = new Map(collections.map((c) => [c.ratingKey, c.labels]));
-  const requests: { method: string; path: string }[] = [];
+  const requests: { method: string; path: string; params: Record<string, string> }[] = [];
   /** ratingKeys to drop from `live` the moment they're fetched (read 404s). */
   const vanishOnRead = new Set<string>();
   /** ratingKeys to drop from `live` just after a successful read (delete 404s). */
@@ -69,7 +81,11 @@ function createCollectionMockPlex(collections: { ratingKey: string; labels: stri
 
   function handler(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url!, `http://localhost`);
-    requests.push({ method: req.method!, path: url.pathname });
+    const params: Record<string, string> = {};
+    for (const [k, v] of url.searchParams) {
+      if (k !== "X-Plex-Token") params[k] = v;
+    }
+    requests.push({ method: req.method!, path: url.pathname, params });
 
     const json = (body: unknown) => {
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -77,7 +93,19 @@ function createCollectionMockPlex(collections: { ratingKey: string; labels: stri
     };
 
     if (url.pathname.endsWith("/all") && req.method === "GET") {
-      json({ MediaContainer: { Metadata: [...live.keys()].map((ratingKey) => ({ ratingKey })) } });
+      // Real Plex matches the tag exactly, case-insensitively.
+      const wanted = params.label?.toLowerCase();
+      const listed = [...live.entries()].filter(
+        ([, labels]) => !filterByLabel || !wanted || labels.some((tag) => tag.toLowerCase() === wanted),
+      );
+      json({
+        MediaContainer: {
+          Metadata: listed.map(([ratingKey, labels]) => ({
+            ratingKey,
+            ...(labelsInListing && labels.length > 0 ? { Label: labels.map((tag) => ({ tag })) } : {}),
+          })),
+        },
+      });
       return;
     }
 
@@ -137,8 +165,11 @@ describe("deleteCollectionsByLabel", () => {
   let mock: ReturnType<typeof createCollectionMockPlex>;
   let client: ReturnType<typeof createPlexClient>;
 
-  const start = async (collections: { ratingKey: string; labels: string[] }[]) => {
-    mock = createCollectionMockPlex(collections);
+  const start = async (
+    collections: { ratingKey: string; labels: string[] }[],
+    opts?: { labelsInListing?: boolean; filterByLabel?: boolean },
+  ) => {
+    mock = createCollectionMockPlex(collections, opts);
     const port = await mock.start();
     client = createPlexClient({ url: `http://localhost:${port}`, token: "test-token" });
   };
@@ -148,6 +179,8 @@ describe("deleteCollectionsByLabel", () => {
   });
 
   it("deletes only collections carrying the label", async () => {
+    // No `filterByLabel`: a server that ignores the filter must still delete
+    // exactly the right collections, just more slowly.
     await start([
       { ratingKey: "1", labels: ["Rule:a"] },
       { ratingKey: "2", labels: ["Rule:b"] },
@@ -155,6 +188,30 @@ describe("deleteCollectionsByLabel", () => {
 
     assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), ["1"]);
     assert.deepEqual([...mock.live.keys()], ["2"]);
+  });
+
+  it("narrows the listing server-side so only real candidates are inspected", async () => {
+    await start(
+      [
+        { ratingKey: "1", labels: ["Rule:a"] },
+        { ratingKey: "2", labels: ["Rule:b"] },
+        { ratingKey: "3", labels: ["Rule:b", "Tinkerbell"] },
+        { ratingKey: "4", labels: [] },
+      ],
+      { filterByLabel: true },
+    );
+
+    assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), ["1"]);
+    assert.deepEqual([...mock.live.keys()], ["2", "3", "4"]);
+
+    const listing = mock.requests.find((r) => r.path === "/library/sections/1/all");
+    assert.equal(listing?.params.label, "Rule:a");
+    // The three collections belonging to nobody we care about are never read.
+    assert.deepEqual(
+      mock.requests.filter((r) => r.path.startsWith("/library/metadata/")).map((r) => r.path),
+      ["/library/metadata/1", "/library/metadata/1"],
+      "one label check, one delete — and nothing about 2, 3 or 4",
+    );
   });
 
   it("skips a collection another rule deletes mid-walk instead of failing", async () => {
@@ -166,6 +223,47 @@ describe("deleteCollectionsByLabel", () => {
 
     assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), ["2"]);
     assert.deepEqual([...mock.live.keys()], [], "our own collection is still deleted");
+  });
+
+  it("uses the labels the listing already carried instead of asking per collection", async () => {
+    await start(
+      [
+        { ratingKey: "1", labels: ["Rule:a"] },
+        { ratingKey: "2", labels: ["Rule:b"] },
+        { ratingKey: "3", labels: ["Rule:a", "Tinkerbell"] },
+      ],
+      { labelsInListing: true },
+    );
+
+    assert.deepEqual((await client.deleteCollectionsByLabel("1", "Rule:a")).sort(), ["1", "3"]);
+    assert.deepEqual([...mock.live.keys()], ["2"]);
+    // The whole point: one listing, then only the deletes. On a library with
+    // thousands of generated collections this is the difference between two
+    // requests and two thousand.
+    assert.deepEqual(
+      mock.requests.filter((r) => r.method === "GET").map((r) => r.path),
+      ["/library/sections/1/all"],
+    );
+  });
+
+  it("still asks about entries the listing gave no labels for", async () => {
+    // Unlabelled collections are indistinguishable from "the listing doesn't
+    // carry labels", so they're resolved the slow way rather than assumed.
+    await start(
+      [
+        { ratingKey: "1", labels: ["Rule:a"] },
+        { ratingKey: "2", labels: [] },
+      ],
+      {
+        labelsInListing: true,
+      },
+    );
+
+    assert.deepEqual(await client.deleteCollectionsByLabel("1", "Rule:a"), ["1"]);
+    assert.deepEqual(
+      mock.requests.filter((r) => r.method === "GET").map((r) => r.path),
+      ["/library/sections/1/all", "/library/metadata/2"],
+    );
   });
 
   it("does not count a collection deleted by another rule between read and delete", async () => {
