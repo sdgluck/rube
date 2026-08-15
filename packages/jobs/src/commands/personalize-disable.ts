@@ -52,10 +52,9 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
       ctx.progress(i + 1, sections.length, `Scanning "${section.title}"...`);
-      const collections = await client.getCollections(section.key);
+      const collections = await client.getCollectionsWithLabels(section.key);
       for (const col of collections) {
-        const labels = await client.getCollectionLabels(col.ratingKey);
-        if (!labels.some((l) => l.tag.startsWith("User:"))) continue;
+        if (!col.labels.some((tag) => tag.startsWith("User:"))) continue;
         await client.deleteItem(col.ratingKey);
         forgetCollections([col.ratingKey]);
         ctx.log(`Deleted "${col.title}"`);
