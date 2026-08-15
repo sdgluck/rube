@@ -11,6 +11,7 @@
  */
 import { createPlexClient } from "@tinkerbell/plex";
 import { getConfig, plexHealthCallback, MINUTE_MS } from "@tinkerbell/core";
+import { recordBandwidthSample } from "@tinkerbell/domain.bandwidth";
 import { closeStaleSessions, recordPollSnapshot } from "./store.ts";
 
 /**
@@ -79,6 +80,15 @@ export async function pollPlaybackOnce(signal?: AbortSignal, now: number = Date.
     const client = createPlexClient({ url, token, signal, onHealth: plexHealthCallback });
     const sessions = await client.getActiveSessions();
     const { opened, closed } = recordPollSnapshot(sessions, now);
+    // What the sessions cost, alongside what they were. Written on every tick
+    // including the empty ones: a gap in the series would be indistinguishable
+    // from a poller that had stopped, and "nothing was streaming" is the most
+    // common true answer.
+    recordBandwidthSample({
+      sampledAt: now,
+      kbps: sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0),
+      streams: sessions.length,
+    });
     backoffUntil = 0;
     return { polled: true, opened, closed, recovered };
   } catch {

@@ -74,13 +74,23 @@ export default function Stats() {
   // Not polled: this changes only when someone runs a bandwidth test.
   const bandwidthQuery = trpc.bandwidth.latest.useQuery(undefined, { refetchOnWindowFocus: false });
 
-  // Fourteen days of daily plays, for the sparkline on the two plays tiles. A
-  // fortnight is two weekends, which is the shortest window where "quiet
-  // Tuesday" and "nobody has watched anything since Friday" look different.
-  // Fetched only when a tile is showing it.
+  // The two sparkline series, each fetched only when a tile is showing it —
+  // they are the only queries on this page nothing else on it needs, and both
+  // poll. Six tiles out of fifteen, so most loads skip both.
+  //
+  // Fourteen days of daily plays: a fortnight is two weekends, the shortest
+  // window where "quiet Tuesday" and "nobody has watched anything since
+  // Friday" look different.
   const activitySeriesQuery = trpc.stats.activitySeries.useQuery(
     { days: 14 },
     { enabled: selectedTiles.includes("playsToday") || selectedTiles.includes("playsWeek") },
+  );
+  // A day of usage in hourly peaks. Refetched on the minute rather than with
+  // the 5s session poll: a bucket is an hour wide, so anything faster redraws
+  // an identical line.
+  const bandwidthUsageQuery = trpc.bandwidth.usage.useQuery(
+    { hours: 24, buckets: 24 },
+    { enabled: selectedTiles.includes("bandwidth"), refetchInterval: 60_000, refetchOnWindowFocus: false },
   );
 
   const utils = trpc.useUtils();
@@ -129,6 +139,11 @@ export default function Stats() {
         const measured = bandwidthQuery.data;
         const capacity = measured?.upMbps ?? 0;
         const inUse = totalBandwidth > 0 ? formatBandwidth(totalBandwidth) : EMPTY;
+        // A day of hourly peaks behind the live figure. The value alone can't
+        // distinguish a quiet moment on a busy server from a server nobody
+        // uses, and that is the difference that decides whether 24 Mbps means
+        // anything.
+        trend = bandwidthUsageQuery.data;
         if (sessionsQuery.isLoading) {
           value = <SkeletonLine width="40px" />;
         } else if (measured && capacity > 0) {

@@ -26,7 +26,15 @@ import {
 import { recentUpMbps, recordBandwidthTest } from "./store.ts";
 import { download, ENDPOINT, LATENCY_PROBES, runPhase, STREAMS, upload } from "./transfer.ts";
 
-export { getBandwidthHistory, getLatestBandwidthTest, pruneBandwidthTests, type BandwidthTest } from "./store.ts";
+export {
+  getBandwidthHistory,
+  getBandwidthSeries,
+  getLatestBandwidthTest,
+  pruneBandwidthSamples,
+  pruneBandwidthTests,
+  recordBandwidthSample,
+  type BandwidthTest,
+} from "./store.ts";
 export { isSlowerThanUsual, summarise, throughputMbps } from "./math.ts";
 export { runPhase } from "./transfer.ts";
 

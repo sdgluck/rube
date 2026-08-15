@@ -9,7 +9,7 @@
 import { and, lt, notInArray } from "drizzle-orm";
 import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
-import { pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwidth";
+import { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwidth";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
 import { syncRecentlyAdded } from "@tinkerbell/domain.stats";
@@ -53,6 +53,9 @@ export const internalJobs = {
       ctx.progress(1, 2, "Pruning health checks and bandwidth history");
       pruneHealthChecks();
       pruneBandwidthTests();
+      // The usage samples are the fastest-growing table here: one row per
+      // 30-second poll, whether or not anything was streaming.
+      pruneBandwidthSamples();
       return `Purged ${result.changes} job run(s) older than 7 days.`;
     },
     timeoutMs: 10 * MINUTE_MS,

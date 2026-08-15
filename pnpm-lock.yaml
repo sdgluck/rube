@@ -595,6 +595,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/domain.bandwidth':
+        specifier: workspace:*
+        version: link:../bandwidth
       '@tinkerbell/plex':
         specifier: workspace:*
         version: link:../../clients/plex

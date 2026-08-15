@@ -550,6 +550,32 @@ export const bandwidthTests = sqliteTable(
   (table) => [index("idx_bandwidth_tests_started").on(table.startedAt)],
 );
 
+/**
+ * Live streaming bandwidth over time — one row per playback poll.
+ *
+ * Separate from `bandwidth_tests`, which measures the *link* a few times a
+ * year. This measures what is being *used*, every 30 seconds, and the two only
+ * mean something together: 24 Mbps is idle on a gigabit line and saturation on
+ * a 30/10 one.
+ *
+ * Deliberately not derived from `playback_sessions`. That table records what
+ * played, not what it cost — a paused session still holds its bitrate, and a
+ * transcode's bandwidth bears no relation to the file's. Both are only
+ * knowable at poll time, from Plex's own figure.
+ */
+export const bandwidthSamples = sqliteTable(
+  "bandwidth_samples",
+  {
+    /** Poll time. The natural key: the poller writes at most one row per tick. */
+    sampledAt: integer("sampled_at").primaryKey(),
+    /** Sum of every active session's bandwidth, in kbps — Plex's unit. */
+    kbps: integer("kbps").notNull().default(0),
+    /** How many sessions that was spread across, so a spike can be read. */
+    streams: integer("streams").notNull().default(0),
+  },
+  (table) => [index("idx_bandwidth_samples_sampled").on(table.sampledAt)],
+);
+
 export const omdbCache = sqliteTable("omdb_cache", {
   imdbId: text("imdb_id").primaryKey(),
   imdbRating: text("imdb_rating"),

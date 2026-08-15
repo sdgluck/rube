@@ -16,6 +16,7 @@
   "dependencies": {
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.bandwidth": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/plex-smart-filter": "workspace:*",
     "drizzle-orm": "^0.45.1",

@@ -1,6 +1,11 @@
 import { z } from "zod";
-import { DAY_MS } from "@tinkerbell/core";
-import { getBandwidthHistory, getLatestBandwidthTest, MAX_TRANSFER_BYTES } from "@tinkerbell/domain.bandwidth";
+import { DAY_MS, HOUR_MS } from "@tinkerbell/core";
+import {
+  getBandwidthHistory,
+  getBandwidthSeries,
+  getLatestBandwidthTest,
+  MAX_TRANSFER_BYTES,
+} from "@tinkerbell/domain.bandwidth";
 import { getActiveRuns } from "@tinkerbell/jobs";
 import { t, procedure } from "./_base.ts";
 
@@ -22,6 +27,22 @@ export const bandwidthRouter = t.router({
   history: procedure
     .input(z.object({ days: z.number().int().min(1).max(365).default(90) }).optional())
     .query(({ input }) => getBandwidthHistory(Date.now() - (input?.days ?? 90) * DAY_MS)),
+
+  /**
+   * Live usage over the last `hours`, as `buckets` peaks — the Bandwidth
+   * tile's sparkline. Peaks rather than averages: see the note on
+   * `getBandwidthSeries`.
+   */
+  usage: procedure
+    .input(
+      z
+        .object({
+          hours: z.number().int().min(1).max(168).default(24),
+          buckets: z.number().int().min(2).max(96).default(24),
+        })
+        .optional(),
+    )
+    .query(({ input }) => getBandwidthSeries(input?.buckets ?? 24, (input?.hours ?? 24) * HOUR_MS)),
 
   /** The live run, if one is in flight — what the tool page polls for progress. */
   activeRun: procedure.query(() => getActiveRuns().find((r) => r.jobId === JOB_ID) ?? null),
