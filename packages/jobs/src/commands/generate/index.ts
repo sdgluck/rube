@@ -19,6 +19,7 @@ import { runHandlerWithCommits } from "./dispatch.ts";
 import { resolveArrAdds } from "./arr.ts";
 import { llmUnavailableReason } from "./ai/llm.ts";
 import { withItemCache } from "./item-cache.ts";
+import { bufferLog } from "./log-buffer.ts";
 import { RULE_CONCURRENCY_DEFAULT } from "@tinkerbell/contracts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
@@ -240,26 +241,6 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     for (const name of skipped) ctx.log(`  - "${name}"`);
   }
   ctx.log("\nAll done!");
-}
-
-/**
- * A context whose log is collected rather than emitted, so one rule's output
- * lands in the job log as a single contiguous block. Mirrors the real
- * context's stringification so buffered lines read identically to live ones.
- */
-function bufferLog(ctx: JobContext): { ctx: JobContext; flush: () => void } {
-  const lines: string[] = [];
-  return {
-    ctx: {
-      ...ctx,
-      log: (...args: unknown[]) =>
-        lines.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")),
-    },
-    flush: () => {
-      if (lines.length > 0) ctx.log(lines.join("\n"));
-      lines.length = 0;
-    },
-  };
 }
 
 interface GenerateCheckpoint {

@@ -1,14 +1,36 @@
+import PQueue from "p-queue";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { upsertCollectionByKey } from "@tinkerbell/domain.collections";
 import type { JobContext } from "@tinkerbell/core";
 import { fetchAutoPoster } from "@tinkerbell/core";
+import { bufferLog } from "./log-buffer.ts";
+
+/**
+ * How many collections may be committed at once. Each commit is five-odd
+ * Plex round-trips (create, label, optional pin, poster upload, detail +
+ * children for the local mirror), and a grouped rule can produce hundreds
+ * of them — run one at a time, latency dominates the whole job.
+ */
+export const COMMIT_CONCURRENCY = 6;
+
+/**
+ * Module-scoped, so `COMMIT_CONCURRENCY` caps the writes one Plex server sees
+ * *in total* rather than per rule. Rules run concurrently too, and a per-rule
+ * queue would multiply the burst by the rule concurrency — which on a home
+ * server is how you turn a generate run into a stalled Plex.
+ */
+const commitQueue = new PQueue({ concurrency: COMMIT_CONCURRENCY });
 
 /**
  * The full "create + pin + mirror" sequence we want for every generated
  * collection. Returns the Plex collection key, or null if creation failed.
+ *
+ * Commits run concurrently, so this collection's log lines are buffered and
+ * emitted as one block — otherwise six collections' progress braids together
+ * and the job log becomes unreadable.
  */
 export async function commitCollection(
-  ctx: JobContext,
+  jobCtx: JobContext,
   client: PlexClient,
   section: PlexSection,
   machineId: string,
@@ -18,30 +40,37 @@ export async function commitCollection(
   pinToHomepage: boolean,
   ruleType: string,
 ): Promise<string | null> {
-  ctx.log(`Creating "${name}" (${ratingKeys.length} items)...`);
+  const { ctx, flush } = bufferLog(jobCtx);
+  try {
+    return await commitQueue.add(async () => {
+      ctx.log(`Creating "${name}" (${ratingKeys.length} items)...`);
 
-  const collectionKey = await client.createCollectionWithLabel(
-    section.key,
-    section.type,
-    machineId,
-    name,
-    ratingKeys,
-    labels,
-  );
-  if (!collectionKey) return null;
+      const collectionKey = await client.createCollectionWithLabel(
+        section.key,
+        section.type,
+        machineId,
+        name,
+        ratingKeys,
+        labels,
+      );
+      if (!collectionKey) return null;
 
-  if (pinToHomepage) {
-    await client.pinToHomepage(section.key, collectionKey, {
-      promotedToOwnHome: 1,
-      promotedToRecommendedHome: 1,
-      promotedToSharedHome: 1,
+      if (pinToHomepage) {
+        await client.pinToHomepage(section.key, collectionKey, {
+          promotedToOwnHome: 1,
+          promotedToRecommendedHome: 1,
+          promotedToSharedHome: 1,
+        });
+        ctx.log(`Pinned "${name}" to homepage`);
+      }
+
+      await applyAutoPoster(ctx, client, ruleType, name, collectionKey);
+      await upsertCollectionByKey(client, section, collectionKey);
+      return collectionKey;
     });
-    ctx.log(`Pinned "${name}" to homepage`);
+  } finally {
+    flush();
   }
-
-  await applyAutoPoster(ctx, client, ruleType, name, collectionKey);
-  await upsertCollectionByKey(client, section, collectionKey);
-  return collectionKey;
 }
 
 /**
