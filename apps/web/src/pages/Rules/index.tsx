@@ -285,9 +285,15 @@ export default function Rules() {
     }
     if (next.type === "seerr_requests") config.filter = next.filter;
     if (next.sections.length > 0) config.sections = next.sections;
-    if (!next.pinToHomepage) config.pinToHomepage = false;
-    if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
-    if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
+    // The cleanup path pins its shelf `false` unconditionally, so writing any
+    // of these onto a cleanup rule would store settings nothing reads. A rule
+    // switched from collection to cleanup sheds them here; switched back, it
+    // starts from the wizard's defaults rather than a stale saved answer.
+    if (next.outcome.kind === "collection") {
+      if (!next.pinToHomepage) config.pinToHomepage = false;
+      if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
+      if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
+    }
     if (next.arr.enabled) config.arr = next.arr;
     // Absent means "build a collection" — the same reading the job takes — so
     // a collection rule writes no action key at all and stays byte-identical

@@ -22,13 +22,14 @@ import {
   typeHasActionsStep,
   typeHasLimit,
   pinRotationError,
+  rulePins,
   typeHasMinItems,
   typeHasOptionalLimit,
   typeProducesManyCollections,
   validateStep,
   type StepId,
 } from "./rule-types.ts";
-import { SOURCE_STEPS } from "./sources/index.ts";
+import { hasSourceStep, SOURCE_STEPS, type SourceStepType } from "./sources/index.ts";
 
 import type {
   ArrFormState,
@@ -322,7 +323,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
    * registry handles dispatch.
    */
   function renderSourceStep() {
-    const SourceComponent = SOURCE_STEPS[form.type];
+    // `form.type` is a plain string (the wizard switches types freely), so the
+    // lookup is guarded rather than assumed to hit.
+    const SourceComponent = hasSourceStep(form.type) ? SOURCE_STEPS[form.type as SourceStepType] : null;
     if (!SourceComponent) return null;
     return <SourceComponent form={form} setForm={setForm} config={{ seerrConfigured }} tagSectionId={tagSectionId} />;
   }
@@ -489,117 +492,133 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           <p className={styles.hint}>Heads-up: OMDB API key is not configured in Settings → AI.</p>
         )}
 
-        <div className={styles.field}>
-          <label>
-            <input
-              type="checkbox"
-              checked={form.pinToHomepage}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  pinToHomepage: e.target.checked,
-                  // This rule type can produce hundreds of collections, so
-                  // pinning always means "rotate a handful" — seed a count
-                  // rather than letting the user pin the lot.
-                  pinRotationCount:
-                    e.target.checked && typeProducesManyCollections(form.type) && form.pinRotationCount === 0
-                      ? 10
-                      : form.pinRotationCount,
-                })
-              }
-            />{" "}
-            Pin generated collections to homepage
-          </label>
-          <span className={styles.hint}>
-            When off, collections are still created in Plex but won't be promoted to the home, recommended, or shared
-            home rows.
-          </span>
-        </div>
-
-        {form.pinToHomepage && typeProducesManyCollections(form.type) && (
-          <div className={styles.field}>
-            <label htmlFor="rule-pin-rotation">Collections on the homepage at a time</label>
-            <input
-              id="rule-pin-rotation"
-              type="number"
-              className={shared.input}
-              style={{ maxWidth: 140 }}
-              min={1}
-              value={form.pinRotationCount || ""}
-              onChange={(e) => setForm({ ...form, pinRotationCount: Math.max(0, parseInt(e.target.value, 10) || 0) })}
-            />
-            <span className={styles.hint}>
-              {form.pinRotationCount > 0
-                ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
-                  "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
-                  `${form.pinRotationCount * 2} collections.`
-                : "Required — this rule type can build far more collections than a homepage can show."}
-            </span>
-          </div>
+        {/* A cleanup rule's shelf is never pinned, so none of this applies to
+            it — see `rulePins`. The Outcome step comes first precisely so this
+            block can be absent rather than retracted. */}
+        {form.outcome.kind === "cleanup" && (
+          <p className={styles.hint}>
+            Cleanup rules don't touch the homepage. The queue collection is created and labelled, but never pinned — a
+            row of items about to be removed isn't something to open Plex to.
+          </p>
         )}
 
-        {form.pinToHomepage && !typeProducesManyCollections(form.type) && (
-          <div className={styles.field}>
-            <label>
-              <input
-                type="checkbox"
-                checked={form.pinRotationCount > 0}
-                onChange={(e) => setForm({ ...form, pinRotationCount: e.target.checked ? 10 : 0 })}
-              />{" "}
-              Rotate a limited number onto the homepage
-            </label>
-            {form.pinRotationCount > 0 && (
-              <input
-                type="number"
-                className={shared.input}
-                style={{ maxWidth: 140 }}
-                min={1}
-                value={form.pinRotationCount}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    pinRotationCount: Math.max(1, parseInt(e.target.value, 10) || 1),
-                  })
-                }
-              />
-            )}
-            <span className={styles.hint}>
-              {form.pinRotationCount > 0
-                ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
-                  "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
-                  `${form.pinRotationCount * 2} collections.`
-                : "When off, every collection this rule generates is pinned."}
-            </span>
-          </div>
-        )}
+        {form.outcome.kind === "collection" && (
+          <>
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.pinToHomepage}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      pinToHomepage: e.target.checked,
+                      // This rule type can produce hundreds of collections, so
+                      // pinning always means "rotate a handful" — seed a count
+                      // rather than letting the user pin the lot.
+                      pinRotationCount:
+                        e.target.checked && typeProducesManyCollections(form.type) && form.pinRotationCount === 0
+                          ? 10
+                          : form.pinRotationCount,
+                    })
+                  }
+                />{" "}
+                Pin generated collections to homepage
+              </label>
+              <span className={styles.hint}>
+                When off, collections are still created in Plex but won't be promoted to the home, recommended, or
+                shared home rows.
+              </span>
+            </div>
 
-        {form.pinToHomepage && (
-          <div className={styles.field}>
-            <label>
-              <input
-                type="checkbox"
-                checked={form.pinMinItems > 0}
-                onChange={(e) => setForm({ ...form, pinMinItems: e.target.checked ? 5 : 0 })}
-              />{" "}
-              Only pin collections with enough items
-            </label>
-            {form.pinMinItems > 0 && (
-              <input
-                type="number"
-                className={shared.input}
-                style={{ maxWidth: 140 }}
-                min={1}
-                value={form.pinMinItems}
-                onChange={(e) => setForm({ ...form, pinMinItems: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                aria-label="Minimum items to pin a collection"
-              />
+            {form.pinToHomepage && typeProducesManyCollections(form.type) && (
+              <div className={styles.field}>
+                <label htmlFor="rule-pin-rotation">Collections on the homepage at a time</label>
+                <input
+                  id="rule-pin-rotation"
+                  type="number"
+                  className={shared.input}
+                  style={{ maxWidth: 140 }}
+                  min={1}
+                  value={form.pinRotationCount || ""}
+                  onChange={(e) =>
+                    setForm({ ...form, pinRotationCount: Math.max(0, parseInt(e.target.value, 10) || 0) })
+                  }
+                />
+                <span className={styles.hint}>
+                  {form.pinRotationCount > 0
+                    ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
+                      "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
+                      `${form.pinRotationCount * 2} collections.`
+                    : "Required — this rule type can build far more collections than a homepage can show."}
+                </span>
+              </div>
             )}
-            <span className={styles.hint}>
-              {form.pinMinItems > 0
-                ? `Only collections with ${form.pinMinItems}+ items reach the homepage. Smaller ones are still created in Plex, just not promoted.`
-                : "Off — every collection this rule pins goes to the homepage, however few items it has."}
-            </span>
-          </div>
+
+            {form.pinToHomepage && !typeProducesManyCollections(form.type) && (
+              <div className={styles.field}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={form.pinRotationCount > 0}
+                    onChange={(e) => setForm({ ...form, pinRotationCount: e.target.checked ? 10 : 0 })}
+                  />{" "}
+                  Rotate a limited number onto the homepage
+                </label>
+                {form.pinRotationCount > 0 && (
+                  <input
+                    type="number"
+                    className={shared.input}
+                    style={{ maxWidth: 140 }}
+                    min={1}
+                    value={form.pinRotationCount}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        pinRotationCount: Math.max(1, parseInt(e.target.value, 10) || 1),
+                      })
+                    }
+                  />
+                )}
+                <span className={styles.hint}>
+                  {form.pinRotationCount > 0
+                    ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
+                      "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
+                      `${form.pinRotationCount * 2} collections.`
+                    : "When off, every collection this rule generates is pinned."}
+                </span>
+              </div>
+            )}
+
+            {form.pinToHomepage && (
+              <div className={styles.field}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={form.pinMinItems > 0}
+                    onChange={(e) => setForm({ ...form, pinMinItems: e.target.checked ? 5 : 0 })}
+                  />{" "}
+                  Only pin collections with enough items
+                </label>
+                {form.pinMinItems > 0 && (
+                  <input
+                    type="number"
+                    className={shared.input}
+                    style={{ maxWidth: 140 }}
+                    min={1}
+                    value={form.pinMinItems}
+                    onChange={(e) => setForm({ ...form, pinMinItems: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                    aria-label="Minimum items to pin a collection"
+                  />
+                )}
+                <span className={styles.hint}>
+                  {form.pinMinItems > 0
+                    ? `Only collections with ${form.pinMinItems}+ items reach the homepage. Smaller ones are still created in Plex, just not promoted.`
+                    : "Off — every collection this rule pins goes to the homepage, however few items it has."}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </>
     );
@@ -1028,19 +1047,31 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             </div>
           )}
           <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Pin to homepage</span>
-            <span className={styles.summaryValue}>
-              {!form.pinToHomepage
-                ? "Off"
-                : form.pinRotationCount > 0
-                  ? `On — ${form.pinRotationCount}/library, rotating`
-                  : (pinRotationError(form) ?? "On")}
-            </span>
-            <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
+            <span className={styles.summaryLabel}>Outcome</span>
+            <span className={styles.summaryValue}>{describeOutcome(form.outcome)}</span>
+            <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("outcome")}>
               Edit
             </button>
           </div>
-          {form.pinToHomepage && (
+          {/* Pinning is a collection-rule concern only — a cleanup rule's
+              shelf is never pinned, so stating it here would be a promise the
+              job doesn't keep. */}
+          {form.outcome.kind === "collection" && (
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryLabel}>Pin to homepage</span>
+              <span className={styles.summaryValue}>
+                {!form.pinToHomepage
+                  ? "Off"
+                  : form.pinRotationCount > 0
+                    ? `On — ${form.pinRotationCount}/library, rotating`
+                    : (pinRotationError(form) ?? "On")}
+              </span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
+                Edit
+              </button>
+            </div>
+          )}
+          {rulePins(form) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Min items to pin</span>
               <span className={styles.summaryValue}>{form.pinMinItems > 0 ? form.pinMinItems : "No minimum"}</span>
@@ -1049,13 +1080,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </button>
             </div>
           )}
-          <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Outcome</span>
-            <span className={styles.summaryValue}>{describeOutcome(form.outcome)}</span>
-            <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("outcome")}>
-              Edit
-            </button>
-          </div>
           {typeHasActionsStep(form.type) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Send to *arr</span>

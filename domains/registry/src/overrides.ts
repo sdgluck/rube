@@ -13,7 +13,13 @@
  * exactly the kind of dead config that makes a rule hard to reason about
  * later.
  */
-import { isGroupedRuleType, producesManyCollections, type RegistryImportOverrides } from "@tinkerbell/contracts";
+import {
+  isGroupedRuleType,
+  producesManyCollections,
+  ruleAction,
+  type RegistryImportOverrides,
+  type RuleAction,
+} from "@tinkerbell/contracts";
 
 export function applyImportOverrides(
   ruleType: string,
@@ -24,8 +30,17 @@ export function applyImportOverrides(
 
   const next = { ...config };
   const many = producesManyCollections(ruleType);
+  // A cleanup rule's shelf is pinned `false` by the job whatever its config
+  // says, so homepage answers are dead config there — same reason the wizard
+  // stops asking for them once the outcome is cleanup.
+  const pins = ruleAction(config as { action?: RuleAction }).kind === "collection";
 
-  if (overrides.pinToHomepage === false) {
+  if (!pins) {
+    // Nothing to decide, and nothing worth keeping if the pack shipped it.
+    delete next.pinToHomepage;
+    delete next.pinRotationCount;
+    delete next.pinMinItems;
+  } else if (overrides.pinToHomepage === false) {
     // Unpinning is unconditional — "don't touch my homepage" has to mean
     // every rule in the pack, not just the grouped ones.
     next.pinToHomepage = false;
@@ -37,7 +52,7 @@ export function applyImportOverrides(
     next.pinToHomepage = true;
   }
 
-  if (next.pinToHomepage !== false && many && overrides.pinRotationCount !== undefined) {
+  if (pins && next.pinToHomepage !== false && many && overrides.pinRotationCount !== undefined) {
     next.pinRotationCount = overrides.pinRotationCount;
   }
 
@@ -54,7 +69,7 @@ export function applyImportOverrides(
   // A pin floor is meaningful for anything that pins, grouped or not — a
   // smart filter that matched two titles is as thin a homepage row as a
   // director with two films. It's dead config only on an unpinned rule.
-  if (overrides.pinMinItems !== undefined && next.pinToHomepage !== false) {
+  if (pins && overrides.pinMinItems !== undefined && next.pinToHomepage !== false) {
     next.pinMinItems = overrides.pinMinItems;
   }
 

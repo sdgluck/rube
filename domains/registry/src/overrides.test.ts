@@ -70,6 +70,15 @@ test("an update keeps a pin floor the user changed, and one they cleared", () =>
   assert.ok(!("pinMinItems" in carryOverUserChoices({}, { ...PUBLISHED, pinMinItems: 3 })));
 });
 
+test("a cleanup rule takes no homepage settings at all", () => {
+  const cleanup = { action: { kind: "cleanup", mode: "label" }, pinToHomepage: true, pinRotationCount: 10 };
+  const out = applyImportOverrides("directors", cleanup, { pinToHomepage: true, pinRotationCount: 5, pinMinItems: 4 });
+  assert.ok(!("pinToHomepage" in out), "the job pins a cleanup shelf false whatever the config says");
+  assert.ok(!("pinRotationCount" in out));
+  assert.ok(!("pinMinItems" in out));
+  assert.deepEqual(out.action, cleanup.action, "the action itself is untouched");
+});
+
 test("an update keeps the pinning choice made at import", () => {
   const current = { sections: ["Films"], pinToHomepage: false };
   const out = carryOverUserChoices(current, { ...PUBLISHED, sections: ["Films"] });

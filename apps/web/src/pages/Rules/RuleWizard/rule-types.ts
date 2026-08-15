@@ -6,7 +6,9 @@ import {
   type RuleTypeValue,
 } from "@tinkerbell/contracts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
-import { hasSourceStep } from "./sources/index.ts";
+// The type list, not the map of components — this module is imported by
+// tests, and the components bring React with them.
+import { hasSourceStep } from "./sources/step-types.ts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
 
 /** First leaf in document order, or null if the tree is empty. Used by the
@@ -403,10 +405,14 @@ export function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; l
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
   if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
-  steps.push({ id: "scope", label: "Scope" });
   // Every rule type can end in cleanup — the selection half is identical, so
   // restricting it would be arbitrary.
+  //
+  // Outcome comes before Scope because it decides what Scope even asks: a
+  // cleanup rule never pins anything, so its homepage questions are dropped.
+  // Asking them first and retracting them afterwards is the worse order.
   steps.push({ id: "outcome", label: "Outcome" });
+  steps.push({ id: "scope", label: "Scope" });
   if (typeHasActionsStep(type)) steps.push({ id: "actions", label: "Actions" });
   steps.push({ id: "review", label: "Review" });
   return steps;
@@ -415,12 +421,27 @@ export function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; l
 // ─── Validation ─────────────────────────────────────────────────────────
 
 /**
+ * Whether this rule puts anything on a homepage at all.
+ *
+ * Cleanup rules do build a collection — the "on the chopping block" shelf —
+ * but the job pins it `false` unconditionally, because a homepage row of
+ * films about to be deleted isn't what anyone wants to open Plex to. So every
+ * pin setting is dead config on a cleanup rule, and the wizard neither asks
+ * about them nor saves them.
+ */
+export function rulePins(form: RuleFormState): boolean {
+  return form.outcome.kind === "collection" && form.pinToHomepage;
+}
+
+/**
  * A rule that can produce hundreds of collections has to say how many of
  * them are on the homepage at once — pinning all of them buries every other
  * row. So for those types "pin" and "rotate N" are one decision, not two.
  */
 export function pinRotationError(form: RuleFormState): string | null {
-  if (!form.pinToHomepage) return null;
+  // A cleanup rule's shelf is never pinned, so there is nothing to answer —
+  // demanding a rotation count would block a rule that can't use one.
+  if (!rulePins(form)) return null;
   if (!typeProducesManyCollections(form.type)) return null;
   return form.pinRotationCount > 0 ? null : "Choose how many collections to keep on the homepage at a time.";
 }
