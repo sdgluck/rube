@@ -323,6 +323,9 @@ importers:
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../../packages/http
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.3.0
       zod:
         specifier: ^4.3.6
         version: 4.4.3

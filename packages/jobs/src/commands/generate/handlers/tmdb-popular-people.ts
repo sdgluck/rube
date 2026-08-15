@@ -2,9 +2,12 @@ import { getConfig } from "@tinkerbell/core";
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
+import { chunked, mapConcurrent } from "#jobs/concurrency.ts";
 
 const MAX_PEOPLE = 50;
 const DEFAULT_PEOPLE = 10;
+/** Credits requests in flight per section. The TMDb client caps the rest. */
+const CREDITS_CONCURRENCY = 6;
 
 /**
  * "Popular actors" / "Popular directors" — fetch the top N people from
@@ -37,29 +40,37 @@ export function tmdbPopularPeopleHandler(role: "cast" | "crew") {
 
       const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
 
-      for (const person of people) {
+      // A credits request per person, fetched a chunk at a time rather than
+      // one at a time — but still a chunk at a time rather than all at once,
+      // so the first collections reach Plex while the rest are still coming.
+      for (const batch of chunked(people, CREDITS_CONCURRENCY)) {
         ctx.signal?.throwIfAborted();
-        const credits = await fetchPersonCredits({ apiKey }, person.id, {
-          role,
-          crewJob,
-          mediaTypes: [sectionMediaType],
-        });
+        const fetched = await mapConcurrent(batch, CREDITS_CONCURRENCY, async (person) => ({
+          person,
+          credits: await fetchPersonCredits({ apiKey }, person.id, {
+            role,
+            crewJob,
+            mediaTypes: [sectionMediaType],
+          }),
+        }));
 
-        const matched: Array<{ ratingKey: string; title: string; year?: number }> = [];
-        const seen = new Set<string>();
-        for (const credit of credits) {
-          const item = tmdbToItem.get(credit.id);
-          if (!item || seen.has(item.ratingKey)) continue;
-          seen.add(item.ratingKey);
-          matched.push(item);
+        for (const { person, credits } of fetched) {
+          const matched: Array<{ ratingKey: string; title: string; year?: number }> = [];
+          const seen = new Set<string>();
+          for (const credit of credits) {
+            const item = tmdbToItem.get(credit.id);
+            if (!item || seen.has(item.ratingKey)) continue;
+            seen.add(item.ratingKey);
+            matched.push(item);
+          }
+
+          if (matched.length < minItems) {
+            ctx.log(`[tmdb_popular] Skipping "${person.name}" in "${section.title}" — ${matched.length} item(s).`);
+            continue;
+          }
+
+          yield { name: person.name, section, matched };
         }
-
-        if (matched.length < minItems) {
-          ctx.log(`[tmdb_popular] Skipping "${person.name}" in "${section.title}" — ${matched.length} item(s).`);
-          continue;
-        }
-
-        yield { name: person.name, section, matched };
       }
     }
   };

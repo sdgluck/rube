@@ -3,6 +3,10 @@ import { plexHealthCallback, errorMessage, getConfig } from "@tinkerbell/core";
 import { deleteCollection } from "@tinkerbell/domain.collections";
 import { getRules } from "@tinkerbell/domain.rules";
 import type { JobContext, CollectionsSweepJobConfig } from "@tinkerbell/core";
+import { chunked, mapConcurrent } from "#jobs/concurrency.ts";
+
+/** Collection detail fetches in flight while taking inventory. */
+const INSPECT_CONCURRENCY = 8;
 
 /**
  * Remove rule-generated collections that no run will ever clean up on its own.
@@ -148,8 +152,11 @@ async function resolveSections(client: PlexClient, config: CollectionsSweepJobCo
 
 /**
  * Walk every section's collections and pull the labels for each. The listing
- * endpoint doesn't carry labels, so this is one detail fetch per collection —
- * slow on a large server, which is why it reports progress.
+ * endpoint doesn't carry labels (confirmed against Plex 1.42 — `includeLabels`
+ * changes nothing), and this job is looking for *any* `Rule:` label rather
+ * than one known tag, so there's no filter to push server-side: it really is a
+ * detail fetch per collection. They run `INSPECT_CONCURRENCY` at a time, which
+ * is the difference between a few minutes and half an hour on a large server.
  */
 async function takeInventory(
   ctx: JobContext,
@@ -168,35 +175,44 @@ async function takeInventory(
   const total = listings.reduce((sum, l) => sum + l.ratingKeys.length, 0);
 
   for (const { section, ratingKeys } of listings) {
-    for (const ratingKey of ratingKeys) {
+    // Chunked so progress still moves in step with the work: the counter is
+    // reported per chunk rather than per collection, which is all it was
+    // really telling anyone at this volume anyway.
+    for (const batch of chunked(ratingKeys, INSPECT_CONCURRENCY)) {
       ctx.progress(inspected, total, `Inspecting ${section.title} (${inspected + 1}/${total})...`);
-      inspected++;
 
-      let detail;
-      try {
-        detail = await client.getCollectionDetail(ratingKey);
-      } catch (err) {
-        // A collection that vanished mid-walk needs no cleanup, and one we
-        // can't read is one we must not judge.
-        ctx.log(`Skipped ${ratingKey} in "${section.title}": ${errorMessage(err)}`);
-        continue;
-      }
-
-      const ruleLabel = detail.labels.find((l) => l.startsWith("Rule:"));
-      if (!ruleLabel) {
-        if (detail.labels.includes("Tinkerbell")) unattributed++;
-        continue;
-      }
-
-      candidates.push({
-        ratingKey,
-        title: detail.title,
-        sectionId: section.key,
-        sectionTitle: section.title,
-        ruleId: ruleLabel.slice("Rule:".length),
-        addedAt: detail.addedAt ?? 0,
-        itemCount: detail.childCount,
+      const details = await mapConcurrent(batch, INSPECT_CONCURRENCY, async (ratingKey) => {
+        try {
+          return { ratingKey, detail: await client.getCollectionDetail(ratingKey) };
+        } catch (err) {
+          // A collection that vanished mid-walk needs no cleanup, and one we
+          // can't read is one we must not judge.
+          ctx.log(`Skipped ${ratingKey} in "${section.title}": ${errorMessage(err)}`);
+          return null;
+        }
       });
+      inspected += batch.length;
+
+      for (const entry of details) {
+        if (!entry) continue;
+        const { ratingKey, detail } = entry;
+
+        const ruleLabel = detail.labels.find((l) => l.startsWith("Rule:"));
+        if (!ruleLabel) {
+          if (detail.labels.includes("Tinkerbell")) unattributed++;
+          continue;
+        }
+
+        candidates.push({
+          ratingKey,
+          title: detail.title,
+          sectionId: section.key,
+          sectionTitle: section.title,
+          ruleId: ruleLabel.slice("Rule:".length),
+          addedAt: detail.addedAt ?? 0,
+          itemCount: detail.childCount,
+        });
+      }
     }
   }
 

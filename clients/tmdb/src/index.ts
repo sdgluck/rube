@@ -12,10 +12,24 @@
  * what we use and let unknown fields fall away.
  */
 
+import PQueue from "p-queue";
 import { z } from "zod";
 import { httpRequest, HttpError } from "@tinkerbell/http";
 
 const BASE = "https://api.themoviedb.org/3";
+
+/**
+ * Ceiling on TMDb requests in flight, for the whole process.
+ *
+ * It lives here rather than at the call sites because the call sites multiply:
+ * rules run concurrently, several of them fan out over people or franchises,
+ * and each of those fans out again over credits. A per-caller limit is a
+ * per-caller limit times however many callers there are, which is how you find
+ * out what TMDb's rate limiter does. One queue at the only place every request
+ * must pass through is the only bound that actually holds.
+ */
+const TMDB_CONCURRENCY = 8;
+const tmdbQueue = new PQueue({ concurrency: TMDB_CONCURRENCY });
 
 export interface TmdbConfig {
   apiKey: string;
@@ -261,22 +275,24 @@ async function tmdbFetch<S extends z.ZodTypeAny>(
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   let res: Response;
   try {
-    res = await httpRequest({
-      url,
-      timeoutMs: 15_000,
-      // Idempotent GET. A single 502 from TMDB at 01:00 used to fail the whole
-      // nightly generate, with no job-level retry behind it.
-      retries: 2,
-      // TMDb error bodies are ~100 chars, but keep headroom so the JSON we
-      // parse the status_code out of is never truncated mid-object.
-      errorBodyMaxLen: 500,
-      init: {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${cfg.apiKey}`,
+    res = (await tmdbQueue.add(() =>
+      httpRequest({
+        url,
+        timeoutMs: 15_000,
+        // Idempotent GET. A single 502 from TMDB at 01:00 used to fail the whole
+        // nightly generate, with no job-level retry behind it.
+        retries: 2,
+        // TMDb error bodies are ~100 chars, but keep headroom so the JSON we
+        // parse the status_code out of is never truncated mid-object.
+        errorBodyMaxLen: 500,
+        init: {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${cfg.apiKey}`,
+          },
         },
-      },
-    });
+      }),
+    )) as Response;
   } catch (err) {
     if (err instanceof HttpError) throw tmdbErrorFrom(err, path);
     throw err;
