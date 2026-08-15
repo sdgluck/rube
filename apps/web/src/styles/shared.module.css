@@ -157,12 +157,17 @@
   background: var(--surface);
 }
 
+/* The header rule is the same --line-soft the body rows draw, not a heavier
+   one of its own: the header is the first row of the table, not a separate
+   band above it, and a darker line under it read as a divider between two
+   things. (It was a hardcoded #ecefee, which also meant it stayed near-white
+   in dark mode while every row below it went dark.) */
 .table th {
   text-align: left;
   padding: 0 16px;
   height: 32px;
   background: var(--surface-header);
-  border-bottom: 1px solid #ecefee;
+  border-bottom: 1px solid var(--line-soft);
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
   color: var(--ink-3);
@@ -231,7 +236,7 @@
   gap: 12px;
   padding: 11px 16px;
   background: var(--surface-header);
-  border-top: 1px solid #ecefee;
+  border-top: 1px solid var(--line-soft);
 }
 
 .tableFooterLabel {
@@ -262,7 +267,7 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  border-bottom: 1px solid #ecefee;
+  border-bottom: 1px solid var(--line-soft);
   white-space: nowrap;
 }
 

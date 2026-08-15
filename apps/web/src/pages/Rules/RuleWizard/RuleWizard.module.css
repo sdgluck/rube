@@ -82,7 +82,7 @@
 .stepsWrap {
   padding: 0 20px 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #ecefee;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .body {
