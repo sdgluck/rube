@@ -22,6 +22,18 @@ import { createServer, type Server } from "node:http";
 
 export const MACHINE_ID = "mock-machine-id";
 
+/**
+ * A real 12×18 teal PNG, served for every `/thumb/` path.
+ *
+ * Committed as bytes rather than generated with `sharp` at start-up so the
+ * mock stays a plain HTTP server with no image dependency — and so a test that
+ * fails does so in the code under test rather than in the fixture.
+ */
+const THUMB_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAwAAAASCAIAAADgy6hbAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAFElEQVR42mNgaO4njEYVjSqityIAVPbnMfnl0N4AAAAASUVORK5CYII=",
+  "base64",
+);
+
 /** Plex's numeric type for a collection, as the client sends it. */
 const COLLECTION_TYPE = 18;
 
@@ -44,6 +56,12 @@ export interface MockItem {
    * reproduced by an item that genuinely has several.
    */
   audioLanguages?: string[];
+  /**
+   * Artwork path. Present on an item makes it usable as member art for a
+   * generated collection poster — see the `/thumb/` route, which serves real
+   * PNG bytes so `sharp` has something it can genuinely decode.
+   */
+  thumb?: string;
 }
 
 export interface MockCollection {
@@ -52,6 +70,10 @@ export interface MockCollection {
   sectionId: string;
   labels: string[];
   memberKeys: string[];
+  /** Description, as Plex serves it and as `PUT ?summary=` sets it. */
+  summary?: string;
+  /** Artwork path. Plex mints a new one on every upload; so does this. */
+  thumb?: string;
 }
 
 export interface MockSection {
@@ -69,6 +91,10 @@ export interface PlexJournal {
   labelWrites: Array<{ ratingKey: string; labels: string[] }>;
   /** Label values the job narrowed a collection listing by, server-side. */
   labelFilteredListings: string[];
+  /** Every summary written onto a collection, in order. */
+  summaryWrites: Array<{ ratingKey: string; summary: string }>;
+  /** Every poster upload, with the byte count that arrived. */
+  posterUploads: Array<{ ratingKey: string; bytes: number }>;
   /** Paths that arrived at an endpoint this mock does not implement. */
   unhandled: string[];
 }
@@ -90,9 +116,12 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
     createdCollections: [],
     labelWrites: [],
     labelFilteredListings: [],
+    summaryWrites: [],
+    posterUploads: [],
     unhandled: [],
   };
   let nextCollectionKey = 9000;
+  let nextThumbVersion = 1;
 
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://mock");
@@ -202,6 +231,36 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
       return;
     }
 
+    // ── Artwork bytes ───────────────────────────────────────────────────────
+    // Real PNG bytes, not a placeholder: the poster renderer hands whatever
+    // comes back to `sharp`, so a stub body would fail at the decoder rather
+    // than exercising the path under test.
+    if (/^\/library\/metadata\/[^/]+\/thumb\//.test(path)) {
+      res.writeHead(200, { "Content-Type": "image/png" });
+      res.end(THUMB_PNG);
+      return;
+    }
+
+    // ── Artwork upload ──────────────────────────────────────────────────────
+    // Plex takes the image bytes as the raw request body and mints a fresh
+    // `thumb` path for them. The new path is what makes "did this run replace
+    // the artwork?" answerable from the next metadata read.
+    const posters = path.match(/^\/library\/metadata\/([^/]+)\/posters$/);
+    if (posters && method === "POST") {
+      const key = posters[1];
+      let bytes = 0;
+      req.on("data", (chunk: Buffer) => {
+        bytes += chunk.length;
+      });
+      req.on("end", () => {
+        journal.posterUploads.push({ ratingKey: key, bytes });
+        const collection = collections.get(key);
+        if (collection) collection.thumb = `/library/metadata/${key}/thumb/${nextThumbVersion++}`;
+        emptyOk();
+      });
+      return;
+    }
+
     // ── Collection members ──────────────────────────────────────────────────
     const children = path.match(/^\/library\/metadata\/([^/]+)\/children$/);
     if (children) {
@@ -242,6 +301,19 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
         return;
       }
 
+      // Title/summary edits: `PUT /library/metadata/:key?summary=…`.
+      if (method === "PUT" && collection) {
+        const summary = q.get("summary");
+        const title = q.get("title");
+        if (summary !== null) {
+          collection.summary = summary;
+          journal.summaryWrites.push({ ratingKey: key, summary });
+        }
+        if (title !== null) collection.title = title;
+        emptyOk();
+        return;
+      }
+
       if (item) {
         json({ Metadata: [metadataFor(item)] });
         return;
@@ -252,8 +324,9 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
             {
               ratingKey: collection.ratingKey,
               title: collection.title,
-              summary: "",
+              summary: collection.summary ?? "",
               smart: 0,
+              thumb: collection.thumb ?? "",
               childCount: collection.memberKeys.length,
               Label: collection.labels.map((tag) => ({ tag })),
             },
@@ -297,6 +370,7 @@ function metadataFor(item: MockItem) {
     title: item.title,
     year: item.year,
     type: "movie",
+    ...(item.thumb ? { thumb: item.thumb } : {}),
     Guid: item.guids.map((id) => ({ id })),
     Label: item.labels.map((tag) => ({ tag })),
     ...(streams.length > 0

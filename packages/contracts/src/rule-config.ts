@@ -6,6 +6,7 @@ import {
   splitLocalLeaves,
 } from "@tinkerbell/plex-smart-filter";
 import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
+import { presentationConfigSchema } from "./presentation.ts";
 
 const LOCAL_FIELDS = new Set(LOCAL_FIELD_DEFS.map((d) => d.field));
 
@@ -154,6 +155,15 @@ const baseRuleConfigSchema = z.object({
    * this keeps working untouched and no migration is needed.
    */
   action: cleanupActionSchema,
+  /**
+   * How this rule's collections look in Plex — summary and poster.
+   *
+   * Absent means the defaults in `DEFAULT_PRESENTATION`: a templated summary,
+   * and no artwork. Both are chosen so a rule saved before this existed keeps
+   * behaving the way it did, except that its collections gain a description —
+   * which is additive, reversible, and the whole point.
+   */
+  presentation: presentationConfigSchema.optional(),
   arr: z
     .object({
       enabled: z.boolean(),

@@ -2,6 +2,7 @@ import {
   fieldLabel,
   isDestructiveMode,
   isGroupedRuleType,
+  posterUrlError,
   producesManyCollections,
   type RuleTypeValue,
 } from "@tinkerbell/contracts";
@@ -399,9 +400,13 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
 
 // ─── Steps ──────────────────────────────────────────────────────────────
 
-export type StepId = "type" | "source" | "scope" | "outcome" | "actions" | "review";
+export type StepId = "type" | "source" | "scope" | "outcome" | "presentation" | "actions" | "review";
 
-export function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; label: string }[] {
+export function stepsFor(
+  type: string,
+  mode: "create" | "edit",
+  outcomeKind: "collection" | "cleanup" = "collection",
+): { id: StepId; label: string }[] {
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
   if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
@@ -413,6 +418,10 @@ export function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; l
   // Asking them first and retracting them afterwards is the worse order.
   steps.push({ id: "outcome", label: "Outcome" });
   steps.push({ id: "scope", label: "Scope" });
+  // A cleanup rule's shelf is deliberately plain: the job gives it neither a
+  // summary nor a poster, so asking would be asking about something nothing
+  // reads — the same reasoning that drops the pinning questions.
+  if (outcomeKind === "collection") steps.push({ id: "presentation", label: "Look" });
   if (typeHasActionsStep(type)) steps.push({ id: "actions", label: "Actions" });
   steps.push({ id: "review", label: "Review" });
   return steps;
@@ -466,6 +475,32 @@ export function outcomeError(form: RuleFormState): string | null {
   return null;
 }
 
+/**
+ * The two answers a presented rule can get wrong.
+ *
+ * The URL check is the same one the server and the registry build apply — a
+ * poster URL is a host this instance will fetch from on a schedule, so it is
+ * HTTPS and allow-listed everywhere, not only where it's convenient.
+ */
+export function presentationError(form: RuleFormState): string | null {
+  const p = form.presentation;
+  if (form.outcome.kind !== "collection") return null;
+  if (p.summary === "custom" && !p.customSummary.trim()) {
+    return "Write the summary, or pick another source.";
+  }
+  if (p.poster === "url") {
+    if (!p.posterUrl.trim()) return "A poster URL is required.";
+    const urlError = posterUrlError(p.posterUrl.trim());
+    if (urlError) return urlError;
+  }
+  if (p.accentColor.trim() && !HEX_COLOR.test(p.accentColor.trim())) {
+    return "Accent must be a hex colour like #E5A00D.";
+  }
+  return null;
+}
+
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
 export function validateStep(step: StepId, form: RuleFormState): string | null {
   if (step === "type") return form.type ? null : "Pick a rule type.";
   if (step === "source") {
@@ -484,6 +519,7 @@ export function validateStep(step: StepId, form: RuleFormState): string | null {
   }
   if (step === "scope") return pinRotationError(form);
   if (step === "outcome") return outcomeError(form);
+  if (step === "presentation") return presentationError(form);
   if (step === "actions") {
     if (form.arr.enabled) {
       if (!form.arr.qualityProfileId) return "Pick a quality profile.";
@@ -504,6 +540,7 @@ export function isFormValid(form: RuleFormState): boolean {
     (form.type !== "list_source" || (!!form.listProvider && !!form.listId.trim())) &&
     (form.type !== "smart_filter" || smartFilterIsComplete(form.smartFilter)) &&
     !pinRotationError(form) &&
+    !presentationError(form) &&
     (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
   );
 }

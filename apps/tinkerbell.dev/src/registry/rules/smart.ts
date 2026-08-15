@@ -29,6 +29,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
         combinator: "all",
         children: [{ kind: "leaf", field: "addedAt", op: ">=", value: "-30d" }],
       },
+      presentation: { poster: "mosaic" },
     },
   },
   {
@@ -47,6 +48,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
           { kind: "leaf", field: "unwatched", op: "=", value: "1" },
         ],
       },
+      presentation: { poster: "mosaic", accentColor: "#B3261E" },
     },
   },
   {
@@ -65,6 +67,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
           { kind: "leaf", field: "rating", op: ">=", value: "7.5" },
         ],
       },
+      presentation: { poster: "mosaic" },
     },
   },
   {
@@ -80,6 +83,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
         combinator: "all",
         children: [{ kind: "leaf", field: "mediaBitrate", op: ">=", value: "30000" }],
       },
+      presentation: { poster: "mosaic" },
     },
   },
   {
@@ -95,6 +99,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
         combinator: "all",
         children: [{ kind: "leaf", field: "unwatched", op: "=", value: "1" }],
       },
+      presentation: { poster: "mosaic" },
     },
     mediaTypes: ["show"],
   },
@@ -114,6 +119,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
           { kind: "leaf", field: "rating", op: ">=", value: "8" },
         ],
       },
+      presentation: { poster: "mosaic" },
     },
   },
   {
@@ -129,6 +135,7 @@ export const SMART_RULES: RegistryRuleInput[] = [
         combinator: "all",
         children: [{ kind: "leaf", field: "duration", op: "<=", value: "7200000" }],
       },
+      presentation: { poster: "mosaic" },
     },
     mediaTypes: ["movie"],
   },

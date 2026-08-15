@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { collectLocalLeaves, smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
 import { isNonPortableField, RULE_TYPE_VALUES } from "./rule-config.ts";
+import { presentationConfigSchema, posterUrlError } from "./presentation.ts";
 
 /**
  * Wire format for the public rule registry served from tinkerbell.dev.
@@ -51,6 +52,26 @@ export const registryRuleSchema = z
     // Tag keys are translated on import; a Plex account id can't be, because it
     // identifies a person rather than a per-server row. Fail the build with the
     // field named, rather than shipping a rule that filters against a stranger.
+    // Presentation is the one part of a published config that makes the
+    // importing server fetch from a third-party host on a schedule, so it is
+    // validated here rather than left to the generic config parse — a build
+    // failure names the offending URL, an import-time failure would not.
+    if (rule.config?.presentation !== undefined) {
+      const presentation = presentationConfigSchema.safeParse(rule.config.presentation);
+      if (!presentation.success) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["config", "presentation"],
+          message: `invalid presentation config: ${presentation.error.issues.map((i) => i.message).join("; ")}`,
+        });
+      } else if (presentation.data.posterUrl) {
+        const error = posterUrlError(presentation.data.posterUrl);
+        if (error) {
+          ctx.addIssue({ code: "custom", path: ["config", "presentation", "posterUrl"], message: error });
+        }
+      }
+    }
+
     const parsed = smartFilterGroupSchema.safeParse(rule.config?.smartFilter);
     if (!parsed.success) return;
     for (const leaf of collectLocalLeaves(parsed.data)) {

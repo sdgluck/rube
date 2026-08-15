@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- **Generated collections now get a description, and can get a poster.** Every rule writes a one-line summary onto the collections it builds — "Films directed by Christopher Nolan.", "Films released between 1980 and 1989." — the moment they're created. It's deterministic and free, and it's on by default for new and existing rules.
+- Rules can now generate a **poster** for each of their collections, replacing Plex's grey four-poster mosaic. Three templates: a gradient plate with the title, a mosaic of the collection's own posters, and a spotlight on one member's artwork; the palette is taken from the films in the collection unless you pick an accent. Artwork is **off by default and opted into per rule** in the wizard's new "Look" step, which shows a live render before you commit to it.
+- New **Settings → Appearance** page: the default template and accent new rules start from, and a master switch that stops every artwork upload at once without editing a single rule.
+- New **Generate Collection Artwork** job, scheduled after the nightly rule run. Poster rendering is minutes of image work per library, and it has no business holding up the rules — it also skips any collection whose poster hasn't changed since last time, so a nightly run doesn't re-upload identical images to your server.
+- For rules whose logic you define yourself — AI prompts, smart filters, external lists — the description can be **written by your configured AI provider** from a sample of what actually landed in the collection. Generated once and reused until the rule changes; falls back to the templated sentence when no provider is configured.
+- A description you edit by hand in Plex is **detected and never overwritten again**, and "Revert artwork" on a rule stops all further uploads and forgets what was written.
+- Registry packs now ship presentation settings, so an imported pack arrives looking designed rather than generic.
+
 ## [0.16.2] - 2026-08-15
 
 ### Added

@@ -84,6 +84,19 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "0 4 * * 0",
     enabled: 1,
   },
+  // Scheduled after `generate` (01:00) rather than triggered by it: `generate`
+  // executes in a Sidequest worker thread, and the queue engine only runs in
+  // the main process, so it has nothing to enqueue with. Running hours later
+  // is correct by construction anyway — this job finds the rule's collections
+  // by label at run time rather than by rating keys that a re-run has already
+  // invalidated.
+  {
+    id: "collection-art",
+    name: "Generate Collection Artwork",
+    command: "collection-art",
+    schedule: "0 5 * * *",
+    enabled: 1,
+  },
   // No schedule — a one-shot import that resumes where it left off. Re-running
   // it on a timer would walk Plex's history forever for nothing.
   {

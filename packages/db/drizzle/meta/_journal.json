@@ -190,6 +190,13 @@
       "when": 1786778017415,
       "tag": "0026_thin_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1786787613874,
+      "tag": "0027_amused_edwin_jarvis",
+      "breakpoints": true
     }
   ]
 }

@@ -206,19 +206,21 @@ async function commitQueueCollections(
   for (const { section, ratingKeys } of bySection.values()) {
     if (ratingKeys.length === 0) continue;
     try {
-      await commitCollection(
-        ctx,
-        client,
+      await commitCollection(ctx, client, {
         section,
         machineId,
-        ruleName,
+        name: ruleName,
         ratingKeys,
-        [...labels, CLEANUP_LABEL],
+        labels: [...labels, CLEANUP_LABEL],
         // Never pinned. A homepage row of films about to be deleted is not
         // what anyone wants their family to open Plex to.
-        false,
-        "cleanup",
-      );
+        pinToHomepage: false,
+        ruleType: "cleanup",
+        // No `ruleId`: the shelf is not one of the rule's presented
+        // collections, so it gets neither a summary nor artwork. "Titles where
+        // watched by everyone" is not a description anyone wants on the row of
+        // things about to be deleted.
+      });
     } catch (err) {
       // The shelf is a convenience; failing to build it must not stop the
       // ledger from advancing or block a legitimate action.

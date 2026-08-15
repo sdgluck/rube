@@ -54,6 +54,10 @@ export const COMMANDS = {
     timeoutMs: HOUR_MS,
   },
   "posters-refresh": { load: () => import("./posters-refresh.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
+  // Sized like `posters-refresh`, and for the same reason: a large library's
+  // worth of image work, once, on a schedule. It renders a poster per
+  // collection, which is why it is not inside the rule run.
+  "collection-art": { load: () => import("./collection-art/index.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
   shuffle: { load: () => import("./shuffle.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "because-you-watched": {
     load: () => import("./because-you-watched.ts"),

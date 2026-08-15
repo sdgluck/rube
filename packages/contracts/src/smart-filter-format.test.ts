@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fieldLabel, LOCAL_FIELD_DEFS } from "@tinkerbell/contracts";
-import { describeCondition, formatFilterValue, parseRelativeDate, toRelativeDate } from "./format.ts";
-import { opsFor, opLabel, withFallbackOp } from "./ops.ts";
+import { fieldLabel, LOCAL_FIELD_DEFS } from "./smart-filter-fields.ts";
+import { describeCondition, formatFilterValue, parseRelativeDate, toRelativeDate } from "./smart-filter-format.ts";
+import { opsFor, opLabel, withFallbackOp } from "./smart-filter-ops.ts";
 
 /**
  * These strings are the whole point of the smart-filter UI: what the user

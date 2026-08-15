@@ -1,7 +1,7 @@
-import { fieldDef, fieldKind, fieldLabel } from "@tinkerbell/contracts";
+import { fieldDef, fieldKind, fieldLabel } from "./smart-filter-fields.ts";
 import type { SmartFilterOp } from "@tinkerbell/plex-smart-filter";
-import { formatResolution, formatRuntime } from "#/format.ts";
-import { opLabel } from "./ops.ts";
+import { formatResolution, formatRuntime } from "./value-format.ts";
+import { opLabel } from "./smart-filter-ops.ts";
 
 /** Placeholder for a clause whose value hasn't been filled in yet. */
 export const UNSET = "?";

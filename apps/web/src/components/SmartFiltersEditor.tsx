@@ -8,13 +8,20 @@ import {
   type SmartFilterNode,
   type SmartFilterOp,
 } from "@tinkerbell/plex-smart-filter";
-import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@tinkerbell/contracts";
+import {
+  describeCondition,
+  fieldKind,
+  fieldLabel,
+  formatFilterValue,
+  opLabel,
+  opsFor,
+  SMART_FILTER_FIELD_DEFS,
+  withFallbackOp,
+} from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import FilterValueInput from "#components/smart-filter/FilterValueInput.tsx";
 import { useTagOptions, tagTitle } from "#components/smart-filter/TagValueSelect.tsx";
-import { opsFor, opLabel, withFallbackOp } from "#components/smart-filter/ops.ts";
-import { describeCondition, formatFilterValue } from "#components/smart-filter/format.ts";
 import shared from "#/styles/shared.module.css";
 import styles from "./SmartFiltersEditor.module.css";
 

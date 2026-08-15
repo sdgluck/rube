@@ -12,8 +12,14 @@
  *   formatRuntime   how long a piece of media is  "1h 52m"   movie/episode length
  */
 
-/** Placeholder for a value that is absent, unknown or not applicable. */
-export const EMPTY = "—";
+/**
+ * `EMPTY`, `formatRuntime` and `formatResolution` live in
+ * `@tinkerbell/contracts` because the shared smart-filter formatter needs them
+ * and the server can't import from here. Re-exported so every page keeps
+ * importing them from the one module it always has.
+ */
+export { EMPTY, formatResolution, formatRuntime } from "@tinkerbell/contracts";
+import { EMPTY } from "@tinkerbell/contracts";
 
 // ─── Durations ──────────────────────────────────────────────────────────────
 
@@ -46,15 +52,6 @@ export function formatClock(ms: number | null | undefined): string {
   const s = totalSec % 60;
   const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
-}
-
-/** Media length: `48m`, `1h 52m`. */
-export function formatRuntime(ms: number | null | undefined): string {
-  if (!ms) return EMPTY;
-  const totalMin = Math.round(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 /** Process uptime, given seconds: `45s`, `12m`, `3h 20m`, `9d 4h`. */
@@ -138,12 +135,6 @@ export function formatSamplingRate(rate: number | null | undefined): string {
 }
 
 // ─── Media descriptors ──────────────────────────────────────────────────────
-
-export function formatResolution(res: string | null | undefined): string {
-  if (!res) return EMPTY;
-  if (res === "4k") return "4K";
-  return `${res}p`;
-}
 
 /**
  * Canonical display names for video and audio codecs. Merged from the two

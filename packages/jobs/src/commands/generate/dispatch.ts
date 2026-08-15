@@ -175,17 +175,18 @@ export async function runHandlerWithCommits(
         const ratingKeys = pending.matched.map((m) => m.ratingKey);
         const pinnable = meetsPinFloor(ratingKeys.length, pinMinItems);
         if (!pinnable) belowPinFloor++;
-        const collectionKey = await commitCollection(
-          ctx,
-          client,
-          pending.section,
+        const collectionKey = await commitCollection(ctx, client, {
+          section: pending.section,
           machineId,
-          pending.name,
+          name: pending.name,
           ratingKeys,
           labels,
-          rotating ? false : pinToHomepage && pinnable,
-          rule.type,
-        );
+          pinToHomepage: rotating ? false : pinToHomepage && pinnable,
+          ruleType: rule.type,
+          ruleId: rule.id,
+          ruleConfig,
+          sourceSummary: pending.sourceSummary,
+        });
         if (!collectionKey) return;
 
         // Only ever mutated between awaits, so there's no interleaving to

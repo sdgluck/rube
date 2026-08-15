@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isDestructiveMode } from "@tinkerbell/contracts";
+import { describeCondition, isDestructiveMode, templatedCollectionSummary } from "@tinkerbell/contracts";
+import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import Modal from "#components/Modal";
-import { describeCondition } from "#components/smart-filter/format.ts";
 import styles from "./RuleWizard.module.css";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
@@ -22,6 +22,7 @@ import {
   typeHasActionsStep,
   typeHasLimit,
   pinRotationError,
+  presentationError,
   rulePins,
   typeHasMinItems,
   typeHasOptionalLimit,
@@ -35,10 +36,55 @@ import type {
   ArrFormState,
   CleanupMode,
   OutcomeFormState,
+  PresentationFormState,
   RuleFormState,
   SmartFilterGroup,
   SmartFilterNode,
 } from "./types.ts";
+
+/**
+ * A stand-in group name, so a grouped rule's preview shows a plausible
+ * collection title rather than the rule's own name. "By Director" is not a
+ * collection anyone will ever see; "Christopher Nolan" is.
+ */
+const SAMPLE_GROUP_NAMES: Record<string, string> = {
+  actors: "Cate Blanchett",
+  tmdb_popular_actors: "Cate Blanchett",
+  directors: "Christopher Nolan",
+  tmdb_popular_directors: "Christopher Nolan",
+  studios: "A24",
+  networks: "HBO",
+  streaming: "Netflix",
+  genres: "Science Fiction",
+  countries: "South Korea",
+  content_ratings: "R",
+  decades: "1990s",
+  years: "1994",
+  resolutions: "4K",
+  audio_languages: "Japanese",
+  subtitle_languages: "French",
+  video_formats: "Bluray",
+  based_on: "Based on a Novel",
+  seasonal: "Halloween",
+  awards: "Academy Award Winners",
+  tmdb_franchises: "The Lord of the Rings",
+};
+
+function sampleCollectionName(type: string): string {
+  return SAMPLE_GROUP_NAMES[type] ?? "Collection";
+}
+
+/** The exact sentence the templated summary would produce, or why it can't. */
+function templatedSummaryHint(type: string, sampleTitle: string, sectionType: string | undefined): string {
+  const example = templatedCollectionSummary({
+    ruleType: type,
+    collectionName: SAMPLE_GROUP_NAMES[type] ?? sampleTitle,
+    sectionType,
+  });
+  return example
+    ? `Deterministic, free, and written before the collection is a second old. For example: "${example}"`
+    : "This rule type picks its own titles, so there's no sentence to derive from it — the AI option is the one that can describe these.";
+}
 
 /** The review row — the last place the outcome is stated before saving. */
 function describeOutcome(o: OutcomeFormState): string {
@@ -55,6 +101,25 @@ function describeOutcome(o: OutcomeFormState): string {
   // Dry run is called out first because it is the difference between a rule
   // that does something and one that only says it would.
   return o.dryRun ? `${verb}${after} — preview only` : `${verb}${after}, max ${o.maxActionsPerRun}/run`;
+}
+
+/** The review row for the Look step — poster first, because it's the visible one. */
+function describePresentation(p: PresentationFormState): string {
+  const poster =
+    p.poster === "none"
+      ? "No artwork"
+      : p.poster === "url"
+        ? "Artwork from a URL"
+        : `${p.poster[0].toUpperCase()}${p.poster.slice(1)} poster`;
+  const summary =
+    p.summary === "none"
+      ? "no description"
+      : p.summary === "custom"
+        ? "a fixed description"
+        : p.summary === "llm"
+          ? "an AI-written description"
+          : "a description from the rule";
+  return `${poster}, ${summary}`;
 }
 
 /** One line per mode, saying what it actually does rather than restating it. */
@@ -138,7 +203,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
   );
 
-  const steps = useMemo(() => stepsFor(form.type, mode), [form.type, mode]);
+  const steps = useMemo(() => stepsFor(form.type, mode, form.outcome.kind), [form.type, mode, form.outcome.kind]);
   const currentStep = steps[Math.min(stepIdx, steps.length - 1)];
 
   // Reset state when the wizard is freshly opened (initial identity changed).
@@ -812,6 +877,178 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     );
   }
 
+  /**
+   * "What should these collections look like?"
+   *
+   * The poster half defaults to off and stays off until someone looks at the
+   * preview and says yes — uploading artwork is a visible, hard-to-undo change
+   * to their Plex server. The summary half defaults to on, because a templated
+   * sentence is deterministic, free, and additive.
+   */
+  function renderPresentationStep() {
+    const p = form.presentation;
+    const setPresentation = (patch: Partial<PresentationFormState>) =>
+      setForm({ ...form, presentation: { ...p, ...patch } });
+
+    const sampleTitle = form.name.trim() || suggestName(form, sections) || sampleCollectionName(form.type);
+    const sectionType = availableSections.find((s) => form.sections.includes(s.title))?.type;
+    const defaultPosterTemplate = (configQuery.data?.collection_art_default_template ??
+      "gradient") as PresentationFormState["poster"];
+
+    return (
+      <>
+        <h3 className={styles.stepHeading}>How should these collections look?</h3>
+        <p className={styles.stepSub}>
+          Plex shows a collection with no artwork as a grey grid of its first four posters, and no description at all.
+          This is where that stops being true.
+        </p>
+
+        <div className={styles.field}>
+          <label htmlFor="presentation-summary">Description</label>
+          <select
+            id="presentation-summary"
+            className={shared.input}
+            value={p.summary}
+            onChange={(e) => setPresentation({ summary: e.target.value as PresentationFormState["summary"] })}
+          >
+            <option value="template">Written from the rule (recommended)</option>
+            <option value="llm">Written by AI from what's in the collection</option>
+            <option value="custom">The same sentence on every collection</option>
+            <option value="none">None</option>
+          </select>
+          <span className={styles.hint}>
+            {p.summary === "template"
+              ? templatedSummaryHint(form.type, sampleTitle, sectionType)
+              : p.summary === "llm"
+                ? "Costs one AI call per collection, once, and is reused until the rule changes. Needs a provider in Settings → AI; without one the templated sentence is used instead."
+                : p.summary === "custom"
+                  ? "Every collection this rule builds gets the same text — right for a single-collection rule, repetitive for a grouped one."
+                  : "Collections are left with no description."}
+          </span>
+        </div>
+
+        {p.summary === "custom" && (
+          <div className={styles.field}>
+            <label htmlFor="presentation-custom-summary">Summary text</label>
+            <textarea
+              id="presentation-custom-summary"
+              className={shared.input}
+              rows={3}
+              maxLength={1000}
+              value={p.customSummary}
+              onChange={(e) => setPresentation({ customSummary: e.target.value })}
+            />
+          </div>
+        )}
+
+        {/* Two controls rather than one select with a "none" option: turning
+            artwork on is the decision that writes to somebody's Plex server,
+            and it deserves to look like a decision. Switching it on takes the
+            template from Settings → Appearance, so that default means
+            something rather than sitting there unread. */}
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={p.poster !== "none"}
+              onChange={(e) => setPresentation({ poster: e.target.checked ? defaultPosterTemplate : "none" })}
+            />{" "}
+            Generate a poster for these collections
+          </label>
+          <span className={styles.hint}>
+            {p.poster === "none"
+              ? "Off by default on purpose: uploading artwork changes what everyone with access to your server sees, and Plex has no undo for it."
+              : "Generated on the server and uploaded by the Generate Collection Artwork job, which runs after the nightly rule run rather than inside it."}
+          </span>
+        </div>
+
+        {p.poster !== "none" && (
+          <div className={styles.field}>
+            <label htmlFor="presentation-poster">Style</label>
+            <select
+              id="presentation-poster"
+              className={shared.input}
+              value={p.poster}
+              onChange={(e) => setPresentation({ poster: e.target.value as PresentationFormState["poster"] })}
+            >
+              <option value="gradient">Gradient — a coloured plate with the title</option>
+              <option value="mosaic">Mosaic — a grid of the collection's own posters</option>
+              <option value="spotlight">Spotlight — one member's poster, framed</option>
+              <option value="url">A specific image</option>
+            </select>
+            {p.poster === "url" && (
+              <span className={styles.hint}>
+                Fetched by the server on a schedule, so it has to be HTTPS on a known image host.
+              </span>
+            )}
+          </div>
+        )}
+
+        {p.poster === "url" && (
+          <div className={styles.field}>
+            <label htmlFor="presentation-poster-url">Poster URL</label>
+            <input
+              id="presentation-poster-url"
+              className={shared.input}
+              value={p.posterUrl}
+              onChange={(e) => setPresentation({ posterUrl: e.target.value })}
+              placeholder="https://raw.githubusercontent.com/…"
+            />
+          </div>
+        )}
+
+        {p.poster !== "none" && p.poster !== "url" && (
+          <div className={styles.field}>
+            <label htmlFor="presentation-accent">Accent colour</label>
+            <input
+              id="presentation-accent"
+              className={shared.input}
+              style={{ maxWidth: 200 }}
+              value={p.accentColor}
+              onChange={(e) => setPresentation({ accentColor: e.target.value })}
+              placeholder="Leave blank to derive it"
+            />
+            <span className={styles.hint}>
+              Blank takes the colour from the collection's own posters, which is what makes a generated set look like it
+              belongs to the films rather than to a theme.
+            </span>
+          </div>
+        )}
+
+        {p.poster !== "none" && configQuery.data?.collection_art_enabled === false && (
+          <p className={styles.hint}>
+            Heads-up: collection artwork is switched off globally in Settings → Appearance, so nothing will be uploaded
+            until that's turned back on.
+          </p>
+        )}
+
+        {p.poster !== "none" && (
+          <div className={styles.field}>
+            <label>Preview</label>
+            <CollectionPosterPreview
+              title={sampleTitle}
+              presentation={{
+                summary: p.summary,
+                customSummary: p.customSummary || undefined,
+                poster: p.poster,
+                posterUrl: p.posterUrl || undefined,
+                accentColor: p.accentColor || undefined,
+              }}
+              sectionId={tagSectionId}
+              sectionType={sectionType}
+              ruleType={form.type}
+              enabled={!presentationError(form)}
+            />
+            <span className={styles.hint}>
+              A real render, using art from your library. A grouped rule builds one of these per{" "}
+              {groupNounForType(form.type)}, so this is the layout rather than the exact collection.
+            </span>
+          </div>
+        )}
+      </>
+    );
+  }
+
   function renderActionsStep() {
     const service = arrService;
     const profilesQuery = arrProfilesQuery;
@@ -1080,6 +1317,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </button>
             </div>
           )}
+          {form.outcome.kind === "collection" && (
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryLabel}>Look</span>
+              <span className={styles.summaryValue}>{describePresentation(form.presentation)}</span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("presentation")}>
+                Edit
+              </button>
+            </div>
+          )}
           {typeHasActionsStep(form.type) && (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Send to *arr</span>
@@ -1104,6 +1350,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (currentStep.id === "source") return renderSourceStep();
     if (currentStep.id === "scope") return renderScopeStep();
     if (currentStep.id === "outcome") return renderOutcomeStep();
+    if (currentStep.id === "presentation") return renderPresentationStep();
     if (currentStep.id === "actions") return renderActionsStep();
     if (currentStep.id === "review") return renderReviewStep();
     return null;

@@ -221,6 +221,21 @@ export const configSchema = z.object({
   prerolls_mode: z.enum(["random", "sequential"]),
   /** Downscale ceiling for the transcoder. */
   prerolls_max_height: z.number().int().positive(),
+  /**
+   * Master switch for the `collection-art` job. Off stops every upload at
+   * once — one switch to flip rather than N rules to find and edit, the same
+   * shape as `cleanup_enabled` and for the same reason: this writes to
+   * somebody's Plex server.
+   *
+   * Default on, because the per-rule `presentation.poster` already defaults to
+   * `none`. Nothing is uploaded until a rule opts in, so a master switch that
+   * defaulted off would just be a second thing to remember to turn on.
+   */
+  collection_art_enabled: z.boolean(),
+  /** Poster template the wizard preselects for a rule turning artwork on. */
+  collection_art_default_template: z.enum(["gradient", "mosaic", "spotlight"]),
+  /** Accent applied when a rule doesn't set one. Empty means derive per collection. */
+  collection_art_default_accent: z.string(),
   posters_kometa_enabled: z.boolean(),
   posters_kometa_person_style: z.enum(["bw", "rainier", "signature", "diiivoy", "diiivoycolor"]),
   /**

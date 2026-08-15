@@ -1,4 +1,4 @@
-import { fieldKind, type SmartFilterFieldKind } from "@tinkerbell/contracts";
+import { fieldKind, type SmartFilterFieldKind } from "./smart-filter-fields.ts";
 import type { SmartFilterOp } from "@tinkerbell/plex-smart-filter";
 
 /**

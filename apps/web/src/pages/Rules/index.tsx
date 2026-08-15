@@ -27,6 +27,7 @@ import { useTagLabels } from "#components/smart-filter/TagValueSelect.tsx";
 import {
   EMPTY_FORM,
   outcomeFromConfig,
+  presentationFromConfig,
   defaultLimitForType,
   smartFilterLeaves,
   typeHasLimit,
@@ -62,6 +63,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const createMutation = trpc.rules.create.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const updateMutation = trpc.rules.update.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const deleteMutation = trpc.rules.delete.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
+  const revertArtworkMutation = trpc.rules.revertArtwork.useMutation();
 
   const testMutation = trpc.rules.test.useMutation();
   const cancelTestMutation = trpc.rules.cancelTest.useMutation();
@@ -241,6 +243,11 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     }
   }
 
+  /** Does this rule ask for generated artwork? Drives the revert affordance. */
+  function generatesArtwork(rule: RuleRow): boolean {
+    return presentationFromConfig((rule.config as { presentation?: unknown } | null)?.presentation).poster !== "none";
+  }
+
   function startCreate() {
     // Seeded to match the list you started from — creating a rule from the
     // cleanup list and getting a collection rule you then can't find would be
@@ -278,6 +285,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
       pinMinItems: (config.pinMinItems as number | undefined) ?? 0,
       outcome: outcomeFromConfig(config.action),
+      presentation: presentationFromConfig(config.presentation),
       arr: {
         ...DEFAULT_ARR_FORM,
         ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
@@ -325,6 +333,21 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       if (!next.pinToHomepage) config.pinToHomepage = false;
       if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
       if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
+
+      // Written only when it says something other than the default, so a rule
+      // that never visited the Look step stays byte-identical to how it was
+      // stored before the step existed. A cleanup rule writes none of it: the
+      // job neither describes nor illustrates its shelf.
+      const p = next.presentation;
+      const presentation: Record<string, unknown> = {};
+      if (p.summary !== "template") presentation.summary = p.summary;
+      if (p.summary === "custom" && p.customSummary.trim()) presentation.customSummary = p.customSummary.trim();
+      if (p.poster !== "none") presentation.poster = p.poster;
+      if (p.poster === "url" && p.posterUrl.trim()) presentation.posterUrl = p.posterUrl.trim();
+      if (p.poster !== "none" && p.poster !== "url" && p.accentColor.trim()) {
+        presentation.accentColor = p.accentColor.trim();
+      }
+      if (Object.keys(presentation).length > 0) config.presentation = presentation;
     }
     if (next.arr.enabled) config.arr = next.arr;
     // Absent means "build a collection" — the same reading the job takes — so
@@ -363,6 +386,49 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
         },
       },
     );
+  }
+
+  /**
+   * "Revert artwork", and honest about what that means.
+   *
+   * There is no image to put back: every run deletes and recreates the rule's
+   * collections, so the artwork that was there before is a Plex-generated
+   * mosaic Plex will regenerate on its own. What reverting actually does is
+   * turn the rule's poster setting off and forget the ledger, so nothing is
+   * uploaded again — and the confirmation says exactly that rather than
+   * promising a restore.
+   */
+  function handleRevertArtwork(rule: RuleRow) {
+    setPendingConfirm({
+      message:
+        `Stop generating artwork for "${rule.name}"?\n\n` +
+        "Tinkerbell will upload nothing further and forget what it wrote. It can't put the previous posters back — " +
+        "Plex regenerates a collection's default mosaic from its members, so that is what these collections will " +
+        "show again after the next run.",
+      onConfirm: () => {
+        const config = { ...rule.config } as Record<string, unknown>;
+        const presentation = { ...(config.presentation as Record<string, unknown> | undefined) };
+        delete presentation.poster;
+        delete presentation.posterUrl;
+        if (Object.keys(presentation).length > 0) config.presentation = presentation;
+        else delete config.presentation;
+
+        updateMutation.mutate({ id: rule.id, config });
+        revertArtworkMutation.mutate(
+          { id: rule.id },
+          {
+            onSuccess: (result) =>
+              addToast(
+                result.forgotten > 0
+                  ? `Stopped generating artwork for "${rule.name}" (${result.forgotten} collection(s) forgotten).`
+                  : `Artwork generation is off for "${rule.name}".`,
+                "success",
+              ),
+          },
+        );
+        setPendingConfirm(null);
+      },
+    });
   }
 
   function handleDelete(rule: RuleRow) {
@@ -755,6 +821,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     onEdit={() => startEdit(rule)}
                     onDuplicate={() => handleDuplicate(rule)}
                     onDelete={() => handleDelete(rule)}
+                    generatesArtwork={generatesArtwork(rule)}
+                    onRevertArtwork={() => handleRevertArtwork(rule)}
                     onDetailCleared={() => setExpandedRow(null)}
                   />
                 );

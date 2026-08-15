@@ -52,6 +52,7 @@ const Preview = lazy(() => import("#pages/Preview"));
 const Changelog = lazy(() => import("#pages/Changelog"));
 const More = lazy(() => import("#pages/More"));
 const SettingsPosters = lazy(() => import("#pages/Settings/SettingsPosters"));
+const SettingsAppearance = lazy(() => import("#pages/Settings/SettingsAppearance"));
 const SettingsPrerolls = lazy(() => import("#pages/Settings/SettingsPrerolls"));
 const SettingsCredits = lazy(() => import("#pages/Settings/SettingsCredits"));
 const SettingsMigrate = lazy(() => import("#pages/SettingsMigrate"));
@@ -382,6 +383,14 @@ export default function App() {
                     element={
                       <LazyPage>
                         <SettingsPosters />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="appearance"
+                    element={
+                      <LazyPage>
+                        <SettingsAppearance />
                       </LazyPage>
                     }
                   />

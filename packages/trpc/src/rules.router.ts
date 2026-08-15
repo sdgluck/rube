@@ -19,6 +19,7 @@ import {
   type RuleProgressState,
   type PersistedTestResult,
 } from "@tinkerbell/domain.rule-progress";
+import { forgetCollectionArtwork, getCollectionArtworkForRule } from "@tinkerbell/domain.collections";
 import { errorMessage } from "@tinkerbell/core";
 import { ruleConfigSchema } from "@tinkerbell/contracts";
 import { t, procedure } from "./_base.ts";
@@ -225,5 +226,38 @@ export const rulesRouter = t.router({
   clearTestResult: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     clearLastTestResult(input.id);
     return { ok: true };
+  }),
+
+  /** What Tinkerbell has written onto this rule's collections so far. */
+  artworkStatus: procedure.input(z.object({ id: z.string() })).query(({ input }) => {
+    const rows = getCollectionArtworkForRule(input.id);
+    return {
+      collections: rows.length,
+      postersUploaded: rows.filter((r) => r.posterUploadedAt).length,
+      summariesWritten: rows.filter((r) => r.summary).length,
+      summariesLocked: rows.filter((r) => r.summaryLockedAt).length,
+      /** True where a poster replaced artwork the collection already had. */
+      replacedExistingArtwork: rows.filter((r) => r.posterUploadedAt && r.priorThumb).length,
+      lastUpdatedAt: rows.reduce<number | null>(
+        (max, r) => (max === null || r.updatedAt > max ? r.updatedAt : max),
+        null,
+      ),
+    };
+  }),
+
+  /**
+   * Stop presenting this rule's collections, and forget what we wrote.
+   *
+   * Honest about its limits: the collections themselves are deleted and
+   * recreated on every run, so there is no image to put back — reverting means
+   * the next run uploads nothing and the collection keeps whatever Plex gives
+   * it. Turning the rule's `presentation.poster` back to `none` is the other
+   * half, and the caller does that through the normal update path.
+   */
+  revertArtwork: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    const rows = getCollectionArtworkForRule(input.id);
+    const replaced = rows.filter((r) => r.posterUploadedAt && r.priorThumb).length;
+    const forgotten = forgetCollectionArtwork(input.id);
+    return { forgotten, replacedExistingArtwork: replaced };
   }),
 });

@@ -44,6 +44,50 @@ export type {
 export { fieldDef, fieldKind, fieldLabel, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 export type { SmartFilterFieldDef, SmartFilterFieldKind } from "./smart-filter-fields.ts";
 
+export { EMPTY, formatResolution, formatRuntime } from "./value-format.ts";
+export { opLabel, opsFor, withFallbackOp } from "./smart-filter-ops.ts";
+export type { OpOption } from "./smart-filter-ops.ts";
+export {
+  describeCondition,
+  formatCalendarDate,
+  formatDateValue,
+  formatFilterValue,
+  isTruthyBoolean,
+  parseRelativeDate,
+  relativeSpanText,
+  resolveRelativeDate,
+  toRelativeDate,
+  UNSET,
+} from "./smart-filter-format.ts";
+export type { RelativeDate, RelativeUnit } from "./smart-filter-format.ts";
+
+export {
+  COLLECTION_POSTER_HEIGHT,
+  COLLECTION_POSTER_TEMPLATES,
+  COLLECTION_POSTER_WIDTH,
+  DEFAULT_PRESENTATION,
+  describeSmartFilter,
+  POSTER_MAX_BYTES,
+  POSTER_SOURCES,
+  POSTER_URL_ALLOWED_HOSTS,
+  posterUrlError,
+  posterUrlRejection,
+  presentationConfigSchema,
+  resolveCollectionSummary,
+  resolvePosterTemplate,
+  resolvePresentation,
+  SUMMARY_SOURCES,
+  templatedCollectionSummary,
+} from "./presentation.ts";
+export type {
+  CollectionPosterTemplateId,
+  CollectionSummaryContext,
+  PosterSource,
+  PosterUrlRejection,
+  PresentationConfig,
+  SummarySource,
+} from "./presentation.ts";
+
 export {
   DEFAULT_REGISTRY_URL,
   REGISTRY_FORMAT_VERSION,

@@ -28,6 +28,7 @@ export const AI_RULES: RegistryRuleInput[] = [
       minItems: 12,
       personalizable: true,
       pinToHomepage: false,
+      presentation: { summary: "llm", poster: "mosaic" },
     },
   },
   {
@@ -43,6 +44,7 @@ export const AI_RULES: RegistryRuleInput[] = [
       limit: 5,
       minItems: 12,
       pinToHomepage: false,
+      presentation: { summary: "llm", poster: "mosaic" },
     },
   },
   {
@@ -58,6 +60,7 @@ export const AI_RULES: RegistryRuleInput[] = [
       limit: 8,
       minItems: 10,
       pinToHomepage: false,
+      presentation: { summary: "llm", poster: "mosaic" },
     },
   },
   {
@@ -73,6 +76,7 @@ export const AI_RULES: RegistryRuleInput[] = [
       limit: 6,
       minItems: 10,
       pinToHomepage: false,
+      presentation: { summary: "llm", poster: "mosaic", accentColor: "#B3261E" },
     },
   },
   {
@@ -88,6 +92,7 @@ export const AI_RULES: RegistryRuleInput[] = [
       limit: 6,
       minItems: 10,
       pinToHomepage: false,
+      presentation: { summary: "llm", poster: "mosaic" },
     },
   },
 ];

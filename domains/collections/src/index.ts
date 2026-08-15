@@ -9,6 +9,15 @@ import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/ple
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 
+export {
+  artworkHash,
+  forgetCollectionArtwork,
+  getCollectionArtwork,
+  getCollectionArtworkForRule,
+  recordCollectionArtwork,
+} from "./artwork.ts";
+export type { CollectionArtworkRow } from "./artwork.ts";
+
 interface SyncStats {
   synced: number;
   removed: number;

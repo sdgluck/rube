@@ -243,6 +243,27 @@ export const SHOTS: Shot[] = [
     ],
   },
   {
+    // The step that decides what a rule's collections look like in Plex.
+    // Reached through Top Rated rather than Studios: a grouped rule can't
+    // leave Scope until it has answered the pin-rotation question, and this
+    // shot is about the step after it. The poster is a real render, so the
+    // shot also proves the preview round-trip works.
+    name: "10-rule-wizard-4-look",
+    description: "Rule wizard step 4 — description and poster, with a live render of the poster",
+    path: "/rules",
+    viewports: DESKTOP,
+    steps: [
+      { click: "Add Rule" },
+      { clickText: "Group your highest-rated items in the library" },
+      { click: "Next" },
+      { click: "Next" },
+      { click: "Next" },
+      { wait: "text=How should these collections look?" },
+      { clickText: "Generate a poster for these collections" },
+      { wait: "img[alt^='Poster preview']" },
+    ],
+  },
+  {
     name: "11-jobs",
     description: "Jobs — metric tiles over the Core and Features panels",
     path: "/jobs",
@@ -325,6 +346,11 @@ export const SHOTS: Shot[] = [
     name: "16-settings-posters",
     description: "Settings → Posters — poster cache configuration and preview",
     path: "/settings/posters",
+  },
+  {
+    name: "16-settings-appearance",
+    description: "Settings → Appearance — collection artwork defaults, with a live render of the template",
+    path: "/settings/appearance",
   },
   {
     name: "16-settings-prerolls",

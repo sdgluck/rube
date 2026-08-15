@@ -1,7 +1,4 @@
-import fs from "node:fs";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-import opentype from "opentype.js";
+import { loadBundledFont } from "./text.ts";
 import type { BadgeShape, BadgeStyle, ColorPreset, OverlayType } from "./schemas.ts";
 import { FONT_SIZE_SCALE } from "./schemas.ts";
 
@@ -60,17 +57,6 @@ export function resolveBadgeColors(type: OverlayType, value: string, style?: Bad
   return auto;
 }
 
-let cachedFont: opentype.Font | null = null;
-
-function loadFont(): opentype.Font {
-  if (cachedFont) return cachedFont;
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const fontPath = path.join(here, "fonts", "Roboto-Bold.ttf");
-  const buf = fs.readFileSync(fontPath);
-  cachedFont = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-  return cachedFont;
-}
-
 /** Returns true when the style would not change rendering vs. the legacy path. */
 function isLegacyStyle(style: BadgeStyle | null | undefined): boolean {
   if (!style) return true;
@@ -93,7 +79,7 @@ function isLegacyStyle(style: BadgeStyle | null | undefined): boolean {
 
 export function createBadgeSvg(text: string, bgColor: string, textColor: string, scale: number): Buffer {
   // Legacy signature — preserved byte-for-byte for golden tests.
-  const font = loadFont();
+  const font = loadBundledFont();
   const fontSize = Math.round(14 * scale);
   const paddingX = Math.round(10 * scale);
   const paddingY = Math.round(6 * scale);
@@ -141,7 +127,7 @@ export function createStyledBadgeSvg(
     return { svg, width: w, height: h };
   }
 
-  const font = loadFont();
+  const font = loadBundledFont();
   const sizeMul = style?.fontSize ? FONT_SIZE_SCALE[style.fontSize] : 1;
   const fontSize = Math.round(14 * scale * sizeMul);
   const paddingX = Math.round(10 * scale * sizeMul);

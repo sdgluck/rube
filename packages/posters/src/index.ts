@@ -8,6 +8,24 @@ export type {
   StyledKind,
   StyledKindStyle,
 } from "./kometa.ts";
+export {
+  collectionPosterTemplate,
+  COLLECTION_POSTER_TEMPLATE_LIST,
+  renderCollectionPoster,
+} from "./collection-templates.ts";
+export type { CollectionPosterInput, CollectionPosterTemplate } from "./collection-templates.ts";
+export {
+  DEFAULT_ACCENT,
+  derivePalette,
+  hexToRgb,
+  luminance,
+  mix,
+  rgbToHex,
+  saturation,
+  type Palette,
+  type Rgb,
+} from "./palette.ts";
+export { fetchPosterUrl, type PosterUrlFetch } from "./fetch-url.ts";
 export { createPosterCache } from "./cache.ts";
 export type {
   FetchResult,

@@ -289,6 +289,54 @@ export const overlayOriginals = sqliteTable(
   (table) => [index("idx_overlay_originals_section").on(table.sectionId)],
 );
 
+/**
+ * What Tinkerbell has written onto a generated collection's *presentation* —
+ * its summary and its poster — and what it found there first.
+ *
+ * Keyed by `(ruleId, collectionName)` rather than by rating key, for the same
+ * reason as `rules.lastPinnedCollections`: every run deletes and recreates the
+ * rule's collections, so rating keys don't survive between runs but names do.
+ *
+ * Two jobs it does that the Plex server can't:
+ *
+ *  - `inputHash` covers (template, title, palette, member poster keys). An
+ *    unchanged hash means the image we'd render is the image already up there,
+ *    so the upload is skipped — a nightly run over 200 collections otherwise
+ *    re-uploads 200 identical JPEGs to a home server every night.
+ *  - `summary` is the last text *we* wrote. When what's on the collection
+ *    differs from it, a person edited it by hand, and the next run leaves it
+ *    alone. Overwriting a hand-written summary every night is the kind of
+ *    thing that makes people uninstall.
+ */
+export const collectionArtwork = sqliteTable(
+  "collection_artwork",
+  {
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
+    collectionName: text("collection_name").notNull(),
+    /** Hash of (template, title, palette, member poster keys) — skip the upload when unchanged. */
+    inputHash: text("input_hash").notNull().default(""),
+    summary: text("summary").notNull().default(""),
+    /** "template" | "llm" | "custom" | "source" — provenance, and the LLM cache key's other half. */
+    summarySource: text("summary_source").notNull().default(""),
+    /** Config hash the cached `summary` was generated against. A change invalidates it. */
+    summaryConfigHash: text("summary_config_hash").notNull().default(""),
+    /** Set when a person edited the summary in Plex; we stop writing it after that. */
+    summaryLockedAt: integer("summary_locked_at"),
+    posterUploadedAt: integer("poster_uploaded_at"),
+    /**
+     * Whether the collection already had artwork before Tinkerbell first
+     * uploaded to it, and where. Collections are recreated each run, so
+     * "revert" mostly means "stop uploading" — but the affordance has to be
+     * honest about what it can restore, and that requires having looked.
+     */
+    priorThumb: text("prior_thumb").notNull().default(""),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("idx_collection_artwork_pk").on(table.ruleId, table.collectionName)],
+);
+
 export const healthChecks = sqliteTable(
   "health_checks",
   {

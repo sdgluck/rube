@@ -14,6 +14,9 @@ import {
   isNonPortableField,
   isTagField,
   NON_PORTABLE_FIELDS,
+  posterUrlRejection,
+  presentationConfigSchema,
+  registryRuleSchema,
   producesManyCollections,
   ruleConfigSchema,
   RULE_TYPE_REQUIRES,
@@ -187,5 +190,60 @@ test("show-only rules aren't bundled into movie-only packs and vice versa", () =
     const rules = rulesForPack(pack.slug);
     const usable = (["movie", "show"] as const).filter((kind) => rules.some((r) => r.mediaTypes.includes(kind)));
     assert.ok(usable.length > 0, `pack "${pack.slug}" has no importable rules for any library kind`);
+  }
+});
+
+test("every published presentation config is valid, and its poster URL is fetchable", () => {
+  // The one part of a published config that makes the importing server reach
+  // out to a third-party host on a schedule, and then hand the bytes to a
+  // native image decoder. Anything wrong here has to fail the build, not the
+  // import — an import-time failure is somebody else's Saturday.
+  for (const rule of REGISTRY.rules) {
+    const raw = (rule.config as { presentation?: unknown }).presentation;
+    if (raw === undefined) continue;
+    const parsed = presentationConfigSchema.safeParse(raw);
+    assert.ok(parsed.success, `rule "${rule.slug}" has an invalid presentation: ${parsed.error?.message}`);
+    if (!parsed.data?.posterUrl) continue;
+    assert.equal(
+      posterUrlRejection(parsed.data.posterUrl),
+      null,
+      `rule "${rule.slug}" ships a poster URL that isn't HTTPS on an allow-listed host`,
+    );
+  }
+});
+
+test("the schema refuses a pack with an off-allowlist or plaintext poster URL", () => {
+  // The gate itself, exercised — the test above only proves today's packs are
+  // clean, which is also what it would say if the gate had been deleted.
+  const base = {
+    slug: "hostile",
+    name: "Hostile",
+    description: "A pack that points the importing server somewhere it shouldn't go.",
+    type: "decades" as const,
+  };
+  for (const posterUrl of [
+    "http://raw.githubusercontent.com/pack/poster.jpg", // plaintext
+    "https://attacker.example/poster.jpg", // off the allow-list
+    "https://raw.githubusercontent.com.attacker.example/poster.jpg", // lookalike host
+  ]) {
+    const result = registryRuleSchema.safeParse({
+      ...base,
+      config: { presentation: { poster: "url", posterUrl } },
+    });
+    assert.equal(result.success, false, `"${posterUrl}" should have failed the build`);
+  }
+});
+
+test("an ai-written summary is only published where an LLM is already required", () => {
+  // `summary: "llm"` degrades to the templated sentence without a provider,
+  // which is fine — but a pack that quietly wants an API key it never declared
+  // is a pack whose import preview under-reports what it needs.
+  for (const rule of REGISTRY.rules) {
+    const presentation = (rule.config as { presentation?: { summary?: string } }).presentation;
+    if (presentation?.summary !== "llm") continue;
+    assert.ok(
+      rule.requires.includes("llm"),
+      `rule "${rule.slug}" asks for an AI-written summary without declaring the llm requirement`,
+    );
   }
 });

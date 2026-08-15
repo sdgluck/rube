@@ -1,7 +1,12 @@
 import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
-import { describeCondition } from "#components/smart-filter/format.ts";
+import { describeCondition } from "@tinkerbell/contracts";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
-import { DEFAULT_OUTCOME_FORM, type OutcomeFormState } from "./RuleWizard/types.ts";
+import {
+  DEFAULT_OUTCOME_FORM,
+  DEFAULT_PRESENTATION_FORM,
+  type OutcomeFormState,
+  type PresentationFormState,
+} from "./RuleWizard/types.ts";
 import { typeProducesManyCollections } from "./RuleWizard/rule-types.ts";
 import styles from "./Rules.module.css";
 
@@ -168,6 +173,7 @@ export const EMPTY_FORM: RuleFormState = {
   pinRotationCount: 0,
   pinMinItems: 0,
   outcome: { ...DEFAULT_OUTCOME_FORM },
+  presentation: { ...DEFAULT_PRESENTATION_FORM },
   arr: { ...DEFAULT_ARR_FORM },
 };
 
@@ -182,6 +188,25 @@ export function outcomeFromConfig(action: unknown): OutcomeFormState {
   const a = action as { kind?: string } | null | undefined;
   if (a?.kind !== "cleanup") return { ...DEFAULT_OUTCOME_FORM };
   return { ...DEFAULT_OUTCOME_FORM, ...(a as Partial<OutcomeFormState>), kind: "cleanup" };
+}
+
+/**
+ * Read a stored `config.presentation` back into wizard form state.
+ *
+ * Absent means the defaults, which is what a rule saved before this existed
+ * gets: a templated description and no artwork. Optional fields come back as
+ * empty strings because the form's inputs are controlled.
+ */
+export function presentationFromConfig(presentation: unknown): PresentationFormState {
+  const p = presentation as Partial<Record<keyof PresentationFormState, unknown>> | null | undefined;
+  if (!p) return { ...DEFAULT_PRESENTATION_FORM };
+  return {
+    summary: (p.summary as PresentationFormState["summary"]) ?? DEFAULT_PRESENTATION_FORM.summary,
+    customSummary: (p.customSummary as string) ?? "",
+    poster: (p.poster as PresentationFormState["poster"]) ?? DEFAULT_PRESENTATION_FORM.poster,
+    posterUrl: (p.posterUrl as string) ?? "",
+    accentColor: (p.accentColor as string) ?? "",
+  };
 }
 
 // Single source of truth lives with the wizard — re-exported here because

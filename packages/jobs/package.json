@@ -43,6 +43,7 @@
     "@tinkerbell/omdb": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/plex-smart-filter": "workspace:*",
+    "@tinkerbell/posters": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",
     "@tinkerbell/tmdb": "workspace:*",
     "@tinkerbell/video": "workspace:*",

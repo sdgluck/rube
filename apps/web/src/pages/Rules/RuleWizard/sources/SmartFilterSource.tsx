@@ -8,7 +8,7 @@ import {
   LOCAL_FIELD_GROUP_NOTE,
   LOCAL_FIELD_HINTS,
 } from "#components/smart-filter/UserValueSelect.tsx";
-import { opsFor, withFallbackOp } from "#components/smart-filter/ops.ts";
+import { opsFor, withFallbackOp } from "@tinkerbell/contracts";
 import styles from "#pages/Rules/RuleWizard/RuleWizard.module.css";
 import type {
   SmartFilterGroup,

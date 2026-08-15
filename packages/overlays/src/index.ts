@@ -27,5 +27,6 @@ export {
   type BadgeColors,
   type StyledBadgeSvg,
 } from "./badge.ts";
+export { fitText, loadBundledFont, measureText, textPathData, wrapText, type FittedText } from "./text.ts";
 export { calculatePosition } from "./position.ts";
 export { compositeOverlays, buildCompositeSharp, type Badge } from "./composite.ts";

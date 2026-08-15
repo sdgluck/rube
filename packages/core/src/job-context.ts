@@ -73,6 +73,22 @@ export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type CollectionsSweepJobConfig = z.infer<typeof collectionsSweepJobConfigSchema>;
 
+export const collectionArtJobConfigSchema = commonJobConfigSchema.extend({
+  /**
+   * Restrict the run to these rules. Set by the "Generate artwork now" action
+   * on a single rule; absent means every rule that has opted in, which is what
+   * the scheduled run does.
+   */
+  ruleIds: z.array(z.string()).optional(),
+  /**
+   * Re-render and re-upload even where the input hash says nothing changed.
+   * For the case the ledger can't see: someone replaced the poster in Plex by
+   * hand and wants Tinkerbell's back.
+   */
+  force: z.boolean().optional(),
+});
+export type CollectionArtJobConfig = z.infer<typeof collectionArtJobConfigSchema>;
+
 export const overlaysJobConfigSchema = commonJobConfigSchema.extend({
   mode: z.enum(["apply", "remove"]).optional(),
 });

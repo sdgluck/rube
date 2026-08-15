@@ -6,7 +6,7 @@
  * type without losing field values the user already entered.
  */
 
-import type { CleanupMode } from "@tinkerbell/contracts";
+import type { CleanupMode, PosterSource, SummarySource } from "@tinkerbell/contracts";
 import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
 
 export type { CleanupMode };
@@ -32,6 +32,30 @@ export interface OutcomeFormState {
   addImportExclusion: boolean;
   dryRun: boolean;
 }
+
+/**
+ * How this rule's collections look in Plex. Flat, and always present in the
+ * form, for the same reason as `OutcomeFormState`: switching the poster off
+ * and back on shouldn't discard the accent the user picked.
+ */
+export interface PresentationFormState {
+  summary: SummarySource;
+  customSummary: string;
+  poster: PosterSource;
+  posterUrl: string;
+  /** Empty means "take the colour from the collection's own posters". */
+  accentColor: string;
+}
+
+export const DEFAULT_PRESENTATION_FORM: PresentationFormState = {
+  summary: "template",
+  customSummary: "",
+  // Uploading artwork is a visible, hard-to-undo change to somebody's server.
+  // It is opted into per rule the first time, never inherited silently.
+  poster: "none",
+  posterUrl: "",
+  accentColor: "",
+};
 
 export interface ArrFormState {
   enabled: boolean;
@@ -69,6 +93,8 @@ export interface RuleFormState {
   pinMinItems: number;
   /** Collection (the default, and what every rule did before) or cleanup. */
   outcome: OutcomeFormState;
+  /** Summary and poster for the collections this rule builds. */
+  presentation: PresentationFormState;
   arr: ArrFormState;
 }
 

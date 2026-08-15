@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Copy, ExternalLink, Eye, FlaskConical, Pencil, Play, Square, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Eye, FlaskConical, ImageOff, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { EMPTY } from "#/format";
 import { useNavigate } from "react-router-dom";
 import RowActions from "#components/RowActions";
@@ -34,6 +34,9 @@ interface RuleTableRowProps {
   onDuplicate: () => void;
   onDelete: () => void;
   onDetailCleared: () => void;
+  /** True when this rule's config asks for generated collection artwork. */
+  generatesArtwork: boolean;
+  onRevertArtwork?: () => void;
   /** Resolves per-server tag keys to names for the Config summary. */
   resolveTag?: (field: string, value: string) => string;
   /** Queue tallies, set only when this rule's outcome is cleanup. */
@@ -62,6 +65,8 @@ export default function RuleTableRow({
   onEdit,
   onDuplicate,
   onDelete,
+  generatesArtwork,
+  onRevertArtwork,
   onDetailCleared,
   resolveTag,
   cleanup,
@@ -180,6 +185,12 @@ export default function RuleTableRow({
                           onSelect: () => navigate(`/collections/${rule.lastCollectionRatingKey}`),
                         },
                   ]
+                : []),
+              // Only for a rule that has artwork turned on — for every other
+              // rule there is nothing to revert, and an action that always
+              // reports "nothing to do" teaches people to ignore it.
+              ...(generatesArtwork && onRevertArtwork
+                ? [{ label: "Revert artwork", icon: ImageOff, danger: true, onSelect: onRevertArtwork }]
                 : []),
               { label: "Edit", icon: Pencil, disabled: formActive, onSelect: onEdit },
               { label: "Duplicate", icon: Copy, disabled: createPending, onSelect: onDuplicate },

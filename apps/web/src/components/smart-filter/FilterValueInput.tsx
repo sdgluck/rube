@@ -1,12 +1,13 @@
-import { fieldDef, fieldKind } from "@tinkerbell/contracts";
 import {
+  fieldDef,
+  fieldKind,
   formatCalendarDate,
   isTruthyBoolean,
   parseRelativeDate,
   resolveRelativeDate,
   toRelativeDate,
   type RelativeUnit,
-} from "./format.ts";
+} from "@tinkerbell/contracts";
 import TagValueSelect, { type TagValueMode } from "./TagValueSelect.tsx";
 import UserValueSelect from "./UserValueSelect.tsx";
 import styles from "./FilterValueInput.module.css";

@@ -24,6 +24,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { to: "/settings/portal", label: "Portal" },
       { to: "/settings/notifications", label: "Notifications" },
       { to: "/settings/posters", label: "Posters" },
+      { to: "/settings/appearance", label: "Appearance" },
       { to: "/settings/prerolls", label: "Prerolls" },
     ],
   },

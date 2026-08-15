@@ -95,7 +95,7 @@ export async function* tmdbFranchisesHandler(deps: HandlerDeps): AsyncGenerator<
         }
 
         ctx.log(`[tmdb_franchises] Yielding "${franchise.name}" (${matched.length}/${tmdbCollection.parts.length})...`);
-        yield { name: franchise.name, section, matched };
+        yield { name: franchise.name, section, matched, sourceSummary: tmdbCollection.overview || undefined };
       }
     }
   }

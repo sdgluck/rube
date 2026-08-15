@@ -18,6 +18,12 @@ export interface PendingCollection {
    * a single dispatch loop covers all rule types.
    */
   matchedTitles?: string[];
+  /**
+   * A description the source published for this exact collection. Only
+   * `tmdb_franchises` has one — TMDb writes an overview per franchise, and its
+   * prose beats anything a template would assemble from the name.
+   */
+  sourceSummary?: string;
 }
 
 export interface HandlerDeps {
