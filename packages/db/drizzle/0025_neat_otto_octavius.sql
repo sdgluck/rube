@@ -1,0 +1,1 @@
+ALTER TABLE `plex_sessions` ADD `scope` text DEFAULT 'portal' NOT NULL;
