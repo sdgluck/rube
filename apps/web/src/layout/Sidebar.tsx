@@ -89,6 +89,7 @@ type NavMetrics = {
   users: number;
   prerolls: number;
   eventsErrors24h: number;
+  cleanupDueSoon: number;
   overlaysStatus: "ok" | "error" | null;
   jobsStatus: "ok" | "error" | null;
 };
@@ -99,8 +100,9 @@ function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMet
   if (metric.kind === "count") {
     const value = metrics[metric.key];
     if (!value) return <span className="nav-metric nav-metric-placeholder" aria-hidden="true" />;
-    // An error tally is not a neutral count and must not read as one.
-    const isErrors = metric.key === "eventsErrors24h";
+    // Neither an error tally nor an imminent deletion is a neutral count, and
+    // neither must read as one.
+    const isErrors = metric.key === "eventsErrors24h" || metric.key === "cleanupDueSoon";
     return (
       <span className={`nav-metric ${isErrors ? "nav-metric-error" : "nav-metric-count"}`} title={`${value}`}>
         {value > 999 ? `${Math.floor(value / 1000)}k` : value}

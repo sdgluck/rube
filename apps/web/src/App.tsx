@@ -4,6 +4,7 @@ import ErrorBoundary from "#components/ErrorBoundary";
 import ScrollRestoration from "#layout/ScrollRestoration";
 import { AppBarProvider } from "#layout/AppBar";
 import CommandPalette from "#components/CommandPalette";
+import AuthBanner from "#/auth/AuthBanner";
 import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
 import useDocumentTitle from "#hooks/useDocumentTitle";
 import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
@@ -24,7 +25,9 @@ const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/S
 const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsService"));
 const SettingsBandwidth = lazy(() => import("#pages/Settings/SettingsBandwidth"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
+const SettingsCleanup = lazy(() => import("#pages/Settings/SettingsCleanup"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
+const SettingsSecurity = lazy(() => import("#pages/Settings/SettingsSecurity"));
 const SettingsSchedules = lazy(() => import("#pages/Settings/SettingsSchedules"));
 const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
 const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
@@ -32,6 +35,7 @@ const SettingsPortalAppearance = lazy(() => import("#pages/Settings/Portal/Setti
 const Collections = lazy(() => import("#pages/Collections"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const Rules = lazy(() => import("#pages/Rules"));
+const Cleanup = lazy(() => import("#pages/Cleanup"));
 const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
@@ -81,6 +85,7 @@ export default function App() {
       <main className="content">
         <ScrollRestoration />
         <AppBarProvider>
+          <AuthBanner />
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
@@ -121,6 +126,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <Rules />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/cleanup"
+                  element={
+                    <LazyPage>
+                      <Cleanup />
                     </LazyPage>
                   }
                 />
@@ -301,10 +314,26 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="cleanup"
+                    element={
+                      <LazyPage>
+                        <SettingsCleanup />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
                     path="maintenance"
                     element={
                       <LazyPage>
                         <SettingsMaintenance />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="security"
+                    element={
+                      <LazyPage>
+                        <SettingsSecurity />
                       </LazyPage>
                     }
                   />

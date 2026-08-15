@@ -6,12 +6,32 @@
  * type without losing field values the user already entered.
  */
 
+import type { CleanupMode } from "@tinkerbell/contracts";
 import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
+
+export type { CleanupMode };
 
 export type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
 
 export type AiVibe = "playful" | "serious" | "mixed";
 export type AiNameStyle = "short_punchy" | "descriptive";
+
+/**
+ * What happens to the items a rule selects.
+ *
+ * Held flat rather than as a discriminated union so switching between
+ * Collection and Cleanup doesn't discard the settings the user already
+ * entered — same reason the rest of this form is one shape.
+ */
+export interface OutcomeFormState {
+  kind: "collection" | "cleanup";
+  mode: CleanupMode;
+  consecutiveRuns: number;
+  maxActionsPerRun: number;
+  viaArr: boolean;
+  addImportExclusion: boolean;
+  dryRun: boolean;
+}
 
 export interface ArrFormState {
   enabled: boolean;
@@ -45,8 +65,22 @@ export interface RuleFormState {
   pinToHomepage: boolean;
   /** Pin only this many collections per library per run, rotating. 0 = pin all. */
   pinRotationCount: number;
+  /** Collection (the default, and what every rule did before) or cleanup. */
+  outcome: OutcomeFormState;
   arr: ArrFormState;
 }
+
+export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
+  kind: "collection",
+  // Least destructive first. The wizard makes you pass a confirmation to get
+  // past unmonitor, and dryRun stays on until you've seen a preview.
+  mode: "collection_only",
+  consecutiveRuns: 3,
+  maxActionsPerRun: 25,
+  viaArr: true,
+  addImportExclusion: false,
+  dryRun: true,
+};
 
 export const DEFAULT_ARR_FORM: ArrFormState = {
   enabled: false,

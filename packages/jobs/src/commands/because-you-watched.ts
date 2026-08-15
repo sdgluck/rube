@@ -212,15 +212,14 @@ export default async function run(ctx: JobContext, config: BywJobConfig): Promis
       }
 
       ctx.log(`Cleaning up old "because you watched" collections...`);
-      const allCollections = await client.getCollections(sectionId);
+      const allCollections = await client.getCollectionsWithLabels(sectionId, { label: BYW_LABEL });
       let deleted = 0;
       for (const col of allCollections) {
-        const labels = await client.getCollectionLabels(col.ratingKey);
-        const hasByw = labels.some((l) => l.tag.toLowerCase() === BYW_LABEL.toLowerCase());
+        const hasByw = col.labels.some((tag) => tag.toLowerCase() === BYW_LABEL.toLowerCase());
         if (!hasByw) continue;
 
         if (isPerUser) {
-          const hasUserLabel = labels.some((l) => l.tag === `User:${user.plexUsername}`);
+          const hasUserLabel = col.labels.some((tag) => tag === `User:${user.plexUsername}`);
           if (!hasUserLabel) continue;
         }
 

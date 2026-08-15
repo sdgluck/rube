@@ -1,8 +1,10 @@
 import type { PlexSection } from "@tinkerbell/plex";
-import { DEFAULT_PIN_ROTATION, producesManyCollections } from "@tinkerbell/contracts";
+import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@tinkerbell/contracts";
+import { runHandlerWithCleanup, type CleanupBudget } from "./cleanup.ts";
 import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rule-history";
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
-import { commitCollection } from "./finalize.ts";
+import { commitCollection, COMMIT_CONCURRENCY } from "./finalize.ts";
+import { drainConcurrently } from "#jobs/concurrency.ts";
 import { selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
 import type { Handler, HandlerDeps } from "./types.ts";
 import { aiPromptHandler } from "./handlers/ai-prompt.ts";
@@ -76,6 +78,42 @@ export function handlerForRule(ruleType: string): Handler | null {
   }
 }
 
+export interface RunHandlerResult {
+  lastCollectionKey: string | null;
+  collectionCount: number;
+  itemCount: number;
+}
+
+/**
+ * Run a rule to its ending.
+ *
+ * A rule is (selection) → (action). Selection is the handler and is shared;
+ * the action is either "make a collection" — every rule that has ever existed
+ * — or "clean up", which selects identically and then queues, labels,
+ * unmonitors or deletes instead.
+ *
+ * A rule with no `action` in its config is a collection rule, so nothing
+ * predating this branch changes behaviour or needs migrating.
+ */
+export async function runHandler(
+  deps: HandlerDeps,
+  machineId: string,
+  labels: string[],
+  budget: CleanupBudget,
+): Promise<RunHandlerResult> {
+  const action = ruleAction(deps.ruleConfig);
+  if (action.kind === "collection") return runHandlerWithCommits(deps, machineId, labels);
+
+  const handler = handlerForRule(deps.rule.type);
+  if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
+
+  const outcome = await runHandlerWithCleanup(deps, action, machineId, labels, budget, handler);
+  // A cleanup rule builds one shelf collection per section, but the rule's
+  // "last collection" pointer is meaningless for it — the Rules table shows
+  // queued/actioned counts instead.
+  return { lastCollectionKey: null, collectionCount: 0, itemCount: outcome.matched };
+}
+
 /**
  * Run a handler to completion, committing each yielded collection to Plex.
  * For ai_prompt rules, also append per-section history so the next run
@@ -119,43 +157,55 @@ export async function runHandlerWithCommits(
   // section's history and the next run retreads the same themes.
   const aiHistoryBySection = new Map<string, { section: PlexSection; entries: HistoricalCollection[] }>();
 
+  // A grouped rule yields hundreds of collections and each commit is several
+  // Plex round-trips, so the handler's output is drained by a pool rather than
+  // one collection at a time. The real ceiling on Plex writes is the shared
+  // queue inside `commitCollection` — this pool only has to be wide enough to
+  // keep it fed, and the handler body still runs serially either way.
   try {
-    for await (const pending of handler(deps)) {
-      const ratingKeys = pending.matched.map((m) => m.ratingKey);
-      const collectionKey = await commitCollection(
-        ctx,
-        client,
-        pending.section,
-        machineId,
-        pending.name,
-        ratingKeys,
-        labels,
-        rotating ? false : pinToHomepage,
-        rule.type,
-      );
-      if (!collectionKey) continue;
+    await drainConcurrently(
+      handler(deps),
+      COMMIT_CONCURRENCY,
+      async (pending) => {
+        const ratingKeys = pending.matched.map((m) => m.ratingKey);
+        const collectionKey = await commitCollection(
+          ctx,
+          client,
+          pending.section,
+          machineId,
+          pending.name,
+          ratingKeys,
+          labels,
+          rotating ? false : pinToHomepage,
+          rule.type,
+        );
+        if (!collectionKey) return;
 
-      lastCollectionKey = collectionKey;
-      collectionCount++;
-      itemCount += ratingKeys.length;
+        // Only ever mutated between awaits, so there's no interleaving to
+        // guard against — but nothing here may assume commit order either.
+        lastCollectionKey = collectionKey;
+        collectionCount++;
+        itemCount += ratingKeys.length;
 
-      if (rotating) {
-        rotationCandidates.push({
-          sectionKey: pending.section.key,
-          name: pending.name,
-          ratingKey: collectionKey,
-        });
-      }
+        if (rotating) {
+          rotationCandidates.push({
+            sectionKey: pending.section.key,
+            name: pending.name,
+            ratingKey: collectionKey,
+          });
+        }
 
-      if (rule.type === "ai_prompt" && pending.matchedTitles) {
-        const bucket = aiHistoryBySection.get(pending.section.key) ?? {
-          section: pending.section,
-          entries: [],
-        };
-        bucket.entries.push({ name: pending.name, sampleItems: pending.matchedTitles });
-        aiHistoryBySection.set(pending.section.key, bucket);
-      }
-    }
+        if (rule.type === "ai_prompt" && pending.matchedTitles) {
+          const bucket = aiHistoryBySection.get(pending.section.key) ?? {
+            section: pending.section,
+            entries: [],
+          };
+          bucket.entries.push({ name: pending.name, sampleItems: pending.matchedTitles });
+          aiHistoryBySection.set(pending.section.key, bucket);
+        }
+      },
+      ctx.signal,
+    );
   } finally {
     for (const { section, entries } of aiHistoryBySection.values()) {
       if (entries.length === 0) continue;

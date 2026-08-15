@@ -3,9 +3,12 @@ import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { lookupBelongsToCollection } from "#commands/generate/sources/tmdb.ts";
 import { minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
+import { chunked, mapConcurrent } from "#jobs/concurrency.ts";
 
 const MAX_GROUPS = 100;
 const DEFAULT_GROUPS = 25;
+/** Franchise lookups in flight. The TMDb client caps the rest. */
+const FRANCHISE_CONCURRENCY = 6;
 
 /**
  * Build franchise collections (Marvel, Bond, etc.) from TMDb's "belongs to
@@ -48,37 +51,52 @@ export async function* tmdbFranchisesHandler(deps: HandlerDeps): AsyncGenerator<
     const groups = await client.fetchGroupedByField(section.key, "collection", limitGroups);
     ctx.log(`[tmdb_franchises] Found ${groups.length} Plex collection group(s) in "${section.title}".`);
 
+    // Each group costs a Plex filter query and two TMDb round-trips, and the
+    // groups have nothing to say to each other — so they're resolved a chunk
+    // at a time. Results are consumed in group order, which keeps the log (and
+    // the order collections appear in Plex) the same as when this was serial.
+    //
     // Note: original behavior does NOT dedupe by franchise ID at the
     // handler level — that's only done in the arr resolver. Preserved here.
-    for (const group of groups) {
-      const groupItems = await client.fetchItemsByFilter(group.key);
-      if (groupItems.length === 0) continue;
+    for (const batch of chunked(groups, FRANCHISE_CONCURRENCY)) {
+      ctx.signal?.throwIfAborted();
+      const resolved = await mapConcurrent(batch, FRANCHISE_CONCURRENCY, async (group) => {
+        const groupItems = await client.fetchItemsByFilter(group.key);
+        if (groupItems.length === 0) return null;
 
-      const sampleTmdbId = groupItems
-        .map((gi) => ratingKeyToTmdbId.get(gi.ratingKey))
-        .find((id): id is number => id !== undefined);
-      if (!sampleTmdbId) continue;
+        const sampleTmdbId = groupItems
+          .map((gi) => ratingKeyToTmdbId.get(gi.ratingKey))
+          .find((id): id is number => id !== undefined);
+        if (!sampleTmdbId) return null;
 
-      const franchise = await lookupBelongsToCollection(apiKey, sampleTmdbId);
-      if (!franchise) {
-        ctx.log(`[tmdb_franchises] No TMDb collection for "${group.tag}", skipping.`);
-        continue;
+        const franchise = await lookupBelongsToCollection(apiKey, sampleTmdbId);
+        if (!franchise) return { group, franchise: null };
+
+        return { group, franchise, tmdbCollection: await fetchCollection({ apiKey }, franchise.id) };
+      });
+
+      for (const entry of resolved) {
+        if (!entry) continue;
+        if (!entry.franchise) {
+          ctx.log(`[tmdb_franchises] No TMDb collection for "${entry.group.tag}", skipping.`);
+          continue;
+        }
+        const { franchise, tmdbCollection } = entry;
+
+        const matched: Array<{ ratingKey: string; title: string; year?: number }> = [];
+        for (const part of tmdbCollection.parts) {
+          const item = tmdbToItem.get(part.id);
+          if (item) matched.push(item);
+        }
+
+        if (matched.length < minMembers) {
+          ctx.log(`[tmdb_franchises] "${franchise.name}" — only ${matched.length} match(es), skipping.`);
+          continue;
+        }
+
+        ctx.log(`[tmdb_franchises] Yielding "${franchise.name}" (${matched.length}/${tmdbCollection.parts.length})...`);
+        yield { name: franchise.name, section, matched };
       }
-
-      const tmdbCollection = await fetchCollection({ apiKey }, franchise.id);
-      const matched: Array<{ ratingKey: string; title: string; year?: number }> = [];
-      for (const part of tmdbCollection.parts) {
-        const item = tmdbToItem.get(part.id);
-        if (item) matched.push(item);
-      }
-
-      if (matched.length < minMembers) {
-        ctx.log(`[tmdb_franchises] "${franchise.name}" — only ${matched.length} match(es), skipping.`);
-        continue;
-      }
-
-      ctx.log(`[tmdb_franchises] Yielding "${franchise.name}" (${matched.length}/${tmdbCollection.parts.length})...`);
-      yield { name: franchise.name, section, matched };
     }
   }
 }

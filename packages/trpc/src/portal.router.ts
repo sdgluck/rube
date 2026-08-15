@@ -19,37 +19,26 @@ import {
 } from "@tinkerbell/core";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { getPlexClient } from "./_base.ts";
+import { COOKIE_NAMES, clearSessionCookie, isSecureRequest, parseCookie, setSessionCookie } from "./cookies.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
-
-const COOKIE = "tb_session";
-const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // seconds
 
 export interface PortalContext {
   session?: { userId: number; username: string };
   rawToken?: string;
   resHeaders: Headers;
-}
-
-function parseCookie(header: string, name: string): string | undefined {
-  for (const part of header.split(";")) {
-    const idx = part.indexOf("=");
-    if (idx === -1) continue;
-    if (part.slice(0, idx).trim() === name) return decodeURIComponent(part.slice(idx + 1).trim());
-  }
-  return undefined;
+  /** Whether the request arrived over HTTPS, so the cookie can be `Secure`. */
+  secure: boolean;
 }
 
 export function createPortalContext(opts: { req: Request; resHeaders: Headers }): PortalContext {
-  const rawToken = parseCookie(opts.req.headers.get("cookie") ?? "", COOKIE);
-  return { session: getPlexSession(rawToken), rawToken, resHeaders: opts.resHeaders };
-}
-
-function setSessionCookie(headers: Headers, raw: string): void {
-  headers.append("Set-Cookie", `${COOKIE}=${raw}; HttpOnly; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax`);
-}
-function clearSessionCookie(headers: Headers): void {
-  headers.append("Set-Cookie", `${COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+  const rawToken = parseCookie(opts.req.headers.get("cookie") ?? "", COOKIE_NAMES.portal);
+  return {
+    session: getPlexSession(rawToken, "portal"),
+    rawToken,
+    resHeaders: opts.resHeaders,
+    secure: isSecureRequest(opts.req),
+  };
 }
 
 const tp = initTRPC.context<PortalContext>().create();
@@ -88,14 +77,14 @@ export const portalRouter = tp.router({
           message: "This Plex account isn't a user of this server.",
         });
       }
-      const raw = createPlexSession(account.id, account.username);
-      setSessionCookie(ctx.resHeaders, raw);
+      const raw = createPlexSession(account.id, account.username, "portal");
+      setSessionCookie(ctx.resHeaders, raw, { scope: "portal", secure: ctx.secure });
       return { status: "ok" as const, username: account.username };
     }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
       deletePlexSession(ctx.rawToken);
-      clearSessionCookie(ctx.resHeaders);
+      clearSessionCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
       return { ok: true };
     }),
   }),

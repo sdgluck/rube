@@ -1,0 +1,46 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+  font: var(--t-body-sm);
+}
+
+.text {
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.dismiss {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  opacity: 0.75;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dismiss:hover {
+  opacity: 1;
+}

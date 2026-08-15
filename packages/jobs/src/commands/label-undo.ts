@@ -56,14 +56,13 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   ctx.log(`Removing "User:" labels from collections...`);
   let collectionsUpdated = 0;
   for (const section of sections) {
-    const colls = await client.getCollections(section.key);
+    const colls = await client.getCollectionsWithLabels(section.key);
     for (const col of colls) {
-      const labels = await client.getCollectionLabels(col.ratingKey);
-      const userLabels = labels.filter((l) => l.tag.startsWith("User:"));
+      const userLabels = col.labels.filter((tag) => tag.startsWith("User:"));
       if (userLabels.length === 0) continue;
-      const remaining = labels.filter((l) => !l.tag.startsWith("User:")).map((l) => l.tag);
+      const remaining = col.labels.filter((tag) => !tag.startsWith("User:"));
       await client.setCollectionLabels(section.key, col.ratingKey, remaining);
-      ctx.log(`Removed ${userLabels.map((l) => l.tag).join(", ")} from "${col.title}"`);
+      ctx.log(`Removed ${userLabels.join(", ")} from "${col.title}"`);
       collectionsUpdated++;
     }
   }

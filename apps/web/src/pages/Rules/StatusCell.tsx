@@ -7,6 +7,8 @@ interface RuleStatusCellProps {
   rule: RuleRow;
   isTesting: boolean;
   isRunning: boolean;
+  /** Set for cleanup rules — a collection count says nothing about them. */
+  cleanup?: { queued: number; actioned: number };
 }
 
 /**
@@ -15,7 +17,7 @@ interface RuleStatusCellProps {
  * automatically while a run/test is in-flight, and the result preview
  * opens automatically on completion.
  */
-export default function StatusCell({ rule, isTesting, isRunning }: RuleStatusCellProps) {
+export default function StatusCell({ rule, isTesting, isRunning, cleanup }: RuleStatusCellProps) {
   if (isRunning) {
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
@@ -29,6 +31,17 @@ export default function StatusCell({ rule, isTesting, isRunning }: RuleStatusCel
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
         <Spinner size="xs" />
         Testing…
+      </span>
+    );
+  }
+
+  // A cleanup rule's ending isn't a collection, so "ok" and a collection count
+  // are both the wrong thing to report. What matters is how much is waiting.
+  if (cleanup) {
+    return (
+      <span className={styles.statusInline}>
+        <span className={cleanup.queued > 0 ? styles.statusOk : styles.statusIdle}>{cleanup.queued} queued</span>
+        {cleanup.actioned > 0 && <span className={styles.statusIdle}> / {cleanup.actioned} actioned</span>}
       </span>
     );
   }

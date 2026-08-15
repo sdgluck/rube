@@ -191,6 +191,44 @@ describe("generate: one bad rule", () => {
   });
 });
 
+describe("generate: rule actions", () => {
+  it("a rule with no action key takes the collection path untouched", async () => {
+    // Back-compat for every rule that predates the action discriminator. If
+    // this ever routes through the cleanup executor, existing installs start
+    // queueing their whole library for deletion on the next nightly run.
+    const plain = seedRule("Plain", "top_rated", { limit: 5 }, 1);
+
+    const { ctx, log } = testContext();
+    await run(ctx, {});
+
+    assert.equal(ruleRow(plain).lastRunStatus, "ok");
+    const text = log.join("\n");
+    assert.doesNotMatch(text, /\[cleanup\]/, "a rule with no action must never enter the cleanup path");
+  });
+
+  it("an explicit collection action is also the collection path", async () => {
+    const explicit = seedRule("Explicit", "top_rated", { limit: 5, action: { kind: "collection" } }, 1);
+
+    const { ctx, log } = testContext();
+    await run(ctx, {});
+
+    assert.equal(ruleRow(explicit).lastRunStatus, "ok");
+    assert.doesNotMatch(log.join("\n"), /\[cleanup\]/);
+  });
+
+  it("a cleanup rule routes to the cleanup executor and records rather than acts", async () => {
+    seedRule("Reclaim", "top_rated", { limit: 5, action: { kind: "cleanup", mode: "delete" } }, 1);
+
+    const { ctx, log } = testContext();
+    await run(ctx, {});
+
+    const text = log.join("\n");
+    assert.match(text, /\[cleanup\]/);
+    // Nothing is due on a first run, whatever the mode says.
+    assert.doesNotMatch(text, /^\[cleanup\] delete:/m);
+  });
+});
+
 describe("generate: rule concurrency", () => {
   it("overlaps rules by default and still runs every one", async () => {
     const ids = [1, 2, 3].map((n) => seedRule(`Rule ${n}`, "no_such_type", {}, n));

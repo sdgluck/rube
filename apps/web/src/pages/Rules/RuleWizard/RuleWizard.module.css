@@ -359,3 +359,72 @@
     transform: translateX(0);
   }
 }
+
+/* ─── Outcome step ────────────────────────────────────────────────────── */
+
+.outcomeChoices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.outcomeCard {
+  align-items: flex-start;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
+}
+
+.outcomeCardActive {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Both are spans inside the card's label column, so they need to be blocks —
+   left inline they render as "Build a collectionCreate or refresh a Plex…". */
+.outcomeCardTitle {
+  display: block;
+  font-weight: 600;
+}
+
+.outcomeCardBody {
+  color: var(--text-muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/*
+ * The confirmation panel. Deliberately the loudest thing on the screen: it is
+ * the last point at which somebody can notice that a scheduled job is about to
+ * start deleting files.
+ */
+.dangerPanel {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.dangerPanelHeading {
+  color: var(--danger);
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.dangerPanelBody {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.dangerPanelBody strong {
+  font-weight: 600;
+}

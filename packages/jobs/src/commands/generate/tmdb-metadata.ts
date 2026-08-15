@@ -10,10 +10,10 @@ const FETCH_CONCURRENCY = 8;
 const PROGRESS_INTERVAL = 50;
 
 /**
- * Module-scoped, so `FETCH_CONCURRENCY` is a ceiling on TMDB requests in
- * flight *in total* rather than per call. Rules run concurrently, and a
- * per-call queue would multiply the burst by the rule concurrency — TMDB
- * would see 8× that and start handing back 429s.
+ * Module-scoped so one hydration can't fan out per call, and kept even though
+ * the TMDb client now holds the real rate ceiling: this queue is what carries
+ * `{ signal }` per task, which is how a cancelled job stops thousands of
+ * queued fetches instead of draining them.
  */
 const tmdbQueue = new PQueue({ concurrency: FETCH_CONCURRENCY });
 

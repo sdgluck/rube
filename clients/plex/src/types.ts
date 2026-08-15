@@ -56,6 +56,13 @@ export interface PlexCollection {
   ratingKey: string;
   title: string;
   addedAt?: number;
+  /**
+   * Labels as carried by the section listing, when it carries them at all.
+   * `undefined` means "the listing didn't say" — which for a collection with
+   * no labels is indistinguishable from "none", so callers that need a
+   * definitive answer must fall back to `getCollectionLabels`.
+   */
+  labels?: string[];
 }
 
 export interface PlexCollectionDetail {

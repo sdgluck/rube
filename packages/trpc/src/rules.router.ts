@@ -61,13 +61,13 @@ export const rulesRouter = t.router({
     return rule;
   }),
 
-  create: t.procedure
+  create: procedure
     .input(z.object({ name: z.string(), type: z.string(), config: z.record(z.string(), z.unknown()) }))
     .mutation(({ input }) => {
       return createRule({ ...input, config: assertValidRuleConfig(input.config) });
     }),
 
-  update: t.procedure
+  update: procedure
     .input(
       z.object({
         id: z.string(),
@@ -112,6 +112,7 @@ export const rulesRouter = t.router({
         collections: result.collections,
         tokensIn: result.tokensIn,
         tokensOut: result.tokensOut,
+        cleanup: result.cleanup,
       };
       setLastTestResult(persisted);
       setRuleLastTest(input.id, {

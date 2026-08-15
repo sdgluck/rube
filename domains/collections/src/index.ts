@@ -44,7 +44,9 @@ export async function upsertCollectionByKey(
   ratingKey: string,
 ): Promise<void> {
   const detail = await client.getCollectionDetail(ratingKey);
-  const members = await client.getCollectionChildren(ratingKey);
+  // The detail we just fetched already answers "is it smart?", so the child
+  // walk doesn't need to ask Plex the same question again.
+  const members = await client.getCollectionChildren(ratingKey, { smart: detail.smart });
   const now = Date.now();
   const values = {
     plexRatingKey: ratingKey,

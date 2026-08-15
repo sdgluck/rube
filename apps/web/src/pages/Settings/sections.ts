@@ -20,6 +20,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     heading: "Automation",
     links: [
       { to: "/settings/schedules", label: "Schedules" },
+      { to: "/settings/cleanup", label: "Cleanup" },
       { to: "/settings/portal", label: "Portal" },
       { to: "/settings/notifications", label: "Notifications" },
       { to: "/settings/posters", label: "Posters" },
@@ -29,6 +30,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     heading: "Tools",
     links: [
+      { to: "/settings/security", label: "Security" },
       { to: "/settings/migrate", label: "Migrate" },
       { to: "/settings/maintenance", label: "Maintenance" },
       { to: "/settings/bandwidth", label: "Bandwidth Test" },

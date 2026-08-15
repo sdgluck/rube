@@ -1,7 +1,10 @@
 import { SETTINGS_LINKS } from "#pages/Settings/sections";
 
 export type NavMetric =
-  | { kind: "count"; key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" | "prerolls" }
+  | {
+      kind: "count";
+      key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" | "prerolls" | "cleanupDueSoon";
+    }
   | { kind: "status"; key: "overlaysStatus" | "jobsStatus" }
   | { kind: "streams" };
 
@@ -29,6 +32,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Automation",
     items: [
       { to: "/rules", label: "Rules", metric: { kind: "count", key: "rules" } },
+      { to: "/cleanup", label: "Cleanup", metric: { kind: "count", key: "cleanupDueSoon" } },
       { to: "/registry", label: "Registry" },
       { to: "/jobs", label: "Jobs", metric: { kind: "status", key: "jobsStatus" } },
     ],

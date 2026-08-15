@@ -148,10 +148,11 @@ async function deleteUserRuleCollections(
   ctx: JobContext,
 ): Promise<void> {
   for (const section of sections) {
-    const collections = await client.getCollections(section.key);
+    // Narrowed to this user's collections server-side; both labels are still
+    // checked below, since the rule label is what makes one of them stale.
+    const collections = await client.getCollectionsWithLabels(section.key, { label: userLabel });
     for (const col of collections) {
-      const labels = await client.getCollectionLabels(col.ratingKey);
-      const tags = labels.map((l) => l.tag);
+      const tags = col.labels;
       if (tags.includes(userLabel) && tags.includes(ruleLabel)) {
         await client.deleteItem(col.ratingKey);
         forgetCollections([col.ratingKey]);

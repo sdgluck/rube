@@ -108,8 +108,24 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
           </span>
         )}
       </div>
+      {result.cleanup && (
+        <div className={styles.cleanupPreview}>
+          {/* Both numbers, always: the gap between them is the whole point of
+              the streak, and a single figure hides it. */}
+          <strong>{result.cleanup.matched}</strong> item{result.cleanup.matched === 1 ? "" : "s"} match;{" "}
+          <strong>{result.cleanup.dueThisRun}</strong> would be {result.cleanup.mode.replace("_", " ")}d on a real run;{" "}
+          <strong>{result.cleanup.waiting}</strong> need more consecutive matches ({result.cleanup.consecutiveRuns} in a
+          row).
+          {result.cleanup.dryRun && " This rule is in preview-only mode, so a real run would act on none of them."}
+          {result.cleanup.dueTitles.length > 0 && (
+            <div className={styles.cleanupPreviewTitles}>{result.cleanup.dueTitles.join(", ")}</div>
+          )}
+        </div>
+      )}
       {result.collections.length === 0 ? (
-        <div className={styles.testPreviewEmpty}>No collections would be created by this rule.</div>
+        <div className={styles.testPreviewEmpty}>
+          {result.cleanup ? "Nothing matched this rule." : "No collections would be created by this rule."}
+        </div>
       ) : stackWidth == null ? null : (
         <div className={styles.testPreviewStack} style={{ width: `${stackWidth}px` }}>
           {result.collections.map((col, i) => (

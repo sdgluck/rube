@@ -12,9 +12,15 @@ export const RULE_CONCURRENCY_DEFAULT = 3;
 export const RULE_CONCURRENCY_MAX = 8;
 
 export {
+  CLEANUP_MODES,
+  DEFAULT_CONSECUTIVE_RUNS,
+  DEFAULT_MAX_ACTIONS_PER_RUN,
   DEFAULT_PIN_ROTATION,
+  DESTRUCTIVE_CLEANUP_MODES,
   EXTERNAL_GROUP_RULE_TYPES,
   GROUPED_RULE_TYPES,
+  isCleanupRule,
+  isDestructiveMode,
   isGroupedRuleType,
   isNonPortableField,
   isTagField,
@@ -22,10 +28,18 @@ export {
   producesManyCollections,
   RULE_TYPE_REQUIRES,
   RULE_TYPE_VALUES,
+  ruleAction,
   ruleConfigSchema,
   TAG_FIELDS,
 } from "./rule-config.ts";
-export type { RuleConfig, RuleRequirement, RuleTypeValue } from "./rule-config.ts";
+export type {
+  CleanupActionConfig,
+  CleanupMode,
+  RuleAction,
+  RuleConfig,
+  RuleRequirement,
+  RuleTypeValue,
+} from "./rule-config.ts";
 
 export { fieldDef, fieldKind, fieldLabel, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 export type { SmartFilterFieldDef, SmartFilterFieldKind } from "./smart-filter-fields.ts";
