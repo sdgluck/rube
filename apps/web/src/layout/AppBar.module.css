@@ -3,20 +3,24 @@
 
 /* `app-bar` is a global marker: the bar is a direct child of `.content`, which
    otherwise hands it the page gutter meant for the route. */
+/* Deliberately not sticky: it scrolls away with the page. A bar pinned over
+   the content stole a band of every viewport for a breadcrumb you only read on
+   arrival, and on short viewports that band cost more than the route name was
+   worth. Scroll back up and it comes back. */
 .bar {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky, 20);
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
-  padding: 8px 28px;
+  /* Fixed, not `min-height`: see --appbar-h. The bar must measure the same
+     whether or not the page put buttons in it. */
+  box-sizing: border-box;
+  height: var(--appbar-h);
+  padding: var(--appbar-pad-y) 28px;
   background: var(--bg-page);
-  /* The bar floats over scrolling content; a hairline keeps table headers from
-     appearing to belong to it. This was a `0 1px 0` box-shadow faking a border
-     — it is a real border now, and a full-weight --line, because with nothing
-     else casting shadows the divide has to hold on its own. */
+  /* A hairline keeps table headers from appearing to belong to the bar. This
+     was a `0 1px 0` box-shadow faking a border — it is a real border now, and
+     a full-weight --line, because with nothing else casting shadows the divide
+     has to hold on its own. */
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -72,9 +76,11 @@
   flex-shrink: 0;
 }
 
+/* Narrow viewports change the gutter only — the height is the same everywhere,
+   so a page reads at the same offset on a phone as on a desktop. */
 @media (max-width: 768px) {
   .bar {
-    padding: 8px 16px;
+    padding: var(--appbar-pad-y) 16px;
   }
 
   .actions {
@@ -84,6 +90,6 @@
 
 @media (max-width: 480px) {
   .bar {
-    padding: 8px 12px;
+    padding: var(--appbar-pad-y) 12px;
   }
 }

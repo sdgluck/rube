@@ -183,6 +183,17 @@
      vertical padding. `.textarea` is the one exception — it grows. */
   --control-h: 32px;
 
+  /* The app bar is the one heading every page shares, so its height is fixed
+     rather than derived from whatever the page portalled into it: a page with
+     buttons in the bar and a page with none must not differ by a pixel, or
+     the body below shifts on every navigation. --control-h plus the bar's
+     8px vertical padding — a full-height button fits exactly, and anything
+     shorter (a count, a chip) just centres in the same box. The trailing 1px
+     is the bar's own hairline, which `box-sizing: border-box` would otherwise
+     take out of the room the button needs. */
+  --appbar-pad-y: 8px;
+  --appbar-h: calc(var(--control-h) + var(--appbar-pad-y) * 2 + 1px);
+
   --btn-radius: var(--r-md);
   --btn-pad-x: 13px;
   --btn-pad-x-sm: 10px;
@@ -758,11 +769,12 @@ p {
   padding: 0;
 }
 
-/* The app bar is chrome, not a page: it manages its own padding and must not
-   stretch to fill the column. */
+/* The app bar is chrome, not a page: it manages its own padding and height and
+   must not stretch to fill the column — `flex: 0 0 auto` also stops the column
+   shrinking it below --appbar-h on a page taller than the viewport. */
 .content > .app-bar {
   flex: 0 0 auto;
-  padding: 8px 28px;
+  padding: var(--appbar-pad-y) 28px;
 }
 
 /* Same for a notice bar. Without the `flex` reset it inherits `flex: 1` from
@@ -843,7 +855,7 @@ p {
   }
 
   .content > .app-bar {
-    padding: 8px 16px;
+    padding: var(--appbar-pad-y) 16px;
   }
 
   /* Rows become their own cards on mobile, so the wrapper stops being one. */
@@ -1022,7 +1034,7 @@ button:active:not(:disabled),
   }
 
   .content > .app-bar {
-    padding: 8px 12px;
+    padding: var(--appbar-pad-y) 12px;
   }
 }
 
