@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-08-15
+
 ### Added
 
 - **Generated collections now get a description, and can get a poster.** Every rule writes a one-line summary onto the collections it builds — "Films directed by Christopher Nolan.", "Films released between 1980 and 1989." — the moment they're created. It's deterministic and free, and it's on by default for new and existing rules.
@@ -15,6 +17,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - For rules whose logic you define yourself — AI prompts, smart filters, external lists — the description can be **written by your configured AI provider** from a sample of what actually landed in the collection. Generated once and reused until the rule changes; falls back to the templated sentence when no provider is configured.
 - A description you edit by hand in Plex is **detected and never overwritten again**, and "Revert artwork" on a rule stops all further uploads and forgets what was written.
 - Registry packs now ship presentation settings, so an imported pack arrives looking designed rather than generic.
+- New periodic **library digests**: a server-wide digest summarising library activity, and a per-user digest recommending titles filtered by that user's stated tastes. Both can be delivered to chat, and email delivery is new in this release.
+
+### Changed
+
+- **Cleanup rules (file/media deletion) now run as their own scheduled job, separate from collection-building rules, on their own 4am schedule.** Existing schedules that relied on cleanup and collection rules running together will need to be reviewed.
+- **The cleanup delete ceiling is now enforced as a rolling 24-hour cap across all runs (scheduled, manual, and concurrent) instead of resetting for every individual run.** Previously, running several cleanup rules by hand, or restarting the container mid-run, could let far more deletions through than the configured limit. The setting is renamed from a per-run limit to `cleanup_max_deletes_per_day`; existing configured values carry over automatically.
+- The UI has a new flatter visual style: square corners throughout (previously rounded), and floating drop-shadow panels replaced with hairline borders. This is a visual-only change with no configuration impact.
+
+### Fixed
+
+- The cleanup delete ceiling now actually holds across runs — it could previously be exceeded by running rules ad hoc or by a mid-run restart, both now covered by the same rolling 24-hour ledger described above.
 
 ## [0.16.2] - 2026-08-15
 
