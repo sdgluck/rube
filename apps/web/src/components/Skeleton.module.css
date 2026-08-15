@@ -11,7 +11,7 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #eef1f0 25%, #f8faf9 50%, #eef1f0 75%);
+  background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-sheen) 50%, var(--skeleton-base) 75%);
   background-size: 640px 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: var(--r-tag);
@@ -26,15 +26,46 @@
   composes: skeleton;
 }
 
-.tableRow td {
-  padding: 0 16px;
-  height: 38px;
-  border-bottom: 1px solid var(--line-soft);
+/* Row and header geometry is the real `.table`'s — see SkeletonTable. All this
+   adds is the things a table with no data in it shouldn't do: a hover highlight
+   implies a row you can click, and there isn't one yet. The selector carries an
+   extra element over `.table tr:hover td` so it wins regardless of the order the
+   two modules land in. */
+.table tbody tr:hover td {
+  background: none;
 }
 
 .tableCell {
   composes: skeleton;
   height: 11px;
+}
+
+/* Shorter than a body cell: a header is 10px uppercase type, not 13px. */
+.headCell {
+  composes: skeleton;
+  height: 8px;
+}
+
+/* Stand-ins for the filter bar's controls, at the one control height. These
+   sit on the page rather than on a table card, and the shimmer alone is a
+   shade lighter than the page — a filled block there is close to invisible.
+   They carry the same border a real input or button does instead, so the
+   toolbar reads as a row of controls waiting to be filled in. */
+.searchControl {
+  composes: skeleton;
+  width: 236px;
+  height: var(--control-h);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  flex-shrink: 0;
+}
+
+.control {
+  composes: skeleton;
+  height: var(--control-h);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  flex-shrink: 0;
 }
 
 .wrapper {
@@ -57,32 +88,6 @@
 }
 
 /* Page-specific compositions */
-
-.collectionsTable {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  border-radius: var(--r-card);
-  box-shadow: var(--e-card);
-}
-
-.collectionsTable th {
-  text-align: left;
-  padding: 0 16px;
-  height: 32px;
-  background: var(--surface-header);
-  border-bottom: 1px solid #ecefee;
-  font: var(--t-label);
-  letter-spacing: var(--t-label-tracking);
-  color: var(--ink-3);
-  text-transform: uppercase;
-}
-
-.jobsRow td {
-  padding: 0 16px;
-  height: 38px;
-  border-bottom: 1px solid var(--line-soft);
-}
 
 .detailLayout {
   display: flex;

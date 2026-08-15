@@ -1,3 +1,4 @@
+import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Skeleton.module.css";
 
 export function SkeletonLine({ width = "100%" }: { width?: string | number }) {
@@ -12,76 +13,98 @@ export function SkeletonBlock({ width, height }: { width: string | number; heigh
   return <div className={styles.block} style={{ width, height }} />;
 }
 
-export function SkeletonTable({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
+/**
+ * The filter bar a list page carries above its table: a search field, then
+ * however many selects and buttons that page has. Real `.filters` geometry, so
+ * the row it stands in for is the same height and the same distance above the
+ * table.
+ */
+export function SkeletonToolbar({ controls = 2 }: { controls?: number }) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <tbody>
-        {Array.from({ length: rows }, (_, r) => (
-          <tr key={r} className={styles.tableRow}>
-            {Array.from({ length: columns }, (_, c) => (
-              <td key={c}>
-                <div className={styles.tableCell} style={{ width: c === 0 ? "40%" : `${30 + ((r + c) % 3) * 15}%` }} />
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className={sharedStyles.filters} aria-hidden="true">
+      <div className={styles.searchControl} />
+      {Array.from({ length: controls }, (_, i) => (
+        <div key={i} className={styles.control} style={{ width: 92 + (i % 3) * 26 }} />
+      ))}
+    </div>
   );
 }
 
-export function CollectionsSkeleton() {
+/**
+ * Geometry comes from the real `.table` and `.table-scroll` rather than a copy
+ * of them: same card, same 32px header row, same 38px body rows. The skeleton
+ * used to render a bare `<tbody>` with no header and no card, so the table
+ * gained a header row and grew a surface around it the moment the data landed —
+ * nothing *moved*, which is why this never showed up as a layout shift, but the
+ * page visibly rearranged.
+ */
+export function SkeletonTable({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
   return (
-    <div className={styles.wrapper}>
-      <SkeletonLine width="200px" />
-      <SkeletonTable rows={8} columns={6} />
+    <div className="table-scroll">
+      <table className={`${sharedStyles.table} ${styles.table}`} aria-hidden="true">
+        <thead>
+          <tr>
+            {Array.from({ length: columns }, (_, c) => (
+              <th key={c}>
+                <div className={styles.headCell} style={{ width: `${44 + (c % 3) * 14}%` }} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }, (_, r) => (
+            <tr key={r}>
+              {Array.from({ length: columns }, (_, c) => (
+                <td key={c}>
+                  <div
+                    className={styles.tableCell}
+                    style={{ width: c === 0 ? "40%" : `${30 + ((r + c) % 3) * 15}%` }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
+}
+
+/** Toolbar over table — the shape every list page resolves to. */
+function ListSkeletonPage({ rows, columns, controls }: { rows: number; columns: number; controls: number }) {
+  return (
+    <>
+      <SkeletonToolbar controls={controls} />
+      <SkeletonTable rows={rows} columns={columns} />
+    </>
+  );
+}
+
+/* Row and column counts track what each page actually renders, so the table
+   doesn't change width or depth when the data arrives. */
+
+export function CollectionsSkeleton() {
+  return <ListSkeletonPage rows={8} columns={7} controls={4} />;
 }
 
 export function JobsSkeleton() {
-  return (
-    <div className={styles.wrapper}>
-      <SkeletonLine width="150px" />
-      <SkeletonTable rows={6} columns={5} />
-    </div>
-  );
+  return <ListSkeletonPage rows={6} columns={5} controls={2} />;
 }
 
 export function UsersSkeleton() {
-  return (
-    <div className={styles.wrapper}>
-      <SkeletonLine width="150px" />
-      <SkeletonTable rows={6} columns={5} />
-    </div>
-  );
+  return <ListSkeletonPage rows={6} columns={6} controls={1} />;
 }
 
 export function EventsSkeleton() {
-  return (
-    <div className={styles.wrapper}>
-      <SkeletonLine width="150px" />
-      <SkeletonTable rows={8} columns={3} />
-    </div>
-  );
+  return <ListSkeletonPage rows={8} columns={4} controls={2} />;
 }
 
 export function MediaSkeleton() {
-  return (
-    <div className={styles.wrapper}>
-      <SkeletonLine width="150px" />
-      <SkeletonTable rows={8} columns={4} />
-    </div>
-  );
+  return <ListSkeletonPage rows={8} columns={5} controls={4} />;
 }
 
 export function RulesSkeleton() {
-  return (
-    <div className={styles.wrapper}>
-      <SkeletonLine width="150px" />
-      <SkeletonTable rows={5} columns={5} />
-    </div>
-  );
+  return <ListSkeletonPage rows={5} columns={5} controls={2} />;
 }
 
 export function PrerollsSkeleton() {

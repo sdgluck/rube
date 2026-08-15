@@ -24,6 +24,11 @@
   --fill-quiet: #f2f5f4;
   --line: #d4dbda;
   --line-soft: #f4f6f6;
+  /* Loading placeholders: the resting fill and the highlight that sweeps
+     across it. Tokens rather than literals so they follow the scheme — as
+     hardcoded values the skeletons stayed near-white on a dark page. */
+  --skeleton-base: #eef1f0;
+  --skeleton-sheen: #f8faf9;
   /* Overlay edges only — dropdowns, popovers, modals. These used to be told
      apart from the page by a drop shadow; with elevation flattened, the only
      thing left to do that job is a border heavier than --line. */
@@ -285,6 +290,10 @@
     --fill-quiet: #1b2524;
     --line: #2d3837;
     --line-soft: #1e2827;
+    /* A shade above --surface, the way the light pair sits a shade below the
+       page: a placeholder reads as an absence of content, not as content. */
+    --skeleton-base: #1b2524;
+    --skeleton-sheen: #24302e;
     /* Proportionally further from --line than the light pair, because the
        whole dark range is compressed: an overlay edge that only just beats the
        surface below it disappears entirely on a dim panel. */
