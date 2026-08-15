@@ -1,7 +1,9 @@
 import {
+  defaultMinItemsForRuleType,
   fieldLabel,
   isDestructiveMode,
   isGroupedRuleType,
+  minItemsOnByDefault,
   posterUrlError,
   producesManyCollections,
   type RuleTypeValue,
@@ -248,11 +250,24 @@ export function typeHasMinItems(type: string): boolean {
   return typeProducesManyCollections(type);
 }
 
-/** Pre-filled value when the user switches the optional min-items floor on. */
+/**
+ * Pre-filled value for the min-items floor — and, for the types that fan out
+ * hardest, the value a new rule starts with the floor already switched on.
+ * Shared with contracts so the wizard's default and the volume estimate that
+ * justifies it can't drift apart.
+ */
 export function defaultMinItemsForType(type: string): number {
-  if (type === "ai_prompt") return 15;
-  if (type === "tmdb_franchises") return 2;
-  return 3;
+  return defaultMinItemsForRuleType(type);
+}
+
+/**
+ * Whether a new rule of this type starts with the floor on. High-cardinality
+ * types do: "one collection per production company, including the ones with a
+ * single film" is a setting nobody chooses on purpose, so it shouldn't be
+ * what they get by not choosing.
+ */
+export function typeMinItemsOnByDefault(type: string): boolean {
+  return typeHasMinItems(type) && minItemsOnByDefault(type);
 }
 
 export function defaultLimitForType(type: string): number {

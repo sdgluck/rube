@@ -41,6 +41,17 @@ export type {
   RuleTypeValue,
 } from "./rule-config.ts";
 
+export {
+  approximateCount,
+  defaultMinItemsForRuleType,
+  estimateCollectionCount,
+  minItemsOnByDefault,
+  VOLUME_SEVERE_THRESHOLD,
+  VOLUME_WARN_THRESHOLD,
+  volumeLevel,
+} from "./collection-volume.ts";
+export type { VolumeEstimateInput, VolumeLevel } from "./collection-volume.ts";
+
 export { fieldDef, fieldKind, fieldLabel, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 export type { SmartFilterFieldDef, SmartFilterFieldKind } from "./smart-filter-fields.ts";
 

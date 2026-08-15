@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { describeCondition, isDestructiveMode, templatedCollectionSummary } from "@tinkerbell/contracts";
+import {
+  approximateCount,
+  describeCondition,
+  estimateCollectionCount,
+  isDestructiveMode,
+  templatedCollectionSummary,
+  volumeLevel,
+} from "@tinkerbell/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
@@ -26,6 +33,7 @@ import {
   rulePins,
   typeHasMinItems,
   typeHasOptionalLimit,
+  typeMinItemsOnByDefault,
   typeProducesManyCollections,
   validateStep,
   type StepId,
@@ -218,13 +226,17 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   }, [open, initial, mode]);
 
   // When type changes (create mode), reset limit / min-items to type defaults.
-  // Grouped types default both to 0 — "no cap, no floor".
+  // Grouped types still default to no cap — capping to the N largest silently
+  // drops groups the user never heard about. The floor is different: for the
+  // types that fan out into thousands of one-item groups it starts on, because
+  // "every production company that ever took a credit" is not a library
+  // anybody asked for. Low-cardinality types (decades, genres) still get 0.
   useEffect(() => {
     if (mode === "edit") return;
     setForm((prev) => ({
       ...prev,
       limit: defaultLimitForType(prev.type),
-      minItems: prev.type === "ai_prompt" ? defaultMinItemsForType(prev.type) : 0,
+      minItems: prev.type === "ai_prompt" || typeMinItemsOnByDefault(prev.type) ? defaultMinItemsForType(prev.type) : 0,
     }));
   }, [form.type, mode]);
 
@@ -236,6 +248,38 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     [sections, requiredSectionType],
   );
   const sectionsLocked = form.type === "imdb_chart" && !!requiredSectionType;
+
+  /**
+   * Library size behind the current scope, and the collection count it
+   * implies. Only fetched for the types where the answer can be alarming —
+   * a single-collection rule builds one collection whatever the library holds.
+   */
+  const volumeMatters = typeProducesManyCollections(form.type);
+  const itemCountsQuery = trpc.plexSectionItemCounts.useQuery(undefined, {
+    enabled: open && volumeMatters,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
+  const volume = useMemo(() => {
+    if (!volumeMatters) return null;
+    const counts = itemCountsQuery.data;
+    if (!counts) return null;
+    // An empty selection means every available section, which is what the
+    // Sections chips and the job both take it to mean.
+    const scoped =
+      form.sections.length > 0 ? availableSections.filter((s) => form.sections.includes(s.title)) : availableSections;
+    const libraryItems = scoped.reduce((sum, s) => sum + (counts[s.title] ?? 0), 0);
+    const estimate = estimateCollectionCount({
+      type: form.type,
+      libraryItems,
+      minItems: form.minItems,
+      limit: form.limit,
+    });
+    if (estimate === null) return null;
+    return { estimate, libraryItems, level: volumeLevel(estimate) };
+  }, [volumeMatters, itemCountsQuery.data, form.sections, form.type, form.minItems, form.limit, availableSections]);
 
   /**
    * The section whose tag values populate the smart-filter pickers. A rule
@@ -395,6 +439,53 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return <SourceComponent form={form} setForm={setForm} config={{ seerrConfigured }} tagSectionId={tagSectionId} />;
   }
 
+  /**
+   * "This rule will build about N collections", and a warning when N is a
+   * number nobody meant to ask for.
+   *
+   * Sits under the min-items field because raising that floor is the fix, and
+   * the estimate re-reads as you type it — the number moving is what makes the
+   * connection. Non-blocking on purpose: a user who genuinely wants a
+   * collection per production company is allowed to have one, they just
+   * shouldn't get there by accident.
+   */
+  function renderVolumeEstimate() {
+    if (!volume) return null;
+    const noun = groupNounForType(form.type);
+    const count = approximateCount(volume.estimate);
+    const items = volume.libraryItems.toLocaleString();
+
+    if (volume.level === "ok") {
+      return (
+        <p className={styles.hint}>
+          Roughly <strong>{count}</strong> collections, one per {noun}, across {items} items.
+        </p>
+      );
+    }
+
+    const severe = volume.level === "severe";
+    return (
+      <div className={styles.volumePanel} data-tone={volume.level} role="status">
+        <p className={styles.volumePanelHeading}>
+          {severe ? `This will build around ${count} collections` : `That's around ${count} collections`}
+        </p>
+        <p className={styles.volumePanelBody}>
+          One per {noun} across {items} items in the selected sections.{" "}
+          {severe
+            ? `Most of them will hold one or two titles, and building that many is enough Plex writes to make the server itself start refusing them mid-run.`
+            : `The long tail of that is ${noun}s with one or two titles.`}{" "}
+          {form.minItems > 0
+            ? `Raise the minimum above ${form.minItems} to cut it down.`
+            : `Switch on "Skip small collections" above to cut it down.`}
+        </p>
+        <p className={styles.volumePanelBody}>
+          Estimated from your library size — the real number depends on your metadata, so treat it as an order of
+          magnitude.
+        </p>
+      </div>
+    );
+  }
+
   function renderScopeStep() {
     return (
       <>
@@ -552,6 +643,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             </span>
           </div>
         )}
+
+        {renderVolumeEstimate()}
 
         {form.type === "rt_top_rated" && !omdbConfigured && (
           <p className={styles.hint}>Heads-up: OMDB API key is not configured in Settings → AI.</p>
@@ -1279,6 +1372,21 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 className={styles.summaryEdit}
                 onClick={() => jumpTo(form.type === "ai_prompt" ? "source" : "scope")}
               >
+                Edit
+              </button>
+            </div>
+          )}
+          {/* The last place the volume is visible before the rule is saved —
+              the Scope step is several clicks back by now, and "about 5,000"
+              is worth reading twice. */}
+          {volume && (
+            <div className={styles.summaryRow} data-tone={volume.level === "ok" ? undefined : volume.level}>
+              <span className={styles.summaryLabel}>Collections</span>
+              <span className={styles.summaryValue}>
+                Roughly {approximateCount(volume.estimate)}
+                {volume.level !== "ok" && " — more than most libraries want"}
+              </span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
                 Edit
               </button>
             </div>

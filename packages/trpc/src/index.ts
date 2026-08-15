@@ -78,6 +78,32 @@ export const appRouter = t.router({
     return sections.map((s) => ({ key: s.key, title: s.title, type: s.type }));
   }),
 
+  /**
+   * Item count per section, keyed by title because that is what a rule's
+   * `sections` list holds.
+   *
+   * One `totalSize`-only request per section, so it is cheap enough for the
+   * rule wizard to ask on open — it needs a denominator to estimate how many
+   * collections a grouped rule would build. A section Plex won't count is
+   * omitted rather than fatal; the estimate degrades to "unknown", which is
+   * the honest answer.
+   */
+  plexSectionItemCounts: procedure.query(async () => {
+    const client = getPlexClient();
+    const sections = getLocalSections();
+    const counts: Record<string, number> = {};
+    await Promise.all(
+      sections.map(async (section) => {
+        try {
+          counts[section.title] = await client.getSectionItemCount(section.key);
+        } catch {
+          // Left out deliberately — see above.
+        }
+      }),
+    );
+    return counts;
+  }),
+
   refreshSections: procedure.mutation(async () => {
     const client = getPlexClient();
     const stats = await syncSections(client);
