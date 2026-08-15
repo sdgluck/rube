@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-08-15
+
+### Added
+
+- The rule wizard now shows an estimated collection count for the current scope, and warns when a rule looks likely to build thousands of collections.
+
+### Changed
+
+- **Grouped rule types that fan out per item (e.g. studios) now default to a minimum group size, so a "Studios" rule no longer tries to build a separate collection for every single-film studio in your library.** Low-cardinality types like genres, decades, and resolutions are unaffected and keep no floor.
+
+### Fixed
+
+- Deleting a collection that Plex had already removed (returning a 404) no longer fails and leaves the stale entry on screen — Tinkerbell now clears it locally and tells you it was already gone.
+- Panels on the Stats and Jobs dashboards no longer swap places under your cursor as their contents update (e.g. a stream starting or a job finishing); each panel now keeps a fixed position. Summary tiles also no longer change height as their values load in, so they no longer shift the rest of the page.
+
 ## [0.17.2] - 2026-08-15
 
 ### Fixed
