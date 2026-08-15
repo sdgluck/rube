@@ -7,7 +7,7 @@ import {
   type SmartCollectionInput,
 } from "@tinkerbell/migrate";
 import { listProviders } from "../registry.ts";
-import { summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
+import { isTinkerbellOwned, summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
 
 function loadPlexSmartCollectionInputs(): SmartCollectionInput[] {
   const rows = db
@@ -36,13 +36,16 @@ function loadPlexSmartCollectionInputs(): SmartCollectionInput[] {
 
 /**
  * Drop rows that another provider already claims (e.g. Kometa-labeled
- * smart collections belong to Kometa, not the generic Plex Smart importer).
- * Keeps Plex Smart as the catch-all for user-authored smart collections
- * that don't fall under a more specific provider's claim.
+ * smart collections belong to Kometa, not the generic Plex Smart importer),
+ * and rows this server generated itself. Keeps Plex Smart as the catch-all for
+ * *user-authored* smart collections that don't fall under a more specific
+ * provider's claim — being the catch-all is exactly why it has to exclude our
+ * own output explicitly: no other provider claims it, so without this every
+ * generated collection reads as an unmigrated one.
  */
 function rejectClaimedByOthers(inputs: SmartCollectionInput[]): SmartCollectionInput[] {
   const others = listProviders().filter((p) => p.id !== PLEX_SMART_RUNTIME.id);
-  return inputs.filter((c) => !others.some((p) => p.claims(c)));
+  return inputs.filter((c) => !isTinkerbellOwned(c) && !others.some((p) => p.claims(c)));
 }
 
 export const PLEX_SMART_RUNTIME: ProviderRuntime = {

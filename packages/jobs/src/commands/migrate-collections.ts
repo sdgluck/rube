@@ -1,10 +1,18 @@
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { deleteConfig, getConfig } from "@tinkerbell/core";
-import { createRule } from "@tinkerbell/domain.rules";
+import { createRule, getRules } from "@tinkerbell/domain.rules";
 import { forgetCollections } from "@tinkerbell/domain.collections";
 import { markProviderCompleted, scanProviderState } from "@tinkerbell/domain.migration";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+
+function dedupeName(name: string, taken: Set<string>): string {
+  if (!taken.has(name)) return name;
+  for (let n = 2; ; n++) {
+    const candidate = `${name} (${n})`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
 
 export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
   ctx.log("tinkerbell migrate-collections");
@@ -22,16 +30,25 @@ export default async function run(ctx: JobContext, _config: CommonJobConfig): Pr
   let step = 0;
 
   // 1. Create rules (disabled by default per the migration design)
+  //
+  // Names are suffixed on collision, the way registry import and the Rules
+  // page's own duplicate action do it. A migrated rule landing under a name
+  // that already exists is otherwise invisible: two rows reading identically,
+  // distinguishable only by one of them being switched off.
+  const taken = new Set(getRules().map((r) => r.name));
   for (const item of items) {
     ctx.signal?.throwIfAborted();
     step++;
     ctx.progress(step, totalSteps, `Creating rule "${item.ruleName}"...`);
+    const name = dedupeName(item.ruleName, taken);
+    taken.add(name);
     const rule = createRule({
-      name: item.ruleName,
+      name,
       type: item.ruleType,
       config: item.ruleConfig,
       enabled: false,
     });
+    if (name !== item.ruleName) ctx.log(`"${item.ruleName}" already exists — migrated rule named "${name}".`);
     ctx.log(`Created rule "${rule.name}" (${rule.type}, id=${rule.id}, disabled).`);
   }
 

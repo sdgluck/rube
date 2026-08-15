@@ -58,6 +58,25 @@ export interface MigrationStatus {
 }
 
 /**
+ * True if this collection is Tinkerbell's own output.
+ *
+ * Migration exists to adopt collections *somebody else* built. A collection
+ * this server generated is already described by the rule that generated it, so
+ * adopting it mints a second rule saying the same thing — and because the
+ * generated collection is named after its rule, the pair is indistinguishable
+ * in the rules list except that the copy is disabled and has never run.
+ *
+ * `Rule:<id>` is the load-bearing half: every generate run stamps it, and it is
+ * what the sweep and delete paths key on. The bare `Tinkerbell` label is
+ * checked too, but it is a weaker signal on its own — the label job puts it on
+ * media items, so a user's hand-made smart collection *of* labelled items could
+ * carry it without being ours.
+ */
+export function isTinkerbellOwned(input: CollectionInput): boolean {
+  return input.labels.some((l) => l === "Tinkerbell" || l.startsWith("Rule:"));
+}
+
+/**
  * Compress a flat list of source items into the per-section count
  * shape used by the status UI. Shared between every Plex-table-backed
  * runtime so they don't each reinvent the grouping.
