@@ -187,7 +187,7 @@
   height: 32px;
   padding: 0;
   border: 1px solid var(--border-input);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: none;
   cursor: pointer;
 }
@@ -206,7 +206,7 @@
   justify-content: center;
   aspect-ratio: 1;
   border: 1px solid var(--border-input);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg-input);
   color: var(--text-secondary);
   cursor: pointer;
@@ -224,7 +224,7 @@
 /* Live preview */
 .preview {
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   overflow: hidden;
 }
 
@@ -245,7 +245,7 @@
   text-align: center;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   padding: 22px;
   box-shadow: var(--e-float);
 }
@@ -270,7 +270,7 @@
   background: #e5a00d;
   color: #1b1b1b;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 9px 18px;
   font-weight: 600;
 }

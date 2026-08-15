@@ -1,7 +1,10 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 22, 21, 0.32);
+  /* Deeper than it was. The panel used to sit on a 48px drop shadow that did
+     half the work of lifting it off the page; with the shadow gone the scrim
+     is the separation, so it has to actually darken what is behind it. */
+  background: rgba(15, 22, 21, 0.48);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;

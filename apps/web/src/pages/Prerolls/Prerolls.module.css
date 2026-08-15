@@ -105,7 +105,7 @@
 .progressFill {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent);
   transition: width 0.2s ease;
 }
@@ -123,7 +123,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--bg-surface);
   overflow: hidden;
 }
@@ -292,10 +292,12 @@
   gap: 12px;
   margin-top: 16px;
   padding: 11px 14px;
-  border: none;
+  /* The upward shadow used to separate this sticky bar from the list scrolling
+     under it. A full border does that now — --line-strong rather than --line,
+     because this one overlaps content instead of sitting beside it. */
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-card);
   background: var(--surface);
-  box-shadow: 0 -12px 36px -14px rgba(19, 28, 27, 0.28);
 }
 
 .syncSummary {
@@ -361,7 +363,7 @@
 .player {
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: #000;
   margin-bottom: 16px;
 }
@@ -369,7 +371,7 @@
 .detailNotice {
   margin: 0 0 16px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg-muted);
   color: var(--text-secondary);
   font-size: 12.5px;
@@ -422,7 +424,7 @@
 .reasons {
   margin-bottom: 16px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg-muted);
 }
 

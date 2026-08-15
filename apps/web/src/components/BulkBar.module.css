@@ -10,7 +10,7 @@
   gap: 8px;
   padding: 9px 14px;
   background: var(--inverse);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   box-shadow: var(--e-inverse);
   margin-bottom: 12px;
   color: #e6f2f0;

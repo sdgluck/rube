@@ -1,6 +1,12 @@
+/* Deliberately exempt from the flat pass. This draws browser chrome around a
+   product screenshot; the rounded corner and the shadow are what make it read
+   as a window floating on the page rather than as part of the page. Squaring
+   it would not look professional, it would look like a broken screenshot. The
+   literals are inline rather than tokens so a future radius change to the site
+   cannot silently un-round the window. */
 .frame {
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   overflow: hidden;
   background: var(--bg-elevated);
   box-shadow:
@@ -31,7 +37,9 @@
   color: var(--text-muted);
   background: var(--bg-page);
   padding: 4px 14px;
-  border-radius: 20px;
+  /* Part of the browser chrome above, not the site's own UI — a URL bar is a
+     pill everywhere it exists. */
+  border-radius: 999px;
   border: 1px solid var(--border);
 }
 

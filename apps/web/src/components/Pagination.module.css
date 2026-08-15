@@ -8,9 +8,9 @@
   gap: 12px;
   padding: 11px 16px;
   background: var(--surface-header);
-  border-top: 1px solid #ecefee;
+  border: 1px solid var(--line);
+  border-top-color: var(--line-soft);
   border-radius: 0 0 var(--r-card) var(--r-card);
-  box-shadow: var(--e-card);
   flex-wrap: wrap;
 }
 
