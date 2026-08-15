@@ -4,6 +4,7 @@ import { errorMessage } from "@tinkerbell/core";
 import type { JobContext } from "@tinkerbell/core";
 import type { Rule } from "@tinkerbell/domain.rules";
 import type { RuleConfig } from "./config.ts";
+import { imdbId, tmdbId } from "./guids.ts";
 import { fetchImdbChart, fetchImdbList } from "./sources/imdb.ts";
 import { lookupBelongsToCollection } from "./sources/tmdb.ts";
 import { chunked, mapConcurrent } from "#jobs/concurrency.ts";
@@ -124,13 +125,8 @@ async function collectImdbUnmatched(
     if (section.type === "show") mediaTypeHint = "tv";
     const items = await client.allItemsWithGuids(section.key);
     for (const item of items) {
-      for (const guid of item.guids) {
-        const m = guid.match(/imdb:\/\/(tt\d+)/);
-        if (m) {
-          present.add(m[1]);
-          break;
-        }
-      }
+      const id = imdbId(item);
+      if (id) present.add(id);
     }
   }
 
@@ -158,13 +154,8 @@ async function collectSeerrUnmatched(
     const items = await client.allItemsWithGuids(section.key);
     const target = section.type === "movie" ? presentMovie : presentTv;
     for (const item of items) {
-      for (const guid of item.guids) {
-        const m = guid.match(/tmdb:\/\/(\d+)/);
-        if (m) {
-          target.add(parseInt(m[1], 10));
-          break;
-        }
-      }
+      const id = tmdbId(item);
+      if (id != null) target.add(id);
     }
   }
 
@@ -206,13 +197,8 @@ async function collectTmdbPeopleUnmatched(
     const items = await client.allItemsWithGuids(section.key);
     const target = section.type === "movie" ? presentMovie : presentTv;
     for (const item of items) {
-      for (const guid of item.guids) {
-        const m = guid.match(/tmdb:\/\/(\d+)/);
-        if (m) {
-          target.add(parseInt(m[1], 10));
-          break;
-        }
-      }
+      const id = tmdbId(item);
+      if (id != null) target.add(id);
     }
   }
 
@@ -269,15 +255,10 @@ async function collectTmdbFranchisesUnmatched(
     const tmdbPresent = new Set<number>();
     const ratingKeyToTmdb = new Map<string, number>();
     for (const item of items) {
-      for (const guid of item.guids) {
-        const m = guid.match(/tmdb:\/\/(\d+)/);
-        if (m) {
-          const id = parseInt(m[1], 10);
-          tmdbPresent.add(id);
-          ratingKeyToTmdb.set(item.ratingKey, id);
-          break;
-        }
-      }
+      const id = tmdbId(item);
+      if (id == null) continue;
+      tmdbPresent.add(id);
+      ratingKeyToTmdb.set(item.ratingKey, id);
     }
 
     const groups = await client.fetchGroupedByField(section.key, "collection", groupLimit);

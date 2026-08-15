@@ -4,6 +4,8 @@ import { plexHealthCallback } from "@tinkerbell/core";
 import { getRule } from "@tinkerbell/domain.rules";
 import { createLogger, noopCheckpoint, type JobContext } from "@tinkerbell/core";
 
+import { ruleAction } from "@tinkerbell/contracts";
+import { listCandidates } from "@tinkerbell/domain.cleanup";
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";
 
@@ -15,10 +17,33 @@ export interface TestCollectionPreview {
   items: Array<{ ratingKey: string; title: string; year?: number; thumb?: string }>;
 }
 
+/**
+ * What a cleanup rule would do, without doing any of it.
+ *
+ * A preview that showed only the final number would hide the interesting case:
+ * a rule matching 800 items of which 3 are due tells you something very
+ * different from one matching 3. Both counts, always.
+ */
+export interface TestCleanupPreview {
+  mode: string;
+  dryRun: boolean;
+  consecutiveRuns: number;
+  /** Items the selection matched this time. */
+  matched: number;
+  /** Of those, how many would be actioned if this were a real run. */
+  dueThisRun: number;
+  /** The rest — still building a streak. */
+  waiting: number;
+  /** Titles that would be actioned, for the preview list. */
+  dueTitles: string[];
+}
+
 export interface TestRuleResult {
   collections: TestCollectionPreview[];
   tokensIn?: number;
   tokensOut?: number;
+  /** Set only for rules whose outcome is cleanup. */
+  cleanup?: TestCleanupPreview;
 }
 
 /**
@@ -107,6 +132,40 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
 
   const totalItems = collections.reduce((sum, c) => sum + c.items.length, 0);
 
+  // For a cleanup rule the collections above are the *candidate* set, not
+  // something that would be built as-is. Work out what would actually happen,
+  // reading the ledger without writing to it — a preview must never advance a
+  // streak, or previewing three times would be enough to delete something.
+  const action = ruleAction(ruleConfig);
+  let cleanup: TestCleanupPreview | undefined;
+  if (action.kind === "cleanup") {
+    const existing = new Map(listCandidates(rule.id).map((c) => [c.ratingKey, c]));
+    const due: string[] = [];
+    let waiting = 0;
+    for (const collection of collections) {
+      for (const item of collection.items) {
+        const row = existing.get(item.ratingKey);
+        if (row?.actionedAt != null) continue;
+        const held = row?.heldUntil != null && row.heldUntil > Date.now();
+        const wouldBe = (row?.streak ?? 0) + 1;
+        if (!held && wouldBe >= action.consecutiveRuns) due.push(item.title);
+        else waiting++;
+      }
+    }
+    cleanup = {
+      mode: action.mode,
+      dryRun: action.dryRun,
+      consecutiveRuns: action.consecutiveRuns,
+      matched: totalItems,
+      dueThisRun: due.length,
+      waiting,
+      dueTitles: due.slice(0, 50),
+    };
+    log(
+      `Cleanup preview: ${totalItems} item(s) match; ${due.length} would be ${action.mode}d on a real run; ${waiting} need more consecutive matches.`,
+    );
+  }
+
   // Enrich items with thumb paths so the UI can render posters. One batched
   // request across all collections, then back-fill each item.
   const allKeys = Array.from(new Set(collections.flatMap((c) => c.items.map((i) => i.ratingKey))));
@@ -135,6 +194,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     collections,
     tokensIn: tokensIn || undefined,
     tokensOut: tokensOut || undefined,
+    cleanup,
   };
 }
 

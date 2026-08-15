@@ -1,5 +1,6 @@
 import type { PlexSection } from "@tinkerbell/plex";
-import { DEFAULT_PIN_ROTATION, producesManyCollections } from "@tinkerbell/contracts";
+import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@tinkerbell/contracts";
+import { runHandlerWithCleanup, type CleanupBudget } from "./cleanup.ts";
 import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rule-history";
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
 import { commitCollection, COMMIT_CONCURRENCY } from "./finalize.ts";
@@ -75,6 +76,42 @@ export function handlerForRule(ruleType: string): Handler | null {
     default:
       return null;
   }
+}
+
+export interface RunHandlerResult {
+  lastCollectionKey: string | null;
+  collectionCount: number;
+  itemCount: number;
+}
+
+/**
+ * Run a rule to its ending.
+ *
+ * A rule is (selection) → (action). Selection is the handler and is shared;
+ * the action is either "make a collection" — every rule that has ever existed
+ * — or "clean up", which selects identically and then queues, labels,
+ * unmonitors or deletes instead.
+ *
+ * A rule with no `action` in its config is a collection rule, so nothing
+ * predating this branch changes behaviour or needs migrating.
+ */
+export async function runHandler(
+  deps: HandlerDeps,
+  machineId: string,
+  labels: string[],
+  budget: CleanupBudget,
+): Promise<RunHandlerResult> {
+  const action = ruleAction(deps.ruleConfig);
+  if (action.kind === "collection") return runHandlerWithCommits(deps, machineId, labels);
+
+  const handler = handlerForRule(deps.rule.type);
+  if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
+
+  const outcome = await runHandlerWithCleanup(deps, action, machineId, labels, budget, handler);
+  // A cleanup rule builds one shelf collection per section, but the rule's
+  // "last collection" pointer is meaningless for it — the Rules table shows
+  // queued/actioned counts instead.
+  return { lastCollectionKey: null, collectionCount: 0, itemCount: outcome.matched };
 }
 
 /**

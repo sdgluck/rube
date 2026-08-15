@@ -38,6 +38,21 @@ export interface PersistedTestResult {
   error?: string;
   tokensIn?: number;
   tokensOut?: number;
+  /**
+   * For a cleanup rule: how many of the matched items would actually be
+   * actioned on a real run, and how many are still building a streak. A
+   * preview showing only the match count would hide the difference between
+   * "800 matched, 3 due" and "3 matched, 3 due".
+   */
+  cleanup?: {
+    mode: string;
+    dryRun: boolean;
+    consecutiveRuns: number;
+    matched: number;
+    dueThisRun: number;
+    waiting: number;
+    dueTitles: string[];
+  };
 }
 
 /**

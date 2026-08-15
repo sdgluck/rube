@@ -1,4 +1,10 @@
-import { fieldLabel, isGroupedRuleType, producesManyCollections, type RuleTypeValue } from "@tinkerbell/contracts";
+import {
+  fieldLabel,
+  isDestructiveMode,
+  isGroupedRuleType,
+  producesManyCollections,
+  type RuleTypeValue,
+} from "@tinkerbell/contracts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import { hasSourceStep } from "./sources/index.ts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
@@ -391,13 +397,16 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
 
 // ─── Steps ──────────────────────────────────────────────────────────────
 
-export type StepId = "type" | "source" | "scope" | "actions" | "review";
+export type StepId = "type" | "source" | "scope" | "outcome" | "actions" | "review";
 
 export function stepsFor(type: string, mode: "create" | "edit"): { id: StepId; label: string }[] {
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
   if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
   steps.push({ id: "scope", label: "Scope" });
+  // Every rule type can end in cleanup — the selection half is identical, so
+  // restricting it would be arbitrary.
+  steps.push({ id: "outcome", label: "Outcome" });
   if (typeHasActionsStep(type)) steps.push({ id: "actions", label: "Actions" });
   steps.push({ id: "review", label: "Review" });
   return steps;
@@ -414,6 +423,26 @@ export function pinRotationError(form: RuleFormState): string | null {
   if (!form.pinToHomepage) return null;
   if (!typeProducesManyCollections(form.type)) return null;
   return form.pinRotationCount > 0 ? null : "Choose how many collections to keep on the homepage at a time.";
+}
+
+/**
+ * A cleanup rule has to be spelled out before it can be saved.
+ *
+ * The streak floor is the important one: `consecutiveRuns: 1` means the very
+ * first match deletes, which removes the only protection against a metadata
+ * blip. The schema permits it (an expert may genuinely want it on a labelling
+ * rule) but the wizard will not hand it to someone by accident.
+ */
+export function outcomeError(form: RuleFormState): string | null {
+  const o = form.outcome;
+  if (o.kind !== "cleanup") return null;
+  if (!o.mode) return "Choose what should happen to matching items.";
+  if (o.consecutiveRuns < 1) return "Items must match at least one run.";
+  if (isDestructiveMode(o.mode) && o.consecutiveRuns < 2) {
+    return "A rule that removes things must require at least two consecutive matching runs.";
+  }
+  if (o.maxActionsPerRun < 1) return "Set a per-run limit of at least one item.";
+  return null;
 }
 
 export function validateStep(step: StepId, form: RuleFormState): string | null {
@@ -433,6 +462,7 @@ export function validateStep(step: StepId, form: RuleFormState): string | null {
     return null;
   }
   if (step === "scope") return pinRotationError(form);
+  if (step === "outcome") return outcomeError(form);
   if (step === "actions") {
     if (form.arr.enabled) {
       if (!form.arr.qualityProfileId) return "Pick a quality profile.";

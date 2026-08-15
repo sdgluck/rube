@@ -183,6 +183,13 @@
       "when": 1786775253287,
       "tag": "0025_neat_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1786778017415,
+      "tag": "0026_thin_crystal",
+      "breakpoints": true
     }
   ]
 }
