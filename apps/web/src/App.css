@@ -194,6 +194,12 @@
   --appbar-pad-y: 8px;
   --appbar-h: calc(var(--control-h) + var(--appbar-pad-y) * 2 + 1px);
 
+  /* The sidebar's metric slot — a count, an error pill, a status dot or the
+     placeholder that stands in before `nav.metrics` resolves. One height for
+     all four, so a nav row never changes size when its value arrives. 16px is
+     the tallest: a count's 10.5px/1.3 line box plus its 1px padding. */
+  --nav-metric-h: 16px;
+
   --btn-radius: var(--r-md);
   --btn-pad-x: 13px;
   --btn-pad-x-sm: 10px;
@@ -511,10 +517,19 @@ p {
   margin-top: 14px;
 }
 
+/* Pinned, not grown from its contents. The metric slot on the right changes
+   size when `nav.metrics` resolves — an 8px placeholder becomes a 16px count,
+   a 6px status dot or a stream badge — and with `align-items: center` that
+   dragged every link with a value 2px taller a few hundred ms into a cold
+   load, settling the whole rail after the page had already painted. 30px is
+   the tallest state (--nav-metric-h plus the 7px padding either side), so the
+   slot can now swap contents without moving anything. */
 .nav-link {
   display: flex;
   align-items: center;
   gap: 9px;
+  box-sizing: border-box;
+  min-height: calc(var(--nav-metric-h) + 14px);
   padding: 7px 10px;
   border-radius: var(--r-md);
   color: rgba(242, 246, 245, 0.6);
@@ -551,10 +566,14 @@ p {
   padding: 1px 6px;
 }
 
-/* Reserve space even when there's no value, so labels stay aligned. */
+/* Reserve space even when there's no value, so labels stay aligned — on both
+   axes. This used to reserve 6px of height against a count's 14px line box,
+   which is what made the row grow when the metric arrived; --nav-link's
+   min-height now holds the row regardless, and matching here keeps the
+   placeholder honest about what it stands in for. */
 .nav-metric-placeholder {
   width: 6px;
-  height: 6px;
+  height: calc(var(--nav-metric-h) - 2px);
   padding: 1px 6px;
   box-sizing: content-box;
 }
