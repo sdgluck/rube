@@ -302,7 +302,7 @@ td.previewBlockCell {
   padding: 9px 14px;
   background: var(--inverse);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   box-shadow: var(--e-inverse);
   color: #fff;
   font-size: 12.5px;
@@ -336,7 +336,7 @@ td.previewBlockCell {
 .testPreviewCloseBtn {
   background: none;
   border: 1px solid var(--border-input);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 4px 12px;
   font-size: 12px;
   cursor: pointer;
@@ -349,7 +349,7 @@ td.previewBlockCell {
 
 .testPreviewCollection {
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 12px 16px;
   margin-bottom: 12px;
 }
@@ -404,7 +404,7 @@ td.previewBlockCell {
   padding: 12px 16px;
   background: var(--bg-error);
   color: var(--text-error);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   margin-top: 24px;
 }
@@ -831,7 +831,7 @@ td.previewBlockCell {
 .cleanupPreview {
   background: color-mix(in srgb, var(--danger) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 12.5px;
   line-height: 1.55;
   margin: 0 0 12px;

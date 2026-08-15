@@ -16,7 +16,7 @@
   gap: 16px;
   padding: 16px;
   background: var(--bg-surface-hover);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   margin-bottom: 24px;
   flex-wrap: wrap;
 }
@@ -39,7 +39,7 @@
 .formGroup input {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   background: var(--bg-input);
   color: var(--text-primary);
@@ -52,7 +52,7 @@
   padding: 16px 20px;
   background: var(--bg-bulk);
   border: 1px solid var(--bulk-border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   margin-bottom: 24px;
 }
 
@@ -72,14 +72,14 @@
   max-width: 200px;
   height: 6px;
   background: var(--border-color);
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
   background: var(--accent);
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   transition: width 0.3s;
 }
 
@@ -87,7 +87,7 @@
   text-align: center;
   padding: 32px;
   background: var(--bg-surface-hover);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   margin-bottom: 24px;
 }
 
@@ -123,7 +123,7 @@
 .badge {
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   font-size: 12px;
   font-weight: 600;
   background: var(--bg-badge);
@@ -230,7 +230,7 @@
   font-size: 12px;
   line-height: 1.5;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   max-height: 400px;
   overflow: auto;
   white-space: pre-wrap;

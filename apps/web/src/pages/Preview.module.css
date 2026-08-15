@@ -84,7 +84,7 @@
   letter-spacing: 0.08em;
   font-weight: 600;
   padding: 3px 8px;
-  border-radius: 3px;
+  border-radius: var(--r-tag);
   background: rgba(229, 160, 13, 0.15);
   color: #e5a00d;
   border: 1px solid rgba(229, 160, 13, 0.3);
@@ -135,7 +135,7 @@
 .userSelect {
   padding: 7px 28px 7px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   background:
     linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.5) 50%) calc(100% - 12px) calc(50% - 2px) / 5px 5px
       no-repeat,
@@ -294,17 +294,14 @@ button.hubChip:hover:not(:disabled) {
   transform: translateY(-2px);
 }
 
+/* Unshadowed with the rest of the app. The lift on `.card:hover` stays: the
+   hover ring below is what actually signals the target, so the translate is
+   supplementary here rather than the whole effect. */
 .posterWrap {
   position: relative;
   border-radius: var(--r-md);
   overflow: hidden;
   background: #222928;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  transition: box-shadow 0.18s ease;
-}
-
-.card:hover .posterWrap {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
 /* Hover ring is a pseudo-element overlay rather than an `outline` so it
@@ -415,14 +412,14 @@ button.hubChip:hover:not(:disabled) {
       0 0 / 800px 100% no-repeat,
     rgba(255, 255, 255, 0.04);
   animation: previewShimmer 1.4s infinite linear;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
 }
 
 .skeletonHubTitle {
   composes: skeletonShimmer;
   width: 180px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: var(--r-tag);
 }
 
 .skeletonCard {

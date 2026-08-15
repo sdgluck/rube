@@ -161,17 +161,17 @@
   padding: 8px 12px;
   background: var(--bg-surface-hover);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   cursor: grab;
   transition:
     transform 0.1s,
     border-color 0.15s,
-    box-shadow 0.15s;
+    background 0.15s;
 }
 
 .catalogChip:hover {
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(18, 134, 124, 0.2);
+  background: var(--accent-soft);
 }
 
 .catalogChip:active {
@@ -265,7 +265,7 @@
   border: 1px solid transparent;
   text-align: left;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   flex: 1;
 }
@@ -303,7 +303,7 @@
   background: var(--bg-bulk);
   color: var(--accent);
   border: 1px solid var(--bulk-border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -397,7 +397,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   z-index: 10;
 }
 
@@ -410,7 +410,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   z-index: 2;
   padding: 4px;
 }
@@ -523,7 +523,7 @@
 .hitBox {
   position: absolute;
   cursor: grab;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   z-index: 3;
   background: transparent;
 }
@@ -566,7 +566,7 @@
 .badgeSelected {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
 }
 
 .badgeRemove {
@@ -613,7 +613,7 @@
 .shortcutsPanel {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   padding: 12px 16px;
   flex-shrink: 0;
 }
@@ -645,7 +645,7 @@
   background: var(--bg-input);
   border: 1px solid var(--border-input);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   padding: 1px 5px;
   font-size: 11px;
   font-family: var(--font-mono);
@@ -666,7 +666,7 @@
 .statusCard {
   background: var(--bg-surface-hover);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -689,7 +689,7 @@
 .startCard {
   background: var(--bg-bulk);
   border: 1px solid var(--bulk-border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 12px;
 }
 
@@ -711,7 +711,7 @@
 .presetQuickItem {
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 8px 10px;
   text-align: left;
   cursor: pointer;
@@ -767,7 +767,7 @@
   font-size: 15px;
   line-height: 1;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
 }
 
 .iconBtn:hover {
@@ -793,7 +793,7 @@
   background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-input);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 6px 10px;
   font-size: 12.5px;
   box-sizing: border-box;
@@ -824,7 +824,7 @@
   gap: 0;
   background: var(--bg-input);
   border: 1px solid var(--border-input);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 2px;
 }
 
@@ -837,7 +837,7 @@
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   transition:
     background 0.15s,
     color 0.15s;
@@ -861,7 +861,7 @@
 
 .colorSwatch {
   border: 2px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 6px 4px;
   font-size: 10px;
   font-weight: 700;
@@ -915,7 +915,7 @@
   width: 32px;
   height: 32px;
   border: 1px solid var(--border-input);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   cursor: pointer;
   padding: 0;
 }
@@ -938,7 +938,7 @@
   background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-input);
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   padding: 4px 6px;
   font-size: 12.5px;
 }
@@ -979,7 +979,7 @@
   background: none;
   border: 1px solid var(--danger);
   color: var(--danger);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -1020,7 +1020,7 @@
   padding: 9px 14px;
   background: var(--inverse);
   border: none;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   box-shadow: var(--e-inverse);
   color: #e6f2f0;
   z-index: var(--z-sticky-bar);
@@ -1162,7 +1162,7 @@
 
 .bulkCell img {
   width: 100%;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   aspect-ratio: 2/3;
   object-fit: cover;
 }
@@ -1188,7 +1188,7 @@
   background: var(--bg-surface);
   color: var(--text-secondary);
   border: 1px solid var(--border-input);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -1225,7 +1225,7 @@
   max-width: calc(100vw - 32px);
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   box-shadow: var(--e-float);
   padding: 4px;
   display: flex;
@@ -1243,7 +1243,7 @@
   border: none;
   text-align: left;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   font-size: 12.5px;
   font-weight: 600;
@@ -1288,7 +1288,7 @@
 .shortcutsPanel {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   padding: 12px 16px;
   flex-shrink: 0;
 }
@@ -1320,7 +1320,7 @@
   background: var(--bg-input);
   border: 1px solid var(--border-input);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-tag);
   padding: 1px 5px;
   font-size: 11px;
   font-family: var(--font-mono);

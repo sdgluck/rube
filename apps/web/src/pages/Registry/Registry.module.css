@@ -36,12 +36,12 @@
   cursor: pointer;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    background 0.15s ease;
 }
 
 .card:hover {
   border-color: var(--accent);
-  box-shadow: var(--e-card);
+  background: var(--surface-sunken);
 }
 
 .card h2 {
@@ -75,7 +75,7 @@
 .chip {
   font-size: 0.74rem;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   color: var(--text-muted);
   white-space: nowrap;
@@ -115,7 +115,7 @@
   align-items: flex-start;
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   cursor: pointer;
 }
 
@@ -181,7 +181,7 @@
   gap: 8px;
   padding: 8px 14px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   cursor: pointer;
   font-size: 0.88rem;
 }
@@ -199,7 +199,7 @@
 
 .notice {
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   border: 1px solid var(--border);
   font-size: 0.86rem;
   margin-bottom: 12px;
@@ -253,7 +253,7 @@
   gap: 12px;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
 }
 
 /* ─── Modal footers ──────────────────────────────────────────────────── */
@@ -318,7 +318,7 @@
   flex: none;
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface, transparent);
   color: inherit;
   font: inherit;

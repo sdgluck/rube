@@ -62,12 +62,15 @@
 
 /* Active sits on white against the page, the same "raised" read the
    sub-navs use — this rail is navigation, not a value. */
+/* An accent bar, not a box. A full border here made an item in a list of plain
+   text links read as a text input — the one shape a settings rail must not
+   have. The bar says "you are here" without borrowing a control's outline. */
 .railLinkActive,
 .railLinkActive:hover {
   background: var(--surface);
   color: var(--ink);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(19, 28, 27, 0.08);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .main {
@@ -129,7 +132,7 @@
 .subTabActive:hover {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgba(19, 28, 27, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .enabledDot {
