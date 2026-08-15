@@ -63,19 +63,26 @@ const TILE_REGISTRY: TileDef[] = [
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function Stats() {
+  const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
+  const selectedTiles = resolveTiles(configQuery.data?.stats_summary_tiles, TILE_REGISTRY, DEFAULT_TILES, MAX_TILES);
+
   // Queries needed for the summary tile bar.
   const sessionsQuery = trpc.stats.sessions.useQuery(undefined, { refetchInterval: 5000 });
   const overviewQuery = trpc.stats.overview.useQuery();
   const activityQuery = trpc.stats.activity.useQuery();
-  // Fourteen days of daily plays, for the sparkline on the two plays tiles. A
-  // fortnight is two weekends, which is the shortest window where "quiet
-  // Tuesday" and "nobody has watched anything since Friday" look different.
-  const activitySeriesQuery = trpc.stats.activitySeries.useQuery({ days: 14 });
   const opsQuery = trpc.stats.ops.useQuery(undefined, { refetchInterval: 30000 });
   // Not polled: this changes only when someone runs a bandwidth test.
   const bandwidthQuery = trpc.bandwidth.latest.useQuery(undefined, { refetchOnWindowFocus: false });
 
-  const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
+  // Fourteen days of daily plays, for the sparkline on the two plays tiles. A
+  // fortnight is two weekends, which is the shortest window where "quiet
+  // Tuesday" and "nobody has watched anything since Friday" look different.
+  // Fetched only when a tile is showing it.
+  const activitySeriesQuery = trpc.stats.activitySeries.useQuery(
+    { days: 14 },
+    { enabled: selectedTiles.includes("playsToday") || selectedTiles.includes("playsWeek") },
+  );
+
   const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation({
     onSuccess: () => utils.config.get.invalidate(),
@@ -85,8 +92,6 @@ export default function Stats() {
   const totalBandwidth = sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
   const transcodingCount = sessions.filter((s) => s.videoDecision === "transcode").length;
   const series = activitySeriesQuery.data;
-
-  const selectedTiles = resolveTiles(configQuery.data?.stats_summary_tiles, TILE_REGISTRY, DEFAULT_TILES, MAX_TILES);
 
   const handleRefresh = () => {
     utils.stats.invalidate();
@@ -176,9 +181,15 @@ export default function Stats() {
           sub = `+${overviewQuery.data.addedThisWeek} this week`;
         to = "/media";
         break;
-      case "addedThisWeek":
-        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : (overviewQuery.data?.addedThisWeek ?? 0);
+      case "addedThisWeek": {
+        const added = overviewQuery.data?.addedThisWeek ?? 0;
+        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : added;
+        if (added > 0) {
+          sub = "Newest first";
+          to = "/media?sort=added&dir=desc";
+        }
         break;
+      }
       case "pct4k": {
         const total = overviewQuery.data?.totalItems ?? 0;
         const c4k = overviewQuery.data?.count4k ?? 0;
@@ -229,7 +240,13 @@ export default function Stats() {
           // The count is the alarm; the sub says which job, which is what you
           // needed before deciding whether to click.
           sub = last ? `${last.name}, ${formatRelativeShort(last.startedAt)}` : "needs attention";
-          to = "/jobs?status=failed";
+          // The failure log, not the Jobs page. This tile counts *runs that
+          // failed in 24h* — a historical event — while `/jobs?status=failed`
+          // lists jobs whose last run is failed *now*. A job that failed three
+          // hours ago and has since succeeded is in the first and not the
+          // second, so linking there sent you to an empty list with the tile
+          // still insisting something was wrong.
+          to = "/events?type=job.failed";
         }
         break;
       }

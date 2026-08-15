@@ -357,6 +357,11 @@ export const EVENTS: Array<{ type: string; message: string; agoMin: number }> = 
   { type: "health.ok", message: "Plex health check passed (1080 items reachable)", agoMin: 95 },
   { type: "job.completed", message: "sync-collections finished — 8 collections in 1.1s", agoMin: 130 },
   { type: "rule.error", message: "Hidden Gems failed — OMDb rate limit, will retry", agoMin: 180 },
+  // Pairs with `run-healthcheck-fail` in JOB_RUNS, at the same age. Every real
+  // failure path emits this event, so a fixture with the failed run and no
+  // event is a state the app cannot actually produce — and it makes the Failed
+  // Jobs tile, which links to exactly this filter, appear to lead nowhere.
+  { type: "job.failed", message: "Healthcheck failed: OMDb: request timed out", agoMin: 95 },
 ];
 
 /** rating key → poster title + hue, for the mock Plex image endpoint. */

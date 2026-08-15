@@ -185,6 +185,10 @@ const SORT_COLUMNS = {
   section: mediaItems.sectionTitle,
   type: mediaItems.type,
   year: mediaItems.year,
+  // Plex omits `addedAt` on some items, and SQLite sorts NULLs last on DESC —
+  // so "newest first", the only direction this sort is asked for, puts the
+  // items with no date at the end rather than at the top.
+  added: mediaItems.addedAt,
   resolution: mediaItems.videoResolution,
   videoCodec: mediaItems.videoCodec,
   audioCodec: mediaItems.audioCodec,

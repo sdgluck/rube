@@ -76,7 +76,12 @@ for (const it of ITEMS) {
       type: it.type,
       // Scattered over the last month but stable per item — random() here
       // would reorder the Media list on every capture.
-      addedAt: now - (fnv1a(it.ratingKey) % 30) * DAY,
+      //
+      // Seconds, not milliseconds: this column carries Plex's unit (see the
+      // schema note), and every reader multiplies by 1000. Seeded in ms it
+      // landed in the year 57,000, which `RelativeTime` renders as "just now"
+      // — so every fixture item looked like it had arrived this second.
+      addedAt: Math.floor((now - (fnv1a(it.ratingKey) % 30) * DAY) / 1000),
       videoResolution: it.videoResolution,
       videoCodec: it.videoCodec,
       audioCodec: it.audioCodec,

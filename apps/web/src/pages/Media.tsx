@@ -10,6 +10,7 @@ import ErrorState from "#components/ErrorState";
 import MultiSelect from "#components/MultiSelect";
 import PageShell from "#components/PageShell";
 import Pagination from "#components/Pagination";
+import RelativeTime from "#components/RelativeTime";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
 import FadeImage from "#components/FadeImage";
@@ -81,6 +82,7 @@ const SORT_KEYS = [
   "section",
   "type",
   "year",
+  "added",
   "resolution",
   "videoCodec",
   "audioCodec",
@@ -92,7 +94,9 @@ type SortKey = (typeof SORT_KEYS)[number];
 interface ColumnDef {
   id: SortKey;
   label: string;
-  render: (item: MediaItem) => string;
+  /** ReactNode rather than string: "Added" renders a <RelativeTime>, which
+      keeps itself current and carries the exact date in its tooltip. */
+  render: (item: MediaItem) => React.ReactNode;
   /** File data the server reported — rendered in mono, like every other
       machine-produced value in the app. */
   mono?: boolean;
@@ -129,6 +133,14 @@ const ALL_COLUMNS: ColumnDef[] = [
   { id: "section", label: "Section", render: (item) => item.sectionTitle, mobile: "meta" },
   { id: "type", label: "Type", render: (item) => item.type, mobile: "meta" },
   { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY), mono: true, mobile: "meta" },
+  {
+    id: "added",
+    label: "Added",
+    // Plex's addedAt is in seconds — see the schema note on the column.
+    render: (item) => (item.addedAt ? <RelativeTime timestamp={item.addedAt} seconds /> : EMPTY),
+    mono: true,
+    mobile: "meta",
+  },
   {
     id: "resolution",
     label: "Resolution",
@@ -167,12 +179,32 @@ const ALL_COLUMNS: ColumnDef[] = [
   },
 ];
 
+const DEFAULT_VISIBLE = ["title", "section", "type", "year", "added"];
+
 const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
   id: col.id,
-  visible: ["title", "section", "type", "year"].includes(col.id),
+  visible: DEFAULT_VISIBLE.includes(col.id),
 }));
 
 type ColumnConfig = { id: string; visible: boolean };
+
+/**
+ * The saved column config, brought up to date with the columns we now ship.
+ *
+ * A saved config is a complete list, and both the table and the Columns
+ * dropdown iterate it rather than ALL_COLUMNS — so a column added after
+ * someone last saved would be invisible *and* absent from the control that
+ * turns it on. Missing columns are appended at their default visibility, which
+ * keeps the order and the choices they made and still shows them the new
+ * column. Columns we have dropped fall away by not being in ALL_COLUMNS.
+ */
+function reconcileColumns(saved: ColumnConfig[] | null | undefined): ColumnConfig[] {
+  if (!saved || saved.length === 0) return DEFAULT_COLUMNS;
+  const known = new Set(ALL_COLUMNS.map((c) => c.id as string));
+  const kept = saved.filter((c) => known.has(c.id));
+  const seen = new Set(kept.map((c) => c.id));
+  return [...kept, ...DEFAULT_COLUMNS.filter((c) => !seen.has(c.id)).map((c) => ({ id: c.id, visible: c.visible }))];
+}
 
 function childToMediaItem(child: {
   ratingKey: string;
@@ -303,7 +335,8 @@ export default function Media() {
   const { sortKey, sortDir, page, listParam, setParam, setListParam, setPage, toggleSort } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
     defaultSortKey: "title",
-    descFirst: ["year"],
+    // "Newest first" is the only reason anyone sorts by when something arrived.
+    descFirst: ["year", "added"],
   });
 
   const sectionFilter = listParam("section");
@@ -332,7 +365,7 @@ export default function Media() {
     onSuccess: () => columnsQuery.refetch(),
   });
 
-  const columnConfig: ColumnConfig[] = columnsQuery.data ?? DEFAULT_COLUMNS;
+  const columnConfig: ColumnConfig[] = reconcileColumns(columnsQuery.data);
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
