@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-08-15
+
+### Fixed
+
+- The server-wide "not authenticated" warning no longer stretches to fill the page — on short pages like Cleanup it used to be pushed to the vertical middle of the screen. It's now a slim notice bar pinned above the page content.
+
 ## [0.16.0] - 2026-08-15
 
 ### Added
