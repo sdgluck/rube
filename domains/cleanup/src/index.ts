@@ -191,6 +191,15 @@ export interface QueuedCandidate extends CleanupCandidate {
   mode: string;
   /** Runs still needed before this one is actioned. 0 = due now. */
   runsRemaining: number;
+  /**
+   * Whether a reprieve is still in force.
+   *
+   * Computed here rather than in the browser: `heldUntil` is a server
+   * timestamp, and letting the page compare it against the *viewer's* clock
+   * means a skewed machine shows a different queue from the one the engine
+   * will act on. The server decides; the page renders what it is told.
+   */
+  held: boolean;
 }
 
 /**
@@ -200,7 +209,10 @@ export interface QueuedCandidate extends CleanupCandidate {
  * rule's name and its `consecutiveRuns` to say anything useful about a row,
  * and asking per row would be a query per item.
  */
-export function queuedCandidates(opts: { includeActioned?: boolean; limit?: number } = {}): QueuedCandidate[] {
+export function queuedCandidates(
+  opts: { includeActioned?: boolean; limit?: number; now?: number } = {},
+): QueuedCandidate[] {
+  const now = opts.now ?? Date.now();
   const rows = db
     .select({
       candidate: cleanupCandidates,
@@ -223,6 +235,7 @@ export function queuedCandidates(opts: { includeActioned?: boolean; limit?: numb
       consecutiveRuns,
       mode: action?.mode ?? "",
       runsRemaining: Math.max(0, consecutiveRuns - candidate.streak),
+      held: candidate.heldUntil != null && candidate.heldUntil > now,
     };
   });
 }
@@ -247,7 +260,6 @@ export function countsByRule(): Map<string, { queued: number; actioned: number }
 }
 
 /** Queue size for the sidebar badge — items due now or on the next run. */
-export function dueSoonCount(): number {
-  const rows = queuedCandidates({ limit: 1000 });
-  return rows.filter((r) => r.runsRemaining <= 1 && (r.heldUntil == null || r.heldUntil <= Date.now())).length;
+export function dueSoonCount(now: number = Date.now()): number {
+  return queuedCandidates({ limit: 1000, now }).filter((r) => r.runsRemaining <= 1 && !r.held).length;
 }

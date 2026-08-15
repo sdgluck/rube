@@ -241,6 +241,16 @@ describe("queuedCandidates", () => {
     assert.equal(db.select().from(cleanupCandidates).all().length, 0);
   });
 
+  test("hold state is decided server-side, not left to the viewer's clock", () => {
+    // The page must not re-derive this from the browser's Date.now(): a skewed
+    // client would then show a different queue from the one the engine acts on.
+    recordMatches(RULE, [match("100")], T0);
+    holdCandidate(RULE, "100", T0 + 30 * DAY);
+
+    assert.equal(queuedCandidates({ now: T0 })[0].held, true);
+    assert.equal(queuedCandidates({ now: T0 + 31 * DAY })[0].held, false, "an expired hold is no longer a hold");
+  });
+
   test("the badge counts what is due now or on the next run", () => {
     recordMatches(RULE, [match("100")], T0); // streak 1, two runs away
     for (let i = 0; i < 2; i++) recordMatches(RULE, [match("100"), match("200")], T0 + (i + 1) * DAY);

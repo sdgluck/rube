@@ -386,12 +386,16 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 
+/* Both are spans inside the card's label column, so they need to be blocks —
+   left inline they render as "Build a collectionCreate or refresh a Plex…". */
 .outcomeCardTitle {
+  display: block;
   font-weight: 600;
 }
 
 .outcomeCardBody {
   color: var(--text-muted);
+  display: block;
   font-size: 12px;
   margin-top: 2px;
 }

@@ -18,11 +18,14 @@
   margin-bottom: 6px;
 }
 
-.switchRow {
+/* Scoped to beat `.field > label { display: block }` above, which is one
+   specificity point higher and was collapsing the row so the checkbox sat on
+   top of its own label. */
+.field > label.switchRow {
   align-items: flex-start;
   cursor: pointer;
   display: flex;
-  font-weight: 400 !important;
+  font-weight: 400;
   gap: 10px;
 }
 

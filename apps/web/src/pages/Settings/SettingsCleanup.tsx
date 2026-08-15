@@ -50,7 +50,9 @@ export default function SettingsCleanup() {
   useUnsavedChanges(isDirty);
 
   const queued = queueQuery.data?.length ?? 0;
-  const dueNow = (queueQuery.data ?? []).filter((r) => r.runsRemaining === 0).length;
+  const dueNow = (queueQuery.data ?? []).filter(
+    (r) => r.runsRemaining === 0 && !(r.heldUntil != null && r.heldUntil > Date.now()),
+  ).length;
 
   const handleSave = async () => {
     setSaving(true);
@@ -119,7 +121,9 @@ export default function SettingsCleanup() {
           <>Nothing is queued for cleanup right now.</>
         ) : (
           <>
-            <Link to="/cleanup">{queued} item(s) queued</Link>
+            <Link to="/cleanup">
+              {queued} item{queued === 1 ? "" : "s"} queued
+            </Link>
             {dueNow > 0 && <>, {dueNow} of them due on the next run</>}.
           </>
         )}

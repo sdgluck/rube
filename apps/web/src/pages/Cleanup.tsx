@@ -56,7 +56,9 @@ export default function Cleanup() {
   });
 
   const rows = query.data ?? [];
-  const dueNow = rows.filter((r) => r.actionedAt == null && r.runsRemaining === 0);
+  // A held item is explicitly not due, however long its streak. `held` comes
+  // from the server so this can't disagree with what the engine will do.
+  const dueNow = rows.filter((r) => r.actionedAt == null && r.runsRemaining === 0 && !r.held);
 
   function keep(ruleId: string, ratingKey: string, title: string) {
     holdMutation.mutate(
@@ -115,7 +117,7 @@ export default function Cleanup() {
             </thead>
             <tbody>
               {rows.map((row) => {
-                const held = row.heldUntil != null && row.heldUntil > Date.now();
+                const held = row.held;
                 const actioned = row.actionedAt != null;
                 return (
                   <tr key={`${row.ruleId}:${row.ratingKey}`} className={actioned ? styles.rowActioned : undefined}>
@@ -174,9 +176,18 @@ function statusText(
 ): React.ReactNode {
   if (actioned) return <span className={styles.statusActioned}>{MODE_PAST_LABELS[row.action] ?? row.action}</span>;
   if (held) {
+    // A calendar date, not a relative span: RelativeTime renders any future
+    // timestamp as "just now", and formatTimeUntil tops out in hours, so a
+    // 90-day reprieve read as "in 2159h". The date is what someone wants
+    // anyway — "when does this come back".
     return (
-      <span className={styles.statusHeld}>
-        Held until <RelativeTime timestamp={row.heldUntil!} />
+      <span className={styles.statusHeld} title={new Date(row.heldUntil!).toLocaleString()}>
+        Held until{" "}
+        {new Date(row.heldUntil!).toLocaleDateString(undefined, {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })}
       </span>
     );
   }
