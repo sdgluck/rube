@@ -166,6 +166,7 @@ export const EMPTY_FORM: RuleFormState = {
   filter: "all",
   pinToHomepage: true,
   pinRotationCount: 0,
+  pinMinItems: 0,
   outcome: { ...DEFAULT_OUTCOME_FORM },
   arr: { ...DEFAULT_ARR_FORM },
 };

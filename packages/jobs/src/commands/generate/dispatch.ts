@@ -5,7 +5,7 @@ import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rul
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
 import { commitCollection, COMMIT_CONCURRENCY } from "./finalize.ts";
 import { drainConcurrently } from "#jobs/concurrency.ts";
-import { selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
+import { meetsPinFloor, selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
 import type { Handler, HandlerDeps } from "./types.ts";
 import { aiPromptHandler } from "./handlers/ai-prompt.ts";
 import { ratedHandler } from "./handlers/rated.ts";
@@ -145,10 +145,15 @@ export async function runHandlerWithCommits(
     );
   }
   const rotating = rotationCount > 0;
+  // Optional floor on what's worth a homepage row. Independent of `minItems`,
+  // which decides whether the collection is built at all — a rule can keep its
+  // long tail in the library and still only promote the substantial ones.
+  const pinMinItems = pinToHomepage ? (ruleConfig.pinMinItems ?? 0) : 0;
   const rotationCandidates: RotationCandidate[] = [];
   let lastCollectionKey: string | null = null;
   let collectionCount = 0;
   let itemCount = 0;
+  let belowPinFloor = 0;
 
   // ai_prompt history is collected per section and flushed in a `finally`
   // so partial-success runs still persist the collections that DID make
@@ -168,6 +173,8 @@ export async function runHandlerWithCommits(
       COMMIT_CONCURRENCY,
       async (pending) => {
         const ratingKeys = pending.matched.map((m) => m.ratingKey);
+        const pinnable = meetsPinFloor(ratingKeys.length, pinMinItems);
+        if (!pinnable) belowPinFloor++;
         const collectionKey = await commitCollection(
           ctx,
           client,
@@ -176,7 +183,7 @@ export async function runHandlerWithCommits(
           pending.name,
           ratingKeys,
           labels,
-          rotating ? false : pinToHomepage,
+          rotating ? false : pinToHomepage && pinnable,
           rule.type,
         );
         if (!collectionKey) return;
@@ -187,7 +194,7 @@ export async function runHandlerWithCommits(
         collectionCount++;
         itemCount += ratingKeys.length;
 
-        if (rotating) {
+        if (rotating && pinnable) {
           rotationCandidates.push({
             sectionKey: pending.section.key,
             name: pending.name,
@@ -216,6 +223,12 @@ export async function runHandlerWithCommits(
         ctx.log(`Failed to record rule history for "${section.title}":`, err);
       }
     }
+  }
+
+  if (belowPinFloor > 0) {
+    ctx.log(
+      `[pin] ${belowPinFloor} collection(s) have fewer than ${pinMinItems} items — created, but left off the homepage.`,
+    );
   }
 
   if (rotating) {

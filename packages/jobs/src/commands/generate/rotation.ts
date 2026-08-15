@@ -17,6 +17,18 @@ export interface RotationCandidate {
 }
 
 /**
+ * Whether a collection is substantial enough to earn a homepage row.
+ *
+ * `pinMinItems` is off by default (0 or absent), in which case everything the
+ * rule pins is pinned. It gates *pinning only* — the collection is created
+ * either way — so a grouped rule can keep building its long tail while the
+ * home shows just the rows with something in them.
+ */
+export function meetsPinFloor(itemCount: number, pinMinItems: number): boolean {
+  return pinMinItems <= 0 || itemCount >= pinMinItems;
+}
+
+/**
  * Pick `count` candidates per section, preferring ones that weren't pinned
  * last run so consecutive rotations don't overlap. Within each group the
  * order is random, so which collections surface varies run to run rather

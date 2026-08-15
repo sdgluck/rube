@@ -30,6 +30,7 @@ export function applyImportOverrides(
     // every rule in the pack, not just the grouped ones.
     next.pinToHomepage = false;
     delete next.pinRotationCount;
+    delete next.pinMinItems;
   } else if (overrides.pinToHomepage === true && many) {
     // Pinning is only offered for rules that rotate. Turning it on for a
     // single-collection rule is a per-rule decision, not a pack-wide one.
@@ -54,12 +55,13 @@ export function applyImportOverrides(
 }
 
 /** The keys the import modal (and the rule editor) let a user decide. */
-const USER_OWNED_KEYS = ["pinToHomepage", "pinRotationCount", "limit", "minItems"] as const;
+const USER_OWNED_KEYS = ["pinToHomepage", "pinRotationCount", "pinMinItems", "limit", "minItems"] as const;
 
 /**
  * Carries the user's answers forward across a pack update.
  *
- * These four keys are asked about at import and editable afterwards, so on
+ * These keys are asked about at import (or set in the rule editor, as
+ * `pinMinItems` is) and editable afterwards, so on
  * this server they belong to the user, not the pack. A published bump can
  * change what a rule *matches* — new keywords, a rewritten filter — but it
  * must never re-pin a homepage somebody deliberately unpinned or re-cap a

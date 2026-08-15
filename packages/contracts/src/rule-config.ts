@@ -125,6 +125,17 @@ const baseRuleConfigSchema = z.object({
    */
   pinRotationCount: z.number().int().positive().optional(),
   /**
+   * Smallest collection worth a homepage row. Absent (the default) pins
+   * whatever the rule builds; set, a collection with fewer items is still
+   * created in Plex but never promoted — a "Wes Anderson" row with two films
+   * is a thin homepage row, not a bad collection.
+   *
+   * Distinct from `minItems`, which decides whether the collection exists at
+   * all. This one only gates pinning, so a rule can build the long tail and
+   * still keep the home to the substantial ones.
+   */
+  pinMinItems: z.number().int().positive().optional(),
+  /**
    * When true, the personalize job also runs this rule per opted-in user,
    * producing a `User:<name>`-labelled variant on their home shaped by their
    * preferences (in addition to the shared collection this rule produces).

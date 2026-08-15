@@ -65,6 +65,8 @@ export interface RuleFormState {
   pinToHomepage: boolean;
   /** Pin only this many collections per library per run, rotating. 0 = pin all. */
   pinRotationCount: number;
+  /** Only pin collections with at least this many items. 0 = no floor. */
+  pinMinItems: number;
   /** Collection (the default, and what every rule did before) or cleanup. */
   outcome: OutcomeFormState;
   arr: ArrFormState;

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
+import { meetsPinFloor, selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
 
 /** Deterministic stand-in for the shuffle so selection is assertable. */
 const noShuffle = <T>(items: T[]): T[] => items;
@@ -73,4 +73,15 @@ test("a real shuffle still respects the no-overlap rule", () => {
     const selected = selectRotation(pool, 3, { "1": ["a", "b", "c"] });
     assert.deepEqual(selected.map((c) => c.name).sort(), ["d", "e", "f"]);
   }
+});
+
+test("no pin floor set pins collections of any size", () => {
+  assert.equal(meetsPinFloor(1, 0), true);
+  assert.equal(meetsPinFloor(0, 0), true);
+});
+
+test("the pin floor is inclusive — exactly N items still pins", () => {
+  assert.equal(meetsPinFloor(5, 5), true);
+  assert.equal(meetsPinFloor(4, 5), false);
+  assert.equal(meetsPinFloor(6, 5), true);
 });

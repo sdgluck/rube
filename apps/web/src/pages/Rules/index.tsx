@@ -244,6 +244,7 @@ export default function Rules() {
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
+      pinMinItems: (config.pinMinItems as number | undefined) ?? 0,
       outcome: outcomeFromConfig(config.action),
       arr: {
         ...DEFAULT_ARR_FORM,
@@ -286,6 +287,7 @@ export default function Rules() {
     if (next.sections.length > 0) config.sections = next.sections;
     if (!next.pinToHomepage) config.pinToHomepage = false;
     if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
+    if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
     if (next.arr.enabled) config.arr = next.arr;
     // Absent means "build a collection" — the same reading the job takes — so
     // a collection rule writes no action key at all and stays byte-identical

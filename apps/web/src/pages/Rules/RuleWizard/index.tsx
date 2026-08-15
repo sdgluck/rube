@@ -572,6 +572,35 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             </span>
           </div>
         )}
+
+        {form.pinToHomepage && (
+          <div className={styles.field}>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.pinMinItems > 0}
+                onChange={(e) => setForm({ ...form, pinMinItems: e.target.checked ? 5 : 0 })}
+              />{" "}
+              Only pin collections with enough items
+            </label>
+            {form.pinMinItems > 0 && (
+              <input
+                type="number"
+                className={shared.input}
+                style={{ maxWidth: 140 }}
+                min={1}
+                value={form.pinMinItems}
+                onChange={(e) => setForm({ ...form, pinMinItems: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                aria-label="Minimum items to pin a collection"
+              />
+            )}
+            <span className={styles.hint}>
+              {form.pinMinItems > 0
+                ? `Only collections with ${form.pinMinItems}+ items reach the homepage. Smaller ones are still created in Plex, just not promoted.`
+                : "Off — every collection this rule pins goes to the homepage, however few items it has."}
+            </span>
+          </div>
+        )}
       </>
     );
   }
@@ -1011,6 +1040,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               Edit
             </button>
           </div>
+          {form.pinToHomepage && (
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryLabel}>Min items to pin</span>
+              <span className={styles.summaryValue}>{form.pinMinItems > 0 ? form.pinMinItems : "No minimum"}</span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
+                Edit
+              </button>
+            </div>
+          )}
           <div className={styles.summaryRow}>
             <span className={styles.summaryLabel}>Outcome</span>
             <span className={styles.summaryValue}>{describeOutcome(form.outcome)}</span>
