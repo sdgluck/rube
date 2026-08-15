@@ -10,7 +10,8 @@ node_modules/
 apps/web/dist
 apps/portal/dist
 .turbo
-.claude/
+.claude/*
+!.claude/skills/
 .idea/
 /posters/
 .pnpm-store/
