@@ -703,6 +703,15 @@ p {
   padding: 8px 28px;
 }
 
+/* Same for a notice bar. Without the `flex` reset it inherits `flex: 1` from
+   the rule above and grows to eat whatever the page leaves over — a one-line
+   warning rendered a screen tall on any short page. Padding is its own; the
+   page gutter would indent it out of alignment with the bar beneath it. */
+.content > .app-notice {
+  flex: 0 0 auto;
+  padding: 7px 28px;
+}
+
 .content > .page-shell-flush,
 .content > *:has(.page-shell-flush) {
   min-height: 0;

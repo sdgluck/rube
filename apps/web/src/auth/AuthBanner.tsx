@@ -26,7 +26,7 @@ export default function AuthBanner() {
   }
 
   return (
-    <div className={styles.banner} role="status">
+    <div className={`app-notice ${styles.banner}`} role="status">
       <span className={styles.text}>
         Anyone who can reach this port can change anything here. You can require a Plex sign-in instead — only the
         account that owns this server gets in.

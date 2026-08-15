@@ -84,8 +84,11 @@ export default function App() {
       <BottomNav />
       <main className="content">
         <ScrollRestoration />
+        {/* Above the AppBarProvider, so it sits over the breadcrumb rather than
+            between it and the page: this is server-wide chrome, not a message
+            about whatever page you happen to be on. */}
+        <AuthBanner />
         <AppBarProvider>
-          <AuthBanner />
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>
               <Routes>

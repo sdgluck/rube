@@ -1,15 +1,16 @@
+/* A strip across the top of the content column, not a card inside the page —
+   so no radius, no margin and no elevation. Padding comes from `.app-notice`
+   in App.css, which aligns it with the app bar directly beneath. */
 .banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin: 0 0 12px;
-  padding: 10px 14px;
-  border-radius: var(--r-md);
   background: var(--status-warn-bg);
   color: var(--status-warn-fg);
-  font: var(--t-body-sm);
+  border-bottom: 1px solid color-mix(in srgb, var(--status-warn-fg) 16%, transparent);
+  font: var(--t-caption);
 }
 
 .text {
