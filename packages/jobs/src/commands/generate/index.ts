@@ -4,6 +4,7 @@ import { plexHealthCallback } from "@tinkerbell/core";
 import {
   getEnabledRules,
   getRule,
+  type Rule,
   setRuleArrCounts,
   setRuleLastCollection,
   setRuleLastRun,
@@ -14,6 +15,7 @@ import { forgetCollections } from "@tinkerbell/domain.collections";
 import { errorMessage } from "@tinkerbell/core";
 import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
 
+import { isCleanupRule } from "@tinkerbell/contracts";
 import { parseRuleConfig } from "./config.ts";
 import { runHandler } from "./dispatch.ts";
 import { createCleanupBudget } from "./cleanup.ts";
@@ -37,11 +39,34 @@ const runRuleLog = createLogger("run-rule");
 const SINGLE_RUN_LOCK_WAIT_MS = 15_000;
 
 /**
- * Batch entry point: run every enabled rule against the configured Plex
- * server. Sections per rule = rule-level filter ∩ job-level filter ∩
- * globally-configured libraries.
+ * What one batch job owns.
+ *
+ * Collection rules and cleanup rules run as separate jobs — separate rows,
+ * schedules and run histories — because they are separate things to a user:
+ * one builds shelves, the other removes files. They share this engine because
+ * a rule is (selection) → (action) and only the action differs; duplicating
+ * resume, concurrency and per-rule failure handling to express that would be
+ * two copies of the hard part and one copy of the easy one.
  */
-export default async function run(ctx: JobContext, config: GenerateJobConfig): Promise<void> {
+interface BatchOptions {
+  /** Which rules this job is responsible for. */
+  owns: (rule: Rule) => boolean;
+  /** Plural noun for the log lines, e.g. "cleanup rule(s)". */
+  noun: string;
+  /**
+   * The one-time sweep of pre-`Rule:` "Generated" collections. Belongs to the
+   * collection job alone — it is about collections this app used to make, and
+   * running it from both would double the Plex calls to no purpose.
+   */
+  sweepLegacyLabels?: boolean;
+}
+
+/**
+ * Batch entry point: run every enabled rule this job owns against the
+ * configured Plex server. Sections per rule = rule-level filter ∩ job-level
+ * filter ∩ globally-configured libraries.
+ */
+export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts: BatchOptions): Promise<void> {
   const { client, machineId, allSections } = await connectPlex(ctx);
   const jobSectionsOrNull = filterSections(allSections, config.sections);
   if (jobSectionsOrNull === null) {
@@ -49,13 +74,13 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
   }
   const jobSections = jobSectionsOrNull ?? allSections;
 
-  const enabledRules = getEnabledRules();
+  const enabledRules = getEnabledRules().filter((r) => opts.owns(r));
   if (enabledRules.length === 0) {
-    ctx.log("No enabled rules found. Configure rules in the admin UI.");
+    ctx.log(`No enabled ${opts.noun} found. Configure rules in the admin UI.`);
     return;
   }
 
-  ctx.log(`Found ${enabledRules.length} enabled rule(s).`);
+  ctx.log(`Found ${enabledRules.length} enabled ${opts.noun}.`);
 
   // Resume whatever a previous run abandoned. `generate` is the longest job in
   // the system and container restarts on a home server are routine, so
@@ -83,11 +108,13 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     } satisfies GenerateCheckpoint);
 
   // One-time migration: delete old "Generated"-labeled collections.
-  for (const section of jobSections) {
-    const deleted = await client.deleteCollectionsByLabel(section.key, "Generated");
-    forgetCollections(deleted);
-    if (deleted.length > 0) {
-      ctx.log(`Migrated: deleted ${deleted.length} old "Generated"-labeled collection(s) from "${section.title}".`);
+  if (opts.sweepLegacyLabels) {
+    for (const section of jobSections) {
+      const deleted = await client.deleteCollectionsByLabel(section.key, "Generated");
+      forgetCollections(deleted);
+      if (deleted.length > 0) {
+        ctx.log(`Migrated: deleted ${deleted.length} old "Generated"-labeled collection(s) from "${section.title}".`);
+      }
     }
   }
 
@@ -101,10 +128,10 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
   const concurrency = Math.min(config.ruleConcurrency ?? RULE_CONCURRENCY_DEFAULT, enabledRules.length);
   if (concurrency > 1) ctx.log(`Running up to ${concurrency} rules at a time.`);
 
-  // One destructive-action budget for the whole run, shared by every cleanup
-  // rule. Per-rule caps don't compose — five rules each under their own limit
-  // of 30 can still empty a library — so the ceiling has to be global, which
-  // means a single mutable object threaded through the concurrent rule loop.
+  // The destructive-action ceiling, shared by every cleanup rule in this run
+  // and by anything else acting today — it counts from the candidate ledger,
+  // not from this process. Created once per run so a long run reads a stable
+  // starting figure.
   const cleanupBudget = createCleanupBudget();
 
   /** Everything one rule does, start to finish. Never throws except on abort. */
@@ -248,6 +275,33 @@ export default async function run(ctx: JobContext, config: GenerateJobConfig): P
     for (const name of skipped) ctx.log(`  - "${name}"`);
   }
   ctx.log("\nAll done!");
+}
+
+/**
+ * The nightly collection build. Everything whose ending is "make a shelf".
+ */
+export default function run(ctx: JobContext, config: GenerateJobConfig): Promise<void> {
+  return runBatch(ctx, config, {
+    owns: (rule) => !isCleanupRule(parseRuleConfig(rule)),
+    noun: "collection rule(s)",
+    sweepLegacyLabels: true,
+  });
+}
+
+/**
+ * The cleanup pass. Everything whose ending is "remove this".
+ *
+ * A separate job rather than a branch inside the one above: its runs are worth
+ * reading on their own, it wants its own schedule (late, after the library has
+ * synced and the collections are built), and a run that deletes files should
+ * not share a history with one that builds shelves. The destructive ceiling is
+ * unaffected by the split — it counts from the ledger, not per run.
+ */
+export function runCleanup(ctx: JobContext, config: GenerateJobConfig): Promise<void> {
+  return runBatch(ctx, config, {
+    owns: (rule) => isCleanupRule(parseRuleConfig(rule)),
+    noun: "cleanup rule(s)",
+  });
 }
 
 interface GenerateCheckpoint {

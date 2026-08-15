@@ -7,6 +7,8 @@ import BecauseYouWatchedJob from "./BecauseYouWatched";
 
 const registry: Record<string, ComponentType<JobPageProps>> = {
   generate: GenerateJob,
+  // Same engine, same settings — only the rules it links to differ.
+  cleanup: GenerateJob,
   "purge-runs": PurgeRunsJob,
   "because-you-watched": BecauseYouWatchedJob,
 };

@@ -256,6 +256,12 @@ export const SHOTS: Shot[] = [
     settleMs: 700,
   },
   {
+    name: "12-job-detail-cleanup",
+    description: "Job detail — Cleanup, the batch job that runs the removal rules",
+    path: "/jobs/cleanup",
+    settleMs: 700,
+  },
+  {
     name: "13-job-run",
     description: "Run log — run stats over the dark log viewer",
     path: "/jobs/runs/run-generate-1",
