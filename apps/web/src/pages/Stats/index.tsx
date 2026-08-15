@@ -23,7 +23,6 @@ import { MostWatchedPanel } from "./MostWatchedPanel";
 import { RecentlyAddedPanel } from "./RecentlyAddedPanel";
 import { StreamsPanel } from "./StreamsPanel";
 import { SystemPanel } from "./SystemPanel";
-import styles from "./Stats.module.css";
 
 // ─── Panel order ────────────────────────────────────────────────────────────
 
@@ -118,18 +117,16 @@ export default function Stats() {
         if (sessionsQuery.isLoading) {
           value = <SkeletonLine width="40px" />;
         } else if (measured && capacity > 0) {
-          value = (
-            <span className={styles.bandwidthRatio}>
-              {inUse}
-              <span className={styles.bandwidthCapacity}> / {formatMbps(capacity)}</span>
-            </span>
-          );
-          // Past a month the denominator is a claim about the past, so say
-          // when it was made rather than quoting a percentage of it.
+          // The denominator lives on the sub line — "24.0 Mbps" / "of 860 Mbps"
+          // — so the value line stays one number at one size, like every other
+          // tile, and the comparison reads as a sentence down the tile.
+          value = inUse;
+          // Past a month the denominator is a claim about the past, so say when
+          // it was made rather than presenting it as current.
           sub =
-            measured.staleDays > 30 || totalBandwidth === 0
-              ? `measured ${formatRelativeShort(measured.startedAt)}`
-              : `${Math.round((totalBandwidth / 1000 / capacity) * 100)}% of measured`;
+            measured.staleDays > 30
+              ? `of ${formatMbps(capacity)} measured ${formatRelativeShort(measured.startedAt)}`
+              : `of ${formatMbps(capacity)}`;
         } else {
           value = inUse;
           sub = <Link to="/settings/bandwidth">Test bandwidth →</Link>;
