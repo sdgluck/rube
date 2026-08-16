@@ -52,7 +52,7 @@ import { downloadJson } from "./utils";
  * it. So the two get their own lists: collection rules stay on /rules, cleanup
  * rules live next to the queue they feed, on /cleanup/rules.
  */
-export type RulesOutcome = "collection" | "cleanup";
+export type RulesOutcome = "collection" | "cleanup" | "metadata";
 
 export default function Rules({ outcome = "collection" }: { outcome?: RulesOutcome } = {}) {
   const utils = trpc.useUtils();
@@ -97,7 +97,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
 
   // Cleanup rules live under /cleanup/rules, so their run history does too.
   const runsHref = useCallback(
-    (ruleId: string) => `${outcome === "cleanup" ? "/cleanup/rules" : "/rules"}/${ruleId}/runs`,
+    (ruleId: string) =>
+      `${outcome === "cleanup" ? "/cleanup/rules" : outcome === "metadata" ? "/metadata/rules" : "/rules"}/${ruleId}/runs`,
     [outcome],
   );
 
@@ -169,6 +170,14 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     () =>
       ((rulesQuery.data ?? []) as RuleRow[]).filter(
         (r) => outcomeFromConfig((r.config as { action?: unknown } | null)?.action).kind === "cleanup",
+      ).length,
+    [rulesQuery.data],
+  );
+
+  const hiddenMetadataCount = useMemo(
+    () =>
+      ((rulesQuery.data ?? []) as RuleRow[]).filter(
+        (r) => outcomeFromConfig((r.config as { action?: unknown } | null)?.action).kind === "metadata",
       ).length,
     [rulesQuery.data],
   );
@@ -408,8 +417,37 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     // a collection rule writes no action key at all and stays byte-identical
     // to how it was stored before this existed.
     if (next.outcome.kind === "cleanup") {
-      const { kind: _kind, ...cleanup } = next.outcome;
-      config.action = { kind: "cleanup", ...cleanup };
+      const { kind: _kind, mode, consecutiveRuns, maxActionsPerRun, viaArr, addImportExclusion, dryRun } = next.outcome;
+      config.action = { kind: "cleanup", mode, consecutiveRuns, maxActionsPerRun, viaArr, addImportExclusion, dryRun };
+    }
+    if (next.outcome.kind === "metadata") {
+      const o = next.outcome;
+      // Only the fields that say something are written. A blank input means
+      // "leave this alone", and storing it as an empty string would make the
+      // job plan a write that blanks the field instead.
+      const set = Object.fromEntries(
+        Object.entries(o.set)
+          .map(([field, template]) => [field, template.trim()])
+          .filter(([, template]) => template !== ""),
+      );
+      const addTags: Record<string, string[]> = {};
+      if (o.addGenres.length > 0) addTags.genre = o.addGenres;
+      if (o.addLabels.length > 0) addTags.label = o.addLabels;
+      const removeTags: Record<string, string[]> = {};
+      if (o.removeGenres.length > 0) removeTags.genre = o.removeGenres;
+      if (o.removeLabels.length > 0) removeTags.label = o.removeLabels;
+
+      config.action = {
+        kind: "metadata",
+        ...(Object.keys(set).length > 0 ? { set } : {}),
+        ...(Object.keys(addTags).length > 0 ? { addTags } : {}),
+        ...(Object.keys(removeTags).length > 0 ? { removeTags } : {}),
+        lock: o.lock,
+        overwriteLocked: o.overwriteLocked,
+        maxWritesPerRun: o.maxWritesPerRun,
+        sortLanguages: o.sortLanguages,
+        dryRun: o.dryRun,
+      };
     }
     const schedule = scheduleToConfig(next.schedule);
     if (schedule) config.schedule = schedule;
@@ -836,6 +874,12 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
             title="No cleanup rules yet"
             description="A cleanup rule finds items to remove instead of building a collection. What it matches is queued here first, and nothing is acted on until an item has matched several runs in a row."
           />
+        ) : outcome === "metadata" ? (
+          <EmptyState
+            icon="cog"
+            title="No metadata rules yet"
+            description="A metadata rule rewrites fields on the items it matches — sort titles, content ratings, studios, genres — instead of building a collection. Every run is previewed first and can be undone from Settings → Metadata."
+          />
         ) : (
           <EmptyState icon="cog" title="No rules yet" description="Add a rule to start generating collections." />
         )
@@ -924,6 +968,15 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
             {hiddenCleanupCount} cleanup rule{hiddenCleanupCount === 1 ? "" : "s"}
           </Link>{" "}
           {hiddenCleanupCount === 1 ? "lives" : "live"} on the Cleanup page.
+        </p>
+      )}
+
+      {outcome === "collection" && hiddenMetadataCount > 0 && (
+        <p className={styles.otherOutcomeHint}>
+          <Link to="/metadata">
+            {hiddenMetadataCount} metadata rule{hiddenMetadataCount === 1 ? "" : "s"}
+          </Link>{" "}
+          {hiddenMetadataCount === 1 ? "lives" : "live"} on the Metadata page.
         </p>
       )}
 

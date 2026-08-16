@@ -6,6 +6,10 @@ import {
   estimateCollectionCount,
   isDestructiveMode,
   RULE_TRIGGER_LABELS,
+  METADATA_SETTABLE_FIELDS,
+  METADATA_TOKENS,
+  SORT_ARTICLES,
+  templateError,
   templatedCollectionSummary,
   volumeLevel,
 } from "@tinkerbell/contracts";
@@ -45,6 +49,7 @@ import { hasSourceStep, SOURCE_STEPS, type SourceStepType } from "./sources/inde
 import type {
   ArrFormState,
   CleanupMode,
+  MetadataSettableField,
   OutcomeFormState,
   PresentationFormState,
   RuleFormState,
@@ -100,6 +105,18 @@ function templatedSummaryHint(type: string, sampleTitle: string, sectionType: st
 /** The review row — the last place the outcome is stated before saving. */
 function describeOutcome(o: OutcomeFormState): string {
   if (o.kind === "collection") return "Build a collection";
+  if (o.kind === "metadata") {
+    const fields = METADATA_SETTABLE_FIELDS.filter((f) => o.set[f].trim() !== "");
+    const tags = [
+      ...(o.addGenres.length || o.addLabels.length ? ["add tags"] : []),
+      ...(o.removeGenres.length || o.removeLabels.length ? ["remove tags"] : []),
+    ];
+    const what = [...fields.map((f) => METADATA_FIELD_LABELS[f].toLowerCase()), ...tags].join(", ") || "nothing";
+    const lock = o.lock ? ", locked" : ", unlocked";
+    // Preview-only first, for the same reason as cleanup: it is the difference
+    // between a rule that does something and one that only says it would.
+    return o.dryRun ? `Set ${what} — preview only` : `Set ${what}${lock}, max ${o.maxWritesPerRun}/run`;
+  }
   const verb =
     o.mode === "collection_only"
       ? "Queue only"
@@ -131,6 +148,40 @@ function describePresentation(p: PresentationFormState): string {
           ? "an AI-written description"
           : "a description from the rule";
   return `${poster}, ${summary}`;
+}
+
+const METADATA_FIELD_LABELS: Record<MetadataSettableField, string> = {
+  title: "Title",
+  titleSort: "Sort title",
+  summary: "Summary",
+  tagline: "Tagline",
+  contentRating: "Content rating",
+  studio: "Studio",
+  originallyAvailableAt: "Originally available",
+};
+
+/**
+ * Placeholders that teach the token vocabulary by example.
+ *
+ * `{sortableTitle}` on the sort title is the one most people arrive for, so it
+ * is shown where they will look for it rather than only in the token list.
+ */
+const METADATA_FIELD_PLACEHOLDERS: Record<MetadataSettableField, string> = {
+  title: "{title}",
+  titleSort: "{sortableTitle}",
+  summary: "",
+  tagline: "",
+  contentRating: "PG-13",
+  studio: "",
+  originallyAvailableAt: "",
+};
+
+/** Comma-separated tags, trimmed, with the blanks dropped. */
+function splitTags(value: string): string[] {
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 }
 
 /** One line per mode, saying what it actually does rather than restating it. */
@@ -907,10 +958,179 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
    * is the last screen where somebody can notice they've built a scheduled
    * deletion.
    */
+
+  /**
+   * What a metadata rule writes.
+   *
+   * Every input is a template, and the token list is right there rather than
+   * in a help page — `{sortableTitle}` alone answers the complaint most people
+   * arrive with, and nobody guesses a token vocabulary. The lock and
+   * overwrite-locked switches are spelled out in full because both are choices
+   * with consequences a user cannot see from the outside: an unlocked write is
+   * reverted by the next agent refresh, and overwriting a locked field
+   * discards somebody's deliberate fix.
+   */
+  function renderMetadataStep() {
+    const o = form.outcome;
+    const setOutcome = (patch: Partial<OutcomeFormState>) => setForm({ ...form, outcome: { ...o, ...patch } });
+    const tokenError = (value: string) => (value ? templateError(value) : null);
+    const usesSortableTitle = Object.values(o.set).some((v) => v.includes("{sortableTitle}"));
+
+    return (
+      <>
+        <h3 className={styles.stepHeading}>What should this rule write?</h3>
+        <p className={styles.stepSub}>
+          Every matching item gets these fields. Leave a field blank to leave it alone. Values can use tokens —{" "}
+          {METADATA_TOKENS.map((t) => `{${t}}`).join(", ")} — which are filled in per item.
+        </p>
+
+        {METADATA_SETTABLE_FIELDS.map((field) => {
+          const error = tokenError(o.set[field]);
+          return (
+            <div key={field} className={styles.field}>
+              <label htmlFor={`meta-set-${field}`}>{METADATA_FIELD_LABELS[field]}</label>
+              <input
+                id={`meta-set-${field}`}
+                className={shared.input}
+                value={o.set[field]}
+                placeholder={METADATA_FIELD_PLACEHOLDERS[field]}
+                onChange={(e) => setOutcome({ set: { ...o.set, [field]: e.target.value } })}
+              />
+              {error && <span className={styles.errorText}>{error}</span>}
+            </div>
+          );
+        })}
+
+        {usesSortableTitle && (
+          <div className={styles.field}>
+            <label htmlFor="meta-sort-languages">Languages whose leading articles to move</label>
+            <input
+              id="meta-sort-languages"
+              className={shared.input}
+              value={o.sortLanguages.join(", ")}
+              placeholder="en"
+              onChange={(e) =>
+                setOutcome({
+                  sortLanguages: e.target.value
+                    .split(",")
+                    .map((v) => v.trim().toLowerCase())
+                    .filter(Boolean),
+                })
+              }
+            />
+            <span className={styles.hint}>
+              Two-letter codes, comma separated. Supported: {Object.keys(SORT_ARTICLES).join(", ")}. Only add a language
+              your library actually contains — stripping "La" is right in a French library and wrong for "La Bamba" in
+              an English one.
+            </span>
+          </div>
+        )}
+
+        <div className={styles.field}>
+          <label htmlFor="meta-add-genres">Genres to add</label>
+          <input
+            id="meta-add-genres"
+            className={shared.input}
+            value={o.addGenres.join(", ")}
+            placeholder="Cyberpunk, Neo-noir"
+            onChange={(e) => setOutcome({ addGenres: splitTags(e.target.value) })}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="meta-add-labels">Labels to add</label>
+          <input
+            id="meta-add-labels"
+            className={shared.input}
+            value={o.addLabels.join(", ")}
+            placeholder="Curated"
+            onChange={(e) => setOutcome({ addLabels: splitTags(e.target.value) })}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="meta-remove-genres">Genres to remove</label>
+          <input
+            id="meta-remove-genres"
+            className={shared.input}
+            value={o.removeGenres.join(", ")}
+            onChange={(e) => setOutcome({ removeGenres: splitTags(e.target.value) })}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="meta-remove-labels">Labels to remove</label>
+          <input
+            id="meta-remove-labels"
+            className={shared.input}
+            value={o.removeLabels.join(", ")}
+            onChange={(e) => setOutcome({ removeLabels: splitTags(e.target.value) })}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label>
+            <input type="checkbox" checked={o.lock} onChange={(e) => setOutcome({ lock: e.target.checked })} /> Lock the
+            fields this rule writes
+          </label>
+          <span className={styles.hint}>
+            A locked field stops receiving updates from Plex's metadata agents, so the value survives the next scan.
+            Unlocked, Plex may put its own value back on the next refresh — which looks exactly like the rule working
+            and then quietly undoing itself.
+          </span>
+        </div>
+
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={o.overwriteLocked}
+              onChange={(e) => setOutcome({ overwriteLocked: e.target.checked })}
+            />{" "}
+            Overwrite fields somebody has already locked
+          </label>
+          <span className={styles.hint}>
+            Off by default. A locked field holding a different value is almost always a deliberate fix — the rule skips
+            it and says so in the run log.
+          </span>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="meta-max-writes">Most fields to change per run</label>
+          <input
+            id="meta-max-writes"
+            type="number"
+            className={shared.input}
+            style={{ maxWidth: 140 }}
+            min={1}
+            value={o.maxWritesPerRun}
+            onChange={(e) => setOutcome({ maxWritesPerRun: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+          />
+          <span className={styles.hint}>
+            A per-rule brake. There is a second, global one in Settings → Metadata that no rule can exceed.
+          </span>
+        </div>
+
+        <div className={styles.field}>
+          <label>
+            <input type="checkbox" checked={o.dryRun} onChange={(e) => setOutcome({ dryRun: e.target.checked })} />{" "}
+            Preview only — report what would change and write nothing
+          </label>
+          <span className={styles.hint}>
+            On by default, and worth leaving on for a run or two. Metadata is the one thing here that can't be
+            regenerated: run it, read the log, then switch this off.
+          </span>
+        </div>
+      </>
+    );
+  }
+
   function renderOutcomeStep() {
     const o = form.outcome;
     const setOutcome = (patch: Partial<OutcomeFormState>) => setForm({ ...form, outcome: { ...o, ...patch } });
     const destructive = isDestructiveMode(o.mode);
+
+    if (o.kind === "metadata") return renderMetadataStep();
 
     return (
       <>

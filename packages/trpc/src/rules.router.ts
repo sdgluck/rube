@@ -122,6 +122,7 @@ async function executeRuleRun(ruleId: string, phase: RuleRunPhase, runId: string
       tokensIn: result.tokensIn,
       tokensOut: result.tokensOut,
       cleanup: result.cleanup,
+      metadata: result.metadata,
       funnel: result.funnel,
     });
     setRuleLastTest(ruleId, {

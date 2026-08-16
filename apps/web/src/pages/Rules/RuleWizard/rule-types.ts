@@ -6,6 +6,7 @@ import {
   minItemsOnByDefault,
   posterUrlError,
   producesManyCollections,
+  templateError,
   type RuleTypeValue,
 } from "@tinkerbell/contracts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
@@ -420,7 +421,7 @@ export type StepId = "type" | "source" | "scope" | "outcome" | "presentation" | 
 export function stepsFor(
   type: string,
   mode: "create" | "edit",
-  outcomeKind: "collection" | "cleanup" = "collection",
+  outcomeKind: "collection" | "cleanup" | "metadata" = "collection",
 ): { id: StepId; label: string }[] {
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
@@ -434,6 +435,10 @@ export function stepsFor(
   // It stays ahead of Scope because it decides what Scope asks: a cleanup rule
   // never pins anything, so its homepage questions are dropped.
   if (outcomeKind === "cleanup") steps.push({ id: "outcome", label: "Cleanup" });
+  // A metadata rule keeps the step for the same reason and drops the same
+  // later ones: it builds no collection, so it pins nothing and there is no
+  // shelf to describe or illustrate.
+  if (outcomeKind === "metadata") steps.push({ id: "outcome", label: "Fields" });
   steps.push({ id: "scope", label: "Scope" });
   // A cleanup rule's shelf is deliberately plain: the job gives it neither a
   // summary nor a poster, so asking would be asking about something nothing
@@ -482,6 +487,7 @@ export function pinRotationError(form: RuleFormState): string | null {
  */
 export function outcomeError(form: RuleFormState): string | null {
   const o = form.outcome;
+  if (o.kind === "metadata") return metadataOutcomeError(o);
   if (o.kind !== "cleanup") return null;
   if (!o.mode) return "Choose what should happen to matching items.";
   if (o.consecutiveRuns < 1) return "Items must match at least one run.";
@@ -489,6 +495,35 @@ export function outcomeError(form: RuleFormState): string | null {
     return "A rule that removes things must require at least two consecutive matching runs.";
   }
   if (o.maxActionsPerRun < 1) return "Set a per-run limit of at least one item.";
+  return null;
+}
+
+/**
+ * A metadata rule has to say what it writes, and say it in tokens that exist.
+ *
+ * The empty case matters more than it looks: a rule saved with every field
+ * blank runs nightly, matches a thousand items and does nothing, and the only
+ * evidence is a log nobody reads. The token check is here as well as in the
+ * schema because the wizard can say which field is wrong while the user is
+ * still looking at it.
+ */
+function metadataOutcomeError(o: RuleFormState["outcome"]): string | null {
+  for (const [field, template] of Object.entries(o.set)) {
+    if (!template) continue;
+    const error = templateError(template);
+    if (error) return `${field}: ${error}`;
+  }
+  const writesSomething =
+    Object.values(o.set).some((v) => v.trim() !== "") ||
+    o.addGenres.length > 0 ||
+    o.addLabels.length > 0 ||
+    o.removeGenres.length > 0 ||
+    o.removeLabels.length > 0;
+  if (!writesSomething) return "Set at least one field, or add or remove at least one tag.";
+  if (o.maxWritesPerRun < 1) return "Set a per-run limit of at least one field.";
+  if (o.sortLanguages.length === 0) {
+    return "Choose at least one language for sort titles, or clear the sort title field.";
+  }
   return null;
 }
 

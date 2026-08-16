@@ -209,10 +209,51 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
           )}
         </div>
       )}
+      {result.metadata && (
+        <div className={styles.cleanupPreview}>
+          {/* Grouped by field, because "change contentRating on 431 items" is
+              the sentence someone needs before agreeing — a total across
+              fields says nothing about what is about to happen. */}
+          <strong>{result.metadata.writes}</strong> field write{result.metadata.writes === 1 ? "" : "s"} across{" "}
+          <strong>{result.metadata.items}</strong> item{result.metadata.items === 1 ? "" : "s"}.
+          {result.metadata.byField.length > 0 && (
+            <div>
+              {result.metadata.byField
+                .map((f) => `${f.field} on ${f.count} item${f.count === 1 ? "" : "s"}`)
+                .join(" · ")}
+            </div>
+          )}
+          {result.metadata.blocked > 0 && (
+            <div>
+              {result.metadata.blocked} would be skipped — the field is locked to a different value and this rule
+              doesn't overwrite locked fields.
+            </div>
+          )}
+          {result.metadata.dryRun && " This rule is in preview-only mode, so a real run would write none of them."}
+          {result.metadata.truncated && (
+            <div>
+              Showing the first {result.metadata.inspected} of {result.metadata.matched} matched items — a real run
+              covers them all.
+            </div>
+          )}
+          {result.metadata.diffs.length > 0 && (
+            <div className={styles.cleanupPreviewTitles}>
+              {result.metadata.diffs.map((d, i: number) => (
+                <div key={i}>
+                  {d.itemTitle} — {d.field}: {d.currentValue} → {d.newValue}
+                  {d.blocked && " (locked, skipped)"}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {result.funnel && result.funnel.length > 0 && <FilterFunnel sections={result.funnel} />}
       {result.collections.length === 0 ? (
         <div className={styles.testPreviewEmpty}>
-          {result.cleanup ? "Nothing matched this rule." : "No collections would be created by this rule."}
+          {result.cleanup || result.metadata
+            ? "Nothing matched this rule."
+            : "No collections would be created by this rule."}
         </div>
       ) : stackWidth == null ? null : (
         <div className={styles.testPreviewStack} style={{ width: `${stackWidth}px` }}>

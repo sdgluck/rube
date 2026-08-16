@@ -47,6 +47,32 @@ export interface PersistedTestResult {
     dueTitles: string[];
   };
   /**
+   * For a metadata rule: the per-field diff a real run would write.
+   *
+   * Grouped by field as well as listed, because "change contentRating on 431
+   * items" is the sentence someone needs before agreeing — and unlike a
+   * collection there is no delete-and-re-run recovery if they agree wrongly.
+   */
+  metadata?: {
+    dryRun: boolean;
+    lock: boolean;
+    matched: number;
+    inspected: number;
+    writes: number;
+    items: number;
+    blocked: number;
+    byField: Array<{ field: string; count: number }>;
+    diffs: Array<{
+      ratingKey: string;
+      itemTitle: string;
+      field: string;
+      currentValue: string;
+      newValue: string;
+      blocked: boolean;
+    }>;
+    truncated: boolean;
+  };
+  /**
    * For a smart filter: how many items each clause eliminated, per library.
    *
    * The single most valuable thing a test can say when the answer is zero —

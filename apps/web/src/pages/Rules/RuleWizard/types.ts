@@ -6,10 +6,11 @@
  * type without losing field values the user already entered.
  */
 
-import type { CleanupMode, PosterSource, SummarySource } from "@tinkerbell/contracts";
+import { DEFAULT_MAX_WRITES_PER_RUN, METADATA_SETTABLE_FIELDS } from "@tinkerbell/contracts";
+import type { CleanupMode, MetadataSettableField, PosterSource, SummarySource } from "@tinkerbell/contracts";
 import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
 
-export type { CleanupMode };
+export type { CleanupMode, MetadataSettableField };
 
 export type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
 
@@ -24,13 +25,27 @@ export type AiNameStyle = "short_punchy" | "descriptive";
  * entered — same reason the rest of this form is one shape.
  */
 export interface OutcomeFormState {
-  kind: "collection" | "cleanup";
+  kind: "collection" | "cleanup" | "metadata";
   mode: CleanupMode;
   consecutiveRuns: number;
   maxActionsPerRun: number;
   viaArr: boolean;
   addImportExclusion: boolean;
   dryRun: boolean;
+  /**
+   * Metadata: the fields this rule writes, as templates. Held as a full map
+   * with empty strings for "don't touch", so clearing a field and typing it
+   * again doesn't lose the rest — and so the inputs stay controlled.
+   */
+  set: Record<MetadataSettableField, string>;
+  addGenres: string[];
+  addLabels: string[];
+  removeGenres: string[];
+  removeLabels: string[];
+  lock: boolean;
+  overwriteLocked: boolean;
+  maxWritesPerRun: number;
+  sortLanguages: string[];
 }
 
 /**
@@ -130,6 +145,12 @@ export const DEFAULT_SCHEDULE_FORM: ScheduleFormState = {
   runOnItemAdded: false,
 };
 
+/** Every settable field, blank. Blank means "leave this alone". */
+const EMPTY_METADATA_SET = Object.fromEntries(METADATA_SETTABLE_FIELDS.map((f) => [f, ""])) as Record<
+  MetadataSettableField,
+  string
+>;
+
 export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
   kind: "collection",
   // Least destructive first. The wizard makes you pass a confirmation to get
@@ -140,6 +161,18 @@ export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
   viaArr: true,
   addImportExclusion: false,
   dryRun: true,
+  set: { ...EMPTY_METADATA_SET },
+  addGenres: [],
+  addLabels: [],
+  removeGenres: [],
+  removeLabels: [],
+  // An unlocked write is reverted by the next agent refresh, so the rule
+  // would appear to work and then silently undo itself.
+  lock: true,
+  // A locked field is almost always a human's deliberate fix.
+  overwriteLocked: false,
+  maxWritesPerRun: DEFAULT_MAX_WRITES_PER_RUN,
+  sortLanguages: ["en"],
 };
 
 export const DEFAULT_ARR_FORM: ArrFormState = {

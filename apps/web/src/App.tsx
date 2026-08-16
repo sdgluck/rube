@@ -167,6 +167,11 @@ export default function App() {
                   <Route path="rules" element={<Rules outcome="cleanup" />} />
                   <Route path="rules/:ruleId/runs" element={<RuleRuns outcome="cleanup" />} />
                 </Route>
+                {/* No layout of its own: a metadata rule's history lives in
+                    Settings → Metadata, where the master switch and the undo
+                    are, so there is no second tab to put beside the rules. */}
+                <Route path="/metadata" element={<Rules outcome="metadata" />} />
+                <Route path="/metadata/rules/:ruleId/runs" element={<RuleRuns outcome="metadata" />} />
                 <Route
                   path="/registry"
                   element={

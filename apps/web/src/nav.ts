@@ -33,6 +33,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/rules", label: "Rules", metric: { kind: "count", key: "rules" } },
       { to: "/cleanup", label: "Cleanup", metric: { kind: "count", key: "cleanupDueSoon" } },
+      { to: "/metadata", label: "Metadata" },
       { to: "/registry", label: "Registry" },
       { to: "/jobs", label: "Jobs", metric: { kind: "status", key: "jobsStatus" } },
     ],

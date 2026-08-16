@@ -185,12 +185,41 @@ export const EMPTY_FORM: RuleFormState = {
  *
  * An absent or unrecognised action is a collection rule — the same reading the
  * generate job takes. Erring the other way would silently turn an ordinary
- * rule into a cleanup rule in the editor.
+ * rule into one that removes or rewrites things in the editor.
  */
 export function outcomeFromConfig(action: unknown): OutcomeFormState {
   const a = action as { kind?: string } | null | undefined;
-  if (a?.kind !== "cleanup") return { ...DEFAULT_OUTCOME_FORM };
-  return { ...DEFAULT_OUTCOME_FORM, ...(a as Partial<OutcomeFormState>), kind: "cleanup" };
+  if (a?.kind === "cleanup") {
+    return { ...DEFAULT_OUTCOME_FORM, ...(a as Partial<OutcomeFormState>), kind: "cleanup" };
+  }
+  if (a?.kind === "metadata") {
+    const stored = a as {
+      set?: Record<string, string>;
+      addTags?: { genre?: string[]; label?: string[] };
+      removeTags?: { genre?: string[]; label?: string[] };
+      lock?: boolean;
+      overwriteLocked?: boolean;
+      maxWritesPerRun?: number;
+      sortLanguages?: string[];
+    };
+    return {
+      ...DEFAULT_OUTCOME_FORM,
+      kind: "metadata",
+      // Merged over the blank map rather than replacing it: the form's inputs
+      // are controlled, and a stored action only carries the fields it writes.
+      set: { ...DEFAULT_OUTCOME_FORM.set, ...stored.set },
+      addGenres: stored.addTags?.genre ?? [],
+      addLabels: stored.addTags?.label ?? [],
+      removeGenres: stored.removeTags?.genre ?? [],
+      removeLabels: stored.removeTags?.label ?? [],
+      lock: stored.lock ?? true,
+      overwriteLocked: stored.overwriteLocked ?? false,
+      maxWritesPerRun: stored.maxWritesPerRun ?? DEFAULT_OUTCOME_FORM.maxWritesPerRun,
+      sortLanguages: stored.sortLanguages ?? ["en"],
+      dryRun: (a as { dryRun?: boolean }).dryRun ?? true,
+    };
+  }
+  return { ...DEFAULT_OUTCOME_FORM };
 }
 
 /**
