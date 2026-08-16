@@ -1,23 +1,23 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { getQualityProfiles, getRootFolders, type ArrConfig, type ArrService } from "@tinkerbell/arr";
-import { getConfig, errorMessage } from "@tinkerbell/core";
+import { arrInstances, errorMessage, resolveArrInstance } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 
-function configFor(service: ArrService): ArrConfig | null {
-  if (service === "radarr") {
-    const url = getConfig("global_radarr_url");
-    const apiKey = getConfig("global_radarr_api_key");
-    if (!url || !apiKey) return null;
-    return { service, url, apiKey };
-  }
-  const url = getConfig("global_sonarr_url");
-  const apiKey = getConfig("global_sonarr_api_key");
-  if (!url || !apiKey) return null;
-  return { service, url, apiKey };
+/**
+ * The instance to talk to. An absent id means the service's default — the
+ * server the original `global_*` keys point at.
+ */
+function configFor(service: ArrService, instanceId?: string): ArrConfig | null {
+  const instance = resolveArrInstance(service, instanceId);
+  if (!instance) return null;
+  return { service, url: instance.url, apiKey: instance.apiKey };
 }
 
-const serviceInput = z.object({ service: z.enum(["radarr", "sonarr"]) });
+const serviceInput = z.object({
+  service: z.enum(["radarr", "sonarr"]),
+  instanceId: z.string().optional(),
+});
 
 export const arrRouter = t.router({
   status: procedure.query(() => {
@@ -27,8 +27,18 @@ export const arrRouter = t.router({
     };
   }),
 
+  /**
+   * Every configured instance, default first.
+   *
+   * Credentials are deliberately not returned: this feeds pickers, which need
+   * a name and an id and nothing else.
+   */
+  instances: procedure.query(() =>
+    arrInstances().map((i) => ({ id: i.id, service: i.service, name: i.name, isDefault: i.isDefault })),
+  ),
+
   qualityProfiles: procedure.input(serviceInput).query(async ({ input }) => {
-    const cfg = configFor(input.service);
+    const cfg = configFor(input.service, input.instanceId);
     if (!cfg) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
@@ -43,7 +53,7 @@ export const arrRouter = t.router({
   }),
 
   rootFolders: procedure.input(serviceInput).query(async ({ input }) => {
-    const cfg = configFor(input.service);
+    const cfg = configFor(input.service, input.instanceId);
     if (!cfg) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",

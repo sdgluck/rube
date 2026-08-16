@@ -19,7 +19,7 @@
  * to browse "what this rule would delete" in Plex before it happens is what
  * makes the feature trustworthy, and it costs one collection.
  */
-import { DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
+import { arrInstances, DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
 import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
 import {
   actionedSince,
@@ -457,18 +457,26 @@ async function findArrRecord(
   if (!section) return null;
   const service: "radarr" | "sonarr" = section.type === "show" ? "sonarr" : "radarr";
 
-  const url = getConfig(service === "radarr" ? "global_radarr_url" : "global_sonarr_url");
-  const apiKey = getConfig(service === "radarr" ? "global_radarr_api_key" : "global_sonarr_api_key");
-  if (!url || !apiKey) return null;
+  const instances = arrInstances(service);
+  if (instances.length === 0) return null;
 
   const guids = await client.getItemGuids(candidate.ratingKey);
   const externalId = arrExternalId({ guids }, service);
   if (!externalId) return null;
 
   const { findByExternalId } = await import("@tinkerbell/arr");
-  const config = { service, url, apiKey };
-  const record = await findByExternalId(config, externalId);
-  return record ? { config, record } : null;
+
+  // Every instance of the service, not one of them. With a split 4K setup the
+  // film is in whichever instance downloaded it, and there is no way to know
+  // which from the Plex side — so the record is looked up in each until one
+  // has it. Deleting through the wrong instance is not a possible outcome:
+  // an instance that does not hold the record returns nothing to delete.
+  for (const instance of instances) {
+    const config = { service, url: instance.url, apiKey: instance.apiKey };
+    const record = await findByExternalId(config, externalId);
+    if (record) return { config, record };
+  }
+  return null;
 }
 
 function pastTense(mode: string): string {

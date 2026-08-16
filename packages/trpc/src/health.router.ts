@@ -5,7 +5,7 @@ import {
   reportHealth,
   getHealthLatest,
   getHealthHistory,
-  HEALTH_SERVICES,
+  healthServices,
   checkServiceHealth,
 } from "@tinkerbell/domain.health";
 import { t, procedure } from "./_base.ts";
@@ -17,12 +17,13 @@ function mutedUntilFor(until: number | undefined): number | null {
 
 export const healthRouter = t.router({
   status: procedure.query(() => {
-    const serviceNames = HEALTH_SERVICES.map((s) => s.service);
+    const services = healthServices();
+    const serviceNames = services.map((s) => s.service);
     const entries = getHealthLatest(serviceNames);
     const cfg = getAllConfig();
     const mutes = getConfig("health_mutes") ?? {};
 
-    return HEALTH_SERVICES.map((svc) => {
+    return services.map((svc) => {
       const entry = entries.find((e) => e.service === svc.service);
       return {
         service: svc.service,
@@ -40,7 +41,7 @@ export const healthRouter = t.router({
   history: procedure.input(z.object({ hours: z.number().default(24) })).query(({ input }) => {
     const since = Date.now() - input.hours * 60 * 60 * 1000;
     const result: Record<string, Array<{ status: string; timestamp: number }>> = {};
-    for (const svc of HEALTH_SERVICES) {
+    for (const svc of healthServices()) {
       result[svc.service] = getHealthHistory(svc.service, since);
     }
     return result;

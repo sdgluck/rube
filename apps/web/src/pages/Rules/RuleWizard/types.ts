@@ -74,6 +74,12 @@ export const DEFAULT_PRESENTATION_FORM: PresentationFormState = {
 
 export interface ArrFormState {
   enabled: boolean;
+  /**
+   * Which instance to add to. Empty means the service's default — the server
+   * the Radarr/Sonarr tabs configure, and what every rule written before split
+   * instances existed targets.
+   */
+  instanceId: string;
   monitor: boolean;
   searchOnAdd: boolean;
   qualityProfileId: number;
@@ -177,6 +183,7 @@ export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
 
 export const DEFAULT_ARR_FORM: ArrFormState = {
   enabled: false,
+  instanceId: "",
   monitor: true,
   searchOnAdd: false,
   qualityProfileId: 0,

@@ -1,5 +1,5 @@
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { getConfig } from "@tinkerbell/core";
+import { getConfig, resolveArrInstance } from "@tinkerbell/core";
 import { errorMessage } from "@tinkerbell/core";
 import type { JobContext } from "@tinkerbell/core";
 import type { Rule } from "@tinkerbell/domain.rules";
@@ -329,14 +329,16 @@ async function pushToArr(
     const queue = byService[service];
     if (queue.length === 0) continue;
 
-    const url = getConfig(service === "radarr" ? "global_radarr_url" : "global_sonarr_url");
-    const apiKey = getConfig(service === "radarr" ? "global_radarr_api_key" : "global_sonarr_api_key");
-    if (!url || !apiKey) {
+    // The instance the rule names, or the service's default for every rule
+    // written before split instances existed.
+    const instance = resolveArrInstance(service, arrCfg.instanceId);
+    if (!instance) {
       ctx.log(`[arr] ${service} not configured — skipping ${queue.length} item(s).`);
       skipped += queue.length;
       continue;
     }
-    const arrConfig = { service, url, apiKey };
+    if (!instance.isDefault) ctx.log(`[arr] Using ${service} instance "${instance.name}".`);
+    const arrConfig = { service, url: instance.url, apiKey: instance.apiKey };
 
     for (const u of queue) {
       try {

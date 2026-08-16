@@ -122,6 +122,30 @@ export const configSchema = z.object({
   global_radarr_api_key: z.string(),
   global_sonarr_url: z.string(),
   global_sonarr_api_key: z.string(),
+  /**
+   * Additional Radarr/Sonarr instances, beyond the pair above.
+   *
+   * A split 4K instance is the norm in this community — a second Radarr with
+   * its own root folder and quality profiles, often a third for anime — and
+   * one url/key pair per service could not express it. A cleanup rule could
+   * not delete from the right instance, and auto-add could not target one.
+   *
+   * Additive rather than a migration: the existing keys stay exactly as they
+   * are and become the *default* instance of their service. Nothing has to be
+   * moved, every rule that names no instance keeps using the pair it always
+   * used, and an install that never wants a second instance never sees one.
+   */
+  global_arr_instances: z.array(
+    z.object({
+      /** Stable across renames — rules refer to this, not to the name. */
+      id: z.string(),
+      service: z.enum(["radarr", "sonarr"]),
+      /** What it is called in pickers: "4K", "Anime". */
+      name: z.string(),
+      url: z.string(),
+      apiKey: z.string(),
+    }),
+  ),
   global_seerr_url: z.string(),
   global_seerr_api_key: z.string(),
   global_omdb_api_key: z.string(),

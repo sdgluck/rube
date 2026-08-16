@@ -276,6 +276,14 @@ const baseRuleConfigSchema = z.object({
   arr: z
     .object({
       enabled: z.boolean(),
+      /**
+       * Which Radarr/Sonarr to add to.
+       *
+       * Absent means the service's default instance — the server the original
+       * `global_radarr_*` keys point at — so every rule written before split
+       * instances existed keeps targeting exactly what it always did.
+       */
+      instanceId: z.string().optional(),
       monitor: z.boolean(),
       searchOnAdd: z.boolean(),
       qualityProfileId: z.number(),

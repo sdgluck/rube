@@ -3,7 +3,7 @@ import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { getEnvironment, getPlexPrerollStatus } from "@tinkerbell/domain.prerolls";
-import { getAllConfig, getConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
+import { arrInstances, getAllConfig, getConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";
@@ -34,6 +34,38 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   { service: "Prerolls", configuredFn: (c) => !!c.prerolls_plex_path },
 ];
 
+/**
+ * The static list plus one entry per extra \*Arr instance.
+ *
+ * Instances are configuration, not code, so they cannot live in the array
+ * above — but a second Radarr that nobody is watching is exactly as useful as
+ * a first one that nobody is watching. Named `Radarr (4K)` after the instance,
+ * which is also what the notification target picker will offer, so routing
+ * "tell me when the 4K one dies" somewhere specific works without any further
+ * plumbing.
+ */
+export function healthServices(): Array<{ service: string; configuredFn: (c: ConfigMap) => boolean }> {
+  const extra = arrInstances()
+    .filter((i) => !i.isDefault)
+    .map((i) => ({
+      service: `${i.service === "radarr" ? "Radarr" : "Sonarr"} (${i.name})`,
+      // Already resolved from config to exist at all, so it is configured by
+      // construction — the check itself is what reports whether it answers.
+      configuredFn: () => true,
+    }));
+  return [...HEALTH_SERVICES, ...extra];
+}
+
+/** The instance behind a derived `Radarr (4K)` health name, if it is one. */
+function instanceForHealthService(service: string): { url: string; apiKey: string } | null {
+  const match = /^(Radarr|Sonarr) \((.+)\)$/.exec(service);
+  if (!match) return null;
+  const found = arrInstances(match[1].toLowerCase() as "radarr" | "sonarr").find(
+    (i) => !i.isDefault && i.name === match[2],
+  );
+  return found ? { url: found.url, apiKey: found.apiKey } : null;
+}
+
 export async function testArrConnection(url: string, apiKey: string) {
   const testUrl = new URL("/api/v3/system/status", url);
   const res = await fetch(testUrl.toString(), {
@@ -47,6 +79,15 @@ export async function testArrConnection(url: string, apiKey: string) {
 
 export async function checkServiceHealth(service: string): Promise<void> {
   const cfg = getAllConfig();
+
+  // An extra instance carries its own credentials and answers the same
+  // endpoint as the default one, so it needs no case of its own.
+  const instance = instanceForHealthService(service);
+  if (instance) {
+    const name = await testArrConnection(instance.url, instance.apiKey);
+    reportHealth(service, "ok", `Connected — ${name}`);
+    return;
+  }
 
   switch (service) {
     case "Plex": {
@@ -225,7 +266,7 @@ export async function checkServiceHealth(service: string): Promise<void> {
 /** Check all configured services, reporting health for each. Returns a summary string. */
 export async function checkAllConfiguredServices(signal?: AbortSignal): Promise<string> {
   const cfg = getAllConfig();
-  const configured = HEALTH_SERVICES.filter((svc) => svc.configuredFn(cfg));
+  const configured = healthServices().filter((svc) => svc.configuredFn(cfg));
   const results: string[] = [];
 
   for (const svc of configured) {

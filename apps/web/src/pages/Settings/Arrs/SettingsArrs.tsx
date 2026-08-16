@@ -33,6 +33,13 @@ export default function SettingsArrs() {
             </NavLink>
           );
         })}
+        {/* Not a service: extra instances of the two above. */}
+        <NavLink
+          to="/settings/arrs/instances"
+          className={({ isActive }) => `${styles.subTab} ${isActive ? styles.subTabActive : ""}`}
+        >
+          Instances
+        </NavLink>
       </nav>
       <Outlet />
     </div>

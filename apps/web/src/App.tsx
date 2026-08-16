@@ -19,6 +19,7 @@ const SettingsPlex = lazy(() => import("#pages/Settings/SettingsPlex"));
 const SettingsAi = lazy(() => import("#pages/Settings/SettingsAi"));
 const SettingsArrs = lazy(() => import("#pages/Settings/Arrs/SettingsArrs"));
 const SettingsArrsService = lazy(() => import("#pages/Settings/Arrs/SettingsArrsService"));
+const SettingsArrsInstances = lazy(() => import("#pages/Settings/Arrs/SettingsArrsInstances"));
 const SettingsDatabases = lazy(() => import("#pages/Settings/Databases/SettingsDatabases"));
 const SettingsDatabasesService = lazy(() => import("#pages/Settings/Databases/SettingsDatabasesService"));
 const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/SettingsNotifications"));
@@ -303,6 +304,15 @@ export default function App() {
                     }
                   >
                     <Route index element={<Navigate to="/settings/arrs/radarr" replace />} />
+                    {/* Ahead of `:service`, which would otherwise match it. */}
+                    <Route
+                      path="instances"
+                      element={
+                        <LazyPage>
+                          <SettingsArrsInstances />
+                        </LazyPage>
+                      }
+                    />
                     <Route
                       path=":service"
                       element={

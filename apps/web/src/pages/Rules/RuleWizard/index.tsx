@@ -257,12 +257,16 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   const arrService = arrServiceForType(form.type, form.chart);
   const arrStatusQuery = trpc.arr.status.useQuery(undefined, { staleTime: 60_000 });
   const arrConfigured = !!arrStatusQuery.data?.[arrService];
+  const arrInstancesQuery = trpc.arr.instances.useQuery(undefined, { staleTime: 60_000 });
+  const arrInstancesForService = (arrInstancesQuery.data ?? []).filter((i) => i.service === arrService);
   const arrProfilesQuery = trpc.arr.qualityProfiles.useQuery(
-    { service: arrService },
+    // Quality profiles and root folders belong to one instance, so switching
+    // instance has to re-ask rather than reuse the other one's answers.
+    { service: arrService, instanceId: form.arr.instanceId || undefined },
     { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
   );
   const arrFoldersQuery = trpc.arr.rootFolders.useQuery(
-    { service: arrService },
+    { service: arrService, instanceId: form.arr.instanceId || undefined },
     { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
   );
 
@@ -1485,6 +1489,32 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
         {form.arr.enabled && (
           <>
+            {/* Only shown once there is a choice to make. On the single-instance
+                setup almost everyone has, a picker with one entry is a control
+                that asks a question with one answer. */}
+            {arrInstancesForService.length > 1 && (
+              <div className={styles.field}>
+                <label htmlFor="arr-instance">Instance</label>
+                <select
+                  id="arr-instance"
+                  className={shared.input}
+                  value={form.arr.instanceId ?? ""}
+                  onChange={(e) =>
+                    // Changing instance invalidates both — a profile id from
+                    // one server means something else entirely on another.
+                    setArr({ instanceId: e.target.value, qualityProfileId: 0, rootFolderPath: "" })
+                  }
+                >
+                  {arrInstancesForService.map((i) => (
+                    <option key={i.id} value={i.isDefault ? "" : i.id}>
+                      {i.name}
+                      {i.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className={styles.field}>
               <label htmlFor="arr-quality">Quality profile</label>
               <select
