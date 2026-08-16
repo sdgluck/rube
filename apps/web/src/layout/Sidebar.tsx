@@ -1,7 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
-import { VERSION, IS_BETA } from "#/version";
+import { VERSION, IS_BETA, GIT_SHA } from "#/version";
 import { NAV_SECTIONS, type NavMetric } from "#/nav";
 import { modChord } from "#components/Kbd";
 import styles from "./Sidebar.module.css";
@@ -213,7 +213,11 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
       <SidebarActiveJobs />
       <div className="sidebar-footer">
         <SidebarHealthDot />
-        <Link to="/settings/changelog" className="sidebar-version" title="View changelog">
+        <Link
+          to="/settings/changelog"
+          className="sidebar-version"
+          title={GIT_SHA ? `${GIT_SHA} — view changelog` : "View changelog"}
+        >
           v{VERSION}
         </Link>
       </div>

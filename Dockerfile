@@ -42,6 +42,10 @@ COPY apps/server/ ./apps/server/
 COPY apps/web/ ./apps/web/
 COPY apps/portal/ ./apps/portal/
 
+# There is no .git in the build context, so the commit the web bundle reports
+# has to be handed in. Unset just means the UI doesn't name a commit.
+ARG TB_GIT_SHA=""
+ENV TB_GIT_SHA=$TB_GIT_SHA
 RUN pnpm --filter @tinkerbell/web run build
 RUN pnpm --filter @tinkerbell/portal run build
 
