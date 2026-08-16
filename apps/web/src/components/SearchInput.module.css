@@ -48,9 +48,13 @@
   background: var(--surface-sunken);
 }
 
-@media (max-width: 720px) {
+/* A whole line, above whatever filters follow. `flex: 1` alone let the field
+   share a row with three selects, which on a phone left it too narrow to read
+   your own query back; a full-width basis makes the toolbar wrap into a search
+   line and a filter line instead of shrinking everything on one. */
+@media (max-width: 768px) {
   .wrap {
     width: auto;
-    flex: 1;
+    flex: 1 0 100%;
   }
 }

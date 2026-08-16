@@ -1193,9 +1193,33 @@
     display: none;
   }
 
+  /* Wraps rather than stacks. One control per row put "All sections", "All
+     labels" and "All rules" — none of them wider than 150px — on three lines of
+     a 390px screen, so the filter bar was most of the first screenful and the
+     list it filters started below the fold. The search field still claims a
+     line of its own (see SearchInput.module.css); the rest share what's left.
+
+     The spacer goes: in a wrapping row a `flex: 1` gap doesn't push the trailing
+     controls right, it pushes them onto a line of their own. */
   .filters {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 8px;
+  }
+
+  .filtersSpacer {
+    display: none;
+  }
+
+  /* A `.compactTable` in a dashboard panel keeps its columns on a phone — the
+     alignment is the point — and swipes sideways inside the panel instead of
+     reflowing to cards. It only has ~322px to work with there, so it buys the
+     width back from the gutters: at 10px a side, seven columns spent 140px on
+     padding and the last one hung half off the edge, which reads as broken
+     rather than as "swipe me". */
+  .compactTable th,
+  .compactTable td {
+    padding: 0 6px;
   }
 
   /* A 100px nowrap label beside a flex input leaves the input ~200px on a

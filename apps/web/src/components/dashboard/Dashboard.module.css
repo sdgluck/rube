@@ -452,22 +452,40 @@
 /* ─── Responsive ────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
+  /* Three across on a phone rather than two. A summary bar is a glance, and at
+     two columns five tiles took three rows and the better part of a screen
+     before the page it summarises started — which is the summary costing more
+     than the thing. The metric shrinks with the tile: 20px in a 132px tile was
+     sized for a column that no longer exists. */
   .summaryBar {
-    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    gap: 6px;
+  }
+
+  .summaryItem {
+    padding: 9px 10px 10px;
   }
 
   .summaryValue {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .summaryValueSmall {
-    font-size: 14px;
+    font-size: 12.5px;
   }
 
-  /* 132px of tile, most of it spoken for by the metric. The trend is the first
-     thing to go: it is the one element here that nothing else depends on. */
+  /* Most of the tile is spoken for by the metric. The trend is the first thing
+     to go: it is the one element here that nothing else depends on. */
   .sparkline {
     display: none;
+  }
+
+  /* A panel header is a title, a count, whatever buttons the panel owns and a
+     drag handle, in one nowrap row — which fits a desktop column and runs 12px
+     past the edge of a phone, taking the last button and the handle with it.
+     Wrapping only costs a line when the row genuinely doesn't fit. */
+  .panelHeader,
+  .panelActions {
+    flex-wrap: wrap;
   }
 }
