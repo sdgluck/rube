@@ -285,6 +285,13 @@
   border: 1px solid var(--line);
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
+  /* The active item is a filled block inside a 2px trough, so anything that
+     makes it taller than the track shows as a teal edge lying over the border
+     and the control reads as broken. That is exactly what iOS text autosizing
+     did to it (see the text-size-adjust rule in App.css, which is the actual
+     fix). This is the belt: an item is never meant to render outside its own
+     track, whatever inflates it. */
+  overflow: hidden;
 }
 
 /* Items stretch to the track's inner height (the flex default) instead of

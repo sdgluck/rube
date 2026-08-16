@@ -1138,6 +1138,14 @@
     display: block;
   }
 
+  /* Each row is its own card here, so the table is a list of cards rather than
+     a surface with rows on it — and a white table behind them filled the 8px
+     between every card, which turned a stack of cards back into one white
+     slab with faint lines across it. The page shows through instead. */
+  .table {
+    background: transparent;
+  }
+
   .table thead {
     display: none;
   }

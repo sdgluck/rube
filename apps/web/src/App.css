@@ -422,6 +422,23 @@ body {
   overflow-x: hidden;
 }
 
+/* iOS Safari inflates text it decides is too small for the block holding it.
+   No other engine does, and nothing here asks for it — every size in this file
+   is chosen. It lands hardest on the fixed-height controls: on an iPhone the
+   Table/Grid segmented control renders its 11.5px labels at roughly the 12.5px
+   of the button beside it, and the active item grows past a track that is a
+   fixed --control-h with a 2px trough, so the teal fill sits over the border.
+
+   Diagnosed from a device screenshot, not reproduced here: text autosizing is
+   iOS-only, and desktop WebKit renders this control correctly with or without
+   this rule. `-webkit-text-size-adjust: 100%` is the standard opt-out and is
+   inert everywhere else; the `overflow: hidden` on .segmented is the belt that
+   contains the symptom whatever inflates an item. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: 13px;
