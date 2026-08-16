@@ -232,6 +232,43 @@ export const ruleHistory = sqliteTable(
 );
 
 /**
+ * Rules that were deleted recently enough to put back.
+ *
+ * Every destructive path in the app was a confirmation dialog and nothing
+ * else, which is exactly the design that trains people to click through
+ * without reading. A rule is the most expensive thing here to lose — a smart
+ * filter someone spent an hour composing — and it is also the easiest to
+ * restore, because the whole of it is one config blob.
+ *
+ * Not a `deleted_at` column on `rules`: every query in the app would then have
+ * to remember to exclude tombstones, and the one that forgot would show a
+ * deleted rule as live. A separate table is only visible to code that asks
+ * for it.
+ *
+ * The rule's collections in Plex are *not* restored. They were deleted from
+ * Plex by the delete and the next run rebuilds them; saying so is the
+ * restore's job, not this table's.
+ */
+export const deletedRules = sqliteTable(
+  "deleted_rules",
+  {
+    /** The id the rule had, so a restore puts it back under its own identity. */
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    type: text("type").notNull(),
+    config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
+    enabled: integer("enabled").notNull().default(1),
+    createdAt: integer("created_at").notNull(),
+    registryRuleSlug: text("registry_rule_slug"),
+    registryPackSlug: text("registry_pack_slug"),
+    registryVersion: integer("registry_version"),
+    registryConfigHash: text("registry_config_hash"),
+    deletedAt: integer("deleted_at").notNull(),
+  },
+  (table) => [index("idx_deleted_rules_deleted_at").on(table.deletedAt)],
+);
+
+/**
  * The membership a rule's collection had at the end of its last run.
  *
  * Every run deletes and recreates a rule's collections, so Plex itself cannot

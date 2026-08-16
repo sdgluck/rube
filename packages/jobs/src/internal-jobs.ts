@@ -11,8 +11,9 @@ import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
 import { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwidth";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
-import { pruneRuleRuns, RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
+import { pruneRuleRuns, pruneRunChanges, RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
+import { pruneDeletedRules } from "@tinkerbell/domain.rules";
 import { getCachedRecentlyAdded, syncRecentlyAdded } from "@tinkerbell/domain.stats";
 import { announceRegistryUpdates } from "./registry-updates.ts";
 import { runDueRules } from "./rule-schedules.ts";
@@ -62,7 +63,17 @@ export const internalJobs = {
       // The usage samples are the fastest-growing table here: one row per
       // 30-second poll, whether or not anything was streaming.
       pruneBandwidthSamples();
-      return `Purged ${result.changes} job run(s) and ${ruleRunsPurged} rule run(s) older than 7 days.`;
+      // Undo has a window; past it the tombstone is just a copy of a rule
+      // nobody can reach.
+      const tombstones = pruneDeletedRules();
+      // Changesets are pruned by age rather than by count, because their size
+      // tracks library churn rather than how many runs happened.
+      const changesPurged = pruneRunChanges(RULE_RUN_RETENTION_MS);
+      return (
+        `Purged ${result.changes} job run(s) and ${ruleRunsPurged} rule run(s) older than 7 days` +
+        `${changesPurged > 0 ? `, ${changesPurged} run change(s)` : ""}` +
+        `${tombstones > 0 ? `, ${tombstones} deleted-rule record(s)` : ""}.`
+      );
     },
     timeoutMs: 10 * MINUTE_MS,
   },

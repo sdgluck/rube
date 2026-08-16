@@ -65,6 +65,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const createMutation = trpc.rules.create.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const updateMutation = trpc.rules.update.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const deleteMutation = trpc.rules.delete.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
+  const restoreMutation = trpc.rules.restore.useMutation();
   const revertArtworkMutation = trpc.rules.revertArtwork.useMutation();
 
   const testMutation = trpc.rules.test.useMutation();
@@ -459,11 +460,44 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     });
   }
 
+  /**
+   * Offer the way back, once the thing has already happened.
+   *
+   * The confirmation dialog is still there, but it was never the real
+   * protection — a prompt you see on every delete is a prompt you stop
+   * reading. This is, and it says what it does and doesn't restore rather than
+   * implying a fuller undo than it is.
+   */
+  function offerRestore(ids: string[]) {
+    const what = ids.length === 1 ? "Rule deleted." : `${ids.length} rules deleted.`;
+    addToast(what, "success", {
+      action: {
+        label: "Undo",
+        onAction: () =>
+          restoreMutation.mutate(
+            { ids },
+            {
+              onSuccess: (res) => {
+                utils.rules.list.invalidate();
+                addToast(
+                  res.missing > 0
+                    ? `Restored ${res.restored}; ${res.missing} could not be. Collections are rebuilt on the next run.`
+                    : `Restored ${res.restored === 1 ? "the rule" : `${res.restored} rules`}. Collections are rebuilt on the next run.`,
+                  res.missing > 0 ? "info" : "success",
+                );
+              },
+              onError: (err) => addToast(err.message, "error"),
+            },
+          ),
+      },
+    });
+  }
+
   function handleDelete(rule: RuleRow) {
     setPendingConfirm({
       message: `Delete rule "${rule.name}"?`,
       onConfirm: () => {
-        deleteMutation.mutate({ id: rule.id });
+        deleteMutation.mutate({ id: rule.id }, { onSuccess: () => offerRestore([rule.id]) });
         setPendingConfirm(null);
       },
     });
@@ -504,11 +538,15 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       message: `Delete ${count} rule${count !== 1 ? "s" : ""}?`,
       onConfirm: async () => {
         setPendingConfirm(null);
-        for (const id of selected) {
+        const deletedIds = [...selected];
+        for (const id of deletedIds) {
           await deleteMutation.mutateAsync({ id });
         }
         setSelected(new Set());
         utils.rules.list.invalidate();
+        // One offer for the whole batch: twelve toasts for twelve rules is
+        // twelve chances to undo eleven of them by accident.
+        offerRestore(deletedIds);
       },
     });
   }

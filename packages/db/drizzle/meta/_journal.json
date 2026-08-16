@@ -253,6 +253,13 @@
       "when": 1786890429440,
       "tag": "0035_curious_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1786891832784,
+      "tag": "0036_oval_karnak",
+      "breakpoints": true
     }
   ]
 }

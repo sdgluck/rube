@@ -7,6 +7,8 @@ import {
   deleteRule,
   setRuleLastRun,
   setRuleLastTest,
+  listDeletedRules,
+  restoreDeletedRules,
 } from "@tinkerbell/domain.rules";
 import {
   activateRuleRun,
@@ -191,7 +193,28 @@ export const rulesRouter = t.router({
 
   delete: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     deleteRule(input.id);
-    return { ok: true };
+    // The id is echoed so the caller can offer to undo without having to
+    // remember what it just asked to delete.
+    return { ok: true, restorable: input.id };
+  }),
+
+  /** What can still be un-deleted, for anyone who missed the toast. */
+  deleted: procedure.query(() => listDeletedRules()),
+
+  /**
+   * Put deleted rules back.
+   *
+   * Restores the rule, not the world around it: its Plex collections were
+   * deleted with it and are rebuilt by the next run, and its run history is
+   * gone with the cascade. The caller says so rather than implying a fuller
+   * undo than this is.
+   *
+   * Partial success is normal — a bulk undo where one entry has expired
+   * restores the rest and reports the difference.
+   */
+  restore: procedure.input(z.object({ ids: z.array(z.string()).min(1).max(500) })).mutation(({ input }) => {
+    const { restored, missing } = restoreDeletedRules(input.ids);
+    return { restored: restored.length, missing: missing.length };
   }),
 
   test: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {

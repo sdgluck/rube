@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, type InferSelectModel } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
+import { rememberDeletedRule } from "./recycle.ts";
 
 export {
   acquireRuleLock,
@@ -15,6 +16,15 @@ export {
 } from "./lock.ts";
 
 export type Rule = InferSelectModel<typeof rules>;
+
+export {
+  listDeletedRules,
+  pruneDeletedRules,
+  rememberDeletedRule,
+  restoreDeletedRules,
+  RESTORE_WINDOW_MS,
+  type DeletedRuleSummary,
+} from "./recycle.ts";
 
 export function getRules(): Rule[] {
   return db.select().from(rules).orderBy(rules.createdAt).all();
@@ -191,7 +201,14 @@ export function setRuleLastTest(id: string, outcome: RuleRunOutcome): void {
     .run();
 }
 
+/**
+ * Delete a rule, keeping enough of it to put back.
+ *
+ * The tombstone is written first: if the copy fails, the rule is still there,
+ * which is the recoverable half of the two.
+ */
 export function deleteRule(id: string): void {
+  rememberDeletedRule(id);
   db.delete(rules).where(eq(rules.id, id)).run();
 }
 

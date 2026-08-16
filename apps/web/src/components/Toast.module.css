@@ -159,3 +159,22 @@
     max-width: 100%;
   }
 }
+
+/* The second chance. Underlined rather than boxed: it sits inside a coloured
+   toast, where a button-shaped button would compete with the toast itself. */
+.action {
+  padding: 0;
+  margin-left: 4px;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  white-space: nowrap;
+}
+
+.action:hover {
+  opacity: 0.8;
+}

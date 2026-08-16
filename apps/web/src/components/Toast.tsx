@@ -4,16 +4,47 @@ import styles from "./Toast.module.css";
 
 type ToastType = "success" | "error" | "info";
 
+export interface ToastAction {
+  label: string;
+  /** Runs on click. The toast dismisses itself immediately afterwards. */
+  onAction: () => void;
+}
+
+export interface ToastOptions {
+  duration?: number;
+  /**
+   * A second chance, offered where the first one has already happened.
+   *
+   * This is what makes "delete, then undo" possible at all — before it, every
+   * destructive path in the app was a confirmation dialog and nothing else,
+   * which trains people to click through rather than to read.
+   */
+  action?: ToastAction;
+}
+
 interface Toast {
   id: number;
   message: string;
   type: ToastType;
+  action?: ToastAction;
   exiting?: boolean;
 }
 
 interface ToastContextValue {
-  addToast: (message: string, type?: ToastType, duration?: number) => void;
+  /**
+   * The third argument takes a plain number for the common "show it longer"
+   * case, so every existing call site is untouched, or an options object when
+   * the toast carries an action.
+   */
+  addToast: (message: string, type?: ToastType, options?: number | ToastOptions) => void;
 }
+
+/**
+ * An undo offer has to outlive the reading of the sentence that offers it.
+ * Four seconds is enough to notice a toast; it is not enough to read "deleted
+ * 12 rules", think about it, and reach for the mouse.
+ */
+const ACTION_DURATION = 12000;
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
@@ -53,16 +84,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToast = useCallback(
-    (message: string, type: ToastType = "info", duration?: number) => {
+    (message: string, type: ToastType = "info", options?: number | ToastOptions) => {
+      const opts: ToastOptions = typeof options === "number" ? { duration: options } : (options ?? {});
+      const { action } = opts;
       const id = ++idRef.current;
       let isDuplicate = false;
       setToasts((prev) => {
-        // Repeating an identical message shouldn't stack copies of it.
-        if (prev.some((t) => t.message === message && t.type === type && !t.exiting)) {
+        // Repeating an identical message shouldn't stack copies of it — but an
+        // actionable toast is never a duplicate. Two deletions in a row are two
+        // separate things to undo, and collapsing them would silently drop the
+        // offer to undo the second.
+        if (!action && prev.some((t) => t.message === message && t.type === type && !t.exiting)) {
           isDuplicate = true;
           return prev;
         }
-        return [...prev, { id, message, type }].slice(-MAX_VISIBLE);
+        return [...prev, { id, message, type, action }].slice(-MAX_VISIBLE);
       });
       if (isDuplicate) return;
       // Errors interrupt; confirmations wait for a pause. Announcing from a
@@ -71,7 +107,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       setAnnouncement(type === "error" ? { polite: "", assertive: message } : { polite: message, assertive: "" });
       timers.current.set(
         id,
-        setTimeout(() => removeToast(id), duration ?? DEFAULT_DURATION[type]),
+        setTimeout(() => removeToast(id), opts.duration ?? (action ? ACTION_DURATION : DEFAULT_DURATION[type])),
       );
     },
     [removeToast],
@@ -90,6 +126,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               >
                 <span className={styles.dot} aria-hidden="true" />
                 <span>{toast.message}</span>
+                {toast.action && (
+                  <button
+                    type="button"
+                    className={styles.action}
+                    onClick={() => {
+                      toast.action?.onAction();
+                      removeToast(toast.id);
+                    }}
+                  >
+                    {toast.action.label}
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.dismiss}
