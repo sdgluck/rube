@@ -24,6 +24,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/collections", label: "Collections", metric: { kind: "count", key: "collections" } },
       { to: "/media", label: "Media", metric: { kind: "count", key: "media" } },
+      { to: "/duplicates", label: "Duplicates" },
       { to: "/overlays", label: "Overlays", metric: { kind: "status", key: "overlaysStatus" } },
       { to: "/prerolls", label: "Prerolls", metric: { kind: "count", key: "prerolls" } },
     ],

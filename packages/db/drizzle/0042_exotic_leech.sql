@@ -1,0 +1,1 @@
+ALTER TABLE `media_items` ADD `version_count` integer DEFAULT 1 NOT NULL;

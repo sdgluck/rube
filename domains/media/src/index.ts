@@ -10,6 +10,14 @@ import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
 export type MediaItemRow = InferSelectModel<typeof mediaItems>;
 
+export {
+  findDuplicates,
+  recommendKeeper,
+  type DuplicateGroup,
+  type DuplicateItem,
+  type DuplicateReport,
+} from "./duplicates.ts";
+
 interface SyncStats {
   synced: number;
   removed: number;
@@ -174,6 +182,7 @@ export async function syncMedia(
         container: media?.container ?? null,
         fileSize,
         bitrate: media?.bitrate ?? null,
+        versionCount: item.Media?.length ?? 1,
         syncedAt: now,
       };
 

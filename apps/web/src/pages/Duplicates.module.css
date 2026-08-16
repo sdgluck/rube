@@ -1,0 +1,67 @@
+.intro {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  max-width: 72ch;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.groupTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.groupYear {
+  color: var(--ink-3);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.groupMeta {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* The recommendation is a tint rather than a border, so a group where nothing
+   is recommended does not read as broken next to one where something is. */
+.keeperRow {
+  background: color-mix(in srgb, var(--status-ok-fg) 8%, transparent);
+}
+
+.keeperBadge {
+  composes: label from "../styles/shared.module.css";
+  margin-left: 6px;
+}
+
+.plexLink {
+  font-size: 11.5px;
+}
+
+.reason {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}

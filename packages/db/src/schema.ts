@@ -644,6 +644,15 @@ export const mediaItems = sqliteTable(
     fileSize: integer("file_size"),
     /** Overall bitrate in kbps, as Plex reports it for the first version. */
     bitrate: integer("bitrate"),
+    /**
+     * How many versions Plex holds for this item.
+     *
+     * The classic Plex duplicate is one item with two files behind it, which
+     * is invisible from every other column here — the resolution and codec
+     * columns describe the first version only, so a 4K remux and a 720p rip
+     * of the same film look like one tidy 4K row.
+     */
+    versionCount: integer("version_count").notNull().default(1),
     syncedAt: integer("synced_at").notNull(),
   },
   (table) => [

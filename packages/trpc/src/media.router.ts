@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
 import { getConfig, setConfig } from "@tinkerbell/core";
 import { narrateSmartFilter, ruleConfigSchema } from "@tinkerbell/contracts";
-import { getLocalMediaItems } from "@tinkerbell/domain.media";
+import { findDuplicates, getLocalMediaItems } from "@tinkerbell/domain.media";
 import { getCollectionsForItem } from "@tinkerbell/domain.collections";
 import { t, procedure, getPlexClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
@@ -42,6 +42,15 @@ export const mediaRouter = t.router({
         sortDir: input.sortDir,
       });
     }),
+
+  /**
+   * Items with more than one file, and separate items that are the same film.
+   *
+   * Answered entirely from the local index — one query, no round trip to
+   * Plex — so the page can be opened casually rather than being a scan
+   * somebody has to schedule.
+   */
+  duplicates: procedure.query(() => findDuplicates()),
 
   get: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
     const client = getPlexClient();

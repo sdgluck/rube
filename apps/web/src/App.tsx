@@ -48,6 +48,7 @@ const CleanupProtected = lazy(() => import("#pages/CleanupProtected"));
 const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
+const Duplicates = lazy(() => import("#pages/Duplicates"));
 const Jobs = lazy(() => import("#pages/Jobs"));
 const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
 const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
@@ -188,6 +189,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <Media />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/duplicates"
+                  element={
+                    <LazyPage>
+                      <Duplicates />
                     </LazyPage>
                   }
                 />
