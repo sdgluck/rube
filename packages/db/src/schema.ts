@@ -611,6 +611,24 @@ export const mediaItems = sqliteTable(
     audioCodec: text("audio_codec"),
     audioChannels: integer("audio_channels"),
     container: text("container"),
+    /**
+     * Bytes on disk, summed across every version and every part.
+     *
+     * Summed rather than taken from the first part, because an item with two
+     * versions occupies both — and the number's whole purpose is to answer
+     * "how much do I get back if this goes", where the answer is all of it.
+     *
+     * Null for shows. The section listing this is read from returns show rows
+     * for a TV library, and Plex hangs no `Media` off those — the files belong
+     * to the episodes. Reading it would mean walking every episode of every
+     * show on every sync, which is a different and much more expensive job.
+     * So a movie library totals correctly and a TV library reports what it
+     * knows, which is nothing; every consumer treats null as "unknown" and
+     * says so rather than counting it as zero.
+     */
+    fileSize: integer("file_size"),
+    /** Overall bitrate in kbps, as Plex reports it for the first version. */
+    bitrate: integer("bitrate"),
     syncedAt: integer("synced_at").notNull(),
   },
   (table) => [
@@ -622,6 +640,8 @@ export const mediaItems = sqliteTable(
     index("idx_media_items_audio_codec").on(table.audioCodec),
     index("idx_media_items_audio_channels").on(table.audioChannels),
     index("idx_media_items_container").on(table.container),
+    // "What is taking up the room" is a sort over the whole library.
+    index("idx_media_items_file_size").on(table.fileSize),
   ],
 );
 

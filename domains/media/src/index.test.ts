@@ -27,6 +27,7 @@ interface FakeItem {
   audienceRating?: number;
   contentRating?: string;
   duration?: number;
+  Media?: Array<{ bitrate?: number; Part?: Array<{ size?: number }> }>;
 }
 
 /**
@@ -159,5 +160,49 @@ describe("taste columns", () => {
     // mean "don't exclude this item", so they collapse to one value here.
     await syncMedia(fakeClient([{ ratingKey: "1", title: "A" }]), [SECTION]);
     assert.equal(db.select().from(mediaItems).all()[0].genres, null);
+  });
+});
+
+/**
+ * The size column exists so a deletion queue can say what it frees, which
+ * makes "wrong but plausible" the expensive failure mode: a show counted as
+ * 0 B silently shrinks a total that somebody is about to make a decision on.
+ */
+describe("file size", () => {
+  test("sums every part of every version, not just the first", async () => {
+    await syncMedia(
+      fakeClient([
+        {
+          ratingKey: "1",
+          title: "Two versions",
+          Media: [{ Part: [{ size: 1000 }] }, { Part: [{ size: 250 }, { size: 250 }] }],
+        },
+      ]),
+      [SECTION],
+    );
+    const row = db.select().from(mediaItems).all()[0];
+    assert.equal(row.fileSize, 1500);
+  });
+
+  test("an item Plex reports no media for stores null, not zero", async () => {
+    // The show case: the files belong to its episodes, and a 0 here would be
+    // added up by every storage total as though the show occupied nothing.
+    await syncMedia(fakeClient([{ ratingKey: "1", title: "A show" }]), [SECTION]);
+    const row = db.select().from(mediaItems).all()[0];
+    assert.equal(row.fileSize, null);
+  });
+
+  test("a version with no size at all stores null rather than zero", async () => {
+    await syncMedia(fakeClient([{ ratingKey: "1", title: "Sizeless", Media: [{ Part: [{}] }] }]), [SECTION]);
+    const row = db.select().from(mediaItems).all()[0];
+    assert.equal(row.fileSize, null);
+  });
+
+  test("bitrate comes from the first version", async () => {
+    await syncMedia(fakeClient([{ ratingKey: "1", title: "A", Media: [{ bitrate: 8000, Part: [{ size: 10 }] }] }]), [
+      SECTION,
+    ]);
+    const row = db.select().from(mediaItems).all()[0];
+    assert.equal(row.bitrate, 8000);
   });
 });

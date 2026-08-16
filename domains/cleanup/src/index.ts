@@ -19,7 +19,7 @@
  * half the streaks bumped.
  */
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
-import { cleanupCandidates, db, rules } from "@tinkerbell/db";
+import { cleanupCandidates, db, mediaItems, rules } from "@tinkerbell/db";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
 
@@ -200,6 +200,15 @@ export interface QueuedCandidate extends CleanupCandidate {
    * will act on. The server decides; the page renders what it is told.
    */
   held: boolean;
+  /**
+   * Bytes this item occupies, or null when that is not known.
+   *
+   * Null is common and not an error — see the `file_size` column note. The
+   * page totals what it knows and says how many it could not account for,
+   * because a deletion queue that quietly under-reports its own size is
+   * worse than one that admits the gap.
+   */
+  fileSize: number | null;
 }
 
 /**
@@ -218,15 +227,20 @@ export function queuedCandidates(
       candidate: cleanupCandidates,
       ruleName: rules.name,
       config: rules.config,
+      // Left-joined: a queued item the media index has not seen (or a show,
+      // which carries no size of its own) still belongs on the list. It
+      // arrives with a null size and is counted as unknown, never as zero.
+      fileSize: mediaItems.fileSize,
     })
     .from(cleanupCandidates)
     .innerJoin(rules, eq(rules.id, cleanupCandidates.ruleId))
+    .leftJoin(mediaItems, eq(mediaItems.ratingKey, cleanupCandidates.ratingKey))
     .where(opts.includeActioned ? undefined : isNull(cleanupCandidates.actionedAt))
     .orderBy(desc(cleanupCandidates.streak), asc(cleanupCandidates.firstMatchedAt))
     .limit(opts.limit ?? 500)
     .all();
 
-  return rows.map(({ candidate, ruleName, config }) => {
+  return rows.map(({ candidate, ruleName, config, fileSize }) => {
     const action = (config as { action?: { consecutiveRuns?: number; mode?: string } } | null)?.action;
     const consecutiveRuns = action?.consecutiveRuns ?? 3;
     return {
@@ -236,6 +250,7 @@ export function queuedCandidates(
       mode: action?.mode ?? "",
       runsRemaining: Math.max(0, consecutiveRuns - candidate.streak),
       held: candidate.heldUntil != null && candidate.heldUntil > now,
+      fileSize: fileSize ?? null,
     };
   });
 }

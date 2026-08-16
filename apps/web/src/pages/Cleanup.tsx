@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
+import { EMPTY, formatFileSize } from "#/format";
 import BulkBar from "#components/BulkBar";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
@@ -82,6 +83,8 @@ type QueueRow = {
   heldUntil: number | null;
   actionedAt: number | null;
   lastMatchedAt: number;
+  /** Null where the size isn't known — shows, and items not yet synced. */
+  fileSize: number | null;
 };
 
 export default function Cleanup() {
@@ -148,10 +151,13 @@ export default function Cleanup() {
       // you are deciding what to rescue.
       streak: (r: QueueRow) => r.runsRemaining,
       lastMatched: (r: QueueRow) => r.lastMatchedAt,
+      // Unknown sizes sort as -1 so "biggest first" does not open with a run
+      // of items whose size nobody knows.
+      size: (r: QueueRow) => r.fileSize ?? -1,
     },
     defaultKey: "streak",
     defaultDir: "asc",
-    descFirst: ["lastMatched"],
+    descFirst: ["lastMatched", "size"],
   });
 
   const rowKey = (row: QueueRow) => `${row.ruleId}:${row.ratingKey}`;
@@ -245,7 +251,19 @@ export default function Cleanup() {
   if (query.error)
     return <ErrorState title="Couldn't load the cleanup queue" error={query.error} onRetry={() => query.refetch()} />;
 
-  const destructiveDue = dueNow.filter((r) => DESTRUCTIVE.has(r.mode)).length;
+  const destructiveDue = dueNow.filter((r) => DESTRUCTIVE.has(r.mode));
+
+  /**
+   * How much space the destructive rows would give back.
+   *
+   * Only the destructive modes: labelling something or dropping it from a
+   * collection frees nothing, and counting those would inflate the number
+   * that people will use to decide whether to let a run proceed. Items whose
+   * size is unknown are counted separately and named, never folded in as
+   * zero.
+   */
+  const reclaimable = destructiveDue.reduce((sum, r) => sum + (r.fileSize ?? 0), 0);
+  const unsizedDue = destructiveDue.filter((r) => r.fileSize == null).length;
 
   return (
     <PageShell
@@ -254,7 +272,9 @@ export default function Cleanup() {
           {dueNow.length > 0 && (
             <StatusChip tone="error">
               {dueNow.length} due on the next run
-              {destructiveDue > 0 ? ` · ${destructiveDue} destructive` : ""}
+              {destructiveDue.length > 0 ? ` · ${destructiveDue.length} destructive` : ""}
+              {reclaimable > 0 ? ` · frees ${formatFileSize(reclaimable)}` : ""}
+              {unsizedDue > 0 ? ` · ${unsizedDue} of unknown size` : ""}
             </StatusChip>
           )}
           <label className={styles.actionedToggle}>
@@ -373,6 +393,9 @@ export default function Cleanup() {
                 <SortableTh sortKey="streak" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                   Streak
                 </SortableTh>
+                <SortableTh sortKey="size" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Size
+                </SortableTh>
                 <th>Status</th>
                 <SortableTh sortKey="lastMatched" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                   Last matched
@@ -410,6 +433,7 @@ export default function Cleanup() {
                     <td>
                       {row.streak} / {row.consecutiveRuns}
                     </td>
+                    <td className={styles.cellMuted}>{row.fileSize != null ? formatFileSize(row.fileSize) : EMPTY}</td>
                     <td>{statusText(row, held, actioned)}</td>
                     <td>
                       <RelativeTime timestamp={row.lastMatchedAt} />

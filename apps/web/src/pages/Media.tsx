@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { EMPTY } from "#/format";
+import { EMPTY, formatFileSize } from "#/format";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
@@ -100,6 +100,7 @@ const SORT_KEYS = [
   "audioCodec",
   "audioChannels",
   "container",
+  "size",
 ] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 
@@ -116,6 +117,7 @@ type MediaItem = {
   audioCodec?: string;
   audioChannels?: number;
   container?: string;
+  fileSize?: number;
 };
 
 const AUDIO_CHANNELS_LABELS: Record<number, string> = {
@@ -171,6 +173,15 @@ const ALL_COLUMNS: TableColumn<MediaItem, SortKey>[] = [
     id: "container",
     label: "Container",
     render: (item) => item.container?.toUpperCase() || EMPTY,
+    mono: true,
+    mobile: "hide",
+  },
+  {
+    id: "size",
+    label: "Size",
+    // A show has no size of its own — its episodes hold the files. Showing a
+    // dash says "not known here" where a 0 B would say "empty".
+    render: (item) => (item.fileSize != null ? formatFileSize(item.fileSize) : EMPTY),
     mono: true,
     mobile: "hide",
   },
@@ -313,7 +324,7 @@ export default function Media() {
     sortKeys: SORT_KEYS,
     defaultSortKey: "title",
     // "Newest first" is the only reason anyone sorts by when something arrived.
-    descFirst: ["year", "added"],
+    descFirst: ["year", "added", "size"],
   });
 
   const sectionFilter = listParam("section");

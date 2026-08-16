@@ -15,6 +15,7 @@ import {
   watchedBy,
   watchHistoryCoverage,
 } from "@tinkerbell/domain.playback";
+import { getStorageBySection } from "@tinkerbell/domain.media";
 import { DAY_MS } from "@tinkerbell/core";
 import { t, procedure, getPlexClient } from "./_base.ts";
 
@@ -88,6 +89,15 @@ export const statsRouter = t.router({
   userPlayback: procedure
     .input(z.object({ userId: z.number(), periodDays: periodSchema }))
     .query(({ input }) => userTotals(input.userId, sinceFor(input.periodDays) || undefined)),
+
+  /**
+   * Bytes per library, and how much of each library the figure covers.
+   *
+   * Read straight from the media index rather than from Plex: the sizes were
+   * already carried in the listing every sync walks, so this costs one local
+   * query and no round trip to the server.
+   */
+  storage: procedure.query(() => getStorageBySection()),
 
   /**
    * Plays and watch time for every user, for the Users table.

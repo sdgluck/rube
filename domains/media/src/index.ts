@@ -89,6 +89,31 @@ export interface SyncMediaOptions {
   onSectionComplete?: (sectionKey: string) => void;
 }
 
+/**
+ * Bytes on disk for one item, across every version and every part.
+ *
+ * Null rather than 0 when Plex hangs no parts off the item, which is the
+ * normal case for a show row: the files belong to its episodes, and the
+ * section listing this walks does not descend into them. Zero would be a
+ * claim ("this occupies nothing") that a storage total would then happily
+ * add up; null is the truth, and every reader of the column treats it as
+ * unknown.
+ */
+function totalPartSize(media: Array<{ Part?: Array<{ size?: number }> }> | undefined): number | null {
+  if (!media || media.length === 0) return null;
+  let total = 0;
+  let seen = false;
+  for (const version of media) {
+    for (const part of version.Part ?? []) {
+      if (typeof part.size === "number") {
+        total += part.size;
+        seen = true;
+      }
+    }
+  }
+  return seen ? total : null;
+}
+
 export async function syncMedia(
   client: PlexClient,
   sections: PlexSection[],
@@ -124,6 +149,7 @@ export async function syncMedia(
 
       const media = item.Media?.[0];
       const genres = item.Genre?.map((g) => g.tag).filter((tag) => tag.length > 0) ?? [];
+      const fileSize = totalPartSize(item.Media);
       const values = {
         ratingKey,
         sectionId: section.key,
@@ -146,6 +172,8 @@ export async function syncMedia(
         audioCodec: media?.audioCodec ?? null,
         audioChannels: media?.audioChannels ?? null,
         container: media?.container ?? null,
+        fileSize,
+        bitrate: media?.bitrate ?? null,
         syncedAt: now,
       };
 
@@ -194,7 +222,78 @@ const SORT_COLUMNS = {
   audioCodec: mediaItems.audioCodec,
   audioChannels: mediaItems.audioChannels,
   container: mediaItems.container,
+  // Like `added`, this is asked for in one direction — biggest first — and
+  // SQLite puts the nulls (every show; see the column note) at the end there.
+  size: mediaItems.fileSize,
 } as const;
+
+export interface SectionStorage {
+  sectionId: string;
+  sectionTitle: string;
+  /** Bytes across every item in the section whose size is known. */
+  bytes: number;
+  /** How many items contributed, and how many could not — see `fileSize`. */
+  sized: number;
+  unsized: number;
+}
+
+/**
+ * Bytes per library, plus how much of each library the figure actually covers.
+ *
+ * The coverage counts are not decoration. A TV library reports zero known
+ * sizes (Plex hangs no parts off a show row), and a total of "0 B" next to
+ * "Shows" would read as an empty library rather than as an unanswerable
+ * question. Callers show the caveat wherever `unsized` is non-zero.
+ */
+export function getStorageBySection(): SectionStorage[] {
+  const rows = db
+    .select({
+      sectionId: mediaItems.sectionId,
+      sectionTitle: mediaItems.sectionTitle,
+      bytes: sql<number>`coalesce(sum(${mediaItems.fileSize}), 0)`,
+      sized: sql<number>`sum(case when ${mediaItems.fileSize} is null then 0 else 1 end)`,
+      unsized: sql<number>`sum(case when ${mediaItems.fileSize} is null then 1 else 0 end)`,
+    })
+    .from(mediaItems)
+    .groupBy(mediaItems.sectionId, mediaItems.sectionTitle)
+    .all();
+  return rows
+    .map((r) => ({
+      sectionId: r.sectionId,
+      sectionTitle: r.sectionTitle,
+      bytes: Number(r.bytes ?? 0),
+      sized: Number(r.sized ?? 0),
+      unsized: Number(r.unsized ?? 0),
+    }))
+    .sort((a, b) => b.bytes - a.bytes);
+}
+
+/** Total bytes for a set of items, and how many of them had no known size. */
+export function getSizeForItems(ratingKeys: string[]): { bytes: number; sized: number; unsized: number } {
+  if (ratingKeys.length === 0) return { bytes: 0, sized: 0, unsized: 0 };
+  let bytes = 0;
+  let sized = 0;
+  let unsized = 0;
+  // SQLite caps host parameters at 999, and a cleanup queue can be longer.
+  const CHUNK = 400;
+  for (let i = 0; i < ratingKeys.length; i += CHUNK) {
+    const rows = db
+      .select({ fileSize: mediaItems.fileSize })
+      .from(mediaItems)
+      .where(inArray(mediaItems.ratingKey, ratingKeys.slice(i, i + CHUNK)))
+      .all();
+    for (const row of rows) {
+      if (row.fileSize == null) unsized++;
+      else {
+        bytes += row.fileSize;
+        sized++;
+      }
+    }
+    // Items the queue names but the index has never seen are unknown too.
+    unsized += ratingKeys.slice(i, i + CHUNK).length - rows.length;
+  }
+  return { bytes, sized, unsized };
+}
 
 /** Distinct "Title (Year)" labels matching a query — for type-ahead pickers. */
 export function searchMediaTitles(query: string, limit = 20): string[] {
@@ -233,6 +332,8 @@ export function getLocalMediaItems(filters: MediaFilters): {
     audioCodec?: string;
     audioChannels?: number;
     container?: string;
+    fileSize?: number;
+    bitrate?: number;
   }>;
   total: number;
   offset: number;
@@ -295,6 +396,8 @@ export function getLocalMediaItems(filters: MediaFilters): {
       audioCodec: row.audioCodec ?? undefined,
       audioChannels: row.audioChannels ?? undefined,
       container: row.container ?? undefined,
+      fileSize: row.fileSize ?? undefined,
+      bitrate: row.bitrate ?? undefined,
     })),
     total,
     offset,

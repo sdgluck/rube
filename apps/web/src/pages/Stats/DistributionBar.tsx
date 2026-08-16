@@ -25,12 +25,16 @@ export function DistributionBar({
   items,
   colorMap,
   formatLabel,
+  formatCount,
 }: {
   label: string;
   items: DistItem[];
   colorMap?: Record<string, string>;
   formatLabel?: (v: string) => string;
+  /** For distributions measured in something other than items — bytes, say. */
+  formatCount?: (n: number) => string;
 }) {
+  const renderCount = formatCount ?? ((n: number) => String(n));
   const sorted = [...items].sort((a, b) => b.count - a.count);
   const total = sorted.reduce((s, i) => s + i.count, 0);
   if (total === 0) return null;
@@ -49,7 +53,7 @@ export function DistributionBar({
               key={item.value ?? i}
               className={styles.distSegment}
               style={{ width: `${pct}%`, background: color }}
-              title={`${displayLabel}: ${item.count} (${pct.toFixed(1)}%)`}
+              title={`${displayLabel}: ${renderCount(item.count)} (${pct.toFixed(1)}%)`}
             />
           );
         })}
@@ -62,7 +66,7 @@ export function DistributionBar({
             <span key={item.value ?? i} className={styles.distLegendItem}>
               <span className={styles.distLegendDot} style={{ background: color }} />
               {displayLabel}
-              <span className={styles.distLegendCount}>{item.count}</span>
+              <span className={styles.distLegendCount}>{renderCount(item.count)}</span>
             </span>
           );
         })}
