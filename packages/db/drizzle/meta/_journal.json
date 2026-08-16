@@ -267,6 +267,13 @@
       "when": 1786892220998,
       "tag": "0037_naive_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1786894255587,
+      "tag": "0038_ancient_firedrake",
+      "breakpoints": true
     }
   ]
 }

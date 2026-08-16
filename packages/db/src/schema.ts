@@ -1124,3 +1124,58 @@ export const digestDeliveries = sqliteTable(
     index("idx_digest_deliveries_sent").on(table.sentAt),
   ],
 );
+
+/**
+ * Every metadata field Tinkerbell has written to a Plex item, and what it
+ * found there first.
+ *
+ * `overlay_originals` establishes the pattern — snapshot before mutate — and
+ * metadata needs it more than posters do. A poster can be regenerated; a
+ * hand-curated sort title cannot. A bad run over 5,000 items with locks set is
+ * genuinely destructive to data nobody else holds a copy of.
+ *
+ * Three details carry the weight:
+ *
+ *  - `batchId` groups every row one run wrote, so undo is per-run and atomic
+ *    in intent. Undoing "that 2am run" is the thing a person actually wants;
+ *    undoing one field on one item is not.
+ *  - `previousLocked` is recorded alongside the value because restoring the
+ *    text and leaving the lock set would hand back a field that Plex has
+ *    stopped maintaining — a revert that isn't one.
+ *  - Rows are written *before* the write lands and are committed even if it
+ *    then fails, so a batch that died halfway is still fully revertible.
+ *
+ * `revertedAt` marks a row as spent rather than deleting it. Undoing twice
+ * must be a no-op, not a double-revert, and the history is the audit trail
+ * someone reads when a title looks wrong.
+ */
+export const metadataOriginals = sqliteTable(
+  "metadata_originals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    batchId: text("batch_id").notNull(),
+    /** Null for a manual edit from the Media page. */
+    ruleId: text("rule_id"),
+    ratingKey: text("rating_key").notNull(),
+    sectionId: text("section_id").notNull(),
+    sectionType: text("section_type").notNull().default("movie"),
+    /** Item title as it was at write time, so the undo UI can name what it touched. */
+    itemTitle: text("item_title").notNull().default(""),
+    /** A scalar field name (`titleSort`) or a tag field (`genre`). */
+    field: text("field").notNull(),
+    /** "scalar" | "tag" — decides how a revert is applied. */
+    fieldKind: text("field_kind").notNull().default("scalar"),
+    /** Null = the field was unset. Tag sets are stored as a JSON array. */
+    previousValue: text("previous_value"),
+    previousLocked: integer("previous_locked").notNull().default(0),
+    newValue: text("new_value"),
+    appliedAt: integer("applied_at").notNull(),
+    revertedAt: integer("reverted_at"),
+  },
+  (table) => [
+    index("idx_metadata_originals_batch").on(table.batchId),
+    index("idx_metadata_originals_item").on(table.ratingKey),
+    // The undo list groups batches newest first and hides spent ones.
+    index("idx_metadata_originals_applied").on(table.appliedAt),
+  ],
+);

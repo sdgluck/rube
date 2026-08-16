@@ -282,6 +282,28 @@ export const configSchema = z.object({
   cleanup_max_deletes_per_day: z.number().int().positive(),
   /** @deprecated Read once at startup to seed `cleanup_max_deletes_per_day`. */
   cleanup_max_deletes_per_run: z.number().int().positive(),
+  /**
+   * Master switch for rule-driven metadata writes, across every rule.
+   *
+   * Default false, and checked at the moment of writing rather than at save
+   * time — the same shape as `cleanup_enabled`, for the same reason: this
+   * writes to somebody's Plex server, over data they curated by hand, and a
+   * user who panics wants one switch rather than N rules to find and disable.
+   *
+   * Manual edits from the Media page are deliberately *not* gated on it. A
+   * person editing one item is watching the result; the switch exists for the
+   * scheduled runs that nobody is watching.
+   */
+  metadata_writes_enabled: z.boolean(),
+  /**
+   * Ceiling on field writes across all metadata rules, over a rolling 24
+   * hours. Per-rule caps don't compose — five rules each under their own limit
+   * of 200 can still rewrite a library overnight — so this one is global and
+   * counted from the ledger, which holds however the work was started.
+   */
+  metadata_max_writes_per_day: z.number().int().positive(),
+  /** How long a metadata batch stays undoable. Pruned by `purge-runs`. */
+  metadata_undo_retention_days: z.number().int().positive(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   collections_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),

@@ -7,9 +7,10 @@
  * job. Each returns the line that becomes the run's `message` and final `log`.
  */
 import { and, lt, notInArray } from "drizzle-orm";
-import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
+import { DAY_MS, getConfig, MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
 import { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwidth";
+import { DEFAULT_RETENTION_DAYS as METADATA_DEFAULT_RETENTION_DAYS, pruneOlderThan } from "@tinkerbell/domain.metadata";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { pruneRuleRuns, pruneRunChanges, RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
@@ -69,10 +70,16 @@ export const internalJobs = {
       // Changesets are pruned by age rather than by count, because their size
       // tracks library churn rather than how many runs happened.
       const changesPurged = pruneRunChanges(RULE_RUN_RETENTION_MS);
+      // Metadata snapshots keep their own, much longer window: they are what
+      // makes a write undoable, and 7 days is shorter than the gap between a
+      // bad nightly run and somebody noticing a title looks wrong.
+      const retentionDays = getConfig("metadata_undo_retention_days") ?? METADATA_DEFAULT_RETENTION_DAYS;
+      const metadataPurged = pruneOlderThan(Date.now() - retentionDays * DAY_MS);
       return (
         `Purged ${result.changes} job run(s) and ${ruleRunsPurged} rule run(s) older than 7 days` +
         `${changesPurged > 0 ? `, ${changesPurged} run change(s)` : ""}` +
-        `${tombstones > 0 ? `, ${tombstones} deleted-rule record(s)` : ""}.`
+        `${tombstones > 0 ? `, ${tombstones} deleted-rule record(s)` : ""}` +
+        `${metadataPurged > 0 ? `, ${metadataPurged} metadata snapshot(s) older than ${retentionDays} days` : ""}.`
       );
     },
     timeoutMs: 10 * MINUTE_MS,
