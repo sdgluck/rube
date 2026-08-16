@@ -749,6 +749,9 @@ importers:
 
   domains/rules:
     dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core

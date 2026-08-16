@@ -1004,3 +1004,44 @@ td.previewBlockCell {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+/* ─── Conflicts, and the running order ──────────────────────────────────── */
+
+.conflictToggle {
+  composes: btn btnGhost btnSm from "../../styles/controls.module.css";
+}
+
+.conflictList {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.conflictHint {
+  display: block;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+.orderCell {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* Only offered when the table is sorted by the running order — dragging a row
+   in a list sorted by name would move it somewhere the list cannot show. */
+.dragHandle {
+  cursor: grab;
+  user-select: none;
+  color: var(--ink-faint);
+  padding: 0 4px;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.5;
+}

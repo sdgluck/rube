@@ -22,6 +22,7 @@ import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
+import ConflictsBanner from "./ConflictsBanner";
 import BulkBar from "#components/BulkBar";
 import BulkEditModal from "./BulkEditModal";
 import { useTagLabels } from "#components/smart-filter/TagValueSelect.tsx";
@@ -67,6 +68,14 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const updateMutation = trpc.rules.update.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const deleteMutation = trpc.rules.delete.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const restoreMutation = trpc.rules.restore.useMutation();
+  const reorderMutation = trpc.rules.reorder.useMutation({
+    onSuccess: () => {
+      utils.rules.list.invalidate();
+      // The running order is half of what makes two rules a conflict, so the
+      // banner has to be re-read once it changes.
+      utils.rules.conflicts.invalidate();
+    },
+  });
   const revertArtworkMutation = trpc.rules.revertArtwork.useMutation();
 
   const testMutation = trpc.rules.test.useMutation();
@@ -199,7 +208,10 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     else if (enabledFilter === "disabled") out = out.filter((r) => !r.enabled);
     out = [...out].sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+      // The running order the engine actually uses: position, then creation,
+      // which is what `getRules` orders by on the server.
+      if (sortKey === "order") cmp = a.position - b.position || a.createdAt - b.createdAt;
+      else if (sortKey === "name") cmp = a.name.localeCompare(b.name);
       else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
       else if (sortKey === "enabled") cmp = Number(!!a.enabled) - Number(!!b.enabled);
       else if (sortKey === "lastRun") cmp = (a.lastRunAt ?? 0) - (b.lastRunAt ?? 0);
@@ -208,6 +220,33 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     });
     return out;
   }, [allRules, search, typeFilter, enabledFilter, sortKey, sortDir]);
+
+  /**
+   * Drag a rule to a new place in the running order.
+   *
+   * Only while the table is sorted by that order, and only when no filter is
+   * narrowing it — dropping a row into a list showing eight of forty rules
+   * would have to guess what "third" meant among the thirty-two it is not
+   * showing, and any guess would silently reorder rules the user cannot see.
+   */
+  const canReorder =
+    sortKey === "order" &&
+    sortDir === "asc" &&
+    search.trim() === "" &&
+    typeFilter.length === 0 &&
+    enabledFilter === "all";
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  function handleDrop(targetId: string) {
+    if (!dragId || dragId === targetId) return;
+    const ids = rules.map((r) => r.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    setDragId(null);
+    reorderMutation.mutate({ ids });
+  }
 
   // Smart-filter rules imported from Plex store per-server tag keys, so the
   // Config column would otherwise read "Genre is 92". One lookup covers every
@@ -826,6 +865,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     >
       <MigrationBanner />
       <RegistryUpdatesBanner />
+      <ConflictsBanner />
 
       {allRules.length > 0 && (
         <RulesToolbar
@@ -898,6 +938,11 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     onChange={toggleSelectAll}
                   />
                 </th>
+                <SortableTh sortKey="order" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  {/* The running order is a column so it can be sorted by,
+                      which is the only state in which dragging makes sense. */}
+                  Order
+                </SortableTh>
                 <SortableTh sortKey="name" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                   Name
                 </SortableTh>
@@ -953,6 +998,11 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     generatesArtwork={generatesArtwork(rule)}
                     onRevertArtwork={() => handleRevertArtwork(rule)}
                     onDetailCleared={() => setExpandedRow(null)}
+                    canReorder={canReorder}
+                    isDragging={dragId === rule.id}
+                    onDragStart={() => setDragId(rule.id)}
+                    onDragEnd={() => setDragId(null)}
+                    onDropOn={() => handleDrop(rule.id)}
                   />
                 );
               })}

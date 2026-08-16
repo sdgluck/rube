@@ -102,6 +102,18 @@ interface RuleTableRowProps {
   cleanup?: { queued: number; actioned: number };
   /** Rules whose ending is a metadata write build no collections either. */
   isMetadata?: boolean;
+  /**
+   * Whether the running order can be dragged right now.
+   *
+   * False whenever a filter, a search or another sort is in force: dropping a
+   * row into a list showing eight of forty rules would have to guess what
+   * "third" meant among the thirty-two it is not showing.
+   */
+  canReorder?: boolean;
+  isDragging?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDropOn?: () => void;
 }
 
 export default function RuleTableRow({
@@ -133,6 +145,11 @@ export default function RuleTableRow({
   resolveTag,
   cleanup,
   isMetadata,
+  canReorder,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onDropOn,
 }: RuleTableRowProps) {
   const navigate = useNavigate();
   const c = rule.config ?? {};
@@ -160,7 +177,22 @@ export default function RuleTableRow({
 
   return (
     <Fragment>
-      <tr data-rule-id={rule.id}>
+      <tr
+        data-rule-id={rule.id}
+        className={isDragging ? styles.dragging : undefined}
+        draggable={canReorder}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragOver={canReorder ? (e) => e.preventDefault() : undefined}
+        onDrop={
+          canReorder
+            ? (e) => {
+                e.preventDefault();
+                onDropOn?.();
+              }
+            : undefined
+        }
+      >
         <td className={styles.checkboxCell} data-cell="hide">
           <input
             type="checkbox"
@@ -171,6 +203,17 @@ export default function RuleTableRow({
               onCheckboxClick(index, { shiftKey: e.shiftKey });
             }}
           />
+        </td>
+        <td className={styles.orderCell} data-cell="hide">
+          {canReorder ? (
+            <span className={styles.dragHandle} aria-hidden="true" title="Drag to change when this rule runs">
+              ⠿
+            </span>
+          ) : (
+            <span className={styles.dragHandle} title="Sort by Order to rearrange">
+              {rule.position + 1}
+            </span>
+          )}
         </td>
         <td data-cell="title">
           {rule.name}

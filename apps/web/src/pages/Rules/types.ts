@@ -1,5 +1,6 @@
 /** Value lists, not bare unions: the URL params are validated against them. */
-export const SORT_KEYS = ["name", "type", "enabled", "lastRun", "runs"] as const;
+/** `order` is the running order — the one sort that can be dragged. */
+export const SORT_KEYS = ["order", "name", "type", "enabled", "lastRun", "runs"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 
 export const ENABLED_FILTERS = ["all", "enabled", "disabled"] as const;
@@ -11,6 +12,8 @@ export type RuleRow = {
   type: string;
   enabled: number;
   config: Record<string, unknown> | null;
+  /** Running order. Lower runs first; ties fall back to createdAt. */
+  position: number;
   createdAt: number;
   lastCollectionRatingKey: string | null;
   lastRunAt: number | null;

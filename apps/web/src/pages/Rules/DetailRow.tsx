@@ -47,7 +47,7 @@ export default function RuleDetailRow({
 
   return (
     <tr className={styles.detailRow}>
-      <td ref={setTdEl} colSpan={8}>
+      <td ref={setTdEl} colSpan={9}>
         <div className={styles.detailWrap}>
           {(isTesting || isRunning) && runId && <InlineProgress runId={runId} phase={isTesting ? "test" : "run"} />}
           {!isTesting && !isRunning && errorToShow && (

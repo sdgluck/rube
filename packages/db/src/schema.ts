@@ -126,6 +126,21 @@ export const rules = sqliteTable("rules", {
   type: text("type").notNull(),
   enabled: integer("enabled").notNull().default(1),
   config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
+  /**
+   * Where this rule sits in the running order. Lower runs first.
+   *
+   * Order was `createdAt` and nothing else, which is fine until two rules
+   * disagree — and nothing stopped them. Two rules can write the same
+   * metadata field on the same item, and whichever ran second won for a
+   * reason nobody could see or change. Two rules can produce collections of
+   * the same name, which Plex allows: you get two, both called "Top Rated",
+   * and the one you see depends on the order they were built in.
+   *
+   * Defaulting to 0 keeps existing installs on their current order — every
+   * rule ties, and `createdAt` remains the tiebreak, which is exactly what it
+   * was before.
+   */
+  position: integer("position").notNull().default(0),
   createdAt: integer("created_at").notNull(),
   lastCollectionRatingKey: text("last_collection_rating_key"),
   lastRunAt: integer("last_run_at"),

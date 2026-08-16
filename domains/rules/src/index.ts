@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, type InferSelectModel } from "drizzle-orm";
+import { desc, eq, type InferSelectModel } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
 import { rememberDeletedRule } from "./recycle.ts";
 
@@ -18,6 +18,14 @@ export {
 export type Rule = InferSelectModel<typeof rules>;
 
 export {
+  conflictsForRule,
+  findRuleConflicts,
+  rulesProducingCollectionNamed,
+  type ConflictKind,
+  type RuleConflict,
+} from "./conflicts.ts";
+
+export {
   listDeletedRules,
   pruneDeletedRules,
   rememberDeletedRule,
@@ -26,8 +34,15 @@ export {
   type DeletedRuleSummary,
 } from "./recycle.ts";
 
+/**
+ * Every rule, in running order.
+ *
+ * `position` first, `createdAt` as the tiebreak. Existing installs have every
+ * rule at position 0, so they keep exactly the creation order they had until
+ * somebody reorders something.
+ */
 export function getRules(): Rule[] {
-  return db.select().from(rules).orderBy(rules.createdAt).all();
+  return db.select().from(rules).orderBy(rules.position, rules.createdAt).all();
 }
 
 export function getRule(id: string): Rule | undefined {
@@ -35,7 +50,22 @@ export function getRule(id: string): Rule | undefined {
 }
 
 export function getEnabledRules(): Rule[] {
-  return db.select().from(rules).where(eq(rules.enabled, 1)).orderBy(rules.createdAt).all();
+  return db.select().from(rules).where(eq(rules.enabled, 1)).orderBy(rules.position, rules.createdAt).all();
+}
+
+/**
+ * Move a rule to a new position, renumbering the rest.
+ *
+ * Renumbers rather than nudging one value: gaps and ties accumulate otherwise,
+ * and the order the user sees has to be the order the engine reads, with no
+ * ambiguity left for `createdAt` to resolve differently after an edit.
+ */
+export function reorderRules(orderedIds: string[]): void {
+  db.transaction(() => {
+    orderedIds.forEach((id, index) => {
+      db.update(rules).set({ position: index }).where(eq(rules.id, id)).run();
+    });
+  });
 }
 
 /** Where an imported rule came from. Null throughout for hand-made rules —
@@ -64,6 +94,12 @@ export function createRule(
     registryVersion: input.registryVersion ?? null,
     registryConfigHash: input.registryConfigHash ?? null,
   };
+  // A new rule goes on the end. Position 0 would tie it with every rule on an
+  // install that has never reordered anything, leaving `createdAt` to break
+  // the tie — which is the right answer, but only by accident.
+  const highest = db.select({ position: rules.position }).from(rules).orderBy(desc(rules.position)).limit(1).get();
+  const position = (highest?.position ?? -1) + 1;
+
   db.insert(rules)
     .values({
       id,
@@ -71,6 +107,7 @@ export function createRule(
       type: input.type,
       config: input.config,
       enabled,
+      position,
       createdAt: now,
       ...provenance,
     })
@@ -81,6 +118,7 @@ export function createRule(
     type: input.type,
     enabled,
     config: input.config,
+    position,
     createdAt: now,
     ...provenance,
     lastCollectionRatingKey: null,

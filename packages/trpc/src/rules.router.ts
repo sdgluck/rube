@@ -9,6 +9,9 @@ import {
   setRuleLastTest,
   listDeletedRules,
   restoreDeletedRules,
+  findRuleConflicts,
+  reorderRules,
+  rulesProducingCollectionNamed,
 } from "@tinkerbell/domain.rules";
 import {
   activateRuleRun,
@@ -151,6 +154,32 @@ async function executeRuleRun(ruleId: string, phase: RuleRunPhase, runId: string
 }
 
 export const rulesRouter = t.router({
+  /**
+   * Where two rules disagree, most consequential first.
+   *
+   * Its own query rather than a field on `list`: it reads the produced
+   * collections and the live cleanup queue, which is a good deal more work
+   * than a rules table render should carry, and the page shows it in one
+   * banner rather than per row.
+   */
+  conflicts: procedure.query(() => findRuleConflicts()),
+
+  /**
+   * Rules already building a collection of this name.
+   *
+   * For the wizard, which has to warn before the rule it is describing
+   * exists and so cannot use the observed-conflict path.
+   */
+  collectionNameOwners: procedure
+    .input(z.object({ name: z.string(), excludeRuleId: z.string().optional() }))
+    .query(({ input }) => rulesProducingCollectionNamed(input.name, input.excludeRuleId)),
+
+  /** Set the running order. Ids in the order they should run. */
+  reorder: procedure.input(z.object({ ids: z.array(z.string()).min(1) })).mutation(({ input }) => {
+    reorderRules(input.ids);
+    return { ok: true };
+  }),
+
   list: procedure.query(() => {
     const tallies = getRuleRunCounts();
     return getRules().map((r) => ({
