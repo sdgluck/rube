@@ -116,17 +116,51 @@ export const SHOTS: Shot[] = [
     steps: [{ clickSelector: "thead input[type='checkbox']" }],
   },
   {
+    name: "03-collections-columns",
+    description: "Collections — the column configurator, showing every available column",
+    path: "/collections",
+    storage: { "collections-view": "table" },
+    viewports: DESKTOP,
+    steps: [{ click: "Columns" }, { wait: "text=Drag to reorder" }],
+  },
+  {
+    // The tabs below are separate routes, so each is addressable directly —
+    // no click step needed to reach one.
     name: "04-collection-detail",
-    description: "Collection detail — header, labels and the item grid",
+    description: "Collection detail — the hero over the Items tab",
     path: "/collections/5001",
     settleMs: 700,
   },
   {
+    name: "04-collection-details",
+    description: "Collection detail — the Details tab: filter, stats, Plex settings and siblings",
+    path: "/collections/5001/details",
+    settleMs: 700,
+  },
+  {
+    name: "04-collection-activity",
+    description: "Collection detail — the Activity tab: where the collection came from, and what wrote its artwork",
+    path: "/collections/5001/activity",
+    settleMs: 700,
+  },
+  {
+    // Lives on the Details tab now — the summary is configuration rather than
+    // identity, so it moved out of the hero when the page was rebuilt.
     name: "04-collection-smart-filters",
     description: "Collection detail — the Smart Filters drawer with the nesting grammar",
-    path: "/collections/5001",
+    path: "/collections/5001/details",
     viewports: DESKTOP,
     steps: [{ click: "Edit filters" }, { wait: "text=of the following" }],
+  },
+  {
+    // 5003 rather than 5001: the studio renders from the collection's own
+    // members, and a smart collection's are resolved by Plex rather than held.
+    name: "04-collection-poster",
+    description: "Collection detail — the poster studio, with a server-rendered preview",
+    path: "/collections/5003",
+    viewports: DESKTOP,
+    steps: [{ click: "Change poster" }, { wait: "text=Apply to Plex" }],
+    settleMs: 1500,
   },
   {
     name: "05-media-table",

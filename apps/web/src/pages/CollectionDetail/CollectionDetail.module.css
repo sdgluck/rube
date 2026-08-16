@@ -123,6 +123,18 @@
   margin-bottom: 10px;
 }
 
+/* A summary is a sentence or two, so it gets the width of a sentence or two.
+   At full page width the field became the largest element in the header —
+   the exact thing this layout exists to stop — and 60px of empty box made an
+   undescribed collection look like an unfinished form. */
+.summaryField {
+  composes: summaryInput from "#/styles/shared.module.css";
+  max-width: 70ch;
+  min-height: 0;
+  margin-bottom: 0;
+  field-sizing: content;
+}
+
 /* ─── Labels ──────────────────────────────────────────────────────────────── */
 
 .labelRow {

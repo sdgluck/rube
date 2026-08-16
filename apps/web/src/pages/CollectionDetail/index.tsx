@@ -328,7 +328,8 @@ export default function CollectionDetailLayout() {
               summary look like an unfinished form. */}
           {summaryEditing || summary ? (
             <textarea
-              className={styles.summaryInput}
+              className={local.summaryField}
+              rows={2}
               value={summary}
               placeholder="Summary"
               autoFocus={summaryEditing && !summary}

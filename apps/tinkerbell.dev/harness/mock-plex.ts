@@ -11,9 +11,10 @@
  *    latter carrying the `content` URI the Smart Filters editor parses.
  *  - `/library/metadata/:key/children` → a collection's items.
  *  - `/hubs` → home hubs built from the demo collections (for the Preview page).
+ *  - `/hubs/sections/:id/manage` → which of a section's collections are pinned.
  *
  * Anything else returns an empty-but-valid `{ MediaContainer }` so stray live
- * Plex calls (sessions, manage hubs) resolve instead of 500ing.
+ * Plex calls (sessions, poster candidates) resolve instead of 500ing.
  */
 
 import { createServer, type Server } from "node:http";
@@ -169,6 +170,28 @@ function homeHubs() {
   return hubs;
 }
 
+/**
+ * A section's collections as manage-hub rows, the first two of each pinned.
+ *
+ * Two rather than all of them, deliberately: the Pinned column is only worth
+ * having because it distinguishes, and a demo where every row says "Pinned"
+ * demonstrates the opposite of what the column is for.
+ *
+ * The identifier is the canonical two-segment form the manage endpoint uses —
+ * `custom.collection.{sectionId}.{ratingKey}` — not the four-segment one
+ * `/hubs` reports, which `normalizeManageHubIdentifier` exists to reconcile.
+ */
+function managedHubs(sectionId: string): Array<Record<string, unknown>> {
+  const inSection = COLLECTIONS.filter((c) => c.sectionId === sectionId);
+  return inSection.map((c, i) => ({
+    identifier: `custom.collection.${c.sectionId}.${c.ratingKey}`,
+    title: c.title,
+    promotedToOwnHome: i < 2 ? 1 : 0,
+    promotedToRecommendedHome: i < 2 ? 1 : 0,
+    promotedToSharedHome: 0,
+  }));
+}
+
 function ratingKeyFromPath(path: string): string | null {
   const m = path.match(/\/library\/metadata\/([\d,]+)/);
   return m ? m[1] : null;
@@ -213,6 +236,16 @@ export function startMockPlex(port: number, host = "127.0.0.1"): Promise<MockPle
       // ── Home hubs (Preview page) ────────────────────────────────────────
       if (path === "/hubs") {
         json(res, { Hub: homeHubs() });
+        return;
+      }
+
+      // ── Managed hubs (which collections are pinned) ─────────────────────
+      // Answered for real rather than falling through to the empty container:
+      // "pinned" is a column on the list and the primary verb on the detail
+      // page, and a demo where nothing is ever pinned never shows either.
+      const manageMatch = path.match(/^\/hubs\/sections\/(\w+)\/manage$/);
+      if (manageMatch) {
+        json(res, { Hub: managedHubs(manageMatch[1]) });
         return;
       }
 
