@@ -48,3 +48,26 @@
   margin-left: 6px;
   font-size: 0.85em;
 }
+
+/* The grid card is a poster with a title; the checkbox floats over its corner
+   so selecting does not cost the card a row of its own. */
+.cardSelectable {
+  composes: card from "../styles/shared.module.css";
+  position: relative;
+}
+
+.cardSelect {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  display: flex;
+  padding: 3px;
+  border-radius: var(--r-sunken);
+  background: var(--surface);
+  opacity: 0.85;
+}
+
+.cardSelect:hover {
+  opacity: 1;
+}

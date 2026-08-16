@@ -8,19 +8,42 @@ interface Props {
   existingLabels: string[];
   onApply: (input: { add: string[]; remove: Set<string> }) => void;
   onCancel: () => void;
+  /** What is being labelled. Singular; pluralised for the title. */
+  noun?: string;
+  /**
+   * Type the labels to remove instead of ticking them.
+   *
+   * For callers that cannot enumerate what the selection already carries —
+   * a hundred media items each with their own labels would be a round trip
+   * per item before the dialog could open. The removal still applies only
+   * where the label is actually present.
+   */
+  freeTextRemove?: boolean;
 }
 
 const MANAGED_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
 
-export default function BulkLabelsModal({ count, existingLabels, onApply, onCancel }: Props) {
+export default function BulkLabelsModal({
+  count,
+  existingLabels,
+  onApply,
+  onCancel,
+  noun = "collection",
+  freeTextRemove = false,
+}: Props) {
   const [labelsToAdd, setLabelsToAdd] = useState("");
   const [labelsToRemove, setLabelsToRemove] = useState<Set<string>>(new Set());
+  const [removeText, setRemoveText] = useState("");
 
-  const addList = labelsToAdd
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const canApply = addList.length > 0 || labelsToRemove.size > 0;
+  const splitList = (value: string) =>
+    value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  const addList = splitList(labelsToAdd);
+  const removeList = freeTextRemove ? new Set(splitList(removeText)) : labelsToRemove;
+  const canApply = addList.length > 0 || removeList.size > 0;
 
   const labelClass = (lbl: string) => {
     const lower = lbl.toLowerCase();
@@ -34,7 +57,7 @@ export default function BulkLabelsModal({ count, existingLabels, onApply, onCanc
       open
       onClose={onCancel}
       size="md"
-      title={`Edit labels on ${count} collection${count !== 1 ? "s" : ""}`}
+      title={`Edit labels on ${count} ${noun}${count !== 1 ? "s" : ""}`}
       footer={
         <>
           <button type="button" className={styles.cancel} onClick={onCancel}>
@@ -44,7 +67,7 @@ export default function BulkLabelsModal({ count, existingLabels, onApply, onCanc
             type="button"
             className={styles.apply}
             disabled={!canApply}
-            onClick={() => onApply({ add: addList, remove: labelsToRemove })}
+            onClick={() => onApply({ add: addList, remove: removeList })}
           >
             Apply
           </button>
@@ -63,7 +86,20 @@ export default function BulkLabelsModal({ count, existingLabels, onApply, onCanc
           onChange={(e) => setLabelsToAdd(e.target.value)}
         />
       </div>
-      {existingLabels.length > 0 && (
+      {freeTextRemove && (
+        <div className={`${shared.labelEditorRow} ${styles.removeRow}`}>
+          <label htmlFor="bulk-labels-remove">Remove labels:</label>
+          <input
+            id="bulk-labels-remove"
+            type="text"
+            className={shared.labelEditorInput}
+            placeholder="Label1, Label2, …"
+            value={removeText}
+            onChange={(e) => setRemoveText(e.target.value)}
+          />
+        </div>
+      )}
+      {!freeTextRemove && existingLabels.length > 0 && (
         <div className={`${shared.labelEditorRow} ${styles.removeRow}`}>
           <label>Remove labels:</label>
           <div className={shared.labelCheckboxList}>

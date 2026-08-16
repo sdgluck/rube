@@ -455,6 +455,9 @@ export function createItemsModule(http: PlexHttp) {
       genres: (meta.Genre ?? []).map((g) => g.tag),
       directors: (meta.Director ?? []).map((d) => d.tag),
       collections: (meta.Collection ?? []).map((c) => ({ id: c.id, tag: c.tag })),
+      // The agent ids Plex matched this item to. Carried so the detail page
+      // can link out to IMDb/TMDb — the fastest way to check a bad match.
+      guids: (meta.Guid ?? []).map((g) => g.id),
       media,
     };
   }

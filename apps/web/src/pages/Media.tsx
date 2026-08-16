@@ -18,6 +18,8 @@ import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { readEnumStorage, writeStorage } from "#/storage";
 import SearchInput from "#components/SearchInput";
 import SavedViews from "#components/SavedViews";
+import BulkBar from "#components/BulkBar";
+import BulkLabelsModal from "#components/BulkLabelsModal";
 import { useToast } from "#components/Toast";
 import { describeDropped, ruleSeedFromView } from "#/lib/viewToRule";
 import {
@@ -246,6 +248,10 @@ function ChildrenRows({
         return (
           <React.Fragment key={child.ratingKey}>
             <tr className={mediaStyles.childRow} onClick={() => navigate(`/media/${child.ratingKey}`)}>
+              {/* Bulk actions act on the rows the filters chose, so a season
+                  or episode revealed by expanding one of them is not
+                  selectable — the cell is here to keep the columns lined up. */}
+              {isEpisode && <td className={styles.checkboxCell} />}
               {isEpisode ? (
                 visibleColumns.map((col, colIdx) => (
                   <td
@@ -350,6 +356,22 @@ export default function Media() {
     );
   }, [setSearchParams]);
 
+  /* Selection. Keyed by ratingKey and kept across pagination — a selection
+     that silently emptied itself when you turned the page would be worse than
+     no selection at all, because the bar would still be showing a count. */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [labelsOpen, setLabelsOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+
+  const toggleSelected = useCallback((key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const toggleExpanded = useCallback((key: string) => {
     setExpandedRows((prev) => {
@@ -391,8 +413,26 @@ export default function Media() {
 
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false });
 
+  const utils = trpc.useUtils();
+  const bulkTagsMutation = trpc.metadata.bulkTags.useMutation();
+  const bulkRefreshMutation = trpc.metadata.bulkRefresh.useMutation();
+
   const items = mediaQuery.data?.items ?? [];
   const total = mediaQuery.data?.total ?? 0;
+
+  const allOnPageSelected = items.length > 0 && items.every((i) => selected.has(i.ratingKey));
+  const someOnPageSelected = items.some((i) => selected.has(i.ratingKey));
+
+  /** Select-all is page-scoped: it can only mean the rows you can see. */
+  function toggleAllOnPage() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) for (const i of items) next.delete(i.ratingKey);
+      else for (const i of items) next.add(i.ratingKey);
+      return next;
+    });
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const sections = sectionsQuery.data ?? [];
 
@@ -421,6 +461,59 @@ export default function Media() {
     const warning = describeDropped(seed.dropped);
     if (warning) addToast(warning, "info", 10000);
     navigate("/rules", { state: { ruleSeed: seed } });
+  }
+
+  /**
+   * Add and remove labels across the selection.
+   *
+   * The mutation reads each item before writing it, so this is one request
+   * that takes a while rather than fifty that race — the bar reports progress
+   * by going busy rather than by counting, because the server does the loop.
+   */
+  async function applyLabels({ add, remove }: { add: string[]; remove: Set<string> }) {
+    const ratingKeys = [...selected];
+    setLabelsOpen(false);
+    setBulkBusy("Applying labels");
+    try {
+      const result = await bulkTagsMutation.mutateAsync({
+        ratingKeys,
+        field: "label",
+        add,
+        remove: [...remove],
+      });
+      const failed = result.failures.length;
+      addToast(
+        `${result.changed} item${result.changed === 1 ? "" : "s"} relabelled` +
+          (failed > 0 ? `, ${failed} failed` : "") +
+          (result.changed > 0 ? " — undo from Settings → Metadata" : ""),
+        failed > 0 ? "error" : "success",
+      );
+      setSelected(new Set());
+      await utils.media.list.invalidate();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Failed to apply labels", "error");
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function refreshSelected() {
+    const ratingKeys = [...selected];
+    setBulkBusy("Refreshing");
+    try {
+      const result = await bulkRefreshMutation.mutateAsync({ ratingKeys });
+      const failed = result.failures.length;
+      addToast(
+        `Asked Plex to refresh ${result.refreshed} item${result.refreshed === 1 ? "" : "s"}` +
+          (failed > 0 ? `, ${failed} failed` : ""),
+        failed > 0 ? "error" : "success",
+      );
+      setSelected(new Set());
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Failed to refresh", "error");
+    } finally {
+      setBulkBusy(null);
+    }
   }
 
   if (mediaQuery.isLoading && !mediaQuery.data) return <MediaSkeleton />;
@@ -534,7 +627,19 @@ export default function Media() {
       ) : viewMode === "grid" ? (
         <div className={styles.grid}>
           {items.map((item) => (
-            <div key={item.ratingKey} className={styles.card} onClick={() => navigate(`/media/${item.ratingKey}`)}>
+            <div
+              key={item.ratingKey}
+              className={mediaStyles.cardSelectable}
+              onClick={() => navigate(`/media/${item.ratingKey}`)}
+            >
+              <label className={mediaStyles.cardSelect} onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={selected.has(item.ratingKey)}
+                  onChange={() => toggleSelected(item.ratingKey)}
+                  aria-label={`Select ${item.title}`}
+                />
+              </label>
               {item.thumb ? (
                 <FadeImage
                   className={styles.cardPoster}
@@ -557,6 +662,19 @@ export default function Media() {
           <table className={styles.table}>
             <thead>
               <tr>
+                <th className={styles.checkboxCell}>
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    ref={(el) => {
+                      // Some-but-not-all reads as indeterminate rather than as
+                      // "nothing selected", which is what an unticked box says.
+                      if (el) el.indeterminate = someOnPageSelected && !allOnPageSelected;
+                    }}
+                    onChange={toggleAllOnPage}
+                    aria-label={allOnPageSelected ? "Deselect all on this page" : "Select all on this page"}
+                  />
+                </th>
                 {visibleColumns.map((col) => (
                   <SortableTh key={col.id} sortKey={col.id} activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                     {col.label}
@@ -571,6 +689,14 @@ export default function Media() {
                 return (
                   <React.Fragment key={item.ratingKey}>
                     <tr className={styles.clickableRow} onClick={() => navigate(`/media/${item.ratingKey}`)}>
+                      <td className={styles.checkboxCell} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(item.ratingKey)}
+                          onChange={() => toggleSelected(item.ratingKey)}
+                          aria-label={`Select ${item.title}`}
+                        />
+                      </td>
                       {visibleColumns.map((col, colIdx) => (
                         <td
                           key={col.id}
@@ -602,7 +728,8 @@ export default function Media() {
                       <ChildrenRows
                         parentRatingKey={item.ratingKey}
                         depth={1}
-                        colSpan={visibleColumns.length}
+                        // +1 for the selection column.
+                        colSpan={visibleColumns.length + 1}
                         visibleColumns={visibleColumns}
                         expandedRows={expandedRows}
                         toggleExpanded={toggleExpanded}
@@ -618,6 +745,30 @@ export default function Media() {
       )}
 
       <Pagination page={page} totalPages={totalPages} total={total} noun="items" onPageChange={setPage} />
+
+      {selected.size > 0 && (
+        <BulkBar
+          count={selected.size}
+          noun="item"
+          progress={bulkBusy ? { done: 0, total: 0, label: bulkBusy } : null}
+          onClear={() => setSelected(new Set())}
+          actions={[
+            { label: "Edit labels…", onClick: () => setLabelsOpen(true), tone: "primary" },
+            { label: "Refresh metadata", onClick: refreshSelected, title: "Ask Plex to re-run its agents" },
+          ]}
+        />
+      )}
+
+      {labelsOpen && (
+        <BulkLabelsModal
+          count={selected.size}
+          noun="item"
+          existingLabels={[]}
+          freeTextRemove
+          onApply={applyLabels}
+          onCancel={() => setLabelsOpen(false)}
+        />
+      )}
     </PageShell>
   );
 }

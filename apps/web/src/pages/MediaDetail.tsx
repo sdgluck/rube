@@ -5,6 +5,7 @@ import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
 import useSwipeBack from "#hooks/useSwipeBack";
+import { useToast } from "#components/Toast";
 import styles from "#/styles/shared.module.css";
 import {
   EMPTY,
@@ -30,6 +31,48 @@ function ratingTier(pct: number): "High" | "Mid" | "Low" {
   return "Low";
 }
 
+/** `Shawshank → The Shawshank Redemption`, with tag sets flattened. */
+function describeChange(previous: string | null, next: string | null, kind: string): string {
+  const show = (value: string | null) => {
+    if (value === null || value === "") return "(empty)";
+    if (kind !== "tag") return value;
+    const tags = decodeTagList(value);
+    return tags.length > 0 ? tags.join(", ") : "(none)";
+  };
+  return `${show(previous)} → ${show(next)}`;
+}
+
+/** Tag sets are stored as JSON; a row that predates that is still a string. */
+function decodeTagList(value: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === "string") : [value];
+  } catch {
+    return [value];
+  }
+}
+
+/**
+ * Plex already knows what this item is on IMDb and TMDb — it stores the ids as
+ * `imdb://tt0111161`-style guids and then offers no way to follow one. The
+ * agents that wrote them are the same ones every rating in the app comes from,
+ * so the link is both free and the one people reach for when a match is wrong.
+ */
+function externalLinksFor(guids: string[], type: string): Array<{ label: string; href: string }> {
+  const links: Array<{ label: string; href: string }> = [];
+  for (const guid of guids) {
+    const [scheme, id] = guid.split("://");
+    if (!id) continue;
+    if (scheme === "imdb") links.push({ label: "IMDb", href: `https://www.imdb.com/title/${id}/` });
+    if (scheme === "tmdb") {
+      const kind = type === "show" || type === "season" || type === "episode" ? "tv" : "movie";
+      links.push({ label: "TMDb", href: `https://www.themoviedb.org/${kind}/${id}` });
+    }
+    if (scheme === "tvdb") links.push({ label: "TVDB", href: `https://thetvdb.com/dereferrer/series/${id}` });
+  }
+  return links;
+}
+
 export default function MediaDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
@@ -52,6 +95,32 @@ export default function MediaDetail() {
   const why = whyQuery.data ?? [];
   const identityQuery = trpc.plexIdentity.useQuery(undefined, { staleTime: Infinity, retry: false });
 
+  // What Tinkerbell has written to this item, ever. The endpoint existed from
+  // the day metadata editing shipped and had no caller — which meant the undo
+  // ledger was only visible in aggregate, on a settings page, nowhere near
+  // the item it had rewritten.
+  const historyQuery = trpc.metadata.history.useQuery(
+    { ratingKey: ratingKey! },
+    { enabled: !!ratingKey, refetchOnWindowFocus: false },
+  );
+  const history = historyQuery.data ?? [];
+
+  const { addToast } = useToast();
+  const refreshMutation = trpc.metadata.refresh.useMutation();
+
+  async function handleRefresh() {
+    if (!ratingKey) return;
+    try {
+      await refreshMutation.mutateAsync({ ratingKey });
+      // Plex refreshes asynchronously, so re-reading immediately would show
+      // the old values and look like the button did nothing. Say what was
+      // asked for, not what changed.
+      addToast("Plex is re-running its agents against this item", "success");
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Failed to refresh", "error");
+    }
+  }
+
   if (detailQuery.isLoading) return <DetailSkeleton />;
   if (detailQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media item</div>;
 
@@ -62,6 +131,7 @@ export default function MediaDetail() {
   // Distinct rules, so an item in four collections from one rule offers one
   // "edit the rule" rather than four identical buttons.
   const owningRules = [...new Map(why.filter((w) => w.rule).map((w) => [w.rule!.id, w.rule!])).values()];
+  const externalLinks = externalLinksFor(item.guids ?? [], item.type);
 
   return (
     <div ref={swipeRef}>
@@ -107,6 +177,17 @@ export default function MediaDetail() {
             <button className={mediaStyles.actionBtn} onClick={() => setEditOpen((v) => !v)}>
               {editOpen ? "Close metadata editor" : "Edit metadata"}
             </button>
+            {/* The server has had this endpoint since metadata editing landed;
+                nothing ever called it. "The agents got it wrong" is the most
+                common complaint about any Plex library and this is the fix. */}
+            <button className={mediaStyles.actionBtn} onClick={handleRefresh} disabled={refreshMutation.isPending}>
+              {refreshMutation.isPending ? "Refreshing…" : "Refresh from Plex"}
+            </button>
+            {externalLinks.map((link) => (
+              <a key={link.label} className={mediaStyles.actionBtn} href={link.href} target="_blank" rel="noreferrer">
+                {link.label}
+              </a>
+            ))}
           </div>
 
           <div className={mediaStyles.metaLine}>
@@ -269,6 +350,34 @@ export default function MediaDetail() {
                       {w.plays} play{w.plays === 1 ? "" : "s"}
                       {w.completedPlays > 0 ? ` · ${w.completedPlays} finished` : ""}
                       {w.lastPlayedAt ? ` · last ${new Date(w.lastPlayedAt).toLocaleDateString()}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* What Tinkerbell has changed here, and what it was before */}
+          {history.length > 0 && (
+            <section className={mediaStyles.section}>
+              <h3 className={mediaStyles.sectionTitle}>
+                Metadata history
+                <span className={mediaStyles.sectionCount}>{history.length}</span>
+              </h3>
+              <ul className={mediaStyles.collectionList}>
+                {history.map((row) => (
+                  <li key={row.id} className={mediaStyles.collectionItem}>
+                    <div className={mediaStyles.collectionMain}>
+                      <span>
+                        {row.field}
+                        {row.revertedAt ? " — reverted" : ""}
+                      </span>
+                      <span className={mediaStyles.collectionReason}>
+                        {describeChange(row.previousValue, row.newValue, row.fieldKind)}
+                      </span>
+                    </div>
+                    <span className={mediaStyles.collectionSection}>
+                      {new Date(row.appliedAt).toLocaleDateString()}
                     </span>
                   </li>
                 ))}

@@ -148,6 +148,111 @@ export const metadataRouter = t.router({
     return { ok: true };
   }),
 
+  /**
+   * Add and/or remove tags across many items at once.
+   *
+   * Add-and-remove rather than replace, because the caller is holding a
+   * selection and not a set of current values: fifty items each have their own
+   * labels, and "add Keep to all of these" must not flatten the forty-nine
+   * other labels it finds on the way. So each item is read, merged and written
+   * individually — slower than one broadcast write, and the only version that
+   * is correct.
+   *
+   * Every write is snapshotted under a single batch id, which is what makes
+   * the whole bulk edit one row in the metadata history and one Undo.
+   */
+  bulkTags: procedure
+    .input(
+      z.object({
+        ratingKeys: z.array(z.string()).min(1).max(500),
+        field: tagFieldEnum,
+        add: z.array(z.string()).default(() => []),
+        remove: z.array(z.string()).default(() => []),
+        lock: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { add, remove } = input;
+      if (add.length === 0 && remove.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing to add or remove." });
+      }
+
+      const client = getPlexClient();
+      const batchId = randomUUID();
+      // Case-insensitive, because Plex tags are — "keep" and "Keep" are one
+      // tag, and a remove that only matched the exact casing would look broken.
+      const removeLower = new Set(remove.map((t) => t.toLowerCase()));
+
+      let changed = 0;
+      const failures: Array<{ ratingKey: string; message: string }> = [];
+
+      for (const ratingKey of input.ratingKeys) {
+        try {
+          const current = await client.getItemFields(ratingKey);
+          if (!current.sectionId) {
+            failures.push({ ratingKey, message: "Plex did not say which library this item belongs to." });
+            continue;
+          }
+
+          const existing = current.tags[input.field] ?? [];
+          const kept = existing.filter((t) => !removeLower.has(t.toLowerCase()));
+          const existingLower = new Set(kept.map((t) => t.toLowerCase()));
+          const added = add.filter((t) => !existingLower.has(t.toLowerCase()));
+          const next = [...kept, ...added];
+
+          const unchanged = next.length === existing.length && next.every((t, i) => t === existing[i]);
+          if (unchanged) continue;
+
+          snapshotWrites(batchId, null, [
+            {
+              ratingKey,
+              sectionId: current.sectionId,
+              sectionType: current.sectionType,
+              itemTitle: current.title,
+              field: input.field,
+              fieldKind: "tag",
+              previousValue: existing,
+              previousLocked: current.locked.includes(input.field),
+              newValue: next,
+            },
+          ]);
+
+          await client.setItemTags(current.sectionId, current.sectionType, ratingKey, input.field, next, {
+            lock: input.lock,
+          });
+          changed++;
+        } catch (err) {
+          failures.push({ ratingKey, message: err instanceof Error ? err.message : "Unknown error" });
+        }
+      }
+
+      // A batch id is only worth returning if something was written under it.
+      return { changed, failures, batchId: changed > 0 ? batchId : null };
+    }),
+
+  /**
+   * Re-run Plex's agents against many items.
+   *
+   * Failures are collected rather than thrown: one unmatched item in a
+   * selection of fifty should not decide the fate of the other forty-nine.
+   */
+  bulkRefresh: procedure
+    .input(z.object({ ratingKeys: z.array(z.string()).min(1).max(500) }))
+    .mutation(async ({ input }) => {
+      const client = getPlexClient();
+      let refreshed = 0;
+      const failures: Array<{ ratingKey: string; message: string }> = [];
+      for (const ratingKey of input.ratingKeys) {
+        try {
+          await client.refreshItem(ratingKey);
+          refreshed++;
+        } catch (err) {
+          failures.push({ ratingKey, message: err instanceof Error ? err.message : "Unknown error" });
+        }
+      }
+      return { refreshed, failures };
+    }),
+
   /** Every metadata write Tinkerbell has made, grouped by the run that made it. */
   batches: procedure
     .input(z.object({ limit: z.number().int().min(1).max(200).default(50), ruleId: z.string().optional() }).optional())

@@ -383,6 +383,8 @@ export interface PlexMediaDetail extends PlexMediaItem {
   genres: string[];
   directors: string[];
   collections: Array<{ id?: number; tag: string }>;
+  /** Agent ids, `imdb://tt0111161` style. Empty when Plex matched nothing. */
+  guids: string[];
   media: PlexMediaInfo[];
 }
 
