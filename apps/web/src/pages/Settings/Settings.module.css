@@ -35,6 +35,17 @@
   gap: 2px;
 }
 
+/* Full-width in the rail so the box lines up with the links it filters. */
+.railSearch {
+  margin-bottom: 4px;
+}
+
+.railEmpty {
+  margin: 0;
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
 .railHeading {
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
