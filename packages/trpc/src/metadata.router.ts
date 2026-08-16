@@ -150,8 +150,8 @@ export const metadataRouter = t.router({
 
   /** Every metadata write Tinkerbell has made, grouped by the run that made it. */
   batches: procedure
-    .input(z.object({ limit: z.number().int().min(1).max(200).default(50) }).optional())
-    .query(({ input }) => listBatches(input?.limit ?? 50)),
+    .input(z.object({ limit: z.number().int().min(1).max(200).default(50), ruleId: z.string().optional() }).optional())
+    .query(({ input }) => listBatches(input?.limit ?? 50, input?.ruleId)),
 
   /** What has been written to one item, for the detail page. */
   history: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => itemHistory(input.ratingKey)),

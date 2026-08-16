@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageCrumbs } from "#layout/AppBar";
 import { trpc } from "#/trpc";
@@ -33,6 +34,7 @@ export default function MediaDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
   const swipeRef = useSwipeBack(navigate);
+  const [editOpen, setEditOpen] = useState(false);
 
   const detailQuery = trpc.media.get.useQuery(
     { ratingKey: ratingKey! },
@@ -102,6 +104,9 @@ export default function MediaDetail() {
                 Edit the rule behind this
               </Link>
             )}
+            <button className={mediaStyles.actionBtn} onClick={() => setEditOpen((v) => !v)}>
+              {editOpen ? "Close metadata editor" : "Edit metadata"}
+            </button>
           </div>
 
           <div className={mediaStyles.metaLine}>
@@ -148,10 +153,10 @@ export default function MediaDetail() {
 
           {item.summary && <p className={mediaStyles.summary}>{item.summary}</p>}
 
-          {/* Editing lives here rather than behind a menu: this page already
-              shows every field it writes, so the edit is next to the thing it
-              changes. */}
-          <MediaEditPanel ratingKey={item.ratingKey} />
+          {/* Opened from the action bar above, but rendered here — the fields
+              it edits are the ones this page already shows, so the editor sits
+              next to the thing it changes rather than in a modal over it. */}
+          {editOpen && <MediaEditPanel ratingKey={item.ratingKey} onClose={() => setEditOpen(false)} />}
 
           {/* Media Files */}
           {item.media.length > 0 && (

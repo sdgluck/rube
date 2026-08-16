@@ -971,3 +971,36 @@ td.previewBlockCell {
   color: var(--ink-3);
   font-size: 12px;
 }
+
+/* The metadata rule's answer to the collection changeset: what it wrote, and
+   the button that puts it back. */
+.metadataBatches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.metadataBatch {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.metadataBatchSummary {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.metadataBatchMeta {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

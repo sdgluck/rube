@@ -944,6 +944,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     onTest={() => handleTest(rule)}
                     resolveTag={resolveTag}
                     cleanup={cleanupCounts[rule.id]}
+                    isMetadata={outcome === "metadata"}
                     onCancelTest={() => handleCancel(rule.id)}
                     runsHref={runsHref(rule.id)}
                     onEdit={() => startEdit(rule)}

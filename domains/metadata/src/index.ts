@@ -166,8 +166,13 @@ export interface MetadataBatch {
  *
  * Aggregated in SQL rather than by loading every row: a single batch can be
  * five thousand rows, and the list only ever shows counts and a few titles.
+ *
+ * `ruleId` narrows to one rule's writes, for the panel on its runs page. A
+ * metadata rule builds no collections, so the collection changeset that panel
+ * normally shows is empty for it — and "nothing moved" is the wrong thing to
+ * tell somebody whose run just rewrote four hundred fields.
  */
-export function listBatches(limit = 50): MetadataBatch[] {
+export function listBatches(limit = 50, ruleId?: string): MetadataBatch[] {
   const rows = db
     .select({
       batchId: metadataOriginals.batchId,
@@ -179,6 +184,7 @@ export function listBatches(limit = 50): MetadataBatch[] {
       fields: sql<string>`group_concat(distinct ${metadataOriginals.field})`,
     })
     .from(metadataOriginals)
+    .where(ruleId ? eq(metadataOriginals.ruleId, ruleId) : undefined)
     .groupBy(metadataOriginals.batchId)
     .orderBy(desc(sql`max(${metadataOriginals.appliedAt})`))
     .limit(limit)

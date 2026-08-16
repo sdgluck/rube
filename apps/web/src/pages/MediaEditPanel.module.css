@@ -1,11 +1,6 @@
 /* Controls compose the shared primitives so this panel matches every other
    form in the app; only the panel's own layout lives here. */
 
-.openButton {
-  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
-  align-self: flex-start;
-}
-
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--r-panel);

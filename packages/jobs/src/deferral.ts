@@ -33,6 +33,8 @@ import { getConfig, MINUTE_MS } from "@tinkerbell/core";
 export const DEFERRABLE_JOBS: readonly string[] = [
   "generate",
   "cleanup",
+  // Same engine as the two above, plus one Plex read per matched item.
+  "metadata",
   "sync-media",
   "sync-collections",
   "overlays",

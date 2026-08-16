@@ -6,6 +6,11 @@ import styles from "./MediaEditPanel.module.css";
 /**
  * Editing one item's metadata by hand.
  *
+ * Opened from the page's action bar, which is where the item's other verbs
+ * live — a third button in its own style halfway down the page would read as
+ * a different kind of thing.
+ *
+ *
  * The smallest useful version of the feature, and the one people find first —
  * which is why the lock explanation lives here in plain words rather than in a
  * tooltip. A locked field stops receiving updates from Plex's metadata agents;
@@ -30,15 +35,14 @@ const FIELDS = [
 /** Only the fields the client knows how to write. */
 type EditableField = (typeof FIELDS)[number]["key"];
 
-export default function MediaEditPanel({ ratingKey }: { ratingKey: string }) {
-  const [open, setOpen] = useState(false);
+export default function MediaEditPanel({ ratingKey, onClose }: { ratingKey: string; onClose: () => void }) {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [lock, setLock] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const { addToast } = useToast();
   const utils = trpc.useUtils();
-  const fieldsQuery = trpc.metadata.fields.useQuery({ ratingKey }, { enabled: open, refetchOnWindowFocus: false });
+  const fieldsQuery = trpc.metadata.fields.useQuery({ ratingKey }, { refetchOnWindowFocus: false });
   const updateMutation = trpc.metadata.updateFields.useMutation();
   const unlockMutation = trpc.metadata.unlockFields.useMutation();
 
@@ -90,19 +94,11 @@ export default function MediaEditPanel({ ratingKey }: { ratingKey: string }) {
     }
   };
 
-  if (!open) {
-    return (
-      <button className={styles.openButton} onClick={() => setOpen(true)}>
-        Edit metadata
-      </button>
-    );
-  }
-
   return (
     <section className={styles.panel}>
       <div className={styles.header}>
         <h3 className={styles.title}>Edit metadata</h3>
-        <button className={styles.close} onClick={() => setOpen(false)}>
+        <button className={styles.close} onClick={onClose}>
           Close
         </button>
       </div>

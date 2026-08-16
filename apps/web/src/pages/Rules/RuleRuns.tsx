@@ -81,7 +81,7 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
   const [params, setParams] = useSearchParams();
   const utils = trpc.useUtils();
   const { addToast } = useToast();
-  const rulesPath = outcome === "cleanup" ? "/cleanup/rules" : "/rules";
+  const rulesPath = outcome === "cleanup" ? "/cleanup/rules" : outcome === "metadata" ? "/metadata" : "/rules";
 
   const phase = (PHASE_FILTERS as readonly string[]).includes(params.get("phase") ?? "")
     ? (params.get("phase") as PhaseFilter)
@@ -192,7 +192,10 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
     >
       <PageCrumbs
         crumbs={[
-          { label: outcome === "cleanup" ? "Cleanup rules" : "Rules", to: rulesPath },
+          {
+            label: outcome === "cleanup" ? "Cleanup rules" : outcome === "metadata" ? "Metadata rules" : "Rules",
+            to: rulesPath,
+          },
           { label: ruleQuery.data?.name ?? "Rule" },
           { label: "Runs" },
         ]}
@@ -282,7 +285,7 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
 
         <div className={styles.runsDetailStack}>
           {selectedId ? (
-            <RunDetail runId={selectedId} />
+            <RunDetail runId={selectedId} ruleId={ruleId} outcome={outcome} />
           ) : (
             <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Run detail">
               <EmptyState icon="list" title="Nothing selected" description="Pick a run to see what it did." />
@@ -295,7 +298,7 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
 }
 
 /** The selected run: what it did, how far in, and everything it said. */
-function RunDetail({ runId }: { runId: string }) {
+function RunDetail({ runId, ruleId, outcome }: { runId: string; ruleId: string; outcome: RulesOutcome }) {
   const runQuery = trpc.rules.runDetail.useQuery(
     { runId },
     // A finished row never changes again, so stop polling when it settles.
@@ -386,12 +389,87 @@ function RunDetail({ runId }: { runId: string }) {
         </div>
       </CardSection>
 
-      {run.phase === "run" && <RunChanges runId={runId} live={live} />}
+      {run.phase === "run" &&
+        (outcome === "metadata" ? <MetadataWrites ruleId={ruleId} /> : <RunChanges runId={runId} live={live} />)}
 
       <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Log">
         <RunLog log={log} downloadName={`rule-run-${runId}.txt`} ariaLabel="Rule run log" />
       </CardSection>
     </>
+  );
+}
+
+/**
+ * What this rule has written to Plex items, and the way back.
+ *
+ * The collection changeset the sibling panel shows is always empty for a
+ * metadata rule — it builds no collections — and "nothing moved" is the wrong
+ * thing to tell somebody whose run just rewrote four hundred fields. The
+ * batches are per rule rather than per run because that is how the ledger
+ * groups them, and because a batch is the unit undo operates on.
+ */
+function MetadataWrites({ ruleId }: { ruleId: string }) {
+  const utils = trpc.useUtils();
+  const { addToast } = useToast();
+  const batchesQuery = trpc.metadata.batches.useQuery({ ruleId, limit: 20 }, { refetchOnWindowFocus: false });
+  const undoMutation = trpc.metadata.undo.useMutation();
+  const batches = batchesQuery.data ?? [];
+
+  const undo = (batchId: string, writes: number) => {
+    if (!confirm(`Put back ${writes} field${writes === 1 ? "" : "s"} to the values they held before this run?`)) return;
+    undoMutation.mutate(
+      { batchId },
+      {
+        onSuccess: () => {
+          addToast("Undo started — watch it on the Jobs page", "success");
+          utils.metadata.batches.invalidate();
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
+  };
+
+  return (
+    <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Metadata written">
+      {batchesQuery.isLoading ? (
+        <SkeletonTable rows={3} columns={2} />
+      ) : batches.length === 0 ? (
+        <EmptyState
+          icon="list"
+          title="Nothing written"
+          description="This rule hasn't changed any fields yet — either it's still in preview-only mode, or every item already held the right values."
+        />
+      ) : (
+        <ul className={styles.metadataBatches}>
+          {batches.map((batch) => (
+            <li key={batch.batchId} className={styles.metadataBatch}>
+              <div>
+                <div className={styles.metadataBatchSummary}>
+                  {batch.fields.join(", ")} on {batch.items} item{batch.items === 1 ? "" : "s"}
+                </div>
+                <div className={styles.metadataBatchMeta}>
+                  {new Date(batch.appliedAt).toLocaleString()} · {batch.writes} field write
+                  {batch.writes === 1 ? "" : "s"}
+                  {batch.sampleTitles.length > 0 && ` · ${batch.sampleTitles.join(", ")}`}
+                </div>
+              </div>
+              {batch.reverted ? (
+                <span className={styles.metadataBatchMeta}>Undone</span>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.runsActionGhost}
+                  onClick={() => undo(batch.batchId, batch.writes)}
+                  disabled={undoMutation.isPending}
+                >
+                  Undo
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </CardSection>
   );
 }
 

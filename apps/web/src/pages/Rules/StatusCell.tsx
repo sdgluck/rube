@@ -11,6 +11,12 @@ interface RuleStatusCellProps {
   runProgress?: number;
   /** Set for cleanup rules — a collection count says nothing about them. */
   cleanup?: { queued: number; actioned: number };
+  /**
+   * True for rules whose ending is a metadata write. Like cleanup, they build
+   * no collections, so a test reporting "0 collections" is not a small
+   * inaccuracy — it reads as a rule that matched nothing.
+   */
+  isMetadata?: boolean;
 }
 
 /**
@@ -19,7 +25,14 @@ interface RuleStatusCellProps {
  * automatically while a run/test is in-flight, and the result preview
  * opens automatically on completion.
  */
-export default function StatusCell({ rule, isTesting, isRunning, runProgress = 0, cleanup }: RuleStatusCellProps) {
+export default function StatusCell({
+  rule,
+  isTesting,
+  isRunning,
+  runProgress = 0,
+  cleanup,
+  isMetadata,
+}: RuleStatusCellProps) {
   // A percentage only once there is one: a run reports 0 until it knows how
   // much work it has, and "Running… 0%" reads like something is stuck.
   const pct = runProgress > 0 ? ` ${Math.round(runProgress * 100)}%` : "";
@@ -68,7 +81,9 @@ export default function StatusCell({ rule, isTesting, isRunning, runProgress = 0
       ? "ok"
       : rule.lastRunStatus
     : rule.lastTestStatus === "ok"
-      ? `${rule.lastTestCollectionCount ?? 0} collection${rule.lastTestCollectionCount === 1 ? "" : "s"}`
+      ? isMetadata
+        ? `${rule.lastTestItemCount ?? 0} item${rule.lastTestItemCount === 1 ? "" : "s"} matched`
+        : `${rule.lastTestCollectionCount ?? 0} collection${rule.lastTestCollectionCount === 1 ? "" : "s"}`
       : rule.lastTestStatus;
 
   let cls = styles.statusOk;

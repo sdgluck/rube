@@ -100,6 +100,8 @@ interface RuleTableRowProps {
   resolveTag?: (field: string, value: string) => string;
   /** Queue tallies, set only when this rule's outcome is cleanup. */
   cleanup?: { queued: number; actioned: number };
+  /** Rules whose ending is a metadata write build no collections either. */
+  isMetadata?: boolean;
 }
 
 export default function RuleTableRow({
@@ -130,6 +132,7 @@ export default function RuleTableRow({
   onDetailCleared,
   resolveTag,
   cleanup,
+  isMetadata,
 }: RuleTableRowProps) {
   const navigate = useNavigate();
   const c = rule.config ?? {};
@@ -191,6 +194,7 @@ export default function RuleTableRow({
             isRunning={isRunning}
             runProgress={runProgress}
             cleanup={cleanup}
+            isMetadata={isMetadata}
           />
         </td>
         <td className={styles.runsCell} data-cell="hide">
