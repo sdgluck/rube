@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, type InferSelectModel } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
 import { rememberDeletedRule } from "./recycle.ts";
+import { SEEDED_RULE } from "@tinkerbell/contracts";
 
 export {
   acquireRuleLock,
@@ -217,8 +218,7 @@ export function seedDefaultRules(): void {
   if (existing.length > 0) return;
 
   createRule({
-    name: "AI Curated Collections",
-    type: "ai_prompt",
+    ...SEEDED_RULE,
     config: {
       themes: ["Vibes & tone", "Visual style & cinematography", "Unexpected pairings", "Moods & atmospheres"],
       customThemes: [],

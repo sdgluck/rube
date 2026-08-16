@@ -36,6 +36,7 @@ import { postersRouter } from "./posters.router.ts";
 import { prerollsRouter } from "./prerolls.router.ts";
 import { migrationRouter } from "./migration.router.ts";
 import { registryRouter } from "./registry.router.ts";
+import { onboardingRouter } from "./onboarding.router.ts";
 import { navRouter } from "./nav.router.ts";
 import { viewsRouter } from "./views.router.ts";
 import { cleanupRouter } from "./cleanup.router.ts";
@@ -67,6 +68,7 @@ export const appRouter = t.router({
   prerolls: prerollsRouter,
   migration: migrationRouter,
   registry: registryRouter,
+  onboarding: onboardingRouter,
   nav: navRouter,
   views: viewsRouter,
   personalization: personalizationRouter,

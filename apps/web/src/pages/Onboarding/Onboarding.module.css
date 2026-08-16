@@ -1,0 +1,566 @@
+/* A takeover, so this owns the viewport rather than sitting in `.content`. */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  background: var(--page);
+  color: var(--ink);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 28px;
+  border-block-end: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.brand {
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerCount {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.skipAll {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: var(--t-meta);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.skipAll:hover {
+  color: var(--ink);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  flex: 1;
+  min-block-size: 0;
+}
+
+/* ─── Step rail ─────────────────────────────────────────────────────────── */
+
+.rail {
+  border-inline-end: 1px solid var(--line);
+  padding: 24px 12px;
+  background: var(--surface);
+}
+
+.railList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 24px;
+}
+
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: 0;
+  border-radius: var(--r-sm);
+  font: var(--t-body);
+  color: var(--ink-2);
+  text-align: start;
+  cursor: pointer;
+}
+
+.railItem:disabled {
+  cursor: default;
+  color: var(--ink-faint);
+}
+
+.railItem:not(:disabled):hover {
+  background: var(--fill-quiet);
+}
+
+.railActive {
+  background: var(--fill-quiet);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.railDone {
+  color: var(--ink);
+}
+
+.railDot {
+  display: grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  flex-shrink: 0;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-strong);
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.railDone .railDot {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--on-accent);
+}
+
+.railActive .railDot {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.railLabel {
+  min-inline-size: 0;
+}
+
+.railReq {
+  margin-inline-start: auto;
+  font: var(--t-caption);
+  color: var(--status-warn-fg);
+}
+
+/* ─── Main column ───────────────────────────────────────────────────────── */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.stepWrap {
+  flex: 1;
+  padding: 32px 28px;
+  animation: fade 180ms ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.stepBody {
+  max-inline-size: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stepTitle {
+  font: var(--t-display);
+  letter-spacing: var(--t-display-tracking);
+  margin: 0;
+}
+
+.stepLede {
+  font: var(--t-body);
+  color: var(--ink-2);
+  margin: 0;
+  max-inline-size: 62ch;
+}
+
+.groupHeading {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 8px 0 0;
+}
+
+.notice {
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+  border-radius: var(--r-sm);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border-block-start: 1px solid var(--line);
+  background: var(--surface);
+  position: sticky;
+  bottom: 0;
+}
+
+.footerSpacer {
+  flex: 1;
+}
+
+/* ─── Concept cards (welcome) ───────────────────────────────────────────── */
+
+.conceptGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.concept {
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+}
+
+.conceptTitle {
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  margin: 0 0 6px;
+}
+
+.conceptBody {
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+  margin: 0;
+}
+
+/* ─── Service / choice cards ────────────────────────────────────────────── */
+
+.tileGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  text-align: start;
+}
+
+/* An expanded card holds a form; letting it stay in one grid cell would
+   squeeze the inputs into a column a third of the page wide. */
+.tileExpanded {
+  grid-column: 1 / -1;
+}
+
+.tilePrimary {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Also used on `<Link>`, where the global anchor underline would otherwise run
+   under every line of the card including the blurb. */
+.tileButton {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tileButton:hover {
+  background: var(--surface-sunken);
+}
+
+.tileHead,
+.tileHeadStatic {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  inline-size: 100%;
+}
+
+.tileHead {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.tileTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+}
+
+.tileDot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-pill);
+  background: var(--status-ok-dot);
+  flex-shrink: 0;
+}
+
+.tileState {
+  font: var(--t-caption);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.tileBlurb {
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.tileMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.req {
+  padding: 1px 6px;
+  border-radius: var(--r-tag);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+.tileBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.tileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A button-shaped link is a flex child of `.stepBody`, which would stretch it
+   the full column width. */
+.inlineAction {
+  align-self: start;
+}
+
+/* ─── Fields ────────────────────────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-inline-size: 460px;
+}
+
+.fieldLabel {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.fieldHint {
+  font: var(--t-meta);
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.checkField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.libraryList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.libraryItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: var(--t-body-sm);
+}
+
+/* ─── Recommendation block ──────────────────────────────────────────────── */
+
+.recommend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: start;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+}
+
+.recommendList {
+  margin: 0;
+  padding-inline-start: 18px;
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ─── Job + rule lists ──────────────────────────────────────────────────── */
+
+.jobList,
+.ruleList,
+.summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.jobRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 12px;
+  background: var(--surface);
+  font: var(--t-body-sm);
+}
+
+.cron {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.ruleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--surface);
+}
+
+.ruleHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ruleName {
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ruleState {
+  margin-inline-start: auto;
+  font: var(--t-caption);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.ruleResult {
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.ruleError {
+  font: var(--t-body-sm);
+  color: var(--status-error-fg);
+  margin: 0;
+}
+
+.summary {
+  gap: 8px;
+}
+
+.summary li {
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  font: var(--t-body);
+}
+
+.summaryDetail {
+  display: block;
+  margin-block-start: 3px;
+  font: var(--t-meta);
+  color: var(--ink-3);
+}
+
+/* ─── Narrow viewports ──────────────────────────────────────────────────── */
+
+@media (max-width: 800px) {
+  /* The rail becomes a horizontal stepper — a 220px column would leave the
+     forms unusable, and the labels are short enough to scroll sideways. */
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rail {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--line);
+    padding: 10px 12px;
+    overflow-x: auto;
+  }
+
+  .railList {
+    flex-direction: row;
+    position: static;
+    gap: 4px;
+  }
+
+  .railItem {
+    inline-size: auto;
+    white-space: nowrap;
+  }
+
+  .railReq {
+    display: none;
+  }
+
+  .stepWrap,
+  .header,
+  .footer {
+    padding-inline: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepWrap {
+    animation: none;
+  }
+}
