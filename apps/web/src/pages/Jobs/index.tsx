@@ -69,6 +69,7 @@ export default function Jobs() {
   const { jobsQuery, recentRunsQuery, rawJobs, systemJobs, featureJobs, statusFilter, setStatusFilter } = useJobsData();
   const upcoming = useUpcomingRuns(1);
 
+  const lastFailureQuery = trpc.jobs.lastFailure.useQuery(undefined, { refetchInterval: 15000 });
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveConfigMutation = trpc.config.save.useMutation({
     onSuccess: () => utils.config.get.invalidate(),
@@ -168,13 +169,16 @@ export default function Jobs() {
         break;
       }
       case "lastFailure": {
-        const lastFailure = rawJobs
-          .filter((j) => j.lastRunStatus === "failed" && j.lastRunStartedAt)
-          .sort((a, b) => (b.lastRunStartedAt ?? 0) - (a.lastRunStartedAt ?? 0))[0];
-        value = lastFailure?.lastRunStartedAt ? <RelativeTime timestamp={lastFailure.lastRunStartedAt} /> : EMPTY;
+        // The last run that failed, not "a job whose latest run is failed" —
+        // the second forgets a failure the moment the job next succeeds, which
+        // is how this tile used to read "—" while the Stats dashboard and the
+        // event log both had a failure from that morning. Same server query as
+        // the Stats tile, so the three cannot disagree.
+        const lastFailure = lastFailureQuery.data;
+        value = lastFailure ? <RelativeTime timestamp={lastFailure.startedAt} /> : EMPTY;
         sub = lastFailure?.name ?? null;
         tone = "small";
-        if (lastFailure) to = `/jobs/${lastFailure.id}`;
+        if (lastFailure) to = `/jobs/runs/${lastFailure.runId}`;
         break;
       }
       case "neverRun": {

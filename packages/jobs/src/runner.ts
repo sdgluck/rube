@@ -373,7 +373,7 @@ export async function startJob(jobId: string): Promise<StartResult> {
       .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
       .where(eq(jobRuns.id, runId))
       .run();
-    emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id });
+    emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id, runId });
     log.error("job points at an unknown command", { jobId: job.id, command: job.command });
     return { ok: false, reason: "unknown-command", runId };
   }
@@ -457,6 +457,7 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
     if (!descriptor.quiet || outcomeChanged(job.id, runId, output)) {
       emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - startedAt)}`, {
         jobId: job.id,
+        runId,
       });
     }
     jobLog.debug("completed", { output });
@@ -476,7 +477,7 @@ async function runInternalJob(job: Job, runId: string, startedAt: number): Promi
       .where(eq(jobRuns.id, runId))
       .run();
     // Failures always emit, quiet or not.
-    emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id });
+    emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id, runId });
     jobLog.error("failed", { err: msg });
   } finally {
     internalControllers.delete(runId);
@@ -631,7 +632,7 @@ export function sweepStuckRuns(now = Date.now()): number {
       .where(eq(jobRuns.id, run.id))
       .run();
     cancelRequestedAt.delete(run.id);
-    emitEvent("job.failed", `${run.name} failed: ${reason}`, { jobId: run.jobId });
+    emitEvent("job.failed", `${run.name} failed: ${reason}`, { jobId: run.jobId, runId: run.id });
     log.error("watchdog force-failed a stuck run", { runId: run.id, job: run.name, reason });
     failed++;
   }

@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import RelativeTime from "#components/RelativeTime";
+import { eventLink } from "#/eventLinks";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import ErrorState from "#components/ErrorState";
@@ -48,22 +50,31 @@ export function SystemPanel({ dragHandle, dragProps }: DashboardPanelProps) {
       <div className={styles.subSection}>
         <div className={styles.subHeader}>Recent Events</div>
         {eventsQuery.data && eventsQuery.data.items.length > 0 ? (
-          eventsQuery.data.items.map((event) => (
-            <div key={event.id} className={styles.eventRow}>
-              <span className={styles.eventTime}>
-                <RelativeTime timestamp={event.timestamp} />
-              </span>
-              <span className={styles.eventMsg}>
-                {event.count > 1 ? <strong>{event.count}× </strong> : null}
-                {event.count > 1 && event.avgDurationMs != null
-                  ? stripDurationFromMessage(event.message)
-                  : event.message}
-                {event.count > 1 && event.avgDurationMs != null && (
-                  <span className={styles.muted}> (avg {formatDuration(event.avgDurationMs)})</span>
-                )}
-              </span>
-            </div>
-          ))
+          eventsQuery.data.items.map((event) => {
+            const to = eventLink(event);
+            const text =
+              event.count > 1 && event.avgDurationMs != null ? stripDurationFromMessage(event.message) : event.message;
+            return (
+              <div key={event.id} className={styles.eventRow}>
+                <span className={styles.eventTime}>
+                  <RelativeTime timestamp={event.timestamp} />
+                </span>
+                <span className={styles.eventMsg}>
+                  {event.count > 1 ? <strong>{event.count}× </strong> : null}
+                  {to ? (
+                    <Link to={to} className={styles.eventLink}>
+                      {text}
+                    </Link>
+                  ) : (
+                    text
+                  )}
+                  {event.count > 1 && event.avgDurationMs != null && (
+                    <span className={styles.muted}> (avg {formatDuration(event.avgDurationMs)})</span>
+                  )}
+                </span>
+              </div>
+            );
+          })
         ) : (
           <div className={styles.muted}>No recent events</div>
         )}

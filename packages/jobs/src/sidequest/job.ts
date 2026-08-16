@@ -161,7 +161,7 @@ export class CommandJob extends Job {
           .set({ status: "failed", log: msg + "\n", message: msg, finishedAt: Date.now() })
           .where(eq(jobRuns.id, runId))
           .run();
-        emitEvent("job.failed", `${jobName} failed: ${msg}`, { jobId });
+        emitEvent("job.failed", `${jobName} failed: ${msg}`, { jobId, runId });
       } catch (err2) {
         logDbError("mark run as failed", err2);
       }
@@ -296,7 +296,7 @@ export class CommandJob extends Job {
         .set({ status: "completed", progress: 1, finishedAt: Date.now() })
         .where(eq(jobRuns.id, runId))
         .run();
-      emitEvent("job.completed", `${jobName} completed in ${formatDuration(Date.now() - startedAt)}`, { jobId });
+      emitEvent("job.completed", `${jobName} completed in ${formatDuration(Date.now() - startedAt)}`, { jobId, runId });
       log.info("completed", { durationMs: Date.now() - startedAt });
 
       return this.complete({ ok: true });
@@ -316,7 +316,7 @@ export class CommandJob extends Job {
         // Don't double-report a run the watchdog already failed.
         if (!alreadyTerminal()) {
           db.update(jobRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(jobRuns.id, runId)).run();
-          emitEvent("job.failed", `${jobName} failed: ${errorMsg}`, { jobId });
+          emitEvent("job.failed", `${jobName} failed: ${errorMsg}`, { jobId, runId });
         }
       } catch (err2) {
         logDbError("mark run as failed", err2);

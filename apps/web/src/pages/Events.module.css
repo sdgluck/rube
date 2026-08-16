@@ -55,6 +55,20 @@
   color: var(--status-neutral-fg);
 }
 
+/* ─── Message link ─────────────────────────────────────────────────────────── */
+
+/* Nearly every row links somewhere, so the message keeps body ink rather than
+ * turning the whole table accent-coloured; the hover is what says it's a link. */
+.messageLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.messageLink:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
 /* ─── Avg duration ─────────────────────────────────────────────────────────── */
 
 .avgDuration {

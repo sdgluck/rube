@@ -52,6 +52,7 @@ export async function announceRegistryUpdates(): Promise<string> {
       }`,
       {
         ruleId: update.ruleId,
+        ruleName: update.ruleName,
         packSlug: update.packSlug,
         fromVersion: update.fromVersion,
         toVersion: update.toVersion,

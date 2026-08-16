@@ -204,9 +204,45 @@ export function getActivitySeries(days: number, now: number = Date.now()): numbe
 
 // ─── Operational summary (failed jobs, last sync, uptime) ───────────────────
 
+export interface LastFailedRun {
+  runId: string;
+  jobId: string;
+  name: string;
+  startedAt: number;
+}
+
+/**
+ * The most recent run that failed, whatever the job has done since.
+ *
+ * One definition of "last failure", used by both the Stats tile and the Jobs
+ * tile — they read the same row, so they cannot say different things. Note
+ * this is deliberately NOT "jobs whose latest run failed": a job that failed
+ * three hours ago and has succeeded twice since still failed three hours ago,
+ * and a dashboard that forgets that disagrees with its own event log.
+ *
+ * `since` bounds it to a window (the Stats tile counts a day); omit it for
+ * "ever".
+ */
+export function getLastFailedRun(since?: number): LastFailedRun | null {
+  const where =
+    since == null ? eq(jobRuns.status, "failed") : and(eq(jobRuns.status, "failed"), gte(jobRuns.startedAt, since));
+
+  const row = db
+    .select({ runId: jobRuns.id, jobId: jobRuns.jobId, name: jobs.name, startedAt: jobRuns.startedAt })
+    .from(jobRuns)
+    .leftJoin(jobs, eq(jobs.id, jobRuns.jobId))
+    .where(where)
+    .orderBy(sql`${jobRuns.startedAt} desc`)
+    .limit(1)
+    .get();
+
+  if (!row) return null;
+  return { runId: row.runId, jobId: row.jobId, name: row.name ?? row.jobId, startedAt: row.startedAt };
+}
+
 export function getOpsSummary(): {
   failedJobs24h: number;
-  lastFailure: { jobId: string; name: string; startedAt: number } | null;
+  lastFailure: LastFailedRun | null;
   lastSyncAt: number | null;
   uptimeSec: number;
 } {
@@ -221,14 +257,7 @@ export function getOpsSummary(): {
   // A count on its own says something is wrong without saying what. The most
   // recent failure names the job, which is the whole of what the dashboard can
   // usefully say before you click through.
-  const lastFailureRow = db
-    .select({ jobId: jobRuns.jobId, name: jobs.name, startedAt: jobRuns.startedAt })
-    .from(jobRuns)
-    .leftJoin(jobs, eq(jobs.id, jobRuns.jobId))
-    .where(and(eq(jobRuns.status, "failed"), gte(jobRuns.startedAt, dayCutoff)))
-    .orderBy(sql`${jobRuns.startedAt} desc`)
-    .limit(1)
-    .get();
+  const lastFailure = getLastFailedRun(dayCutoff);
 
   const lastSyncRow = db
     .select({ updatedAt: sql<number>`max(${statsCache.updatedAt})` })
@@ -237,13 +266,7 @@ export function getOpsSummary(): {
 
   return {
     failedJobs24h,
-    lastFailure: lastFailureRow
-      ? {
-          jobId: lastFailureRow.jobId,
-          name: lastFailureRow.name ?? lastFailureRow.jobId,
-          startedAt: lastFailureRow.startedAt,
-        }
-      : null,
+    lastFailure,
     lastSyncAt: lastSyncRow?.updatedAt ?? null,
     uptimeSec: Math.floor((Date.now() - PROCESS_STARTED_AT_MS) / 1000),
   };

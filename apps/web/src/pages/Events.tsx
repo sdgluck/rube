@@ -1,5 +1,7 @@
 import { keepPreviousData } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
+import { eventLink } from "#/eventLinks";
 import { EventsSkeleton } from "#components/Skeleton";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { useListParams } from "#hooks/useListParams";
@@ -158,6 +160,11 @@ export default function Events() {
                       label: event.type,
                       className: styles.badgeDefault,
                     };
+                    const to = eventLink(event);
+                    const text =
+                      event.count > 1 && event.avgDurationMs != null
+                        ? stripDurationFromMessage(event.message)
+                        : event.message;
                     return (
                       <tr key={event.id}>
                         <td data-cell="meta" className={styles.timestamp}>
@@ -167,9 +174,16 @@ export default function Events() {
                           <span className={`${sharedStyles.statusPill} ${badge.className}`}>{badge.label}</span>
                         </td>
                         <td data-cell="title">
-                          {event.count > 1 && event.avgDurationMs != null
-                            ? stripDurationFromMessage(event.message)
-                            : event.message}
+                          {/* Only the message is the link — the repeat count and
+                              the average duration describe the roll-up, not the
+                              one occurrence you'd be opening. */}
+                          {to ? (
+                            <Link to={to} className={styles.messageLink}>
+                              {text}
+                            </Link>
+                          ) : (
+                            text
+                          )}
                           {event.count > 1 && event.avgDurationMs != null && (
                             <span className={styles.avgDuration}> (avg {formatDuration(event.avgDurationMs)})</span>
                           )}

@@ -255,13 +255,14 @@ export default function Stats() {
           // The count is the alarm; the sub says which job, which is what you
           // needed before deciding whether to click.
           sub = last ? `${last.name}, ${formatRelativeShort(last.startedAt)}` : "needs attention";
-          // The failure log, not the Jobs page. This tile counts *runs that
+          // The failure itself, not the Jobs page. This tile counts *runs that
           // failed in 24h* — a historical event — while `/jobs?status=failed`
           // lists jobs whose last run is failed *now*. A job that failed three
           // hours ago and has since succeeded is in the first and not the
           // second, so linking there sent you to an empty list with the tile
-          // still insisting something was wrong.
-          to = "/events?type=job.failed";
+          // still insisting something was wrong. One failure goes straight to
+          // its run log; several go to the list of them.
+          to = n === 1 && last ? `/jobs/runs/${last.runId}` : "/events?type=job.failed";
         }
         break;
       }

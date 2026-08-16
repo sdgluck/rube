@@ -16,6 +16,7 @@ import {
   listFeatureCatalog,
 } from "@tinkerbell/jobs";
 import { getBywCollectionsGroupedByUser } from "@tinkerbell/domain.collections";
+import { getLastFailedRun } from "@tinkerbell/domain.stats";
 import { t, procedure } from "./_base.ts";
 
 export const jobsRouter = t.router({
@@ -61,6 +62,14 @@ export const jobsRouter = t.router({
   recentRuns: procedure
     .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
     .query(({ input }) => getRecentRuns(input?.limit)),
+
+  /**
+   * The last run that failed, ever — the same row the Stats dashboard's
+   * failure tile reads, so the two pages can't report different failures.
+   * `recentRuns` can't answer this: a failure drops off the end of that
+   * window as soon as enough jobs have run since.
+   */
+  lastFailure: procedure.query(() => getLastFailedRun()),
 
   update: procedure
     .input(

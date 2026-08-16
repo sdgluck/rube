@@ -276,6 +276,17 @@
   white-space: nowrap;
 }
 
+/* Body ink until hovered — see the note on Events' own message link. */
+.eventLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.eventLink:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
 /* ─── Distribution bars ─────────────────────────────────────────────────── */
 
 .distRows {

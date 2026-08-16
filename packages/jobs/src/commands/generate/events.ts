@@ -34,6 +34,7 @@ export function announceNewCollections(ruleId: string, ruleName: string, before:
 
   emitEvent("collection.created", `"${ruleName}" created ${fresh.length} new collection(s): ${sampleList(fresh)}`, {
     ruleId,
+    ruleName,
     count: fresh.length,
     titles: fresh.slice(0, SAMPLE_SIZE),
   });
@@ -62,6 +63,6 @@ export function announceEmptyRule(
   emitEvent(
     "rule.empty",
     `"${ruleName}" matched nothing this run — it matched ${previousItemCount} item(s) last time`,
-    { ruleId, previousItemCount },
+    { ruleId, ruleName, previousItemCount },
   );
 }
