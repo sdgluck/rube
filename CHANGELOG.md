@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-08-16
+
+### Added
+
+- Collection page: labels in the header are now clickable pills that link to the Collections list filtered to that label.
+- Collection editing moved into a dedicated three-step wizard (opened via an Edit button), matching the rule wizard's style, with a review step before anything is saved.
+- Smart filter collection summaries are now written as natural-language sentences (e.g. "Horror films released in the last 10 years that you haven't watched") instead of a clause-by-clause restatement of the filter, and genres are shown by name rather than numeric tag ID.
+- Collections table gains six new optional columns — Poster, Pinned, Summary, Artwork, Last synced, Rating key — configurable the same way as Media's columns; Pinned is shown by default.
+- Collection detail page rebuilt with Items / Details / Activity tabs: a poster studio (generate from a template, upload, pick an existing Plex image, or fetch an allow-listed URL), manual pin/unpin to the Plex home screen with live state, membership editing (add/remove items) on static collections, and visibility of library order, runtime, year span, genre mix, watched share, sibling collections from the same rule, and who/what last set the poster and summary.
+- Active Streams table columns are now configurable, adding audio, playback decision, device, app, location and time-left.
+- Users page: the "Last Watched" title now links to the item (only for history synced after this release).
+- Sidebar footer: hovering the version now shows the commit the running build was made from (Docker builds only).
+- Bandwidth tile on Stats now tracks usage over the last 24 hours as a sparkline of hourly peaks, instead of only showing the current instant; a week of samples is kept.
+- Stats tiles for Failed Jobs (24h), 4K Library, Top User and Last Sync are now clickable and link to a filtered view of the relevant page; Active Users (7d) and Movies/Episodes show a 14-day sparkline instead of a blank or redundant sub-line.
+- Jobs page can be filtered by status (failed / running / never run), with a banner explaining the active filter and a link to clear it.
+- Media table can now be sorted by "Added" date and ships an Added column by default.
+
+### Changed
+
+- Breadcrumb trails now live only in the top app bar; the duplicate breadcrumb previously drawn at the top of each page's body is gone.
+- Collection header is now a read-only summary (library, name, key facts, description, labels) instead of always-editable inline fields.
+- Rule wizard no longer asks for an outcome step; the page you opened it from (Rules vs. Cleanup) decides it.
+- Preview toolbar: the redundant Plex-home chip is removed, Shuffle hubs moved to the end and matches the pickers' height, and the Provenance (Rule/User) badge uses a quieter fill instead of a border.
+- Job Failed events now open the log for the specific run that failed, instead of the job's overall history.
+- Bandwidth tile shows total capacity as "of 860 Mbps" on the sub-line instead of a second number crammed into the value line.
+
+### Fixed
+
+- **Custom collection posters set by hand are no longer silently overwritten by the nightly poster job** — only summary edits were protected from this before; poster edits now lock the same way.
+- iOS Safari no longer inflates the Table/Grid toggle's text past its button edge, and mobile card-list tables no longer show a white slab behind stacked cards.
+- Dashboard panel headers, the Playback History range control, the filter bar, summary tiles and compact tables no longer overflow or misalign on phone-width screens.
+- Stats and Jobs previously disagreed on what counts as a "failed job" (failures in the last 24h vs. jobs currently in a failed state); both now use the same definition.
+- Failed Jobs (24h) tile now links to a job-failure log that actually matches what it counts, instead of a Jobs list showing "0 of 16".
+- Added (7d) tile now links to Media sorted by newest-added, which wasn't previously possible.
+- Column configuration (Media, Collections, Streams) no longer hides columns added after a user last saved their layout.
+- Registry page rendered its border and warning colors incorrectly in dark mode; both now use the correct theme colors.
+- Tables app-wide now draw one consistent left/right border that no longer disappears under row hover/selection highlighting, share one header row height, and use consistent title-column weight (previously inconsistent between Media and other pages).
+
 ## [0.18.0] - 2026-08-15
 
 ### Added
