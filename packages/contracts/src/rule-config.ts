@@ -7,6 +7,7 @@ import {
 } from "@tinkerbell/plex-smart-filter";
 import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 import { presentationConfigSchema } from "./presentation.ts";
+import { ruleScheduleSchema } from "./rule-schedule.ts";
 
 const LOCAL_FIELDS = new Set(LOCAL_FIELD_DEFS.map((d) => d.field));
 
@@ -155,6 +156,13 @@ const baseRuleConfigSchema = z.object({
    * this keeps working untouched and no migration is needed.
    */
   action: cleanupActionSchema,
+  /**
+   * When this rule runs, if not simply "in the nightly batch".
+   *
+   * Absent is the behaviour every rule had before this existed, so nothing
+   * needs migrating. See `rule-schedule.ts` for what the three parts mean.
+   */
+  schedule: ruleScheduleSchema.optional(),
   /**
    * How this rule's collections look in Plex — summary and poster.
    *

@@ -4,8 +4,10 @@ import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
 import {
   DEFAULT_OUTCOME_FORM,
   DEFAULT_PRESENTATION_FORM,
+  DEFAULT_SCHEDULE_FORM,
   type OutcomeFormState,
   type PresentationFormState,
+  type ScheduleFormState,
 } from "./RuleWizard/types.ts";
 import { typeProducesManyCollections } from "./RuleWizard/rule-types.ts";
 import styles from "./Rules.module.css";
@@ -175,6 +177,7 @@ export const EMPTY_FORM: RuleFormState = {
   outcome: { ...DEFAULT_OUTCOME_FORM },
   presentation: { ...DEFAULT_PRESENTATION_FORM },
   arr: { ...DEFAULT_ARR_FORM },
+  schedule: { ...DEFAULT_SCHEDULE_FORM },
 };
 
 /**
@@ -207,6 +210,54 @@ export function presentationFromConfig(presentation: unknown): PresentationFormS
     posterUrl: (p.posterUrl as string) ?? "",
     accentColor: (p.accentColor as string) ?? "",
   };
+}
+
+/**
+ * Read a stored `config.schedule` back into wizard form state.
+ *
+ * The saved shape omits what isn't in use; the form needs every field present
+ * to bind controls to. So each half gets a boolean saying whether it's on, and
+ * the values behind an off switch fall back to the defaults rather than to
+ * empty strings — un-ticking a window and re-ticking it shouldn't leave two
+ * blank date boxes.
+ */
+export function scheduleFromConfig(schedule: unknown): ScheduleFormState {
+  const s = schedule as Partial<Record<keyof ScheduleFormState | "triggers", unknown>> | null | undefined;
+  if (!s) return { ...DEFAULT_SCHEDULE_FORM };
+  const cron = typeof s.cron === "string" ? s.cron : "";
+  const activeFrom = typeof s.activeFrom === "string" ? s.activeFrom : "";
+  const activeTo = typeof s.activeTo === "string" ? s.activeTo : "";
+  const triggers = Array.isArray(s.triggers) ? (s.triggers as string[]) : [];
+  return {
+    useCron: cron.length > 0,
+    cron: cron || DEFAULT_SCHEDULE_FORM.cron,
+    excludeFromBatch: s.excludeFromBatch === true,
+    useWindow: activeFrom.length > 0 && activeTo.length > 0,
+    activeFrom: activeFrom || DEFAULT_SCHEDULE_FORM.activeFrom,
+    activeTo: activeTo || DEFAULT_SCHEDULE_FORM.activeTo,
+    runOnItemAdded: triggers.includes("item-added"),
+  };
+}
+
+/**
+ * The inverse: only the parts that are switched on reach the config, so a rule
+ * that never touched the schedule controls stays byte-identical to how it was
+ * stored before they existed. Returns undefined when nothing is set, which is
+ * what the job reads as "nightly batch, all year".
+ */
+export function scheduleToConfig(form: ScheduleFormState): Record<string, unknown> | undefined {
+  const schedule: Record<string, unknown> = {};
+  if (form.useCron && form.cron.trim()) {
+    schedule.cron = form.cron.trim();
+    // Only meaningful alongside a cron, and the schema rejects it without one.
+    if (form.excludeFromBatch) schedule.excludeFromBatch = true;
+  }
+  if (form.useWindow && form.activeFrom && form.activeTo) {
+    schedule.activeFrom = form.activeFrom;
+    schedule.activeTo = form.activeTo;
+  }
+  if (form.runOnItemAdded) schedule.triggers = ["item-added"];
+  return Object.keys(schedule).length > 0 ? schedule : undefined;
 }
 
 // Single source of truth lives with the wizard — re-exported here because

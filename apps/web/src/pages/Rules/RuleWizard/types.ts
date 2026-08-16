@@ -96,7 +96,39 @@ export interface RuleFormState {
   /** Summary and poster for the collections this rule builds. */
   presentation: PresentationFormState;
   arr: ArrFormState;
+  /** When the rule runs, if not simply "in the nightly batch". */
+  schedule: ScheduleFormState;
 }
+
+/**
+ * Flattened for the form: the wizard needs a stable shape to bind controls to,
+ * where the saved config omits every part that isn't in use. `handleSave` is
+ * where the two are reconciled.
+ */
+export interface ScheduleFormState {
+  /** Run on this rule's own cron as well as (or instead of) the batch. */
+  useCron: boolean;
+  cron: string;
+  excludeFromBatch: boolean;
+  /** Only exist between two dates each year. */
+  useWindow: boolean;
+  activeFrom: string;
+  activeTo: string;
+  runOnItemAdded: boolean;
+}
+
+/** Every part off: the nightly batch, all year round, as it always was. */
+export const DEFAULT_SCHEDULE_FORM: ScheduleFormState = {
+  useCron: false,
+  // A sensible starting point rather than an empty box — 3am is out of the way
+  // and matches the nightly job's own hour.
+  cron: "0 3 * * *",
+  excludeFromBatch: false,
+  useWindow: false,
+  activeFrom: "10-01",
+  activeTo: "11-05",
+  runOnItemAdded: false,
+};
 
 export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
   kind: "collection",

@@ -442,3 +442,26 @@
 .dangerPanelBody strong {
   font-weight: 600;
 }
+
+/* ── "When it runs" ─────────────────────────────────────────────────────────
+   A separated block at the foot of Scope: three switches most rules never
+   touch, kept visibly apart from the questions every rule answers. */
+
+.scheduleBlock {
+  padding-top: 16px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.scheduleHeading {
+  margin: 0 0 4px;
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+}
+
+.scheduleDates {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 260px;
+}

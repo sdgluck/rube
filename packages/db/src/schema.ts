@@ -167,6 +167,21 @@ export const rules = sqliteTable("rules", {
   registryPackSlug: text("registry_pack_slug"),
   registryVersion: integer("registry_version"),
   registryConfigHash: text("registry_config_hash"),
+  /**
+   * When this rule's own cron last fired, for rules that have one.
+   *
+   * Separate from `lastRunAt` on purpose: that moves for a manual run too, and
+   * using it would let pressing "Run now" at 02:59 swallow the 03:00 scheduled
+   * run. The scheduler compares the cron's previous occurrence against this,
+   * so only a scheduled fire counts as having satisfied the schedule.
+   */
+  lastScheduledAt: integer("last_scheduled_at"),
+  /**
+   * When this rule's collections were last torn down for being outside the
+   * rule's calendar window. Null once it is back inside, so re-entering and
+   * leaving the window again tears down again.
+   */
+  windowClearedAt: integer("window_cleared_at"),
 });
 
 /**

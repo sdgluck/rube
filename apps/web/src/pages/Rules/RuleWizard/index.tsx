@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   approximateCount,
   describeCondition,
+  describeRuleWindow,
   estimateCollectionCount,
   isDestructiveMode,
+  RULE_TRIGGER_LABELS,
   templatedCollectionSummary,
   volumeLevel,
 } from "@tinkerbell/contracts";
@@ -46,6 +48,7 @@ import type {
   OutcomeFormState,
   PresentationFormState,
   RuleFormState,
+  ScheduleFormState,
   SmartFilterGroup,
   SmartFilterNode,
 } from "./types.ts";
@@ -778,7 +781,120 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             )}
           </>
         )}
+
+        {renderScheduleFields()}
       </>
+    );
+  }
+
+  /**
+   * "When does this run?" — three independent switches, all off by default.
+   *
+   * Lives at the foot of Scope rather than in a step of its own: it is the
+   * same question Scope already asks (which slice of the library, and when)
+   * and a fourth step for three checkboxes most rules never touch would be a
+   * step everyone pages past.
+   */
+  function renderScheduleFields() {
+    const s = form.schedule;
+    const setSchedule = (patch: Partial<ScheduleFormState>) => setForm({ ...form, schedule: { ...s, ...patch } });
+
+    return (
+      <div className={styles.scheduleBlock}>
+        <h4 className={styles.scheduleHeading}>When it runs</h4>
+        <p className={styles.hint}>
+          By default every rule runs in the nightly Generate job. These are for the ones that shouldn't.
+        </p>
+
+        <div className={styles.field}>
+          <label>
+            <input type="checkbox" checked={s.useCron} onChange={(e) => setSchedule({ useCron: e.target.checked })} />{" "}
+            Run on its own schedule
+          </label>
+          {s.useCron && (
+            <>
+              <input
+                type="text"
+                className={shared.input}
+                style={{ maxWidth: 200 }}
+                value={s.cron}
+                onChange={(e) => setSchedule({ cron: e.target.value })}
+                aria-label="Cron expression"
+                placeholder="0 3 * * *"
+              />
+              <label>
+                <input
+                  type="checkbox"
+                  checked={s.excludeFromBatch}
+                  onChange={(e) => setSchedule({ excludeFromBatch: e.target.checked })}
+                />{" "}
+                And skip the nightly job
+              </label>
+              <span className={styles.hint}>
+                A cron expression, evaluated in the timezone set under Settings → Schedules.{" "}
+                {s.excludeFromBatch
+                  ? "This rule now runs only on this schedule."
+                  : "This rule runs on this schedule as well as nightly."}
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={s.useWindow}
+              onChange={(e) => setSchedule({ useWindow: e.target.checked })}
+            />{" "}
+            Only during part of the year
+          </label>
+          {s.useWindow && (
+            <>
+              <div className={styles.scheduleDates}>
+                <input
+                  type="text"
+                  className={shared.input}
+                  value={s.activeFrom}
+                  onChange={(e) => setSchedule({ activeFrom: e.target.value })}
+                  aria-label="Active from (MM-DD)"
+                  placeholder="MM-DD"
+                />
+                <span className={styles.hint}>to</span>
+                <input
+                  type="text"
+                  className={shared.input}
+                  value={s.activeTo}
+                  onChange={(e) => setSchedule({ activeTo: e.target.value })}
+                  aria-label="Active to (MM-DD)"
+                  placeholder="MM-DD"
+                />
+              </div>
+              <span className={styles.hint}>
+                {describeRuleWindow({ activeFrom: s.activeFrom, activeTo: s.activeTo })
+                  ? `Runs ${describeRuleWindow({ activeFrom: s.activeFrom, activeTo: s.activeTo })} each year. Outside that, its collections are removed and put back when the window comes round again.`
+                  : "Two dates as MM-DD. An end before the start wraps the year end, so 12-01 to 01-05 is Christmas."}
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={s.runOnItemAdded}
+              onChange={(e) => setSchedule({ runOnItemAdded: e.target.checked })}
+            />{" "}
+            {RULE_TRIGGER_LABELS["item-added"]}
+          </label>
+          <span className={styles.hint}>
+            Runs shortly after new items appear, on the back of the Sync Recently Added job — so its cadence is that
+            job's, and a bulk import of five hundred files is one run rather than five hundred. The nightly run still
+            happens either way.
+          </span>
+        </div>
+      </div>
     );
   }
 

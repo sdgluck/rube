@@ -28,6 +28,8 @@ import {
   EMPTY_FORM,
   outcomeFromConfig,
   presentationFromConfig,
+  scheduleFromConfig,
+  scheduleToConfig,
   defaultLimitForType,
   smartFilterLeaves,
   typeHasLimit,
@@ -309,6 +311,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       pinMinItems: (config.pinMinItems as number | undefined) ?? 0,
       outcome: outcomeFromConfig(config.action),
       presentation: presentationFromConfig(config.presentation),
+      schedule: scheduleFromConfig(config.schedule),
       arr: {
         ...DEFAULT_ARR_FORM,
         ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
@@ -380,6 +383,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       const { kind: _kind, ...cleanup } = next.outcome;
       config.action = { kind: "cleanup", ...cleanup };
     }
+    const schedule = scheduleToConfig(next.schedule);
+    if (schedule) config.schedule = schedule;
 
     if (isEditing && next.id) {
       updateMutation.mutate({ id: next.id, name: next.name, config }, { onSuccess: () => cancelForm() });

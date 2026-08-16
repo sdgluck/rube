@@ -13,8 +13,10 @@ import { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } from "@t
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
 import { pruneRuleRuns, RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
-import { syncRecentlyAdded } from "@tinkerbell/domain.stats";
+import { getCachedRecentlyAdded, syncRecentlyAdded } from "@tinkerbell/domain.stats";
 import { announceRegistryUpdates } from "./registry-updates.ts";
+import { runDueRules } from "./rule-schedules.ts";
+import { runTriggeredRules } from "./rule-triggers.ts";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { JOB_RUN_RETENTION_MS } from "./limits.ts";
 
@@ -64,7 +66,20 @@ export const internalJobs = {
     },
     timeoutMs: 10 * MINUTE_MS,
   },
-  "sync-recently-added": { run: (ctx: JobContext) => syncRecentlyAdded(ctx.signal), timeoutMs: 10 * MINUTE_MS },
+  "sync-recently-added": {
+    run: async (ctx: JobContext) => {
+      // The added-item trigger rides on this job rather than polling Plex
+      // again: this is already the thing that knows what showed up, and a
+      // second poller asking the same question would be a second answer to
+      // keep consistent.
+      const before = new Set(getCachedRecentlyAdded().items.map((i) => i.ratingKey));
+      const summary = await syncRecentlyAdded(ctx.signal);
+      const added = getCachedRecentlyAdded().items.filter((i) => i.ratingKey && !before.has(i.ratingKey));
+      const triggered = await runTriggeredRules(ctx, "item-added", added.length);
+      return triggered ? `${summary}. ${triggered}` : summary;
+    },
+    timeoutMs: 10 * MINUTE_MS,
+  },
   healthcheck: {
     run: (ctx: JobContext) => checkAllConfiguredServices(ctx.signal),
     // Runs every minute. Anything past 5 is wedged, not slow.
@@ -84,6 +99,15 @@ export const internalJobs = {
     timeoutMs: 5 * MINUTE_MS,
     // Daily, and quiet: the interesting outcome is the event it emits, not the
     // 364 runs a year that find nothing new.
+    quiet: true,
+  },
+  "rule-schedules": {
+    run: (ctx: JobContext) => runDueRules(ctx),
+    // Ticks every minute, but a tick that finds work runs whole rules inside
+    // it — the same budget the Generate job gives one rule.
+    timeoutMs: 30 * MINUTE_MS,
+    // Most minutes there is nothing due, and "No rule schedules due." is the
+    // stable text that keeps those minutes out of the activity feed.
     quiet: true,
   },
   "playback-poll": {

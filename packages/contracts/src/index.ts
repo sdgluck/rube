@@ -102,6 +102,16 @@ export type {
 } from "./presentation.ts";
 
 export {
+  describeRuleWindow,
+  isRuleActiveOn,
+  RULE_TRIGGER_LABELS,
+  RULE_TRIGGERS,
+  ruleScheduleSchema,
+  runsInNightlyBatch,
+} from "./rule-schedule.ts";
+export type { RuleSchedule, RuleTrigger } from "./rule-schedule.ts";
+
+export {
   DEFAULT_REGISTRY_URL,
   REGISTRY_FORMAT_VERSION,
   registryImportOverridesSchema,

@@ -8,6 +8,7 @@ import {
   setRuleArrCounts,
   setRuleLastCollection,
   setRuleLastRun,
+  setRuleWindowCleared,
   withRuleLock,
   RuleLockedError,
 } from "@tinkerbell/domain.rules";
@@ -16,7 +17,13 @@ import { startRuleRun } from "@tinkerbell/domain.rule-runs";
 import { errorMessage } from "@tinkerbell/core";
 import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
 
-import { isCleanupRule } from "@tinkerbell/contracts";
+import {
+  describeRuleWindow,
+  isCleanupRule,
+  isRuleActiveOn,
+  runsInNightlyBatch,
+  type RuleSchedule,
+} from "@tinkerbell/contracts";
 import { parseRuleConfig } from "./config.ts";
 import { announceEmptyRule, announceNewCollections } from "./events.ts";
 import { runHandler } from "./dispatch.ts";
@@ -163,6 +170,29 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
 
     const ruleConfig = parseRuleConfig(rule);
     ruleCtx.log(`\n--- Rule: "${rule.name}" (${rule.type}) ---`);
+
+    // Out of season, or owned by its own cron rather than this batch. Both are
+    // "not this rule's turn", and both have to be decided before the rule's
+    // collections are deleted — the delete is the first thing a run does.
+    const skip = batchSkipReason(rule, ruleConfig, new Date());
+    if (skip) {
+      ruleCtx.log(`Skipping — ${skip.reason}.`);
+      if (skip.tearDown) {
+        try {
+          await clearOutOfSeasonCollections(ruleCtx, rule, ctx.signal);
+          ruleCtx.log("Removed this rule's collections until it is back in season.");
+        } catch (err) {
+          ruleCtx.log("Failed to remove out-of-season collections:", err);
+        }
+      }
+      ruleRun.finish({ status: "ok" });
+      completedRuleIds.add(rule.id);
+      saveCheckpoint();
+      return;
+    }
+    // Back in season — forget the teardown so leaving the window next year
+    // tears down again rather than assuming it was already handled.
+    if (rule.windowClearedAt != null) setRuleWindowCleared(rule.id, null);
 
     // AI rules need a working provider. Without one every such rule fails
     // identically, so check once up front and skip rather than delete the
@@ -517,6 +547,65 @@ function filterSections(allSections: PlexSection[], filter: string[] | undefined
   const names = filter.map((s) => s.trim().toLowerCase());
   const matched = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
   return matched.length === 0 ? null : matched;
+}
+
+export interface BatchSkip {
+  reason: string;
+  /** True when the rule owns collections that shouldn't outlive its season. */
+  tearDown: boolean;
+}
+
+/**
+ * Why the nightly batch should leave this rule alone tonight, if it should.
+ *
+ * Pure, and exported for tests: the two ways to get this wrong are silently
+ * skipping a rule that should have run (which looks exactly like a broken
+ * rule) and tearing down collections repeatedly every night for a rule that
+ * has been out of season since March.
+ */
+export function batchSkipReason(
+  rule: Pick<Rule, "windowClearedAt">,
+  config: { schedule?: RuleSchedule },
+  now: Date,
+): BatchSkip | null {
+  if (!isRuleActiveOn(config.schedule, now)) {
+    const window = describeRuleWindow(config.schedule);
+    return {
+      reason: `outside this rule's season (${window})`,
+      // Only the first night out of season does the teardown; after that the
+      // collections are already gone and re-deleting them is a Plex round-trip
+      // per section per night for nothing.
+      tearDown: rule.windowClearedAt == null,
+    };
+  }
+  if (!runsInNightlyBatch(config.schedule)) {
+    return { reason: `it runs on its own schedule (${config.schedule?.cron})`, tearDown: false };
+  }
+  return null;
+}
+
+/**
+ * Take down a rule's collections because the rule is out of season.
+ *
+ * The teardown is what makes a calendar window worth having: a Halloween rule
+ * that merely stops running in November leaves its collections pinned to the
+ * home screen until someone notices. Runs once on the way out — `windowCleared`
+ * on the rule row remembers it — and is undone by re-entering the window.
+ */
+export async function clearOutOfSeasonCollections(
+  ctx: JobContext,
+  rule: Rule,
+  signal?: AbortSignal,
+): Promise<{ cleared: boolean }> {
+  const ruleConfig = parseRuleConfig(rule);
+  const { client, allSections } = await connectPlex(ctx, signal);
+  const sections = filterSections(allSections, ruleConfig.sections) ?? allSections;
+  await deleteOldCollections(ctx, client, sections, rule.id);
+  setRuleWindowCleared(rule.id, Date.now());
+  // The rule now owns nothing, and the Rules table's "last run" counts should
+  // say so rather than keep advertising a set that no longer exists.
+  setRuleLastRun(rule.id, { status: "ok", durationMs: 0, collectionCount: 0, itemCount: 0 });
+  return { cleared: true };
 }
 
 async function deleteOldCollections(

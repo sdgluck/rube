@@ -90,6 +90,11 @@ export function createRule(
     lastRunArrSkippedCount: null,
     lastRunArrFailedCount: null,
     lastPinnedCollections: {},
+    // Null, not "now": the per-rule scheduler adopts the current occurrence on
+    // its next tick, so a rule saved at 10:05 with an hourly cron waits for
+    // 11:00 rather than firing the moment it is created.
+    lastScheduledAt: null,
+    windowClearedAt: null,
   };
 }
 
@@ -118,6 +123,25 @@ export function setRuleLastCollection(id: string, ratingKey: string): void {
  */
 export function setRuleLastPinnedCollections(id: string, bySection: Record<string, string[]>): void {
   db.update(rules).set({ lastPinnedCollections: bySection }).where(eq(rules.id, id)).run();
+}
+
+/**
+ * Mark this rule's own cron as satisfied up to `at`.
+ *
+ * Written only by the per-rule scheduler, never by a manual run — see the
+ * column comment for why the two must not share a timestamp.
+ */
+export function setRuleLastScheduled(id: string, at: number): void {
+  db.update(rules).set({ lastScheduledAt: at }).where(eq(rules.id, id)).run();
+}
+
+/**
+ * Remember (or forget) that this rule's collections have been torn down for
+ * being out of season. Null on re-entry, so leaving the window a year later
+ * tears down again rather than assuming it was already done.
+ */
+export function setRuleWindowCleared(id: string, at: number | null): void {
+  db.update(rules).set({ windowClearedAt: at }).where(eq(rules.id, id)).run();
 }
 
 export function setRuleArrCounts(id: string, added: number, skipped: number, failed: number): void {

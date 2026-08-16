@@ -12,6 +12,7 @@ import {
   Square,
   Trash2,
 } from "lucide-react";
+import { describeRuleWindow, type RuleSchedule } from "@tinkerbell/contracts";
 import { EMPTY } from "#/format";
 import { Link, useNavigate } from "react-router-dom";
 import RowActions from "#components/RowActions";
@@ -22,6 +23,48 @@ import RulePreviewRow from "./RulePreviewRow";
 import StatusCell from "./StatusCell";
 import styles from "./Rules.module.css";
 import type { RuleRow } from "./types";
+
+/**
+ * The badges for a rule that doesn't simply run nightly.
+ *
+ * On the row rather than behind the expander because "why didn't this run?"
+ * is a question asked while scanning the list, and a seasonal rule sitting at
+ * zero collections in March is the exact thing that prompts it.
+ */
+function ScheduleBadges({ config }: { config: unknown }) {
+  const schedule = (config as { schedule?: RuleSchedule } | null)?.schedule;
+  if (!schedule) return null;
+  const window = describeRuleWindow(schedule);
+  return (
+    <>
+      {schedule.cron && (
+        <span
+          className={styles.scheduleBadge}
+          title={
+            schedule.excludeFromBatch
+              ? `Runs only on its own schedule: ${schedule.cron}`
+              : `Runs nightly and on its own schedule: ${schedule.cron}`
+          }
+        >
+          {schedule.cron}
+        </span>
+      )}
+      {window && (
+        <span
+          className={styles.scheduleBadge}
+          title={`Only runs ${window} each year. Outside that its collections are removed.`}
+        >
+          {window}
+        </span>
+      )}
+      {schedule.triggers?.includes("item-added") && (
+        <span className={styles.scheduleBadge} title="Also runs shortly after new items are added to the library">
+          on new items
+        </span>
+      )}
+    </>
+  );
+}
 
 interface RuleTableRowProps {
   rule: RuleRow;
@@ -133,6 +176,7 @@ export default function RuleTableRow({
               registry
             </span>
           )}
+          <ScheduleBadges config={rule.config} />
         </td>
         <td data-cell="pill">
           <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>

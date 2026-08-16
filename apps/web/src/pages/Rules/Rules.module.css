@@ -562,6 +562,19 @@ td.previewBlockCell {
   word-break: break-word;
 }
 
+/* A rule that doesn't simply run nightly says so on its row, in neutral ink —
+   it's a fact about the rule, not a warning about it. */
+.scheduleBadge {
+  display: inline-block;
+  padding: 2px 7px;
+  margin-left: 8px;
+  font: 600 9.5px/1.4 var(--font-mono);
+  color: var(--ink-3);
+  vertical-align: middle;
+  background: var(--surface-sunken);
+  border-radius: var(--r-pill);
+}
+
 /* ── Filter funnel ──────────────────────────────────────────────────────────
    One row per clause, bars all scaled to the library rather than to the
    previous step, so a clause that halves the set looks like half. */

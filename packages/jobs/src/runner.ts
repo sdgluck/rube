@@ -57,6 +57,16 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     enabled: 1,
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
+  // Every minute, because it is a poll for "has any rule's own cron come due"
+  // rather than work in itself — see rule-schedules.ts for why a poll and not
+  // a live Cron per rule. Most ticks read the rules table and stop.
+  {
+    id: "rule-schedules",
+    name: "Run Scheduled Rules",
+    command: "rule-schedules",
+    schedule: "* * * * *",
+    enabled: 1,
+  },
   { id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "* * * * *", enabled: 1 },
   // Six-field schedule — croner reads a leading seconds field, which every
   // other job here omits. 30s is Tautulli's default and the trade-off is
