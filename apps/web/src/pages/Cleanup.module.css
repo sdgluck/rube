@@ -59,3 +59,46 @@
   text-align: right;
   white-space: nowrap;
 }
+
+/* ── Filters ────────────────────────────────────────────────────────────────
+   The most destructive list in the app, so it gets the tools that make a list
+   readable rather than skimmable. */
+
+.filters {
+  composes: filters from "../styles/shared.module.css";
+}
+
+.filtersSpacer {
+  flex: 1;
+}
+
+.segmented {
+  composes: segmented from "../styles/controls.module.css";
+}
+
+.segmentedBtn {
+  composes: segmentedItem from "../styles/controls.module.css";
+}
+
+.segmentedBtn:hover:not(.segmentedBtnActive) {
+  color: var(--ink);
+  background: var(--surface-sunken);
+}
+
+.segmentedBtnActive {
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent-fill);
+}
+
+.holdPicker {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font: var(--t-data);
+  color: var(--ink-2);
+}
+
+.checkboxCell {
+  composes: checkboxCell from "../styles/shared.module.css";
+}

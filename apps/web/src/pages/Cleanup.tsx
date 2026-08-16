@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
+import BulkBar from "#components/BulkBar";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import MultiSelect from "#components/MultiSelect";
 import PageShell, { StatusChip } from "#components/PageShell";
 import RelativeTime from "#components/RelativeTime";
+import SearchInput from "#components/SearchInput";
+import SortableTh from "#components/SortableTh";
+import { useLocalSort } from "#hooks/useLocalSort";
 import { useToast } from "#components/Toast";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Cleanup.module.css";
@@ -16,9 +21,13 @@ import styles from "./Cleanup.module.css";
  * schedule is only acceptable if there is somewhere to see what it is about to
  * do while there is still time to say no, and "Keep" is that no.
  *
- * Deliberately read-only apart from the reprieve: rules are edited on the
- * Rules page, and an "action this now" button here would defeat the waiting
- * period the whole design rests on.
+ * It is also the one screen in the app where a mis-click costs a file, so it
+ * gets the tools a list needs to actually be read rather than skimmed: search,
+ * filters, sort, a batch reprieve, and an undo on every reprieve.
+ *
+ * Still no "action this now" button. Everything else about a cleanup rule is
+ * edited on the rule itself, and short-circuiting the waiting period from the
+ * page whose whole purpose is oversight would defeat the design.
  */
 
 const MODE_LABELS: Record<string, string> = {
@@ -39,8 +48,50 @@ const MODE_PAST_LABELS: Record<string, string> = {
 /** Modes that remove or change something outside Tinkerbell's bookkeeping. */
 const DESTRUCTIVE = new Set(["unmonitor", "delete"]);
 
+/**
+ * How long a reprieve lasts. Never "forever": an indefinite hold is
+ * indistinguishable from the rule being wrong, and this way the item comes back
+ * for review rather than silently never being considered again.
+ */
+const HOLD_OPTIONS = [
+  { value: 30, label: "30 days" },
+  { value: 90, label: "90 days" },
+  { value: 365, label: "A year" },
+];
+
+const STATUS_FILTERS = ["all", "due", "waiting", "held"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+const STATUS_LABELS: Record<StatusFilter, string> = {
+  all: "All",
+  due: "Due next run",
+  waiting: "Waiting",
+  held: "Held",
+};
+
+type QueueRow = {
+  ruleId: string;
+  ruleName: string;
+  ratingKey: string;
+  title: string;
+  mode: string;
+  action: string;
+  streak: number;
+  consecutiveRuns: number;
+  runsRemaining: number;
+  held: boolean;
+  heldUntil: number | null;
+  actionedAt: number | null;
+  lastMatchedAt: number;
+};
+
 export default function Cleanup() {
   const [showActioned, setShowActioned] = useState(false);
+  const [search, setSearch] = useState("");
+  const [ruleFilter, setRuleFilter] = useState<string[]>([]);
+  const [modeFilter, setModeFilter] = useState<string[]>([]);
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [holdDays, setHoldDays] = useState(90);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const { addToast } = useToast();
   const utils = trpc.useUtils();
 
@@ -48,40 +99,164 @@ export default function Cleanup() {
     { includeActioned: showActioned },
     { refetchOnWindowFocus: false, refetchInterval: 30_000 },
   );
-  const holdMutation = trpc.cleanup.hold.useMutation({
-    onSuccess: () => {
-      utils.cleanup.queue.invalidate();
-      utils.nav.metrics.invalidate();
-    },
-  });
+  const invalidate = () => {
+    utils.cleanup.queue.invalidate();
+    utils.nav.metrics.invalidate();
+  };
+  const holdMutation = trpc.cleanup.hold.useMutation({ onSuccess: invalidate });
+  const holdManyMutation = trpc.cleanup.holdMany.useMutation({ onSuccess: invalidate });
+  const restoreMutation = trpc.cleanup.restoreHolds.useMutation({ onSuccess: invalidate });
 
-  const rows = query.data ?? [];
+  const rows = (query.data ?? []) as QueueRow[];
   // A held item is explicitly not due, however long its streak. `held` comes
   // from the server so this can't disagree with what the engine will do.
   const dueNow = rows.filter((r) => r.actionedAt == null && r.runsRemaining === 0 && !r.held);
 
-  function keep(ruleId: string, ratingKey: string, title: string) {
-    holdMutation.mutate(
-      { ruleId, ratingKey, days: 90 },
-      { onSuccess: () => addToast(`Keeping "${title}" for 90 days`, "success") },
+  const ruleOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const row of rows) names.set(row.ruleId, row.ruleName);
+    return [...names.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+
+  const modeOptions = useMemo(() => {
+    const modes = new Set(rows.map((r) => r.mode));
+    return [...modes].map((value) => ({ value, label: MODE_LABELS[value] ?? value }));
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (needle && !row.title.toLowerCase().includes(needle)) return false;
+      if (ruleFilter.length > 0 && !ruleFilter.includes(row.ruleId)) return false;
+      if (modeFilter.length > 0 && !modeFilter.includes(row.mode)) return false;
+      if (status === "due") return row.actionedAt == null && row.runsRemaining === 0 && !row.held;
+      if (status === "waiting") return row.actionedAt == null && row.runsRemaining > 0 && !row.held;
+      if (status === "held") return row.actionedAt == null && row.held;
+      return true;
+    });
+  }, [rows, search, ruleFilter, modeFilter, status]);
+
+  const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
+    rows: filtered,
+    accessors: {
+      title: (r: QueueRow) => r.title,
+      rule: (r: QueueRow) => r.ruleName,
+      action: (r: QueueRow) => r.mode,
+      // Closest to being actioned first — the only ordering that matters when
+      // you are deciding what to rescue.
+      streak: (r: QueueRow) => r.runsRemaining,
+      lastMatched: (r: QueueRow) => r.lastMatchedAt,
+    },
+    defaultKey: "streak",
+    defaultDir: "asc",
+    descFirst: ["lastMatched"],
+  });
+
+  const rowKey = (row: QueueRow) => `${row.ruleId}:${row.ratingKey}`;
+  // Actioned rows are history: there is nothing left to keep or release.
+  const selectable = sorted.filter((r) => r.actionedAt == null);
+  const selectedRows = selectable.filter((r) => selected.has(rowKey(r)));
+
+  function toggleRow(row: QueueRow) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const key = rowKey(row);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  /**
+   * Apply a reprieve to the selection, and offer to take it back.
+   *
+   * The undo restores each item's *previous* hold rather than clearing them
+   * all: some of the selection may already have been held, and "undo" that
+   * released them would be a worse outcome than the mis-click it was fixing.
+   */
+  function bulkHold(days: number | null) {
+    const items = selectedRows.map((r) => ({ ruleId: r.ruleId, ratingKey: r.ratingKey }));
+    if (items.length === 0) return;
+    holdManyMutation.mutate(
+      { items, days },
+      {
+        onSuccess: (res) => {
+          setSelected(new Set());
+          addToast(
+            days == null
+              ? `${res.count} item${res.count === 1 ? "" : "s"} back in the queue.`
+              : `Keeping ${res.count} item${res.count === 1 ? "" : "s"} for ${days} days.`,
+            "success",
+            {
+              action: {
+                label: "Undo",
+                onAction: () =>
+                  restoreMutation.mutate(
+                    { items: res.previous },
+                    { onSuccess: () => addToast("Put back as it was.", "success") },
+                  ),
+              },
+            },
+          );
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
     );
   }
 
-  function release(ruleId: string, ratingKey: string, title: string) {
+  function keep(row: QueueRow) {
     holdMutation.mutate(
-      { ruleId, ratingKey, days: null },
-      { onSuccess: () => addToast(`"${title}" is back in the queue`, "success") },
+      { ruleId: row.ruleId, ratingKey: row.ratingKey, days: holdDays },
+      {
+        onSuccess: () =>
+          addToast(`Keeping "${row.title}" for ${holdDays} days.`, "success", {
+            action: {
+              label: "Undo",
+              onAction: () =>
+                restoreMutation.mutate({
+                  items: [{ ruleId: row.ruleId, ratingKey: row.ratingKey, heldUntil: row.heldUntil }],
+                }),
+            },
+          }),
+      },
+    );
+  }
+
+  function release(row: QueueRow) {
+    holdMutation.mutate(
+      { ruleId: row.ruleId, ratingKey: row.ratingKey, days: null },
+      {
+        onSuccess: () =>
+          addToast(`"${row.title}" is back in the queue.`, "success", {
+            action: {
+              label: "Undo",
+              onAction: () =>
+                restoreMutation.mutate({
+                  items: [{ ruleId: row.ruleId, ratingKey: row.ratingKey, heldUntil: row.heldUntil }],
+                }),
+            },
+          }),
+      },
     );
   }
 
   if (query.error)
     return <ErrorState title="Couldn't load the cleanup queue" error={query.error} onRetry={() => query.refetch()} />;
 
+  const destructiveDue = dueNow.filter((r) => DESTRUCTIVE.has(r.mode)).length;
+
   return (
     <PageShell
       actions={
         <>
-          {dueNow.length > 0 && <StatusChip tone="error">{dueNow.length} due on the next run</StatusChip>}
+          {dueNow.length > 0 && (
+            <StatusChip tone="error">
+              {dueNow.length} due on the next run
+              {destructiveDue > 0 ? ` · ${destructiveDue} destructive` : ""}
+            </StatusChip>
+          )}
           <label className={styles.actionedToggle}>
             <input type="checkbox" checked={showActioned} onChange={(e) => setShowActioned(e.target.checked)} /> Show
             already actioned
@@ -91,9 +266,57 @@ export default function Cleanup() {
     >
       <p className={styles.intro}>
         Items a cleanup rule has matched. Nothing happens until an item has matched on enough consecutive runs — if it
-        stops matching, its streak resets and it leaves this list. <strong>Keep</strong> holds an item back for 90 days
-        without changing the rule.
+        stops matching, its streak resets and it leaves this list. <strong>Keep</strong> holds an item back without
+        changing the rule.
       </p>
+
+      <div className={styles.filters}>
+        <SearchInput placeholder="Search titles…" ariaLabel="Search the queue" value={search} onChange={setSearch} />
+        <MultiSelect
+          allLabel="All rules"
+          ariaLabel="Filter by rule"
+          options={ruleOptions}
+          selected={ruleFilter}
+          onChange={setRuleFilter}
+        />
+        <MultiSelect
+          allLabel="All actions"
+          ariaLabel="Filter by action"
+          options={modeOptions}
+          selected={modeFilter}
+          onChange={setModeFilter}
+        />
+        <span className={styles.segmented} role="tablist" aria-label="Filter by status">
+          {STATUS_FILTERS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={value === status}
+              className={`${styles.segmentedBtn} ${value === status ? styles.segmentedBtnActive : ""}`}
+              onClick={() => setStatus(value)}
+            >
+              {STATUS_LABELS[value]}
+            </button>
+          ))}
+        </span>
+        <div className={styles.filtersSpacer} />
+        <label className={styles.holdPicker}>
+          Keep for
+          <select
+            className={sharedStyles.input}
+            value={holdDays}
+            onChange={(e) => setHoldDays(Number(e.target.value))}
+            aria-label="How long a reprieve lasts"
+          >
+            {HOLD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {rows.length === 0 ? (
         <EmptyState
@@ -101,26 +324,78 @@ export default function Cleanup() {
           title="Nothing queued"
           description="No cleanup rule has matched anything yet. Rules with a Cleanup outcome track what they match here before acting on it."
         />
+      ) : sorted.length === 0 ? (
+        <EmptyState
+          icon="list"
+          title="Nothing matches those filters"
+          description="Every queued item is hidden by the current search or filters."
+          action={
+            <button
+              type="button"
+              className={sharedStyles.buttonSecondary}
+              onClick={() => {
+                setSearch("");
+                setRuleFilter([]);
+                setModeFilter([]);
+                setStatus("all");
+              }}
+            >
+              Clear filters
+            </button>
+          }
+        />
       ) : (
         <div className="table-scroll">
           <table className={sharedStyles.table}>
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Rule</th>
-                <th>Action</th>
-                <th>Streak</th>
+                <th className={styles.checkboxCell}>
+                  <input
+                    type="checkbox"
+                    aria-label="Select everything shown"
+                    checked={selectable.length > 0 && selectedRows.length === selectable.length}
+                    onChange={() =>
+                      setSelected(
+                        selectedRows.length === selectable.length ? new Set() : new Set(selectable.map(rowKey)),
+                      )
+                    }
+                  />
+                </th>
+                <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Title
+                </SortableTh>
+                <SortableTh sortKey="rule" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Rule
+                </SortableTh>
+                <SortableTh sortKey="action" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Action
+                </SortableTh>
+                <SortableTh sortKey="streak" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Streak
+                </SortableTh>
                 <th>Status</th>
-                <th>Last matched</th>
+                <SortableTh sortKey="lastMatched" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Last matched
+                </SortableTh>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {sorted.map((row) => {
                 const held = row.held;
                 const actioned = row.actionedAt != null;
                 return (
-                  <tr key={`${row.ruleId}:${row.ratingKey}`} className={actioned ? styles.rowActioned : undefined}>
+                  <tr key={rowKey(row)} className={actioned ? styles.rowActioned : undefined}>
+                    <td className={styles.checkboxCell}>
+                      {!actioned && (
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${row.title}`}
+                          checked={selected.has(rowKey(row))}
+                          onChange={() => toggleRow(row)}
+                        />
+                      )}
+                    </td>
                     <td>
                       <Link to={`/media/${row.ratingKey}`}>{row.title}</Link>
                     </td>
@@ -143,7 +418,7 @@ export default function Cleanup() {
                       {actioned ? null : held ? (
                         <button
                           className={sharedStyles.buttonSecondary}
-                          onClick={() => release(row.ruleId, row.ratingKey, row.title)}
+                          onClick={() => release(row)}
                           disabled={holdMutation.isPending}
                         >
                           Release
@@ -151,7 +426,7 @@ export default function Cleanup() {
                       ) : (
                         <button
                           className={sharedStyles.buttonSecondary}
-                          onClick={() => keep(row.ruleId, row.ratingKey, row.title)}
+                          onClick={() => keep(row)}
                           disabled={holdMutation.isPending}
                         >
                           Keep
@@ -164,6 +439,28 @@ export default function Cleanup() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedRows.length > 0 && (
+        <BulkBar
+          count={selectedRows.length}
+          noun="item"
+          onClear={() => setSelected(new Set())}
+          actions={[
+            {
+              label: `Keep for ${HOLD_OPTIONS.find((o) => o.value === holdDays)?.label ?? `${holdDays} days`}`,
+              tone: "primary",
+              onClick: () => bulkHold(holdDays),
+              disabled: holdManyMutation.isPending,
+            },
+            {
+              label: "Release",
+              onClick: () => bulkHold(null),
+              disabled: holdManyMutation.isPending,
+              title: "Put these back in the queue, streak and all",
+            },
+          ]}
+        />
       )}
     </PageShell>
   );

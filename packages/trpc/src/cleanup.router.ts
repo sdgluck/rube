@@ -48,4 +48,54 @@ export const cleanupRouter = t.router({
       holdCandidate(input.ruleId, input.ratingKey, input.days == null ? null : Date.now() + input.days * DAY_MS);
       return { ok: true };
     }),
+
+  /**
+   * The same reprieve, applied to a selection.
+   *
+   * The queue is where somebody reviews what a scheduled deletion is about to
+   * do, and reviewing it one row at a time is how a page with forty rows gets
+   * skimmed instead of read. Reprieving a batch is the ordinary case, not the
+   * exception.
+   *
+   * Returns the previous hold for each item so the caller can offer an undo —
+   * this is the one page where the cost of a mis-click is a file.
+   */
+  holdMany: procedure
+    .input(
+      z.object({
+        items: z
+          .array(z.object({ ruleId: z.string(), ratingKey: z.string() }))
+          .min(1)
+          .max(500),
+        days: z.number().int().positive().nullable().default(90),
+      }),
+    )
+    .mutation(({ input }) => {
+      const until = input.days == null ? null : Date.now() + input.days * DAY_MS;
+      const previous: Array<{ ruleId: string; ratingKey: string; heldUntil: number | null }> = [];
+      for (const item of input.items) {
+        // Read before writing: an undo has to put back the hold each item
+        // actually had, not a blanket "no hold" that would quietly release
+        // something that was already reprieved.
+        const existing = listCandidates(item.ruleId).find((c) => c.ratingKey === item.ratingKey);
+        previous.push({ ...item, heldUntil: existing?.heldUntil ?? null });
+        holdCandidate(item.ruleId, item.ratingKey, until);
+      }
+      return { ok: true as const, count: input.items.length, previous };
+    }),
+
+  /** Put back exactly the holds a `holdMany` replaced. */
+  restoreHolds: procedure
+    .input(
+      z.object({
+        items: z
+          .array(z.object({ ruleId: z.string(), ratingKey: z.string(), heldUntil: z.number().nullable() }))
+          .min(1)
+          .max(500),
+      }),
+    )
+    .mutation(({ input }) => {
+      for (const item of input.items) holdCandidate(item.ruleId, item.ratingKey, item.heldUntil);
+      return { ok: true as const, count: input.items.length };
+    }),
 });
