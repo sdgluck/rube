@@ -39,6 +39,7 @@ export default function PortalApp() {
   const brandingQuery = portalTrpc.branding.useQuery();
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"collections" | "preferences">("collections");
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PIN_KEY));
 
   // Apply the admin's background image to the page.
@@ -149,8 +150,92 @@ export default function PortalApp() {
             Sign out ({meQuery.data.username})
           </button>
         </div>
-        <PreferencesForm />
+
+        {/* Two tabs, and "Your collections" is first on purpose: this was a
+            form you filled in and never heard back from. What your answers
+            produced should be the thing you land on. */}
+        <div className="tabs" role="tablist" aria-label="Portal sections">
+          {(["collections", "preferences"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              className={`tab ${tab === value ? "tab-on" : ""}`}
+              onClick={() => setTab(value)}
+            >
+              {value === "collections" ? "Your collections" : "Your tastes"}
+            </button>
+          ))}
+        </div>
+
+        {tab === "collections" ? <MyCollections /> : <PreferencesForm />}
       </div>
+    </div>
+  );
+}
+
+/**
+ * What Tinkerbell built for this person, and the one-tap way to say it was
+ * wrong.
+ *
+ * The portal used to be a form with no feedback: you rated fourteen genres,
+ * pressed Save, and never learned whether any of it mattered. Showing the
+ * output closes that loop, and "Not for me" turns a shrug into the one signal
+ * the rules already know how to read.
+ */
+function MyCollections() {
+  const utils = portalTrpc.useUtils();
+  const collectionsQuery = portalTrpc.myCollections.useQuery();
+  const notInterested = portalTrpc.notInterested.useMutation();
+  const [excluded, setExcluded] = useState<string[]>([]);
+
+  if (collectionsQuery.isLoading) return <p className="muted">Loading your collections…</p>;
+
+  const collections = collectionsQuery.data ?? [];
+  if (collections.length === 0) {
+    return (
+      <div className="stack">
+        <p className="muted">
+          Nothing yet. Collections appear here once the server has built some for you — set your tastes under{" "}
+          <strong>Your tastes</strong>, and they'll show up after the next nightly run.
+        </p>
+      </div>
+    );
+  }
+
+  const exclude = (title: string) => {
+    // Optimistic, and local: the row is about to disappear from the next run's
+    // output anyway, and waiting on a round-trip to grey out a button makes a
+    // one-tap gesture feel like a form submission.
+    setExcluded((prev) => [...prev, title]);
+    notInterested.mutate({ title }, { onSuccess: () => utils.preferences.get.invalidate() });
+  };
+
+  return (
+    <div className="stack">
+      <p className="field-hint">
+        These are yours — nobody else on the server sees them. Tell us what missed and the next run will leave it out.
+      </p>
+      {collections.map((collection) => (
+        <div key={collection.ratingKey} className="collection-row">
+          <div className="collection-head">
+            <span className="collection-title">{collection.title}</span>
+            <span className="muted">
+              {collection.itemCount} item{collection.itemCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          {collection.summary && <p className="collection-summary">{collection.summary}</p>}
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={excluded.includes(collection.title)}
+            onClick={() => exclude(collection.title)}
+          >
+            {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { getPlexClient } from "./_base.ts";
 import { COOKIE_NAMES, clearSessionCookie, isSecureRequest, parseCookie, setSessionCookie } from "./cookies.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
+import { getCollectionsForUser } from "@tinkerbell/domain.collections";
 
 export interface PortalContext {
   session?: { userId: number; username: string };
@@ -103,6 +104,56 @@ export const portalRouter = tp.router({
         return { ok: true };
       }),
   }),
+
+  /**
+   * The collections Tinkerbell has built *for this user*, with a few titles
+   * from each.
+   *
+   * The portal was a form and nothing else: you rated fourteen genres, pressed
+   * Save, and never found out whether any of it worked. This is the other half
+   * of the loop — what your answers produced, in the words the collection
+   * actually carries on your home screen.
+   *
+   * Read from the local mirror rather than Plex: the mirror is what the sync
+   * job keeps current, and a portal that opens a Plex connection per visitor
+   * is a portal that falls over when the server is busy.
+   */
+  myCollections: userProcedure.query(({ ctx }) => {
+    const rows = getCollectionsForUser(ctx.session.username);
+    return rows.map((row) => ({
+      ratingKey: row.plexRatingKey,
+      title: row.title,
+      summary: row.summary,
+      itemCount: row.childCount,
+    }));
+  }),
+
+  /**
+   * "Not for me."
+   *
+   * Adds the title to `excludedTitles`, which is the same list the portal's
+   * own picker writes to and the one every rule already honours — so this is a
+   * new way to say something the system could already hear, rather than a
+   * second preference store to keep in step.
+   *
+   * Idempotent: pressing it twice is one exclusion, not two.
+   */
+  notInterested: userProcedure
+    .input(z.object({ title: z.string().trim().min(1).max(500) }))
+    .mutation(({ ctx, input }) => {
+      const current = getUserPreferences(ctx.session.userId);
+      const excludedTitles = current.preferences.excludedTitles.includes(input.title)
+        ? current.preferences.excludedTitles
+        : [...current.preferences.excludedTitles, input.title];
+      setUserPreferences(
+        ctx.session.userId,
+        { ...current.preferences, excludedTitles },
+        // Opt-in is left exactly as it was. Saying "not this one" is not
+        // consent to have your whole home screen rearranged.
+        current.optedIn,
+      );
+      return { ok: true as const, excluded: excludedTitles.length };
+    }),
 
   searchTitles: userProcedure.input(z.object({ q: z.string() })).query(({ input }) => searchMediaTitles(input.q, 15)),
 

@@ -545,3 +545,56 @@ textarea {
 .save-row .err {
   color: #f0a9a2;
 }
+
+/* ── Tabs, and the collections behind them ─────────────────── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tab {
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-on {
+  color: var(--accent-ink);
+  border-bottom-color: var(--accent);
+}
+
+.collection-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 14px;
+  background: var(--bg-surface-2);
+  border-radius: 8px;
+}
+
+.collection-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.collection-title {
+  font-weight: 600;
+}
+
+.collection-summary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}

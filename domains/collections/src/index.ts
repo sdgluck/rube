@@ -429,6 +429,27 @@ export function forgetCollections(ratingKeys: string[]): number {
 }
 
 /**
+ * Every collection built for one specific user.
+ *
+ * The `User:<name>` label is what personalization uses to keep one person's
+ * collections off everybody else's home screen, so it is also the honest
+ * answer to "what did Tinkerbell make for me" — the portal shows exactly the
+ * set the user can actually see.
+ *
+ * Matched on the JSON array with LIKE, the same shape `getBywCollectionsGroupedByUser`
+ * uses. An exact `"User:<name>"` match including the quotes, so a user called
+ * `sam` doesn't collect the collections belonging to `samantha`.
+ */
+export function getCollectionsForUser(username: string): CollectionRow[] {
+  return db
+    .select()
+    .from(collections)
+    .where(like(collections.labels, `%"User:${username}"%`))
+    .orderBy(desc(collections.addedAt))
+    .all();
+}
+
+/**
  * Group collections labelled by the Because-You-Watched job by user. Used by
  * the jobs UI to render BYW output per Plex user. Keeps the LIKE-on-JSON
  * shape pinned in one place.
