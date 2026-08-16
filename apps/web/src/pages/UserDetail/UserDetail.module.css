@@ -186,12 +186,7 @@
 }
 
 .ratingChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font: var(--t-data);
-  color: var(--ink-2);
-  cursor: pointer;
+  composes: labelCheckboxItem from "../../styles/shared.module.css";
 }
 
 .dim {
