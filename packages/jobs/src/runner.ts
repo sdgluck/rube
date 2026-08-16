@@ -138,6 +138,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // ── Background / escape-hatch (hidden from UI, invoked via Settings or BYW lifecycle) ──
   { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
   { id: "label-undo", name: "Clear Tinkerbell Labels", command: "label-undo", schedule: "", enabled: 1 },
+  { id: "metadata-undo", name: "Undo Metadata Changes", command: "metadata-undo", schedule: "", enabled: 1 },
   { id: "byw-remove", name: "Remove Because You Watched", command: "byw-remove", schedule: "", enabled: 1 },
   {
     id: "personalize-enable",

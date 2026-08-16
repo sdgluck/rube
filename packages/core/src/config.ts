@@ -304,6 +304,16 @@ export const configSchema = z.object({
   metadata_max_writes_per_day: z.number().int().positive(),
   /** How long a metadata batch stays undoable. Pruned by `purge-runs`. */
   metadata_undo_retention_days: z.number().int().positive(),
+  /**
+   * Transient slot the Undo button writes right before starting the
+   * `metadata-undo` command, read at run start and cleared on completion.
+   *
+   * The same shape as `migration_pending_plan` and for the same reason: the
+   * command runs in a Sidequest worker thread, and a config key is the
+   * plumbing that already exists to get a parameter there. A batch can be
+   * thousands of Plex writes, so it cannot be a request.
+   */
+  metadata_undo_pending_batch: z.string(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   collections_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),

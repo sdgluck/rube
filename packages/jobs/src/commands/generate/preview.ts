@@ -1,14 +1,15 @@
-import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
+import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 import { getConfig } from "@tinkerbell/core";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getRule } from "@tinkerbell/domain.rules";
 import { createLogger, noopCheckpoint, type JobContext } from "@tinkerbell/core";
 
-import { ruleAction } from "@tinkerbell/contracts";
+import { ruleAction, type MetadataActionConfig } from "@tinkerbell/contracts";
 import { listCandidates } from "@tinkerbell/domain.cleanup";
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";
 import { buildFilterFunnel, type SectionFunnel } from "./funnel.ts";
+import { describe as describeValue, planWrites, type PlannedWrite } from "./metadata.ts";
 
 const testRuleLog = createLogger("test-rule");
 
@@ -39,6 +40,47 @@ export interface TestCleanupPreview {
   dueTitles: string[];
 }
 
+/** One field a metadata rule would change, as the confirmation step renders it. */
+export interface TestMetadataDiff {
+  ratingKey: string;
+  itemTitle: string;
+  field: string;
+  currentValue: string;
+  newValue: string;
+  /** Plex has this field locked to something else and the rule won't overwrite it. */
+  blocked: boolean;
+}
+
+/**
+ * What a metadata rule would write, without writing any of it.
+ *
+ * Nobody should run this blind, and unlike a collection there is no "delete it
+ * and re-run" recovery. "Change contentRating on 431 items" is the sentence a
+ * user needs to see before agreeing, so the counts here come from the same
+ * `planWrites` the run uses — a preview computed a second way is a preview
+ * that can disagree with reality.
+ */
+export interface TestMetadataPreview {
+  dryRun: boolean;
+  lock: boolean;
+  /** Items the selection matched. */
+  matched: number;
+  /** Of those, how many were read to build this diff. */
+  inspected: number;
+  /** Field writes that would change something. */
+  writes: number;
+  /** Distinct items those writes land on. */
+  items: number;
+  /** Planned writes that would be skipped because the field is locked. */
+  blocked: number;
+  /** Per-field counts, for the "Change contentRating on 431 items" line. */
+  byField: Array<{ field: string; count: number }>;
+  /** The first N diffs, in full. */
+  diffs: TestMetadataDiff[];
+  /** Set when the preview stopped short of reading every matched item. */
+  truncated: boolean;
+}
+
 export interface TestRuleResult {
   collections: TestCollectionPreview[];
   tokensIn?: number;
@@ -51,6 +93,8 @@ export interface TestRuleResult {
    * (an IMDb chart, a TMDb franchise) rather than a stack of conditions.
    */
   funnel?: SectionFunnel[];
+  /** Set only for rules whose outcome is a metadata write. */
+  metadata?: TestMetadataPreview;
 }
 
 /**
@@ -187,6 +231,15 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     }
   }
 
+  let metadata: TestMetadataPreview | undefined;
+  if (action.kind === "metadata") {
+    metadata = await previewMetadata(ctx, client, action, collections);
+    log(
+      `Metadata preview: ${metadata.writes} field write(s) across ${metadata.items} item(s)` +
+        `${metadata.blocked > 0 ? `, ${metadata.blocked} skipped as locked` : ""}.`,
+    );
+  }
+
   // Enrich items with thumb paths so the UI can render posters. One batched
   // request across all collections, then back-fill each item.
   const allKeys = Array.from(new Set(collections.flatMap((c) => c.items.map((i) => i.ratingKey))));
@@ -217,6 +270,82 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     tokensOut: tokensOut || undefined,
     cleanup,
     funnel,
+    metadata,
+  };
+}
+
+/**
+ * How many items a preview reads before it stops.
+ *
+ * A rule matching 5,000 items would otherwise be 5,000 Plex round-trips with a
+ * person watching a spinner. The cap is reported rather than hidden — a
+ * silently truncated preview reads as "this is everything" when it isn't.
+ */
+const PREVIEW_READ_LIMIT = 250;
+
+/** Diffs shown in full. The rest are counted. */
+const PREVIEW_DIFF_LIMIT = 50;
+
+async function previewMetadata(
+  ctx: JobContext,
+  client: PlexClient,
+  action: MetadataActionConfig,
+  collections: TestCollectionPreview[],
+): Promise<TestMetadataPreview> {
+  // De-duplicated exactly as the run does it: a grouped rule yields a film
+  // once per credit, and counting it three times would make the preview
+  // promise three times the work.
+  const byKey = new Map<string, { ratingKey: string; title: string; collection: string }>();
+  for (const collection of collections) {
+    for (const item of collection.items) {
+      if (!byKey.has(item.ratingKey)) {
+        byKey.set(item.ratingKey, { ratingKey: item.ratingKey, title: item.title, collection: collection.name });
+      }
+    }
+  }
+  const matches = [...byKey.values()];
+  const toRead = matches.slice(0, PREVIEW_READ_LIMIT);
+
+  const planned: PlannedWrite[] = [];
+  for (const item of toRead) {
+    ctx.signal?.throwIfAborted();
+    try {
+      const current = await client.getItemFields(item.ratingKey);
+      planned.push(
+        ...planWrites(
+          action,
+          // Section is irrelevant to planning — only the write needs it — so
+          // the preview doesn't pay to resolve one per item.
+          { ...item, sectionId: "", sectionType: "movie", title: item.title },
+          current,
+        ),
+      );
+    } catch (err) {
+      ctx.log(`Metadata preview: could not read "${item.title}" — ${(err as Error).message}`);
+    }
+  }
+
+  const byField = new Map<string, number>();
+  for (const write of planned) byField.set(write.field, (byField.get(write.field) ?? 0) + 1);
+
+  return {
+    dryRun: action.dryRun,
+    lock: action.lock,
+    matched: matches.length,
+    inspected: toRead.length,
+    writes: planned.filter((p) => !p.blocked).length,
+    items: new Set(planned.filter((p) => !p.blocked).map((p) => p.ratingKey)).size,
+    blocked: planned.filter((p) => p.blocked).length,
+    byField: [...byField.entries()].map(([field, count]) => ({ field, count })).sort((a, b) => b.count - a.count),
+    diffs: planned.slice(0, PREVIEW_DIFF_LIMIT).map((p) => ({
+      ratingKey: p.ratingKey,
+      itemTitle: p.itemTitle,
+      field: p.field,
+      currentValue: describeValue(p.currentValue),
+      newValue: describeValue(p.newValue),
+      blocked: p.blocked,
+    })),
+    truncated: matches.length > toRead.length,
   };
 }
 

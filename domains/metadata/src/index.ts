@@ -116,10 +116,11 @@ export function snapshotWrites(
 /**
  * The rows a batch would revert — newest first, already-reverted ones omitted.
  *
- * Reversed relative to how they were applied, so a batch that wrote the same
- * field twice (a rule that touches an item from two sections, say) restores
- * the value that was there before the *first* write rather than the one
- * between them.
+ * Newest-first is a listing order, not a revert order. A batch that wrote the
+ * same field twice has two rows and only the older one holds the pre-batch
+ * value; picking between them is the caller's job (see `groupForRevert` in the
+ * `metadata-undo` command), because it also has to decide what happens to the
+ * superseded row.
  */
 export function batchRows(batchId: string): MetadataOriginal[] {
   return db

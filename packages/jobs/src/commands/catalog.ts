@@ -80,6 +80,9 @@ export const COMMANDS = {
   "preroll-process": { load: () => import("./preroll-process.ts"), lane: "interactive", timeoutMs: 6 * HOUR_MS },
   label: { load: () => import("./label.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "label-undo": { load: () => import("./label-undo.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  // Someone clicked Undo and is watching. A batch can be thousands of writes,
+  // hence the wider budget than its interactive neighbours.
+  "metadata-undo": { load: () => import("./metadata-undo.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
   overlays: { load: () => import("./overlays.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
   "byw-remove": { load: () => import("./byw-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "personalize-enable": {
