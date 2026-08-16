@@ -166,6 +166,39 @@
   color: var(--ink-3);
 }
 
+/* The collection's name and the reason it exists, stacked — the reason is a
+   sentence and would push the section label off the row if it sat inline. */
+.collectionMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.collectionReason {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.collectionCriteria {
+  display: block;
+  color: var(--ink-3);
+}
+
+/* ─── Actions ────────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.actionBtn {
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
+  text-decoration: none;
+}
+
 /* ─── Media version ──────────────────────────────────────────────────────── */
 
 .mediaVersion {

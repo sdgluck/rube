@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { db, rules } from "@tinkerbell/db";
 import { getConfig, setConfig } from "@tinkerbell/core";
+import { narrateSmartFilter, ruleConfigSchema } from "@tinkerbell/contracts";
 import { getLocalMediaItems } from "@tinkerbell/domain.media";
 import { getCollectionsForItem } from "@tinkerbell/domain.collections";
 import { t, procedure, getPlexClient } from "./_base.ts";
@@ -57,6 +60,48 @@ export const mediaRouter = t.router({
       ...detail,
       collections: enrichedCollections,
     };
+  }),
+
+  /**
+   * Why this item is where it is.
+   *
+   * The detail page could already list the collections an item belongs to, and
+   * stopped there — which answers "where" and leaves "why" to whoever fancies
+   * opening every rule and reading its filter. For each collection this names
+   * the rule behind it and states that rule's criteria in the same English the
+   * filter editor uses.
+   *
+   * A collection with no rule behind it is reported as such rather than
+   * omitted: "somebody made this by hand in Plex" is a real and useful answer.
+   */
+  why: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
+    return getCollectionsForItem(input.ratingKey).map((row) => {
+      const ruleId = row.labels.find((l) => l.startsWith("Rule:"))?.slice("Rule:".length);
+      const rule = ruleId
+        ? db
+            .select({ id: rules.id, name: rules.name, type: rules.type, config: rules.config })
+            .from(rules)
+            .where(eq(rules.id, ruleId))
+            .get()
+        : undefined;
+
+      let criteria: string | null = null;
+      if (rule) {
+        const parsed = ruleConfigSchema.safeParse(rule.config);
+        const filter = parsed.success ? parsed.data.smartFilter : undefined;
+        if (filter && filter.children.length > 0) {
+          // Rules store tag values as display names already, so no per-server
+          // lookup is needed to render them readably.
+          criteria = narrateSmartFilter(filter, { noun: "items" });
+        }
+      }
+
+      return {
+        collection: { ratingKey: row.plexRatingKey, title: row.title, sectionTitle: row.sectionTitle },
+        rule: rule ? { id: rule.id, name: rule.name, type: rule.type } : null,
+        criteria,
+      };
+    });
   }),
 
   children: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {

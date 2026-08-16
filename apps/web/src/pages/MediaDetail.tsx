@@ -42,12 +42,23 @@ export default function MediaDetail() {
     { enabled: !!ratingKey, refetchOnWindowFocus: false },
   );
   const watchers = watchedByQuery.data ?? [];
+  const whyQuery = trpc.media.why.useQuery(
+    { ratingKey: ratingKey! },
+    { enabled: !!ratingKey, refetchOnWindowFocus: false },
+  );
+  const why = whyQuery.data ?? [];
+  const identityQuery = trpc.plexIdentity.useQuery(undefined, { staleTime: Infinity, retry: false });
 
   if (detailQuery.isLoading) return <DetailSkeleton />;
   if (detailQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load media item</div>;
 
   const item = detailQuery.data;
   if (!item) return null;
+
+  const machineIdentifier = identityQuery.data?.machineIdentifier;
+  // Distinct rules, so an item in four collections from one rule offers one
+  // "edit the rule" rather than four identical buttons.
+  const owningRules = [...new Map(why.filter((w) => w.rule).map((w) => [w.rule!.id, w.rule!])).values()];
 
   return (
     <div ref={swipeRef}>
@@ -67,6 +78,31 @@ export default function MediaDetail() {
         </div>
 
         <div className={styles.detailMain}>
+          {/* The page was a read-only dead end: everything you could want to
+              do with the item you had just looked up happened somewhere else.
+              These are the two that don't need a page of their own. */}
+          <div className={mediaStyles.actions}>
+            {machineIdentifier && (
+              <a
+                className={mediaStyles.actionBtn}
+                href={`https://app.plex.tv/desktop/#!/server/${machineIdentifier}/details?key=${encodeURIComponent(
+                  `/library/metadata/${ratingKey}`,
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in Plex
+              </a>
+            )}
+            {/* The rule that put this item where it is, when exactly one rule
+                did. With several, the Collections list below names each. */}
+            {owningRules.length === 1 && (
+              <Link className={mediaStyles.actionBtn} to={`/rules?q=${encodeURIComponent(owningRules[0]!.name)}`}>
+                Edit the rule behind this
+              </Link>
+            )}
+          </div>
+
           <div className={mediaStyles.metaLine}>
             {[
               item.year && String(item.year),
@@ -229,7 +265,7 @@ export default function MediaDetail() {
             </section>
           )}
 
-          {/* Collections */}
+          {/* Collections — and, for each, why this item is in it */}
           {item.collections.length > 0 && (
             <section className={mediaStyles.section}>
               <h3 className={mediaStyles.sectionTitle}>
@@ -237,14 +273,35 @@ export default function MediaDetail() {
                 <span className={mediaStyles.sectionCount}>{item.collections.length}</span>
               </h3>
               <ul className={mediaStyles.collectionList}>
-                {item.collections.map((col) => (
-                  <li key={col.ratingKey} className={mediaStyles.collectionItem}>
-                    <Link to={`/collections/${col.ratingKey}`} className={mediaStyles.collectionLink}>
-                      {col.title}
-                    </Link>
-                    {col.sectionTitle && <span className={mediaStyles.collectionSection}>{col.sectionTitle}</span>}
-                  </li>
-                ))}
+                {item.collections.map((col) => {
+                  const reason = why.find((w) => w.collection.ratingKey === col.ratingKey);
+                  return (
+                    <li key={col.ratingKey} className={mediaStyles.collectionItem}>
+                      <div className={mediaStyles.collectionMain}>
+                        <Link to={`/collections/${col.ratingKey}`} className={mediaStyles.collectionLink}>
+                          {col.title}
+                        </Link>
+                        {/* The answer to "why is this here" — the rule behind
+                            the collection, and what that rule asks for. A
+                            collection nobody automated says so, because "made
+                            by hand in Plex" is a real answer. */}
+                        {reason?.rule ? (
+                          <span className={mediaStyles.collectionReason}>
+                            from <Link to={`/rules?q=${encodeURIComponent(reason.rule.name)}`}>{reason.rule.name}</Link>
+                            {reason.criteria && (
+                              <span className={mediaStyles.collectionCriteria}>{reason.criteria}</span>
+                            )}
+                          </span>
+                        ) : (
+                          whyQuery.isSuccess && (
+                            <span className={mediaStyles.collectionReason}>not built by a rule</span>
+                          )
+                        )}
+                      </div>
+                      {col.sectionTitle && <span className={mediaStyles.collectionSection}>{col.sectionTitle}</span>}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}

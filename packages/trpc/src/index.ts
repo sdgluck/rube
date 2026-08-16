@@ -69,6 +69,19 @@ export const appRouter = t.router({
   views: viewsRouter,
   personalization: personalizationRouter,
 
+  /**
+   * The server's machine identifier, which is what an `app.plex.tv` deep link
+   * needs to name the server an item lives on.
+   *
+   * Its own procedure rather than folded into a page's payload: it never
+   * changes for the life of a server, so the client caches it forever and
+   * every "Open in Plex" link on every page is free after the first.
+   */
+  plexIdentity: procedure.query(async () => {
+    const { machineIdentifier } = await getPlexClient().getIdentity();
+    return { machineIdentifier };
+  }),
+
   plexSections: procedure.query(async () => {
     const cached = getLocalSections();
     if (cached.length > 0) return cached;
