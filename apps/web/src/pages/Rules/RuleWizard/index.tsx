@@ -783,12 +783,13 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   }
 
   /**
-   * "What should happen to matches?"
+   * "What should happen to matches?" — the cleanup knobs.
    *
-   * Collection is preselected and is what every rule did before this step
-   * existed. Choosing Cleanup reveals the knobs and a confirmation panel that
-   * spells out, in plain English, what one run will actually do — this is the
-   * last screen where somebody can notice they've built a scheduled deletion.
+   * Only reached by a cleanup rule; the kind itself comes from the page the
+   * wizard was opened on and is never asked. The confirmation panel at the
+   * bottom spells out, in plain English, what one run will actually do — this
+   * is the last screen where somebody can notice they've built a scheduled
+   * deletion.
    */
   function renderOutcomeStep() {
     const o = form.outcome;
@@ -799,41 +800,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
       <>
         <h3 className={styles.stepHeading}>What should happen to matches?</h3>
         <p className={styles.stepSub}>
-          Every rule selects items the same way. This is what it does with them once it has.
+          Matching items are tracked over several runs, then labelled, unmonitored, or deleted. A queue collection is
+          built first either way, so you can see what's on the chopping block.
         </p>
-
-        <div className={styles.outcomeChoices}>
-          <button
-            type="button"
-            className={`${styles.outcomeCard} ${o.kind === "collection" ? styles.outcomeCardActive : ""}`}
-            onClick={() => setOutcome({ kind: "collection" })}
-            aria-pressed={o.kind === "collection"}
-          >
-            <input type="radio" checked={o.kind === "collection"} readOnly tabIndex={-1} />
-            <span>
-              <span className={styles.outcomeCardTitle}>Build a collection</span>
-              <span className={styles.outcomeCardBody}>
-                Create or refresh a Plex collection from the matching items. This is what rules normally do.
-              </span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.outcomeCard} ${o.kind === "cleanup" ? styles.outcomeCardActive : ""}`}
-            onClick={() => setOutcome({ kind: "cleanup" })}
-            aria-pressed={o.kind === "cleanup"}
-          >
-            <input type="radio" checked={o.kind === "cleanup"} readOnly tabIndex={-1} />
-            <span>
-              <span className={styles.outcomeCardTitle}>Clean up</span>
-              <span className={styles.outcomeCardBody}>
-                Track matching items over several runs, then label, unmonitor, or delete them. Always builds a queue
-                collection first so you can see what's on the chopping block.
-              </span>
-            </span>
-          </button>
-        </div>
 
         {o.kind === "cleanup" && (
           <>
@@ -1391,13 +1360,17 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </button>
             </div>
           )}
-          <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Outcome</span>
-            <span className={styles.summaryValue}>{describeOutcome(form.outcome)}</span>
-            <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("outcome")}>
-              Edit
-            </button>
-          </div>
+          {/* Cleanup only: a collection rule's outcome is the one the page it
+              was created on offers, and it has no step to edit it on. */}
+          {form.outcome.kind === "cleanup" && (
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryLabel}>Outcome</span>
+              <span className={styles.summaryValue}>{describeOutcome(form.outcome)}</span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("outcome")}>
+                Edit
+              </button>
+            </div>
+          )}
           {/* Pinning is a collection-rule concern only — a cleanup rule's
               shelf is never pinned, so stating it here would be a promise the
               job doesn't keep. */}

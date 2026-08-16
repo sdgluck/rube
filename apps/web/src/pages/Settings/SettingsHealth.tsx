@@ -93,6 +93,8 @@ export default function SettingsHealth() {
     },
   });
 
+  const configured = (query.data ?? []).filter((svc) => svc.configured);
+
   return (
     <div>
       <SettingsPageHeader title="Health" />
@@ -113,14 +115,22 @@ export default function SettingsHealth() {
         <ErrorState inline title="Couldn't load health status" error={query.error} onRetry={() => query.refetch()} />
       )}
 
+      {/* Configured services only. An unconfigured integration has nothing to
+          report and no Check button, so its card was a row of grey saying
+          "Not configured" — half the page, none of the signal. Setting one up
+          is done on its own settings pane, not here. */}
+      {configured.length === 0 && !query.error && (
+        <p className={styles.headerHint}>
+          Nothing to monitor yet — health appears here once an integration is configured.
+        </p>
+      )}
+
       <div className={styles.serviceList}>
-        {query.data?.map((svc) => {
+        {configured.map((svc) => {
           let dotClass = styles.statusNone;
           let message = "No activity recorded";
 
-          if (!svc.configured) {
-            message = "Not configured";
-          } else if (svc.status === "ok") {
+          if (svc.status === "ok") {
             dotClass = styles.statusOk;
             message = svc.message || "OK";
           } else if (svc.status === "error") {
@@ -145,17 +155,15 @@ export default function SettingsHealth() {
                   {svc.timestamp && <span className={styles.serviceTime}>{timeAgo(svc.timestamp)}</span>}
                 </div>
                 <div className={styles.serviceMessage}>{message}</div>
-                {svc.configured && <Sparkline points={history} />}
+                <Sparkline points={history} />
               </div>
-              {svc.configured && (
-                <button
-                  className={styles.checkBtn}
-                  disabled={isChecking}
-                  onClick={() => checkMutation.mutate({ service: svc.service })}
-                >
-                  {isChecking ? "Checking…" : "Check"}
-                </button>
-              )}
+              <button
+                className={styles.checkBtn}
+                disabled={isChecking}
+                onClick={() => checkMutation.mutate({ service: svc.service })}
+              >
+                {isChecking ? "Checking…" : "Check"}
+              </button>
             </div>
           );
         })}

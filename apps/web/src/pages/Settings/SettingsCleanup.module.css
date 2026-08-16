@@ -1,32 +1,21 @@
+/* Only what the shared settings card can't express. Layout, fields, hints and
+   buttons all come from Settings.module.css so this pane reads like the rest. */
+
 .intro {
   color: var(--ink-3);
   font-size: 13px;
   line-height: 1.55;
-  margin: 0 0 20px;
+  margin: 0;
   max-width: 72ch;
 }
 
-.field {
-  margin-bottom: 20px;
-  max-width: 72ch;
-}
-
-.field > label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-/* Scoped to beat `.field > label { display: block }` above, which is one
-   specificity point higher and was collapsing the row so the checkbox sat on
-   top of its own label. */
-.field > label.switchRow {
+.switchRow {
   align-items: flex-start;
   cursor: pointer;
   display: flex;
-  font-weight: 400;
+  font-size: 13px;
   gap: 10px;
+  max-width: 72ch;
 }
 
 .switchLabel {
@@ -34,8 +23,7 @@
   font-weight: 600;
 }
 
-.switchHint,
-.hint {
+.switchHint {
   color: var(--ink-3);
   display: block;
   font-size: 12px;
@@ -52,7 +40,7 @@
   border-radius: var(--r-sm);
   font-size: 12.5px;
   line-height: 1.5;
-  margin: 0 0 20px;
+  margin: 0;
   max-width: 72ch;
   padding: 10px 12px;
 }
@@ -60,10 +48,5 @@
 .queueLine {
   color: var(--ink-3);
   font-size: 12.5px;
-  margin: 0 0 20px;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
+  margin: 0;
 }

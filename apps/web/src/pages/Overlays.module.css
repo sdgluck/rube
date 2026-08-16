@@ -45,22 +45,12 @@
   flex-wrap: wrap;
 }
 
-.sectionSelectInline {
-  composes: select selectSm from "../styles/controls.module.css";
-  font-weight: 600;
-}
-
 .subtitle {
   color: var(--ink-2);
   font-size: 13px;
   margin: 0;
   line-height: 1.5;
   max-width: 720px;
-}
-
-.sectionSelect {
-  composes: select from "../styles/controls.module.css";
-  font-weight: 600;
 }
 
 /*
@@ -71,7 +61,10 @@
  */
 .workspace {
   display: grid;
-  grid-template-columns: 236px 1fr 292px;
+  /* The catalog column carries two chip columns plus preset names; at 236px
+     that left ~97px a chip, so "Video Codec" and "Content Rating" wrapped and
+     every tile grew a second line. The canvas keeps the slack. */
+  grid-template-columns: 288px 1fr 292px;
   gap: 16px;
   align-items: stretch;
   /* Reserve: page header (~90px) + action bar (~64px) + breathing room. */
@@ -1053,12 +1046,25 @@
   color: var(--on-accent);
 }
 
+/* One height for every button in the bar, set by the box rather than by what
+   is inside it — the overflow trigger holds a single "⋯" glyph, whose line box
+   is shorter than a word's, so padding alone left it visibly squat. */
+.actionBtnPrimary,
+.actionBtnSecondary,
+.actionBtnDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  line-height: 1;
+}
+
 .actionBtnPrimary {
   background: var(--accent-fill);
   color: var(--on-accent);
   border: none;
   border-radius: var(--r-md);
-  padding: 7px 13px;
+  padding: 0 13px;
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 600;
@@ -1081,7 +1087,7 @@
   color: var(--on-accent);
   border: none;
   border-radius: var(--r-md);
-  padding: 7px 13px;
+  padding: 0 13px;
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 600;
@@ -1103,7 +1109,7 @@
   color: var(--on-accent);
   border: none;
   border-radius: var(--r-md);
-  padding: 7px 13px;
+  padding: 0 13px;
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 600;
@@ -1217,6 +1223,15 @@
 
 .overflowWrap {
   position: relative;
+  display: flex;
+}
+
+/* Square, so a one-glyph trigger doesn't read as a clipped word button. */
+.actionBtnOverflow {
+  composes: actionBtnSecondary;
+  width: 30px;
+  padding: 0;
+  font-size: 15px;
 }
 
 .overflowMenu {
@@ -1340,12 +1355,15 @@
   margin: 4px 0 4px;
 }
 
-/* ─── Catalog: 2-column chip grid ──────────────────────────────── */
+/* ─── Catalog: chip grid ───────────────────────────────────────── */
 
+/* Auto-fill rather than a fixed two: the column is wide enough for two 120px
+   chips and the track floor is what keeps a label on one line, whatever the
+   panel's width turns out to be. */
 .chipList {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
 }
 
 .catalogChip {
@@ -1363,17 +1381,18 @@
   align-self: flex-start;
 }
 
-/* Below 1100px the inspector stops being a side rail, so the catalog gets the
-   full width back and can afford a third column. That reasoning runs out on a
-   phone, where three columns is ~110px each for a label plus a sample. */
+/* Below 1100px the inspector stops being a side rail and the catalog spans the
+   page, where a 112px floor would fan out into eight thin columns. A wider
+   track keeps the chips a readable size. That reasoning runs out on a phone,
+   which is narrow enough for the base floor again. */
 @media (max-width: 1100px) {
   .chipList {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 
 @media (max-width: 600px) {
   .chipList {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   }
 }

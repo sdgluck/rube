@@ -26,6 +26,17 @@
   color: var(--ink-3);
 }
 
+/* Reads as plain text until hovered, matching the title links in Stats. */
+.lastWatchedLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lastWatchedLink:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
 /* ─── Inline name editing ───────────────────────────────────────────────── */
 
 .nameCell {

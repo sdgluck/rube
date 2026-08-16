@@ -444,6 +444,8 @@ export const plexUsers = sqliteTable(
     label: text("label").notNull(),
     collectionCount: integer("collection_count").notNull().default(0),
     lastWatchedTitle: text("last_watched_title"),
+    /** Links the title to its media page. Null for rows synced before this was recorded. */
+    lastWatchedRatingKey: text("last_watched_rating_key"),
     lastWatchedAt: integer("last_watched_at"),
     /**
      * The server owner. Recorded at sync time because the alternative — asking

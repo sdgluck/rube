@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { CHANGELOG, VERSION, IS_BETA } from "#/version";
-import PageShell, { StatusChip } from "#components/PageShell";
+import { StatusChip } from "#components/PageShell";
+import SettingsPageHeader from "#pages/Settings/SettingsPageHeader";
 import styles from "./Changelog.module.css";
 
 type Block =
@@ -104,7 +105,19 @@ export default function Changelog() {
   }, []);
 
   return (
-    <PageShell count={`v${VERSION}`} chip={IS_BETA ? <StatusChip tone="advisory">Beta</StatusChip> : undefined}>
+    // A settings pane, not a page: PageShell would add its own gutter inside
+    // the one the settings layout already provides, and only this pane would
+    // sit indented from the rail.
+    <>
+      <SettingsPageHeader
+        title="Changelog"
+        meta={
+          <>
+            <span className={styles.version}>v{VERSION}</span>
+            {IS_BETA && <StatusChip tone="advisory">Beta</StatusChip>}
+          </>
+        }
+      />
       <div className={styles.releases}>
         {releases.map((release) => (
           <article key={release.version} className={styles.release}>
@@ -144,6 +157,6 @@ export default function Changelog() {
           </article>
         ))}
       </div>
-    </PageShell>
+    </>
   );
 }

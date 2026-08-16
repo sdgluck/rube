@@ -284,17 +284,16 @@
 
 .syncBar {
   position: sticky;
-  bottom: 0;
+  top: 0;
   z-index: 5;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 16px;
+  margin-bottom: 16px;
   padding: 11px 14px;
-  /* The upward shadow used to separate this sticky bar from the list scrolling
-     under it. A full border does that now — --line-strong rather than --line,
-     because this one overlaps content instead of sitting beside it. */
+  /* A full border rather than a shadow: this one overlaps the grid scrolling
+     under it, so --line-strong instead of the --line used beside content. */
   border: 1px solid var(--line-strong);
   border-radius: var(--r-card);
   background: var(--surface);
@@ -512,8 +511,8 @@
   }
 
   .syncBar {
-    /* The mobile bottom nav owns the bottom edge, so unstick rather than
-       stack two bars on top of each other. */
+    /* A four-line wrapped bar pinned to a phone's top edge would cost most of
+       the viewport, so on mobile it just sits above the grid and scrolls away. */
     position: static;
   }
 

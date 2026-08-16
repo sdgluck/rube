@@ -13,8 +13,8 @@ interface PlexSyncBarProps {
 }
 
 /**
- * The page's footer, and the only place that says out loud whether Plex is
- * actually playing what this page shows. Everything above it is Tinkerbell's
+ * The bar above the grid, and the only place that says out loud whether Plex is
+ * actually playing what this page shows. Everything below it is Tinkerbell's
  * own state; this is the part that can silently diverge.
  */
 export default function PlexSyncBar({ enabledCount, mode, status, syncing, onModeChange, onSync }: PlexSyncBarProps) {

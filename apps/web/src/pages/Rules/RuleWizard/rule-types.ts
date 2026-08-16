@@ -425,13 +425,15 @@ export function stepsFor(
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
   if (typeHasSourceStep(type)) steps.push({ id: "source", label: "Source" });
-  // Every rule type can end in cleanup — the selection half is identical, so
-  // restricting it would be arbitrary.
+  // The outcome is not a question the wizard asks: which page you started from
+  // is the answer, and both pages list only their own kind, so choosing the
+  // other one here built a rule that vanished on save. A collection rule
+  // therefore has nothing to configure and skips the step entirely; a cleanup
+  // rule keeps it for the knobs — the action, the streak, the caps.
   //
-  // Outcome comes before Scope because it decides what Scope even asks: a
-  // cleanup rule never pins anything, so its homepage questions are dropped.
-  // Asking them first and retracting them afterwards is the worse order.
-  steps.push({ id: "outcome", label: "Outcome" });
+  // It stays ahead of Scope because it decides what Scope asks: a cleanup rule
+  // never pins anything, so its homepage questions are dropped.
+  if (outcomeKind === "cleanup") steps.push({ id: "outcome", label: "Cleanup" });
   steps.push({ id: "scope", label: "Scope" });
   // A cleanup rule's shelf is deliberately plain: the job gives it neither a
   // summary nor a poster, so asking would be asking about something nothing

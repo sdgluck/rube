@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import shared from "#/styles/shared.module.css";
+import CardSection from "#components/CardSection";
 import SettingsPageHeader from "./SettingsPageHeader";
+import settings from "./Settings.module.css";
 import styles from "./SettingsDigest.module.css";
 
 /**
@@ -38,79 +40,80 @@ export default function SettingsDigest() {
   const preview = previewQuery.data;
 
   return (
-    <>
+    <div className={settings.form}>
       <SettingsPageHeader title="Digest" />
 
-      <p className={styles.intro}>
-        A periodic summary of what was added, what people watched, and anything about to be removed. It goes to
-        whichever notification services you've ticked <strong>Digest</strong> for, and by email to portal users who
-        asked for one. Its schedule is on the <Link to="/jobs/digest">Digest job</Link>; who receives it is set per
-        service under <Link to="/settings/notifications">Notifications</Link>.
-      </p>
-
-      {emailStatusQuery.data && !emailStatusQuery.data.smtpConfigured && (
-        <p className={styles.notice}>
-          Email isn't configured, so per-user digests won't be sent. Set up a mail server under{" "}
-          <Link to="/settings/notifications/smtp">Notifications → Email</Link>. The server-wide digest still goes to
-          your other channels.
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Preview">
+        <p className={styles.intro}>
+          A periodic summary of what was added, what people watched, and anything about to be removed. It goes to
+          whichever notification services you've ticked <strong>Digest</strong> for, and by email to portal users who
+          asked for one. Its schedule is on the <Link to="/jobs/digest">Digest job</Link>; who receives it is set per
+          service under <Link to="/settings/notifications">Notifications</Link>.
         </p>
-      )}
 
-      <div className={styles.controls}>
-        <label className={styles.control}>
-          <span>Period</span>
-          <select
-            className={shared.select}
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value as "weekly" | "monthly")}
-          >
-            <option value="weekly">Last 7 days</option>
-            <option value="monthly">Last 30 days</option>
-          </select>
-        </label>
+        {emailStatusQuery.data && !emailStatusQuery.data.smtpConfigured && (
+          <p className={styles.notice}>
+            Email isn't configured, so per-user digests won't be sent. Set up a mail server under{" "}
+            <Link to="/settings/notifications/smtp">Notifications → Email</Link>. The server-wide digest still goes to
+            your other channels.
+          </p>
+        )}
 
-        <label className={styles.control}>
-          <span>As seen by</span>
-          <select className={shared.select} value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">Everyone (server-wide)</option>
-            {subscribers.map((s) => (
-              <option key={s.userId} value={String(s.userId)}>
-                {s.username}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        <div className={styles.controls}>
+          <label className={styles.control}>
+            <span>Period</span>
+            <select
+              className={shared.select}
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as "weekly" | "monthly")}
+            >
+              <option value="weekly">Last 7 days</option>
+              <option value="monthly">Last 30 days</option>
+            </select>
+          </label>
 
-      {previewQuery.isLoading && <p className={styles.empty}>Building the preview…</p>}
-      {previewQuery.error && <p className={styles.empty}>Couldn't build a preview: {previewQuery.error.message}</p>}
-
-      {preview && (
-        <div className={styles.preview}>
-          <h2 className={styles.previewTitle}>{preview.message.title}</h2>
-          <p className={styles.previewText}>{preview.message.text}</p>
-          {(preview.message.blocks ?? []).length === 0 ? (
-            <p className={styles.empty}>
-              Nothing happened in this period, so no digest would be sent — the run would record it as skipped rather
-              than mail out an empty summary.
-            </p>
-          ) : (
-            (preview.message.blocks ?? []).map((block) => (
-              <div key={block.heading} className={styles.block}>
-                <p className={styles.blockHeading}>{block.heading}</p>
-                <ul className={styles.blockLines}>
-                  {block.lines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
+          <label className={styles.control}>
+            <span>As seen by</span>
+            <select className={shared.select} value={userId} onChange={(e) => setUserId(e.target.value)}>
+              <option value="">Everyone (server-wide)</option>
+              {subscribers.map((s) => (
+                <option key={s.userId} value={String(s.userId)}>
+                  {s.username}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      )}
 
-      <div className={styles.field} style={{ marginTop: 28 }}>
-        <label>Subscribers</label>
+        {previewQuery.isLoading && <p className={styles.empty}>Building the preview…</p>}
+        {previewQuery.error && <p className={styles.empty}>Couldn't build a preview: {previewQuery.error.message}</p>}
+
+        {preview && (
+          <div className={styles.preview}>
+            <h2 className={styles.previewTitle}>{preview.message.title}</h2>
+            <p className={styles.previewText}>{preview.message.text}</p>
+            {(preview.message.blocks ?? []).length === 0 ? (
+              <p className={styles.empty}>
+                Nothing happened in this period, so no digest would be sent — the run would record it as skipped rather
+                than mail out an empty summary.
+              </p>
+            ) : (
+              (preview.message.blocks ?? []).map((block) => (
+                <div key={block.heading} className={styles.block}>
+                  <p className={styles.blockHeading}>{block.heading}</p>
+                  <ul className={styles.blockLines}>
+                    {block.lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </CardSection>
+
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Subscribers">
         {subscribers.length === 0 ? (
           <span className={styles.hint}>
             Nobody has subscribed yet. Portal users choose a frequency and enter their own address — Tinkerbell never
@@ -136,10 +139,9 @@ export default function SettingsDigest() {
             </tbody>
           </table>
         )}
-      </div>
+      </CardSection>
 
-      <div className={styles.field}>
-        <label>Recent deliveries</label>
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Recent deliveries">
         {deliveries.length === 0 ? (
           <span className={styles.hint}>Nothing has been sent yet.</span>
         ) : (
@@ -173,8 +175,8 @@ export default function SettingsDigest() {
             </tbody>
           </table>
         )}
-      </div>
-    </>
+      </CardSection>
+    </div>
   );
 }
 

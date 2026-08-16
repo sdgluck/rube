@@ -1,0 +1,1 @@
+ALTER TABLE `plex_users` ADD `last_watched_rating_key` text;

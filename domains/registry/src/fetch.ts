@@ -10,7 +10,15 @@ import { httpRequestJson } from "@tinkerbell/http";
 import { getConfig, setConfig } from "@tinkerbell/core";
 import { DEFAULT_REGISTRY_URL, registryIndexSchema, type RegistryIndex } from "@tinkerbell/contracts";
 
-const FETCH_TIMEOUT_MS = 15_000;
+/**
+ * Short, because somebody is watching a skeleton while this runs. 15s with two
+ * retries meant a server with no outbound internet showed a loading page for
+ * the better part of a minute before admitting it. This is a catalogue of rule
+ * packs, not a critical path — failing fast and offering "Try again" beats
+ * being thorough about a host that isn't answering.
+ */
+const FETCH_TIMEOUT_MS = 5_000;
+const FETCH_RETRIES = 1;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 export function registryUrl(): string {
@@ -42,7 +50,7 @@ export async function fetchRegistryIndex(opts: { force?: boolean } = {}): Promis
   const url = registryUrl();
   let payload: unknown;
   try {
-    payload = await httpRequestJson<unknown>({ url, timeoutMs: FETCH_TIMEOUT_MS, retries: 2 });
+    payload = await httpRequestJson<unknown>({ url, timeoutMs: FETCH_TIMEOUT_MS, retries: FETCH_RETRIES });
   } catch (err) {
     // Plenty of Tinkerbell installs have no outbound internet at all. Say so
     // plainly rather than surfacing a bare fetch error.

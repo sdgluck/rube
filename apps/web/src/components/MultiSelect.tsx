@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import styles from "./MultiSelect.module.css";
 
@@ -80,9 +81,7 @@ export default function MultiSelect({ allLabel, options, selected, onChange, ari
       >
         <span>{label}</span>
         {activeCount > 1 && <span className={styles.count}>{activeCount}</span>}
-        <span className={styles.caret} aria-hidden="true">
-          &#9662;
-        </span>
+        <ChevronDown className={styles.caret} size={13} strokeWidth={2.5} aria-hidden="true" />
       </button>
       {open && (
         <div className={styles.menu} id={menuId} role="group" aria-label={ariaLabel ?? allLabel}>

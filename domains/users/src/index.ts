@@ -44,12 +44,12 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
   }
 
   // Build a map of accountID → most recent history item
-  const lastWatchedByAccount = new Map<number, { title: string; viewedAt: number }>();
+  const lastWatchedByAccount = new Map<number, { title: string; ratingKey: string | null; viewedAt: number }>();
   for (const item of history) {
     if (!item.accountID || !item.viewedAt) continue;
     if (!lastWatchedByAccount.has(item.accountID)) {
       const title = item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title;
-      lastWatchedByAccount.set(item.accountID, { title, viewedAt: item.viewedAt });
+      lastWatchedByAccount.set(item.accountID, { title, ratingKey: item.ratingKey ?? null, viewedAt: item.viewedAt });
     }
   }
 
@@ -78,6 +78,7 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
         label: userLabel,
         collectionCount: userCollectionCounts.get(userLabel) || 0,
         lastWatchedTitle: lastWatched?.title ?? null,
+        lastWatchedRatingKey: lastWatched?.ratingKey ?? null,
         lastWatchedAt: lastWatched?.viewedAt ?? null,
         isOwner: s.isOwner ? 1 : 0,
         syncedAt: now,
@@ -89,6 +90,7 @@ export async function syncUsers(client: PlexClient): Promise<SyncStats> {
           label: userLabel,
           collectionCount: userCollectionCounts.get(userLabel) || 0,
           lastWatchedTitle: lastWatched?.title ?? null,
+          lastWatchedRatingKey: lastWatched?.ratingKey ?? null,
           lastWatchedAt: lastWatched?.viewedAt ?? null,
           isOwner: s.isOwner ? 1 : 0,
           syncedAt: now,
@@ -121,6 +123,7 @@ export function getLocalUsers(filters: UserFilters): {
     label: string;
     collectionCount: number;
     lastWatchedTitle: string | null;
+    lastWatchedRatingKey: string | null;
     lastWatchedAt: number | null;
     /** Whether this user opted into personalized home screens in the portal.
         No preferences row means they never did — the same reading
@@ -160,6 +163,7 @@ export function getLocalUsers(filters: UserFilters): {
       label: plexUsers.label,
       collectionCount: plexUsers.collectionCount,
       lastWatchedTitle: plexUsers.lastWatchedTitle,
+      lastWatchedRatingKey: plexUsers.lastWatchedRatingKey,
       lastWatchedAt: plexUsers.lastWatchedAt,
       optedIn: userPreferences.optedIn,
     })
@@ -181,6 +185,7 @@ export function getLocalUsers(filters: UserFilters): {
       label: row.label,
       collectionCount: row.collectionCount,
       lastWatchedTitle: row.lastWatchedTitle,
+      lastWatchedRatingKey: row.lastWatchedRatingKey,
       lastWatchedAt: row.lastWatchedAt,
       optedIn: row.optedIn === 1,
     })),

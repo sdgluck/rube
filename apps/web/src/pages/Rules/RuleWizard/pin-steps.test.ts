@@ -43,8 +43,18 @@ describe("pinRotationError", () => {
 });
 
 describe("stepsFor", () => {
-  it("asks for the outcome before the scope it changes", () => {
-    const ids = stepsFor("directors", "create").map((s) => s.id);
+  it("asks a cleanup rule for its outcome before the scope it changes", () => {
+    const ids = stepsFor("directors", "create", "cleanup").map((s) => s.id);
     assert.ok(ids.indexOf("outcome") < ids.indexOf("scope"), `outcome should precede scope, got ${ids.join(" → ")}`);
+  });
+
+  it("never shows a collection rule an outcome step — the page it was created on decided", () => {
+    const ids = stepsFor("directors", "create").map((s) => s.id);
+    assert.ok(!ids.includes("outcome"), `outcome should be absent, got ${ids.join(" → ")}`);
+  });
+
+  it("keeps the Look step for a collection rule and drops it for cleanup", () => {
+    assert.ok(stepsFor("directors", "create").some((s) => s.id === "presentation"));
+    assert.ok(!stepsFor("directors", "create", "cleanup").some((s) => s.id === "presentation"));
   });
 });

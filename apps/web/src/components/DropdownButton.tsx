@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import styles from "./DropdownButton.module.css";
 
@@ -39,7 +40,8 @@ export default function DropdownButton({ label, options, className, disabled }: 
   return (
     <div className={styles.wrapper} ref={ref}>
       <button className={className} onClick={toggle} disabled={disabled}>
-        {label} <span className={styles.caret}>&#9662;</span>
+        {label}
+        <ChevronDown className={styles.caret} size={13} strokeWidth={2.5} aria-hidden="true" />
       </button>
       {visible && (
         <div className={`${styles.menu} ${!open ? styles.menuExiting : ""}`}>

@@ -10,7 +10,8 @@ import Banner from "#components/Banner";
 import BulkBar from "#components/BulkBar";
 import { PrerollsSkeleton } from "#components/Skeleton";
 import controls from "#/styles/controls.module.css";
-import UploadDropzone from "./UploadDropzone";
+import UploadModal from "./UploadModal";
+import { UploadProgressList } from "./UploadDropzone";
 import PrerollCard from "./PrerollCard";
 import PrerollDetailModal from "./PrerollDetailModal";
 import PlexSyncBar from "./PlexSyncBar";
@@ -32,6 +33,7 @@ export default function Prerolls() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importExistingOpen, setImportExistingOpen] = useState(false);
   const lastClickedRef = useRef<string | null>(null);
@@ -202,6 +204,14 @@ export default function Prerolls() {
           >
             Import from URL
           </button>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnPrimary}`}
+            onClick={() => setUploadOpen(true)}
+            disabled={ffmpegMissing}
+          >
+            Upload
+          </button>
         </>
       }
     >
@@ -212,13 +222,25 @@ export default function Prerolls() {
         </Banner>
       )}
 
-      <UploadDropzone uploads={uploads} disabled={ffmpegMissing} onFiles={handleFiles} />
+      {/* Above the grid: what Plex is actually playing is the state this page
+          is about, and at the foot of a long grid it was the last thing read
+          rather than the first. */}
+      <PlexSyncBar
+        enabledCount={enabledCount}
+        mode={mode}
+        status={plexStatusQuery.data}
+        syncing={syncMutation.isPending}
+        onModeChange={handleModeChange}
+        onSync={handleSync}
+      />
+
+      <UploadProgressList uploads={uploads} />
 
       {prerolls.length === 0 ? (
         <EmptyState
           icon="film"
           title="No prerolls yet"
-          description="Upload a clip above, import one from a URL, or pull in videos already sitting in the prerolls folder, and it'll be ready to play before your next movie."
+          description="Upload a clip, import one from a URL, or pull in videos already sitting in the prerolls folder, and it'll be ready to play before your next movie."
         />
       ) : (
         <div className={styles.grid} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
@@ -254,14 +276,9 @@ export default function Prerolls() {
         />
       )}
 
-      <PlexSyncBar
-        enabledCount={enabledCount}
-        mode={mode}
-        status={plexStatusQuery.data}
-        syncing={syncMutation.isPending}
-        onModeChange={handleModeChange}
-        onSync={handleSync}
-      />
+      {uploadOpen && (
+        <UploadModal disabled={ffmpegMissing} onClose={() => setUploadOpen(false)} onFiles={handleFiles} />
+      )}
 
       {openPreroll && (
         <PrerollDetailModal

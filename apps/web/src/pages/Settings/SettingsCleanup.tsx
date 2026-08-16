@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
-import shared from "#/styles/shared.module.css";
+import CardSection from "#components/CardSection";
 import SettingsPageHeader from "./SettingsPageHeader";
+import settings from "./Settings.module.css";
 import styles from "./SettingsCleanup.module.css";
 
 const DEFAULT_MAX_DELETES = 50;
@@ -71,16 +72,16 @@ export default function SettingsCleanup() {
   };
 
   return (
-    <>
+    <div className={settings.form}>
       <SettingsPageHeader title="Cleanup" />
 
-      <p className={styles.intro}>
-        Rules whose outcome is <strong>Cleanup</strong> can label, unmonitor, or delete the items they match. Nothing
-        destructive happens unless this switch is on — it is checked every time a rule is about to act, not when the
-        rule is saved, so turning it off stops work already in progress.
-      </p>
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Rule-driven cleanup">
+        <p className={styles.intro}>
+          Rules whose outcome is <strong>Cleanup</strong> can label, unmonitor, or delete the items they match. Nothing
+          destructive happens unless this switch is on — it is checked every time a rule is about to act, not when the
+          rule is saved, so turning it off stops work already in progress.
+        </p>
 
-      <div className={styles.field}>
         <label className={styles.switchRow}>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           <span>
@@ -91,50 +92,52 @@ export default function SettingsCleanup() {
             </span>
           </span>
         </label>
-      </div>
 
-      {enabled && (
-        <div className={styles.armed} role="status">
-          Cleanup is armed. Rules that are past their preview-only setting will remove things on their next scheduled
-          run.
-        </div>
-      )}
-
-      <div className={styles.field}>
-        <label htmlFor="cleanup-max">Most items to remove per day, across all rules</label>
-        <input
-          id="cleanup-max"
-          type="number"
-          min={1}
-          className={shared.input}
-          value={maxDeletes}
-          onChange={(e) => setMaxDeletes(Math.max(1, parseInt(e.target.value, 10) || 1))}
-        />
-        <span className={styles.hint}>
-          A backstop over and above each rule's own limit. Per-rule caps don't compose — five rules each staying under
-          thirty can still empty a library in one night. Counted over a rolling 24 hours from what was actually removed,
-          so scheduled runs and rules you run by hand draw on the same allowance.
-        </span>
-      </div>
-
-      <p className={styles.queueLine}>
-        {queued === 0 ? (
-          <>Nothing is queued for cleanup right now.</>
-        ) : (
-          <>
-            <Link to="/cleanup">
-              {queued} item{queued === 1 ? "" : "s"} queued
-            </Link>
-            {dueNow > 0 && <>, {dueNow} of them due on the next run</>}.
-          </>
+        {enabled && (
+          <div className={styles.armed} role="status">
+            Cleanup is armed. Rules that are past their preview-only setting will remove things on their next scheduled
+            run.
+          </div>
         )}
-      </p>
 
-      <div className={styles.actions}>
-        <button className={shared.button} onClick={handleSave} disabled={!isDirty || saving}>
-          {saving ? "Saving…" : "Save"}
-        </button>
-      </div>
-    </>
+        <div className={settings.field}>
+          <label className={settings.label} htmlFor="cleanup-max">
+            Most items to remove per day, across all rules
+          </label>
+          <input
+            id="cleanup-max"
+            type="number"
+            min={1}
+            className={settings.input}
+            value={maxDeletes}
+            onChange={(e) => setMaxDeletes(Math.max(1, parseInt(e.target.value, 10) || 1))}
+          />
+          <p className={settings.hint}>
+            A backstop over and above each rule's own limit. Per-rule caps don't compose — five rules each staying under
+            thirty can still empty a library in one night. Counted over a rolling 24 hours from what was actually
+            removed, so scheduled runs and rules you run by hand draw on the same allowance.
+          </p>
+        </div>
+
+        <p className={styles.queueLine}>
+          {queued === 0 ? (
+            <>Nothing is queued for cleanup right now.</>
+          ) : (
+            <>
+              <Link to="/cleanup">
+                {queued} item{queued === 1 ? "" : "s"} queued
+              </Link>
+              {dueNow > 0 && <>, {dueNow} of them due on the next run</>}.
+            </>
+          )}
+        </p>
+
+        <div className={settings.buttons}>
+          <button className={settings.button} onClick={handleSave} disabled={!isDirty || saving}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </CardSection>
+    </div>
   );
 }

@@ -143,6 +143,8 @@ RULES.forEach((r, i) => {
 });
 
 // ── Plex users ──────────────────────────────────────────────────────────────
+// Resolved by title so the demo's Last Watched links land on a real seeded item.
+const itemKeyByTitle = new Map(ITEMS.map((i) => [i.title, i.ratingKey]));
 for (const u of USERS) {
   db.insert(plexUsers)
     .values({
@@ -152,6 +154,7 @@ for (const u of USERS) {
       label: `User:${u.name}`,
       collectionCount: u.collectionCount,
       lastWatchedTitle: u.lastWatched,
+      lastWatchedRatingKey: itemKeyByTitle.get(u.lastWatched) ?? null,
       lastWatchedAt: now - u.agoMin * min,
       syncedAt: now,
     })

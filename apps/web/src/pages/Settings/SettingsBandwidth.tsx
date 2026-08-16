@@ -5,7 +5,9 @@ import RelativeTime from "#components/RelativeTime";
 import Spinner from "#components/Spinner";
 import { useToast } from "#components/Toast";
 import { EMPTY, formatBandwidth, formatFileSize, formatMbps } from "#/format";
+import CardSection from "#components/CardSection";
 import SettingsPageHeader from "./SettingsPageHeader";
+import settings from "./Settings.module.css";
 import styles from "./SettingsBandwidth.module.css";
 
 const JOB_ID = "bandwidth-test";
@@ -104,136 +106,139 @@ export default function SettingsBandwidth() {
   const peak = Math.max(1, ...history.map((h) => h.upMbps ?? 0));
 
   return (
-    <div>
+    <div className={settings.form}>
       <SettingsPageHeader title="Bandwidth Test" />
 
-      <p className={styles.intro}>
-        Measures this server's internet connection against Cloudflare's speed endpoints. The upload figure is what
-        remote streams actually consume, so it's the capacity the Stats bandwidth tile divides live playback by. A run
-        takes under a minute and moves up to {formatCeiling(maxTransferQuery.data)} of data — worth knowing if this
-        connection is metered.
-      </p>
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Connection test">
+        <p className={styles.intro}>
+          Measures this server's internet connection against Cloudflare's speed endpoints. The upload figure is what
+          remote streams actually consume, so it's the capacity the Stats bandwidth tile divides live playback by. A run
+          takes under a minute and moves up to {formatCeiling(maxTransferQuery.data)} of data — worth knowing if this
+          connection is metered.
+        </p>
 
-      {/* Expect this to read higher than a browser speed test, and say why
+        {/* Expect this to read higher than a browser speed test, and say why
           before someone concludes the tool is broken. Both halves matter: the
           machine (a wired server, not a laptop on Wi-Fi) and the method
           (parallel connections, which is also what several viewers streaming
           at once looks like — so it is the right measure for this number). */}
-      <p className={styles.intro}>
-        Expect a higher figure than a speed test run in your browser. This measures the machine Tinkerbell runs on,
-        which is usually wired, rather than the device you're reading this on; and it uses several connections at once,
-        the way several people streaming at once would. A single connection often can't saturate a fast line, so
-        one-connection tests can report less than half of what the link will actually carry.
-      </p>
+        <p className={styles.intro}>
+          Expect a higher figure than a speed test run in your browser. This measures the machine Tinkerbell runs on,
+          which is usually wired, rather than the device you're reading this on; and it uses several connections at
+          once, the way several people streaming at once would. A single connection often can't saturate a fast line, so
+          one-connection tests can report less than half of what the link will actually carry.
+        </p>
 
-      <div className={styles.header}>
-        <button
-          className={styles.runBtn}
-          disabled={!!run || startMutation.isPending || cooldownLeftMs > 0}
-          title={cooldownLeftMs > 0 ? "Cloudflare throttles frequent tests" : undefined}
-          onClick={() => startMutation.mutate({ jobId: JOB_ID })}
-        >
-          {run ? "Running…" : "Run test"}
-        </button>
-        {!run && cooldownLeftMs > 0 && (
-          <span className={styles.warning}>
-            Another test can be run in {Math.ceil(cooldownLeftMs / 60_000)} min — Cloudflare throttles servers that test
-            back to back, and it takes about that long to lift.
-          </span>
-        )}
-        {!run && cooldownLeftMs === 0 && activeStreams > 0 && (
-          <span className={styles.warning}>
-            {activeStreams} {activeStreams === 1 ? "stream is" : "streams are"} playing — the test will compete with
-            playback, and both will look worse than they are.
-          </span>
-        )}
-      </div>
-
-      {run && (
-        <div className={styles.activeBanner}>
-          <Spinner size="sm" />
-          <span className={styles.bannerText}>{run.status === "cancelling" ? "Cancelling…" : "Testing"}</span>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${Math.round(run.progress * 100)}%` }} />
-          </div>
-          <span className={styles.bannerMessage}>{run.message}</span>
+        <div className={styles.header}>
           <button
-            className={styles.cancelBtn}
-            disabled={run.status === "cancelling" || cancelMutation.isPending}
-            onClick={() => cancelMutation.mutate({ runId: run.id })}
+            className={styles.runBtn}
+            disabled={!!run || startMutation.isPending || cooldownLeftMs > 0}
+            title={cooldownLeftMs > 0 ? "Cloudflare throttles frequent tests" : undefined}
+            onClick={() => startMutation.mutate({ jobId: JOB_ID })}
           >
-            Cancel
+            {run ? "Running…" : "Run test"}
           </button>
+          {!run && cooldownLeftMs > 0 && (
+            <span className={styles.warning}>
+              Another test can be run in {Math.ceil(cooldownLeftMs / 60_000)} min — Cloudflare throttles servers that
+              test back to back, and it takes about that long to lift.
+            </span>
+          )}
+          {!run && cooldownLeftMs === 0 && activeStreams > 0 && (
+            <span className={styles.warning}>
+              {activeStreams} {activeStreams === 1 ? "stream is" : "streams are"} playing — the test will compete with
+              playback, and both will look worse than they are.
+            </span>
+          )}
         </div>
-      )}
 
-      {latestQuery.error && (
-        <ErrorState
-          inline
-          title="Couldn't load the last bandwidth test"
-          error={latestQuery.error}
-          onRetry={() => latestQuery.refetch()}
-        />
-      )}
-
-      {latest ? (
-        <>
-          <div className={styles.resultGrid}>
-            <ResultCard
-              label="Upload"
-              value={formatMbps(latest.upMbps)}
-              sub={latest.upMbps != null ? "what remote streams use" : null}
-            />
-            <ResultCard label="Download" value={formatMbps(latest.downMbps)} />
-            <ResultCard
-              label="Latency"
-              value={latest.latencyMs != null ? `${Math.round(latest.latencyMs)} ms` : EMPTY}
-              sub={latest.jitterMs != null ? `± ${Math.round(latest.jitterMs)} ms jitter` : null}
-            />
-            <ResultCard label="Edge" value={latest.pop ?? EMPTY} sub="Cloudflare PoP" />
+        {run && (
+          <div className={styles.activeBanner}>
+            <Spinner size="sm" />
+            <span className={styles.bannerText}>{run.status === "cancelling" ? "Cancelling…" : "Testing"}</span>
+            <div className={styles.progressBar}>
+              <div className={styles.progressFill} style={{ width: `${Math.round(run.progress * 100)}%` }} />
+            </div>
+            <span className={styles.bannerMessage}>{run.message}</span>
+            <button
+              className={styles.cancelBtn}
+              disabled={run.status === "cancelling" || cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate({ runId: run.id })}
+            >
+              Cancel
+            </button>
           </div>
-          <p className={styles.caveat}>
-            Measured <RelativeTime timestamp={latest.startedAt} />
-            {/* Omitted for rows written before the column existed, rather than
+        )}
+
+        {latestQuery.error && (
+          <ErrorState
+            inline
+            title="Couldn't load the last bandwidth test"
+            error={latestQuery.error}
+            onRetry={() => latestQuery.refetch()}
+          />
+        )}
+
+        {latest ? (
+          <>
+            <div className={styles.resultGrid}>
+              <ResultCard
+                label="Upload"
+                value={formatMbps(latest.upMbps)}
+                sub={latest.upMbps != null ? "what remote streams use" : null}
+              />
+              <ResultCard label="Download" value={formatMbps(latest.downMbps)} />
+              <ResultCard
+                label="Latency"
+                value={latest.latencyMs != null ? `${Math.round(latest.latencyMs)} ms` : EMPTY}
+                sub={latest.jitterMs != null ? `± ${Math.round(latest.jitterMs)} ms jitter` : null}
+              />
+              <ResultCard label="Edge" value={latest.pop ?? EMPTY} sub="Cloudflare PoP" />
+            </div>
+            <p className={styles.caveat}>
+              Measured <RelativeTime timestamp={latest.startedAt} />
+              {/* Omitted for rows written before the column existed, rather than
                 assuming a parallelism that was never recorded. */}
-            {latest.streams != null && ` over ${latest.streams} connections`}, moving{" "}
-            {formatFileSize(latest.bytesDown + latest.bytesUp)}.
-            {latest.concurrentKbps > 0 &&
-              ` ${formatBandwidth(latest.concurrentKbps)} of playback was in flight at the time, so this reads low.`}
-          </p>
-        </>
-      ) : (
-        !latestQuery.isLoading && <div className={styles.empty}>No bandwidth test has been run yet.</div>
-      )}
+              {latest.streams != null && ` over ${latest.streams} connections`}, moving{" "}
+              {formatFileSize(latest.bytesDown + latest.bytesUp)}.
+              {latest.concurrentKbps > 0 &&
+                ` ${formatBandwidth(latest.concurrentKbps)} of playback was in flight at the time, so this reads low.`}
+            </p>
+          </>
+        ) : (
+          !latestQuery.isLoading && <div className={styles.empty}>No bandwidth test has been run yet.</div>
+        )}
+      </CardSection>
 
-      <h4 className={styles.sectionTitle}>Last 90 days</h4>
-      {history.length === 0 ? (
-        <div className={styles.empty}>Results will appear here once you've run a test.</div>
-      ) : (
-        <>
-          <div className={styles.chart}>
-            {history.map((h) => {
-              const value = h.upMbps ?? 0;
-              const failed = h.status !== "ok";
-              const title = failed
-                ? `${new Date(h.startedAt).toLocaleString()} — ${h.status}${h.error ? `: ${h.error}` : ""}`
-                : `${new Date(h.startedAt).toLocaleString()} — ↑ ${formatMbps(h.upMbps)} ↓ ${formatMbps(h.downMbps)}`;
-              return (
-                <div
-                  key={h.id}
-                  className={`${styles.bar} ${failed ? styles.barFailed : ""}`}
-                  style={{ height: failed ? "100%" : `${Math.max(2, (value / peak) * 100)}%` }}
-                  title={title}
-                />
-              );
-            })}
-          </div>
-          <div className={styles.chartAxis}>
-            <span>Upload, peak {formatMbps(peak)}</span>
-            <span>{history.length} run(s)</span>
-          </div>
-        </>
-      )}
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Last 90 days">
+        {history.length === 0 ? (
+          <div className={styles.empty}>Results will appear here once you've run a test.</div>
+        ) : (
+          <>
+            <div className={styles.chart}>
+              {history.map((h) => {
+                const value = h.upMbps ?? 0;
+                const failed = h.status !== "ok";
+                const title = failed
+                  ? `${new Date(h.startedAt).toLocaleString()} — ${h.status}${h.error ? `: ${h.error}` : ""}`
+                  : `${new Date(h.startedAt).toLocaleString()} — ↑ ${formatMbps(h.upMbps)} ↓ ${formatMbps(h.downMbps)}`;
+                return (
+                  <div
+                    key={h.id}
+                    className={`${styles.bar} ${failed ? styles.barFailed : ""}`}
+                    style={{ height: failed ? "100%" : `${Math.max(2, (value / peak) * 100)}%` }}
+                    title={title}
+                  />
+                );
+              })}
+            </div>
+            <div className={styles.chartAxis}>
+              <span>Upload, peak {formatMbps(peak)}</span>
+              <span>{history.length} run(s)</span>
+            </div>
+          </>
+        )}
+      </CardSection>
     </div>
   );
 }

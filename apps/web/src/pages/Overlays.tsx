@@ -3,12 +3,14 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { PosterCanvas, type BadgeLayout, type CanvasBadge } from "#lib/PosterCanvas";
 import ConfirmModal from "#components/ConfirmModal";
+import DropdownButton from "#components/DropdownButton";
 import FeatureStatusBanner from "#components/FeatureStatusBanner";
 import PageShell from "#components/PageShell";
 import { PageSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import Spinner from "#components/Spinner";
 import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@tinkerbell/contracts";
+import shared from "#/styles/shared.module.css";
 import styles from "./Overlays.module.css";
 import { Inspector } from "./Overlays/Inspector";
 import { PresetList } from "./Overlays/PresetList";
@@ -424,18 +426,11 @@ export default function Overlays() {
     <PageShell
       actions={
         sections.length > 1 ? (
-          <select
-            className={styles.sectionSelectInline}
-            value={sectionId}
-            onChange={(e) => setActiveSection(e.target.value)}
-            aria-label="Library section"
-          >
-            {sections.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.title}
-              </option>
-            ))}
-          </select>
+          <DropdownButton
+            label={sections.find((s) => s.key === sectionId)?.title ?? "Library"}
+            className={shared.buttonSecondary}
+            options={sections.map((s) => ({ label: s.title, onClick: () => setActiveSection(s.key) }))}
+          />
         ) : undefined
       }
     >
@@ -749,7 +744,7 @@ export default function Overlays() {
               </span>
               <div className={styles.overflowWrap} ref={overflowRef}>
                 <button
-                  className={styles.actionBtnSecondary}
+                  className={styles.actionBtnOverflow}
                   onClick={() => setOverflowOpen((v) => !v)}
                   aria-label="More actions"
                   title="More actions"

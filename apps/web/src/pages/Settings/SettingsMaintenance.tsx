@@ -4,7 +4,9 @@ import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import CardSection from "#components/CardSection";
 import SettingsPageHeader from "./SettingsPageHeader";
+import settings from "./Settings.module.css";
 import local from "./SettingsMaintenance.module.css";
 import ErrorState from "#components/ErrorState";
 
@@ -58,7 +60,7 @@ export default function SettingsMaintenance() {
   }
 
   return (
-    <div>
+    <div className={settings.form}>
       <SettingsPageHeader title="Maintenance" />
 
       {jobsQuery.error && (
@@ -70,35 +72,37 @@ export default function SettingsMaintenance() {
         />
       )}
 
-      <div className={local.actionList}>
-        {ACTIONS.map((action) => {
-          const job = jobsQuery.data?.find((j) => j.id === action.jobId);
-          const lastRun = job?.lastRunStartedAt;
-          return (
-            <div key={action.jobId} className={local.actionCard}>
-              <div className={local.actionRow}>
-                <div className={local.actionText}>
-                  <strong>{action.title}</strong>
-                  <span className={local.actionDescription}>{action.description}</span>
-                  {lastRun && (
-                    <span className={local.actionMeta}>
-                      Last run <RelativeTime timestamp={lastRun} />
-                      {job?.lastRunStatus ? ` — ${job.lastRunStatus}` : ""}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPending(action)}
-                  disabled={startMutation.isPending || job?.lastRunStatus === "running"}
-                >
-                  {job?.lastRunStatus === "running" ? "Running…" : "Run"}
-                </button>
-              </div>
+      {ACTIONS.map((action) => {
+        const job = jobsQuery.data?.find((j) => j.id === action.jobId);
+        const lastRun = job?.lastRunStartedAt;
+        const running = job?.lastRunStatus === "running";
+        return (
+          <CardSection
+            key={action.jobId}
+            className={settings.group}
+            titleClassName={settings.groupTitle}
+            title={action.title}
+          >
+            <p className={settings.hint}>{action.description}</p>
+            {lastRun && (
+              <p className={local.actionMeta}>
+                Last run <RelativeTime timestamp={lastRun} />
+                {job?.lastRunStatus ? ` — ${job.lastRunStatus}` : ""}
+              </p>
+            )}
+            <div className={settings.buttons}>
+              <button
+                type="button"
+                className={settings.buttonSecondary}
+                onClick={() => setPending(action)}
+                disabled={startMutation.isPending || running}
+              >
+                {running ? "Running…" : "Run"}
+              </button>
             </div>
-          );
-        })}
-      </div>
+          </CardSection>
+        );
+      })}
 
       {pending && (
         <ConfirmModal

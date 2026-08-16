@@ -20,6 +20,34 @@
   background: var(--status-error-dot);
 }
 
+/* Transport marker on an active stream: playing, paused, buffering. */
+.stateIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--status-ok-dot);
+}
+
+.stateIcon[data-state="paused"] {
+  color: var(--status-warn-dot);
+}
+
+.stateIcon[data-state="buffering"] {
+  color: var(--status-error-dot);
+  animation: stateIconSpin 1.2s linear infinite;
+}
+
+@keyframes stateIconSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stateIcon[data-state="buffering"] {
+    animation: none;
+  }
+}
+
 /* ─── Table cells ───────────────────────────────────────────────────────── */
 
 .titleCell {

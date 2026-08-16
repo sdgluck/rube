@@ -48,9 +48,12 @@
   padding: 1px 6px;
 }
 
+/* An SVG chevron rather than the ▾ glyph this used to be: at the size a
+   trigger wants it, the glyph rendered as an indistinct dot. */
 .caret {
-  font-size: 0.7em;
-  opacity: 0.7;
+  flex-shrink: 0;
+  margin-left: 1px;
+  color: var(--ink-3);
 }
 
 @keyframes menuIn {

@@ -1,18 +1,14 @@
-/* Say what failed and what happens next. The block carries the failure; the
- * retry sits below it, outside — an action is not part of the diagnosis. */
+/* Say what failed and what happens next. Inline: the block carries the failure
+ * and the retry sits below it, outside — an action is not part of the
+ * diagnosis. Full-page: the same centred card <ErrorBoundary> uses, so a
+ * page-sized failure reads the same however it happened. */
 
-.container {
+.inline {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  padding: 24px 0;
-}
-
-.inline {
-  composes: container;
-  padding: 12px 0;
   gap: 6px;
+  padding: 12px 0;
 }
 
 .block {
@@ -55,4 +51,62 @@
 .retry {
   composes: btn btnSecondary btnSm from "../styles/controls.module.css";
   margin-top: 2px;
+}
+
+/* ─── Full-page card ────────────────────────────────────────────────────── */
+
+/* Mirrors ErrorBoundary: `margin: auto` on the card rather than centring here,
+   so a card taller than the column overflows downward and stays scrollable
+   instead of losing its top. */
+.wrap {
+  display: flex;
+  flex: 1;
+  min-height: 220px;
+}
+
+.panel {
+  margin: auto;
+  width: 100%;
+  max-width: 560px;
+  padding: 28px;
+  border: none;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: var(--e-card);
+  text-align: center;
+}
+
+.cardTitle {
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  margin: 0 0 16px;
+}
+
+.cardDetail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+  color: var(--status-error-fg);
+  background: var(--status-error-bg);
+  border-radius: var(--r-sunken);
+  padding: 10px 12px;
+  margin: 0 0 20px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.cardPrimary {
+  composes: btn btnPrimary from "../styles/controls.module.css";
+}
+
+.cardSecondary {
+  composes: btn btnSecondary from "../styles/controls.module.css";
 }

@@ -3,7 +3,6 @@ import type { UploadItem } from "./types";
 import styles from "./Prerolls.module.css";
 
 interface UploadDropzoneProps {
-  uploads: UploadItem[];
   disabled?: boolean;
   onFiles: (files: File[]) => void;
 }
@@ -11,8 +10,12 @@ interface UploadDropzoneProps {
 /**
  * Drag-and-drop target plus a hidden file input, following the trigger
  * pattern already used by Settings → Portal → Appearance.
+ *
+ * Progress lives in `UploadProgressList` rather than here: the dropzone sits
+ * in a modal now, and an upload that is still running has to stay visible on
+ * the page after that modal is dismissed.
  */
-export default function UploadDropzone({ uploads, disabled, onFiles }: UploadDropzoneProps) {
+export default function UploadDropzone({ disabled, onFiles }: UploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -22,64 +25,66 @@ export default function UploadDropzone({ uploads, disabled, onFiles }: UploadDro
   }
 
   return (
-    <div>
-      <div
-        className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
-        data-disabled={disabled ? "true" : undefined}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!disabled) setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          if (!disabled) handleFiles(e.dataTransfer.files);
-        }}
+    <div
+      className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
+      data-disabled={disabled ? "true" : undefined}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!disabled) setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        if (!disabled) handleFiles(e.dataTransfer.files);
+      }}
+    >
+      <p className={styles.dropzoneTitle}>Drop video files here</p>
+      <p className={styles.dropzoneHint}>MP4, MOV, MKV, WebM, AVI and friends — up to 2 GB each</p>
+      <button
+        type="button"
+        className={styles.dropzoneButton}
+        onClick={() => inputRef.current?.click()}
+        disabled={disabled}
       >
-        <p className={styles.dropzoneTitle}>Drop video files here</p>
-        <p className={styles.dropzoneHint}>MP4, MOV, MKV, WebM, AVI and friends — up to 2 GB each</p>
-        <button
-          type="button"
-          className={styles.dropzoneButton}
-          onClick={() => inputRef.current?.click()}
-          disabled={disabled}
-        >
-          Choose files
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="video/*"
-          multiple
-          hidden
-          onChange={(e) => {
-            handleFiles(e.target.files);
-            // Reset so re-picking the same file fires change again.
-            e.target.value = "";
-          }}
-        />
-      </div>
-
-      {uploads.length > 0 && (
-        <ul className={styles.uploadList}>
-          {uploads.map((upload) => (
-            <li key={upload.key} className={styles.uploadRow}>
-              <span className={styles.uploadName}>{upload.filename}</span>
-              {upload.error ? (
-                <span className={styles.uploadError}>{upload.error}</span>
-              ) : (
-                <>
-                  <span className={styles.progressBar}>
-                    <span className={styles.progressFill} style={{ width: `${Math.round(upload.progress * 100)}%` }} />
-                  </span>
-                  <span className={styles.uploadPercent}>{Math.round(upload.progress * 100)}%</span>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+        Choose files
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="video/*"
+        multiple
+        hidden
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          // Reset so re-picking the same file fires change again.
+          e.target.value = "";
+        }}
+      />
     </div>
+  );
+}
+
+/** In-flight uploads, on the page rather than in the modal that started them. */
+export function UploadProgressList({ uploads }: { uploads: UploadItem[] }) {
+  if (uploads.length === 0) return null;
+  return (
+    <ul className={styles.uploadList}>
+      {uploads.map((upload) => (
+        <li key={upload.key} className={styles.uploadRow}>
+          <span className={styles.uploadName}>{upload.filename}</span>
+          {upload.error ? (
+            <span className={styles.uploadError}>{upload.error}</span>
+          ) : (
+            <>
+              <span className={styles.progressBar}>
+                <span className={styles.progressFill} style={{ width: `${Math.round(upload.progress * 100)}%` }} />
+              </span>
+              <span className={styles.uploadPercent}>{Math.round(upload.progress * 100)}%</span>
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }

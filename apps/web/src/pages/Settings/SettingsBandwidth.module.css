@@ -141,16 +141,6 @@
 
 /* ─── History ─────────────────────────────────────────────────────────────── */
 
-/* The top margin is load-bearing: with `margin-top: 0` this heading sits flush
- * against whatever block precedes it and reads as that block's caption rather
- * than as the label for the chart below it. */
-.sectionTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-  margin: 24px 0 10px;
-}
-
 .chart {
   display: flex;
   align-items: flex-end;

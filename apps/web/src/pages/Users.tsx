@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
 import { UsersSkeleton } from "#components/Skeleton";
@@ -257,7 +258,15 @@ export default function Users() {
                         <td data-cell="meta">
                           {user.lastWatchedTitle ? (
                             <span>
-                              {user.lastWatchedTitle}
+                              {/* Rows synced before the rating key was recorded have a title but
+                                  nowhere to point — those stay plain text. */}
+                              {user.lastWatchedRatingKey ? (
+                                <Link to={`/media/${user.lastWatchedRatingKey}`} className={styles.lastWatchedLink}>
+                                  {user.lastWatchedTitle}
+                                </Link>
+                              ) : (
+                                user.lastWatchedTitle
+                              )}
                               {user.lastWatchedAt && (
                                 <span className={styles.hint}>
                                   {" "}
