@@ -281,12 +281,12 @@ export const SHOTS: Shot[] = [
     description: "Rule wizard step 3 — library sections and scope",
     path: "/rules",
     viewports: DESKTOP,
-    // Two Nexts, not one: Outcome sits between Type and Scope, because what a
-    // rule does decides what Scope asks it (a cleanup rule is never pinned).
+    // One Next. There used to be an Outcome step between Type and Scope, asking
+    // whether this was a rule or a cleanup; that is decided by the page you
+    // opened the wizard from now, and the trail is Type → Scope → Look → Review.
     steps: [
       { click: "Add Rule" },
       { clickText: "Build a collection per production company" },
-      { click: "Next" },
       { click: "Next" },
       { wait: "text=Sections" },
     ],
@@ -301,10 +301,10 @@ export const SHOTS: Shot[] = [
     description: "Rule wizard step 4 — description and poster, with a live render of the poster",
     path: "/rules",
     viewports: DESKTOP,
+    // Two Nexts for the same reason 3-scope takes one: Type → Scope → Look.
     steps: [
       { click: "Add Rule" },
       { clickText: "Group your highest-rated items in the library" },
-      { click: "Next" },
       { click: "Next" },
       { click: "Next" },
       { wait: "text=How should these collections look?" },
