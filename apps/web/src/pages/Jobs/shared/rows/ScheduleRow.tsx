@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { trpc } from "#/trpc";
-import { describeCron } from "#/utils";
+import CronPreview from "#components/CronPreview";
 import styles from "#pages/Jobs/Jobs.module.css";
 
 export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedule: string }) {
@@ -27,7 +27,9 @@ export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedu
   }, [editing, jobId, updateMutation]);
 
   const value = editing ?? schedule;
-  const help = error ?? describeCron(value) ?? "";
+  // Only the error and the plain-English gloss live here; the fire times come
+  // from CronPreview, which knows the schedule zone.
+  const help = error ?? "";
 
   return (
     <tr>
@@ -46,7 +48,8 @@ export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedu
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
         />
-        {help && <div className={error ? styles.fieldHelpError : styles.fieldHelp}>{help}</div>}
+        {help && <div className={styles.fieldHelpError}>{help}</div>}
+        {!error && <CronPreview expr={value} />}
       </td>
     </tr>
   );

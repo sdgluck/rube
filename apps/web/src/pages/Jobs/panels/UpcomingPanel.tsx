@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Cron } from "croner";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { formatTimeUntil } from "#/format";
+import { findScheduleCollisions } from "#lib/cron.ts";
 import styles from "#pages/Jobs/Jobs.module.css";
 import { useJobsData } from "#pages/Jobs/useJobsData";
 
@@ -31,6 +32,7 @@ export function useUpcomingRuns(limit = 8) {
 export function UpcomingPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const navigate = useNavigate();
   const upcoming = useUpcomingRuns();
+  const collisions = useMemo(() => findScheduleCollisions(upcoming), [upcoming]);
 
   // Countdowns are computed, not pushed — re-render on a slow tick so "in 15m"
   // doesn't sit there going stale between job list refetches.
@@ -67,6 +69,11 @@ export function UpcomingPanel({ dragHandle, dragProps }: DashboardPanelProps) {
       ) : (
         <div className={styles.muted}>No scheduled jobs</div>
       )}
+      {collisions.map((names) => (
+        <div key={names.join()} className={styles.muted}>
+          {names.join(", ")} all start at the same minute — they run one after another, not together.
+        </div>
+      ))}
     </PanelShell>
   );
 }

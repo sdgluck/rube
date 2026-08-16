@@ -14,6 +14,7 @@ import {
   volumeLevel,
 } from "@tinkerbell/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
+import CronPreview from "#components/CronPreview";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
@@ -881,6 +882,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 />{" "}
                 And skip the nightly job
               </label>
+              <CronPreview expr={s.cron} />
               <span className={styles.hint}>
                 A cron expression, evaluated in the timezone set under Settings → Schedules.{" "}
                 {s.excludeFromBatch
