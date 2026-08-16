@@ -2,7 +2,14 @@
  * Which services exist, which events each one wants, and how an event becomes
  * a delivered message.
  */
-import { getConfig, emitEventViaHook, errorMessage, type ConfigValue, type ConfigKey } from "@tinkerbell/core";
+import {
+  getConfig,
+  emitEventViaHook,
+  errorMessage,
+  isWithinClockWindow,
+  type ConfigValue,
+  type ConfigKey,
+} from "@tinkerbell/core";
 import {
   EVENT_TYPES,
   NOTIFICATION_SERVICES,
@@ -137,10 +144,48 @@ export function sendRichNotification(service: NotificationService, message: Rich
   return agent.send(message);
 }
 
+/**
+ * The one event allowed through quiet hours, when the exemption is on.
+ *
+ * A server that has been unreachable since 2am is the thing worth waking up
+ * for; without an exemption the honest choice is between being paged about a
+ * flapping *Arr and hearing nothing at all, and most people faced with that
+ * pick "nothing" and then miss the outage too.
+ */
+const URGENT_EVENTS = new Set(["plex.unreachable"]);
+
+/**
+ * Should delivery be suppressed right now?
+ *
+ * Suppression is delivery-only and deliberately late — the event is already
+ * recorded by the time this runs, so the activity feed in the morning is
+ * complete whatever the channels did overnight.
+ */
+export function suppressionReason(type: string, service: string | undefined, now: Date = new Date()): string | null {
+  if (service) {
+    const mutedUntil = getConfig("health_mutes")?.[service];
+    if (mutedUntil && mutedUntil > now.getTime() && (type.startsWith("health.") || URGENT_EVENTS.has(type))) {
+      return `${service} is muted`;
+    }
+  }
+
+  const quiet = getConfig("notifications_quiet_hours");
+  if (quiet?.enabled && isWithinClockWindow(quiet.from, quiet.to, now, getConfig("global_timezone") || undefined)) {
+    if (quiet.allowUrgent && URGENT_EVENTS.has(type)) return null;
+    return `quiet hours (${quiet.from}–${quiet.to})`;
+  }
+
+  return null;
+}
+
 export function notifyEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
   const label = EVENT_TYPES.find((e) => e.id === type)?.label ?? type;
   const jobId = typeof metadata?.jobId === "string" ? metadata.jobId : undefined;
   const healthService = typeof metadata?.service === "string" ? metadata.service : undefined;
+
+  // Checked once for the whole dispatch: quiet hours and mutes are statements
+  // about the server, not about any one channel.
+  if (suppressionReason(type, healthService)) return;
 
   for (const agent of AGENTS) {
     const enabledEvents = getConfig(agent.eventsKey);

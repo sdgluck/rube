@@ -86,6 +86,10 @@ export default function SettingsHealth() {
     { refetchInterval: 30000, refetchOnWindowFocus: false },
   );
 
+  const muteMutation = trpc.health.mute.useMutation({
+    onSettled: () => utils.health.status.invalidate(),
+  });
+
   const checkMutation = trpc.health.check.useMutation({
     onSettled: () => {
       utils.health.status.invalidate();
@@ -153,10 +157,33 @@ export default function SettingsHealth() {
                   <span className={styles.serviceName}>{svc.service}</span>
                   {uptimeStr && <span className={styles.serviceUptime}>{uptimeStr}</span>}
                   {svc.timestamp && <span className={styles.serviceTime}>{timeAgo(svc.timestamp)}</span>}
+                  {/* Said on the card, not only on the button: a muted
+                      service still shows a red dot, and "why didn't I hear
+                      about this" needs an answer visible from the list. */}
+                  {svc.mutedUntil && (
+                    <span className={styles.serviceTime}>
+                      muted until {new Date(svc.mutedUntil).toLocaleTimeString()}
+                    </span>
+                  )}
                 </div>
                 <div className={styles.serviceMessage}>{message}</div>
                 <Sparkline points={history} />
               </div>
+              {/* Beside Check because they are the two things you do to a
+                  service that is failing: look again, or stop being told
+                  about it while you go and fix it. */}
+              <button
+                className={styles.checkBtn}
+                disabled={muteMutation.isPending}
+                title={
+                  svc.mutedUntil
+                    ? `Muted until ${new Date(svc.mutedUntil).toLocaleString()}`
+                    : "Stop notifying about this service for 8 hours"
+                }
+                onClick={() => muteMutation.mutate({ service: svc.service, hours: svc.mutedUntil ? 0 : 8 })}
+              >
+                {svc.mutedUntil ? "Unmute" : "Mute 8h"}
+              </button>
               <button
                 className={styles.checkBtn}
                 disabled={isChecking}

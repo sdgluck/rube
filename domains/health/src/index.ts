@@ -3,7 +3,7 @@ import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { getEnvironment, getPlexPrerollStatus } from "@tinkerbell/domain.prerolls";
-import { getAllConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
+import { getAllConfig, getConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";
@@ -248,8 +248,54 @@ export async function checkAllConfiguredServices(signal?: AbortSignal): Promise<
   return `Checked ${configured.length} service(s): ${results.join("; ")}`;
 }
 
+/**
+ * Consecutive error checks, most recent first.
+ *
+ * Reads a bounded window rather than a service's whole history: the answer is
+ * only ever compared against a threshold capped at 20, so anything past that
+ * is the same answer.
+ */
+function consecutiveFailures(service: string, limit: number): number {
+  const rows = db
+    .select({ status: healthChecks.status })
+    .from(healthChecks)
+    .where(eq(healthChecks.service, service))
+    .orderBy(desc(healthChecks.timestamp))
+    .limit(limit)
+    .all();
+  let count = 0;
+  for (const row of rows) {
+    if (row.status !== "error") break;
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Record a check, and announce the transitions worth announcing.
+ *
+ * With a threshold of 1 — the default, and what every existing install has —
+ * this is exactly the old behaviour: announce on the ok→error edge, announce
+ * the recovery on error→ok.
+ *
+ * Above 1, the edge stops being the trigger and the count becomes it. Two
+ * things follow, and getting either wrong is worse than not having the
+ * feature. The failure is announced on the run that *reaches* the threshold
+ * and not after, so a service that stays down produces one message rather
+ * than one an hour. And the recovery is announced only if the outage it ends
+ * was itself announced — otherwise raising the threshold would turn a
+ * flapping service from noisy in both directions into silent when it breaks
+ * and chatty when it returns, which is the worst of both.
+ *
+ * The count comes from the table, never from memory: a restart mid-outage
+ * must not reset the streak and re-announce, and the process running this is
+ * restarted by every upgrade.
+ */
 export function reportHealth(service: string, status: "ok" | "error", message: string): void {
-  // Check previous status for this service to detect transitions
+  const threshold = getConfig("health_failure_threshold") ?? 1;
+
+  // Read before the insert: `priorFailures` is the state the streak was in
+  // when this check ran, which is what decides whether anything is announced.
   const prev = db
     .select({ status: healthChecks.status })
     .from(healthChecks)
@@ -257,11 +303,15 @@ export function reportHealth(service: string, status: "ok" | "error", message: s
     .orderBy(desc(healthChecks.timestamp))
     .limit(1)
     .get();
+  const priorFailures = threshold > 1 ? consecutiveFailures(service, threshold) : prev?.status === "error" ? 1 : 0;
 
   db.insert(healthChecks).values({ service, status, message, timestamp: Date.now() }).run();
 
-  if (prev) {
-    if (prev.status === "ok" && status === "error") {
+  // Nothing to compare against on a service's very first check.
+  if (!prev) return;
+
+  if (status === "error") {
+    if (priorFailures + 1 === threshold) {
       emitEvent("health.failed", `${service}: ${message}`, { service });
       // Plex going away stops every job, every rule and the portal, so it gets
       // its own event type on top of the generic one — a user who routes
@@ -271,9 +321,9 @@ export function reportHealth(service: string, status: "ok" | "error", message: s
       if (service === "Plex") {
         emitEvent("plex.unreachable", `Plex is unreachable: ${message}`, { service });
       }
-    } else if (prev.status === "error" && status === "ok") {
-      emitEvent("health.recovered", `${service} recovered`, { service });
     }
+  } else if (priorFailures >= threshold) {
+    emitEvent("health.recovered", `${service} recovered`, { service });
   }
 }
 

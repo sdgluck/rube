@@ -251,6 +251,47 @@ export const configSchema = z.object({
     to: z.string(),
   }),
   /**
+   * Hours during which nothing is sent to any notification channel.
+   *
+   * The events still happen and are still recorded — this suppresses delivery
+   * only, so the activity feed in the morning is complete. Evaluated in the
+   * scheduler's timezone, and an end before the start spans midnight, which is
+   * what an overnight quiet period always means.
+   *
+   * `allowUrgent` lets `plex.unreachable` through regardless. A server that
+   * has been down since 2am is the one thing worth waking up for, and without
+   * an exemption the honest choice is between being paged about a flapping
+   * *Arr and hearing nothing at all.
+   */
+  notifications_quiet_hours: z.object({
+    enabled: z.boolean(),
+    from: z.string(),
+    to: z.string(),
+    allowUrgent: z.boolean(),
+  }),
+  /**
+   * How many consecutive failed checks a service must record before
+   * `health.failed` is emitted.
+   *
+   * 1 preserves the original behaviour and is the default. Higher values are
+   * for the services that flap: an *Arr that refuses one request in fifty
+   * produced a failure and a recovery every hour, which trains people to
+   * ignore the channel those land in.
+   *
+   * The event still fires on the transition only — raising this delays the
+   * announcement, it does not repeat it.
+   */
+  health_failure_threshold: z.number().int().min(1).max(20),
+  /**
+   * Per-service mutes, as `service -> epoch ms until which it stays quiet`.
+   *
+   * For the service you already know is broken and are in the middle of
+   * fixing. Expiry is a timestamp rather than a flag so a mute cannot be left
+   * on for ever by accident — which is the failure mode that makes people
+   * distrust the whole health feature.
+   */
+  health_mutes: z.record(z.string(), z.number()),
+  /**
    * Whether the server owner counts towards "watched by everyone".
    *
    * Off by default: the owner is usually the person curating the library

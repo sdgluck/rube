@@ -36,6 +36,15 @@ export default function SettingsNotifications() {
     <div>
       <SettingsPageHeader title="Notifications" />
       <nav className={styles.subTabs} aria-label="Notification services">
+        {/* First, and not a service: quiet hours and the failure threshold
+            apply to every destination, so they belong beside them rather than
+            repeated on each one. */}
+        <NavLink
+          to="/settings/notifications/delivery"
+          className={({ isActive }) => `${styles.subTab} ${isActive ? styles.subTabActive : ""}`}
+        >
+          Delivery
+        </NavLink>
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}
