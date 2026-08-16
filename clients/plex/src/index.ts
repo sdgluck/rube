@@ -21,8 +21,11 @@ import type { PlexClientOptions } from "./types.ts";
 export { PREROLL_PREF_ID } from "./prefs.ts";
 export { PlexApiError } from "./http.ts";
 
-export { SECTION_TYPE_MAP } from "./types.ts";
+export { SECTION_TYPE_MAP, COLLECTION_MODES, COLLECTION_SORTS } from "./types.ts";
 export type {
+  CollectionMode,
+  CollectionSort,
+  CollectionPrefs,
   PlexSection,
   PlexHub,
   PlexItem,

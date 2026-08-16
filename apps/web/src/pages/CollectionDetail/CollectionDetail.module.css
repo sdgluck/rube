@@ -1,0 +1,483 @@
+/**
+ * Layout only. Every colour, control and surface here comes from a token or a
+ * primitive — what this file owns is the hero's grid, the strips that sit
+ * under it, and the poster's hover affordance.
+ *
+ * The hero exists to fix a hierarchy problem: the old page put the title, six
+ * chips, a label input and a summary field at one level, so nothing read as
+ * primary. Here the title is the only large thing, facts are a quiet dot-joined
+ * line, and the controls that edit them stay invisible until they are wanted.
+ */
+
+/* ─── Hero ────────────────────────────────────────────────────────────────── */
+
+.hero {
+  display: grid;
+  grid-template-columns: 148px 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.posterFrame {
+  position: relative;
+  border-radius: var(--r-sunken);
+  overflow: hidden;
+  box-shadow: var(--e-card);
+  aspect-ratio: 2 / 3;
+}
+
+.posterImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.posterEmpty {
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 8px, var(--checker-b) 8px 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  font: var(--t-caption);
+}
+
+/* The affordance is the image itself. A permanent "Change poster" button under
+   the poster would be a fourth control competing in a header that already had
+   too many; on a touch screen there is no hover, so it stays visible there. */
+.posterChange {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 10px;
+  border: 0;
+  cursor: pointer;
+  background: linear-gradient(to top, var(--scrim) 0%, transparent 55%);
+  color: var(--on-dark);
+  font: var(--t-data);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.posterFrame:hover .posterChange,
+.posterChange:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .posterChange {
+    opacity: 1;
+  }
+}
+
+.heroMain {
+  min-width: 0;
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── The quiet facts line ────────────────────────────────────────────────── */
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font: var(--t-data);
+  color: var(--ink-2);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.metaDot {
+  display: inline-block;
+  margin: 0 8px;
+  color: var(--ink-3);
+  opacity: 0.6;
+}
+
+/* Chips are now reserved for state that is categorical — smart, pinned, the
+   owning rule — rather than being the format every fact was forced into. */
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* ─── Labels ──────────────────────────────────────────────────────────────── */
+
+.labelRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+  min-height: 24px;
+}
+
+/* The add-label input used to be the most prominent control on the page. It
+   earns its space only once someone is looking at the labels. */
+.labelAdd {
+  opacity: 0;
+  transition: opacity 0.15s;
+  max-width: 150px;
+}
+
+.labelRow:hover .labelAdd,
+.labelRow:focus-within .labelAdd {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .labelAdd {
+    opacity: 1;
+  }
+}
+
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+
+.tabsRow {
+  margin-bottom: 16px;
+}
+
+/* ─── Items toolbar ───────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbarSpacer {
+  flex: 1;
+}
+
+/* ─── Stats strip ─────────────────────────────────────────────────────────── */
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  box-shadow: var(--e-flat);
+  border-radius: var(--r-sunken);
+  overflow: hidden;
+}
+
+.statCell {
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.statValue {
+  font: var(--t-metric);
+  color: var(--ink);
+  display: block;
+}
+
+.statLabel {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-top: 4px;
+  display: block;
+}
+
+/* ─── Two-column settings rows ────────────────────────────────────────────── */
+
+.settingRow {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: 12px 20px;
+  align-items: start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.settingRow:last-child {
+  border-bottom: 0;
+}
+
+.settingName {
+  font: var(--t-body);
+  color: var(--ink);
+}
+
+/* Block, because this also sits inside a radio's label, where an inline span
+   would run straight on from the option name. */
+.settingHelp {
+  display: block;
+  font: var(--t-caption);
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+
+/* ─── Related collections ─────────────────────────────────────────────────── */
+
+.relatedRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
+}
+
+.relatedItem {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.relatedPoster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--r-sunken);
+  box-shadow: var(--e-card);
+  display: block;
+}
+
+/* A collection with no artwork still holds its slot. Without this the row
+   collapses into ragged gaps wherever a poster is missing, which reads as a
+   broken grid rather than as art nobody has set yet. */
+.relatedEmpty {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--r-sunken);
+  box-shadow: var(--e-card);
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 8px, var(--checker-b) 8px 16px);
+  display: block;
+}
+
+.relatedTitle {
+  font: var(--t-caption);
+  color: var(--ink-2);
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relatedItem:hover .relatedTitle {
+  color: var(--accent-text);
+}
+
+/* ─── Provenance list ─────────────────────────────────────────────────────── */
+
+.factRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font: var(--t-body-sm);
+}
+
+.factRow:last-child {
+  border-bottom: 0;
+}
+
+.factName {
+  color: var(--ink-3);
+}
+
+.factValue {
+  color: var(--ink);
+  text-align: right;
+}
+
+/* ─── Poster studio ───────────────────────────────────────────────────────── */
+
+.studio {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.studioPreview {
+  width: 200px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--r-sunken);
+  box-shadow: var(--e-card);
+  object-fit: cover;
+  display: block;
+}
+
+.studioPlaceholder {
+  width: 200px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--r-sunken);
+  box-shadow: var(--e-flat);
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  color: var(--ink-faint);
+  font: var(--t-caption);
+}
+
+.studioPane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.choiceList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font: var(--t-body-sm);
+  color: var(--ink);
+}
+
+.choice:hover {
+  background: var(--fill-hover);
+}
+
+.candidateRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.candidate {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--r-sunken);
+  overflow: hidden;
+  box-shadow: var(--e-flat);
+}
+
+.candidateSelected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.candidateImg {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+.dropZone {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sunken);
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--ink-3);
+  font: var(--t-body-sm);
+  cursor: pointer;
+}
+
+.dropZone:hover {
+  border-color: var(--line-accent);
+  color: var(--ink-2);
+}
+
+/* ─── Add-items picker ────────────────────────────────────────────────────── */
+
+.pickList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface-sunken);
+  max-height: 380px;
+  overflow-y: auto;
+  border-radius: var(--r-sunken);
+}
+
+.pickItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  cursor: pointer;
+  font: var(--t-body-sm);
+  color: var(--ink);
+}
+
+.pickItem:hover {
+  background: var(--fill-hover);
+}
+
+.pickThumb {
+  width: 32px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--r-tag);
+  flex-shrink: 0;
+}
+
+.pickYear {
+  margin-left: auto;
+  color: var(--ink-3);
+  font: var(--t-caption);
+}
+
+/* ─── Narrow screens ──────────────────────────────────────────────────────── */
+
+@media (width <= 700px) {
+  .hero {
+    grid-template-columns: 104px 1fr;
+    gap: 14px;
+  }
+
+  .heroTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .studio {
+    grid-template-columns: 1fr;
+  }
+
+  .studioPreview,
+  .studioPlaceholder {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .settingRow {
+    grid-template-columns: 1fr;
+  }
+}

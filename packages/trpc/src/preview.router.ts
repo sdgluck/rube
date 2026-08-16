@@ -15,6 +15,17 @@ function previewKey(userId: number | null, sectionId: number | null, count: numb
   return `${userId ?? "admin"}:${sectionId ?? "all"}:${count}`;
 }
 
+/**
+ * Drop every cached home preview.
+ *
+ * Exported because pinning is no longer only this router's business — the
+ * collection detail page pins and unpins too, and a stale preview that still
+ * shows a hub the user just removed is the same bug whichever page caused it.
+ */
+export function clearPreviewCache(): void {
+  previewCache.clear();
+}
+
 export const previewRouter = t.router({
   home: procedure
     .input(

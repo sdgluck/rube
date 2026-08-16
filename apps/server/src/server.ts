@@ -26,6 +26,7 @@ import { getLocalCollections } from "@tinkerbell/domain.collections";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
 import { clientIp, rejectIfNotAdmin } from "./auth.ts";
+import { handleCollectionRoute } from "./collections.ts";
 import { handlePrerollRoute } from "./prerolls.ts";
 import { guarded, sendFetchResponse, toFetchRequest } from "./http.ts";
 
@@ -181,6 +182,19 @@ const server = createServer(
       } catch (err) {
         if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
+        return;
+      }
+    }
+
+    // Collection poster upload — binary with a progress bar, which the tRPC
+    // batch link can't carry. Gated: it writes to the Plex server.
+    if (path.startsWith("/api/collections/")) {
+      if (rejectIfNotAdmin(req, res)) return;
+      try {
+        if (await handleCollectionRoute(req, res, url)) return;
+      } catch (err) {
+        if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: errorMessage(err) }));
         return;
       }
     }

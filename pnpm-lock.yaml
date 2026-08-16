@@ -81,6 +81,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -108,6 +111,9 @@ importers:
       '@tinkerbell/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@tinkerbell/posters':
+        specifier: workspace:*
+        version: link:../../packages/posters
       '@tinkerbell/trpc':
         specifier: workspace:*
         version: link:../../packages/trpc

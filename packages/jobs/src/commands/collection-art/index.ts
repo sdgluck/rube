@@ -37,6 +37,7 @@ interface Totals {
   considered: number;
   postersUploaded: number;
   postersUnchanged: number;
+  postersLocked: number;
   summariesWritten: number;
   summariesLocked: number;
   failures: number;
@@ -74,6 +75,7 @@ export default async function run(ctx: JobContext, config: CollectionArtJobConfi
     considered: 0,
     postersUploaded: 0,
     postersUnchanged: 0,
+    postersLocked: 0,
     summariesWritten: 0,
     summariesLocked: 0,
     failures: 0,
@@ -136,6 +138,7 @@ export default async function run(ctx: JobContext, config: CollectionArtJobConfi
   ctx.log(
     `\nDone. ${totals.considered} collection(s) considered — ` +
       `${totals.postersUploaded} poster(s) uploaded, ${totals.postersUnchanged} unchanged, ` +
+      `${totals.postersLocked} left alone (chosen by hand), ` +
       `${totals.summariesWritten} summary/summaries written, ${totals.summariesLocked} left alone (edited in Plex), ` +
       `${totals.failures} failure(s).`,
   );
@@ -180,6 +183,19 @@ async function processCollection(ctx: JobContext, client: PlexClient, work: Coll
   }
 
   if (presentation.poster === "none") return;
+
+  // Somebody chose this poster in the app. Checked before the member art is
+  // fetched and the image rendered, because neither is worth doing for an
+  // upload that isn't going to happen.
+  //
+  // `force` deliberately doesn't override it: the summary lock isn't a cache
+  // that a forced run should bust, and neither is this — it records a person's
+  // decision, and the way to undo it is to pick a different poster.
+  if (ledger?.posterLockedAt) {
+    totals.postersLocked++;
+    ctx.log(`Poster for "${name}" was chosen by hand — leaving it alone.`);
+    return;
+  }
 
   const { buffers, keys } = await fetchMemberPosters(client, members, ctx.signal);
   const built = await buildCollectionPoster({

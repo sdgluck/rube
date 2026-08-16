@@ -26,6 +26,7 @@ export {
   type Rgb,
 } from "./palette.ts";
 export { fetchPosterUrl, type PosterUrlFetch } from "./fetch-url.ts";
+export { normalizePosterUpload, type PosterUpload } from "./upload.ts";
 export { createPosterCache } from "./cache.ts";
 export type {
   FetchResult,

@@ -19,7 +19,7 @@ setupTempDb("tinkerbell-collection-art-");
 
 const { db, rules, collectionArtwork } = await import("@tinkerbell/db");
 const { deleteConfig, setConfig, noopCheckpoint } = await import("@tinkerbell/core");
-const { getCollectionArtwork } = await import("@tinkerbell/domain.collections");
+const { getCollectionArtwork, recordCollectionArtwork } = await import("@tinkerbell/domain.collections");
 const { startMockPlex } = await import("../../test-support/mock-plex-server.ts");
 const run = (await import("./index.ts")).default;
 
@@ -210,6 +210,24 @@ describe("collection-art", () => {
 
     await run(testContext().ctx, {});
     assert.equal(plex.journal.posterUploads.length, 2, "new member art must produce a new poster");
+  });
+
+  it("leaves a poster somebody chose in the app alone, even when forced", async () => {
+    seedRule({ poster: "mosaic" });
+    seedCollections(["1980s"]);
+
+    await run(testContext().ctx, {});
+    assert.equal(plex.journal.posterUploads.length, 1);
+
+    // What the poster studio records when a person picks, uploads or renders
+    // one by hand. The blank input hash is part of it: without the lock, that
+    // alone would make the next run believe it had work to do.
+    recordCollectionArtwork(RULE_ID, "1980s", { posterLockedAt: Date.now(), inputHash: "" });
+
+    const { ctx, log } = testContext();
+    await run(ctx, { force: true });
+    assert.equal(plex.journal.posterUploads.length, 1, "a locked poster must survive even a forced run");
+    assert.match(log.join("\n"), /1 left alone \(chosen by hand\)/);
   });
 
   it("records the artwork a collection already had, once, for the revert affordance", async () => {

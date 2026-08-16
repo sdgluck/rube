@@ -326,6 +326,13 @@ export const collectionArtwork = sqliteTable(
     summaryLockedAt: integer("summary_locked_at"),
     posterUploadedAt: integer("poster_uploaded_at"),
     /**
+     * Set when a person chose this collection's poster by hand, in the app.
+     * The symmetric case to `summaryLockedAt`, and for the same reason: a
+     * nightly job that silently replaces artwork somebody picked is worse than
+     * one that never offered to set it.
+     */
+    posterLockedAt: integer("poster_locked_at"),
+    /**
      * Whether the collection already had artwork before Tinkerbell first
      * uploaded to it, and where. Collections are recreated each run, so
      * "revert" mostly means "stop uploading" — but the affordance has to be

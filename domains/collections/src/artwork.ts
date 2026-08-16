@@ -44,6 +44,7 @@ export function recordCollectionArtwork(ruleId: string, collectionName: string, 
       summaryConfigHash: patch.summaryConfigHash ?? "",
       summaryLockedAt: patch.summaryLockedAt ?? null,
       posterUploadedAt: patch.posterUploadedAt ?? null,
+      posterLockedAt: patch.posterLockedAt ?? null,
       priorThumb: patch.priorThumb ?? "",
       updatedAt: now,
     })

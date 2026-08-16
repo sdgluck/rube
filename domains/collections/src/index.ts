@@ -18,6 +18,9 @@ export {
 } from "./artwork.ts";
 export type { CollectionArtworkRow } from "./artwork.ts";
 
+export { getCollectionStats } from "./stats.ts";
+export type { CollectionStats } from "./stats.ts";
+
 interface SyncStats {
   synced: number;
   removed: number;

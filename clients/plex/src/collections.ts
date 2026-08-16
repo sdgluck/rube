@@ -3,6 +3,11 @@ import { PlexApiError, type PlexHttp } from "./http.ts";
 import {
   PLEX_COLLECTION_TYPE,
   SECTION_TYPE_MAP,
+  COLLECTION_MODES,
+  COLLECTION_SORTS,
+  type CollectionMode,
+  type CollectionPrefs,
+  type CollectionSort,
   type PlexItem,
   type PlexCollection,
   type PlexCollectionDetail,
@@ -20,6 +25,31 @@ const DELETE_CONCURRENCY = 4;
 /** True for the 404 Plex returns once a ratingKey no longer exists. */
 function isGone(err: unknown): boolean {
   return err instanceof PlexApiError && err.status === 404;
+}
+
+/**
+ * The `server://…` URI Plex wants whenever items are named as the *content* of
+ * something — creating a collection, or adding to one. Not a URL: the machine
+ * identifier addresses the server to itself, and the rating keys are a single
+ * comma-joined path segment rather than a list parameter.
+ */
+function libraryUri(machineId: string, ratingKeys: string[]): string {
+  return `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
+}
+
+/**
+ * Plex serves prefs as strings and omits them entirely when they've never been
+ * set. Anything we don't recognise becomes the library default rather than a
+ * number that would later be PUT back as a mode Plex doesn't have.
+ */
+function readMode(raw: unknown): CollectionMode {
+  const n = Number(raw);
+  return (COLLECTION_MODES as readonly number[]).includes(n) ? (n as CollectionMode) : -1;
+}
+
+function readSort(raw: unknown): CollectionSort {
+  const n = Number(raw);
+  return (COLLECTION_SORTS as readonly number[]).includes(n) ? (n as CollectionSort) : 0;
 }
 
 export function createCollectionsModule(http: PlexHttp) {
@@ -82,6 +112,8 @@ export function createCollectionsModule(http: PlexHttp) {
       smart: meta.smart === "1" || meta.smart === 1 || meta.smart === true,
       content: meta.content || "",
       addedAt: meta.addedAt,
+      collectionMode: readMode(meta.collectionMode),
+      collectionSort: readSort(meta.collectionSort),
     };
   }
 
@@ -212,7 +244,7 @@ export function createCollectionsModule(http: PlexHttp) {
   ): Promise<string | null> {
     if (ratingKeys.length === 0) return null;
 
-    const uri = `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
+    const uri = libraryUri(machineId, ratingKeys);
 
     const data = await http.request("/library/collections", {
       method: "POST",
@@ -270,7 +302,51 @@ export function createCollectionsModule(http: PlexHttp) {
     });
   }
 
+  /**
+   * Adds items to a static collection. The same endpoint smart collections use
+   * for their filter URI — with a `server://` item URI it appends rather than
+   * replaces, so this is additive and re-adding an existing member is a no-op
+   * on Plex's side rather than a duplicate.
+   *
+   * Only meaningful for static collections. A smart collection's membership is
+   * its filter, and a PUT here would replace that filter with a fixed list —
+   * callers guard before reaching this.
+   */
+  async function addCollectionItems(ratingKey: string, machineId: string, itemRatingKeys: string[]): Promise<void> {
+    if (itemRatingKeys.length === 0) return;
+    await http.request(`/library/collections/${ratingKey}/items`, {
+      method: "PUT",
+      params: { uri: libraryUri(machineId, itemRatingKeys) },
+    });
+  }
+
+  /**
+   * Removes one item. Reports whether it was actually there: a key already
+   * absent isn't a failure — it's the state the caller asked for — but a bulk
+   * remove that says "31 removed" when it removed 28 is lying.
+   */
+  async function removeCollectionItem(ratingKey: string, itemRatingKey: string): Promise<boolean> {
+    try {
+      await http.request(`/library/collections/${ratingKey}/children/${itemRatingKey}`, { method: "DELETE" });
+      return true;
+    } catch (err) {
+      if (isGone(err)) return false;
+      throw err;
+    }
+  }
+
+  async function setCollectionPrefs(ratingKey: string, prefs: CollectionPrefs): Promise<void> {
+    const params: Record<string, number> = {};
+    if (prefs.collectionMode !== undefined) params.collectionMode = prefs.collectionMode;
+    if (prefs.collectionSort !== undefined) params.collectionSort = prefs.collectionSort;
+    if (Object.keys(params).length === 0) return;
+    await http.request(`/library/metadata/${ratingKey}/prefs`, { method: "PUT", params });
+  }
+
   return {
+    addCollectionItems,
+    removeCollectionItem,
+    setCollectionPrefs,
     getCollections,
     getCollectionsWithLabels,
     getCollectionLabels,

@@ -1,0 +1,1 @@
+ALTER TABLE `collection_artwork` ADD `poster_locked_at` integer;

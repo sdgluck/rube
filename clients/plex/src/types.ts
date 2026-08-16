@@ -76,6 +76,27 @@ export interface PlexCollectionDetail {
   /** Smart-collection filter URI (`/library/sections/N/all?…`). Empty for non-smart collections. */
   content: string;
   addedAt?: number;
+  /** How the collection's items appear in the library. `-1` is "use the library default". */
+  collectionMode: CollectionMode;
+  /** The order Plex serves the collection's children in. */
+  collectionSort: CollectionSort;
+}
+
+/**
+ * Plex's `collectionMode` pref, verbatim. `-1` is not "unset" — it is the
+ * library's own default, which is a distinct third state from "hide" and
+ * "show", so it round-trips rather than being normalised away.
+ */
+export const COLLECTION_MODES = [-1, 0, 1, 2] as const;
+export type CollectionMode = (typeof COLLECTION_MODES)[number];
+
+/** Plex's `collectionSort` pref: release date, alphabetical, or hand-ordered. */
+export const COLLECTION_SORTS = [0, 1, 2] as const;
+export type CollectionSort = (typeof COLLECTION_SORTS)[number];
+
+export interface CollectionPrefs {
+  collectionMode?: CollectionMode;
+  collectionSort?: CollectionSort;
 }
 
 export interface PlexLabel {
