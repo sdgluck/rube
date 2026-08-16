@@ -10,6 +10,7 @@ import {
   type RuleConfig,
 } from "@tinkerbell/contracts";
 import { bufferLog } from "./log-buffer.ts";
+import { tagResolverFor } from "./tag-labels.ts";
 
 /**
  * How many collections may be committed at once. Each commit is five-odd
@@ -115,6 +116,7 @@ async function applySummary(
   if (!opts.ruleId) return;
   const presentation: PresentationConfig = resolvePresentation(opts.ruleConfig);
 
+  const resolveTag = await tagResolverFor(client, opts.section.key, opts.ruleConfig?.smartFilter);
   const resolved = resolveCollectionSummary(presentation, {
     ruleType: opts.ruleType,
     collectionName: opts.name,
@@ -122,6 +124,7 @@ async function applySummary(
     itemCount: opts.ratingKeys.length,
     sourceSummary: opts.sourceSummary,
     config: opts.ruleConfig,
+    resolveTag,
   });
   if (!resolved) return;
 

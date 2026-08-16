@@ -71,6 +71,8 @@ export {
   UNSET,
 } from "./smart-filter-format.ts";
 export type { RelativeDate, RelativeUnit } from "./smart-filter-format.ts";
+export { narrateSmartFilter, needsTagLookup } from "./smart-filter-narrate.ts";
+export type { NarrateOptions, TagResolver } from "./smart-filter-narrate.ts";
 
 export {
   COLLECTION_POSTER_HEIGHT,

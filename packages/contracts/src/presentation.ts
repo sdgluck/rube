@@ -11,6 +11,7 @@
 import { z } from "zod";
 import type { SmartFilterGroup, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
 import { describeCondition } from "./smart-filter-format.ts";
+import { narrateSmartFilter, type TagResolver } from "./smart-filter-narrate.ts";
 
 // ─── Poster templates ───────────────────────────────────────────────────────
 
@@ -158,12 +159,28 @@ export interface CollectionSummaryContext {
   sourceSummary?: string;
   /** The rule's parsed config, for the types whose summary depends on it. */
   config?: { smartFilter?: SmartFilterGroup; listProvider?: string; listId?: string; filter?: string };
+  /**
+   * Turns a per-server tag key into its title. Without one a smart filter's
+   * summary says "genre is 1204" — accurate, unreadable, and written to
+   * somebody's library. Callers with a Plex client should supply it.
+   */
+  resolveTag?: TagResolver;
 }
 
 /** "Films" / "Series" / "Titles", matching the library this collection is in. */
 function plural(sectionType: string | undefined, capitalised = true): string {
   const word = sectionType === "movie" ? "Films" : sectionType === "show" ? "Series" : "Titles";
   return capitalised ? word : word.toLowerCase();
+}
+
+/**
+ * Field labels start a clause capitalised, which is right in the wizard's
+ * review pane and wrong mid-sentence. Only clause starts — the beginning, and
+ * whatever follows a connector or an open bracket — are lowered, so tag titles
+ * ("Horror", "HBO") keep their capitals.
+ */
+function lowerClauseStarts(text: string): string {
+  return text.replace(/(^|and |or |\()([A-Z])/g, (_m, lead: string, letter: string) => lead + letter.toLowerCase());
 }
 
 /** `1980s` → `[1980, 1989]`. Null for anything that isn't a decade label. */
@@ -183,9 +200,12 @@ function decadeRange(name: string): [number, number] | null {
  * prose, because it ends up inside a sentence in a collection's description
  * and in the prompt an LLM is asked to write one from.
  */
-export function describeSmartFilter(node: SmartFilterNode, isRoot = true): string {
-  if (node.kind === "leaf") return describeCondition(node.field, node.op, [node.value]);
-  const parts = node.children.map((child) => describeSmartFilter(child, false)).filter(Boolean);
+export function describeSmartFilter(node: SmartFilterNode, isRoot = true, resolveTag?: TagResolver): string {
+  if (node.kind === "leaf") {
+    const resolved = resolveTag ? [resolveTag(node.field, node.value)] : undefined;
+    return describeCondition(node.field, node.op, [node.value], resolved);
+  }
+  const parts = node.children.map((child) => describeSmartFilter(child, false, resolveTag)).filter(Boolean);
   if (parts.length === 0) return "";
   const joined = parts.join(node.combinator === "all" ? " and " : " or ");
   return isRoot || parts.length === 1 ? joined : `(${joined})`;
@@ -273,8 +293,14 @@ export function templatedCollectionSummary(input: CollectionSummaryContext): str
     case "smart_filter": {
       const filter = input.config?.smartFilter;
       if (!filter) return null;
-      const described = describeSmartFilter(filter);
-      return described ? `${many} where ${described.toLowerCase()}.` : null;
+      // Prose first — this ends up under a collection's title in Plex, read by
+      // somebody who doesn't know a filter is involved. A tree that doesn't
+      // decompose into a sentence gets the clause-by-clause restatement, which
+      // is stiff but never wrong about what the filter matches.
+      const narrated = narrateSmartFilter(filter, { noun: manyLower, resolveTag: input.resolveTag });
+      if (narrated) return narrated;
+      const described = describeSmartFilter(filter, true, input.resolveTag);
+      return described ? `${many} matching ${lowerClauseStarts(described)}.` : null;
     }
     case "ai_prompt":
       // The AI wrote the collection's name and picked its members; a template

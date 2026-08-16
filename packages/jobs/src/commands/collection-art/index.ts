@@ -30,6 +30,7 @@ import {
 } from "@tinkerbell/domain.collections";
 import { isCleanupRule, resolvePresentation, type PresentationConfig, type RuleConfig } from "@tinkerbell/contracts";
 import { parseRuleConfig } from "../generate/config.ts";
+import { tagResolverFor } from "../generate/tag-labels.ts";
 import { buildCollectionPoster, fetchMemberPosters, posterAlreadyUploaded } from "./poster.ts";
 import { describeRuleFilter, llmSummaryUnavailable, SAMPLE_TITLES, writeLlmSummary } from "./summary.ts";
 
@@ -281,7 +282,10 @@ async function applyLlmSummary(
       ruleName: work.rule.name,
       ruleType: work.rule.type,
       collectionName: work.name,
-      filterText: describeRuleFilter(work.ruleConfig),
+      filterText: describeRuleFilter(
+        work.ruleConfig,
+        await tagResolverFor(client, work.section.key, work.ruleConfig.smartFilter),
+      ),
       sampleTitles: members.slice(0, SAMPLE_TITLES).map((m) => m.title),
       signal: ctx.signal,
     });

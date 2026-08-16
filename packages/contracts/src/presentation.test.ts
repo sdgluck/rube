@@ -89,8 +89,29 @@ describe("templatedCollectionSummary", () => {
         },
       },
     });
-    assert.equal(withFilter, "Films where genre is horror and year is at least 2000.");
+    assert.equal(withFilter, "Horror films from 2000 onwards.");
     assert.equal(templatedCollectionSummary({ ruleType: "smart_filter", collectionName: "Modern Horror" }), null);
+  });
+
+  it("restates a filter it can't turn into prose, rather than guessing at one", () => {
+    // A top-level `or` across two fields: no sentence means the same thing.
+    const text = templatedCollectionSummary({
+      ruleType: "smart_filter",
+      collectionName: "Mixed",
+      sectionType: "movie",
+      config: {
+        smartFilter: {
+          kind: "group",
+          combinator: "any",
+          children: [
+            { kind: "leaf", field: "genre", op: "=", value: "1204" },
+            { kind: "leaf", field: "addedAt", op: ">=", value: "-7d" },
+          ],
+        },
+      },
+      resolveTag: (_field, value) => (value === "1204" ? "Horror" : value),
+    });
+    assert.equal(text, "Films matching genre is Horror or date added in the last 7 days.");
   });
 
   it("never returns a string containing an obvious hole", () => {

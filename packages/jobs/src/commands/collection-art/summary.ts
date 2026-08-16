@@ -13,7 +13,7 @@
 import { createLlmClient } from "@tinkerbell/llm";
 import { errorMessage, getLlmConfig } from "@tinkerbell/core";
 import { reportHealth } from "@tinkerbell/domain.health";
-import { describeSmartFilter, type RuleConfig } from "@tinkerbell/contracts";
+import { describeSmartFilter, type RuleConfig, type TagResolver } from "@tinkerbell/contracts";
 
 /** Titles handed to the model. Ten is enough to characterise a collection. */
 export const SAMPLE_TITLES = 10;
@@ -35,11 +35,16 @@ export interface LlmSummaryRequest {
   signal?: AbortSignal;
 }
 
-/** The rule's smart filter as one English sentence, or undefined. */
-export function describeRuleFilter(config: RuleConfig): string | undefined {
+/**
+ * The rule's smart filter as one English sentence, or undefined.
+ *
+ * `resolveTag` matters more here than anywhere: the model is being asked to
+ * write prose from this line, and "genre is 1204" tells it nothing at all.
+ */
+export function describeRuleFilter(config: RuleConfig, resolveTag?: TagResolver): string | undefined {
   const filter = config.smartFilter;
   if (!filter) return undefined;
-  return describeSmartFilter(filter) || undefined;
+  return describeSmartFilter(filter, true, resolveTag) || undefined;
 }
 
 /**
