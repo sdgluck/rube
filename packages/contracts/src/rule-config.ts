@@ -8,6 +8,7 @@ import {
 import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 import { presentationConfigSchema } from "./presentation.ts";
 import { ruleScheduleSchema } from "./rule-schedule.ts";
+import { templateError } from "./metadata-tokens.ts";
 
 const LOCAL_FIELDS = new Set(LOCAL_FIELD_DEFS.map((d) => d.field));
 
@@ -31,9 +32,88 @@ export const DEFAULT_CONSECUTIVE_RUNS = 3;
 /** Per-rule ceiling on actions in a single run, mirroring `arr.maxAddsPerRun`. */
 export const DEFAULT_MAX_ACTIONS_PER_RUN = 25;
 
+/** Scalar fields a metadata rule may set. Templated — see `metadata-tokens.ts`. */
+export const METADATA_SETTABLE_FIELDS = [
+  "title",
+  "titleSort",
+  "summary",
+  "tagline",
+  "contentRating",
+  "studio",
+  "originallyAvailableAt",
+] as const;
+
+export type MetadataSettableField = (typeof METADATA_SETTABLE_FIELDS)[number];
+
+/** Tag sets a metadata rule may add to or remove from. */
+export const METADATA_RULE_TAG_FIELDS = ["genre", "label"] as const;
+
+/** Per-rule ceiling on field writes in one run. */
+export const DEFAULT_MAX_WRITES_PER_RUN = 200;
+
+/**
+ * A metadata rule matching more than this share of its sections reads as a
+ * filter mistake rather than an instruction — the same guard as cleanup, at
+ * the same threshold, because the realistic failure is identical: a smart
+ * filter typo that suddenly matches the whole library.
+ */
+export const IMPLAUSIBLE_METADATA_FRACTION = 0.25;
+
+const metadataSetSchema = z.object(
+  Object.fromEntries(METADATA_SETTABLE_FIELDS.map((f) => [f, z.string().optional()])) as Record<
+    MetadataSettableField,
+    z.ZodOptional<z.ZodString>
+  >,
+);
+
+const metadataTagsSchema = z.object(
+  Object.fromEntries(METADATA_RULE_TAG_FIELDS.map((f) => [f, z.array(z.string()).optional()])) as Record<
+    (typeof METADATA_RULE_TAG_FIELDS)[number],
+    z.ZodOptional<z.ZodArray<z.ZodString>>
+  >,
+);
+
 const cleanupActionSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("collection") }),
+    z.object({
+      kind: z.literal("metadata"),
+      /**
+       * Applied to every item the rule's selection matched. Values may use
+       * the closed token set — `{sortableTitle}` alone answers the most
+       * common complaint the feature exists for.
+       */
+      set: metadataSetSchema.optional(),
+      addTags: metadataTagsSchema.optional(),
+      removeTags: metadataTagsSchema.optional(),
+      /**
+       * Lock what we write. Defaults on because an unlocked write is a lie:
+       * the next agent refresh reverts it, so the app appears to work and
+       * then silently undoes itself.
+       */
+      lock: z.boolean().default(true),
+      /**
+       * Write to a field Plex has already locked to a *different* value.
+       *
+       * Off by default. A locked field is almost always a human's deliberate
+       * fix, and the whole point of the lock is that it survives things that
+       * run at 2am.
+       */
+      overwriteLocked: z.boolean().default(false),
+      maxWritesPerRun: z.number().int().positive().default(DEFAULT_MAX_WRITES_PER_RUN),
+      /**
+       * Languages whose leading articles `{sortableTitle}` moves. Stripping
+       * "La" is right in a French library and wrong for "La Bamba" in an
+       * English one, so the library says which it is.
+       */
+      sortLanguages: z.array(z.string()).default(["en"]),
+      /**
+       * Same shape and same reason as cleanup's: the only acceptable default
+       * for something that overwrites data nobody else holds a copy of is one
+       * you have to switch off.
+       */
+      dryRun: z.boolean().default(true),
+    }),
     z.object({
       kind: z.literal("cleanup"),
       mode: z.enum(CLEANUP_MODES),
@@ -64,6 +144,7 @@ const cleanupActionSchema = z
 
 export type RuleAction = NonNullable<z.infer<typeof cleanupActionSchema>>;
 export type CleanupActionConfig = Extract<RuleAction, { kind: "cleanup" }>;
+export type MetadataActionConfig = Extract<RuleAction, { kind: "metadata" }>;
 
 /** Normalised action for a rule config. Absent means the collection path. */
 export function ruleAction(config: { action?: RuleAction }): RuleAction {
@@ -72,6 +153,26 @@ export function ruleAction(config: { action?: RuleAction }): RuleAction {
 
 export function isCleanupRule(config: { action?: RuleAction }): boolean {
   return config.action?.kind === "cleanup";
+}
+
+export function isMetadataRule(config: { action?: RuleAction }): boolean {
+  return config.action?.kind === "metadata";
+}
+
+/**
+ * Whether this action would write anything at all.
+ *
+ * A metadata rule saved with every field blank is a rule that runs nightly,
+ * matches a thousand items, and does nothing — worth catching at save time
+ * rather than leaving someone to wonder why the sort titles never changed.
+ */
+export function metadataActionIsEmpty(action: MetadataActionConfig): boolean {
+  const values = [
+    ...Object.values(action.set ?? {}),
+    ...Object.values(action.addTags ?? {}).flat(),
+    ...Object.values(action.removeTags ?? {}).flat(),
+  ];
+  return values.every((v) => v == null || v === "");
 }
 
 /**
@@ -196,6 +297,20 @@ const baseRuleConfigSchema = z.object({
  * rather than running and quietly returning the wrong set.
  */
 export const ruleConfigSchema = baseRuleConfigSchema.superRefine((config, ctx) => {
+  // A template naming a token nobody implements would expand to a literal at
+  // run time and write "{titel}" into four hundred titles. That has to be a
+  // save-time error, and it has to be checked here rather than only in the
+  // wizard — a rule can also arrive by import or from a registry pack.
+  if (config.action?.kind === "metadata") {
+    for (const [field, value] of Object.entries(config.action.set ?? {})) {
+      if (typeof value !== "string") continue;
+      const error = templateError(value);
+      if (error) {
+        ctx.addIssue({ code: "custom", path: ["action", "set", field], message: error });
+      }
+    }
+  }
+
   if (!config.smartFilter) return;
 
   if (splitLocalLeaves(config.smartFilter).error === "local-leaf-in-or-group") {

@@ -48,6 +48,10 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // read is fresh, after generate (1am) so a rule's shelf reflects the night's
   // collections, and clear of purge-runs (3am).
   { id: "cleanup", name: "Cleanup", command: "cleanup", schedule: "0 4 * * *", enabled: 1 },
+  // 2am: after sync-media, and *before* generate's 1am work has been overtaken
+  // by anything — a sort title fixed here should be what the next night's
+  // collections sort on. Clear of purge-runs (3am) and cleanup (4am).
+  { id: "metadata", name: "Apply Metadata", command: "metadata", schedule: "0 2 * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
   {
     id: "sync-recently-added",

@@ -20,6 +20,7 @@ import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig }
 import {
   describeRuleWindow,
   isCleanupRule,
+  isMetadataRule,
   isRuleActiveOn,
   runsInNightlyBatch,
   type RuleSchedule,
@@ -28,6 +29,7 @@ import { parseRuleConfig } from "./config.ts";
 import { announceEmptyRule, announceNewCollections } from "./events.ts";
 import { runHandler } from "./dispatch.ts";
 import { createCleanupBudget } from "./cleanup.ts";
+import { createMetadataBudget } from "./metadata.ts";
 import { resolveArrAdds } from "./arr.ts";
 import { llmUnavailableReason } from "./ai/llm.ts";
 import { withItemCache } from "./item-cache.ts";
@@ -144,6 +146,8 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
   // not from this process. Created once per run so a long run reads a stable
   // starting figure.
   const cleanupBudget = createCleanupBudget();
+  // The metadata write ceiling, counted the same way and for the same reason.
+  const metadataBudget = createMetadataBudget();
 
   /** Everything one rule does, start to finish. Never throws except on abort. */
   const runOneRule = async (rule: (typeof enabledRules)[number], jobCtx: JobContext): Promise<void> => {
@@ -250,6 +254,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
             machineId,
             labels,
             cleanupBudget,
+            metadataBudget,
           );
         },
         { signal: ruleCtx.signal },
@@ -384,7 +389,10 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
  */
 export default function run(ctx: JobContext, config: GenerateJobConfig): Promise<void> {
   return runBatch(ctx, config, {
-    owns: (rule) => !isCleanupRule(parseRuleConfig(rule)),
+    owns: (rule) => {
+      const config = parseRuleConfig(rule);
+      return !isCleanupRule(config) && !isMetadataRule(config);
+    },
     noun: "collection rule(s)",
     sweepLegacyLabels: true,
   });
@@ -473,6 +481,7 @@ export async function runSingleRule(
         machineId,
         labels,
         createCleanupBudget(),
+        createMetadataBudget(),
       );
     },
     { waitMs: SINGLE_RUN_LOCK_WAIT_MS, signal },
@@ -626,4 +635,20 @@ async function deleteOldCollections(
       ctx.log(`Deleted ${deleted.length} old collection(s) with label "${ruleLabel}" from "${section.title}".`);
     }
   }
+}
+
+/**
+ * The metadata pass. Everything whose ending is "fix these fields".
+ *
+ * Its own job for the same reasons cleanup has one: it wants its own schedule
+ * (after the library has synced, so the fields it reads are current), its runs
+ * are worth reading on their own, and a run that overwrites hand-curated
+ * metadata should not share a history with one that builds shelves. The write
+ * ceiling is unaffected by the split — it counts from the ledger, not per run.
+ */
+export function runMetadata(ctx: JobContext, config: GenerateJobConfig): Promise<void> {
+  return runBatch(ctx, config, {
+    owns: (rule) => isMetadataRule(parseRuleConfig(rule)),
+    noun: "metadata rule(s)",
+  });
 }

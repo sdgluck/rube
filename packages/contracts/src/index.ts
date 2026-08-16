@@ -19,11 +19,17 @@ export {
   DESTRUCTIVE_CLEANUP_MODES,
   EXTERNAL_GROUP_RULE_TYPES,
   GROUPED_RULE_TYPES,
+  DEFAULT_MAX_WRITES_PER_RUN,
+  IMPLAUSIBLE_METADATA_FRACTION,
   isCleanupRule,
   isDestructiveMode,
   isGroupedRuleType,
+  isMetadataRule,
   isNonPortableField,
   isTagField,
+  METADATA_RULE_TAG_FIELDS,
+  METADATA_SETTABLE_FIELDS,
+  metadataActionIsEmpty,
   NON_PORTABLE_FIELDS,
   producesManyCollections,
   RULE_TYPE_REQUIRES,
@@ -35,11 +41,24 @@ export {
 export type {
   CleanupActionConfig,
   CleanupMode,
+  MetadataActionConfig,
+  MetadataSettableField,
   RuleAction,
   RuleConfig,
   RuleRequirement,
   RuleTypeValue,
 } from "./rule-config.ts";
+
+export {
+  DEFAULT_SORT_LANGUAGES,
+  expandTemplate,
+  METADATA_TOKENS,
+  SORT_ARTICLES,
+  sortableTitle,
+  templateError,
+  unknownTokens,
+} from "./metadata-tokens.ts";
+export type { MetadataToken, TokenContext } from "./metadata-tokens.ts";
 
 export {
   approximateCount,

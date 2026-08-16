@@ -1,6 +1,7 @@
 import type { PlexSection } from "@tinkerbell/plex";
 import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@tinkerbell/contracts";
 import { runHandlerWithCleanup, type CleanupBudget } from "./cleanup.ts";
+import { runHandlerWithMetadata, type MetadataBudget } from "./metadata.ts";
 import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rule-history";
 import { recordCollectionChanges } from "@tinkerbell/domain.rule-runs";
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
@@ -89,15 +90,15 @@ export interface RunHandlerResult {
  * Run a rule to its ending.
  *
  * A rule is (selection) → (action). Selection is the handler and is shared;
- * the action is either "make a collection" — every rule that has ever existed
- * — or "clean up", which selects identically and then queues, labels,
- * unmonitors or deletes instead.
+ * the action is "make a collection" — every rule that has ever existed —
+ * "clean up", which queues, labels, unmonitors or deletes, or "metadata",
+ * which rewrites the item's own fields.
  *
  * A rule with no `action` in its config is a collection rule, so nothing
  * predating this branch changes behaviour or needs migrating.
  *
  * The batch jobs are split by ending — `generate` owns the collection rules,
- * `cleanup` owns the rest — so in a scheduled run this branch only ever goes
+ * `cleanup` and `metadata` own theirs — so in a scheduled run this branch only ever goes
  * one way. It stays a branch because the ad-hoc path doesn't: "Run" on the
  * Rules page runs whichever single rule the user clicked.
  */
@@ -106,12 +107,20 @@ export async function runHandler(
   machineId: string,
   labels: string[],
   budget: CleanupBudget,
+  metadataBudget: MetadataBudget,
 ): Promise<RunHandlerResult> {
   const action = ruleAction(deps.ruleConfig);
   if (action.kind === "collection") return runHandlerWithCommits(deps, machineId, labels);
 
   const handler = handlerForRule(deps.rule.type);
   if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
+
+  if (action.kind === "metadata") {
+    const result = await runHandlerWithMetadata(deps, action, metadataBudget, handler);
+    // A metadata rule builds nothing, so there is no "last collection" to
+    // point at — the Rules table shows what it wrote instead.
+    return { lastCollectionKey: null, collectionCount: 0, itemCount: result.matched };
+  }
 
   const outcome = await runHandlerWithCleanup(deps, action, machineId, labels, budget, handler);
   // A cleanup rule builds one shelf collection per section, but the rule's

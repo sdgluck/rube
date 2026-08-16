@@ -44,6 +44,10 @@ export const EVENT_TYPES = [
   // deletion from frightening into routine.
   { id: "cleanup.pending", label: "Cleanup Pending" },
   { id: "cleanup.actioned", label: "Cleanup Actioned" },
+  // Metadata writes are the one thing in the app that cannot be regenerated,
+  // so a run that changed something says so — the event carries the batch id,
+  // which is what an undo needs.
+  { id: "metadata.written", label: "Metadata Written" },
   // One event per sync, not one per item: a library scan that finds 127 new
   // files should be one ping, and the count plus a few titles is what anyone
   // reads anyway.

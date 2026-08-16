@@ -216,6 +216,29 @@ export function itemHistory(ratingKey: string, limit = 50): MetadataOriginal[] {
     .all();
 }
 
+/**
+ * How many field writes have landed in the last window.
+ *
+ * The global ceiling counts from the ledger rather than from a per-run
+ * counter, for the reason cleanup learned the hard way: a per-run budget
+ * bounds exactly one batch, so an ad-hoc rule run mints itself a fresh full
+ * allowance and five rules run by hand grant five. Counting what actually
+ * happened holds however the work was started — scheduled, ad-hoc, or after a
+ * restart mid-run.
+ *
+ * Reverted rows still count. They were written; handing them back is a second
+ * event, not an erasure of the first, and letting an undo refill the budget
+ * would make "undo, retry, undo, retry" an unbounded loop.
+ */
+export function writesSince(sinceMs: number): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(metadataOriginals)
+    .where(sql`${metadataOriginals.appliedAt} >= ${sinceMs}`)
+    .get();
+  return row?.n ?? 0;
+}
+
 /** Default window kept before a batch stops being undoable. */
 export const DEFAULT_RETENTION_DAYS = 90;
 

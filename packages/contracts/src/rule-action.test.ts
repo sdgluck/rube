@@ -10,7 +10,10 @@ import { test } from "node:test";
 import {
   CLEANUP_MODES,
   DEFAULT_CONSECUTIVE_RUNS,
+  DEFAULT_MAX_WRITES_PER_RUN,
   isCleanupRule,
+  isMetadataRule,
+  metadataActionIsEmpty,
   isDestructiveMode,
   ruleAction,
   ruleConfigSchema,
@@ -112,4 +115,54 @@ test("cleanup composes with the watch-history filter guard", () => {
     },
   });
   assert.ok(parsed.success, parsed.error?.message);
+});
+
+test("a metadata action defaults to dry run, locking, and not overwriting locks", () => {
+  // The three defaults that decide whether this feature is safe to leave on a
+  // schedule. Dry run because it overwrites data nobody holds another copy of;
+  // lock because an unlocked write is reverted by the next agent refresh and
+  // so is a lie; `overwriteLocked` off because a locked field is almost always
+  // a human's deliberate fix.
+  const parsed = ruleConfigSchema.parse({ action: { kind: "metadata", set: { titleSort: "{sortableTitle}" } } });
+  assert.equal(parsed.action?.kind, "metadata");
+  assert.equal(parsed.action.kind === "metadata" && parsed.action.dryRun, true);
+  assert.equal(parsed.action.kind === "metadata" && parsed.action.lock, true);
+  assert.equal(parsed.action.kind === "metadata" && parsed.action.overwriteLocked, false);
+});
+
+test("a metadata action defaults to a per-run write ceiling and English sorting", () => {
+  const parsed = ruleConfigSchema.parse({ action: { kind: "metadata", set: { studio: "A24" } } });
+  assert.equal(parsed.action?.kind === "metadata" && parsed.action.maxWritesPerRun, DEFAULT_MAX_WRITES_PER_RUN);
+  assert.deepEqual(parsed.action?.kind === "metadata" ? parsed.action.sortLanguages : null, ["en"]);
+});
+
+test("a metadata rule is not a cleanup rule", () => {
+  const parsed = ruleConfigSchema.parse({ action: { kind: "metadata", set: { studio: "A24" } } });
+  assert.equal(isCleanupRule(parsed), false);
+  assert.equal(isMetadataRule(parsed), true);
+});
+
+test("a template naming an unknown token is refused at save time", () => {
+  // Otherwise the rule runs clean and writes the literal "{titel}" into every
+  // title it matched — which is not something a nightly job should be able to
+  // do quietly.
+  const result = ruleConfigSchema.safeParse({ action: { kind: "metadata", set: { title: "Marvel {titel}" } } });
+  assert.equal(result.success, false);
+  assert.match(result.error!.issues[0].message, /\{titel\}/);
+  assert.deepEqual(result.error!.issues[0].path, ["action", "set", "title"]);
+});
+
+test("a template using only known tokens saves", () => {
+  const result = ruleConfigSchema.safeParse({
+    action: { kind: "metadata", set: { titleSort: "{collection} {year} {sortableTitle}" } },
+  });
+  assert.equal(result.success, true);
+});
+
+test("an action that would write nothing is detectable", () => {
+  const empty = ruleConfigSchema.parse({ action: { kind: "metadata" } });
+  assert.equal(empty.action?.kind === "metadata" && metadataActionIsEmpty(empty.action), true);
+
+  const set = ruleConfigSchema.parse({ action: { kind: "metadata", addTags: { label: ["Curated"] } } });
+  assert.equal(set.action?.kind === "metadata" && metadataActionIsEmpty(set.action), false);
 });
