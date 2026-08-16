@@ -181,7 +181,12 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
     const skip = batchSkipReason(rule, ruleConfig, new Date());
     if (skip) {
       ruleCtx.log(`Skipping — ${skip.reason}.`);
-      if (skip.tearDown) {
+      // Only rules that build collections have anything to tear down. A
+      // metadata rule's writes are not undone by going out of season — that
+      // would be a startling thing for a calendar window to do — so the
+      // teardown would be a Plex round trip per section that finds nothing,
+      // announced with a line claiming it removed something.
+      if (skip.tearDown && !isMetadataRule(ruleConfig)) {
         try {
           await clearOutOfSeasonCollections(ruleCtx, rule, ctx.signal);
           ruleCtx.log("Removed this rule's collections until it is back in season.");

@@ -165,7 +165,7 @@ export default function MediaEditPanel({ ratingKey, onClose }: { ratingKey: stri
                   ? "No changes"
                   : `Save ${changed.length} change${changed.length === 1 ? "" : "s"}`}
             </button>
-            <span className={styles.hint}>Every change is recorded and can be undone from Settings → Metadata.</span>
+            <span className={styles.hint}>Every change is recorded and can be reverted from Settings → Metadata.</span>
           </div>
         </>
       )}

@@ -3,6 +3,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import CardSection from "#components/CardSection";
+import ConfirmModal from "#components/ConfirmModal";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import styles from "./SettingsMetadata.module.css";
@@ -11,7 +12,7 @@ const DEFAULT_MAX_WRITES = 2000;
 const DEFAULT_RETENTION_DAYS = 90;
 
 /**
- * The master switch for rule-driven metadata writes, and the undo history.
+ * The master switch for rule-driven metadata writes, and the revert history.
  *
  * Its own pane for the same reason `Cleanup` has one: it needs to be findable
  * in a hurry. But the history below it is the part that makes the feature
@@ -30,7 +31,8 @@ export default function SettingsMetadata() {
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveMutation = trpc.config.save.useMutation();
   const batchesQuery = trpc.metadata.batches.useQuery(undefined, { refetchOnWindowFocus: false });
-  const undoMutation = trpc.metadata.undo.useMutation();
+  const revertMutation = trpc.metadata.undo.useMutation();
+  const [confirming, setConfirming] = useState<{ batchId: string; writes: number } | null>(null);
 
   useEffect(() => {
     if (configQuery.data) {
@@ -68,14 +70,16 @@ export default function SettingsMetadata() {
     }
   };
 
-  const handleUndo = async (batchId: string, writes: number) => {
-    if (!confirm(`Put back ${writes} field${writes === 1 ? "" : "s"} to the values they held before this run?`)) return;
+  const handleRevert = async () => {
+    if (!confirming) return;
     try {
-      await undoMutation.mutateAsync({ batchId });
-      addToast("Undo started — watch it on the Jobs page", "success");
+      await revertMutation.mutateAsync({ batchId: confirming.batchId });
+      addToast("Revert started — watch it on the Jobs page", "success");
       await utils.metadata.batches.invalidate();
     } catch (err) {
-      addToast(err instanceof Error ? err.message : "Failed to start the undo", "error");
+      addToast(err instanceof Error ? err.message : "Failed to start the revert", "error");
+    } finally {
+      setConfirming(null);
     }
   };
 
@@ -131,7 +135,7 @@ export default function SettingsMetadata() {
 
         <div className={settings.field}>
           <label className={settings.label} htmlFor="metadata-retention">
-            Days to keep undo history
+            Days to keep revert history
           </label>
           <input
             id="metadata-retention"
@@ -142,8 +146,8 @@ export default function SettingsMetadata() {
             onChange={(e) => setRetentionDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
           />
           <p className={settings.hint}>
-            How long a run stays undoable. A metadata write cannot be regenerated the way a collection can, and the gap
-            between a bad nightly run and somebody noticing a title looks wrong is usually weeks rather than days.
+            How long a run stays revertible. A metadata write cannot be regenerated the way a collection can, and the
+            gap between a bad nightly run and somebody noticing a title looks wrong is usually weeks rather than days.
           </p>
         </div>
 
@@ -174,14 +178,14 @@ export default function SettingsMetadata() {
                   </span>
                 </div>
                 {batch.reverted ? (
-                  <span className={styles.batchReverted}>Undone</span>
+                  <span className={styles.batchReverted}>Reverted</span>
                 ) : (
                   <button
                     className={settings.button}
-                    onClick={() => handleUndo(batch.batchId, batch.writes)}
-                    disabled={undoMutation.isPending}
+                    onClick={() => setConfirming({ batchId: batch.batchId, writes: batch.writes })}
+                    disabled={revertMutation.isPending}
                   >
-                    Undo
+                    Revert
                   </button>
                 )}
               </li>
@@ -189,6 +193,25 @@ export default function SettingsMetadata() {
           </ul>
         )}
       </CardSection>
+
+      {confirming && (
+        <ConfirmModal
+          title="Revert these writes?"
+          // Word for word the shape the collection revert uses, because the
+          // caveat is the same one: putting a field back while the rule stays
+          // armed means the next run writes it again.
+          message={
+            `${confirming.writes.toLocaleString()} field${confirming.writes === 1 ? "" : "s"} will go back to the ` +
+            `values they held before this run, along with their original locked state. ` +
+            `This changes Plex now, but not the rule — the next run writes the same values again from the same ` +
+            `templates, so fix the rule if you don't want this back.`
+          }
+          confirmLabel={revertMutation.isPending ? "Reverting…" : "Revert"}
+          danger
+          onCancel={() => setConfirming(null)}
+          onConfirm={handleRevert}
+        />
+      )}
     </div>
   );
 }

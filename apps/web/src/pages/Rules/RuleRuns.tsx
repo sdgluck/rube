@@ -411,20 +411,25 @@ function RunDetail({ runId, ruleId, outcome }: { runId: string; ruleId: string; 
 function MetadataWrites({ ruleId }: { ruleId: string }) {
   const utils = trpc.useUtils();
   const { addToast } = useToast();
+  const [confirming, setConfirming] = useState<{ batchId: string; writes: number } | null>(null);
   const batchesQuery = trpc.metadata.batches.useQuery({ ruleId, limit: 20 }, { refetchOnWindowFocus: false });
-  const undoMutation = trpc.metadata.undo.useMutation();
+  const revertMutation = trpc.metadata.undo.useMutation();
   const batches = batchesQuery.data ?? [];
 
-  const undo = (batchId: string, writes: number) => {
-    if (!confirm(`Put back ${writes} field${writes === 1 ? "" : "s"} to the values they held before this run?`)) return;
-    undoMutation.mutate(
-      { batchId },
+  const revert = () => {
+    if (!confirming) return;
+    revertMutation.mutate(
+      { batchId: confirming.batchId },
       {
         onSuccess: () => {
-          addToast("Undo started — watch it on the Jobs page", "success");
+          addToast("Revert started — watch it on the Jobs page", "success");
           utils.metadata.batches.invalidate();
+          setConfirming(null);
         },
-        onError: (err) => addToast(err.message, "error"),
+        onError: (err) => {
+          addToast(err.message, "error");
+          setConfirming(null);
+        },
       },
     );
   };
@@ -454,20 +459,41 @@ function MetadataWrites({ ruleId }: { ruleId: string }) {
                 </div>
               </div>
               {batch.reverted ? (
-                <span className={styles.metadataBatchMeta}>Undone</span>
+                <span className={styles.metadataBatchMeta}>Reverted</span>
               ) : (
                 <button
                   type="button"
                   className={styles.runsActionGhost}
-                  onClick={() => undo(batch.batchId, batch.writes)}
-                  disabled={undoMutation.isPending}
+                  onClick={() => setConfirming({ batchId: batch.batchId, writes: batch.writes })}
+                  disabled={revertMutation.isPending}
                 >
-                  Undo
+                  Revert
                 </button>
               )}
             </li>
           ))}
         </ul>
+      )}
+
+      {confirming && (
+        <ConfirmModal
+          title="Revert these writes?"
+          // The same two things the collection revert spells out, because they
+          // are just as true here: what actually happens, and what doesn't.
+          // A field put back while the rule stays armed is rewritten tomorrow
+          // night, so a revert buys time to fix the rule rather than pinning
+          // the value.
+          message={
+            `${confirming.writes.toLocaleString()} field${confirming.writes === 1 ? "" : "s"} will go back to the ` +
+            `values they held before this run, along with their original locked state. ` +
+            `This changes Plex now, but not the rule — the next run writes the same values again from the same ` +
+            `templates, so fix the rule if you don't want this back.`
+          }
+          confirmLabel={revertMutation.isPending ? "Reverting…" : "Revert"}
+          danger
+          onCancel={() => setConfirming(null)}
+          onConfirm={revert}
+        />
       )}
     </CardSection>
   );

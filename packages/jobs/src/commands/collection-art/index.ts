@@ -28,7 +28,13 @@ import {
   recordCollectionArtwork,
   type CollectionArtworkRow,
 } from "@tinkerbell/domain.collections";
-import { isCleanupRule, resolvePresentation, type PresentationConfig, type RuleConfig } from "@tinkerbell/contracts";
+import {
+  isCleanupRule,
+  isMetadataRule,
+  resolvePresentation,
+  type PresentationConfig,
+  type RuleConfig,
+} from "@tinkerbell/contracts";
 import { parseRuleConfig } from "../generate/config.ts";
 import { tagResolverFor } from "../generate/tag-labels.ts";
 import { buildCollectionPoster, fetchMemberPosters, posterAlreadyUploaded } from "./poster.ts";
@@ -333,7 +339,8 @@ function subtitleFor(count: number, sectionType: string): string | undefined {
 
 /**
  * Rules this run has anything to do for: enabled, building collections (a
- * cleanup rule's shelf is never presented), and opted into a poster or an
+ * cleanup rule's shelf is never presented, and a metadata rule builds
+ * nothing at all), and opted into a poster or an
  * AI-written summary. Templated summaries are written during the rule run, so
  * they are not on their own a reason to be here.
  */
@@ -342,7 +349,11 @@ function selectRules(config: CollectionArtJobConfig): Rule[] {
   return getEnabledRules().filter((rule) => {
     if (wanted && !wanted.has(rule.id)) return false;
     const ruleConfig = parseRuleConfig(rule);
-    if (isCleanupRule(ruleConfig)) return false;
+    // Neither of the two non-collection endings has a collection to present.
+    // A metadata rule can still carry a stale `presentation` — from a registry
+    // pack, or from having once been a collection rule — and without this it
+    // would be picked up here and go looking for collections that don't exist.
+    if (isCleanupRule(ruleConfig) || isMetadataRule(ruleConfig)) return false;
     const presentation = resolvePresentation(ruleConfig);
     return presentation.poster !== "none" || presentation.summary === "llm";
   });
