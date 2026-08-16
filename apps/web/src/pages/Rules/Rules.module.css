@@ -491,6 +491,31 @@ td.previewBlockCell {
 
 /* ── Run history page ─────────────────────────────────────────────────── */
 
+/* Two panes: the history is a list you scan, the run beside it is the thing
+   you read. Below 900px the detail would be too narrow for a log, so they
+   stack — history first, since that's what you came in through. */
+.runsLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .runsLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.runsDetailStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* A card heading with a control on its right — the filter, or the run's
+   status badge. */
 .runsSectionHead {
   display: flex;
   align-items: center;
@@ -499,26 +524,24 @@ td.previewBlockCell {
   width: 100%;
 }
 
-.runsFilter {
-  display: inline-flex;
-  gap: 4px;
+/* Title and badge as one unit — a badge pushed to the far edge of a wide card
+   stops reading as part of the heading. */
+.runsSectionHeadTight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.runsFilterBtn,
-.runsFilterActive {
-  font: var(--t-data);
-  padding: 2px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
+.runsAction {
+  composes: btn btnPrimary btnSm from "../../styles/controls.module.css";
 }
 
-.runsFilterActive {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+.runsActionGhost {
+  composes: btn btnGhost btnSm from "../../styles/controls.module.css";
+}
+
+.runsActionDanger {
+  composes: btn btnDanger btnSm from "../../styles/controls.module.css";
 }
 
 .runRowSelected td {
@@ -529,10 +552,19 @@ td.previewBlockCell {
    so it says which it is rather than relying on the duration to hint. */
 .runPhaseTag {
   margin-left: 6px;
-  font: var(--t-meta);
+  font: var(--t-data);
   color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+}
+
+.runErrorText {
+  color: var(--status-error-fg);
+  word-break: break-word;
+}
+
+/* The expanded table row gives the log a slice of the row, not the page. */
+.inlineLog {
+  margin-top: 8px;
 }
 
 .statusInline {
@@ -673,32 +705,6 @@ td.previewBlockCell {
   font-size: 12.5px;
   color: var(--ink);
   margin-bottom: 8px;
-}
-
-.logTail {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--ink-3);
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-tag);
-  padding: 6px 10px;
-  /* Holds the full run log, not a tail of it, so it needs to be worth
-     scrolling — ~18 lines before the scrollbar takes over. Capped rather than
-     free-growing so a long run can't push the rule's action buttons off the
-     bottom of the expanded row. */
-  max-height: 260px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 0;
-}
-
-/* It's focusable so keyboard users can scroll it; make that visible. */
-.logTail:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 .errorBox {

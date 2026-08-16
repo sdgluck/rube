@@ -1,0 +1,101 @@
+/* The run-output pane, shared by job runs and rule runs. Moved out of
+   Jobs.module.css when a second feature needed the same viewer. */
+
+.full {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Machine output, so mono and on the dark surface — the same treatment the
+   sidebar and the collection preview canvas use. */
+.viewer {
+  background: var(--sidebar);
+  color: var(--on-dark-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 16px;
+  border-radius: var(--r-md);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+  min-height: 120px;
+  margin: 0;
+}
+
+/* Inside a panel or an expanded table row the log is one element among
+   several, so it takes a bounded slice rather than all the height going. */
+.viewerCompact {
+  composes: viewer;
+  max-height: 260px;
+  min-height: 0;
+  font-size: 11.5px;
+  padding: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filterInput {
+  composes: input inputSm from "../styles/controls.module.css";
+  width: 200px;
+}
+
+.toolbarBtn {
+  composes: btn btnGhost btnSm from "../styles/controls.module.css";
+}
+
+.errorToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.errorToggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Floats over the pane rather than taking a toolbar row of its own — in the
+   compact variant there is no toolbar to put it in. */
+.copyBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  border: 1px solid var(--on-dark-fill-2);
+  color: var(--on-dark-3);
+  padding: 4px 10px;
+  border-radius: var(--r-tag);
+  font-size: 11px;
+  cursor: pointer;
+  z-index: 1;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.copyBtn:hover {
+  background: var(--on-dark-fill-2);
+  color: var(--on-accent);
+}

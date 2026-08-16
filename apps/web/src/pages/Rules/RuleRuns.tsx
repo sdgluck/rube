@@ -1,39 +1,41 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import EmptyState from "#components/EmptyState";
-import PageShell from "#components/PageShell";
+import PageShell, { StatusChip } from "#components/PageShell";
 import RelativeTime from "#components/RelativeTime";
+import RunLog from "#components/RunLog";
 import SortableTh from "#components/SortableTh";
-import { DetailSkeleton } from "#components/Skeleton";
+import { SkeletonTable } from "#components/Skeleton";
+import { useToast } from "#components/Toast";
 import { PageCrumbs } from "#layout/AppBar";
 import { useLocalSort } from "#hooks/useLocalSort";
 import useSwipeBack from "#hooks/useSwipeBack";
 import { formatDuration, formatElapsed } from "#/format";
 import { fetchRuleRunLog, isRunActive, useRunLog } from "#pages/Jobs/shared/useRunLog";
-import jobStyles from "#pages/Jobs/Jobs.module.css";
+import shared from "#/styles/shared.module.css";
 import styles from "./Rules.module.css";
 import type { RulesOutcome } from "./index";
 
 const PHASE_FILTERS = ["all", "run", "test"] as const;
 type PhaseFilter = (typeof PHASE_FILTERS)[number];
 
-const ERROR_PATTERN = /error|failed|exception|fatal|panic|ENOENT|ECONNREFUSED/i;
+const PHASE_LABELS: Record<PhaseFilter, string> = { all: "All", run: "Runs", test: "Tests" };
 
-function RunStatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "running" || status === "cancelling" || status === "queued"
-      ? jobStyles.badgeRunning
-      : status === "ok"
-        ? jobStyles.badgeCompleted
-        : status === "error"
-          ? jobStyles.badgeFailed
-          : jobStyles.badgeCancelled;
-  // `cancelling` and `queued` are real states the user can act on, so they are
+/** Terminal statuses read as outcomes; the live ones read as themselves. */
+function statusClass(status: string): string {
+  if (status === "ok") return shared.runBadgeOk;
+  if (status === "error") return shared.runBadgeError;
+  if (status === "cancelled") return shared.runBadgeCancelled;
+  return shared.runBadgeBusy;
+}
+
+function RunBadge({ status }: { status: string }) {
+  // `cancelling` and `queued` are states the user can still act on, so they are
   // named rather than rounded to the nearest finished-looking word.
-  const label = status === "cancelling" ? "cancelling…" : status === "queued" ? "queued" : status;
-  return <span className={`${jobStyles.badge} ${cls}`}>{label}</span>;
+  const label = status === "cancelling" ? "cancelling…" : status;
+  return <span className={`${shared.runBadge} ${statusClass(status)}`}>{label}</span>;
 }
 
 function formatEta(startMs: number, progress: number): string | null {
@@ -45,21 +47,24 @@ function formatEta(startMs: number, progress: number): string | null {
 }
 
 /**
- * Every run of one rule, and the detail of whichever is selected.
+ * Every run of one rule, with the selected one open beside it.
  *
- * A run used to exist only as a spinner in the rules table for as long as one
- * browser tab held one HTTP request open. Now each is a row with a log, so
- * "what did the nightly job actually do to this rule three days ago?" and "what
- * is it doing right now?" are the same question asked of the same list.
+ * A run used to exist only as a spinner in the rules table, for as long as one
+ * browser tab held one request open. Two panes because the two questions are
+ * asked together: "how has this rule been doing?" is the list, "what did this
+ * run actually do?" is the detail, and answering the second shouldn't cost you
+ * sight of the first.
  *
- * The selected run lives in `?run=`, which is what makes a live run linkable —
- * from the sidebar, from a toast, or to someone else.
+ * The selection lives in `?run=`, which is what makes a live run linkable —
+ * from the sidebar, from a job's rule breakdown, or to someone else.
  */
 export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOutcome } = {}) {
   const { ruleId } = useParams<{ ruleId: string }>();
   const navigate = useNavigate();
   const swipeRef = useSwipeBack(navigate);
   const [params, setParams] = useSearchParams();
+  const utils = trpc.useUtils();
+  const { addToast } = useToast();
   const rulesPath = outcome === "cleanup" ? "/cleanup/rules" : "/rules";
 
   const phase = (PHASE_FILTERS as readonly string[]).includes(params.get("phase") ?? "")
@@ -71,8 +76,15 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
     { ruleId: ruleId!, phase: phase === "all" ? undefined : phase, limit: 100 },
     { enabled: !!ruleId, refetchInterval: 3000 },
   );
+  const activeRunsQuery = trpc.rules.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
+  const active = (activeRunsQuery.data ?? []).find((run) => run.ruleId === ruleId) ?? null;
+
+  const runMutation = trpc.rules.run.useMutation();
+  const testMutation = trpc.rules.test.useMutation();
+  const cancelMutation = trpc.rules.cancelRun.useMutation();
 
   const runs = useMemo(() => runsQuery.data ?? [], [runsQuery.data]);
+  // Default to the newest run, so arriving from the table lands on something.
   const selectedId = params.get("run") ?? runs[0]?.id ?? null;
 
   const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
@@ -83,54 +95,111 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
       // A run still going has no finish time; sort those by elapsed so far
       // rather than dropping them to the bottom as "missing".
       duration: (r) => (r.finishedAt ?? Date.now()) - r.startedAt,
-      collections: (r) => r.collectionCount ?? -1,
     },
     defaultKey: "startedAt",
     defaultDir: "desc",
-    descFirst: ["startedAt", "duration", "collections"],
+    descFirst: ["startedAt", "duration"],
   });
 
-  const selectRun = (runId: string) => {
+  const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
-    next.set("run", runId);
+    if (value === null) next.delete(key);
+    else next.set(key, value);
+    if (key === "phase") next.delete("run");
     setParams(next, { replace: true });
   };
 
-  const setPhase = (value: PhaseFilter) => {
-    const next = new URLSearchParams(params);
-    if (value === "all") next.delete("phase");
-    else next.set("phase", value);
-    next.delete("run");
-    setParams(next, { replace: true });
+  /** Start a run/test and follow it — both attach to one already in flight. */
+  const start = (kind: "run" | "test") => {
+    const mutation = kind === "run" ? runMutation : testMutation;
+    mutation.mutate(
+      { id: ruleId! },
+      {
+        onSuccess: (res) => {
+          setParam("run", res.runId);
+          utils.rules.activeRuns.invalidate();
+          utils.rules.runs.invalidate({ ruleId: ruleId! });
+          if (res.attached) addToast("Already running — showing the run in progress.", "info");
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
   };
 
   if (!ruleId) return null;
 
-  return (
-    <PageShell count={runs.length > 0 ? `${runs.length} runs` : undefined}>
-      <div ref={swipeRef}>
-        <PageCrumbs
-          crumbs={[
-            { label: outcome === "cleanup" ? "Cleanup rules" : "Rules", to: rulesPath },
-            { label: ruleQuery.data?.name ?? "Rule" },
-            { label: "Runs" },
-          ]}
-        />
+  const pct = active ? Math.round(active.progress * 100) : 0;
 
+  return (
+    <PageShell
+      count={runs.length > 0 ? runs.length.toLocaleString() : undefined}
+      chip={
+        active ? (
+          <StatusChip tone="running" dot>
+            {active.phase === "test" ? "Testing" : "Running"}
+            {pct > 0 ? ` ${pct}%` : ""}
+          </StatusChip>
+        ) : undefined
+      }
+      actions={
+        <>
+          {active && (
+            <button
+              type="button"
+              className={styles.runsActionDanger}
+              onClick={() =>
+                cancelMutation.mutate({ runId: active.id }, { onSuccess: () => utils.rules.activeRuns.invalidate() })
+              }
+              disabled={cancelMutation.isPending}
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.runsActionGhost}
+            onClick={() => start("test")}
+            disabled={testMutation.isPending}
+          >
+            Test
+          </button>
+          <button
+            type="button"
+            className={styles.runsAction}
+            onClick={() => start("run")}
+            disabled={runMutation.isPending}
+          >
+            Run now
+          </button>
+        </>
+      }
+    >
+      <PageCrumbs
+        crumbs={[
+          { label: outcome === "cleanup" ? "Cleanup rules" : "Rules", to: rulesPath },
+          { label: ruleQuery.data?.name ?? "Rule" },
+          { label: "Runs" },
+        ]}
+      />
+
+      <div ref={swipeRef} className={styles.runsLayout}>
         <CardSection
-          titleClassName={jobStyles.detailSectionTitle}
+          className={shared.runCardCapped}
+          titleClassName={shared.runCardTitle}
           title={
             <span className={styles.runsSectionHead}>
-              Run history
-              <span className={styles.runsFilter} role="group" aria-label="Filter runs by phase">
+              History
+              <span className={styles.segmented} role="tablist" aria-label="Filter runs by phase">
                 {PHASE_FILTERS.map((value) => (
                   <button
                     key={value}
                     type="button"
-                    className={value === phase ? styles.runsFilterActive : styles.runsFilterBtn}
-                    onClick={() => setPhase(value)}
+                    role="tab"
+                    aria-selected={value === phase}
+                    className={`${styles.segmentedBtn} ${value === phase ? styles.segmentedBtnActive : ""}`}
+                    onClick={() => setParam("phase", value === "all" ? null : value)}
                   >
-                    {value === "all" ? "All" : value === "run" ? "Runs" : "Tests"}
+                    {PHASE_LABELS[value]}
                   </button>
                 ))}
               </span>
@@ -138,16 +207,20 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
           }
         >
           {runsQuery.isLoading ? (
-            <p>Loading runs…</p>
+            <SkeletonTable rows={5} columns={3} />
           ) : sorted.length === 0 ? (
             <EmptyState
               icon="list"
               title="No runs yet"
-              description="Runs appear here once this rule has been run or tested — by you or by the nightly job."
+              description={
+                phase === "test"
+                  ? "This rule hasn't been tested yet."
+                  : "Runs appear here once this rule has run — by you or by the nightly job."
+              }
             />
           ) : (
             <div className="table-scroll in-panel" data-scroll="x">
-              <table className={jobStyles.compactTable}>
+              <table className={shared.compactTable}>
                 <thead>
                   <tr>
                     <SortableTh sortKey="status" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
@@ -159,41 +232,26 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
                     <SortableTh sortKey="duration" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                       Duration
                     </SortableTh>
-                    <th>Trigger</th>
-                    <SortableTh sortKey="collections" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                      Collections
-                    </SortableTh>
                   </tr>
                 </thead>
                 <tbody>
                   {sorted.map((run) => (
                     <tr
                       key={run.id}
-                      className={`${jobStyles.clickableRow} ${run.id === selectedId ? styles.runRowSelected : ""}`}
-                      onClick={() => selectRun(run.id)}
+                      className={`${shared.clickableRow} ${run.id === selectedId ? styles.runRowSelected : ""}`}
+                      aria-current={run.id === selectedId ? "true" : undefined}
+                      onClick={() => setParam("run", run.id)}
                     >
                       <td>
-                        <RunStatusBadge status={run.status} />
+                        <RunBadge status={run.status} />
+                        {/* A test sits in the same list and reads identically at
+                            a glance, so it says which it is. */}
                         {run.phase === "test" && <span className={styles.runPhaseTag}>test</span>}
                       </td>
-                      <td className={jobStyles.runMeta}>
+                      <td className={shared.cellMuted}>
                         <RelativeTime timestamp={run.startedAt} />
                       </td>
-                      <td className={jobStyles.runMeta}>{formatElapsed(run.startedAt, run.finishedAt)}</td>
-                      <td className={jobStyles.runMeta}>
-                        {run.trigger === "job" && run.jobRunId ? (
-                          // The parent job run is where the rest of that night's
-                          // work is, so the breakdown links both ways.
-                          <Link to={`/jobs/runs/${run.jobRunId}`} onClick={(e) => e.stopPropagation()}>
-                            Generate job
-                          </Link>
-                        ) : run.trigger === "job" ? (
-                          "Generate job"
-                        ) : (
-                          "Manual"
-                        )}
-                      </td>
-                      <td className={jobStyles.runMeta}>{run.collectionCount ?? "—"}</td>
+                      <td className={shared.cellMuted}>{formatElapsed(run.startedAt, run.finishedAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -202,175 +260,115 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
           )}
         </CardSection>
 
-        {selectedId && <RunDetail runId={selectedId} />}
+        <div className={styles.runsDetailStack}>
+          {selectedId ? (
+            <RunDetail runId={selectedId} />
+          ) : (
+            <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Run detail">
+              <EmptyState icon="list" title="Nothing selected" description="Pick a run to see what it did." />
+            </CardSection>
+          )}
+        </div>
       </div>
     </PageShell>
   );
 }
 
-/** The selected run: what it's doing, how far in, and everything it has said. */
+/** The selected run: what it did, how far in, and everything it said. */
 function RunDetail({ runId }: { runId: string }) {
-  const utils = trpc.useUtils();
   const runQuery = trpc.rules.runDetail.useQuery(
     { runId },
+    // A finished row never changes again, so stop polling when it settles.
     { refetchInterval: (query) => (isRunActive(query.state.data?.status ?? undefined) ? 1000 : false) },
   );
-  const cancelMutation = trpc.rules.cancelRun.useMutation({
-    onSuccess: () => {
-      runQuery.refetch();
-      utils.rules.activeRuns.invalidate();
-    },
-  });
-
   const run = runQuery.data;
   const log = useRunLog(runId, isRunActive(run?.status ?? undefined), fetchRuleRunLog);
 
-  const logRef = useRef<HTMLPreElement>(null);
-  const autoScroll = useRef(true);
-  const [filter, setFilter] = useState("");
-  const [errorsOnly, setErrorsOnly] = useState(false);
-
-  const filteredLog = useMemo(() => {
-    if (!log) return "";
-    if (!filter && !errorsOnly) return log;
-    return log
-      .split("\n")
-      .filter((line) => {
-        if (errorsOnly && !ERROR_PATTERN.test(line)) return false;
-        if (filter && !line.toLowerCase().includes(filter.toLowerCase())) return false;
-        return true;
-      })
-      .join("\n");
-  }, [log, filter, errorsOnly]);
-
-  const isFiltering = !!(filter || errorsOnly);
-
-  useEffect(() => {
-    if (autoScroll.current && logRef.current && !isFiltering) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [log, isFiltering]);
-
-  const handleLogScroll = () => {
-    if (!logRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = logRef.current;
-    autoScroll.current = scrollHeight - scrollTop - clientHeight < 50;
-  };
-
-  const handleDownload = () => {
-    if (!log) return;
-    const blob = new Blob([log], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement("a"), { href: url, download: `rule-run-${runId}.txt` });
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  if (runQuery.isLoading) return <DetailSkeleton />;
   if (!run) return null;
 
+  const live = isRunActive(run.status);
   const eta = run.status === "running" ? formatEta(run.startedAt, run.progress) : null;
-  const cancellable = run.status === "queued" || run.status === "running";
 
   return (
-    <CardSection title="Run detail" titleClassName={jobStyles.detailSectionTitle}>
-      <div className={jobStyles.runHeader}>
-        <RunStatusBadge status={run.status} />
-        {cancellable && (
-          <button
-            className={`${jobStyles.button} ${jobStyles.buttonDanger}`}
-            onClick={() => cancelMutation.mutate({ runId: run.id })}
-            disabled={cancelMutation.isPending}
-          >
-            Cancel
-          </button>
+    <>
+      <CardSection
+        className={shared.runCard}
+        titleClassName={shared.runCardTitle}
+        title={
+          <span className={styles.runsSectionHeadTight}>
+            {run.phase === "test" ? "Test detail" : "Run detail"}
+            <RunBadge status={run.status} />
+          </span>
+        }
+      >
+        {live && run.progress > 0 && (
+          <div className={shared.progressBar}>
+            <div className={shared.progressFill} style={{ width: `${Math.round(run.progress * 100)}%` }} />
+          </div>
         )}
-        {run.trigger === "job" && run.jobRunId && (
-          <Link className={jobStyles.runLink} to={`/jobs/runs/${run.jobRunId}`}>
-            View the job run
-          </Link>
-        )}
-      </div>
 
-      <div className={jobStyles.metaGrid}>
-        <span className={jobStyles.metaLabel}>Started</span>
-        <span>
-          <RelativeTime timestamp={run.startedAt} />
-        </span>
-        {run.finishedAt && (
-          <>
-            <span className={jobStyles.metaLabel}>Finished</span>
-            <span>
-              <RelativeTime timestamp={run.finishedAt} />
-            </span>
-          </>
-        )}
-        <span className={jobStyles.metaLabel}>Duration</span>
-        <span>{formatElapsed(run.startedAt, run.finishedAt)}</span>
-        {eta && (
-          <>
-            <span className={jobStyles.metaLabel}>ETA</span>
-            <span>{eta}</span>
-          </>
-        )}
-        {run.collectionCount != null && (
-          <>
-            <span className={jobStyles.metaLabel}>Produced</span>
-            <span>
-              {run.collectionCount} collection{run.collectionCount === 1 ? "" : "s"}
-              {run.itemCount != null ? `, ${run.itemCount} item${run.itemCount === 1 ? "" : "s"}` : ""}
-            </span>
-          </>
-        )}
-        {run.message && (
-          <>
-            <span className={jobStyles.metaLabel}>Status</span>
-            <span>{run.message}</span>
-          </>
-        )}
-        {run.error && (
-          <>
-            <span className={jobStyles.metaLabel}>Error</span>
-            <span>{run.error}</span>
-          </>
-        )}
-      </div>
-
-      {isRunActive(run.status) && run.progress > 0 && (
-        <div className={jobStyles.progressBar}>
-          <div className={jobStyles.progressFill} style={{ width: `${Math.round(run.progress * 100)}%` }} />
+        <div className={shared.metaGrid}>
+          <span className={shared.metaLabel}>Started</span>
+          <span>
+            <RelativeTime timestamp={run.startedAt} />
+          </span>
+          {run.finishedAt && (
+            <>
+              <span className={shared.metaLabel}>Finished</span>
+              <span>
+                <RelativeTime timestamp={run.finishedAt} />
+              </span>
+            </>
+          )}
+          <span className={shared.metaLabel}>Duration</span>
+          <span>{formatElapsed(run.startedAt, run.finishedAt)}</span>
+          {eta && (
+            <>
+              <span className={shared.metaLabel}>ETA</span>
+              <span>{eta}</span>
+            </>
+          )}
+          <span className={shared.metaLabel}>Trigger</span>
+          <span>
+            {run.trigger === "job" ? (
+              run.jobRunId ? (
+                // The rest of that night's work is on the job run, so the
+                // breakdown links both ways.
+                <Link to={`/jobs/runs/${run.jobRunId}`}>Generate job</Link>
+              ) : (
+                "Generate job"
+              )
+            ) : (
+              "Manual"
+            )}
+          </span>
+          {run.collectionCount != null && (
+            <>
+              <span className={shared.metaLabel}>Produced</span>
+              <span>
+                {run.collectionCount} collection{run.collectionCount === 1 ? "" : "s"}
+                {run.itemCount != null ? `, ${run.itemCount.toLocaleString()} items` : ""}
+              </span>
+            </>
+          )}
+          {run.message && (
+            <>
+              <span className={shared.metaLabel}>Status</span>
+              <span>{run.message}</span>
+            </>
+          )}
+          {run.error && (
+            <>
+              <span className={shared.metaLabel}>Error</span>
+              <span className={styles.runErrorText}>{run.error}</span>
+            </>
+          )}
         </div>
-      )}
+      </CardSection>
 
-      <div className={jobStyles.logToolbar}>
-        <input
-          type="text"
-          className={jobStyles.logFilterInput}
-          placeholder="Filter log…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <label className={jobStyles.logErrorToggle}>
-          <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
-          Errors only
-        </label>
-        {log && (
-          <>
-            <button className={jobStyles.logToolbarBtn} onClick={() => navigator.clipboard.writeText(log)}>
-              Copy
-            </button>
-            <button className={jobStyles.logToolbarBtn} onClick={handleDownload}>
-              Download
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className={jobStyles.logWrapper}>
-        <pre ref={logRef} className={jobStyles.logViewer} onScroll={handleLogScroll}>
-          {filteredLog || (isFiltering ? "(no matching lines)" : "(no output yet)")}
-        </pre>
-      </div>
-    </CardSection>
+      <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Log">
+        <RunLog log={log} downloadName={`rule-run-${runId}.txt`} ariaLabel="Rule run log" />
+      </CardSection>
+    </>
   );
 }

@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { trpc } from "#/trpc";
 import styles from "#pages/Jobs/Jobs.module.css";
 import { isRunActive, useRunLog } from "#pages/Jobs/shared/useRunLog";
 import { useJobsData } from "#pages/Jobs/useJobsData";
+import RunLog from "#components/RunLog";
 
 export function RecentLogsPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const { recentRunsQuery } = useJobsData();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const logRef = useRef<HTMLPreElement>(null);
 
   // One tab per job — its latest run. Runs arrive newest-first.
   const latestRunPerJob = useMemo(() => {
@@ -50,14 +50,7 @@ export function RecentLogsPanel({ dragHandle, dragProps }: DashboardPanelProps) 
         ))}
       </div>
       {selectedRunQuery.data ? (
-        <div className={styles.logWrapper}>
-          <button className={styles.logCopyBtn} onClick={() => navigator.clipboard.writeText(selectedLog)}>
-            Copy
-          </button>
-          <pre ref={logRef} className={styles.logViewer}>
-            {selectedLog || "(no output)"}
-          </pre>
-        </div>
+        <RunLog log={selectedLog} variant="compact" emptyText="(no output)" ariaLabel="Recent run log" />
       ) : selectedRunQuery.isLoading ? (
         <div className={styles.muted}>Loading log…</div>
       ) : null}

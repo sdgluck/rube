@@ -1090,6 +1090,100 @@
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
+/* ─── Run detail primitives ───────────────────────────────────────────────
+ *
+ * The card, meta grid, progress bar and status badge a "what did this run do?"
+ * view is built from. These lived in Jobs.module.css until rule runs needed the
+ * same vocabulary; a page reaching into another feature's stylesheet is exactly
+ * what this file exists to prevent.
+ */
+
+/* A bordered, transparent card — the Jobs/Rules detail idiom. The filled
+   variant with an elevation ring is `.group` in Settings.module.css. */
+.runCard {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* For a card whose body is a list that could run to any length. */
+.runCardCapped {
+  composes: runCard;
+  max-height: 50vh;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.runCardTitle {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+/* Label/value pairs. Labels size to their content so the values line up. */
+.metaGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+}
+
+.metaLabel {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.progressBar {
+  width: 100%;
+  height: 6px;
+  background: var(--fill-quiet);
+  border-radius: var(--r-tag);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--r-tag);
+  transition: width 0.3s ease;
+}
+
+/* Run status. Named for outcomes rather than for either vocabulary, since a
+   job says "completed/failed" where a rule says "ok/error" and they mean the
+   same thing to a reader. */
+.runBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-card);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.runBadgeBusy {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.runBadgeOk {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.runBadgeError {
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+}
+
+.runBadgeCancelled {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;

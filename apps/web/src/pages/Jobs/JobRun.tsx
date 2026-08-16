@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
@@ -6,6 +5,7 @@ import { DetailSkeleton } from "#components/Skeleton";
 import { PageCrumbs } from "#layout/AppBar";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
+import RunLog from "#components/RunLog";
 import { formatDuration, formatElapsed } from "#/format";
 import { isRunActive, useRunLog } from "./shared/useRunLog";
 
@@ -32,16 +32,10 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`${styles.badge} ${cls}`}>{status === "cancelling" ? "cancelling…" : status}</span>;
 }
 
-const ERROR_PATTERN = /error|failed|exception|fatal|panic|ENOENT|ECONNREFUSED/i;
-
 export default function JobRun() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
   const swipeRef = useSwipeBack(navigate);
-  const logRef = useRef<HTMLPreElement>(null);
-  const autoScroll = useRef(true);
-  const [filter, setFilter] = useState("");
-  const [errorsOnly, setErrorsOnly] = useState(false);
 
   const runQuery = trpc.jobs.run.useQuery(
     { runId: runId! },
@@ -57,47 +51,6 @@ export default function JobRun() {
 
   const run = runQuery.data;
   const log = useRunLog(runId, isRunActive(run?.status));
-
-  const filteredLog = useMemo(() => {
-    if (!log) return "";
-    if (!filter && !errorsOnly) return log;
-    const lines = log.split("\n");
-    return lines
-      .filter((line: string) => {
-        if (errorsOnly && !ERROR_PATTERN.test(line)) return false;
-        if (filter && !line.toLowerCase().includes(filter.toLowerCase())) return false;
-        return true;
-      })
-      .join("\n");
-  }, [log, filter, errorsOnly]);
-
-  const isFiltering = !!(filter || errorsOnly);
-
-  // Auto-scroll log
-  useEffect(() => {
-    if (autoScroll.current && logRef.current && !isFiltering) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [log, isFiltering]);
-
-  // Track user scroll position
-  const handleLogScroll = () => {
-    if (!logRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = logRef.current;
-    autoScroll.current = scrollHeight - scrollTop - clientHeight < 50;
-  };
-
-  const handleDownload = () => {
-    if (!log) return;
-    const blob = new Blob([log], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement("a"), {
-      href: url,
-      download: `job-run-${runId}.txt`,
-    });
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   if (runQuery.isLoading) return <DetailSkeleton />;
   if (runQuery.error) return <p>Error: {runQuery.error.message}</p>;
@@ -162,35 +115,7 @@ export default function JobRun() {
         </div>
       )}
 
-      <div className={styles.logToolbar}>
-        <input
-          type="text"
-          className={styles.logFilterInput}
-          placeholder="Filter log…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <label className={styles.logErrorToggle}>
-          <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
-          Errors only
-        </label>
-        {log && (
-          <>
-            <button className={styles.logToolbarBtn} onClick={() => navigator.clipboard.writeText(log)}>
-              Copy
-            </button>
-            <button className={styles.logToolbarBtn} onClick={handleDownload}>
-              Download
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className={styles.logWrapper}>
-        <pre ref={logRef} className={styles.logViewer} onScroll={handleLogScroll}>
-          {filteredLog || (isFiltering ? "(no matching lines)" : "(no output yet)")}
-        </pre>
-      </div>
+      <RunLog log={log} downloadName={`job-run-${runId}.txt`} />
     </div>
   );
 }
