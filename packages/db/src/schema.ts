@@ -232,6 +232,31 @@ export const ruleHistory = sqliteTable(
 );
 
 /**
+ * A named list view — the search, filters and sort of a page, under a name.
+ *
+ * `useListParams` already keeps every list page's state in the URL, which
+ * makes a view nothing more than a stored query string. That is the whole
+ * design: no per-page schema, no migration when a page gains a filter, and a
+ * view is shareable as a plain link whether or not it was ever saved.
+ *
+ * Keyed by `page` rather than a global namespace so "Unwatched 4K" on Media
+ * and "Unwatched 4K" on Collections are two views, not a collision.
+ */
+export const savedViews = sqliteTable(
+  "saved_views",
+  {
+    id: text("id").primaryKey(),
+    /** Which list page this belongs to — "media", "collections", … */
+    page: text("page").notNull(),
+    name: text("name").notNull(),
+    /** The URL query string, minus the leading "?". */
+    query: text("query").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("idx_saved_views_page_name").on(table.page, table.name)],
+);
+
+/**
  * Rules that were deleted recently enough to put back.
  *
  * Every destructive path in the app was a confirmation dialog and nothing

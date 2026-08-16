@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import type { RuleSeed } from "#/lib/viewToRule";
 import { useListParams } from "#hooks/useListParams";
 import { readEnum } from "#/storage";
 import ConfirmModal from "#components/ConfirmModal";
@@ -103,6 +104,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const [form, setForm] = useState<RuleFormState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
@@ -281,6 +284,30 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     setForm({ ...EMPTY_FORM, outcome: { ...EMPTY_FORM.outcome, kind: outcome } });
     setIsEditing(false);
   }
+
+  /**
+   * Open the wizard on a rule the Media page has already half-written.
+   *
+   * Arrives as router state rather than query params: the filter tree is a
+   * nested object, and round-tripping it through a URL would mean inventing an
+   * encoding for something that only has to survive one navigation.
+   *
+   * Cleared from history immediately, so a reload or a back-and-forward
+   * doesn't reopen the wizard on a rule the user already dismissed.
+   */
+  useEffect(() => {
+    const seed = (location.state as { ruleSeed?: RuleSeed } | null)?.ruleSeed;
+    if (!seed) return;
+    navigate(location.pathname, { replace: true, state: null });
+    setForm({
+      ...EMPTY_FORM,
+      type: "smart_filter",
+      outcome: { ...EMPTY_FORM.outcome, kind: outcome },
+      sections: seed.sections,
+      smartFilter: seed.smartFilter as RuleFormState["smartFilter"],
+    });
+    setIsEditing(false);
+  }, [location.state]);
 
   function startEdit(rule: RuleRow) {
     const config = rule.config ?? {};

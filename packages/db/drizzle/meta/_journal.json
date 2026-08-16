@@ -260,6 +260,13 @@
       "when": 1786891832784,
       "tag": "0036_oval_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1786892220998,
+      "tag": "0037_naive_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

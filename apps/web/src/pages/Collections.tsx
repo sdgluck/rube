@@ -26,6 +26,7 @@ import { readEnumStorage, writeStorage } from "#/storage";
 import { errorMessage } from "#/utils";
 import SearchInput from "#components/SearchInput";
 import { ColumnsButton, reconcileColumns, visibleColumns, type TableColumn } from "#components/TableColumns";
+import SavedViews from "#components/SavedViews";
 import { EMPTY } from "#/format";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@tinkerbell/trpc";
@@ -610,6 +611,7 @@ export default function Collections() {
             onChange={(ruleIds) => setFilters({ ruleIds })}
           />
           <div className={styles.filtersSpacer} />
+          <SavedViews page="collections" />
           {/* Only in the table — the grid has no columns to configure. */}
           {viewMode === "table" && (
             <ColumnsButton

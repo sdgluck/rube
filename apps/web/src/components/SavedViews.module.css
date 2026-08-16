@@ -1,0 +1,154 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
+}
+
+.count {
+  padding: 0 5px;
+  margin-left: 6px;
+  font: var(--t-data);
+  color: var(--ink-3);
+  background: var(--fill-track);
+  border-radius: var(--r-pill);
+}
+
+/* A transparent full-page button, so a click anywhere closes the menu without
+   a document listener that has to avoid firing on its own trigger. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dropdown);
+  padding: 0;
+  cursor: default;
+  background: none;
+  border: none;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+  max-width: 320px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--e-float);
+}
+
+.empty {
+  margin: 0;
+  padding: 8px;
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.itemName {
+  flex: 1;
+  padding: 6px 8px;
+  overflow: hidden;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+}
+
+.itemName:hover {
+  background: var(--surface-sunken);
+}
+
+.itemDelete {
+  padding: 2px 6px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-3);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+}
+
+.itemDelete:hover {
+  color: var(--status-error-fg);
+  background: var(--surface-sunken);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.action {
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+}
+
+.action:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.action:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.saveForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saveHint {
+  margin: 0;
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.saveActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.saveBtn {
+  composes: btn btnPrimary from "../styles/controls.module.css";
+}
+
+.cancelBtn {
+  composes: btn btnSecondary from "../styles/controls.module.css";
+}

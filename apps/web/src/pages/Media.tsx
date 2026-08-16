@@ -17,6 +17,9 @@ import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { readEnumStorage, writeStorage } from "#/storage";
 import SearchInput from "#components/SearchInput";
+import SavedViews from "#components/SavedViews";
+import { useToast } from "#components/Toast";
+import { describeDropped, ruleSeedFromView } from "#/lib/viewToRule";
 import {
   ColumnsButton,
   reconcileColumns,
@@ -298,6 +301,7 @@ function ChildrenRows({
 export default function Media() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const { sortKey, sortDir, page, listParam, setParam, setListParam, setPage, toggleSort } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
@@ -392,6 +396,33 @@ export default function Media() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const sections = sectionsQuery.data ?? [];
 
+  /**
+   * Hand the current filters to the rule wizard.
+   *
+   * Browsing and authoring were separate acts — you found the set here, then
+   * rebuilt it from memory in the wizard. The translation is lossy where Plex
+   * has no equivalent field, so the losses are named before the wizard opens
+   * rather than discovered later by a rule that matches too much.
+   */
+  function createRule() {
+    const seed = ruleSeedFromView(
+      {
+        sections: sectionFilter,
+        types: typeFilter,
+        search,
+        resolutions: resFilter,
+        videoCodecs: vcodecFilter,
+        audioCodecs: acodecFilter,
+        audioChannels: achFilter,
+        containers: containerFilter,
+      },
+      (key) => sections.find((s) => s.key === key)?.title ?? null,
+    );
+    const warning = describeDropped(seed.dropped);
+    if (warning) addToast(warning, "info", 10000);
+    navigate("/rules", { state: { ruleSeed: seed } });
+  }
+
   if (mediaQuery.isLoading && !mediaQuery.data) return <MediaSkeleton />;
   if (mediaQuery.error && !mediaQuery.data) {
     return <ErrorState title="Couldn't load media" error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />;
@@ -428,6 +459,7 @@ export default function Media() {
           {activeFilterCount > 0 && <span className={styles.advancedFilterBadge}>{activeFilterCount}</span>}
         </button>
         <div className={styles.filtersSpacer} />
+        <SavedViews page="media" extraActions={[{ label: "Create rule from this view…", onSelect: createRule }]} />
         {viewMode === "table" && (
           <ColumnsButton
             all={ALL_COLUMNS}

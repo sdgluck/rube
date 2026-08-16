@@ -37,6 +37,7 @@ import { prerollsRouter } from "./prerolls.router.ts";
 import { migrationRouter } from "./migration.router.ts";
 import { registryRouter } from "./registry.router.ts";
 import { navRouter } from "./nav.router.ts";
+import { viewsRouter } from "./views.router.ts";
 import { cleanupRouter } from "./cleanup.router.ts";
 import { digestRouter } from "./digest.router.ts";
 import { personalizationRouter } from "./personalization.router.ts";
@@ -65,6 +66,7 @@ export const appRouter = t.router({
   migration: migrationRouter,
   registry: registryRouter,
   nav: navRouter,
+  views: viewsRouter,
   personalization: personalizationRouter,
 
   plexSections: procedure.query(async () => {
