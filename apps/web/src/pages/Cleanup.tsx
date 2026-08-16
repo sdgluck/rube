@@ -85,6 +85,8 @@ type QueueRow = {
   lastMatchedAt: number;
   /** Null where the size isn't known — shows, and items not yet synced. */
   fileSize: number | null;
+  /** A standing protection covers this item; no rule will ever action it. */
+  isProtected: boolean;
 };
 
 export default function Cleanup() {
@@ -109,11 +111,17 @@ export default function Cleanup() {
   const holdMutation = trpc.cleanup.hold.useMutation({ onSuccess: invalidate });
   const holdManyMutation = trpc.cleanup.holdMany.useMutation({ onSuccess: invalidate });
   const restoreMutation = trpc.cleanup.restoreHolds.useMutation({ onSuccess: invalidate });
+  const protectMutation = trpc.cleanup.protect.useMutation({
+    onSuccess: () => {
+      invalidate();
+      utils.cleanup.protections.invalidate();
+    },
+  });
 
   const rows = (query.data ?? []) as QueueRow[];
   // A held item is explicitly not due, however long its streak. `held` comes
   // from the server so this can't disagree with what the engine will do.
-  const dueNow = rows.filter((r) => r.actionedAt == null && r.runsRemaining === 0 && !r.held);
+  const dueNow = rows.filter((r) => r.actionedAt == null && r.runsRemaining === 0 && !r.held && !r.isProtected);
 
   const ruleOptions = useMemo(() => {
     const names = new Map<string, string>();
@@ -134,7 +142,7 @@ export default function Cleanup() {
       if (needle && !row.title.toLowerCase().includes(needle)) return false;
       if (ruleFilter.length > 0 && !ruleFilter.includes(row.ruleId)) return false;
       if (modeFilter.length > 0 && !modeFilter.includes(row.mode)) return false;
-      if (status === "due") return row.actionedAt == null && row.runsRemaining === 0 && !row.held;
+      if (status === "due") return row.actionedAt == null && row.runsRemaining === 0 && !row.held && !row.isProtected;
       if (status === "waiting") return row.actionedAt == null && row.runsRemaining > 0 && !row.held;
       if (status === "held") return row.actionedAt == null && row.held;
       return true;
@@ -207,6 +215,22 @@ export default function Cleanup() {
             },
           );
         },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
+  }
+
+  /**
+   * Settle it for good.
+   *
+   * No confirm: protecting something is the safe direction, and the row grows
+   * a Remove on the Protected tab the moment it lands.
+   */
+  function protect(row: QueueRow) {
+    protectMutation.mutate(
+      { kind: "item", value: row.ratingKey, label: row.title, note: "" },
+      {
+        onSuccess: () => addToast(`"${row.title}" is protected — no cleanup rule will action it.`, "success"),
         onError: (err) => addToast(err.message, "error"),
       },
     );
@@ -439,22 +463,38 @@ export default function Cleanup() {
                       <RelativeTime timestamp={row.lastMatchedAt} />
                     </td>
                     <td className={styles.actionsCell}>
-                      {actioned ? null : held ? (
-                        <button
-                          className={sharedStyles.buttonSecondary}
-                          onClick={() => release(row)}
-                          disabled={holdMutation.isPending}
-                        >
-                          Release
-                        </button>
-                      ) : (
-                        <button
-                          className={sharedStyles.buttonSecondary}
-                          onClick={() => keep(row)}
-                          disabled={holdMutation.isPending}
-                        >
-                          Keep
-                        </button>
+                      {actioned ? null : row.isProtected ? null : (
+                        <>
+                          {held ? (
+                            <button
+                              className={sharedStyles.buttonSecondary}
+                              onClick={() => release(row)}
+                              disabled={holdMutation.isPending}
+                            >
+                              Release
+                            </button>
+                          ) : (
+                            <button
+                              className={sharedStyles.buttonSecondary}
+                              onClick={() => keep(row)}
+                              disabled={holdMutation.isPending}
+                            >
+                              Keep
+                            </button>
+                          )}
+                          {/* Beside Keep, because the choice between them is
+                              the whole point: Keep buys time, Protect settles
+                              it. Someone pressing Keep for the third time on
+                              the same film wanted this. */}
+                          <button
+                            className={sharedStyles.buttonSecondary}
+                            onClick={() => protect(row)}
+                            disabled={protectMutation.isPending}
+                            title="Never let a cleanup rule action this item"
+                          >
+                            Protect
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -491,11 +531,21 @@ export default function Cleanup() {
 }
 
 function statusText(
-  row: { runsRemaining: number; heldUntil: number | null; actionedAt: number | null; action: string },
+  row: {
+    runsRemaining: number;
+    heldUntil: number | null;
+    actionedAt: number | null;
+    action: string;
+    isProtected: boolean;
+  },
   held: boolean,
   actioned: boolean,
 ): React.ReactNode {
   if (actioned) return <span className={styles.statusActioned}>{MODE_PAST_LABELS[row.action] ?? row.action}</span>;
+  // Ahead of the hold and the streak: protection outranks both, and a row
+  // reading "due next run" while the engine will skip it is the one thing
+  // this page must never say.
+  if (row.isProtected) return <span className={styles.statusHeld}>Protected</span>;
   if (held) {
     // A calendar date, not a relative span: RelativeTime renders any future
     // timestamp as "just now", and formatTimeUntil tops out in hours, so a

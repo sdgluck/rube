@@ -1111,6 +1111,45 @@ export const cleanupCandidates = sqliteTable(
 );
 
 /**
+ * Things a cleanup rule must never action, whatever its filter says.
+ *
+ * The queue already had a reprieve, but every reprieve expires — deliberately,
+ * so a rule that keeps re-matching something comes back for review instead of
+ * being silently overruled forever. That is the right default and the wrong
+ * only option: "this film never goes" and "nothing in Favourites ever goes"
+ * are permanent facts about a library, not decisions to be re-taken every
+ * ninety days by someone who has forgotten why they made them.
+ *
+ * Two kinds, both answerable from the local index so that the queue page and
+ * the engine cannot disagree about what is protected:
+ *
+ * - `item` — one rating key.
+ * - `collection` — every member of a collection, matched on title so the
+ *   protection survives the collection being rebuilt with a new rating key,
+ *   which is exactly what Tinkerbell's own rules do to it nightly.
+ *
+ * Protection by Plex *label* is the obvious third and is deliberately absent:
+ * item labels are not in the local index, so it could only be answered by
+ * asking Plex during a run, and a protection the queue page cannot evaluate
+ * is one that shows the wrong answer right up until something is deleted.
+ */
+export const cleanupProtections = sqliteTable(
+  "cleanup_protections",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind").notNull(),
+    /** A rating key, or a collection title folded to lower case. */
+    value: text("value").notNull(),
+    /** What it looked like when it was added — for display. */
+    label: text("label").notNull().default(""),
+    /** Why, in the words of whoever added it. */
+    note: text("note").notNull().default(""),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("idx_cleanup_protections_unique").on(table.kind, table.value)],
+);
+
+/**
  * What has been sent, to whom, for which period.
  *
  * This is the idempotency guarantee, not a log. A digest job that fails

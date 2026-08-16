@@ -10,9 +10,21 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 
 setupTempDb("tinkerbell-cleanup-test-");
 
-const { db, cleanupCandidates, rules } = await import("@tinkerbell/db");
-const { recordMatches, dueForAction, markActioned, holdCandidate, listCandidates, queuedCandidates, dueSoonCount } =
-  await import("./index.ts");
+const { db, cleanupCandidates, cleanupProtections, collectionItems, collections, rules } =
+  await import("@tinkerbell/db");
+const {
+  recordMatches,
+  dueForAction,
+  markActioned,
+  holdCandidate,
+  listCandidates,
+  queuedCandidates,
+  dueSoonCount,
+  addProtection,
+  removeProtection,
+  listProtections,
+  protectedRatingKeys,
+} = await import("./index.ts");
 
 const RULE = "rule-1";
 const OTHER = "rule-2";
@@ -36,6 +48,9 @@ function streakOf(ruleId: string, ratingKey: string): number | undefined {
 
 beforeEach(() => {
   db.delete(cleanupCandidates).run();
+  db.delete(cleanupProtections).run();
+  db.delete(collectionItems).run();
+  db.delete(collections).run();
   db.delete(rules).run();
   seedRule(RULE, { action: { kind: "cleanup", mode: "delete", consecutiveRuns: 3 } });
   seedRule(OTHER, { action: { kind: "cleanup", mode: "delete", consecutiveRuns: 3 } });
@@ -259,5 +274,104 @@ describe("queuedCandidates", () => {
 
     holdCandidate(RULE, "100", Date.now() + 30 * DAY);
     assert.equal(dueSoonCount(), 1, "a held item is not about to happen");
+  });
+});
+
+// ─── Protection ──────────────────────────────────────────────────────────────
+
+/**
+ * Protection is the last thing standing between a rule and a file it must
+ * never touch, so the cases that matter are the ones where it could silently
+ * fail open: a due item slipping through, a per-run limit filled entirely by
+ * protected rows, and a collection rebuilt under a new rating key — which is
+ * what Tinkerbell's own rules do to their collections nightly.
+ */
+function seedCollection(ratingKey: string, title: string, memberKeys: string[]): void {
+  db.insert(collections)
+    .values({ plexRatingKey: ratingKey, sectionId: "1", sectionTitle: "Movies", title, syncedAt: T0 })
+    .onConflictDoNothing()
+    .run();
+  for (const itemRatingKey of memberKeys) {
+    db.insert(collectionItems).values({ collectionRatingKey: ratingKey, itemRatingKey }).onConflictDoNothing().run();
+  }
+}
+
+describe("protection", () => {
+  test("a protected item is never due, however long its streak", () => {
+    for (const t of [0, 1, 2, 3]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    assert.equal(dueForAction(RULE, 3, 10).length, 1);
+
+    addProtection("item", "100", "Film 100");
+    assert.deepEqual(dueForAction(RULE, 3, 10), []);
+  });
+
+  test("removing the protection lets it become due again", () => {
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    addProtection("item", "100", "Film 100");
+    assert.equal(dueForAction(RULE, 3, 10).length, 0);
+
+    removeProtection(listProtections()[0].id);
+    assert.equal(dueForAction(RULE, 3, 10).length, 1);
+  });
+
+  test("the per-run limit still yields a full batch when protected rows lead", () => {
+    // Without over-fetching, protecting the two longest streaks would return
+    // an empty batch for a limit of 2 — the rule would silently stall rather
+    // than move on to the items it is allowed to action.
+    const keys = ["100", "101", "102", "103"];
+    for (const t of [0, 1, 2])
+      recordMatches(
+        RULE,
+        keys.map((k) => match(k)),
+        T0 + t * DAY,
+      );
+    addProtection("item", "100", "Film 100");
+    addProtection("item", "101", "Film 101");
+
+    const due = dueForAction(RULE, 3, 2);
+    assert.equal(due.length, 2);
+    assert.deepEqual(due.map((d) => d.ratingKey).sort(), ["102", "103"]);
+  });
+
+  test("protecting a collection covers its members", () => {
+    seedCollection("col-1", "Favourites", ["100", "200"]);
+    addProtection("collection", "Favourites", "Favourites");
+    const keys = protectedRatingKeys();
+    assert.ok(keys.has("100"));
+    assert.ok(keys.has("200"));
+    assert.equal(keys.has("300"), false);
+  });
+
+  test("a collection protection survives the collection being recreated", () => {
+    seedCollection("col-1", "Favourites", ["100"]);
+    addProtection("collection", "Favourites", "Favourites");
+
+    db.delete(collections).run();
+    db.delete(collectionItems).run();
+    seedCollection("col-2-new-key", "Favourites", ["100", "101"]);
+
+    const keys = protectedRatingKeys();
+    assert.ok(keys.has("100"));
+    assert.ok(keys.has("101"));
+  });
+
+  test("collection titles match regardless of case and padding", () => {
+    seedCollection("col-1", "Favourites", ["100"]);
+    addProtection("collection", "  favourites  ", "Favourites");
+    assert.ok(protectedRatingKeys().has("100"));
+  });
+
+  test("protecting the same thing twice is not an error", () => {
+    addProtection("item", "100", "Film 100");
+    addProtection("item", "100", "Film 100", "changed my mind about the note");
+    assert.equal(listProtections().length, 1);
+    assert.equal(listProtections()[0].note, "changed my mind about the note");
+  });
+
+  test("the queue marks protected rows so the page cannot contradict the engine", () => {
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    addProtection("item", "100", "Film 100");
+    const row = queuedCandidates().find((c) => c.ratingKey === "100");
+    assert.equal(row?.isProtected, true);
   });
 });

@@ -281,6 +281,13 @@
       "when": 1786901697903,
       "tag": "0039_fluffy_titania",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1786902173438,
+      "tag": "0040_brave_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

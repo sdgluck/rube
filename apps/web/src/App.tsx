@@ -43,6 +43,7 @@ const CollectionActivity = lazy(() => import("#pages/CollectionDetail/Activity")
 const Rules = lazy(() => import("#pages/Rules"));
 const Cleanup = lazy(() => import("#pages/Cleanup"));
 const CleanupLayout = lazy(() => import("#pages/CleanupLayout"));
+const CleanupProtected = lazy(() => import("#pages/CleanupProtected"));
 const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
@@ -166,6 +167,7 @@ export default function App() {
                   <Route index element={<Cleanup />} />
                   <Route path="rules" element={<Rules outcome="cleanup" />} />
                   <Route path="rules/:ruleId/runs" element={<RuleRuns outcome="cleanup" />} />
+                  <Route path="protected" element={<CleanupProtected />} />
                 </Route>
                 {/* No layout of its own: a metadata rule's history lives in
                     Settings → Metadata, where the master switch and the undo

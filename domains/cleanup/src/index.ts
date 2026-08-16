@@ -19,7 +19,15 @@
  * half the streaks bumped.
  */
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
-import { cleanupCandidates, db, mediaItems, rules } from "@tinkerbell/db";
+import {
+  cleanupCandidates,
+  cleanupProtections,
+  collectionItems,
+  collections,
+  db,
+  mediaItems,
+  rules,
+} from "@tinkerbell/db";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
 
@@ -134,7 +142,8 @@ export function dueForAction(
   limit: number,
   now: number = Date.now(),
 ): CleanupCandidate[] {
-  return db
+  const protectedKeys = protectedRatingKeys();
+  const rows = db
     .select()
     .from(cleanupCandidates)
     .where(
@@ -148,8 +157,99 @@ export function dueForAction(
       ),
     )
     .orderBy(desc(cleanupCandidates.streak), asc(cleanupCandidates.firstMatchedAt))
-    .limit(limit)
+    // Protection is applied after the query, so the limit still yields a full
+    // batch when some of the leading rows are protected. Over-fetching by the
+    // number of protected keys is enough for that in the worst case.
+    .limit(protectedKeys.size > 0 ? limit + protectedKeys.size : limit)
     .all();
+
+  const eligible = protectedKeys.size > 0 ? rows.filter((r) => !protectedKeys.has(r.ratingKey)) : rows;
+  return eligible.slice(0, limit);
+}
+
+export type ProtectionKind = "item" | "collection";
+
+export interface Protection {
+  id: number;
+  kind: string;
+  value: string;
+  label: string;
+  note: string;
+  createdAt: number;
+}
+
+/** Everything currently protected, newest first. */
+export function listProtections(): Protection[] {
+  return db.select().from(cleanupProtections).orderBy(desc(cleanupProtections.createdAt)).all();
+}
+
+/**
+ * Protect something. Idempotent — protecting twice is not an error, it is
+ * someone pressing the button again because they weren't sure it took.
+ */
+export function addProtection(
+  kind: ProtectionKind,
+  value: string,
+  label: string,
+  note = "",
+  now: number = Date.now(),
+): void {
+  const normalised = kind === "collection" ? value.trim().toLowerCase() : value.trim();
+  if (!normalised) return;
+  db.insert(cleanupProtections)
+    .values({ kind, value: normalised, label: label.trim() || value.trim(), note, createdAt: now })
+    .onConflictDoUpdate({
+      target: [cleanupProtections.kind, cleanupProtections.value],
+      set: { label: label.trim() || value.trim(), note },
+    })
+    .run();
+}
+
+export function removeProtection(id: number): void {
+  db.delete(cleanupProtections).where(eq(cleanupProtections.id, id)).run();
+}
+
+/**
+ * The rating keys protection currently covers.
+ *
+ * Resolved rather than stored: a collection protection has to mean "whatever
+ * is in it now", or it would freeze the membership at the moment the button
+ * was pressed and quietly stop covering anything added since.
+ */
+export function protectedRatingKeys(): Set<string> {
+  const rows = db.select().from(cleanupProtections).all();
+  if (rows.length === 0) return new Set();
+
+  const keys = new Set<string>();
+  const collectionTitles: string[] = [];
+  for (const row of rows) {
+    if (row.kind === "item") keys.add(row.value);
+    else if (row.kind === "collection") collectionTitles.push(row.value);
+  }
+
+  if (collectionTitles.length > 0) {
+    // Matched on lower-cased title: a Tinkerbell rule rebuilds its collections
+    // by deleting and recreating them, so the rating key of "Favourites"
+    // changes underneath a protection that tried to hold onto it.
+    const matching = db
+      .select({ key: collections.plexRatingKey })
+      .from(collections)
+      .where(inArray(sql`lower(${collections.title})`, collectionTitles))
+      .all();
+    if (matching.length > 0) {
+      for (let i = 0; i < matching.length; i += CHUNK) {
+        const slice = matching.slice(i, i + CHUNK).map((m) => m.key);
+        const members = db
+          .select({ itemRatingKey: collectionItems.itemRatingKey })
+          .from(collectionItems)
+          .where(inArray(collectionItems.collectionRatingKey, slice))
+          .all();
+        for (const m of members) keys.add(m.itemRatingKey);
+      }
+    }
+  }
+
+  return keys;
 }
 
 /** Stamp a candidate as done. The row stays as the audit trail. */
@@ -209,6 +309,13 @@ export interface QueuedCandidate extends CleanupCandidate {
    * worse than one that admits the gap.
    */
   fileSize: number | null;
+  /**
+   * Whether a standing protection covers this item.
+   *
+   * Computed server-side alongside `held` and for the same reason: the page
+   * must not be able to disagree with the engine about what is safe.
+   */
+  isProtected: boolean;
 }
 
 /**
@@ -240,6 +347,8 @@ export function queuedCandidates(
     .limit(opts.limit ?? 500)
     .all();
 
+  const protectedKeys = protectedRatingKeys();
+
   return rows.map(({ candidate, ruleName, config, fileSize }) => {
     const action = (config as { action?: { consecutiveRuns?: number; mode?: string } } | null)?.action;
     const consecutiveRuns = action?.consecutiveRuns ?? 3;
@@ -251,6 +360,7 @@ export function queuedCandidates(
       runsRemaining: Math.max(0, consecutiveRuns - candidate.streak),
       held: candidate.heldUntil != null && candidate.heldUntil > now,
       fileSize: fileSize ?? null,
+      isProtected: protectedKeys.has(candidate.ratingKey),
     };
   });
 }

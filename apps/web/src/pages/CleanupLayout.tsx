@@ -15,6 +15,9 @@ import styles from "./Cleanup.module.css";
 const TABS = [
   { to: "/cleanup", label: "Queue" },
   { to: "/cleanup/rules", label: "Rules" },
+  // Protection is a third thing, not a filter on the queue: most of what it
+  // covers has never been matched by a rule and so has never appeared there.
+  { to: "/cleanup/protected", label: "Protected" },
 ];
 
 export default function CleanupLayout() {

@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { DAY_MS } from "@tinkerbell/core";
-import { countsByRule, holdCandidate, listCandidates, queuedCandidates } from "@tinkerbell/domain.cleanup";
+import {
+  addProtection,
+  countsByRule,
+  holdCandidate,
+  listCandidates,
+  listProtections,
+  queuedCandidates,
+  removeProtection,
+} from "@tinkerbell/domain.cleanup";
 import { t, procedure } from "./_base.ts";
 
 /**
@@ -24,6 +32,33 @@ export const cleanupRouter = t.router({
    * status cell needs this on every render of the list.
    */
   counts: procedure.query(() => Object.fromEntries(countsByRule())),
+
+  /**
+   * Standing protections — the things no cleanup rule may ever action.
+   *
+   * Separate from a hold, which always expires by design. This is the answer
+   * to "stop asking me about this film", and to "nothing in Favourites, ever".
+   */
+  protections: procedure.query(() => listProtections()),
+
+  protect: procedure
+    .input(
+      z.object({
+        kind: z.enum(["item", "collection"]),
+        value: z.string().min(1),
+        label: z.string().default(""),
+        note: z.string().default(""),
+      }),
+    )
+    .mutation(({ input }) => {
+      addProtection(input.kind, input.value, input.label, input.note);
+      return { ok: true };
+    }),
+
+  unprotect: procedure.input(z.object({ id: z.number().int() })).mutation(({ input }) => {
+    removeProtection(input.id);
+    return { ok: true };
+  }),
 
   /** One rule's queue and audit trail — the Rules page drill-down. */
   forRule: procedure.input(z.object({ ruleId: z.string() })).query(({ input }) => listCandidates(input.ruleId)),
