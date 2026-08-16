@@ -8,13 +8,22 @@ import { formatDuration } from "#/format";
 
 interface RuleDetailRowProps {
   ruleId: string;
+  /** The in-flight run to show the log of, when there is one. */
+  runId: string | null;
   isTesting: boolean;
   isRunning: boolean;
   errorToShow: string | null;
   onCleared: () => void;
 }
 
-export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToShow, onCleared }: RuleDetailRowProps) {
+export default function RuleDetailRow({
+  ruleId,
+  runId,
+  isTesting,
+  isRunning,
+  errorToShow,
+  onCleared,
+}: RuleDetailRowProps) {
   const resultQuery = trpc.rules.lastTestResult.useQuery({ id: ruleId }, { enabled: !isRunning });
   const hasResult = !!resultQuery.data;
   const showAnything = isTesting || isRunning || !!errorToShow || hasResult;
@@ -36,9 +45,9 @@ export default function RuleDetailRow({ ruleId, isTesting, isRunning, errorToSho
 
   return (
     <tr className={styles.detailRow}>
-      <td ref={setTdEl} colSpan={7}>
+      <td ref={setTdEl} colSpan={8}>
         <div className={styles.detailWrap}>
-          {(isTesting || isRunning) && <InlineProgress ruleId={ruleId} phase={isTesting ? "test" : "run"} />}
+          {(isTesting || isRunning) && runId && <InlineProgress runId={runId} phase={isTesting ? "test" : "run"} />}
           {!isTesting && !isRunning && errorToShow && (
             <div style={{ marginBottom: 12 }}>
               <div className={styles.detailHeader}>

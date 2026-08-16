@@ -7,6 +7,8 @@ interface RuleStatusCellProps {
   rule: RuleRow;
   isTesting: boolean;
   isRunning: boolean;
+  /** 0–1 from the run's own row; 0 while it has nothing to report yet. */
+  runProgress?: number;
   /** Set for cleanup rules — a collection count says nothing about them. */
   cleanup?: { queued: number; actioned: number };
 }
@@ -17,12 +19,15 @@ interface RuleStatusCellProps {
  * automatically while a run/test is in-flight, and the result preview
  * opens automatically on completion.
  */
-export default function StatusCell({ rule, isTesting, isRunning, cleanup }: RuleStatusCellProps) {
+export default function StatusCell({ rule, isTesting, isRunning, runProgress = 0, cleanup }: RuleStatusCellProps) {
+  // A percentage only once there is one: a run reports 0 until it knows how
+  // much work it has, and "Running… 0%" reads like something is stuck.
+  const pct = runProgress > 0 ? ` ${Math.round(runProgress * 100)}%` : "";
   if (isRunning) {
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
         <Spinner size="xs" />
-        Running…
+        Running…{pct}
       </span>
     );
   }
@@ -30,7 +35,7 @@ export default function StatusCell({ rule, isTesting, isRunning, cleanup }: Rule
     return (
       <span className={`${styles.statusInline} ${styles.statusBusy}`}>
         <Spinner size="xs" />
-        Testing…
+        Testing…{pct}
       </span>
     );
   }

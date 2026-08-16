@@ -66,17 +66,39 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const revertArtworkMutation = trpc.rules.revertArtwork.useMutation();
 
   const testMutation = trpc.rules.test.useMutation();
-  const cancelTestMutation = trpc.rules.cancelTest.useMutation();
-  const testingRuleIdRef = useRef<string | null>(null);
-
   const runMutation = trpc.rules.run.useMutation();
   const cancelRunMutation = trpc.rules.cancelRun.useMutation();
-  const runningRuleIdRef = useRef<string | null>(null);
+
+  /**
+   * What's in flight, according to the server rather than this tab.
+   *
+   * The table used to derive "running" from the run mutation's own pending
+   * state, which meant the row existed only as long as one HTTP request in one
+   * tab: a reload, a proxy timeout or a closed lid and the run vanished from
+   * the UI while carrying on happily on the server. Polling the run rows shows
+   * every run — this tab's, another tab's, and the ones the nightly Generate
+   * job is executing in a worker thread.
+   */
+  const activeRunsQuery = trpc.rules.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
+  const activeByRule = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof activeRunsQuery.data>[number]>();
+    for (const run of activeRunsQuery.data ?? []) {
+      // A rule can have a run and a test in flight at once; the run is the one
+      // worth showing, being the one that changes anything.
+      const existing = map.get(run.ruleId);
+      if (!existing || (existing.phase === "test" && run.phase === "run")) map.set(run.ruleId, run);
+    }
+    return map;
+  }, [activeRunsQuery.data]);
+
+  // Cleanup rules live under /cleanup/rules, so their run history does too.
+  const runsHref = useCallback(
+    (ruleId: string) => `${outcome === "cleanup" ? "/cleanup/rules" : "/rules"}/${ruleId}/runs`,
+    [outcome],
+  );
 
   const [form, setForm] = useState<RuleFormState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
-  const [runningRuleId, setRunningRuleId] = useState<string | null>(null);
   const { addToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
@@ -96,7 +118,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const { sortKey, sortDir, param, listParam, setParam, setListParam, setParams, toggleSort } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
     defaultSortKey: "name",
-    descFirst: ["lastRun"],
+    descFirst: ["lastRun", "runs"],
   });
 
   /**
@@ -166,6 +188,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
       else if (sortKey === "enabled") cmp = Number(!!a.enabled) - Number(!!b.enabled);
       else if (sortKey === "lastRun") cmp = (a.lastRunAt ?? 0) - (b.lastRunAt ?? 0);
+      else if (sortKey === "runs") cmp = a.runCount - b.runCount;
       return sortDir === "asc" ? cmp : -cmp;
     });
     return out;
@@ -507,98 +530,109 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     addToast(`${enabled ? "Enabled" : "Disabled"} ${selected.size} rule${selected.size !== 1 ? "s" : ""}`, "success");
   }
 
+  /**
+   * Bulk actions queue rather than await.
+   *
+   * The server runs manual rules one at a time, and each rule's row says
+   * whether it is queued, running or done — so the browser no longer has to
+   * hold the sequence together, and closing the tab no longer abandons it.
+   */
   async function handleBulkRun() {
     const ids = Array.from(selected);
-    addToast(`Running ${ids.length} rule${ids.length !== 1 ? "s" : ""} sequentially…`, "info");
-    let okCount = 0;
-    let errCount = 0;
-    for (const id of ids) {
-      try {
-        await runRule(id);
-        okCount++;
-      } catch {
-        // Per-rule failure is non-fatal — keep running the rest of the
-        // selection. The aggregate counts surface in the toast below.
-        errCount++;
-      }
-    }
-    addToast(`Bulk run complete — ${okCount} ok, ${errCount} failed`, errCount === 0 ? "success" : "error");
+    for (const id of ids) await runRule(id).catch(() => {});
+    addToast(`Queued ${ids.length} rule${ids.length !== 1 ? "s" : ""} to run`, "info");
   }
 
   async function handleBulkTest() {
     const ids = Array.from(selected);
-    let okCount = 0;
-    let errCount = 0;
-    for (const id of ids) {
-      try {
-        await testRule(id);
-        okCount++;
-      } catch {
-        // Per-rule failure is non-fatal — keep running the rest of the
-        // selection. Aggregate counts surface in the toast below.
-        errCount++;
-      }
-    }
-    if (errCount > 0) {
-      addToast(`Bulk test — ${okCount} ok, ${errCount} failed`, "error");
-    }
-    addToast(`Tested ${ids.length} rule${ids.length !== 1 ? "s" : ""}`, "info");
+    for (const id of ids) await testRule(id).catch(() => {});
+    addToast(`Queued ${ids.length} rule${ids.length !== 1 ? "s" : ""} to test`, "info");
   }
 
+  /**
+   * Runs this tab started, so it can report their endings.
+   *
+   * A run is now visible to every tab, but only the tab that pressed the button
+   * should toast about it or swing the preview row open. Keyed by run id rather
+   * than rule id: attaching to a run someone else started shouldn't claim it.
+   */
+  const startedHereRef = useRef<Set<string>>(new Set());
+
   function testRule(id: string): Promise<unknown> {
-    setTestingRuleId(id);
     // expandedRow drives both the in-flight log view and the post-completion
     // test-results preview, so we leave it set on success.
     setExpandedRow(id);
     setExpandedPreview(null);
-    testingRuleIdRef.current = id;
-    return testMutation
-      .mutateAsync({ id })
-      .catch((err) => {
-        // On error/cancel collapse — the status cell tooltip carries the message.
-        setExpandedRow(null);
-        throw err;
-      })
-      .finally(() => {
-        testingRuleIdRef.current = null;
-        setTestingRuleId(null);
-        utils.rules.list.invalidate();
-        utils.rules.lastTestResult.invalidate({ id });
-      });
+    return testMutation.mutateAsync({ id }).then((res) => {
+      startedHereRef.current.add(res.runId);
+      // Don't wait 2s for the next poll to admit the run exists.
+      utils.rules.activeRuns.invalidate();
+      return res;
+    });
   }
 
   function runRule(id: string): Promise<unknown> {
-    setRunningRuleId(id);
-    // While the run is in-flight, expandedRow drives the inline log view.
-    // After completion we collapse it and (if a collection was produced)
-    // open the Plex-style preview row instead — see `.then` below.
+    // While the run is in-flight, expandedRow drives the inline log view. On
+    // completion the watcher below collapses it and opens the preview row.
     setExpandedRow(id);
     setExpandedPreview(null);
-    runningRuleIdRef.current = id;
-    return runMutation
-      .mutateAsync({ id })
-      .then((result) => {
-        const rule = allRules.find((r) => r.id === id);
-        const lastCollectionKey = (result as { lastCollectionKey?: string | null })?.lastCollectionKey;
-        addToast(`Ran "${rule?.name ?? "rule"}"${lastCollectionKey ? "" : " (no collections created)"}`, "success");
-        // Swap the in-flight log view for the result preview. If no collection
-        // was created there's nothing to preview, so just collapse.
-        setExpandedRow(null);
-        if (lastCollectionKey) setExpandedPreview(id);
-        return result;
-      })
-      .catch((err) => {
-        // On error/cancel the log view should not stick around — the status
-        // cell carries the error message via its tooltip.
-        setExpandedRow(null);
-        throw err;
-      })
-      .finally(() => {
-        runningRuleIdRef.current = null;
-        setRunningRuleId(null);
-        utils.rules.list.invalidate();
-      });
+    return runMutation.mutateAsync({ id }).then((res) => {
+      startedHereRef.current.add(res.runId);
+      if (res.attached) addToast("That rule is already running — showing the run in progress.", "info");
+      utils.rules.activeRuns.invalidate();
+      return res;
+    });
   }
+
+  /**
+   * Notice runs ending.
+   *
+   * The mutation returns as soon as the run has a row, so there is no promise
+   * to hang the "it finished" behaviour off any more. A run that leaves the
+   * active list has ended — however it ended, and whichever tab or process was
+   * executing it.
+   */
+  const previouslyActiveRef = useRef<Map<string, string>>(new Map());
+  useEffect(() => {
+    const data = activeRunsQuery.data;
+    if (!data) return;
+    const nowActive = new Map(data.map((run) => [run.ruleId, run.id]));
+
+    for (const [ruleId, runId] of previouslyActiveRef.current) {
+      if (nowActive.get(ruleId) === runId) continue;
+      utils.rules.list.invalidate();
+      utils.rules.lastTestResult.invalidate({ id: ruleId });
+      if (!startedHereRef.current.delete(runId)) continue;
+
+      void utils.client.rules.runDetail.query({ runId }).then((run) => {
+        if (!run) return;
+        const name = allRules.find((r) => r.id === ruleId)?.name ?? "rule";
+        if (run.status === "cancelled") {
+          setExpandedRow((prev) => (prev === ruleId ? null : prev));
+          return;
+        }
+        if (run.status === "error") {
+          // The status cell carries the message in its tooltip; the log view
+          // shouldn't sit there looking live.
+          setExpandedRow((prev) => (prev === ruleId ? null : prev));
+          addToast(`"${name}" failed — ${run.error ?? "see the run log"}`, "error");
+          return;
+        }
+        if (run.phase === "test") return;
+
+        const created = (run.collectionCount ?? 0) > 0;
+        addToast(`Ran "${name}"${created ? "" : " (no collections created)"}`, "success");
+        // Swap the in-flight log view for the result preview. With nothing
+        // created there's nothing to preview, so just collapse.
+        setExpandedRow((prev) => (prev === ruleId ? null : prev));
+        if (created) setExpandedPreview(ruleId);
+      });
+    }
+    previouslyActiveRef.current = nowActive;
+    // `allRules` is read for a display name only; re-running this on every
+    // list refetch would replay endings that were already handled.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRunsQuery.data]);
 
   function handleTest(rule: RuleRow) {
     void testRule(rule.id).catch(() => {
@@ -606,39 +640,20 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     });
   }
 
-  function handleCancelTest() {
-    if (testingRuleId) {
-      cancelTestMutation.mutate({ id: testingRuleId });
-    }
-    testingRuleIdRef.current = null;
-    setTestingRuleId(null);
-    testMutation.reset();
-  }
-
   function handleRun(rule: RuleRow) {
     void runRule(rule.id).catch(() => {});
   }
 
-  function handleCancelRun() {
-    if (runningRuleId) {
-      cancelRunMutation.mutate({ id: runningRuleId });
-    }
-    runningRuleIdRef.current = null;
-    setRunningRuleId(null);
-    runMutation.reset();
+  /**
+   * Stop a run. Cancelling is a message to the run, not to this tab: the
+   * executor unwinds and writes the terminal status itself, which is what makes
+   * it work for a run belonging to another process.
+   */
+  function handleCancel(ruleId: string) {
+    const active = activeByRule.get(ruleId);
+    if (!active) return;
+    cancelRunMutation.mutate({ runId: active.id }, { onSuccess: () => utils.rules.activeRuns.invalidate() });
   }
-
-  useEffect(() => {
-    return () => {
-      if (testingRuleIdRef.current) {
-        cancelTestMutation.mutate({ id: testingRuleIdRef.current });
-      }
-      if (runningRuleIdRef.current) {
-        cancelRunMutation.mutate({ id: runningRuleIdRef.current });
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -728,17 +743,11 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
           actions={[
             { label: "Enable", onClick: () => handleBulkSetEnabled(true), disabled: updateMutation.isPending },
             { label: "Disable", onClick: () => handleBulkSetEnabled(false), disabled: updateMutation.isPending },
-            {
-              label: "Test",
-              onClick: handleBulkTest,
-              disabled: testMutation.isPending || runMutation.isPending,
-            },
-            {
-              label: "Run",
-              tone: "primary",
-              onClick: handleBulkRun,
-              disabled: testMutation.isPending || runMutation.isPending,
-            },
+            // No "something is already running" guard any more: starting a run
+            // is now just enqueuing one, and the queue is the thing that keeps
+            // them from overlapping.
+            { label: "Test", onClick: handleBulkTest },
+            { label: "Run", tone: "primary", onClick: handleBulkRun },
             {
               label: "Edit…",
               onClick: () => setBulkEditOpen(true),
@@ -787,14 +796,18 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                 <SortableTh sortKey="lastRun" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                   Status
                 </SortableTh>
+                <SortableTh sortKey="runs" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                  Runs
+                </SortableTh>
                 <th>Config</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {rules.map((rule, i) => {
-                const isTesting = testMutation.isPending && testingRuleId === rule.id;
-                const isRunning = runMutation.isPending && runningRuleId === rule.id;
+                const active = activeByRule.get(rule.id);
+                const isTesting = active?.phase === "test";
+                const isRunning = active?.phase === "run";
                 return (
                   <RuleTableRow
                     key={rule.id}
@@ -809,15 +822,16 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     previewExpanded={expandedPreview === rule.id}
                     onTogglePreview={() => togglePreviewExpand(rule.id)}
                     formActive={!!form}
-                    testPending={testMutation.isPending}
-                    runPending={runMutation.isPending}
+                    activeRunId={active?.id ?? null}
+                    runProgress={active?.progress ?? 0}
                     createPending={createMutation.isPending}
                     onRun={() => handleRun(rule)}
-                    onCancelRun={handleCancelRun}
+                    onCancelRun={() => handleCancel(rule.id)}
                     onTest={() => handleTest(rule)}
                     resolveTag={resolveTag}
                     cleanup={cleanupCounts[rule.id]}
-                    onCancelTest={handleCancelTest}
+                    onCancelTest={() => handleCancel(rule.id)}
+                    runsHref={runsHref(rule.id)}
                     onEdit={() => startEdit(rule)}
                     onDuplicate={() => handleDuplicate(rule)}
                     onDelete={() => handleDelete(rule)}

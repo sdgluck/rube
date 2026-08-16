@@ -12,6 +12,7 @@ import {
   RuleLockedError,
 } from "@tinkerbell/domain.rules";
 import { forgetCollections, getCollectionTitlesForRule } from "@tinkerbell/domain.collections";
+import { startRuleRun } from "@tinkerbell/domain.rule-runs";
 import { errorMessage } from "@tinkerbell/core";
 import { createLogger, noopCheckpoint, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
 
@@ -125,6 +126,8 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
   const failures: { name: string; error: string }[] = [];
   // Rules another run was already generating when we reached them.
   const skipped: string[] = [];
+  // Rules stopped individually from the UI while the batch was running.
+  const cancelledRules: string[] = [];
 
   const concurrency = Math.min(config.ruleConcurrency ?? RULE_CONCURRENCY_DEFAULT, enabledRules.length);
   if (concurrency > 1) ctx.log(`Running up to ${concurrency} rules at a time.`);
@@ -136,7 +139,28 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
   const cleanupBudget = createCleanupBudget();
 
   /** Everything one rule does, start to finish. Never throws except on abort. */
-  const runOneRule = async (rule: (typeof enabledRules)[number], ruleCtx: JobContext): Promise<void> => {
+  const runOneRule = async (rule: (typeof enabledRules)[number], jobCtx: JobContext): Promise<void> => {
+    /**
+     * Each rule in a batch gets its own `rule_runs` row, so a nightly job's
+     * outcome is answerable per rule rather than only as one blob of job log —
+     * and so the rules table can say "running" for a rule the *job* is
+     * running, not just one started from the UI.
+     *
+     * `tee` mirrors every line into the job's own log, which keeps the job
+     * transcript exactly as complete as it was before. The handle's signal
+     * derives from the job's, so cancelling the job still cancels the rule,
+     * and cancelling this rule's row unwinds just this rule.
+     */
+    const ruleRun = startRuleRun({
+      ruleId: rule.id,
+      phase: "run",
+      trigger: "job",
+      jobRunId: jobCtx.runId ?? null,
+      signal: ctx.signal,
+      tee: (line) => jobCtx.log(line),
+    });
+    const ruleCtx = ruleRun.ctx;
+
     const ruleConfig = parseRuleConfig(rule);
     ruleCtx.log(`\n--- Rule: "${rule.name}" (${rule.type}) ---`);
 
@@ -147,6 +171,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
       const unavailable = llmUnavailableReason();
       if (unavailable) {
         ruleCtx.log(`Skipping AI rule — ${unavailable}.`);
+        ruleRun.finish({ status: "ok" });
         completedRuleIds.add(rule.id);
         saveCheckpoint();
         return;
@@ -157,6 +182,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
     const ruleSectionsOrNull = filterSections(allSections, ruleConfig.sections);
     if (ruleSectionsOrNull === null) {
       ruleCtx.log(`No matching sections for rule config, skipping.`);
+      ruleRun.finish({ status: "ok" });
       // A rule with nothing to do is done — don't re-evaluate it on a resume.
       completedRuleIds.add(rule.id);
       saveCheckpoint();
@@ -191,7 +217,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
 
           return runHandler({ ctx: ruleCtx, client, sections, rule, ruleConfig }, machineId, labels, cleanupBudget);
         },
-        { signal: ctx.signal },
+        { signal: ruleCtx.signal },
       );
       if (lastCollectionKey) setRuleLastCollection(rule.id, lastCollectionKey);
 
@@ -206,6 +232,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
         collectionCount,
         itemCount,
       });
+      ruleRun.finish({ status: "ok", collectionCount, itemCount });
 
       announceNewCollections(rule.id, rule.name, collectionsBefore, getCollectionTitlesForRule(rule.id));
       // Not for cleanup rules: matching nothing is their healthy steady state,
@@ -225,20 +252,41 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
       // Not checkpointed as complete, so a resume picks it up again.
       if (err instanceof RuleLockedError) {
         ruleCtx.log(`Skipping "${rule.name}" — ${err.heldBy || "another run"} is already generating it.`);
+        // Recorded as cancelled rather than failed: nothing went wrong, this
+        // slice simply yielded to the run that already held the rule.
+        ruleRun.finish({ status: "cancelled" });
         skipped.push(rule.name);
         return;
       }
 
       const message = errorMessage(err);
+      /**
+       * Cancelled, or merely interrupted?
+       *
+       * A rule whose own row was cancelled is cancelled. So is one that
+       * unwound cleanly when the job was cancelled — that's an AbortError and
+       * nothing else went wrong. But a rule that failed on its own merits
+       * while the job happened to be stopping still failed, and recording that
+       * as "cancelled" would bury the only account of the real problem.
+       */
+      const abortError = err instanceof Error && err.name === "AbortError";
+      const cancelled = ruleRun.cancelRequested() || (ctx.signal.aborted && abortError);
       setRuleLastRun(rule.id, {
-        status: "error",
+        status: cancelled ? "cancelled" : "error",
         durationMs: Date.now() - ruleStartedAt,
-        error: message,
+        error: cancelled ? undefined : message,
       });
+      ruleRun.finish(cancelled ? { status: "cancelled" } : { status: "error", error: message });
 
-      // Cancellation and budget timeouts abort `ctx.signal` — that's the whole
-      // job ending, not this rule failing, so it still propagates.
       if (ctx.signal.aborted) throw err;
+
+      // Cancelled from its own row: the user stopped this one rule, and the
+      // rest of the batch carries on. Not a failure, so not in the summary.
+      if (cancelled) {
+        ruleCtx.log(`Rule "${rule.name}" was cancelled.`);
+        cancelledRules.push(rule.name);
+        return;
+      }
 
       failures.push({ name: rule.name, error: message });
       ruleCtx.log(`Rule "${rule.name}" failed: ${message}`);
@@ -288,6 +336,10 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
   if (skipped.length > 0) {
     ctx.log(`\n${skipped.length} rule(s) skipped — already being generated by another run:`);
     for (const name of skipped) ctx.log(`  - "${name}"`);
+  }
+  if (cancelledRules.length > 0) {
+    ctx.log(`\n${cancelledRules.length} rule(s) cancelled:`);
+    for (const name of cancelledRules) ctx.log(`  - "${name}"`);
   }
   ctx.log("\nAll done!");
 }

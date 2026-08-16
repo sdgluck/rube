@@ -34,6 +34,7 @@ const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"
 const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
 const SettingsPortalAppearance = lazy(() => import("#pages/Settings/Portal/SettingsPortalAppearance"));
 const Collections = lazy(() => import("#pages/Collections"));
+const RuleRuns = lazy(() => import("#pages/Rules/RuleRuns"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
 const CollectionItems = lazy(() => import("#pages/CollectionDetail/Items"));
 const CollectionDetails = lazy(() => import("#pages/CollectionDetail/Details"));
@@ -142,6 +143,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/rules/:ruleId/runs"
+                  element={
+                    <LazyPage>
+                      <RuleRuns />
+                    </LazyPage>
+                  }
+                />
+                <Route
                   path="/cleanup"
                   element={
                     <LazyPage>
@@ -151,6 +160,7 @@ export default function App() {
                 >
                   <Route index element={<Cleanup />} />
                   <Route path="rules" element={<Rules outcome="cleanup" />} />
+                  <Route path="rules/:ruleId/runs" element={<RuleRuns outcome="cleanup" />} />
                 </Route>
                 <Route
                   path="/registry"

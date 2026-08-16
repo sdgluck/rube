@@ -32,7 +32,7 @@
     "@tinkerbell/domain.prerolls": "workspace:*",
     "@tinkerbell/domain.preview": "workspace:*",
     "@tinkerbell/domain.registry": "workspace:*",
-    "@tinkerbell/domain.rule-progress": "workspace:*",
+    "@tinkerbell/domain.rule-runs": "workspace:*",
     "@tinkerbell/domain.rules": "workspace:*",
     "@tinkerbell/domain.search": "workspace:*",
     "@tinkerbell/domain.sections": "workspace:*",

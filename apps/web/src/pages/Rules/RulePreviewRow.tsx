@@ -36,7 +36,7 @@ export default function RulePreviewRow({ ruleId, fallbackRatingKey }: RulePrevie
 
   return (
     <tr className={styles.detailRow}>
-      <td ref={setTdEl} colSpan={7} className={styles.previewBlockCell}>
+      <td ref={setTdEl} colSpan={8} className={styles.previewBlockCell}>
         <div className={styles.previewStack} style={wrapperWidth ? { width: `${wrapperWidth}px` } : undefined}>
           {listQuery.isLoading ? (
             <>

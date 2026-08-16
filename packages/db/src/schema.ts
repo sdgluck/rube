@@ -216,6 +216,66 @@ export const ruleHistory = sqliteTable(
   (table) => [index("idx_rule_history_rule_section_run").on(table.ruleId, table.sectionKey, table.runAt)],
 );
 
+/**
+ * One row per execution of a single rule — the durable counterpart to the
+ * `last_run_*` columns on `rules`, which only ever remember the most recent one.
+ *
+ * This exists because a rule run had no server-visible existence: progress lived
+ * in a Map in the API process, so a run was invisible to every other tab, to the
+ * Sidequest worker thread, and to the same tab after a reload. A run big enough
+ * to be worth watching — a thousand collections, twenty minutes — was exactly the
+ * kind that disappeared.
+ *
+ * Deliberately shaped like `jobRuns` below: same log/progress/message triple,
+ * same append-only log writes, same "active status vs terminal status" split. The
+ * terminal statuses match `rules.lastRunStatus` ("ok" | "error" | "cancelled") so
+ * the denormalised summary on `rules` stays written the way it always was.
+ *
+ * Nullable: `jobRunId` (null for manual runs), the count columns and `error`
+ * (nothing to report until the run ends), `finishedAt` (null while in progress).
+ */
+export const ruleRuns = sqliteTable(
+  "rule_runs",
+  {
+    id: text("id").primaryKey(),
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
+    /** "run" | "test" — a test is a dry run, and worth the same durability. */
+    phase: text("phase").notNull(),
+    /** "manual" | "job" — a UI press, or a slice of a Generate/Cleanup job. */
+    trigger: text("trigger").notNull(),
+    /**
+     * The `job_runs.id` this rule run belongs to, when a job owns it. No FK: job
+     * runs are pruned on their own retention schedule, and a rule run outliving
+     * its parent should keep its own history rather than be deleted with it.
+     */
+    jobRunId: text("job_run_id"),
+    /** "queued" | "running" | "cancelling" → "ok" | "error" | "cancelled". */
+    status: text("status").notNull().default("queued"),
+    log: text("log").notNull().default(""),
+    progress: real("progress").notNull().default(0),
+    message: text("message").notNull().default(""),
+    collectionCount: integer("collection_count"),
+    itemCount: integer("item_count"),
+    error: text("error"),
+    startedAt: integer("started_at").notNull(),
+    /**
+     * Heartbeat, pushed forward by every log/progress flush. A worker thread that
+     * dies without taking the process down leaves a row that is `running` and
+     * silent; the watchdog uses the gap since this to tell that from a run that
+     * is simply quiet between steps.
+     */
+    updatedAt: integer("updated_at").notNull(),
+    finishedAt: integer("finished_at"),
+  },
+  (table) => [
+    index("idx_rule_runs_rule_started").on(table.ruleId, table.startedAt),
+    index("idx_rule_runs_status_started").on(table.status, table.startedAt),
+    index("idx_rule_runs_job_run").on(table.jobRunId),
+  ],
+);
+
 // Nullable: finishedAt only — null while the run is still in progress, set
 // when the run terminates (success, failure, or cancellation).
 export const jobRuns = sqliteTable(

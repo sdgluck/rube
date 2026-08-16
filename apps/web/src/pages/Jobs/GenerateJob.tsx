@@ -7,6 +7,7 @@ import JobPageShell from "./shared/JobPageShell";
 import ConfigPanel from "./shared/ConfigPanel";
 import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
+import RuleBreakdownPanel from "./shared/RuleBreakdownPanel";
 import JobConfigRows from "./shared/JobConfigRows";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
@@ -92,6 +93,7 @@ export default function GenerateJob({ job }: JobPageProps) {
         </ConfigPanel>
         <RunHistoryPanel runsQuery={actions.runsQuery} />
       </div>
+      <RuleBreakdownPanel jobRunId={actions.latestRun?.id} />
       <LatestRunLogPanel latestRun={actions.latestRun} />
     </JobPageShell>
   );

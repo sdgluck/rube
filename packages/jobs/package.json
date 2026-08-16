@@ -37,6 +37,7 @@
     "@tinkerbell/domain.prerolls": "workspace:*",
     "@tinkerbell/domain.registry": "workspace:*",
     "@tinkerbell/domain.rule-history": "workspace:*",
+    "@tinkerbell/domain.rule-runs": "workspace:*",
     "@tinkerbell/domain.rules": "workspace:*",
     "@tinkerbell/domain.shuffle-hubs": "workspace:*",
     "@tinkerbell/domain.stats": "workspace:*",

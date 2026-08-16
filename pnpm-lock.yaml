@@ -709,11 +709,17 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  domains/rule-progress:
+  domains/rule-runs:
     dependencies:
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -982,6 +988,9 @@ importers:
       '@tinkerbell/domain.rule-history':
         specifier: workspace:*
         version: link:../../domains/rule-history
+      '@tinkerbell/domain.rule-runs':
+        specifier: workspace:*
+        version: link:../../domains/rule-runs
       '@tinkerbell/domain.rules':
         specifier: workspace:*
         version: link:../../domains/rules
@@ -1189,9 +1198,9 @@ importers:
       '@tinkerbell/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
-      '@tinkerbell/domain.rule-progress':
+      '@tinkerbell/domain.rule-runs':
         specifier: workspace:*
-        version: link:../../domains/rule-progress
+        version: link:../../domains/rule-runs
       '@tinkerbell/domain.rules':
         specifier: workspace:*
         version: link:../../domains/rules

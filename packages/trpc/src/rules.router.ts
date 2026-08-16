@@ -9,16 +9,25 @@ import {
   setRuleLastTest,
 } from "@tinkerbell/domain.rules";
 import {
-  getRuleProgress,
-  clearProgress,
+  activateRuleRun,
+  createRuleRun,
+  findActiveRuleRun,
+  getActiveRuleRuns,
+  getRuleRun,
+  getRuleRunLog,
+  getRuleRuns,
+  getRuleRunCounts,
+  getRuleRunsForJobRun,
+  getRecentRuleRuns,
+  queueRuleRun,
+  requestRuleRunCancel,
   setLastTestResult,
   getLastTestResult,
   clearLastTestResult,
   hasLastTestResult,
-  createTrackedContext,
-  type RuleProgressState,
   type PersistedTestResult,
-} from "@tinkerbell/domain.rule-progress";
+  type RuleRunPhase,
+} from "@tinkerbell/domain.rule-runs";
 import { forgetCollectionArtwork, getCollectionArtworkForRule } from "@tinkerbell/domain.collections";
 import { errorMessage } from "@tinkerbell/core";
 import { ruleConfigSchema } from "@tinkerbell/contracts";
@@ -42,18 +51,101 @@ function assertValidRuleConfig(config: Record<string, unknown>): Record<string, 
   return config;
 }
 
-const testControllers = new Map<string, AbortController>();
-const runControllers = new Map<string, AbortController>();
-// Tracks the in-flight promise for the most recent run of each rule so a
-// second `run` call serializes after the first instead of racing it. Aborting
-// the old controller alone wasn't enough — abort is async, the old run can
-// still be mid-commit when the new one starts, and Plex permits same-title
-// collections so both end up creating real duplicates.
-const runPromises = new Map<string, Promise<unknown>>();
+/**
+ * Start a rule run/test, or hand back the one already in flight.
+ *
+ * Returns as soon as the run has a row — it does not wait for the run to
+ * finish. The mutation used to stay open for the whole run, which made the
+ * HTTP request the only record that the run existed: a proxy timeout or a
+ * closed laptop lid ended the request, the row went quiet in the UI, and the
+ * work carried on invisibly on the server. The row is the record now, and the
+ * client polls it.
+ *
+ * Pressing Run on a rule that is already running attaches to that run rather
+ * than starting a second one. A rule run is delete-then-recreate, and Plex
+ * happily keeps two collections with the same title.
+ */
+function startOrAttachRuleRun(ruleId: string, phase: RuleRunPhase): { runId: string; attached: boolean } {
+  const existing = findActiveRuleRun(ruleId, phase);
+  if (existing) return { runId: existing.id, attached: true };
+
+  const runId = createRuleRun({ ruleId, phase, trigger: "manual" });
+  // Queued, not raced: manual runs execute one at a time so a bulk "run all"
+  // doesn't point twenty concurrent rules at one Plex server.
+  void queueRuleRun(() => executeRuleRun(ruleId, phase, runId));
+  return { runId, attached: false };
+}
+
+async function executeRuleRun(ruleId: string, phase: RuleRunPhase, runId: string): Promise<void> {
+  const consolePrefix = phase === "run" ? "[run-rule]" : "[test-rule]";
+  const handle = activateRuleRun(runId, { consolePrefix });
+  // Null means the run was cancelled while it waited its turn. Nothing to do,
+  // and nothing to record — `requestRuleRunCancel` already wrote the row.
+  if (!handle) return;
+
+  const startedAt = Date.now();
+  try {
+    if (phase === "run") {
+      const { runSingleRule } = await import("@tinkerbell/jobs");
+      const result = await runSingleRule(ruleId, handle.ctx.signal, handle.ctx);
+      setRuleLastRun(ruleId, {
+        status: "ok",
+        durationMs: Date.now() - startedAt,
+        collectionCount: result.collectionCount,
+        itemCount: result.itemCount,
+      });
+      handle.finish({ status: "ok", collectionCount: result.collectionCount, itemCount: result.itemCount });
+      return;
+    }
+
+    const { testRule } = await import("@tinkerbell/jobs");
+    const result = await testRule(ruleId, handle.ctx.signal, handle.ctx);
+    const itemCount = result.collections.reduce((sum, c) => sum + c.items.length, 0);
+    const durationMs = Date.now() - startedAt;
+    setLastTestResult({
+      ruleId,
+      finishedAt: Date.now(),
+      durationMs,
+      status: "ok",
+      collections: result.collections,
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      cleanup: result.cleanup,
+    });
+    setRuleLastTest(ruleId, {
+      status: "ok",
+      durationMs,
+      collectionCount: result.collections.length,
+      itemCount,
+    });
+    handle.finish({ status: "ok", collectionCount: result.collections.length, itemCount });
+  } catch (err) {
+    // The row, not the exception type, decides how this is recorded: a run
+    // cancelled from another tab surfaces here as a plain AbortError.
+    const aborted = handle.cancelRequested() || (err instanceof Error && err.name === "AbortError");
+    const status = aborted ? "cancelled" : "error";
+    const message = errorMessage(err);
+    if (aborted) {
+      console.log(`${consolePrefix} ${phase === "run" ? "Run" : "Test"} for rule "${ruleId}" was cancelled`);
+    } else {
+      console.error(`${consolePrefix} ${phase === "run" ? "Run" : "Test"} for rule "${ruleId}" failed:`, message);
+    }
+    const outcome = { status, durationMs: Date.now() - startedAt, error: aborted ? undefined : message } as const;
+    if (phase === "run") setRuleLastRun(ruleId, outcome);
+    else setRuleLastTest(ruleId, outcome);
+    handle.finish({ status, error: aborted ? undefined : message });
+  }
+}
 
 export const rulesRouter = t.router({
   list: procedure.query(() => {
-    return getRules().map((r) => ({ ...r, hasTestResult: hasLastTestResult(r.id) }));
+    const tallies = getRuleRunCounts();
+    return getRules().map((r) => ({
+      ...r,
+      hasTestResult: hasLastTestResult(r.id),
+      runCount: tallies[r.id]?.count ?? 0,
+      lastRunId: tallies[r.id]?.lastRunId ?? null,
+    }));
   }),
 
   get: procedure.input(z.object({ id: z.string() })).query(({ input }) => {
@@ -92,132 +184,53 @@ export const rulesRouter = t.router({
     return { ok: true };
   }),
 
-  test: procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
-    if (testControllers.has(input.id)) {
-      console.log(`[test-rule] Aborting previous test for rule "${input.id}"`);
-      testControllers.get(input.id)?.abort();
-    }
-    const controller = new AbortController();
-    testControllers.set(input.id, controller);
-    const ctx = createTrackedContext(input.id, "test", controller.signal, "[test-rule]");
-    const startedAt = Date.now();
-    try {
-      const { testRule } = await import("@tinkerbell/jobs");
-      const result = await testRule(input.id, controller.signal, ctx);
-      const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
-      const persisted: PersistedTestResult = {
-        ruleId: input.id,
-        finishedAt: Date.now(),
-        durationMs: Date.now() - startedAt,
-        status: "ok",
-        collections: result.collections,
-        tokensIn: result.tokensIn,
-        tokensOut: result.tokensOut,
-        cleanup: result.cleanup,
-      };
-      setLastTestResult(persisted);
-      setRuleLastTest(input.id, {
-        status: "ok",
-        durationMs: persisted.durationMs,
-        collectionCount: result.collections.length,
-        itemCount: totalItems,
-      });
-      return result;
-    } catch (err) {
-      const aborted = err instanceof Error && err.name === "AbortError";
-      const status = aborted ? "cancelled" : "error";
-      if (aborted) {
-        console.log(`[test-rule] Test for rule "${input.id}" was cancelled`);
-      } else {
-        console.error(`[test-rule] Test for rule "${input.id}" failed:`, errorMessage(err));
-      }
-      setRuleLastTest(input.id, {
-        status,
-        durationMs: Date.now() - startedAt,
-        error: aborted ? undefined : errorMessage(err),
-      });
-      throw err;
-    } finally {
-      testControllers.delete(input.id);
-      clearProgress(input.id);
-    }
+  test: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    return startOrAttachRuleRun(input.id, "test");
   }),
 
-  cancelTest: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
-    console.log(`[test-rule] Cancel requested for rule "${input.id}"`);
-    testControllers.get(input.id)?.abort();
-    testControllers.delete(input.id);
-    return { ok: true };
+  run: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+    return startOrAttachRuleRun(input.id, "run");
   }),
 
-  run: procedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
-    // Wait for any in-flight run of this same rule to fully settle before
-    // starting a new one. Without this serialization two concurrent runs
-    // both pass deleteOldCollections and both call createCollectionWithLabel,
-    // producing duplicate same-title collections in Plex.
-    const prior = runPromises.get(input.id);
-    if (prior) {
-      console.log(`[run-rule] Aborting previous run for rule "${input.id}" and waiting for it to finish`);
-      runControllers.get(input.id)?.abort();
-      await prior.catch(() => {});
-    }
-
-    const controller = new AbortController();
-    runControllers.set(input.id, controller);
-    const ctx = createTrackedContext(input.id, "run", controller.signal, "[run-rule]");
-    const startedAt = Date.now();
-
-    const work = (async () => {
-      try {
-        const { runSingleRule } = await import("@tinkerbell/jobs");
-        const result = await runSingleRule(input.id, controller.signal, ctx);
-        setRuleLastRun(input.id, {
-          status: "ok",
-          durationMs: Date.now() - startedAt,
-          collectionCount: result.collectionCount,
-          itemCount: result.itemCount,
-        });
-        return result;
-      } catch (err) {
-        const aborted = err instanceof Error && err.name === "AbortError";
-        const status = aborted ? "cancelled" : "error";
-        if (aborted) {
-          console.log(`[run-rule] Run for rule "${input.id}" was cancelled`);
-        } else {
-          console.error(`[run-rule] Run for rule "${input.id}" failed:`, errorMessage(err));
-        }
-        setRuleLastRun(input.id, {
-          status,
-          durationMs: Date.now() - startedAt,
-          error: aborted ? undefined : errorMessage(err),
-        });
-        throw err;
-      } finally {
-        runControllers.delete(input.id);
-        clearProgress(input.id);
-      }
-    })();
-
-    runPromises.set(input.id, work);
-    try {
-      return await work;
-    } finally {
-      // Clear only if our promise is still the current one — a later run
-      // may have already replaced it via the prior-await branch above.
-      if (runPromises.get(input.id) === work) runPromises.delete(input.id);
-    }
+  /**
+   * Ask a run to stop. Safe to call from any tab, or for a run this process
+   * isn't executing — the executor notices the status and unwinds.
+   */
+  cancelRun: procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
+    const outcome = requestRuleRunCancel(input.runId);
+    if (outcome) console.log(`[rule-runs] Cancel requested for run "${input.runId}" (${outcome})`);
+    return { ok: outcome !== null, status: outcome };
   }),
 
-  cancelRun: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
-    console.log(`[run-rule] Cancel requested for rule "${input.id}"`);
-    runControllers.get(input.id)?.abort();
-    runControllers.delete(input.id);
-    return { ok: true };
-  }),
+  /** Every rule run currently queued, running or unwinding, with rule names. */
+  activeRuns: procedure.query(() => getActiveRuleRuns()),
 
-  progress: procedure.input(z.object({ id: z.string() })).query(({ input }): RuleProgressState | null => {
-    return getRuleProgress(input.id) ?? null;
-  }),
+  runs: procedure
+    .input(
+      z.object({
+        ruleId: z.string(),
+        limit: z.number().int().min(1).max(200).optional(),
+        phase: z.enum(["run", "test"]).optional(),
+      }),
+    )
+    .query(({ input }) => getRuleRuns(input.ruleId, { limit: input.limit, phase: input.phase })),
+
+  runDetail: procedure.input(z.object({ runId: z.string() })).query(({ input }) => getRuleRun(input.runId)),
+
+  /** Incremental log slice — see `useRunLog` on the client for why. */
+  runLog: procedure
+    .input(z.object({ runId: z.string(), offset: z.number().int().min(0).default(0) }))
+    .query(({ input }) => getRuleRunLog(input.runId, input.offset) ?? { chunk: "", nextOffset: 0, size: 0 }),
+
+  /** Latest runs across all rules, for the Jobs dashboard. */
+  recentRuns: procedure
+    .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
+    .query(({ input }) => getRecentRuleRuns(input?.limit ?? 20)),
+
+  /** The per-rule breakdown of a Generate/Cleanup job run. */
+  runsForJobRun: procedure
+    .input(z.object({ jobRunId: z.string() }))
+    .query(({ input }) => getRuleRunsForJobRun(input.jobRunId)),
 
   lastTestResult: procedure.input(z.object({ id: z.string() })).query(({ input }): PersistedTestResult | null => {
     return getLastTestResult(input.id) ?? null;

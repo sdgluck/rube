@@ -470,6 +470,71 @@ td.previewBlockCell {
   white-space: nowrap;
 }
 
+.runsCell {
+  font: var(--t-data);
+  white-space: nowrap;
+}
+
+.runsLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ink-3);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.runsLink:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ── Run history page ─────────────────────────────────────────────────── */
+
+.runsSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.runsFilter {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.runsFilterBtn,
+.runsFilterActive {
+  font: var(--t-data);
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.runsFilterActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.runRowSelected td {
+  background: var(--accent-soft);
+}
+
+/* A test sits in the same list as a run and reads identically at a glance,
+   so it says which it is rather than relying on the duration to hint. */
+.runPhaseTag {
+  margin-left: 6px;
+  font: var(--t-meta);
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .statusInline {
   display: inline-flex;
   align-items: center;

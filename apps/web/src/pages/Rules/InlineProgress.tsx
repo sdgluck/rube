@@ -1,29 +1,43 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "#/trpc";
+import { fetchRuleRunLog, isRunActive, useRunLog } from "#pages/Jobs/shared/useRunLog";
 import styles from "./Rules.module.css";
 import { formatDuration } from "#/format";
 
 interface InlineProgressProps {
-  ruleId: string;
+  /** The `rule_runs` row to follow. */
+  runId: string;
   phase: "test" | "run";
 }
 
-export default function InlineProgress({ ruleId, phase }: InlineProgressProps) {
-  const progressQuery = trpc.rules.progress.useQuery({ id: ruleId }, { refetchInterval: 500, enabled: true });
+/**
+ * The live view of one rule run, read from its row rather than from whatever
+ * this tab happens to remember.
+ *
+ * That distinction is the whole point: reopening the row — in this tab, another
+ * tab, or after a reload — re-attaches to the same run with its log so far,
+ * instead of showing an empty pane for work that is plainly still happening.
+ */
+export default function InlineProgress({ runId, phase }: InlineProgressProps) {
+  const runQuery = trpc.rules.runDetail.useQuery(
+    { runId },
+    // Stop polling the moment the run ends: a finished row never changes again.
+    { refetchInterval: (query) => (isRunActive(query.state.data?.status ?? undefined) ? 1000 : false) },
+  );
+  const data = runQuery.data;
+  const log = useRunLog(runId, isRunActive(data?.status ?? undefined), fetchRuleRunLog);
+
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(t);
   }, []);
 
-  const data = progressQuery.data;
-  const logs = data?.recentLogs ?? [];
-
   /**
    * Follow the tail as lines arrive, but stop the moment the user scrolls up —
-   * otherwise the 500ms poll yanks them back to the bottom and reading
-   * anything that already scrolled past becomes impossible. Re-arms when they
-   * scroll back to the bottom themselves.
+   * otherwise the poll yanks them back to the bottom and reading anything that
+   * already scrolled past becomes impossible. Re-arms when they scroll back to
+   * the bottom themselves.
    */
   const logRef = useRef<HTMLPreElement>(null);
   const pinnedToBottom = useRef(true);
@@ -39,19 +53,20 @@ export default function InlineProgress({ ruleId, phase }: InlineProgressProps) {
   useEffect(() => {
     const el = logRef.current;
     if (el && pinnedToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [logs.length]);
+  }, [log]);
 
   const elapsed = data ? now - data.startedAt : 0;
-  const pct = data && data.total > 0 ? Math.min(100, Math.round((data.current / data.total) * 100)) : 0;
-  const indeterminate = !data || data.total === 0 || data.current === 0;
+  const pct = data ? Math.min(100, Math.round(data.progress * 100)) : 0;
+  const queued = data?.status === "queued";
+  const indeterminate = !data || queued || pct === 0;
 
   return (
     <div>
       <div className={styles.detailHeader}>
-        <span className={styles.detailTitle}>{phase === "test" ? "Testing" : "Running"}…</span>
+        <span className={styles.detailTitle}>{queued ? "Queued" : phase === "test" ? "Testing" : "Running"}…</span>
         <span className={styles.detailMeta}>
           {elapsed > 0 ? `${formatDuration(elapsed)} elapsed` : ""}
-          {data && data.total > 0 ? ` · step ${data.current}/${data.total}` : ""}
+          {pct > 0 ? ` · ${pct}%` : ""}
         </span>
       </div>
       <div className={styles.progressBar}>
@@ -62,7 +77,7 @@ export default function InlineProgress({ ruleId, phase }: InlineProgressProps) {
         )}
       </div>
       <div className={styles.progressMessage}>{data?.message || "Starting…"}</div>
-      {logs.length > 0 && (
+      {log.length > 0 && (
         <pre
           ref={logRef}
           className={styles.logTail}
@@ -71,7 +86,7 @@ export default function InlineProgress({ ruleId, phase }: InlineProgressProps) {
           role="log"
           aria-label={phase === "test" ? "Test log" : "Run log"}
         >
-          {logs.join("\n")}
+          {log}
         </pre>
       )}
     </div>

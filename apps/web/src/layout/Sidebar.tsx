@@ -121,19 +121,57 @@ function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMet
   );
 }
 
+/**
+ * What's running right now, from anywhere in the app.
+ *
+ * Rule runs are listed beside job runs because they are the same kind of thing
+ * to the person waiting on one — and because a rule run's only route back used
+ * to be the table row that started it, which is exactly what disappeared on a
+ * reload.
+ */
 function SidebarActiveJobs() {
   const activeRunsQuery = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
+  const activeRuleRunsQuery = trpc.rules.activeRuns.useQuery(undefined, { refetchInterval: 2000 });
   const cancelMutation = trpc.jobs.cancel.useMutation({
     onSuccess: () => activeRunsQuery.refetch(),
   });
+  const cancelRuleRunMutation = trpc.rules.cancelRun.useMutation({
+    onSuccess: () => activeRuleRunsQuery.refetch(),
+  });
 
   const runs = activeRunsQuery.data;
-  if (!runs || runs.length === 0) return null;
+  // Rule runs a job owns are already represented by that job's own row; listing
+  // both would report one piece of work twice.
+  const ruleRuns = (activeRuleRunsQuery.data ?? []).filter((run) => run.trigger === "manual");
+  if ((!runs || runs.length === 0) && ruleRuns.length === 0) return null;
 
   return (
     <div className={styles.sidebarJobs}>
       <div className={styles.sidebarJobsTitle}>Running</div>
-      {runs.map((run) => (
+      {ruleRuns.map((run) => (
+        <div key={run.id} className={styles.sidebarJob}>
+          <Spinner size="sm" variant="inverse" />
+          <Link to={`/rules/${run.ruleId}/runs?run=${run.id}`} className={styles.sidebarJobLink}>
+            <span className={styles.sidebarJobName}>
+              {run.ruleName}
+              {run.phase === "test" ? " (test)" : ""}
+            </span>
+            {run.progress > 0 && <span className={styles.sidebarJobProgress}>{Math.round(run.progress * 100)}%</span>}
+          </Link>
+          <button
+            className={styles.sidebarCancel}
+            onClick={(e) => {
+              e.stopPropagation();
+              cancelRuleRunMutation.mutate({ runId: run.id });
+            }}
+            title={`Cancel ${run.ruleName}`}
+            aria-label={`Cancel ${run.ruleName}`}
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+      {(runs ?? []).map((run) => (
         <div key={run.id} className={styles.sidebarJob}>
           <Spinner size="sm" variant="inverse" />
           {/* A real link, not a div with onClick: focusable, middle-clickable,

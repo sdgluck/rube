@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { eq, and, desc, inArray, notInArray, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 import { seedDefaultRules } from "@tinkerbell/domain.rules";
+import { markStaleRuleRunsAsFailed, sweepStuckRuleRuns } from "@tinkerbell/domain.rule-runs";
 import { db, jobs, jobRuns } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import {
@@ -644,6 +645,11 @@ function startWatchdog(): void {
   watchdogTimer = setInterval(() => {
     try {
       sweepStuckRuns();
+      // Rule runs have no deadline of their own — a rule may legitimately take
+      // an hour. What they do have is a heartbeat, so the question here is
+      // "did the executor stop existing?", not "is this taking too long?".
+      const abandoned = sweepStuckRuleRuns();
+      if (abandoned > 0) log.warn("failed abandoned rule runs", { count: abandoned });
     } catch (err) {
       log.error("watchdog sweep failed", { err: errorMessage(err) });
     }
@@ -691,6 +697,10 @@ export async function initJobs(): Promise<void> {
   seedDefaultRules();
   markStaleRunsAsFailed();
   markStaleStressTestsAsFailed();
+  // Rule runs die with their process for the same reasons job runs do —
+  // whether they were started from the Rules page or by a Generate job.
+  const staleRuleRuns = markStaleRuleRunsAsFailed();
+  if (staleRuleRuns > 0) log.info("marked stale rule runs as failed", { count: staleRuleRuns });
   await startSidequest();
   startCronSchedules({ catchUp: true });
   startWatchdog();

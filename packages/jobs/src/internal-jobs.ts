@@ -11,6 +11,7 @@ import { MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { db, jobRuns } from "@tinkerbell/db";
 import { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } from "@tinkerbell/domain.bandwidth";
 import { pruneHealthChecks, checkAllConfiguredServices } from "@tinkerbell/domain.health";
+import { pruneRuleRuns, RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
 import { pollPlaybackOnce } from "@tinkerbell/domain.playback";
 import { syncRecentlyAdded } from "@tinkerbell/domain.stats";
 import { announceRegistryUpdates } from "./registry-updates.ts";
@@ -50,13 +51,16 @@ export const internalJobs = {
         // executing and still owns the row until it writes its terminal status.
         .where(and(notInArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]), lt(jobRuns.startedAt, cutoff)))
         .run();
+      // Rule runs are far more numerous than job runs — one Generate job writes
+      // a row per rule — so they are purged on the same schedule.
+      const ruleRunsPurged = pruneRuleRuns(Date.now() - RULE_RUN_RETENTION_MS);
       ctx.progress(1, 2, "Pruning health checks and bandwidth history");
       pruneHealthChecks();
       pruneBandwidthTests();
       // The usage samples are the fastest-growing table here: one row per
       // 30-second poll, whether or not anything was streaming.
       pruneBandwidthSamples();
-      return `Purged ${result.changes} job run(s) older than 7 days.`;
+      return `Purged ${result.changes} job run(s) and ${ruleRunsPurged} rule run(s) older than 7 days.`;
     },
     timeoutMs: 10 * MINUTE_MS,
   },

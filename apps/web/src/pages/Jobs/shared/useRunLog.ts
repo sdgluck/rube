@@ -5,6 +5,20 @@ import { trpcClient } from "#/trpc";
 const LOG_POLL_MS = 1000;
 
 /**
+ * Where a slice of log comes from. Job runs and rule runs store their logs the
+ * same way and slice them with the same offset arithmetic, so they share the
+ * hook and differ only in which procedure answers.
+ */
+export type RunLogFetcher = (
+  runId: string,
+  offset: number,
+) => Promise<{ chunk: string; nextOffset: number; size: number }>;
+
+export const fetchJobRunLog: RunLogFetcher = (runId, offset) => trpcClient.jobs.runLog.query({ runId, offset });
+
+export const fetchRuleRunLog: RunLogFetcher = (runId, offset) => trpcClient.rules.runLog.query({ runId, offset });
+
+/**
  * Accumulate a run's log by fetching only what's been appended since the last
  * poll.
  *
@@ -17,7 +31,11 @@ const LOG_POLL_MS = 1000;
  * on every request, so each poll would otherwise mint a new react-query cache
  * entry and the cache would grow with the log.
  */
-export function useRunLog(runId: string | null | undefined, isActive: boolean): string {
+export function useRunLog(
+  runId: string | null | undefined,
+  isActive: boolean,
+  fetchSlice: RunLogFetcher = fetchJobRunLog,
+): string {
   const [text, setText] = useState("");
   const offsetRef = useRef(0);
 
@@ -43,11 +61,11 @@ export function useRunLog(runId: string | null | undefined, isActive: boolean): 
       if (inFlight) return;
       inFlight = true;
       try {
-        const res = await trpcClient.jobs.runLog.query({ runId, offset: offsetRef.current });
+        const res = await fetchSlice(runId, offsetRef.current);
         if (cancelled) return;
         if (res.size < offsetRef.current) {
           // The stored log shrank — a rewrite, not an append. Take it whole.
-          const full = await trpcClient.jobs.runLog.query({ runId, offset: 0 });
+          const full = await fetchSlice(runId, 0);
           if (cancelled) return;
           setText(full.chunk);
           offsetRef.current = full.nextOffset;
@@ -73,12 +91,18 @@ export function useRunLog(runId: string | null | undefined, isActive: boolean): 
       cancelled = true;
       clearInterval(timer);
     };
-  }, [runId, isActive]);
+  }, [runId, isActive, fetchSlice]);
 
   return text;
 }
 
-/** Statuses where a run is still producing output. */
+/**
+ * Statuses where a run is still producing output.
+ *
+ * Covers both vocabularies: a rule run adds `queued`, which is active but not
+ * yet logging — callers that poll for output want it treated as live so the
+ * pane is already watching when the run starts.
+ */
 export function isRunActive(status: string | undefined): boolean {
-  return status === "running" || status === "cancelling";
+  return status === "running" || status === "cancelling" || status === "queued";
 }

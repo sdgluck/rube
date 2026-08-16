@@ -142,6 +142,7 @@ export class CommandJob extends Job {
       },
       signal: controller.signal,
       checkpoint: createCheckpoint(jobId),
+      runId,
     };
 
     // ── Config ────────────────────────────────────────────────────────────

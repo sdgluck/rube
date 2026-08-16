@@ -24,6 +24,15 @@ export interface JobContext {
   progress: (current: number, total: number, message: string) => void;
   signal: AbortSignal;
   checkpoint: JobCheckpoint;
+  /**
+   * The `job_runs.id` this context belongs to, when a job run owns it.
+   *
+   * Absent for the contexts that have no run row behind them — an ad-hoc rule
+   * run, a preview, the stress harness. Present so work a job does on behalf of
+   * something else (a `rule_runs` row, say) can point back at the run that
+   * caused it.
+   */
+  runId?: string;
 }
 
 /**

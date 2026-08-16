@@ -1,7 +1,19 @@
 import { Fragment } from "react";
-import { Copy, ExternalLink, Eye, FlaskConical, ImageOff, Pencil, Play, Square, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Eye,
+  FlaskConical,
+  History,
+  ImageOff,
+  Pencil,
+  Play,
+  Square,
+  Trash2,
+} from "lucide-react";
 import { EMPTY } from "#/format";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import RowActions from "#components/RowActions";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { CONFIG_SUMMARY, summarizeSmartFilterTree, TYPE_BADGE, TYPE_LABELS } from "./constants";
@@ -23,8 +35,12 @@ interface RuleTableRowProps {
   previewExpanded: boolean;
   onTogglePreview: () => void;
   formActive: boolean;
-  testPending: boolean;
-  runPending: boolean;
+  /** The in-flight run's id, when this rule has one. Null when idle. */
+  activeRunId: string | null;
+  /** 0–1, for the inline "Running… 62%" readout. */
+  runProgress: number;
+  /** Where this rule's run history lives. */
+  runsHref: string;
   createPending: boolean;
   onRun: () => void;
   onCancelRun: () => void;
@@ -55,8 +71,9 @@ export default function RuleTableRow({
   previewExpanded,
   onTogglePreview,
   formActive,
-  testPending,
-  runPending,
+  activeRunId,
+  runProgress,
+  runsHref,
   createPending,
   onRun,
   onCancelRun,
@@ -124,7 +141,19 @@ export default function RuleTableRow({
           <ToggleSwitch checked={!!rule.enabled} onChange={onToggleEnabled} size="sm" />
         </td>
         <td className={styles.statusCell} data-cell="meta">
-          <StatusCell rule={rule} isTesting={isTesting} isRunning={isRunning} cleanup={cleanup} />
+          <StatusCell
+            rule={rule}
+            isTesting={isTesting}
+            isRunning={isRunning}
+            runProgress={runProgress}
+            cleanup={cleanup}
+          />
+        </td>
+        <td className={styles.runsCell} data-cell="hide">
+          <Link to={runsHref} className={styles.runsLink} title={`Run history for ${rule.name}`}>
+            {rule.runCount > 0 ? `${rule.runCount} run${rule.runCount === 1 ? "" : "s"}` : "No runs"}
+            <ChevronRight size={14} aria-hidden />
+          </Link>
         </td>
         <td data-cell="hide">
           <span className={styles.configSummary}>{configSummary}</span>
@@ -145,20 +174,18 @@ export default function RuleTableRow({
                   }
                 : {
                     label: "Run",
-                    title: runPending || testPending ? "Another rule is running" : "Generate collections in Plex",
+                    title: "Generate collections in Plex",
                     icon: Play,
                     inline: true,
                     primary: true,
-                    disabled: runPending || testPending,
                     onSelect: onRun,
                   },
               isTesting
                 ? { label: "Cancel test", icon: Square, danger: true, onSelect: onCancelTest }
                 : {
                     label: "Test",
-                    title: testPending || runPending ? "Another rule is running" : "Preview without writing to Plex",
+                    title: "Preview without writing to Plex",
                     icon: FlaskConical,
-                    disabled: testPending || runPending,
                     onSelect: onTest,
                   },
               // Preview / View only make sense when the last run actually
@@ -192,6 +219,7 @@ export default function RuleTableRow({
               ...(generatesArtwork && onRevertArtwork
                 ? [{ label: "Revert artwork", icon: ImageOff, danger: true, onSelect: onRevertArtwork }]
                 : []),
+              { label: "View runs", icon: History, onSelect: () => navigate(runsHref) },
               { label: "Edit", icon: Pencil, disabled: formActive, onSelect: onEdit },
               { label: "Duplicate", icon: Copy, disabled: createPending, onSelect: onDuplicate },
               { label: "Delete", icon: Trash2, danger: true, onSelect: onDelete },
@@ -202,6 +230,7 @@ export default function RuleTableRow({
       {showDetail && (
         <RuleDetailRow
           ruleId={rule.id}
+          runId={activeRunId}
           isTesting={isTesting}
           isRunning={isRunning}
           errorToShow={errorToShow}
