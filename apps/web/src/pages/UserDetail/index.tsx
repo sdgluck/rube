@@ -99,6 +99,16 @@ export default function UserDetailLayout() {
         { label: "Remove friend", icon: Trash2, onSelect: () => confirmRemoval("unfriend"), danger: true },
       ];
 
+  // "0 collections" reads as "this user sees nothing", which isn't what the
+  // number means: it only counts collections labelled `User:<name>`, i.e. the
+  // ones personalization generated for them. Server-wide collections they can
+  // see are never in it, so say whose collections these are — and when the
+  // count is zero because they never opted in, say that instead of a bare 0.
+  const personalizationOff = user.collectionCount === 0 && !user.optedIn;
+  const collectionsTitle = personalizationOff
+    ? `${user.username} isn't opted into personalization, so Tinkerbell hasn't made any collections just for them. Server-wide collections are unaffected.`
+    : `Collections Tinkerbell generated for ${user.username} alone. Server-wide collections aren't counted here.`;
+
   const chips = [
     user.isOwner && "Owner",
     user.isManaged ? "Managed" : user.isHome && "Home",
@@ -136,8 +146,15 @@ export default function UserDetailLayout() {
           </div>
 
           <div className={local.metaLine}>
-            <span>
-              <strong className={local.metaNum}>{user.collectionCount}</strong> collections
+            <span title={collectionsTitle}>
+              {personalizationOff ? (
+                "no personal collections"
+              ) : (
+                <>
+                  <strong className={local.metaNum}>{user.collectionCount}</strong> personal collection
+                  {user.collectionCount === 1 ? "" : "s"}
+                </>
+              )}
             </span>
             <span className={local.metaDot}>·</span>
             <span>

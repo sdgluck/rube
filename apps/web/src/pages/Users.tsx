@@ -249,8 +249,14 @@ export default function Users() {
                         Name
                       </SortableTh>
                       <th>Personalization</th>
-                      <SortableTh sortKey="collectionCount" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Collections
+                      <SortableTh
+                        sortKey="collectionCount"
+                        activeKey={sortKey}
+                        activeDir={sortDir}
+                        onSort={toggleSort}
+                        title="Collections Tinkerbell generated for this user alone. Server-wide collections aren't counted here."
+                      >
+                        Personal Collections
                       </SortableTh>
                       <th>Plays</th>
                       <SortableTh sortKey="lastWatchedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>

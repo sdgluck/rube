@@ -12,6 +12,8 @@ interface SortableThProps<K extends string> {
   onSort: (key: K) => void;
   children: ReactNode;
   className?: string;
+  /** Hover text for columns whose label can't carry the whole meaning. */
+  title?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export default function SortableTh<K extends string>({
   onSort,
   children,
   className,
+  title,
 }: SortableThProps<K>) {
   const active = activeKey === sortKey;
   return (
@@ -36,7 +39,7 @@ export default function SortableTh<K extends string>({
       className={`${styles.th} ${className ?? ""}`}
       aria-sort={active ? (activeDir === "asc" ? "ascending" : "descending") : "none"}
     >
-      <button type="button" className={styles.sortBtn} onClick={() => onSort(sortKey)}>
+      <button type="button" className={styles.sortBtn} title={title} onClick={() => onSort(sortKey)}>
         <span>{children}</span>
         <span className={active ? styles.arrowActive : styles.arrow} aria-hidden="true">
           {active ? (activeDir === "asc" ? "▲" : "▼") : "▾"}
