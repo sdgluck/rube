@@ -84,7 +84,9 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
       const s = sharings[i];
       ctx.progress(i + 1, sharings.length, `Restricting "${s.username}"...`);
       try {
-        await client.setSharingRestrictions(s.id, [BASELINE_LABEL, `User:${s.username}`]);
+        // Pass the snapshotted filters so any content-rating clause the
+        // admin set survives the label rewrite.
+        await client.setSharingRestrictions(s.id, [BASELINE_LABEL, `User:${s.username}`], detailFor(s.userId));
         configured++;
       } catch (err) {
         ctx.log(`Failed to restrict ${s.username}: ${errorMessage(err)}`);

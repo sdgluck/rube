@@ -522,10 +522,66 @@ export const plexUsers = sqliteTable(
      * nothing like a shared user's, so they are excluded by default.
      */
     isOwner: integer("is_owner").notNull().default(0),
+    /** Nullable: Plex omits an email for managed users, who have no account. */
+    email: text("email"),
+    thumb: text("thumb"),
+    /** In the owner's Plex Home. */
+    isHome: integer("is_home").notNull().default(0),
+    /** A managed profile rather than a full Plex account. Implies `isHome`. */
+    isManaged: integer("is_managed").notNull().default(0),
+    /** PIN-protected. The PIN itself is write-only on Plex's side. */
+    isProtected: integer("is_protected").notNull().default(0),
+    /**
+     * The share id, not the user id. `PUT`/`DELETE .../shared_servers/{id}`
+     * are keyed by it, so without it neither the library picker nor the
+     * unshare action has anything to address. Null for the owner and for Home
+     * users who reach the server through the Home rather than a share.
+     */
+    sharedServerId: integer("shared_server_id"),
+    /** False while an invite is outstanding. */
+    accepted: integer("accepted").notNull().default(1),
     syncedAt: integer("synced_at").notNull(),
   },
   (table) => [index("idx_plex_users_username").on(table.username)],
 );
+
+/**
+ * What each user can currently see, mirrored from plex.tv so the list renders
+ * without a round trip. The detail page re-reads plex.tv live — share state
+ * changes out-of-band from the Plex web app, and a stale library list that
+ * silently lies is worse than a slower page.
+ */
+export const plexUserShares = sqliteTable("plex_user_shares", {
+  userId: integer("user_id").primaryKey(),
+  /** JSON array of library section keys. Empty means every library. */
+  sectionIds: text("section_ids", { mode: "json" }).$type<number[]>().notNull().default([]),
+  allowSync: integer("allow_sync").notNull().default(0),
+  allowTuners: integer("allow_tuners").notNull().default(0),
+  allowChannels: integer("allow_channels").notNull().default(0),
+  allowCameraUpload: integer("allow_camera_upload").notNull().default(0),
+  /** Verbatim plex.tv filter strings — `contentRating=PG|label=Tinkerbell`. */
+  filterMovies: text("filter_movies").notNull().default(""),
+  filterTelevision: text("filter_television").notNull().default(""),
+  filterMusic: text("filter_music").notNull().default(""),
+  syncedAt: integer("synced_at").notNull(),
+});
+
+/**
+ * Invites with no accepted user behind them yet, so the users list can show a
+ * pending row. Plex has no webhook for acceptance — it is discovered by the
+ * `sync-users` poll, at which point the row disappears in favour of a real
+ * `plex_users` row.
+ */
+export const plexInvites = sqliteTable("plex_invites", {
+  id: integer("id").primaryKey(),
+  /** `sent` is an invite we issued; `received` is one waiting on the owner. */
+  direction: text("direction").notNull(),
+  username: text("username").notNull().default(""),
+  email: text("email").notNull().default(""),
+  thumb: text("thumb"),
+  createdAt: integer("created_at"),
+  syncedAt: integer("synced_at").notNull(),
+});
 
 // Snapshot of each shared user's plex.tv sharing filters captured when the
 // personalization master switch is enabled, so disabling can restore the

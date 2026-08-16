@@ -1,0 +1,23 @@
+/* Only the fieldset framing is local — the inputs, checkbox list and buttons
+ * are the shared primitives. */
+
+.group {
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.hint {
+  margin: 4px 0 8px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}

@@ -27,6 +27,9 @@ drive collections, overlays, labels, and notifications on a schedule.
   LunaSea, and generic webhooks.
 - **Stats & events** — library stats, an activity feed, and playback history.
 - **Multi-user** — per-user settings and integrations (Plex, \*Arrs, Overseerr).
+- **User management** — invite people to the server, choose the libraries each
+  one gets, set downloads / Live TV / content-rating limits, watch what they're
+  streaming and stop a stream, all without leaving for app.plex.tv.
 
 ## Install
 

@@ -1,0 +1,199 @@
+/**
+ * Layout only — every colour, control and surface comes from a token or a
+ * primitive. The hero mirrors CollectionDetail's four-step read (identity,
+ * name, facts, state) so the two drill-in pages don't each invent their own
+ * header; what differs is the frame, because a user has a round avatar rather
+ * than a 2:3 poster.
+ */
+
+/* ─── Hero ────────────────────────────────────────────────────────────────── */
+
+.hero {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 22px;
+  align-items: start;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.avatarFrame {
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: var(--e-card);
+  aspect-ratio: 1;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* An initial, not a silhouette: at 72px a generic avatar is indistinguishable
+   from every other row's, which is the opposite of what a header is for. */
+.avatarEmpty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-sunken);
+  color: var(--ink-3);
+  font: var(--t-display);
+}
+
+.heroMain {
+  min-width: 0;
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.heroIdentity {
+  min-width: 0;
+}
+
+.eyebrow {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+
+.heroTitle {
+  font: var(--t-display);
+  letter-spacing: var(--t-display-tracking);
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── Facts line ──────────────────────────────────────────────────────────── */
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font: var(--t-data);
+  color: var(--ink-2);
+  line-height: 1.5;
+  row-gap: 6px;
+}
+
+.metaDot {
+  display: inline-block;
+  margin: 0 8px;
+  color: var(--ink-3);
+  opacity: 0.6;
+}
+
+.metaNum {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Facts on the left, state on the right — a chip after a "·" would read as
+   another fact in the same sentence. */
+.metaRule {
+  width: 1px;
+  height: 12px;
+  background: var(--line);
+  margin: 0 12px;
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabsRow {
+  margin-bottom: 16px;
+}
+
+/* ─── Access panels ───────────────────────────────────────────────────────── */
+
+/* Four separate settings that each write to Plex on their own, so each gets
+   its own card rather than being run together into one long form with a single
+   Save that would have to fan out to four different endpoints. */
+.panels {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 18px 20px;
+}
+
+.panelTitle {
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.panelHint {
+  font: var(--t-caption);
+  color: var(--ink-3);
+  margin: 0 0 10px;
+}
+
+.panelActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ratingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ratingLead {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  min-width: 52px;
+}
+
+.ratingChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: var(--t-data);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.dim {
+  color: var(--ink-3);
+}

@@ -54,6 +54,9 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   // Phase 2: Configure user sharing restrictions
   ctx.log(`Fetching shared users from plex.tv...`);
   const sharings = await client.getSharings(machineId);
+  // Read the current filters so the label rewrite below preserves any
+  // content-rating clause set on the user's detail page.
+  const details = await client.getSharedServerDetails(machineId).catch(() => []);
 
   if (sharings.length === 0) {
     ctx.log(`No shared users found for this server.`);
@@ -75,7 +78,11 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
     ctx.log(`Labels: ${labels.join(", ")}`);
 
     try {
-      await client.setSharingRestrictions(sharing.id, labels);
+      await client.setSharingRestrictions(
+        sharing.id,
+        labels,
+        details.find((d) => d.userId === sharing.userId),
+      );
       ctx.log(`Set sharing restriction for ${sharing.username}`);
       configured++;
     } catch (err) {

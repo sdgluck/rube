@@ -45,3 +45,4 @@ export {
 export { runSingleRule, testRule } from "./commands/generate/index.ts";
 export type { TestRuleResult, TestCollectionPreview } from "./commands/generate/index.ts";
 export { previewDigest } from "./commands/digest.ts";
+export { reconcileSharingRestrictions, BASELINE_LABEL } from "./personalize/reconcile.ts";

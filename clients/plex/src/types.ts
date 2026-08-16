@@ -10,12 +10,24 @@ export interface PlexClientOptions {
   token: string;
   signal?: AbortSignal;
   onHealth?: PlexHealthCallback;
+  /**
+   * The account service. Only ever overridden by tests — there is exactly one
+   * plex.tv in production — but without the seam none of the sharing or user
+   * management calls can be exercised by the mock-server pattern the rest of
+   * this client is tested with.
+   */
+  plexTvUrl?: string;
 }
 
 export interface RequestOptions {
   method?: string;
   params?: Record<string, string | number | undefined | null>;
   headers?: Record<string, string>;
+}
+
+export interface PlexTvRequestOptions extends RequestOptions {
+  /** A string is sent verbatim as XML; anything else is JSON-encoded. */
+  body?: string | Record<string, unknown>;
 }
 
 export interface PlexSection {
@@ -122,6 +134,79 @@ export interface PlexSharedServerDetail {
   librarySectionIds: number[];
 }
 
+/**
+ * The four booleans plex.tv calls "sharing settings". Optional throughout:
+ * a `PUT` that omits one leaves it alone, which is what every partial edit
+ * in the UI wants.
+ */
+export interface PlexShareSettings {
+  /** Downloads / sync. */
+  allowSync?: boolean;
+  /** Live TV & DVR. */
+  allowTuners?: boolean;
+  allowChannels?: boolean;
+  allowCameraUpload?: boolean;
+}
+
+/** Raw plex.tv filter strings, e.g. `contentRating=PG-13|label=Tinkerbell`. */
+export interface PlexShareFilters {
+  filterMovies?: string;
+  filterTelevision?: string;
+  filterMusic?: string;
+}
+
+/**
+ * One row of `/api/servers/{machineId}/shared_servers` — the authoritative
+ * view of what a user can actually see, including the share id the section
+ * and unshare endpoints are keyed by (which is *not* the user id).
+ */
+export interface PlexSharedServerFull extends Required<PlexShareSettings>, Required<PlexShareFilters> {
+  /** The shared-server id. `PUT`/`DELETE .../shared_servers/{id}` want this. */
+  sharedServerId: number;
+  userId: number;
+  username: string;
+  email: string;
+  /** False while the invite is still outstanding. */
+  accepted: boolean;
+  librarySectionIds: number[];
+}
+
+/** A user on the account, from `/api/users/` (friends) or `/api/v2/home/users`. */
+export interface PlexUserRecord {
+  id: number;
+  username: string;
+  title: string;
+  email: string;
+  thumb: string;
+  /** In the owner's Plex Home. */
+  home: boolean;
+  /** A managed (profile-restricted) user rather than a full Plex account. */
+  restricted: boolean;
+  /** PIN-protected. The PIN itself is write-only and can never be read back. */
+  protected: boolean;
+}
+
+export interface PlexInvite {
+  id: number;
+  /** `sent` is an invite we issued; `received` is one waiting on us. */
+  direction: "sent" | "received";
+  username: string;
+  email: string;
+  thumb: string;
+  createdAt?: number;
+}
+
+export interface InviteUserOptions {
+  machineIdentifier: string;
+  /** One of the two. An email invites someone not yet on the account. */
+  invitedEmail?: string;
+  invitedId?: number;
+  /** Empty shares every library. */
+  librarySectionIds: number[];
+  settings?: PlexShareSettings;
+  filters?: PlexShareFilters;
+}
+
 export interface PlexHubItem {
   ratingKey: string;
   title: string;
@@ -159,6 +244,12 @@ export interface PlexSession {
   ratingKey?: string;
   /** Plex's live-session identifier. Reused across unrelated plays over time. */
   sessionKey?: string;
+  /**
+   * `Session.id` — the opaque handle `/status/sessions/terminate` wants. A
+   * different value from `sessionKey`, and passing that one instead silently
+   * fails to kill anything.
+   */
+  sessionId?: string;
   parentRatingKey?: string;
   grandparentRatingKey?: string;
   librarySectionId?: string;

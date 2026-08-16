@@ -49,6 +49,10 @@ const Jobs = lazy(() => import("#pages/Jobs"));
 const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
 const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
 const Users = lazy(() => import("#pages/Users"));
+const UserDetail = lazy(() => import("#pages/UserDetail"));
+const UserAccess = lazy(() => import("#pages/UserDetail/Access"));
+const UserActivity = lazy(() => import("#pages/UserDetail/Activity"));
+const UserSessions = lazy(() => import("#pages/UserDetail/Sessions"));
 const Overlays = lazy(() => import("#pages/Overlays"));
 const Prerolls = lazy(() => import("#pages/Prerolls"));
 const Events = lazy(() => import("#pages/Events"));
@@ -210,6 +214,18 @@ export default function App() {
                     </LazyPage>
                   }
                 />
+                <Route
+                  path="/users/:userId"
+                  element={
+                    <LazyPage>
+                      <UserDetail />
+                    </LazyPage>
+                  }
+                >
+                  <Route index element={<UserAccess />} />
+                  <Route path="activity" element={<UserActivity />} />
+                  <Route path="sessions" element={<UserSessions />} />
+                </Route>
                 <Route
                   path="/events"
                   element={

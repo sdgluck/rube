@@ -26,6 +26,21 @@
   color: var(--ink-3);
 }
 
+/* Kind and invite state beside the username. Deliberately quieter than the
+   personalization pill: those are facts about the account, not state anyone
+   came to this page to act on. */
+.badge {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: var(--r-tag);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 /* Reads as plain text until hovered, matching the title links in Stats. */
 .lastWatchedLink {
   color: inherit;

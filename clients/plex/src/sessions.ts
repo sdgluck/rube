@@ -19,6 +19,7 @@ export function createSessionsModule(http: PlexHttp) {
       return {
         ratingKey: item.ratingKey,
         sessionKey: item.sessionKey,
+        sessionId: session?.id,
         parentRatingKey: item.parentRatingKey,
         grandparentRatingKey: item.grandparentRatingKey,
         librarySectionId: item.librarySectionID == null ? undefined : String(item.librarySectionID),
@@ -87,5 +88,17 @@ export function createSessionsModule(http: PlexHttp) {
     });
   }
 
-  return { getActiveSessions, getRecentlyAdded };
+  /**
+   * Stop a stream, showing the viewer `reason` on their client.
+   *
+   * `sessionId` is `Session.id` from `/status/sessions`, not `sessionKey`.
+   * The parameter name is camel-cased with a capital I — Plex answers 400 for
+   * `sessionid` — and a successful terminate returns an empty body, so a
+   * non-throwing call is the whole success signal.
+   */
+  async function terminateSession(sessionId: string, reason: string): Promise<void> {
+    await http.requestRaw("/status/sessions/terminate", { params: { sessionId, reason } });
+  }
+
+  return { getActiveSessions, getRecentlyAdded, terminateSession };
 }

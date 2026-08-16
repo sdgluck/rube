@@ -1,80 +1,17 @@
-import { XMLParser } from "fast-xml-parser";
-import { httpRequest, HttpError } from "@tinkerbell/http";
 import type { PlexHttp } from "./http.ts";
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  return String(err);
-}
+import { createPlexTvRequest, plexTvXmlParser as xmlParser, toArray } from "./plextv.ts";
+import { setFilterClause } from "./filters.ts";
 import { plexSharedServerRawSchema } from "./schemas.ts";
-
-const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "",
-  // Containers we want to walk return as arrays even when there's only one
-  // child, so downstream code doesn't have to special-case 1-vs-N.
-  isArray: (name) => name === "User" || name === "Server" || name === "SharedServer" || name === "Section",
-});
-
-function toArray<T>(v: T | T[] | undefined): T[] {
-  if (v === undefined) return [];
-  return Array.isArray(v) ? v : [v];
-}
 import type {
   PlexAccount,
   PlexHistoryItem,
   PlexSharing,
   PlexSharedServerDetail,
-  RequestOptions,
   WatchHistoryOptions,
 } from "./types.ts";
 
 export function createSharingModule(http: PlexHttp) {
-  async function plexTvRequest(path: string, { method = "GET", params = {}, headers = {} }: RequestOptions = {}) {
-    const reqUrl = new URL(path, "https://plex.tv");
-    reqUrl.searchParams.set("X-Plex-Token", http.token);
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) reqUrl.searchParams.set(k, String(v));
-    }
-
-    let res: Response;
-    try {
-      res = await httpRequest({
-        url: reqUrl,
-        retries: 3,
-        timeoutMs: 15_000,
-        init: {
-          method,
-          signal: http.signal,
-          headers: {
-            Accept: "application/json",
-            "X-Plex-Client-Identifier": "tinkerbell",
-            "X-Plex-Product": "tinkerbell",
-            "X-Plex-Version": "1.0.0",
-            ...headers,
-          },
-        },
-      });
-    } catch (err) {
-      if (err instanceof HttpError) {
-        http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${err.status}`);
-        throw new Error(`Plex.tv API ${method} ${path} → ${err.message}`);
-      }
-      http.onHealth?.("Plex.tv", "error", `${method} ${path} → ${errorMessage(err)}`);
-      throw err;
-    }
-
-    http.onHealth?.("Plex.tv", "ok", `${method} ${path} → ${res.status}`);
-
-    const text = await res.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch {
-      return { _raw: text };
-    }
-  }
+  const plexTvRequest = createPlexTvRequest(http);
 
   async function getSharings(machineIdentifier: string): Promise<PlexSharing[]> {
     const results: PlexSharing[] = [];
@@ -134,14 +71,24 @@ export function createSharingModule(http: PlexHttp) {
     return results;
   }
 
-  async function setSharingRestrictions(userId: number, labels: string[]): Promise<void> {
-    const filterStr = `label=${labels.join("|")}`;
-
+  /**
+   * Set the `label=` clause of a user's movie and TV filters.
+   *
+   * `current` is the user's existing filter strings. Passing them keeps any
+   * `contentRating=` clause an admin set alongside the labels — without it
+   * this write is wholesale, and a parental rating quietly disappears every
+   * time personalization reconciles.
+   */
+  async function setSharingRestrictions(
+    userId: number,
+    labels: string[],
+    current?: { filterMovies?: string; filterTelevision?: string },
+  ): Promise<void> {
     await plexTvRequest(`/api/friends/${userId}`, {
       method: "PUT",
       params: {
-        filterMovies: filterStr,
-        filterTelevision: filterStr,
+        filterMovies: setFilterClause(current?.filterMovies, "label", labels),
+        filterTelevision: setFilterClause(current?.filterTelevision, "label", labels),
       },
     });
   }

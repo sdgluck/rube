@@ -29,6 +29,8 @@ export class PlexApiError extends Error {
 export interface PlexHttp {
   url: string;
   token: string;
+  /** Base for the account service. See `PlexClientOptions.plexTvUrl`. */
+  plexTvUrl?: string;
   signal?: AbortSignal;
   onHealth?: PlexHealthCallback;
   request: (path: string, opts?: RequestOptions) => Promise<any>;
@@ -41,7 +43,7 @@ const PLEX_HEADERS = {
   "X-Plex-Version": "1.0.0",
 };
 
-export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptions): PlexHttp {
+export function createPlexHttp({ url, token, signal, onHealth, plexTvUrl }: PlexClientOptions): PlexHttp {
   function buildUrl(path: string, params: RequestOptions["params"]): URL {
     const reqUrl = new URL(path, url);
     reqUrl.searchParams.set("X-Plex-Token", token);
@@ -112,5 +114,5 @@ export function createPlexHttp({ url, token, signal, onHealth }: PlexClientOptio
     }
   }
 
-  return { url, token, signal, onHealth, request, requestRaw };
+  return { url, token, plexTvUrl, signal, onHealth, request, requestRaw };
 }

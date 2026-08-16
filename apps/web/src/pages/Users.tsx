@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Settings2, UserMinus } from "lucide-react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "#/trpc";
 import { UsersSkeleton } from "#components/Skeleton";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
+import Banner from "#components/Banner";
+import ConfirmModal from "#components/ConfirmModal";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
+import InviteUserModal from "#components/InviteUserModal";
 import PageShell from "#components/PageShell";
+import RowActions, { type RowAction } from "#components/RowActions";
 import Pagination from "#components/Pagination";
 import SortableTh from "#components/SortableTh";
 import { useListParams } from "#hooks/useListParams";
@@ -96,6 +101,7 @@ function EditableName({
 
 export default function Users() {
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
   const { addToast } = useToast();
   const { sortKey, sortDir, page, param, setParam, setPage, toggleSort } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
@@ -128,10 +134,19 @@ export default function Users() {
   const syncMutation = trpc.users.sync.useMutation({
     onSuccess: () => {
       utils.users.list.invalidate();
+      utils.users.invites.invalidate();
       addToast("Users refreshed", "success");
     },
     onError: () => addToast("Failed to refresh users", "error"),
   });
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<{ userId: number; username: string } | null>(null);
+
+  const invitesQuery = trpc.users.invites.useQuery(undefined, { refetchOnWindowFocus: false });
+  const invites = invitesQuery.data ?? [];
+  const removeMutation = trpc.users.remove.useMutation();
+  const cancelInviteMutation = trpc.users.cancelInvite.useMutation();
 
   const users = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
@@ -148,7 +163,12 @@ export default function Users() {
         <EmptyState
           icon="person"
           title="No shared users found"
-          description="Users will appear here once Plex sharing is configured."
+          description="Users appear here once you share the server with someone."
+          action={
+            <button type="button" className={sharedStyles.button} onClick={() => setInviteOpen(true)}>
+              Invite a user
+            </button>
+          }
         />
       ) : (
         <>
@@ -166,7 +186,45 @@ export default function Users() {
             >
               {syncMutation.isPending ? "Refreshing…" : "Refresh"}
             </button>
+            <button className={sharedStyles.button} onClick={() => setInviteOpen(true)}>
+              Invite user
+            </button>
           </div>
+
+          {/* Plex has no webhook for acceptance, so an invite is only known to
+              have landed at the next sync. Saying so beats a row that silently
+              looks like every other. */}
+          {invites.length > 0 && (
+            <Banner variant="info">
+              {invites.length} pending invite{invites.length === 1 ? "" : "s"}:{" "}
+              {invites.map((invite, i) => (
+                <span key={invite.id}>
+                  {i > 0 && ", "}
+                  {invite.email || invite.username}
+                  {invite.direction === "sent" && (
+                    <>
+                      {" "}
+                      <button
+                        type="button"
+                        className={sharedStyles.buttonGhost}
+                        onClick={async () => {
+                          try {
+                            await cancelInviteMutation.mutateAsync({ inviteId: invite.id });
+                            utils.users.invites.invalidate();
+                            addToast("Invite cancelled", "success");
+                          } catch (err) {
+                            addToast(err instanceof Error ? err.message : "Failed to cancel the invite", "error");
+                          }
+                        }}
+                      >
+                        cancel
+                      </button>
+                    </>
+                  )}
+                </span>
+              ))}
+            </Banner>
+          )}
 
           {users.length === 0 ? (
             <EmptyState
@@ -198,12 +256,26 @@ export default function Users() {
                       <SortableTh sortKey="lastWatchedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                         Last Watched
                       </SortableTh>
+                      <th aria-label="Actions" />
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user) => (
                       <tr key={user.userId}>
-                        <td data-cell="title">{user.username}</td>
+                        <td data-cell="title">
+                          <Link to={`/users/${user.userId}`} className={sharedStyles.cellLink}>
+                            {user.username}
+                          </Link>
+                          {/* Kind and invite state, only when they aren't the
+                              ordinary case — a badge on every row says nothing. */}
+                          {user.isOwner && <span className={styles.badge}>owner</span>}
+                          {user.isManaged ? (
+                            <span className={styles.badge}>managed</span>
+                          ) : (
+                            user.isHome && <span className={styles.badge}>home</span>
+                          )}
+                          {!user.accepted && <span className={styles.badge}>pending</span>}
+                        </td>
                         <td data-cell="meta">
                           <EditableName
                             userId={user.userId}
@@ -278,6 +350,35 @@ export default function Users() {
                             <span className={styles.hint}>—</span>
                           )}
                         </td>
+                        <td data-cell="meta">
+                          {/* Nothing here for the owner: Plex refuses every one
+                              of these against the account that owns the server. */}
+                          {!user.isOwner && (
+                            <RowActions
+                              label={`Actions for ${user.username}`}
+                              actions={
+                                [
+                                  {
+                                    label: "Manage access",
+                                    icon: Settings2,
+                                    onSelect: () => navigate(`/users/${user.userId}`),
+                                  },
+                                  ...(user.sharedServerId !== null
+                                    ? [
+                                        {
+                                          label: "Remove access",
+                                          icon: UserMinus,
+                                          danger: true,
+                                          onSelect: () =>
+                                            setPendingRemoval({ userId: user.userId, username: user.username }),
+                                        },
+                                      ]
+                                    : []),
+                                ] as RowAction[]
+                              }
+                            />
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -288,6 +389,38 @@ export default function Users() {
             </>
           )}
         </>
+      )}
+
+      {inviteOpen && (
+        <InviteUserModal
+          onClose={() => setInviteOpen(false)}
+          onInvited={() => {
+            setInviteOpen(false);
+            utils.users.list.invalidate();
+            utils.users.invites.invalidate();
+          }}
+        />
+      )}
+
+      {pendingRemoval && (
+        <ConfirmModal
+          title="Remove access?"
+          message={`${pendingRemoval.username} will lose access to this server. They stay a Plex friend, and any Tinkerbell collections made for them are deleted.`}
+          confirmLabel="Remove access"
+          danger
+          onCancel={() => setPendingRemoval(null)}
+          onConfirm={async () => {
+            const { userId, username } = pendingRemoval;
+            setPendingRemoval(null);
+            try {
+              await removeMutation.mutateAsync({ userId, mode: "unshare" });
+              utils.users.list.invalidate();
+              addToast(`Removed ${username}'s access`, "success");
+            } catch (err) {
+              addToast(err instanceof Error ? err.message : "Failed to remove access", "error");
+            }
+          }}
+        />
       )}
     </PageShell>
   );

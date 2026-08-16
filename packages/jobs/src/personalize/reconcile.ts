@@ -1,4 +1,5 @@
 import type { PlexClient } from "@tinkerbell/plex";
+import { getFilterClause } from "@tinkerbell/plex";
 import { errorMessage, getConfig, setConfig } from "@tinkerbell/core";
 import { db, sharingRestrictionBackups } from "@tinkerbell/db";
 
@@ -34,11 +35,16 @@ export async function reconcileSharingRestrictions(
       .onConflictDoNothing()
       .run();
 
-    const expected = `label=${[BASELINE_LABEL, `User:${s.username}`].join("|")}`;
-    if (d?.filterMovies === expected) continue; // already restricted
+    // Compare the label clause alone. The same string can also carry a
+    // `contentRating=` clause an admin set on the user's detail page, and
+    // testing the whole string would read that as drift and wipe it on every
+    // run — which is how a parental rating silently disappears.
+    const expected = [BASELINE_LABEL, `User:${s.username}`];
+    const actual = getFilterClause(d?.filterMovies, "label");
+    if (actual.length === expected.length && expected.every((l) => actual.includes(l))) continue;
 
     try {
-      await client.setSharingRestrictions(s.id, [BASELINE_LABEL, `User:${s.username}`]);
+      await client.setSharingRestrictions(s.id, expected, d);
       configured++;
     } catch (err) {
       log(`Failed to restrict ${s.username}: ${errorMessage(err)}`);

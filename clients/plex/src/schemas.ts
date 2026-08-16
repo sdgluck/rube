@@ -85,6 +85,8 @@ const plexUserRawSchema = z
 
 const plexSessionRawSchema = z
   .object({
+    /** The handle `/status/sessions/terminate` keys on. */
+    id: z.string().optional(),
     location: z.string().optional(),
     bandwidth: z.number().optional(),
   })
@@ -182,6 +184,57 @@ export const plexSharedServerRawSchema = z
     filterMovies: z.string().optional(),
     filterTelevision: z.string().optional(),
     librarySectionIDs: z.string().optional(),
+  })
+  .passthrough();
+
+/**
+ * plex.tv user payloads. Everything is optional and coerced: `/api/users/` is
+ * XML, so every attribute arrives as a string, while `/api/v2/home/users` is
+ * JSON with real numbers and booleans for the same fields.
+ */
+const plexBool = z.union([z.boolean(), z.number(), z.string()]).optional();
+
+export const plexUserRecordRawSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    username: z.string().optional(),
+    title: z.string().optional(),
+    friendlyName: z.string().optional(),
+    email: z.string().optional(),
+    thumb: z.string().optional(),
+    home: plexBool,
+    admin: plexBool,
+    guest: plexBool,
+    restricted: plexBool,
+    protected: plexBool,
+  })
+  .passthrough();
+
+export const plexSharedServerFullRawSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    userID: z.coerce.number().optional(),
+    username: z.string().optional(),
+    email: z.string().optional(),
+    accepted: plexBool,
+    allowSync: plexBool,
+    allowTuners: plexBool,
+    allowChannels: plexBool,
+    allowCameraUpload: plexBool,
+    filterMovies: z.string().optional(),
+    filterTelevision: z.string().optional(),
+    filterMusic: z.string().optional(),
+  })
+  .passthrough();
+
+export const plexInviteRawSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    username: z.string().optional(),
+    title: z.string().optional(),
+    email: z.string().optional(),
+    thumb: z.string().optional(),
+    createdAt: z.coerce.number().optional(),
   })
   .passthrough();
 

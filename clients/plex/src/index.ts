@@ -12,6 +12,7 @@ import { createHubsModule } from "./hubs.ts";
 import { createItemsModule } from "./items.ts";
 import { createCollectionsModule } from "./collections.ts";
 import { createSharingModule } from "./sharing.ts";
+import { createUsersModule } from "./users.ts";
 import { createSessionsModule } from "./sessions.ts";
 import { createPostersModule } from "./posters.ts";
 import { createStreamingModule } from "./streaming.ts";
@@ -20,6 +21,13 @@ import type { PlexClientOptions } from "./types.ts";
 
 export { PREROLL_PREF_ID } from "./prefs.ts";
 export { PlexApiError } from "./http.ts";
+export {
+  parseShareFilter,
+  composeShareFilter,
+  getFilterClause,
+  setFilterClause,
+  shareFiltersEqual,
+} from "./filters.ts";
 
 export { SECTION_TYPE_MAP, COLLECTION_MODES, COLLECTION_SORTS } from "./types.ts";
 export type {
@@ -36,6 +44,12 @@ export type {
   PlexAccount,
   PlexSharing,
   PlexSharedServerDetail,
+  PlexSharedServerFull,
+  PlexShareSettings,
+  PlexShareFilters,
+  PlexUserRecord,
+  PlexInvite,
+  InviteUserOptions,
   PlexHubItem,
   PlexHomeHub,
   PlexSession,
@@ -63,6 +77,7 @@ export function createPlexClient(opts: PlexClientOptions) {
     ...createItemsModule(http),
     ...createCollectionsModule(http),
     ...createSharingModule(http),
+    ...createUsersModule(http),
     ...createSessionsModule(http),
     ...createPostersModule(http),
     ...createStreamingModule(http),
