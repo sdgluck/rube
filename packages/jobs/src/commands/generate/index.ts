@@ -215,7 +215,12 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
           // collections is no more fatal than the rule's own handler failing.
           await deleteOldCollections(ruleCtx, client, sections, rule.id);
 
-          return runHandler({ ctx: ruleCtx, client, sections, rule, ruleConfig }, machineId, labels, cleanupBudget);
+          return runHandler(
+            { ctx: ruleCtx, client, sections, rule, ruleConfig, ruleRunId: ruleRun.runId },
+            machineId,
+            labels,
+            cleanupBudget,
+          );
         },
         { signal: ruleCtx.signal },
       );
@@ -390,6 +395,7 @@ export async function runSingleRule(
   ruleId: string,
   signal?: AbortSignal,
   ctxIn?: JobContext,
+  ruleRunId?: string,
 ): Promise<{ lastCollectionKey: string | null; collectionCount: number; itemCount: number }> {
   const rule = getRule(ruleId);
   if (!rule) throw new Error(`Rule "${ruleId}" not found`);
@@ -432,7 +438,12 @@ export async function runSingleRule(
 
       ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
       const labels = ["Tinkerbell", `Rule:${rule.id}`];
-      return runHandler({ ctx, client, sections, rule, ruleConfig }, machineId, labels, createCleanupBudget());
+      return runHandler(
+        { ctx, client, sections, rule, ruleConfig, ruleRunId },
+        machineId,
+        labels,
+        createCleanupBudget(),
+      );
     },
     { waitMs: SINGLE_RUN_LOCK_WAIT_MS, signal },
   );

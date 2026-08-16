@@ -25,13 +25,22 @@ import {
   getLastTestResult,
   clearLastTestResult,
   hasLastTestResult,
+  getRunChanges,
+  getRunChangeCounts,
+  getRememberedMembers,
+  rememberMembers,
+  clearRunChanges,
   type PersistedTestResult,
   type RuleRunPhase,
 } from "@tinkerbell/domain.rule-runs";
-import { forgetCollectionArtwork, getCollectionArtworkForRule } from "@tinkerbell/domain.collections";
+import {
+  forgetCollectionArtwork,
+  getCollectionArtworkForRule,
+  upsertCollectionByKey,
+} from "@tinkerbell/domain.collections";
 import { errorMessage } from "@tinkerbell/core";
 import { ruleConfigSchema } from "@tinkerbell/contracts";
-import { t, procedure } from "./_base.ts";
+import { t, procedure, getPlexClient } from "./_base.ts";
 
 /**
  * Reject a config the generate job couldn't parse, without rewriting it.
@@ -87,7 +96,7 @@ async function executeRuleRun(ruleId: string, phase: RuleRunPhase, runId: string
   try {
     if (phase === "run") {
       const { runSingleRule } = await import("@tinkerbell/jobs");
-      const result = await runSingleRule(ruleId, handle.ctx.signal, handle.ctx);
+      const result = await runSingleRule(ruleId, handle.ctx.signal, handle.ctx, runId);
       setRuleLastRun(ruleId, {
         status: "ok",
         durationMs: Date.now() - startedAt,
@@ -213,9 +222,95 @@ export const rulesRouter = t.router({
         phase: z.enum(["run", "test"]).optional(),
       }),
     )
-    .query(({ input }) => getRuleRuns(input.ruleId, { limit: input.limit, phase: input.phase })),
+    .query(({ input }) => {
+      const runs = getRuleRuns(input.ruleId, { limit: input.limit, phase: input.phase });
+      // One grouped query for the whole page rather than one per row — the
+      // counts are what make a list of runs scannable ("that's the night it
+      // dropped 200 items"), so they can't be a per-row fetch.
+      const counts = getRunChangeCounts(runs.map((r) => r.id));
+      return runs.map((run) => ({ ...run, changes: counts.get(run.id) ?? { added: 0, removed: 0 } }));
+    }),
 
   runDetail: procedure.input(z.object({ runId: z.string() })).query(({ input }) => getRuleRun(input.runId)),
+
+  /** What this run added to and removed from each collection it touched. */
+  runChanges: procedure.input(z.object({ runId: z.string() })).query(({ input }) => getRunChanges(input.runId)),
+
+  /**
+   * Put a run's collections back the way they were before it ran.
+   *
+   * Applied to Plex directly rather than by re-running the rule: re-running
+   * would re-derive the same membership from the same sources and land exactly
+   * where the run being reverted did. So the changeset is played backwards —
+   * everything the run added comes out, everything it removed goes back in.
+   *
+   * The remembered snapshot is rewritten to match, and the changeset dropped,
+   * so the next run diffs against what Plex actually holds now and the same
+   * revert can't be applied twice. Note the next scheduled run will re-derive
+   * the membership again: a revert buys time to fix the rule, it doesn't pin
+   * the collection forever.
+   */
+  revertRun: procedure.input(z.object({ runId: z.string() })).mutation(async ({ input }) => {
+    const run = getRuleRun(input.runId);
+    if (!run) throw new Error("That run no longer exists.");
+    if (run.phase !== "run") throw new Error("A test changes nothing, so there is nothing to revert.");
+
+    const groups = getRunChanges(input.runId);
+    if (groups.length === 0) return { ok: true as const, collections: 0, added: 0, removed: 0, skipped: 0 };
+
+    const client = getPlexClient();
+    const { machineIdentifier } = await client.getIdentity();
+    const sections = await client.getSections();
+    let addedBack = 0;
+    let removedAgain = 0;
+    let skipped = 0;
+
+    for (const group of groups) {
+      // No key means the collection was never committed, or was committed by a
+      // run whose rows predate the key being recorded. Nothing to write to.
+      if (!group.collectionRatingKey) {
+        skipped++;
+        continue;
+      }
+      try {
+        if (group.removed.length > 0) {
+          await client.addCollectionItems(
+            group.collectionRatingKey,
+            machineIdentifier,
+            group.removed.map((m) => m.ratingKey),
+          );
+          addedBack += group.removed.length;
+        }
+        for (const item of group.added) {
+          if (await client.removeCollectionItem(group.collectionRatingKey, item.ratingKey)) removedAgain++;
+        }
+        // Keep the local mirror honest about what the collection now holds —
+        // the Collections page reads it, not Plex.
+        const section = sections.find((s) => s.key === group.sectionKey);
+        if (section) await upsertCollectionByKey(client, section, group.collectionRatingKey);
+      } catch (err) {
+        // One collection Plex has since deleted shouldn't strand the rest of
+        // the revert — report it and carry on.
+        console.warn(`[rule-runs] Revert failed for "${group.collectionName}":`, errorMessage(err));
+        skipped++;
+      }
+    }
+
+    // Rewrite the snapshot from the reverted membership so the next run's diff
+    // is against what Plex holds now, not what this run left behind.
+    for (const group of groups) {
+      const remembered = getRememberedMembers(run.ruleId, group.sectionKey, group.collectionName);
+      const addedKeys = new Set(group.added.map((m) => m.ratingKey));
+      const reverted = [
+        ...remembered.filter((m) => !addedKeys.has(m.ratingKey)),
+        ...group.removed.map((m) => ({ ratingKey: m.ratingKey, title: m.title })),
+      ];
+      rememberMembers(run.ruleId, group.sectionKey, group.collectionName, reverted);
+    }
+    clearRunChanges(input.runId);
+
+    return { ok: true as const, collections: groups.length, added: addedBack, removed: removedAgain, skipped };
+  }),
 
   /** Incremental log slice — see `useRunLog` on the client for why. */
   runLog: procedure

@@ -42,6 +42,17 @@ export interface HandlerDeps {
    * this generation pass is for. Handlers use it to steer/filter output.
    */
   userPrefs?: UserPreferences;
+  /**
+   * The `rule_runs.id` this dispatch belongs to, when there is one, so each
+   * committed collection's membership diff can be attributed to a run.
+   *
+   * Passed explicitly rather than read off `ctx.runId`, which means the *job*
+   * run — a rule run inside the nightly batch has both, and conflating them
+   * would file every rule's changes under the job.
+   *
+   * Absent for previews and the personalize pass, which record no changeset.
+   */
+  ruleRunId?: string;
 }
 
 export type Handler = (deps: HandlerDeps) => AsyncGenerator<PendingCollection>;

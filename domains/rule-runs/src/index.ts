@@ -3,3 +3,4 @@ export * from "./statuses.ts";
 export * from "./queue.ts";
 export * from "./test-results.ts";
 export * from "./limits.ts";
+export * from "./changes.ts";

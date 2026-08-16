@@ -2,11 +2,12 @@ import type { PlexSection } from "@tinkerbell/plex";
 import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@tinkerbell/contracts";
 import { runHandlerWithCleanup, type CleanupBudget } from "./cleanup.ts";
 import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rule-history";
+import { recordCollectionChanges } from "@tinkerbell/domain.rule-runs";
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
 import { commitCollection, COMMIT_CONCURRENCY } from "./finalize.ts";
 import { drainConcurrently } from "#jobs/concurrency.ts";
 import { meetsPinFloor, selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
-import type { Handler, HandlerDeps } from "./types.ts";
+import type { Handler, HandlerDeps, PendingCollection } from "./types.ts";
 import { aiPromptHandler } from "./handlers/ai-prompt.ts";
 import { ratedHandler } from "./handlers/rated.ts";
 import { tmdbGroupedHandler } from "./handlers/tmdb-grouped.ts";
@@ -194,6 +195,8 @@ export async function runHandlerWithCommits(
         });
         if (!collectionKey) return;
 
+        recordChanges(deps, pending, collectionKey);
+
         // Only ever mutated between awaits, so there's no interleaving to
         // guard against — but nothing here may assume commit order either.
         lastCollectionKey = collectionKey;
@@ -242,6 +245,36 @@ export async function runHandlerWithCommits(
   }
 
   return { lastCollectionKey, collectionCount, itemCount };
+}
+
+/**
+ * Diff this commit against the membership remembered from the rule's previous
+ * run, and file the result under the run that made it.
+ *
+ * Best-effort by construction: the collection is already in Plex by the time
+ * this is reached, and failing to write its changeset is not a reason to fail
+ * the run that succeeded. A missed changeset costs one run's worth of history
+ * and self-corrects on the next one, because the snapshot is only replaced
+ * when the write lands.
+ */
+function recordChanges(deps: HandlerDeps, pending: PendingCollection, collectionKey: string): void {
+  if (!deps.ruleRunId) return;
+  try {
+    const diff = recordCollectionChanges({
+      runId: deps.ruleRunId,
+      ruleId: deps.rule.id,
+      sectionKey: pending.section.key,
+      sectionTitle: pending.section.title,
+      collectionName: pending.name,
+      collectionRatingKey: collectionKey,
+      members: pending.matched.map((m) => ({ ratingKey: m.ratingKey, title: m.title })),
+    });
+    if (diff.added.length > 0 || diff.removed.length > 0) {
+      deps.ctx.log(`"${pending.name}": +${diff.added.length} / -${diff.removed.length} since the last run.`);
+    }
+  } catch (err) {
+    deps.ctx.log(`Failed to record changes for "${pending.name}":`, err);
+  }
 }
 
 /**

@@ -562,6 +562,73 @@ td.previewBlockCell {
   word-break: break-word;
 }
 
+/* ── A run's changeset ──────────────────────────────────────────────────────
+   Two directions, always in the same order and the same two colours, so a
+   column of runs can be read down rather than parsed row by row. */
+
+.changeCounts {
+  display: inline-flex;
+  gap: 8px;
+  font: var(--t-data);
+  white-space: nowrap;
+}
+
+.changeAdded {
+  color: var(--status-ok-fg);
+}
+
+.changeRemoved {
+  color: var(--status-error-fg);
+}
+
+.changeList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changeGroup {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.changeGroup:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.changeGroupHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.changeGroupName {
+  font-weight: 600;
+}
+
+/* Wrapping pills rather than a list: a collection that gained forty items
+   should cost a few lines, not forty. */
+.changeItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font: var(--t-data);
+}
+
+.changeItemAdded {
+  color: var(--status-ok-fg);
+}
+
+.changeItemRemoved {
+  color: var(--status-error-fg);
+}
+
 /* The expanded table row gives the log a slice of the row, not the page. */
 .inlineLog {
   margin-top: 8px;

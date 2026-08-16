@@ -217,6 +217,68 @@ export const ruleHistory = sqliteTable(
 );
 
 /**
+ * The membership a rule's collection had at the end of its last run.
+ *
+ * Every run deletes and recreates a rule's collections, so Plex itself cannot
+ * answer "what changed" — the old collection is gone and the new one has no
+ * memory of it. This is that memory: one row per collection a rule owns,
+ * overwritten at the end of each commit, and read at the start of the next one
+ * to produce `ruleRunChanges` below.
+ *
+ * Keyed by NAME rather than rating key for the same reason `lastPinnedCollections`
+ * is — rating keys don't survive a delete-and-recreate cycle, names do.
+ */
+export const ruleCollectionMembers = sqliteTable(
+  "rule_collection_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
+    sectionKey: text("section_key").notNull(),
+    collectionName: text("collection_name").notNull(),
+    members: text("members", { mode: "json" }).$type<{ ratingKey: string; title: string }[]>().notNull().default([]),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("idx_rule_members_unique").on(table.ruleId, table.sectionKey, table.collectionName)],
+);
+
+/**
+ * What one run did to one collection, item by item.
+ *
+ * The counts on `rule_runs` say a rule produced 40 collections and 900 items;
+ * they cannot say that "Sci-Fi Gems" lost fourteen titles because an OMDb
+ * rating moved. This table answers that, and is what makes a run revertable —
+ * the revert is "put the removed ones back, take the added ones out again".
+ *
+ * `change` is "added" | "removed". A run that changed nothing writes no rows,
+ * so the common steady-state night costs nothing.
+ */
+export const ruleRunChanges = sqliteTable(
+  "rule_run_changes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: text("run_id").notNull(),
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
+    sectionKey: text("section_key").notNull(),
+    sectionTitle: text("section_title").notNull(),
+    collectionName: text("collection_name").notNull(),
+    /** The Plex key of the collection as it existed at the end of this run. */
+    collectionRatingKey: text("collection_rating_key"),
+    itemRatingKey: text("item_rating_key").notNull(),
+    itemTitle: text("item_title").notNull(),
+    change: text("change").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [
+    index("idx_rule_run_changes_run").on(table.runId),
+    index("idx_rule_run_changes_rule_at").on(table.ruleId, table.at),
+  ],
+);
+
+/**
  * One row per execution of a single rule — the durable counterpart to the
  * `last_run_*` columns on `rules`, which only ever remember the most recent one.
  *

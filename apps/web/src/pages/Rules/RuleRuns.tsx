@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
+import ConfirmModal from "#components/ConfirmModal";
 import EmptyState from "#components/EmptyState";
 import PageShell, { StatusChip } from "#components/PageShell";
 import RelativeTime from "#components/RelativeTime";
@@ -36,6 +37,21 @@ function RunBadge({ status }: { status: string }) {
   // named rather than rounded to the nearest finished-looking word.
   const label = status === "cancelling" ? "cancelling…" : status;
   return <span className={`${shared.runBadge} ${statusClass(status)}`}>{label}</span>;
+}
+
+/**
+ * The two directions as one cell. A run that changed nothing says so in words
+ * rather than showing "+0 / -0" — a steady night is the common case, and two
+ * zeroes read as a bug the first few times you see them.
+ */
+function ChangeCounts({ added, removed }: { added: number; removed: number }) {
+  if (added === 0 && removed === 0) return <span className={shared.cellMuted}>No change</span>;
+  return (
+    <span className={styles.changeCounts}>
+      {added > 0 && <span className={styles.changeAdded}>+{added.toLocaleString()}</span>}
+      {removed > 0 && <span className={styles.changeRemoved}>−{removed.toLocaleString()}</span>}
+    </span>
+  );
 }
 
 function formatEta(startMs: number, progress: number): string | null {
@@ -232,6 +248,7 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
                     <SortableTh sortKey="duration" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                       Duration
                     </SortableTh>
+                    <th>Changes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -252,6 +269,9 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
                         <RelativeTime timestamp={run.startedAt} />
                       </td>
                       <td className={shared.cellMuted}>{formatElapsed(run.startedAt, run.finishedAt)}</td>
+                      <td>
+                        <ChangeCounts added={run.changes.added} removed={run.changes.removed} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -366,9 +386,146 @@ function RunDetail({ runId }: { runId: string }) {
         </div>
       </CardSection>
 
+      {run.phase === "run" && <RunChanges runId={runId} live={live} />}
+
       <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Log">
         <RunLog log={log} downloadName={`rule-run-${runId}.txt`} ariaLabel="Rule run log" />
       </CardSection>
     </>
+  );
+}
+
+/**
+ * What the run did to each collection, item by item, and the way back.
+ *
+ * The counts on the run tell you 900 items were committed; they can't tell you
+ * that the collection you care about lost fourteen of them. Since every run
+ * deletes and recreates its collections, Plex can't tell you either — this is
+ * the only place that remembers.
+ */
+function RunChanges({ runId, live }: { runId: string; live: boolean }) {
+  const utils = trpc.useUtils();
+  const { addToast } = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const changesQuery = trpc.rules.runChanges.useQuery(
+    { runId },
+    // A finished run's changeset is final; a live one is still being written.
+    { refetchInterval: live ? 3000 : false },
+  );
+  const revertMutation = trpc.rules.revertRun.useMutation();
+
+  const groups = changesQuery.data ?? [];
+  const totals = groups.reduce(
+    (acc, g) => ({ added: acc.added + g.added.length, removed: acc.removed + g.removed.length }),
+    { added: 0, removed: 0 },
+  );
+
+  const revert = () => {
+    revertMutation.mutate(
+      { runId },
+      {
+        onSuccess: (res) => {
+          setConfirmOpen(false);
+          addToast(
+            `Reverted ${res.collections} collection${res.collections === 1 ? "" : "s"} — ` +
+              `${res.added} put back, ${res.removed} taken out` +
+              (res.skipped > 0 ? `, ${res.skipped} skipped` : "") +
+              ".",
+            "success",
+          );
+          utils.rules.runChanges.invalidate({ runId });
+          utils.rules.runs.invalidate();
+          utils.collections.invalidate();
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
+  };
+
+  return (
+    <CardSection
+      className={shared.runCard}
+      titleClassName={shared.runCardTitle}
+      title={
+        <span className={styles.runsSectionHead}>
+          <span className={styles.runsSectionHeadTight}>
+            Changes
+            <ChangeCounts added={totals.added} removed={totals.removed} />
+          </span>
+          {groups.length > 0 && !live && (
+            <button
+              type="button"
+              className={styles.runsActionGhost}
+              onClick={() => setConfirmOpen(true)}
+              disabled={revertMutation.isPending}
+            >
+              Revert this run
+            </button>
+          )}
+        </span>
+      }
+    >
+      {changesQuery.isLoading ? (
+        <SkeletonTable rows={3} columns={2} />
+      ) : groups.length === 0 ? (
+        <EmptyState
+          icon="list"
+          title="Nothing moved"
+          description={
+            live
+              ? "This run is still going — changes appear as each collection is committed."
+              : "Every collection this rule owns came out the same as it went in."
+          }
+        />
+      ) : (
+        <ul className={styles.changeList}>
+          {groups.map((group) => (
+            <li key={`${group.sectionKey}-${group.collectionName}`} className={styles.changeGroup}>
+              <div className={styles.changeGroupHead}>
+                <span className={styles.changeGroupName}>
+                  {group.collectionRatingKey ? (
+                    <Link to={`/collections/${group.collectionRatingKey}`}>{group.collectionName}</Link>
+                  ) : (
+                    group.collectionName
+                  )}
+                </span>
+                <span className={shared.cellMuted}>{group.sectionTitle}</span>
+                <ChangeCounts added={group.added.length} removed={group.removed.length} />
+              </div>
+              <div className={styles.changeItems}>
+                {group.added.map((item) => (
+                  <span key={`a-${item.ratingKey}`} className={styles.changeItemAdded}>
+                    + {item.title}
+                  </span>
+                ))}
+                {group.removed.map((item) => (
+                  <span key={`r-${item.ratingKey}`} className={styles.changeItemRemoved}>
+                    − {item.title}
+                  </span>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {confirmOpen && (
+        <ConfirmModal
+          title="Revert this run?"
+          // Spelled out in both directions: "revert" alone doesn't say whether
+          // it puts things back or takes them away, and here it does both.
+          message={
+            `${totals.removed.toLocaleString()} item${totals.removed === 1 ? "" : "s"} will go back into ` +
+            `their collections and ${totals.added.toLocaleString()} will come out again. ` +
+            `This changes Plex now, but not the rule — the next scheduled run works the membership out ` +
+            `from the same sources again, so fix the rule if you don't want this back.`
+          }
+          confirmLabel={revertMutation.isPending ? "Reverting…" : "Revert"}
+          danger
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={revert}
+        />
+      )}
+    </CardSection>
   );
 }
