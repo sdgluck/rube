@@ -758,6 +758,15 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/domain.playback':
+        specifier: workspace:*
+        version: link:../playback
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      '@tinkerbell/plex-smart-filter':
+        specifier: workspace:*
+        version: link:../../packages/plex-smart-filter
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))

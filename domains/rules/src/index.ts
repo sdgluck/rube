@@ -17,6 +17,8 @@ export {
 
 export type Rule = InferSelectModel<typeof rules>;
 
+export { explainItem, type ClauseVerdict, type ItemExplanation } from "./explain.ts";
+
 export {
   conflictsForRule,
   findRuleConflicts,

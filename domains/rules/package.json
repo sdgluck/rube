@@ -17,6 +17,9 @@
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.playback": "workspace:*",
+    "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/plex-smart-filter": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {

@@ -18,6 +18,7 @@ import {
 } from "#/format";
 import mediaStyles from "./MediaDetail.module.css";
 import MediaEditPanel from "./MediaEditPanel";
+import MediaWhyPanel from "./MediaWhyPanel";
 
 function fileName(path: string | undefined): string {
   if (!path) return EMPTY;
@@ -356,6 +357,10 @@ export default function MediaDetail() {
               </ul>
             </section>
           )}
+
+          {/* The inverse of the Collections list below: that answers "which
+              rules put this here", this answers "why didn't one of them". */}
+          <MediaWhyPanel ratingKey={item.ratingKey} />
 
           {/* What Tinkerbell has changed here, and what it was before */}
           {history.length > 0 && (

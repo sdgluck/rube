@@ -357,3 +357,41 @@
   background: var(--line);
   margin-right: 2px;
 }
+
+/* ─── "Why this item?" ──────────────────────────────────────────────────── */
+
+.whySelect {
+  composes: select from "../styles/controls.module.css";
+  max-width: 320px;
+}
+
+.whyVerdict {
+  margin: 8px 0 0;
+  font-weight: 600;
+}
+
+.whyReason {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.whyClauses {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.whyPass {
+  color: var(--status-ok-fg);
+}
+
+/* The failing clause is the one the reader is hunting for, so it carries the
+   weight as well as the colour. */
+.whyFail {
+  color: var(--status-error-fg);
+  font-weight: 600;
+}

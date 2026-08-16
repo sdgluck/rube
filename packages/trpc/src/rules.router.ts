@@ -10,6 +10,7 @@ import {
   listDeletedRules,
   restoreDeletedRules,
   findRuleConflicts,
+  explainItem,
   reorderRules,
   rulesProducingCollectionNamed,
 } from "@tinkerbell/domain.rules";
@@ -43,6 +44,8 @@ import {
   getCollectionArtworkForRule,
   upsertCollectionByKey,
 } from "@tinkerbell/domain.collections";
+import { TRPCError } from "@trpc/server";
+import { getLocalSections } from "@tinkerbell/domain.sections";
 import { errorMessage } from "@tinkerbell/core";
 import { ruleConfigSchema } from "@tinkerbell/contracts";
 import { t, procedure, getPlexClient } from "./_base.ts";
@@ -173,6 +176,41 @@ export const rulesRouter = t.router({
   collectionNameOwners: procedure
     .input(z.object({ name: z.string(), excludeRuleId: z.string().optional() }))
     .query(({ input }) => rulesProducingCollectionNamed(input.name, input.excludeRuleId)),
+
+  /**
+   * Why one item does or doesn't match one rule.
+   *
+   * The counterpart to the filter funnel, which answers the same question for
+   * a whole library and so cannot answer it for the film in front of you.
+   * Only smart-filter rules have clauses to report on; every other type
+   * selects by a mechanism with nothing to break down, and says so rather
+   * than pretending to explain.
+   */
+  explainItem: procedure.input(z.object({ ruleId: z.string(), ratingKey: z.string() })).query(async ({ input }) => {
+    const rule = getRule(input.ruleId);
+    if (!rule) throw new TRPCError({ code: "NOT_FOUND", message: "No such rule." });
+
+    const config = ruleConfigSchema.parse(rule.config);
+    const filter = config.smartFilter;
+    if (rule.type !== "smart_filter" || !filter) {
+      return {
+        ratingKey: input.ratingKey,
+        itemTitle: "",
+        matches: false,
+        combinator: "all" as const,
+        clauses: [],
+        reason: `"${rule.name}" is a ${rule.type.replace(/_/g, " ")} rule — it picks items by its source list rather than by clauses, so there is nothing to break down.`,
+      };
+    }
+
+    return explainItem({
+      client: getPlexClient(),
+      ratingKey: input.ratingKey,
+      filter: filter as Parameters<typeof explainItem>[0]["filter"],
+      ruleSectionTitles: config.sections ?? [],
+      sections: getLocalSections(),
+    });
+  }),
 
   /** Set the running order. Ids in the order they should run. */
   reorder: procedure.input(z.object({ ids: z.array(z.string()).min(1) })).mutation(({ input }) => {
