@@ -44,6 +44,10 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: "/users", label: "Users", metric: { kind: "count", key: "users" } },
       { to: "/events", label: "Events", metric: { kind: "count", key: "eventsErrors24h" } },
       { to: "/settings", label: "Settings" },
+      // Stays after setup finishes rather than disappearing: it is the one
+      // page that says what is and isn't connected in one screen, and it is
+      // how someone who dismissed the banner gets back to an unfinished step.
+      { to: "/onboarding", label: "Setup" },
     ],
   },
 ];

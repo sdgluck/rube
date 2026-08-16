@@ -590,6 +590,31 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/onboarding:
+    dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/domain.health':
+        specifier: workspace:*
+        version: link:../health
+      '@tinkerbell/domain.rules':
+        specifier: workspace:*
+        version: link:../rules
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/overlays:
     dependencies:
       '@tinkerbell/db':
@@ -749,6 +774,9 @@ importers:
 
   domains/rules:
     dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -1211,6 +1239,9 @@ importers:
       '@tinkerbell/domain.notifications':
         specifier: workspace:*
         version: link:../../domains/notifications
+      '@tinkerbell/domain.onboarding':
+        specifier: workspace:*
+        version: link:../../domains/onboarding
       '@tinkerbell/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays

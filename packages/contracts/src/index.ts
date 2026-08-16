@@ -165,3 +165,5 @@ export type {
   OverlayType,
   Ratings,
 } from "@tinkerbell/overlays";
+
+export { SEEDED_RULE, isSeededRule } from "./seeded-rule.ts";
