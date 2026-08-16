@@ -28,7 +28,7 @@ import {
   isFormValid,
   limitFieldLabel,
   requiredSectionTypeForRule,
-  RULE_TYPES,
+  ruleTypesFor,
   stepsFor,
   suggestName,
   TYPE_LABELS,
@@ -45,6 +45,7 @@ import {
   type StepId,
 } from "./rule-types.ts";
 import { hasSourceStep, SOURCE_STEPS, type SourceStepType } from "./sources/index.ts";
+import { buildPresetFilter, CLEANUP_PRESETS, type CleanupPreset } from "./cleanup-presets.ts";
 
 import type {
   ArrFormState,
@@ -441,15 +442,65 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
   // ─── Step renderers ─────────────────────────────────────────────────────
 
+  /**
+   * Pick a preset: it writes the filter, so the type comes with it. Choosing a
+   * second preset overwrites the first — they are alternatives, not clauses to
+   * accumulate, and a half-merged tree is worse than either.
+   */
+  function choosePreset(preset: CleanupPreset) {
+    setForm({
+      ...form,
+      type: "smart_filter",
+      cleanupPreset: preset.value,
+      smartFilter: buildPresetFilter(preset, preset.knobDefault),
+    });
+  }
+
   function renderTypeStep() {
+    const kind = form.outcome.kind;
+    const types = ruleTypesFor(kind);
+    const heading =
+      kind === "cleanup"
+        ? "What should this rule look for?"
+        : kind === "metadata"
+          ? "Which items?"
+          : "Choose a rule type";
+    const sub =
+      kind === "cleanup"
+        ? "Start from one of these, or pick a way to select items yourself. Nothing is removed until you have set the action and the streak on the next step."
+        : kind === "metadata"
+          ? "How this rule picks the items it will rewrite. Types that slice the library into one collection per director or decade aren't offered here — a metadata rule writes to items, not groups."
+          : "Each type drives how the Generate Collections job builds collections during a run.";
+
     return (
       <>
-        <h3 className={styles.stepHeading}>Choose a rule type</h3>
-        <p className={styles.stepSub}>
-          Each type drives how the Generate Collections job builds collections during a run.
-        </p>
+        <h3 className={styles.stepHeading}>{heading}</h3>
+        <p className={styles.stepSub}>{sub}</p>
+        {kind === "cleanup" && (
+          <>
+            <div className={styles.typeGrid}>
+              {CLEANUP_PRESETS.map((p) => {
+                const selected = form.cleanupPreset === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    type="button"
+                    className={`${styles.typeCard} ${selected ? styles.typeCardSelected : ""}`}
+                    onClick={() => choosePreset(p)}
+                    disabled={mode === "edit"}
+                    aria-pressed={selected}
+                  >
+                    <span className={styles.typeCardName}>{p.label}</span>
+                    <span className={styles.typeCardDesc}>{p.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className={styles.stepSub}>Or select the items yourself:</p>
+          </>
+        )}
         <div className={styles.typeGrid}>
-          {RULE_TYPES.map((t) => {
+          {types.map((t) => {
             const missing = t.requires === "omdb" && !omdbConfigured ? "Requires OMDB API key (Settings → AI)" : null;
             const seerrMissing =
               t.requires === "seerr" && !seerrConfigured ? "Requires Seerr (Settings → Media Managers)" : null;
@@ -457,13 +508,16 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               t.requires === "tmdb" && !tmdbConfigured ? "Requires TMDb API key (Settings → AI)" : null;
             const warn = missing || seerrMissing || tmdbMissing;
             const disabled = mode === "edit" && t.value !== form.type;
-            const selected = form.type === t.value;
+            // A preset also selects `smart_filter`, but it is the preset that
+            // is chosen — showing both highlighted would claim two answers to
+            // one question.
+            const selected = form.type === t.value && !form.cleanupPreset;
             return (
               <button
                 key={t.value}
                 type="button"
                 className={`${styles.typeCard} ${selected ? styles.typeCardSelected : ""}`}
-                onClick={() => setForm({ ...form, type: t.value })}
+                onClick={() => setForm({ ...form, type: t.value, cleanupPreset: undefined })}
                 disabled={disabled}
                 aria-pressed={selected}
               >

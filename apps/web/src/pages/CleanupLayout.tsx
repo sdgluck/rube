@@ -20,7 +20,9 @@ const TABS = [
 export default function CleanupLayout() {
   return (
     <div className={styles.layout}>
-      <PageTabs tabs={TABS} ariaLabel="Cleanup sections" />
+      <div className={styles.layoutTabs}>
+        <PageTabs tabs={TABS} ariaLabel="Cleanup sections" />
+      </div>
       <Outlet />
     </div>
   );

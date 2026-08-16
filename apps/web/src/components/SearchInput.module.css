@@ -15,6 +15,14 @@
   max-width: 320px;
 }
 
+/* For a column narrower than the default width — the settings rail is 182px,
+   and a field that keeps its 236px there hangs over the panel beside it.
+   No min-width, unlike `grow`: the point is to obey the container, not the
+   field. */
+.fill {
+  width: 100%;
+}
+
 .input {
   composes: input inputSm inputSearch from "../styles/controls.module.css";
   width: 100%;

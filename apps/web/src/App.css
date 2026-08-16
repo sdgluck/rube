@@ -1134,6 +1134,77 @@ button:active:not(:disabled),
   }
 }
 
+/* ─── Checkboxes ─────────────────────────────────────────────────────────────
+ * Element selector, not a class. Roughly fifty checkboxes are rendered across
+ * the app and most carry no class at all, so a class-based checkbox was really
+ * "whatever the OS draws" — a macOS blue tick sitting next to the app's teal
+ * accent, and a different shape again on Windows. Styling the element gets all
+ * of them, including the ones written next week. The half-dozen module rules
+ * that set `accent-color` and a 14–15px box are now redundant: an attribute
+ * selector outranks a bare class, so this is the one size everywhere, which is
+ * the point — they were drifting apart.
+ */
+
+input[type="checkbox"] {
+  appearance: none;
+  box-sizing: border-box;
+  position: relative;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--fill-inert);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  /* Checkboxes sit beside their label text far more often than not, and the
+     baseline a replaced element gets by default drops the box a couple of
+     pixels below the line. Centring on the text's mid-line is what every one
+     of these labels actually wanted. */
+  vertical-align: -0.18em;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The tick is two borders of an empty box, rotated — no glyph, so it can't be
+   missing from a font, and it scales with the box rather than with text. */
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 32%;
+  top: 12%;
+  width: 26%;
+  height: 55%;
+  border: solid var(--on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(43deg);
+}
+
+input[type="checkbox"]:indeterminate::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: var(--on-accent);
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 
 /* Present to assistive tech, invisible on screen. For headings a page conveys

@@ -9,6 +9,12 @@ import {
   LOCAL_FIELD_HINTS,
 } from "#components/smart-filter/UserValueSelect.tsx";
 import { opsFor, withFallbackOp } from "@tinkerbell/contracts";
+import {
+  buildPresetFilter,
+  cleanupPreset,
+  presetFromFilter,
+  type CleanupPreset,
+} from "#pages/Rules/RuleWizard/cleanup-presets.ts";
 import styles from "#pages/Rules/RuleWizard/RuleWizard.module.css";
 import type {
   SmartFilterGroup,
@@ -34,6 +40,11 @@ import type {
 export default function SmartFilterSource({ form, setForm, tagSectionId = null }: SourceStepProps) {
   const setRoot = (next: SmartFilterGroup) => setForm({ ...form, smartFilter: next });
   const usesWatchHistory = hasLocalLeaves(form.smartFilter);
+  const preset = cleanupPreset(form.cleanupPreset);
+
+  // A preset has already written the clauses; all that is left is its one
+  // number. The full tree is one click away and the same rule either way.
+  if (preset) return <PresetEditor form={form} setForm={setForm} preset={preset} />;
 
   return (
     <>
@@ -58,6 +69,83 @@ export default function SmartFilterSource({ form, setForm, tagSectionId = null }
         <label>Filter</label>
         <GroupEditor group={form.smartFilter} onChange={setRoot} depth={0} sectionId={tagSectionId} />
       </div>
+    </>
+  );
+}
+
+// ─── Cleanup presets ─────────────────────────────────────────────────────────
+
+/**
+ * One preset, one number.
+ *
+ * The escape hatch is deliberately not a mode switch: dropping the preset
+ * reveals the tree it built, already populated, so "edit as a full smart
+ * filter" continues from where the preset got to rather than starting over.
+ * It is one-way — once the clauses are yours, re-applying the preset would
+ * throw them away without saying so.
+ */
+function PresetEditor({
+  form,
+  setForm,
+  preset,
+}: {
+  form: SourceStepProps["form"];
+  setForm: SourceStepProps["setForm"];
+  preset: CleanupPreset;
+}) {
+  const current = presetFromFilter(form.smartFilter)?.amount ?? preset.knobDefault;
+
+  const setAmount = (raw: number) => {
+    const amount = Math.min(preset.knobMax, Math.max(preset.knobMin, Math.round(raw) || preset.knobMin));
+    setForm({ ...form, smartFilter: buildPresetFilter(preset, amount) });
+  };
+
+  return (
+    <>
+      <h3 className={styles.stepHeading}>{preset.label}</h3>
+      <p className={styles.stepSub}>{preset.description}</p>
+      <WatchHistoryWarning />
+      <div className={styles.field}>
+        <label htmlFor="cleanup-preset-knob">{preset.knobLabel}</label>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input
+            id="cleanup-preset-knob"
+            type="number"
+            className={shared.input}
+            style={{ width: 110 }}
+            min={preset.knobMin}
+            max={preset.knobMax}
+            value={current}
+            onChange={(e) => setAmount(Number(e.target.value))}
+          />
+          <span className={styles.hint} style={{ margin: 0 }}>
+            {preset.knob === "days" ? "days" : "% of the way through"}
+          </span>
+        </span>
+        {preset.note && (
+          <p className={styles.hint} style={{ marginTop: 6 }}>
+            {preset.note}
+          </p>
+        )}
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="rule-smart-filter-name">Collection name (optional)</label>
+        <input
+          id="rule-smart-filter-name"
+          className={shared.input}
+          value={form.collectionName}
+          onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
+          placeholder={preset.label}
+        />
+      </div>
+      <button
+        type="button"
+        className={styles.summaryEdit}
+        style={{ alignSelf: "flex-start" }}
+        onClick={() => setForm({ ...form, cleanupPreset: undefined })}
+      >
+        Edit as a full smart filter
+      </button>
     </>
   );
 }
