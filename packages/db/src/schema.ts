@@ -1174,6 +1174,37 @@ export const cleanupProtections = sqliteTable(
 );
 
 /**
+ * "Please don't delete this" — from the people who watch, not the person who
+ * configures.
+ *
+ * A vote is a signal, deliberately not a hold. A shared user pressing a button
+ * in the portal must not be able to silently overrule the server owner's rule;
+ * equally, an owner deleting six films while three people were quietly hoping
+ * to watch one is the outcome the cleanup queue exists to prevent. So the vote
+ * is recorded and shown on the queue beside the item, and the decision stays
+ * exactly where it was.
+ *
+ * One vote per person per item — the unique index makes pressing it twice
+ * idempotent rather than a way to stuff the ballot.
+ */
+export const cleanupKeepVotes = sqliteTable(
+  "cleanup_keep_votes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ratingKey: text("rating_key").notNull(),
+    /** Plex user id, so a renamed account keeps its votes. */
+    userId: integer("user_id").notNull(),
+    /** Denormalised for display: the queue shows who asked. */
+    username: text("username").notNull(),
+    votedAt: integer("voted_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_cleanup_keep_votes_unique").on(table.ratingKey, table.userId),
+    index("idx_cleanup_keep_votes_item").on(table.ratingKey),
+  ],
+);
+
+/**
  * What has been sent, to whom, for which period.
  *
  * This is the idempotency guarantee, not a log. A digest job that fails

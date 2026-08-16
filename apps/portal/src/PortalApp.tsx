@@ -39,7 +39,7 @@ export default function PortalApp() {
   const brandingQuery = portalTrpc.branding.useQuery();
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"collections" | "preferences">("collections");
+  const [tab, setTab] = useState<"collections" | "preferences" | "leaving">("collections");
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PIN_KEY));
 
   // Apply the admin's background image to the page.
@@ -151,11 +151,12 @@ export default function PortalApp() {
           </button>
         </div>
 
-        {/* Two tabs, and "Your collections" is first on purpose: this was a
-            form you filled in and never heard back from. What your answers
-            produced should be the thing you land on. */}
+        {/* "Your collections" is first on purpose: this was a form you
+            filled in and never heard back from, so what your answers produced
+            should be the thing you land on. "Leaving soon" is last because it
+            is the one nobody wants to be looking at. */}
         <div className="tabs" role="tablist" aria-label="Portal sections">
-          {(["collections", "preferences"] as const).map((value) => (
+          {(["collections", "preferences", "leaving"] as const).map((value) => (
             <button
               key={value}
               type="button"
@@ -164,13 +165,81 @@ export default function PortalApp() {
               className={`tab ${tab === value ? "tab-on" : ""}`}
               onClick={() => setTab(value)}
             >
-              {value === "collections" ? "Your collections" : "Your tastes"}
+              {value === "collections" ? "Your collections" : value === "preferences" ? "Your tastes" : "Leaving soon"}
             </button>
           ))}
         </div>
 
-        {tab === "collections" ? <MyCollections /> : <PreferencesForm />}
+        {tab === "collections" ? <MyCollections /> : tab === "preferences" ? <PreferencesForm /> : <LeavingSoon />}
       </div>
+    </div>
+  );
+}
+
+/**
+ * What a cleanup rule is about to remove, and the way to say you would rather
+ * it didn't.
+ *
+ * The admin's queue page has always been able to show this, to exactly one
+ * person. Everybody else found out when the film stopped being there — and
+ * the entire argument for the streak is that a scheduled deletion is
+ * tolerable only when somebody can see it coming.
+ *
+ * The button records a vote, not a hold. A shared user must not be able to
+ * silently overrule the server owner's rule; what they can do is make sure
+ * that removing something turns into a decision the owner makes, rather than
+ * one that simply happens at 4am.
+ */
+function LeavingSoon() {
+  const utils = portalTrpc.useUtils();
+  const leavingQuery = portalTrpc.leavingSoon.useQuery();
+  const voteKeep = portalTrpc.voteKeep.useMutation({ onSuccess: () => utils.leavingSoon.invalidate() });
+  const summaryQuery = portalTrpc.myWatchSummary.useQuery();
+
+  const items = leavingQuery.data ?? [];
+  const summary = summaryQuery.data;
+
+  return (
+    <div className="stack">
+      {summary && summary.plays > 0 && (
+        <p className="field-hint">
+          You have played {summary.plays} thing{summary.plays === 1 ? "" : "s"} on this server.
+        </p>
+      )}
+
+      {leavingQuery.isLoading && <p className="muted">Checking…</p>}
+
+      {!leavingQuery.isLoading && items.length === 0 && (
+        <p className="muted">Nothing is scheduled to be removed. You will see it here first if that changes.</p>
+      )}
+
+      {items.length > 0 && (
+        <>
+          <p className="field-hint">
+            These are queued for removal. Say if you would rather one stayed — the server owner sees who asked.
+          </p>
+          {items.map((item) => (
+            <div key={item.ratingKey} className="collection-row">
+              <div className="collection-head">
+                <span className="collection-title">{item.title}</span>
+                <span className="muted">
+                  {item.runsRemaining === 0
+                    ? "Goes on the next run"
+                    : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={voteKeep.isPending}
+                onClick={() => voteKeep.mutate({ ratingKey: item.ratingKey, keep: !item.voted })}
+              >
+                {item.voted ? "Asked to keep \u2713" : "Keep this"}
+              </button>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

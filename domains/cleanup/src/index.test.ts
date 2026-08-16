@@ -10,7 +10,7 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 
 setupTempDb("tinkerbell-cleanup-test-");
 
-const { db, cleanupCandidates, cleanupProtections, collectionItems, collections, rules } =
+const { db, cleanupCandidates, cleanupKeepVotes, cleanupProtections, collectionItems, collections, rules } =
   await import("@tinkerbell/db");
 const {
   recordMatches,
@@ -24,6 +24,10 @@ const {
   removeProtection,
   listProtections,
   protectedRatingKeys,
+  recordKeepVote,
+  removeKeepVote,
+  keepVotesForUser,
+  leavingSoon,
 } = await import("./index.ts");
 
 const RULE = "rule-1";
@@ -48,6 +52,7 @@ function streakOf(ruleId: string, ratingKey: string): number | undefined {
 
 beforeEach(() => {
   db.delete(cleanupCandidates).run();
+  db.delete(cleanupKeepVotes).run();
   db.delete(cleanupProtections).run();
   db.delete(collectionItems).run();
   db.delete(collections).run();
@@ -373,5 +378,73 @@ describe("protection", () => {
     addProtection("item", "100", "Film 100");
     const row = queuedCandidates().find((c) => c.ratingKey === "100");
     assert.equal(row?.isProtected, true);
+  });
+});
+
+// ─── Keep votes, and what the portal shows ───────────────────────────────────
+
+/**
+ * A vote is a signal, not a hold. The tests that matter are the ones that
+ * would let it quietly become one — or let a shared user see, or influence,
+ * something that isn't theirs.
+ */
+describe("keep votes", () => {
+  test("a vote does not spare the item", () => {
+    // This is the whole design. If a vote ever starts holding things back, a
+    // shared user can silently overrule the server owner's rule.
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    recordKeepVote("100", 7, "sam");
+    assert.equal(dueForAction(RULE, 3, 10).length, 1);
+  });
+
+  test("the queue shows who asked", () => {
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    recordKeepVote("100", 7, "sam");
+    recordKeepVote("100", 8, "alex");
+    const row = queuedCandidates().find((c) => c.ratingKey === "100");
+    assert.deepEqual(row?.keepVotes.sort(), ["alex", "sam"]);
+  });
+
+  test("voting twice is one vote", () => {
+    recordKeepVote("100", 7, "sam");
+    recordKeepVote("100", 7, "sam");
+    assert.equal(db.select().from(cleanupKeepVotes).all().length, 1);
+  });
+
+  test("a vote can be taken back", () => {
+    recordKeepVote("100", 7, "sam");
+    removeKeepVote("100", 7);
+    assert.equal(keepVotesForUser(7).size, 0);
+  });
+
+  test("one person's votes are only their own", () => {
+    recordKeepVote("100", 7, "sam");
+    recordKeepVote("200", 8, "alex");
+    assert.deepEqual([...keepVotesForUser(7)], ["100"]);
+  });
+});
+
+describe("leavingSoon", () => {
+  test("lists destructive items that are actually due", () => {
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    const items = leavingSoon();
+    assert.equal(items.length, 1);
+    assert.equal(items[0].ratingKey, "100");
+  });
+
+  test("leaves out anything already spared", () => {
+    // Asking people to worry about something that has been held or protected
+    // is how a warning list stops being read.
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("200")], T0 + t * DAY);
+    holdCandidate(RULE, "100", T0 + 400 * DAY);
+    addProtection("item", "200", "Film 200");
+    assert.deepEqual(leavingSoon(50, T0 + 3 * DAY), []);
+  });
+
+  test("a non-destructive rule is not a warning", () => {
+    seedRule("labeller", { action: { kind: "cleanup", mode: "label", consecutiveRuns: 1 } });
+    recordMatches("labeller", [match("300")], T0);
+    assert.deepEqual(leavingSoon(), []);
   });
 });

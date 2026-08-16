@@ -21,6 +21,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import {
   cleanupCandidates,
+  cleanupKeepVotes,
   cleanupProtections,
   collectionItems,
   collections,
@@ -252,6 +253,82 @@ export function protectedRatingKeys(): Set<string> {
   return keys;
 }
 
+/**
+ * Record that somebody would rather this one stayed.
+ *
+ * A vote, not a hold: a shared user pressing a button in the portal must not
+ * be able to silently overrule the server owner's rule. It is shown on the
+ * queue beside the item, and the decision stays where it was.
+ *
+ * Idempotent — pressing it twice is one vote, not a way to stuff the ballot.
+ */
+export function recordKeepVote(ratingKey: string, userId: number, username: string, now: number = Date.now()): void {
+  db.insert(cleanupKeepVotes)
+    .values({ ratingKey, userId, username, votedAt: now })
+    .onConflictDoUpdate({
+      target: [cleanupKeepVotes.ratingKey, cleanupKeepVotes.userId],
+      set: { username, votedAt: now },
+    })
+    .run();
+}
+
+export function removeKeepVote(ratingKey: string, userId: number): void {
+  db.delete(cleanupKeepVotes)
+    .where(and(eq(cleanupKeepVotes.ratingKey, ratingKey), eq(cleanupKeepVotes.userId, userId)))
+    .run();
+}
+
+/** Who has asked for each item to stay, keyed by rating key. */
+export function keepVotesByItem(): Map<string, string[]> {
+  const rows = db.select().from(cleanupKeepVotes).all();
+  const byItem = new Map<string, string[]>();
+  for (const row of rows) {
+    byItem.set(row.ratingKey, [...(byItem.get(row.ratingKey) ?? []), row.username]);
+  }
+  return byItem;
+}
+
+/** The rating keys one person has voted for. */
+export function keepVotesForUser(userId: number): Set<string> {
+  return new Set(
+    db
+      .select({ ratingKey: cleanupKeepVotes.ratingKey })
+      .from(cleanupKeepVotes)
+      .where(eq(cleanupKeepVotes.userId, userId))
+      .all()
+      .map((r) => r.ratingKey),
+  );
+}
+
+/**
+ * What is about to be removed, for the portal.
+ *
+ * Only the destructive modes, and only items that are not held or protected:
+ * a list that included "will be labelled" or things already spared would be
+ * asking people to worry about nothing, and a portal that cries wolf is one
+ * nobody reads the week it matters.
+ */
+export function leavingSoon(
+  limit = 50,
+  now: number = Date.now(),
+): Array<{
+  ratingKey: string;
+  title: string;
+  runsRemaining: number;
+}> {
+  const protectedKeys = protectedRatingKeys();
+  return queuedCandidates({ now })
+    .filter(
+      (c) =>
+        c.actionedAt == null &&
+        (c.mode === "delete" || c.mode === "unmonitor") &&
+        !c.held &&
+        !protectedKeys.has(c.ratingKey),
+    )
+    .slice(0, limit)
+    .map((c) => ({ ratingKey: c.ratingKey, title: c.title, runsRemaining: c.runsRemaining }));
+}
+
 /** Stamp a candidate as done. The row stays as the audit trail. */
 export function markActioned(ruleId: string, ratingKey: string, action: CleanupAction, now: number = Date.now()): void {
   db.update(cleanupCandidates)
@@ -316,6 +393,14 @@ export interface QueuedCandidate extends CleanupCandidate {
    * must not be able to disagree with the engine about what is safe.
    */
   isProtected: boolean;
+  /**
+   * Who has asked, from the portal, for this to stay.
+   *
+   * Advisory by design — see `recordKeepVote`. The queue shows it so a
+   * deletion nobody wanted is a decision somebody made rather than one that
+   * simply happened at 4am.
+   */
+  keepVotes: string[];
 }
 
 /**
@@ -348,6 +433,7 @@ export function queuedCandidates(
     .all();
 
   const protectedKeys = protectedRatingKeys();
+  const votes = keepVotesByItem();
 
   return rows.map(({ candidate, ruleName, config, fileSize }) => {
     const action = (config as { action?: { consecutiveRuns?: number; mode?: string } } | null)?.action;
@@ -361,6 +447,7 @@ export function queuedCandidates(
       held: candidate.heldUntil != null && candidate.heldUntil > now,
       fileSize: fileSize ?? null,
       isProtected: protectedKeys.has(candidate.ratingKey),
+      keepVotes: votes.get(candidate.ratingKey) ?? [],
     };
   });
 }

@@ -87,6 +87,8 @@ type QueueRow = {
   fileSize: number | null;
   /** A standing protection covers this item; no rule will ever action it. */
   isProtected: boolean;
+  /** Portal users who have asked for this to stay. Advisory, not a hold. */
+  keepVotes: string[];
 };
 
 export default function Cleanup() {
@@ -445,6 +447,15 @@ export default function Cleanup() {
                     </td>
                     <td>
                       <Link to={`/media/${row.ratingKey}`}>{row.title}</Link>
+                      {/* The people who watch, as opposed to the person who
+                          configures. Advisory — it changes nothing on its own,
+                          which is the whole point: a deletion nobody wanted
+                          becomes a decision rather than an event. */}
+                      {row.keepVotes.length > 0 && (
+                        <span className={styles.keepVotes} title={row.keepVotes.join(", ")}>
+                          {row.keepVotes.length} asked to keep
+                        </span>
+                      )}
                     </td>
                     <td>
                       <Link to={`/cleanup/rules?q=${encodeURIComponent(row.ruleName)}`}>{row.ruleName}</Link>

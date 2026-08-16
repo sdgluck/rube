@@ -23,6 +23,8 @@ import { COOKIE_NAMES, clearSessionCookie, isSecureRequest, parseCookie, setSess
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
 import { getCollectionsForUser } from "@tinkerbell/domain.collections";
+import { keepVotesForUser, leavingSoon, recordKeepVote, removeKeepVote } from "@tinkerbell/domain.cleanup";
+import { userTotals } from "@tinkerbell/domain.playback";
 
 export interface PortalContext {
   session?: { userId: number; username: string };
@@ -154,6 +156,49 @@ export const portalRouter = tp.router({
       );
       return { ok: true as const, excluded: excludedTitles.length };
     }),
+
+  /**
+   * What a cleanup rule is about to remove, and whether you have asked it to
+   * stay.
+   *
+   * The queue page has always been able to say this, to exactly one person.
+   * Everyone else found out when the film stopped being there — and the whole
+   * argument for the streak is that a scheduled deletion is tolerable only
+   * when somebody can see it coming.
+   *
+   * Held and protected items are left out. A list that included things
+   * already spared would be asking people to worry about nothing, and a
+   * portal that cries wolf is one nobody reads the week it matters.
+   */
+  leavingSoon: userProcedure.query(({ ctx }) => {
+    const voted = keepVotesForUser(ctx.session.userId);
+    return leavingSoon().map((item) => ({ ...item, voted: voted.has(item.ratingKey) }));
+  }),
+
+  /**
+   * "I'd like to keep this."
+   *
+   * A signal, deliberately not a hold: a shared user must not be able to
+   * silently overrule the server owner's rule. The vote appears on the admin's
+   * queue beside the item, so a deletion nobody wanted becomes a decision
+   * somebody made rather than one that happened at 4am.
+   */
+  voteKeep: userProcedure
+    .input(z.object({ ratingKey: z.string().min(1), keep: z.boolean() }))
+    .mutation(({ ctx, input }) => {
+      if (input.keep) recordKeepVote(input.ratingKey, ctx.session.userId, ctx.session.username);
+      else removeKeepVote(input.ratingKey, ctx.session.userId);
+      return { ok: true as const };
+    }),
+
+  /**
+   * What you have watched here.
+   *
+   * Scoped to the session's own user id and nobody else's — the portal has
+   * never let one shared user read another's anything, and a watch history is
+   * the last place to start.
+   */
+  myWatchSummary: userProcedure.query(({ ctx }) => userTotals(ctx.session.userId)),
 
   searchTitles: userProcedure.input(z.object({ q: z.string() })).query(({ input }) => searchMediaTitles(input.q, 15)),
 

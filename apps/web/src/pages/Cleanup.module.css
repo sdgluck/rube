@@ -99,6 +99,12 @@
   color: var(--ink-2);
 }
 
+/* Advisory, so it reads as a note beside the title rather than as a status. */
+.keepVotes {
+  composes: label from "../styles/shared.module.css";
+  margin-left: 6px;
+}
+
 .checkboxCell {
   composes: checkboxCell from "../styles/shared.module.css";
 }
