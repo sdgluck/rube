@@ -239,6 +239,7 @@ export const configSchema = z.object({
   /** @deprecated Read once at startup to seed `cleanup_max_deletes_per_day`. */
   cleanup_max_deletes_per_run: z.number().int().positive(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
+  collections_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(6),
   stats_panel_order: z.array(z.string()).max(20),
   /** Visible columns of the Active Streams panel, in display order. */

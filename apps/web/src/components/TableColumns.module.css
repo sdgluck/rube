@@ -1,0 +1,114 @@
+/* The "Columns" control. Moved here verbatim from Media.module.css when the
+   Collections table needed the same one — see TableColumns.tsx. */
+
+.wrapper {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--control-h);
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: var(--btn-font-size-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+}
+
+.trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.triggerActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.triggerActive:hover {
+  background: var(--accent-text);
+  color: var(--on-accent);
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--surface);
+  /* An overlay, so --line-strong: this sits over table rows that already carry
+     --line borders, and an edge of the same weight would not read as in front
+     of them. */
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 12px;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: var(--r-tag);
+  cursor: grab;
+  transition: background 0.1s;
+}
+
+.item:hover {
+  background: var(--surface-sunken);
+}
+
+.itemDragging {
+  opacity: 0.5;
+  background: var(--accent-soft);
+}
+
+.handle {
+  color: var(--line);
+  font-size: 12.5px;
+  cursor: grab;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.itemLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.itemLabel input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}

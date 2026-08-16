@@ -25,13 +25,53 @@ import PageShell from "#components/PageShell";
 import { readEnumStorage, writeStorage } from "#/storage";
 import { errorMessage } from "#/utils";
 import SearchInput from "#components/SearchInput";
+import { ColumnsButton, reconcileColumns, visibleColumns, type TableColumn } from "#components/TableColumns";
+import { EMPTY } from "#/format";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@tinkerbell/trpc";
 import styles from "#/styles/shared.module.css";
+import collectionStyles from "./Collections.module.css";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 const PAGE_SIZE = 50;
+
+type CollectionRow = RouterOutputs["collections"]["list"]["items"][number];
+
+/** Labels Tinkerbell writes itself, which read as provenance rather than tags. */
+const SYSTEM_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
+
+/**
+ * Column ids in their default order, for the two "is this column on?" checks
+ * that have to run *before* the column defs exist — the defs close over the
+ * data those checks decide whether to fetch.
+ */
+const COLUMN_IDS = [
+  { id: "poster" },
+  { id: "title" },
+  { id: "section" },
+  { id: "items" },
+  { id: "smart" },
+  { id: "pinned" },
+  { id: "labels" },
+  { id: "rule" },
+  { id: "summary" },
+  { id: "artwork" },
+  { id: "added" },
+  { id: "synced" },
+  { id: "ratingKey" },
+] as const;
+
+/**
+ * What the table shows before anybody configures it: the columns it had
+ * already, plus Pinned — the one fact about a collection that was previously
+ * only discoverable by opening it.
+ */
+const DEFAULT_VISIBLE = ["title", "section", "items", "smart", "pinned", "labels", "rule", "added"];
 
 export default function Collections() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -173,6 +213,179 @@ export default function Collections() {
     }
     return null;
   };
+
+  // ─── Columns ──────────────────────────────────────────────────────────────
+
+  const columnsQuery = trpc.collections.columns.useQuery(undefined, { refetchOnWindowFocus: false });
+  const saveColumnsMutation = trpc.collections.saveColumns.useMutation({
+    onSuccess: () => columnsQuery.refetch(),
+  });
+
+  // Both of these answer for every collection at once and only matter to a
+  // column that may be switched off, so they're fetched lazily and kept
+  // briefly — the table is useful before either arrives.
+  const needsPinned = useMemo(
+    () => reconcileColumns(COLUMN_IDS, DEFAULT_VISIBLE, columnsQuery.data).some((c) => c.id === "pinned" && c.visible),
+    [columnsQuery.data],
+  );
+  const needsArtwork = useMemo(
+    () => reconcileColumns(COLUMN_IDS, DEFAULT_VISIBLE, columnsQuery.data).some((c) => c.id === "artwork" && c.visible),
+    [columnsQuery.data],
+  );
+  const pinnedQuery = trpc.collections.pinnedKeys.useQuery(undefined, {
+    enabled: needsPinned,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
+  const artworkQuery = trpc.collections.artworkFlags.useQuery(undefined, {
+    enabled: needsArtwork,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
+  const pinnedSet = useMemo(() => new Set(pinnedQuery.data ?? []), [pinnedQuery.data]);
+  const artworkFlags = artworkQuery.data ?? {};
+
+  const allColumns: TableColumn<CollectionRow>[] = useMemo(
+    () => [
+      {
+        id: "poster",
+        label: "Poster",
+        mobile: "hide",
+        // The checker box is always drawn and the image fades in over it, so a
+        // collection with no art and one whose thumb Plex no longer serves
+        // both read as "no poster" rather than as a broken image.
+        render: (col) => (
+          <div className={collectionStyles.rowPoster}>
+            {col.thumb && (
+              <FadeImage
+                className={collectionStyles.rowPosterImg}
+                src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                alt=""
+                loading="lazy"
+              />
+            )}
+          </div>
+        ),
+      },
+      { id: "title", label: "Title", sortKey: "title", mobile: "title", render: (col) => col.title },
+      {
+        id: "section",
+        label: "Section",
+        sortKey: "sectionTitle",
+        mobile: "meta",
+        render: (col) => col.sectionTitle,
+      },
+      {
+        id: "items",
+        label: "Items",
+        sortKey: "childCount",
+        mobile: "meta",
+        mono: true,
+        render: (col) => col.childCount.toLocaleString(),
+      },
+      { id: "smart", label: "Smart", sortKey: "smart", mobile: "hide", render: (col) => (col.smart ? "Yes" : "No") },
+      {
+        id: "pinned",
+        label: "Pinned",
+        mobile: "hide",
+        // Absence is left blank rather than marked "No": on a library where
+        // three collections of five hundred are pinned, a column of "No" is
+        // four hundred and ninety-seven pieces of noise.
+        render: (col) =>
+          pinnedSet.has(col.plexRatingKey) ? (
+            <span className={styles.metaChip}>Pinned</span>
+          ) : pinnedQuery.isLoading ? (
+            <span className={styles.muted}>…</span>
+          ) : (
+            <span className={styles.muted}>{EMPTY}</span>
+          ),
+      },
+      {
+        id: "labels",
+        label: "Labels",
+        sortKey: "labels",
+        mobile: "hide",
+        render: (col) =>
+          parseLabels(col.labels)
+            .filter((l) => !l.startsWith("Rule:"))
+            .map((label) => (
+              <span
+                key={label}
+                className={`${styles.label} ${SYSTEM_LABELS.includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+              >
+                {label}
+              </span>
+            )),
+      },
+      {
+        id: "rule",
+        label: "Rule",
+        mobile: "hide",
+        render: (col) => {
+          const rid = findRuleId(parseLabels(col.labels));
+          if (!rid) return <span className={styles.muted}>{EMPTY}</span>;
+          const name = ruleNameById.get(rid);
+          // A deleted rule has no name to search Rules by, so there's nothing
+          // to link to.
+          if (!name) return <span className={styles.muted}>Rule {rid.slice(0, 8)}</span>;
+          return (
+            <Link
+              to={`/rules?q=${encodeURIComponent(name)}`}
+              className={styles.ruleLink}
+              title="Open rule"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {name}
+            </Link>
+          );
+        },
+      },
+      {
+        id: "summary",
+        label: "Summary",
+        mobile: "hide",
+        render: (col) =>
+          col.summary ? (
+            <span className={collectionStyles.summaryCell} title={col.summary}>
+              {col.summary}
+            </span>
+          ) : (
+            <span className={styles.muted}>{EMPTY}</span>
+          ),
+      },
+      {
+        id: "artwork",
+        label: "Artwork",
+        mobile: "hide",
+        render: (col) => {
+          const flags = artworkFlags[col.plexRatingKey];
+          if (flags?.posterLocked) return <span className={styles.metaChip}>Set by hand</span>;
+          if (flags?.managed) return <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Managed</span>;
+          return <span className={styles.muted}>{EMPTY}</span>;
+        },
+      },
+      {
+        id: "added",
+        label: "Added",
+        sortKey: "addedAt",
+        mobile: "meta",
+        mono: true,
+        render: (col) => (col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : EMPTY),
+      },
+      {
+        id: "synced",
+        label: "Last synced",
+        mobile: "hide",
+        mono: true,
+        render: (col) => <RelativeTime timestamp={col.syncedAt} />,
+      },
+      { id: "ratingKey", label: "Rating key", mobile: "hide", mono: true, render: (col) => col.plexRatingKey },
+    ],
+    [pinnedSet, pinnedQuery.isLoading, artworkFlags, ruleNameById],
+  );
+
+  const columnConfig = reconcileColumns(allColumns, DEFAULT_VISIBLE, columnsQuery.data);
+  const shownColumns = visibleColumns(allColumns, columnConfig);
 
   // Unique labels across selected collections
   const selectedLabels = [
@@ -397,6 +610,14 @@ export default function Collections() {
             onChange={(ruleIds) => setFilters({ ruleIds })}
           />
           <div className={styles.filtersSpacer} />
+          {/* Only in the table — the grid has no columns to configure. */}
+          {viewMode === "table" && (
+            <ColumnsButton
+              all={allColumns}
+              config={columnConfig}
+              onChange={(next) => saveColumnsMutation.mutate(next)}
+            />
+          )}
           <div className={styles.viewToggle}>
             <button
               className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
@@ -468,111 +689,75 @@ export default function Collections() {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Title
-                      </SortableTh>
-                      <SortableTh sortKey="sectionTitle" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Section
-                      </SortableTh>
-                      <SortableTh sortKey="childCount" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Items
-                      </SortableTh>
-                      <SortableTh sortKey="smart" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Smart
-                      </SortableTh>
-                      <SortableTh sortKey="labels" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Labels
-                      </SortableTh>
-                      <th>Rule</th>
-                      <SortableTh sortKey="addedAt" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                        Added
-                      </SortableTh>
+                      {shownColumns.map((col) =>
+                        col.sortKey ? (
+                          <SortableTh
+                            key={col.id}
+                            sortKey={col.sortKey as SortKey}
+                            activeKey={sortKey}
+                            activeDir={sortDir}
+                            onSort={toggleSort}
+                          >
+                            {col.label}
+                          </SortableTh>
+                        ) : (
+                          <th key={col.id}>{col.label}</th>
+                        ),
+                      )}
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {collections.map((col, i) => {
-                      const labels = parseLabels(col.labels);
-                      return (
-                        <tr
-                          key={col.plexRatingKey}
-                          className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
-                          onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
+                    {collections.map((col, i) => (
+                      <tr
+                        key={col.plexRatingKey}
+                        className={`${styles.clickableRow} ${selected.has(col.plexRatingKey) ? styles.selectedRow : ""}`}
+                        onClick={() => navigate(`/collections/${col.plexRatingKey}`)}
+                      >
+                        <td
+                          className={styles.checkboxCell}
+                          data-cell="hide"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCheckboxClick(i, e);
+                          }}
                         >
+                          <input
+                            type="checkbox"
+                            className={styles.checkbox}
+                            checked={selected.has(col.plexRatingKey)}
+                            readOnly
+                          />
+                        </td>
+                        {shownColumns.map((def) => (
                           <td
-                            className={styles.checkboxCell}
-                            data-cell="hide"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckboxClick(i, e);
-                            }}
+                            key={def.id}
+                            data-cell={def.mobile ?? "hide"}
+                            className={def.mono ? styles.cellMuted : undefined}
                           >
-                            <input
-                              type="checkbox"
-                              className={styles.checkbox}
-                              checked={selected.has(col.plexRatingKey)}
-                              readOnly
-                            />
+                            {def.render(col)}
                           </td>
-                          <td data-cell="title">{col.title}</td>
-                          <td data-cell="meta">{col.sectionTitle}</td>
-                          <td data-cell="meta">{col.childCount}</td>
-                          <td data-cell="hide">{col.smart ? "Yes" : "No"}</td>
-                          <td data-cell="hide">
-                            {labels
-                              .filter((l) => !l.startsWith("Rule:"))
-                              .map((label) => (
-                                <span
-                                  key={label}
-                                  className={`${styles.label} ${["tinkerbell", "generated", "becauseyouwatched"].includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
-                                >
-                                  {label}
-                                </span>
-                              ))}
-                          </td>
-                          <td data-cell="hide" onClick={(e) => e.stopPropagation()}>
-                            {(() => {
-                              const rid = findRuleId(labels);
-                              if (!rid) return <span className={styles.muted}>—</span>;
-                              const name = ruleNameById.get(rid);
-                              // A deleted rule has no name to search Rules by,
-                              // so there's nothing to link to.
-                              if (!name) return <span className={styles.muted}>Rule {rid.slice(0, 8)}</span>;
-                              return (
-                                <Link
-                                  to={`/rules?q=${encodeURIComponent(name)}`}
-                                  className={styles.ruleLink}
-                                  title="Open rule"
-                                >
-                                  {name}
-                                </Link>
-                              );
-                            })()}
-                          </td>
-                          <td data-cell="meta">
-                            {col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : ""}
-                          </td>
-                          <td data-cell="hide">
-                            <RowActions
-                              label={`Actions for ${col.title}`}
-                              actions={[
-                                {
-                                  label: "Open",
-                                  icon: ExternalLink,
-                                  onSelect: () => navigate(`/collections/${col.plexRatingKey}`),
-                                },
-                                {
-                                  label: "Delete",
-                                  icon: Trash2,
-                                  danger: true,
-                                  onSelect: () => handleDelete(col.plexRatingKey, col.title),
-                                },
-                              ]}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        ))}
+                        <td data-cell="hide">
+                          <RowActions
+                            label={`Actions for ${col.title}`}
+                            actions={[
+                              {
+                                label: "Open",
+                                icon: ExternalLink,
+                                onSelect: () => navigate(`/collections/${col.plexRatingKey}`),
+                              },
+                              {
+                                label: "Delete",
+                                icon: Trash2,
+                                danger: true,
+                                onSelect: () => handleDelete(col.plexRatingKey, col.title),
+                              },
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

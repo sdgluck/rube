@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { db, rules } from "@tinkerbell/db";
-import { errorMessage, getConfig } from "@tinkerbell/core";
+import { errorMessage, getConfig, setConfig } from "@tinkerbell/core";
 import { LOCAL_FIELD_DEFS, posterUrlError, resolvePosterTemplate } from "@tinkerbell/contracts";
 import { derivePalette, fetchPosterUrl, renderCollectionPoster } from "@tinkerbell/posters";
 import {
@@ -216,6 +216,67 @@ export const collectionsRouter = t.router({
 
   filters: procedure.query(() => {
     return getCollectionFilters();
+  }),
+
+  columns: procedure.query(() => getConfig("collections_columns") ?? null),
+
+  saveColumns: procedure.input(z.array(z.object({ id: z.string(), visible: z.boolean() }))).mutation(({ input }) => {
+    setConfig("collections_columns", input);
+    return { ok: true as const };
+  }),
+
+  /**
+   * Every collection currently pinned to the Plex home screen, as a set of
+   * rating keys.
+   *
+   * One request per library rather than one per row: the list shows fifty
+   * collections and `getManagedHubs` answers for a whole section at once, so
+   * the "Pinned" column costs a handful of calls however long the page is.
+   */
+  pinnedKeys: procedure.query(async () => {
+    const client = getPlexClient();
+    const sectionIds = [...new Set(getLocalCollections().items.map((c) => c.sectionId))];
+    const pinned: string[] = [];
+    await Promise.all(
+      sectionIds.map(async (sectionId) => {
+        try {
+          for (const hub of await client.getManagedHubs(sectionId)) {
+            if ((hub.promotedToOwnHome ?? 0) <= 0) continue;
+            // `custom.collection.{sectionId}.{ratingKey}` — the last segment is
+            // the collection this hub is for.
+            const key = hub.identifier.split(".").pop();
+            if (key) pinned.push(key);
+          }
+        } catch {
+          // A section Plex won't answer for contributes no pins rather than
+          // failing the column for every other library.
+        }
+      }),
+    );
+    return pinned;
+  }),
+
+  /**
+   * What Tinkerbell has written onto each collection, keyed by rating key.
+   *
+   * Resolved here rather than per row because the ledger is keyed by
+   * `(ruleId, collectionName)` and the list only knows rating keys — the join
+   * needs the `Rule:<id>` label off every row, which is one local query for the
+   * whole page instead of one round trip each.
+   */
+  artworkFlags: procedure.query(() => {
+    const flags: Record<string, { managed: boolean; posterLocked: boolean }> = {};
+    for (const row of getLocalCollections().items) {
+      const labelled = row.labels.find((l) => l.startsWith("Rule:"));
+      if (!labelled) continue;
+      const artwork = getCollectionArtwork(labelled.slice("Rule:".length), row.title);
+      if (!artwork) continue;
+      flags[row.plexRatingKey] = {
+        managed: !!artwork.posterUploadedAt || !!artwork.summarySource,
+        posterLocked: !!artwork.posterLockedAt,
+      };
+    }
+    return flags;
   }),
 
   get: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {

@@ -1,0 +1,31 @@
+/* Layout for the two cells that aren't plain text. Everything else on this
+   page composes from styles/shared.module.css. */
+
+.rowPoster {
+  position: relative;
+  width: 26px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--r-tag);
+  overflow: hidden;
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 4px, var(--checker-b) 4px 8px);
+}
+
+.rowPosterImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* One line, ellipsised, with the whole thing in the title attribute. A summary
+   is a paragraph, and a row that grows to fit one turns the table into a wall. */
+.summaryCell {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+}

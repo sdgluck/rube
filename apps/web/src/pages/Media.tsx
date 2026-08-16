@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { EMPTY } from "#/format";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -17,6 +17,13 @@ import FadeImage from "#components/FadeImage";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { readEnumStorage, writeStorage } from "#/storage";
 import SearchInput from "#components/SearchInput";
+import {
+  ColumnsButton,
+  reconcileColumns,
+  visibleColumns as resolveVisibleColumns,
+  type ColumnConfig,
+  type TableColumn,
+} from "#components/TableColumns";
 import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
 
@@ -91,21 +98,6 @@ const SORT_KEYS = [
 ] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 
-interface ColumnDef {
-  id: SortKey;
-  label: string;
-  /** ReactNode rather than string: "Added" renders a <RelativeTime>, which
-      keeps itself current and carries the exact date in its tooltip. */
-  render: (item: MediaItem) => React.ReactNode;
-  /** File data the server reported — rendered in mono, like every other
-      machine-produced value in the app. */
-  mono?: boolean;
-  /** Role this cell takes when the table becomes cards on mobile. Columns here
-      are user-configurable, so the role travels with the column rather than
-      being inferred from its position in the row. */
-  mobile?: "title" | "meta" | "hide";
-}
-
 type MediaItem = {
   ratingKey: string;
   title: string;
@@ -128,7 +120,7 @@ const AUDIO_CHANNELS_LABELS: Record<number, string> = {
   8: "7.1",
 };
 
-const ALL_COLUMNS: ColumnDef[] = [
+const ALL_COLUMNS: TableColumn<MediaItem, SortKey>[] = [
   { id: "title", label: "Title", render: (item) => item.title, mobile: "title" },
   { id: "section", label: "Section", render: (item) => item.sectionTitle, mobile: "meta" },
   { id: "type", label: "Type", render: (item) => item.type, mobile: "meta" },
@@ -181,31 +173,6 @@ const ALL_COLUMNS: ColumnDef[] = [
 
 const DEFAULT_VISIBLE = ["title", "section", "type", "year", "added"];
 
-const DEFAULT_COLUMNS = ALL_COLUMNS.map((col) => ({
-  id: col.id,
-  visible: DEFAULT_VISIBLE.includes(col.id),
-}));
-
-type ColumnConfig = { id: string; visible: boolean };
-
-/**
- * The saved column config, brought up to date with the columns we now ship.
- *
- * A saved config is a complete list, and both the table and the Columns
- * dropdown iterate it rather than ALL_COLUMNS — so a column added after
- * someone last saved would be invisible *and* absent from the control that
- * turns it on. Missing columns are appended at their default visibility, which
- * keeps the order and the choices they made and still shows them the new
- * column. Columns we have dropped fall away by not being in ALL_COLUMNS.
- */
-function reconcileColumns(saved: ColumnConfig[] | null | undefined): ColumnConfig[] {
-  if (!saved || saved.length === 0) return DEFAULT_COLUMNS;
-  const known = new Set(ALL_COLUMNS.map((c) => c.id as string));
-  const kept = saved.filter((c) => known.has(c.id));
-  const seen = new Set(kept.map((c) => c.id));
-  return [...kept, ...DEFAULT_COLUMNS.filter((c) => !seen.has(c.id)).map((c) => ({ id: c.id, visible: c.visible }))];
-}
-
 function childToMediaItem(child: {
   ratingKey: string;
   type: string;
@@ -244,7 +211,7 @@ function ChildrenRows({
   parentRatingKey: string;
   depth: number;
   colSpan: number;
-  visibleColumns: ColumnDef[];
+  visibleColumns: TableColumn<MediaItem, SortKey>[];
   expandedRows: Set<string>;
   toggleExpanded: (key: string) => void;
   navigate: (path: string) => void;
@@ -357,48 +324,15 @@ export default function Media() {
     (f) => f.length > 0,
   ).length;
 
-  // Column configuration
-  const [showColumnConfig, setShowColumnConfig] = useState(false);
-  const columnConfigRef = useRef<HTMLDivElement>(null);
+  // Column configuration. The control, the reconcile and the reorder all live
+  // in #components/TableColumns, shared with the Collections table.
   const columnsQuery = trpc.media.columns.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveColumnsMutation = trpc.media.saveColumns.useMutation({
     onSuccess: () => columnsQuery.refetch(),
   });
 
-  const columnConfig: ColumnConfig[] = reconcileColumns(columnsQuery.data);
-
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-
-  const visibleColumns = columnConfig
-    .filter((c) => c.visible)
-    .map((c) => ALL_COLUMNS.find((col) => col.id === c.id)!)
-    .filter(Boolean);
-
-  // Close column config dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (columnConfigRef.current && !columnConfigRef.current.contains(e.target as Node)) {
-        setShowColumnConfig(false);
-      }
-    }
-    if (showColumnConfig) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [showColumnConfig]);
-
-  function toggleColumn(id: string) {
-    const next = columnConfig.map((c) => (c.id === id ? { ...c, visible: !c.visible } : c));
-    saveColumnsMutation.mutate(next);
-  }
-
-  function moveColumn(from: number, to: number) {
-    if (from === to) return;
-    const next = [...columnConfig];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    saveColumnsMutation.mutate(next);
-  }
+  const columnConfig: ColumnConfig[] = reconcileColumns(ALL_COLUMNS, DEFAULT_VISIBLE, columnsQuery.data);
+  const visibleColumns = resolveVisibleColumns(ALL_COLUMNS, columnConfig);
 
   const clearAdvancedFilters = useCallback(() => {
     setSearchParams(
@@ -495,44 +429,11 @@ export default function Media() {
         </button>
         <div className={styles.filtersSpacer} />
         {viewMode === "table" && (
-          <div className={mediaStyles.columnConfigWrapper} ref={columnConfigRef}>
-            <button
-              className={`${mediaStyles.columnConfigBtn} ${showColumnConfig ? mediaStyles.columnConfigBtnActive : ""}`}
-              onClick={() => setShowColumnConfig((v) => !v)}
-            >
-              Columns
-            </button>
-            {showColumnConfig && (
-              <div className={mediaStyles.columnConfigDropdown}>
-                {columnConfig.map((col, i) => {
-                  const def = ALL_COLUMNS.find((c) => c.id === col.id);
-                  if (!def) return null;
-                  return (
-                    <div
-                      key={col.id}
-                      className={`${mediaStyles.columnConfigItem} ${dragIndex === i ? mediaStyles.columnConfigItemDragging : ""}`}
-                      draggable
-                      onDragStart={() => setDragIndex(i)}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        if (dragIndex !== null && dragIndex !== i) {
-                          moveColumn(dragIndex, i);
-                          setDragIndex(i);
-                        }
-                      }}
-                      onDragEnd={() => setDragIndex(null)}
-                    >
-                      <span className={mediaStyles.dragHandle}>&#x2630;</span>
-                      <label className={mediaStyles.columnConfigLabel}>
-                        <input type="checkbox" checked={col.visible} onChange={() => toggleColumn(col.id)} />
-                        {def.label}
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ColumnsButton
+            all={ALL_COLUMNS}
+            config={columnConfig}
+            onChange={(next) => saveColumnsMutation.mutate(next)}
+          />
         )}
         <div className={styles.viewToggle}>
           <button
