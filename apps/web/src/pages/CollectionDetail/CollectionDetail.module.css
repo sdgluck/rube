@@ -194,6 +194,20 @@
   margin-right: 0;
 }
 
+/* Underline rather than a colour swap on hover: a label chip already carries a
+   palette that says which *kind* of label it is — Tinkerbell's own, a user's,
+   or a plain one — and repainting it under the pointer would trade that for a
+   cue the underline gives without spending any colour. */
+.labelChipLink {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.labelChipLink:hover {
+  text-decoration: underline;
+}
+
 /* ─── Tabs ────────────────────────────────────────────────────────────────── */
 
 .tabsRow {

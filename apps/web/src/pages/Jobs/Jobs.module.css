@@ -405,19 +405,6 @@
 
 /* ─── Run detail page (JobRun) ───────────────────────────────────────────── */
 
-/* Drill-ins open with a mono back link to the parent route. */
-.backLink {
-  color: var(--ink-3);
-  text-decoration: none;
-  font: var(--t-data);
-  display: inline-block;
-  margin-bottom: 14px;
-}
-
-.backLink:hover {
-  color: var(--accent-text);
-}
-
 .runDetail {
   display: flex;
   flex-direction: column;

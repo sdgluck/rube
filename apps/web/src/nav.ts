@@ -53,8 +53,10 @@ export type Crumb = { label: string; to: string };
  * The route's place in the nav, as a breadcrumb trail — the app bar's answer
  * to "where am I" now that pages don't render a title of their own.
  *
- * Drill-in routes (/jobs/:id, /media/:key) stop at their section: the record's
- * own name is the page's business, and it shows it in its back link.
+ * Drill-in routes (/jobs/:id, /media/:key) stop at their section, because the
+ * record's name isn't in the URL — the page appends it with <PageCrumbs>, which
+ * is also what turns the section above it back into a link. Settings is the
+ * exception that can be resolved from the path alone.
  */
 export function routeTrail(pathname: string): Crumb[] {
   const settings = SETTINGS_LINKS.find((l) => pathname === l.to || pathname.startsWith(`${l.to}/`));

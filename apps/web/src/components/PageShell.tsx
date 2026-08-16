@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { PageActions } from "#layout/AppBar";
 import styles from "./PageShell.module.css";
 
@@ -27,55 +26,6 @@ export function StatusChip({
       {dot && <span className={styles.chipDot} aria-hidden="true" />}
       {children}
     </span>
-  );
-}
-
-/**
- * The `← Parent / This record` link that opens a drill-in route. It carries the
- * record's name because the page no longer has a heading to put it in.
- */
-export function BackLink({
-  to,
-  parent,
-  onBack,
-  children,
-}: {
-  to: string;
-  parent?: ReactNode;
-  /** Go back through history instead of to `to` — the drill-in came from a
-   *  filtered list and `to` would throw the filters away. */
-  onBack?: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className={styles.backRow}>
-      {onBack ? (
-        <a
-          href={to}
-          className={styles.backLink}
-          onClick={(e) => {
-            e.preventDefault();
-            onBack();
-          }}
-        >
-          <span aria-hidden="true">←</span>
-          {parent ?? children}
-        </a>
-      ) : (
-        <Link to={to} className={styles.backLink}>
-          <span aria-hidden="true">←</span>
-          {parent ?? children}
-        </Link>
-      )}
-      {parent != null && (
-        <>
-          <span className={styles.backSep} aria-hidden="true">
-            /
-          </span>
-          <span className={styles.backCurrent}>{children}</span>
-        </>
-      )}
-    </div>
   );
 }
 

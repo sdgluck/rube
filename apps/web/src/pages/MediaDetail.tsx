@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { BackLink } from "#components/PageShell";
+import { PageCrumbs } from "#layout/AppBar";
 import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
@@ -51,9 +51,7 @@ export default function MediaDetail() {
 
   return (
     <div ref={swipeRef}>
-      <BackLink to="/media" parent="Media" onBack={() => navigate(-1)}>
-        {item.title}
-      </BackLink>
+      <PageCrumbs crumbs={[{ label: item.title }]} onBackToParent={() => navigate(-1)} />
 
       <div className={styles.detailLayout}>
         <div className={styles.detailPoster}>

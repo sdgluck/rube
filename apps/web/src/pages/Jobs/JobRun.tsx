@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import { DetailSkeleton } from "#components/Skeleton";
-import { BackLink } from "#components/PageShell";
+import { PageCrumbs } from "#layout/AppBar";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
 import { formatDuration, formatElapsed } from "#/format";
@@ -105,9 +105,7 @@ export default function JobRun() {
 
   return (
     <div ref={swipeRef} className={styles.runDetail}>
-      <BackLink to={`/jobs/${run.jobId}`} parent="Job">
-        Run
-      </BackLink>
+      <PageCrumbs crumbs={[{ label: run.jobId, to: `/jobs/${run.jobId}` }, { label: `Run ${run.id}` }]} />
 
       <div className={styles.runHeader}>
         <StatusBadge status={run.status} />

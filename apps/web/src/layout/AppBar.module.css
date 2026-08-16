@@ -53,6 +53,18 @@
   text-overflow: ellipsis;
 }
 
+/* A crumb a page contributed for the record it is showing, rather than a nav
+   label. The trail is uppercased because section names are nav chrome; a
+   collection called `"What the F*ck?!"` is a name someone typed, and shouting
+   it back at them is neither a breadcrumb nor a courtesy. Mono goes with it —
+   the record's own text, not the app's word for where it lives. */
+.crumbRecord {
+  text-transform: none;
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+  min-width: 0;
+}
+
 .sep {
   color: var(--ink-faint);
 }

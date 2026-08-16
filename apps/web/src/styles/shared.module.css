@@ -726,21 +726,6 @@
   min-width: 0;
 }
 
-.backLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 14px;
-  color: var(--ink-3);
-  text-decoration: none;
-  font: var(--t-data);
-  transition: color 0.15s;
-}
-
-.backLink:hover {
-  color: var(--accent-text);
-}
-
 .detailHeader {
   display: flex;
   align-items: center;

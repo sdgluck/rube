@@ -13,6 +13,7 @@ import { useToast } from "#components/Toast";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer } from "#components/SmartFiltersEditor";
+import { PageCrumbs } from "#layout/AppBar";
 import { CollectionProvider } from "./context.ts";
 import CollectionEditModal from "./CollectionEditModal.tsx";
 import PosterStudio from "./PosterStudio.tsx";
@@ -186,16 +187,7 @@ export default function CollectionDetailLayout() {
 
   return (
     <div ref={swipeRef}>
-      <a
-        href="#"
-        className={styles.backLink}
-        onClick={(e) => {
-          e.preventDefault();
-          navigate("/collections");
-        }}
-      >
-        &larr; Collections
-      </a>
+      <PageCrumbs crumbs={[{ label: collection.title }]} />
 
       {/* Presentation only. Everything here is read — the pencil opens the
           editor, the poster is changed from the actions menu. The header used
@@ -294,10 +286,16 @@ export default function CollectionDetailLayout() {
           {visibleLabels.length > 0 && (
             <div className={local.labelRow}>
               <span className={local.labelLead}>Labels</span>
+              {/* A label is the one thing on this page that names a set rather
+                  than this collection, so it goes where that set is listed.
+                  `label` is repeatable on Collections, which is the same
+                  parameter its own filter chips write. */}
               {visibleLabels.map((label) => (
-                <span
+                <Link
                   key={label}
-                  className={`${styles.label} ${local.labelChip} ${
+                  to={`/collections?label=${encodeURIComponent(label)}`}
+                  title={`Show collections labelled "${label}"`}
+                  className={`${styles.label} ${local.labelChip} ${local.labelChipLink} ${
                     SYSTEM_LABELS.includes(label.toLowerCase())
                       ? styles.labelTinkerbell
                       : label.toLowerCase().startsWith("user:")
@@ -306,7 +304,7 @@ export default function CollectionDetailLayout() {
                   }`}
                 >
                   {label}
-                </span>
+                </Link>
               ))}
             </div>
           )}
