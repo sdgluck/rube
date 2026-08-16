@@ -562,6 +562,98 @@ td.previewBlockCell {
   word-break: break-word;
 }
 
+/* ── Filter funnel ──────────────────────────────────────────────────────────
+   One row per clause, bars all scaled to the library rather than to the
+   previous step, so a clause that halves the set looks like half. */
+
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.funnelSection {
+  padding: 12px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-md);
+}
+
+.funnelHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.funnelHeadMeta {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.funnelSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.funnelStep {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+  gap: 10px;
+  align-items: center;
+  font: var(--t-data);
+}
+
+.funnelLabel {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.funnelLocalTag {
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.funnelTrack {
+  height: 6px;
+  overflow: hidden;
+  background: var(--fill-track);
+  border-radius: var(--r-pill);
+}
+
+.funnelFill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.funnelCount {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 9ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.funnelRemoved {
+  color: var(--status-error-fg);
+}
+
+.funnelVerdict {
+  margin: 8px 0 0;
+  font: var(--t-data);
+  color: var(--ink-2);
+}
+
 /* ── A run's changeset ──────────────────────────────────────────────────────
    Two directions, always in the same order and the same two colours, so a
    column of runs can be read down rather than parsed row by row. */

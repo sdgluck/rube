@@ -8,6 +8,7 @@ import { ruleAction } from "@tinkerbell/contracts";
 import { listCandidates } from "@tinkerbell/domain.cleanup";
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";
+import { buildFilterFunnel, type SectionFunnel } from "./funnel.ts";
 
 const testRuleLog = createLogger("test-rule");
 
@@ -44,6 +45,12 @@ export interface TestRuleResult {
   tokensOut?: number;
   /** Set only for rules whose outcome is cleanup. */
   cleanup?: TestCleanupPreview;
+  /**
+   * Per-clause attrition, for `smart_filter` rules only. The other 28 rule
+   * types don't have a filter tree to walk — their selection is a source
+   * (an IMDb chart, a TMDb franchise) rather than a stack of conditions.
+   */
+  funnel?: SectionFunnel[];
 }
 
 /**
@@ -166,6 +173,20 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     );
   }
 
+  // Where the items went, clause by clause. Built after the handler rather
+  // than inside it so a funnel that fails costs nothing but itself, and only
+  // for smart filters — every other rule type selects from a source rather
+  // than by narrowing, so there is no attrition to attribute.
+  let funnel: SectionFunnel[] | undefined;
+  if (rule.type === "smart_filter" && ruleConfig.smartFilter?.children.length) {
+    log("Measuring where the items went, clause by clause…");
+    funnel = await buildFilterFunnel({ ctx, client, sections, filter: ruleConfig.smartFilter });
+    for (const section of funnel) {
+      const trail = section.steps.map((s) => `${s.label} → ${s.remaining}`).join("; ");
+      log(`[Funnel] "${section.sectionTitle}": ${section.start} → ${trail || "no clauses"} → ${section.final}`);
+    }
+  }
+
   // Enrich items with thumb paths so the UI can render posters. One batched
   // request across all collections, then back-fill each item.
   const allKeys = Array.from(new Set(collections.flatMap((c) => c.items.map((i) => i.ratingKey))));
@@ -195,6 +216,7 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
     tokensIn: tokensIn || undefined,
     tokensOut: tokensOut || undefined,
     cleanup,
+    funnel,
   };
 }
 

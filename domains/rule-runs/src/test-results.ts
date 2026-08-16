@@ -46,6 +46,28 @@ export interface PersistedTestResult {
     waiting: number;
     dueTitles: string[];
   };
+  /**
+   * For a smart filter: how many items each clause eliminated, per library.
+   *
+   * The single most valuable thing a test can say when the answer is zero —
+   * without it, every clause in the rule is equally suspect.
+   */
+  funnel?: TestFunnelSection[];
+}
+
+export interface TestFunnelStep {
+  label: string;
+  remaining: number;
+  removed: number;
+  source: "plex" | "local";
+}
+
+export interface TestFunnelSection {
+  sectionTitle: string;
+  start: number;
+  steps: TestFunnelStep[];
+  final: number;
+  mode: "narrowing" | "contributing";
 }
 
 const lastTestResultByRule = new Map<string, PersistedTestResult>();

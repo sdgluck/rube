@@ -102,6 +102,20 @@ export function createItemsModule(http: PlexHttp) {
     }));
   }
 
+  /**
+   * How many items a filter matches, without fetching any of them.
+   *
+   * The funnel asks this once per clause per section, so it must not pay for
+   * the rows: `X-Plex-Container-Size=0` returns the `totalSize` header and an
+   * empty body. A six-clause rule over three libraries is eighteen of these,
+   * which is only affordable because each one is a count rather than a page.
+   */
+  async function countItemsByFilter(filterPath: string): Promise<number> {
+    const joiner = filterPath.includes("?") ? "&" : "?";
+    const data = await http.request(`${filterPath}${joiner}X-Plex-Container-Start=0&X-Plex-Container-Size=0`);
+    return data?.MediaContainer?.totalSize ?? 0;
+  }
+
   async function allItemsWithGuids(sectionId: string): Promise<
     Array<{
       ratingKey: string;
@@ -532,6 +546,7 @@ export function createItemsModule(http: PlexHttp) {
     fetchItemsSorted,
     fetchGroupedByField,
     fetchItemsByFilter,
+    countItemsByFilter,
     allItemsWithGuids,
     getSectionItemCount,
     getItemGuids,
