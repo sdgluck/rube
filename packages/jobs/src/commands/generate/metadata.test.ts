@@ -163,6 +163,8 @@ describe("planWrites", () => {
     ratingKey: "1",
     title: "The Matrix",
     type: "movie",
+    sectionId: "1",
+    sectionType: "movie",
     fields: { title: "The Matrix", titleSort: "The Matrix", year: "1999", studio: "Warner" },
     tags: { genre: ["Action"], label: [] },
     locked: [],

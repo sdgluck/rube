@@ -1,0 +1,90 @@
+/* Only what the shared settings card can't express. Layout, fields, hints and
+   buttons all come from Settings.module.css so this pane reads like the rest. */
+
+.intro {
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 72ch;
+}
+
+.switchRow {
+  align-items: flex-start;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 10px;
+  max-width: 72ch;
+}
+
+.switchLabel {
+  display: block;
+  font-weight: 600;
+}
+
+.switchHint {
+  color: var(--ink-3);
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+/* Shown only while writing is armed. A statement of the current state, not a
+   warning about a mistake — which is what someone opening this page in a
+   hurry needs to read first. */
+.armed {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 72ch;
+  padding: 10px 12px;
+}
+
+.batches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.batch {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.batchMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.batchSummary {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.batchMeta {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.batchReverted {
+  color: var(--ink-3);
+  flex: none;
+  font-size: 12px;
+}

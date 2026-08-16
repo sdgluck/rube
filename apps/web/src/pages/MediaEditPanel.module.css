@@ -1,0 +1,132 @@
+/* Controls compose the shared primitives so this panel matches every other
+   form in the app; only the panel's own layout lives here. */
+
+.openButton {
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
+  align-self: flex-start;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.title {
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  margin: 0;
+}
+
+.close {
+  composes: btn btnGhost btnSm from "../styles/controls.module.css";
+}
+
+.fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* The summary is the one field worth a full row of its own. */
+.field:has(.summaryInput) {
+  grid-column: 1 / -1;
+}
+
+.fieldHead {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.label {
+  font: var(--t-meta);
+  font-weight: 600;
+}
+
+/* Deliberately as prominent as any other control here. A lock nobody can find
+   the release for is a trap, not a feature. */
+.unlock {
+  background: none;
+  border: none;
+  color: var(--accent-text);
+  cursor: pointer;
+  font: var(--t-caption);
+  padding: 0;
+  text-align: right;
+}
+
+.unlock:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.textInput {
+  composes: input from "../styles/controls.module.css";
+  width: 100%;
+}
+
+.summaryInput {
+  composes: textarea from "../styles/controls.module.css";
+  width: 100%;
+}
+
+.lockRow {
+  align-items: flex-start;
+  cursor: pointer;
+  display: flex;
+  font: var(--t-body);
+  gap: 10px;
+  max-width: 72ch;
+}
+
+.lockLabel {
+  display: block;
+  font-weight: 600;
+}
+
+.lockHint {
+  color: var(--ink-3);
+  display: block;
+  font: var(--t-meta);
+  margin-top: 4px;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.save {
+  composes: btn btnPrimary from "../styles/controls.module.css";
+}
+
+.hint {
+  color: var(--ink-3);
+  font: var(--t-meta);
+  margin: 0;
+}
+
+.error {
+  color: var(--danger);
+  font: var(--t-body-sm);
+  margin: 0;
+}

@@ -15,6 +15,7 @@ import {
   formatSamplingRate,
 } from "#/format";
 import mediaStyles from "./MediaDetail.module.css";
+import MediaEditPanel from "./MediaEditPanel";
 
 function fileName(path: string | undefined): string {
   if (!path) return EMPTY;
@@ -146,6 +147,11 @@ export default function MediaDetail() {
           )}
 
           {item.summary && <p className={mediaStyles.summary}>{item.summary}</p>}
+
+          {/* Editing lives here rather than behind a menu: this page already
+              shows every field it writes, so the edit is next to the thing it
+              changes. */}
+          <MediaEditPanel ratingKey={item.ratingKey} />
 
           {/* Media Files */}
           {item.media.length > 0 && (

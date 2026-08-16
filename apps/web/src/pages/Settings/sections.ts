@@ -21,6 +21,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     links: [
       { to: "/settings/schedules", label: "Schedules" },
       { to: "/settings/cleanup", label: "Cleanup" },
+      { to: "/settings/metadata", label: "Metadata" },
       { to: "/settings/portal", label: "Portal" },
       { to: "/settings/notifications", label: "Notifications" },
       { to: "/settings/digest", label: "Digest" },

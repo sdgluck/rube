@@ -20,6 +20,7 @@
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.bandwidth": "workspace:*",
     "@tinkerbell/domain.cleanup": "workspace:*",
+    "@tinkerbell/domain.metadata": "workspace:*",
     "@tinkerbell/domain.collections": "workspace:*",
     "@tinkerbell/domain.digest": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",

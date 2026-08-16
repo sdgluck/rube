@@ -1202,6 +1202,9 @@ importers:
       '@tinkerbell/domain.media':
         specifier: workspace:*
         version: link:../../domains/media
+      '@tinkerbell/domain.metadata':
+        specifier: workspace:*
+        version: link:../../domains/metadata
       '@tinkerbell/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration

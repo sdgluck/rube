@@ -57,11 +57,41 @@ export function isMetadataTagField(field: string): field is MetadataTagField {
   return (METADATA_TAG_FIELDS as readonly string[]).includes(field);
 }
 
+/**
+ * Which section type a write to this item must claim.
+ *
+ * Every metadata PUT goes to `/library/sections/:id/all` with a `type`, and
+ * that number is the *section's* type, not the item's — an episode is written
+ * as part of a `show` section. Deriving it from the item saves callers a
+ * `getSections()` round trip they would otherwise need before every edit.
+ */
+export function sectionTypeForItem(itemType: string): string {
+  switch (itemType) {
+    case "show":
+    case "season":
+    case "episode":
+      return "show";
+    case "artist":
+    case "album":
+    case "track":
+      return "artist";
+    case "photo":
+    case "photoalbum":
+      return "photo";
+    default:
+      return "movie";
+  }
+}
+
 /** An item's current metadata, plus which of its fields Plex has locked. */
 export interface ItemFields {
   ratingKey: string;
   title: string;
   type: string;
+  /** The library this item lives in — needed for every write. */
+  sectionId: string;
+  /** The section type a write must claim. See `sectionTypeForItem`. */
+  sectionType: string;
   fields: MetadataFields;
   tags: Partial<Record<MetadataTagField, string[]>>;
   /** Field names Plex reports as locked — scalar and tag fields alike. */
@@ -137,10 +167,13 @@ export function createMetadataModule(http: PlexHttp) {
       tags[field] = tagList(meta, TAG_CONTAINER[field]);
     }
 
+    const itemType = str(meta.type) ?? "";
     return {
       ratingKey: str(meta.ratingKey) ?? ratingKey,
       title: str(meta.title) ?? "",
-      type: str(meta.type) ?? "",
+      type: itemType,
+      sectionId: str(meta.librarySectionID) ?? "",
+      sectionType: sectionTypeForItem(itemType),
       fields,
       tags,
       locked: parseLocked(meta),

@@ -35,6 +35,7 @@ export {
   METADATA_TAG_FIELDS,
   isMetadataField,
   isMetadataTagField,
+  sectionTypeForItem,
   type MetadataField,
   type MetadataTagField,
   type MetadataFields,

@@ -39,6 +39,7 @@ import { registryRouter } from "./registry.router.ts";
 import { navRouter } from "./nav.router.ts";
 import { viewsRouter } from "./views.router.ts";
 import { cleanupRouter } from "./cleanup.router.ts";
+import { metadataRouter } from "./metadata.router.ts";
 import { digestRouter } from "./digest.router.ts";
 import { personalizationRouter } from "./personalization.router.ts";
 
@@ -53,6 +54,7 @@ export const appRouter = t.router({
   stats: statsRouter,
   overlays: overlaysRouter,
   cleanup: cleanupRouter,
+  metadata: metadataRouter,
   digest: digestRouter,
   events: eventsRouter,
   health: healthRouter,
