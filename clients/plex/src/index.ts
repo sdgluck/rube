@@ -10,6 +10,7 @@ import { createPlexHttp } from "./http.ts";
 import { createSectionsModule } from "./sections.ts";
 import { createHubsModule } from "./hubs.ts";
 import { createItemsModule } from "./items.ts";
+import { createMetadataModule } from "./metadata.ts";
 import { createCollectionsModule } from "./collections.ts";
 import { createSharingModule } from "./sharing.ts";
 import { createUsersModule } from "./users.ts";
@@ -28,6 +29,17 @@ export {
   setFilterClause,
   shareFiltersEqual,
 } from "./filters.ts";
+
+export {
+  METADATA_FIELDS,
+  METADATA_TAG_FIELDS,
+  isMetadataField,
+  isMetadataTagField,
+  type MetadataField,
+  type MetadataTagField,
+  type MetadataFields,
+  type ItemFields,
+} from "./metadata.ts";
 
 export { SECTION_TYPE_MAP, COLLECTION_MODES, COLLECTION_SORTS } from "./types.ts";
 export type {
@@ -75,6 +87,7 @@ export function createPlexClient(opts: PlexClientOptions) {
     ...createSectionsModule(http),
     ...createHubsModule(http),
     ...createItemsModule(http),
+    ...createMetadataModule(http),
     ...createCollectionsModule(http),
     ...createSharingModule(http),
     ...createUsersModule(http),
