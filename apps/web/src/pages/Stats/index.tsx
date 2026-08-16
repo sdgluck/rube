@@ -3,6 +3,7 @@ import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
+import SetupCard from "./SetupCard";
 import {
   DashboardGrid,
   DashboardLayout,
@@ -326,6 +327,10 @@ export default function Stats() {
         }
       >
         <DashboardLayout>
+          {/* Only ever appears once the top-of-app banner has been dismissed —
+              see SetupCard. */}
+          <SetupCard />
+
           {/* ─── Metric tiles ─────────────────────────────────────────── */}
           <SummaryBar>{selectedTiles.map(renderTile)}</SummaryBar>
 

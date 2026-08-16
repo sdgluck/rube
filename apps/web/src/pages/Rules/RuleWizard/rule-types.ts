@@ -9,6 +9,7 @@ import {
   templateError,
   type RuleTypeValue,
 } from "@tinkerbell/contracts";
+import { cleanupPreset } from "./cleanup-presets.ts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 // The type list, not the map of components — this module is imported by
 // tests, and the components bring React with them.
@@ -387,6 +388,10 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
   }
   if (form.type === "smart_filter") {
     if (form.collectionName.trim()) return form.collectionName.trim();
+    // A preset's own label beats a clause dump: "Never watched" reads better
+    // than "Watched by nobody: 1", and it is what the user picked.
+    const preset = cleanupPreset(form.cleanupPreset);
+    if (preset) return preset.label;
     const head = firstLeaf(form.smartFilter);
     if (!head) return "Smart Filter";
     return head.value.trim() ? `${fieldLabel(head.field)}: ${head.value.trim()}` : "Smart Filter";
@@ -412,6 +417,41 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
   if (form.type === "tmdb_popular_directors") return "Popular Directors";
   if (form.type === "tmdb_franchises") return "Franchises";
   return "";
+}
+
+/**
+ * Selection types that answer "which items", rather than "how should the
+ * library be sliced into groups".
+ *
+ * Every rule type builds a set of items, but a grouped type builds one set per
+ * director, per decade, per genre — and the grouping is the whole of its
+ * meaning. That is exactly right for a collection and meaningless for the
+ * other two outcomes: "one collection per director, then delete them" and "one
+ * collection per director, then retitle them" are both just "every item with a
+ * director". `ai_prompt` is excluded for the same reason and one more — what it
+ * returns is a judgement call the model makes fresh on each run, which is not
+ * something to hand a delete action.
+ */
+export const ITEM_SELECTION_RULE_TYPES: readonly RuleTypeValue[] = [
+  "smart_filter",
+  "top_rated",
+  "lowest_rated",
+  "imdb_chart",
+  "imdb_list",
+  "list_source",
+  "rt_top_rated",
+  "seerr_requests",
+];
+
+const ITEM_SELECTION = new Set<string>(ITEM_SELECTION_RULE_TYPES);
+
+/**
+ * The types offered on the Type step, for the outcome the wizard was opened
+ * with. Collections keep the full catalogue; the other two get the list above.
+ */
+export function ruleTypesFor(outcomeKind: "collection" | "cleanup" | "metadata"): RuleType[] {
+  if (outcomeKind === "collection") return RULE_TYPES;
+  return RULE_TYPES.filter((t) => ITEM_SELECTION.has(t.value));
 }
 
 // ─── Steps ──────────────────────────────────────────────────────────────

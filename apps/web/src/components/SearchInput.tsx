@@ -9,6 +9,8 @@ interface SearchInputProps {
   ariaLabel?: string;
   /** Opt out of the fixed width where the field shares a row it should flex in. */
   grow?: boolean;
+  /** Opt out of the fixed width where the field sits in a narrower column. */
+  fill?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface SearchInputProps {
  * were on. Width lives here now, and a clear button comes with it.
  */
 const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(function SearchInput(
-  { value, onChange, placeholder, ariaLabel, grow = false },
+  { value, onChange, placeholder, ariaLabel, grow = false, fill = false },
   ref,
 ) {
   const fallbackRef = useRef<HTMLInputElement>(null);
@@ -34,7 +36,7 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(function Sear
   }
 
   return (
-    <div className={`${styles.wrap} ${grow ? styles.grow : ""}`}>
+    <div className={`${styles.wrap} ${grow ? styles.grow : ""} ${fill ? styles.fill : ""}`}>
       <input
         ref={(el) => {
           fallbackRef.current = el;

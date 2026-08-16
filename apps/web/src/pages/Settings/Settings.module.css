@@ -165,6 +165,28 @@
   color: var(--ink);
 }
 
+/* A checkbox and its label are one control, so they sit on one row rather than
+   in `.field`'s column. `flex-start` because a label may carry a hint under it
+   and the box belongs beside the first line, not centred on the paragraph; the
+   1px nudge puts it on that line's optical centre rather than its box top. */
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  max-width: 72ch;
+}
+
+.checkRow input[type="checkbox"] {
+  margin-top: 1px;
+}
+
+/* Hints under a checkbox line up with its label, not with the box. */
+.checkRow .hint {
+  display: block;
+  margin-top: 4px;
+}
+
 .input {
   composes: input from "../../styles/controls.module.css";
 }

@@ -38,6 +38,7 @@ import {
   typeHasMinItems,
   typeHasOptionalLimit,
 } from "./constants";
+import { presetFromFilter } from "./RuleWizard/cleanup-presets.ts";
 import RuleTableRow from "./RuleTableRow";
 import styles from "./Rules.module.css";
 import RulesToolbar from "./Toolbar";
@@ -329,7 +330,15 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     // Seeded to match the list you started from — creating a rule from the
     // cleanup list and getting a collection rule you then can't find would be
     // its own bug report. The Outcome step still shows, and still switches.
-    setForm({ ...EMPTY_FORM, outcome: { ...EMPTY_FORM.outcome, kind: outcome } });
+    //
+    // The default type is seeded the same way: `ai_prompt` isn't offered on the
+    // cleanup or metadata paths, so starting there left the Type step with a
+    // selection that wasn't on screen.
+    setForm({
+      ...EMPTY_FORM,
+      type: outcome === "collection" ? EMPTY_FORM.type : "smart_filter",
+      outcome: { ...EMPTY_FORM.outcome, kind: outcome },
+    });
     setIsEditing(false);
   }
 
@@ -359,10 +368,21 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
 
   function startEdit(rule: RuleRow) {
     const config = rule.config ?? {};
+    const smartFilter = (config.smartFilter as SmartFilterGroup | undefined) ?? {
+      kind: "group" as const,
+      combinator: "all" as const,
+      children: [],
+    };
+    // A preset leaves no trace in the saved rule — it is an ordinary smart
+    // filter — so reopening one means recognising the shape it wrote. A tree
+    // that has since been edited by hand simply doesn't match, and opens in
+    // the full editor.
+    const preset = outcomeFromConfig(config.action).kind === "cleanup" ? presetFromFilter(smartFilter) : null;
     setForm({
       id: rule.id,
       name: rule.name,
       type: rule.type,
+      cleanupPreset: preset?.preset.value,
       themes: (config.themes as string[]) || [],
       customThemes: (config.customThemes as string[]) || [],
       vibe: ((config.vibe as AiVibe) || "mixed") satisfies AiVibe,
@@ -376,11 +396,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       listProvider: ((config.listProvider as RuleFormState["listProvider"]) ||
         "mdblist") satisfies RuleFormState["listProvider"],
       collectionName: (config.collectionName as string) || "",
-      smartFilter: (config.smartFilter as SmartFilterGroup | undefined) ?? {
-        kind: "group",
-        combinator: "all",
-        children: [],
-      },
+      smartFilter,
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,

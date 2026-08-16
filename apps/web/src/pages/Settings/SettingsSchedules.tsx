@@ -138,30 +138,28 @@ export default function SettingsSchedules() {
           Neither applies to a job you start yourself: pressing <strong>Run now</strong> always runs now.
         </p>
 
-        <label className={styles.field}>
-          <span className={styles.label}>
-            <input
-              type="checkbox"
-              checked={defer.enabled}
-              onChange={(e) => setDefer({ ...defer, enabled: e.target.checked })}
-            />{" "}
-            Wait while someone is watching
-          </span>
+        <label className={styles.checkRow}>
+          <input
+            type="checkbox"
+            checked={defer.enabled}
+            onChange={(e) => setDefer({ ...defer, enabled: e.target.checked })}
+          />
+          <span className={styles.label}>Wait while someone is watching</span>
         </label>
         {defer.enabled && (
           <>
-            <label className={styles.field}>
-              <span className={styles.label}>
-                <input
-                  type="checkbox"
-                  checked={defer.transcodesOnly}
-                  onChange={(e) => setDefer({ ...defer, transcodesOnly: e.target.checked })}
-                />{" "}
-                Only wait for transcodes
-              </span>
-              <span className={styles.hint}>
-                A direct play is mostly disk and network; a transcode is the CPU these jobs want. On a server that
-                rarely transcodes, this is the difference between waiting sometimes and waiting every evening.
+            <label className={styles.checkRow}>
+              <input
+                type="checkbox"
+                checked={defer.transcodesOnly}
+                onChange={(e) => setDefer({ ...defer, transcodesOnly: e.target.checked })}
+              />
+              <span>
+                <span className={styles.label}>Only wait for transcodes</span>
+                <span className={styles.hint}>
+                  A direct play is mostly disk and network; a transcode is the CPU these jobs want. On a server that
+                  rarely transcodes, this is the difference between waiting sometimes and waiting every evening.
+                </span>
               </span>
             </label>
             <label className={styles.field}>
@@ -182,15 +180,13 @@ export default function SettingsSchedules() {
           </>
         )}
 
-        <label className={styles.field}>
-          <span className={styles.label}>
-            <input
-              type="checkbox"
-              checked={window.enabled}
-              onChange={(e) => setWindow({ ...window, enabled: e.target.checked })}
-            />{" "}
-            Only start heavy jobs during a window
-          </span>
+        <label className={styles.checkRow}>
+          <input
+            type="checkbox"
+            checked={window.enabled}
+            onChange={(e) => setWindow({ ...window, enabled: e.target.checked })}
+          />
+          <span className={styles.label}>Only start heavy jobs during a window</span>
         </label>
         {window.enabled && (
           <>

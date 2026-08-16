@@ -105,6 +105,16 @@ export interface RuleFormState {
   collectionName: string;
   /** smart_filter rule type: recursive AND/OR tree of clauses. */
   smartFilter: SmartFilterGroup;
+  /**
+   * Which cleanup preset wrote `smartFilter`, if one did.
+   *
+   * Presentation only — it is never saved, because the rule it describes is an
+   * ordinary smart filter and nothing at run time needs to know where the
+   * clauses came from. It survives a reload by being recovered from the tree's
+   * shape (`presetFromFilter`), and clearing it is what "edit as a full smart
+   * filter" means.
+   */
+  cleanupPreset?: string;
   /** seerr_requests rule type: status filter ("all" / "approved" / …). */
   filter: string;
   pinToHomepage: boolean;

@@ -41,6 +41,7 @@ export default function Settings() {
               ariaLabel="Filter settings"
               value={filter}
               onChange={setFilter}
+              fill
             />
           </div>
           {sections.length === 0 ? (

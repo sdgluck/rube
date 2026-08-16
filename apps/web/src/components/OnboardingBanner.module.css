@@ -1,0 +1,82 @@
+/* A strip across the top of the content column, matching AuthBanner's
+   geometry exactly — no radius, no margin, no elevation, and padding from
+   `.app-notice` in App.css so it lines up with the app bar beneath. Info
+   rather than warn: unfinished setup is a state, not a problem. */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+  border-bottom: 1px solid color-mix(in srgb, var(--status-info-fg) 16%, transparent);
+  font: var(--t-caption);
+}
+
+.text {
+  min-width: 0;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+}
+
+.track {
+  inline-size: 96px;
+  block-size: 4px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--status-info-fg) 16%, transparent);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  block-size: 100%;
+  background: var(--status-info-fg);
+  transition: inline-size 200ms ease;
+}
+
+.count {
+  font: var(--t-data);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.dismiss {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  opacity: 0.75;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dismiss:hover {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

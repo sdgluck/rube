@@ -1,10 +1,12 @@
 import { lazy, Suspense, useState, useCallback } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "#components/ErrorBoundary";
 import ScrollRestoration from "#layout/ScrollRestoration";
 import { AppBarProvider } from "#layout/AppBar";
 import CommandPalette from "#components/CommandPalette";
 import AuthBanner from "#/auth/AuthBanner";
+import OnboardingBanner from "#components/OnboardingBanner";
+import useOnboardingRedirect from "#hooks/useOnboardingRedirect";
 import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
 import useDocumentTitle from "#hooks/useDocumentTitle";
 import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
@@ -70,6 +72,7 @@ const SettingsAppearance = lazy(() => import("#pages/Settings/SettingsAppearance
 const SettingsPrerolls = lazy(() => import("#pages/Settings/SettingsPrerolls"));
 const SettingsCredits = lazy(() => import("#pages/Settings/SettingsCredits"));
 const SettingsMigrate = lazy(() => import("#pages/SettingsMigrate"));
+const Onboarding = lazy(() => import("#pages/Onboarding"));
 
 function LazyPage({ children }: { children: React.ReactNode }) {
   return (
@@ -83,6 +86,7 @@ export default function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [paletteInitialQuery, setPaletteInitialQuery] = useState<string>("");
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const location = useLocation();
 
   const openPalette = useCallback((initialQuery = "") => {
     setPaletteInitialQuery(initialQuery);
@@ -92,6 +96,23 @@ export default function App() {
   useDocumentTitle();
   useKeyboardShortcuts(setShortcutsHelpOpen, openPalette);
   useMigrationCompletionInvalidator();
+  useOnboardingRedirect();
+
+  /**
+   * Setup renders outside the app shell — no sidebar, no bottom nav, no app
+   * bar. Handled here rather than as a route because those three are siblings
+   * of `<Routes>`, not children of it, so there is no route-level way to opt
+   * out of them.
+   */
+  if (location.pathname === "/onboarding") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageSkeleton />}>
+          <Onboarding />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <div className="layout">
@@ -103,6 +124,7 @@ export default function App() {
             between it and the page: this is server-wide chrome, not a message
             about whatever page you happen to be on. */}
         <AuthBanner />
+        <OnboardingBanner />
         <AppBarProvider>
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>

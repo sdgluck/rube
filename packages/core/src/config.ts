@@ -316,6 +316,33 @@ export const configSchema = z.object({
    */
   health_mutes: z.record(z.string(), z.number()),
   /**
+   * First-run setup: the user's position in the flow, and the decisions they
+   * have made about it. Deliberately *not* a per-step done flag.
+   *
+   * Whether a step is finished is derived from the thing the step was asking
+   * for — `HEALTH_SERVICES[].configuredFn` for an integration, the rule count
+   * for rules — because a recorded boolean survives the state that earned it.
+   * Marking Plex done and then clearing the token would otherwise leave setup
+   * claiming to be complete over an install that cannot reach a server.
+   *
+   * `acknowledged` is the exception, and only covers optional steps: "I don't
+   * want notifications" is a real answer with nothing in config to show for
+   * it. `domains/onboarding` refuses to acknowledge a step whose
+   * `acknowledgeable` is false, so this can never fake the Plex connection.
+   */
+  onboarding_state: z.object({
+    startedAt: z.number().optional(),
+    /** Where "Resume" reopens the wizard. Ignored once that step is complete. */
+    lastStepId: z.string().optional(),
+    /** Optional steps the user explicitly moved past. */
+    acknowledged: z.array(z.string()).default([]),
+    /** They chose the dashboard over the wizard. Stops the first-run redirect. */
+    skipped: z.boolean().optional(),
+    /** The progress banner was dismissed for good. Setup itself carries on. */
+    dismissedAt: z.number().optional(),
+    completedAt: z.number().optional(),
+  }),
+  /**
    * Whether the server owner counts towards "watched by everyone".
    *
    * Off by default: the owner is usually the person curating the library
