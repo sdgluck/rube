@@ -25,8 +25,25 @@ function timezoneOptions(): string[] {
   return ["UTC", Intl.DateTimeFormat().resolvedOptions().timeZone].filter(Boolean);
 }
 
+interface DeferForm {
+  enabled: boolean;
+  maxWaitMinutes: number;
+  transcodesOnly: boolean;
+}
+
+interface WindowForm {
+  enabled: boolean;
+  from: string;
+  to: string;
+}
+
+const DEFAULT_DEFER: DeferForm = { enabled: false, maxWaitMinutes: 120, transcodesOnly: false };
+const DEFAULT_WINDOW: WindowForm = { enabled: false, from: "01:00", to: "06:00" };
+
 export default function SettingsSchedules() {
   const [timezone, setTimezone] = useState("");
+  const [defer, setDefer] = useState<DeferForm>(DEFAULT_DEFER);
+  const [window, setWindow] = useState<WindowForm>(DEFAULT_WINDOW);
   const [saving, setSaving] = useState(false);
   const { addToast } = useToast();
   const utils = trpc.useUtils();
@@ -34,15 +51,26 @@ export default function SettingsSchedules() {
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const effectiveQuery = trpc.config.effectiveTimezone.useQuery();
   const saveConfigMutation = trpc.config.save.useMutation();
+  const deferredQuery = trpc.jobs.deferred.useQuery(undefined, { refetchInterval: 15_000 });
 
   useEffect(() => {
-    if (configQuery.data) setTimezone(configQuery.data.global_timezone || "");
+    if (!configQuery.data) return;
+    setTimezone(configQuery.data.global_timezone || "");
+    setDefer({ ...DEFAULT_DEFER, ...configQuery.data.jobs_defer_while_streaming });
+    setWindow({ ...DEFAULT_WINDOW, ...configQuery.data.jobs_maintenance_window });
   }, [configQuery.data]);
 
   const isDirty = useMemo(() => {
-    if (!configQuery.data) return false;
-    return timezone !== (configQuery.data.global_timezone || "");
-  }, [timezone, configQuery.data]);
+    const data = configQuery.data;
+    if (!data) return false;
+    const savedDefer = { ...DEFAULT_DEFER, ...data.jobs_defer_while_streaming };
+    const savedWindow = { ...DEFAULT_WINDOW, ...data.jobs_maintenance_window };
+    return (
+      timezone !== (data.global_timezone || "") ||
+      JSON.stringify(defer) !== JSON.stringify(savedDefer) ||
+      JSON.stringify(window) !== JSON.stringify(savedWindow)
+    );
+  }, [timezone, defer, window, configQuery.data]);
 
   useUnsavedChanges(isDirty);
 
@@ -51,12 +79,16 @@ export default function SettingsSchedules() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveConfigMutation.mutateAsync({ global_timezone: timezone });
+      await saveConfigMutation.mutateAsync({
+        global_timezone: timezone,
+        jobs_defer_while_streaming: defer,
+        jobs_maintenance_window: window,
+      });
       await utils.config.effectiveTimezone.invalidate();
       await utils.config.get.invalidate();
-      addToast("Timezone saved — schedules rebuilt", "success");
+      addToast("Schedules saved", "success");
     } catch (err) {
-      addToast(`Failed to save timezone: ${(err as Error).message}`, "error");
+      addToast(`Failed to save: ${(err as Error).message}`, "error");
     } finally {
       setSaving(false);
     }
@@ -66,6 +98,7 @@ export default function SettingsSchedules() {
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const effective = effectiveQuery.data;
+  const waiting = deferredQuery.data ?? [];
 
   return (
     <div className={styles.form}>
@@ -93,6 +126,107 @@ export default function SettingsSchedules() {
             </>
           )}
         </p>
+      </CardSection>
+
+      {/* Both settings hold the same set of heavy jobs back, so they live in
+          one card — a user reasoning about "why hasn't this run" needs to see
+          both answers at once. */}
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Staying out of the way">
+        <p className={styles.hint}>
+          Poster rendering, overlay burn-in and preroll transcodes compete for the same CPU and disk that serve a stream
+          — and they are scheduled for the hours somebody is most likely to be watching. These hold that work back.
+          Neither applies to a job you start yourself: pressing <strong>Run now</strong> always runs now.
+        </p>
+
+        <label className={styles.field}>
+          <span className={styles.label}>
+            <input
+              type="checkbox"
+              checked={defer.enabled}
+              onChange={(e) => setDefer({ ...defer, enabled: e.target.checked })}
+            />{" "}
+            Wait while someone is watching
+          </span>
+        </label>
+        {defer.enabled && (
+          <>
+            <label className={styles.field}>
+              <span className={styles.label}>
+                <input
+                  type="checkbox"
+                  checked={defer.transcodesOnly}
+                  onChange={(e) => setDefer({ ...defer, transcodesOnly: e.target.checked })}
+                />{" "}
+                Only wait for transcodes
+              </span>
+              <span className={styles.hint}>
+                A direct play is mostly disk and network; a transcode is the CPU these jobs want. On a server that
+                rarely transcodes, this is the difference between waiting sometimes and waiting every evening.
+              </span>
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>Give up waiting after</span>
+              <input
+                type="number"
+                className={styles.input}
+                min={1}
+                max={1440}
+                value={defer.maxWaitMinutes}
+                onChange={(e) => setDefer({ ...defer, maxWaitMinutes: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+              />
+              <span className={styles.hint}>
+                Minutes. There has to be a ceiling — a household that streams every evening would otherwise push the
+                nightly jobs into never running at all. When it expires the job runs anyway and says so in the log.
+              </span>
+            </label>
+          </>
+        )}
+
+        <label className={styles.field}>
+          <span className={styles.label}>
+            <input
+              type="checkbox"
+              checked={window.enabled}
+              onChange={(e) => setWindow({ ...window, enabled: e.target.checked })}
+            />{" "}
+            Only start heavy jobs during a window
+          </span>
+        </label>
+        {window.enabled && (
+          <>
+            <div className={styles.field}>
+              <span className={styles.label}>Between</span>
+              <div className={styles.inlineFields}>
+                <input
+                  type="time"
+                  className={styles.input}
+                  value={window.from}
+                  onChange={(e) => setWindow({ ...window, from: e.target.value })}
+                  aria-label="Window start"
+                />
+                <input
+                  type="time"
+                  className={styles.input}
+                  value={window.to}
+                  onChange={(e) => setWindow({ ...window, to: e.target.value })}
+                  aria-label="Window end"
+                />
+              </div>
+              <span className={styles.hint}>
+                In the timezone above. An end before the start spans midnight, which is usually what an overnight window
+                means — 22:00 to 06:00 rather than 01:00 to 06:00.
+              </span>
+            </div>
+          </>
+        )}
+
+        {waiting.length > 0 && (
+          <p className={styles.hint}>
+            Waiting right now: {waiting.map((w) => w.jobName).join(", ")}. Each starts as soon as the server is quiet,
+            or when its wait runs out.
+          </p>
+        )}
+
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving || !isDirty}>
             {saving ? "Saving…" : "Save"}

@@ -164,6 +164,15 @@
   gap: 8px;
 }
 
+/* Two controls that are one answer — a from/to pair reads as a range only if
+   it sits on one line. */
+.inlineFields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 320px;
+}
+
 .button {
   composes: btn btnPrimary from "../../styles/controls.module.css";
   align-self: flex-start;

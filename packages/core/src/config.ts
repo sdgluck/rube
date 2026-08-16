@@ -207,6 +207,50 @@ export const configSchema = z.object({
   /** Days of raw session rows to keep. 0 = keep forever. `watch_state` is never pruned. */
   playback_retention_days: z.number().int().min(0),
   /**
+   * Hold heavy scheduled jobs back while somebody is watching something.
+   *
+   * Poster rendering, overlay burn-in and preroll transcodes are CPU and disk
+   * against the same box serving the stream, and they are exactly the jobs
+   * that run at the hour people are actually watching. Off by default: it
+   * delays work, and a server nobody streams from should not inherit a
+   * behaviour designed for one that is busy.
+   *
+   * Only ever applied to *scheduled* starts. A person pressing "Run now" has
+   * asked for it now, and silently deferring that is how a button comes to
+   * look broken.
+   */
+  jobs_defer_while_streaming: z.object({
+    enabled: z.boolean(),
+    /**
+     * Give up waiting after this long and run anyway. Without a ceiling a
+     * household that streams every evening would push the nightly jobs into
+     * never running at all.
+     */
+    maxWaitMinutes: z
+      .number()
+      .int()
+      .min(1)
+      .max(24 * 60),
+    /**
+     * Transcodes only, rather than any playback at all. A direct play is
+     * mostly disk and network; a transcode is the CPU these jobs want.
+     */
+    transcodesOnly: z.boolean(),
+  }),
+  /**
+   * Confine heavy scheduled jobs to a window of the day.
+   *
+   * Separate from each job's own cron: a job can be scheduled hourly and still
+   * be told never to start work between 6pm and midnight. Times are `HH:MM` in
+   * the scheduler's timezone, and a window whose end precedes its start spans
+   * midnight — which is the common case for a maintenance window.
+   */
+  jobs_maintenance_window: z.object({
+    enabled: z.boolean(),
+    from: z.string(),
+    to: z.string(),
+  }),
+  /**
    * Whether the server owner counts towards "watched by everyone".
    *
    * Off by default: the owner is usually the person curating the library

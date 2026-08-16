@@ -18,7 +18,14 @@ export {
   getActiveRuns,
   getRecentRuns,
 } from "./queries.ts";
-export { restartSchedules, catchUpMissedRuns, schedulerTimezone } from "./schedule.ts";
+export {
+  restartSchedules,
+  catchUpMissedRuns,
+  schedulerTimezone,
+  deferredStarts,
+  clearDeferredStarts,
+} from "./schedule.ts";
+export { DEFERRABLE_JOBS, isDeferrable } from "./deferral.ts";
 export { COMMANDS, isCommandName, type CommandName, type CommandLane } from "./commands/catalog.ts";
 export { internalJobs, isInternalJobName, type InternalJobName } from "./internal-jobs.ts";
 export {

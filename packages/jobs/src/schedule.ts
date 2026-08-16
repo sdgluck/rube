@@ -12,7 +12,8 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import { Cron } from "croner";
 import { db, jobRuns, jobs } from "@tinkerbell/db";
-import { createLogger, errorMessage, getConfig, isValidTimezone, DAY_MS, HOUR_MS } from "@tinkerbell/core";
+import { createLogger, errorMessage, getConfig, isValidTimezone, DAY_MS, HOUR_MS, MINUTE_MS } from "@tinkerbell/core";
+import { deferralFor, maxDeferralMs } from "./deferral.ts";
 
 const log = createLogger("jobs");
 
@@ -82,6 +83,105 @@ const CATCHUP_MAX_AGE_MS = DAY_MS;
 /** Space catch-up runs out so boot doesn't enqueue five jobs at once. */
 const CATCHUP_STAGGER_MS = 5_000;
 
+/**
+ * Scheduled starts that are waiting for the server to go quiet.
+ *
+ * Keyed by job id, so a second occurrence of the same job while it's already
+ * waiting doesn't queue a second run — it just keeps the original deadline.
+ * In memory rather than in a table on purpose: a deferral is worth exactly as
+ * long as the process that owes it, and a restart should start the jobs it is
+ * due rather than honour a wait decided before the reboot.
+ */
+const deferred = new Map<string, { jobName: string; waitingSince: number; deadline: number }>();
+
+let deferralSweep: ReturnType<typeof setInterval> | null = null;
+
+/** How often to re-ask whether the server has gone quiet. */
+const DEFERRAL_SWEEP_MS = MINUTE_MS;
+
+/** Snapshot of what's waiting, for the Jobs page. */
+export function deferredStarts(): Array<{ jobId: string; jobName: string; waitingSince: number; deadline: number }> {
+  return [...deferred.entries()].map(([jobId, entry]) => ({ jobId, ...entry }));
+}
+
+/**
+ * Start a job the scheduler asked for, unless the server is busy.
+ *
+ * Only the cron path calls this. `startJob` remains the direct route, and is
+ * what the UI's "Run now" still uses — a deferral applies to work the server
+ * decided to do, never to work a person asked for.
+ */
+function startScheduled(jobId: string, jobName: string): void {
+  const verdict = deferralFor(jobId);
+  if (!verdict) {
+    deferred.delete(jobId);
+    startJob?.(jobId).catch((err) => log.error("failed to start job", { job: jobName, err: errorMessage(err) }));
+    return;
+  }
+
+  const existing = deferred.get(jobId);
+  if (existing) {
+    // Already waiting. Don't extend the deadline — the ceiling is measured
+    // from the first occurrence that was held, not the most recent one, or an
+    // hourly job on a busy evening would never reach it.
+    return;
+  }
+  const now = Date.now();
+  deferred.set(jobId, { jobName, waitingSince: now, deadline: now + maxDeferralMs() });
+  log.info("holding a scheduled job back", { job: jobName, reason: verdict.reason });
+  startDeferralSweep();
+}
+
+/** Re-check what's waiting: start anything now clear, or now out of patience. */
+function sweepDeferred(): void {
+  if (deferred.size === 0) {
+    if (deferralSweep) {
+      clearInterval(deferralSweep);
+      deferralSweep = null;
+    }
+    return;
+  }
+
+  const now = Date.now();
+  // Snapshotted to an array because the loop deletes from the map it walks.
+  const pending = Array.from(deferred.entries());
+  for (const [jobId, entry] of pending) {
+    const verdict = deferralFor(jobId);
+    const expired = now >= entry.deadline;
+    if (verdict && !expired) continue;
+
+    deferred.delete(jobId);
+    if (expired && verdict) {
+      // Said out loud rather than silently: running anyway is the right
+      // outcome, but it is the opposite of what the setting asked for, and a
+      // user seeing this every night has learned their window is too tight.
+      log.warn("running a deferred job anyway — waited long enough", {
+        job: entry.jobName,
+        reason: verdict.reason,
+        waitedMs: now - entry.waitingSince,
+      });
+    } else {
+      log.info("server went quiet — starting the job that was held", { job: entry.jobName });
+    }
+    startJob?.(jobId).catch((err) => log.error("failed to start job", { job: entry.jobName, err: errorMessage(err) }));
+  }
+}
+
+function startDeferralSweep(): void {
+  if (deferralSweep) return;
+  deferralSweep = setInterval(sweepDeferred, DEFERRAL_SWEEP_MS);
+  deferralSweep.unref?.();
+}
+
+/** Drop every pending deferral. For tests and shutdown. */
+export function clearDeferredStarts(): void {
+  deferred.clear();
+  if (deferralSweep) {
+    clearInterval(deferralSweep);
+    deferralSweep = null;
+  }
+}
+
 export function scheduleCron(job: ScheduledJob): void {
   const existing = cronJobs.get(job.id);
   if (existing) {
@@ -107,7 +207,7 @@ export function scheduleCron(job: ScheduledJob): void {
           log.error("cron fired before initSchedule() — dropping", { job: job.name });
           return;
         }
-        startJob(job.id).catch((err) => log.error("failed to start job", { job: job.name, err: errorMessage(err) }));
+        startScheduled(job.id, job.name);
       },
     );
     cronJobs.set(job.id, cron);

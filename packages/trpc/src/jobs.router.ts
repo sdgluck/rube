@@ -14,6 +14,7 @@ import {
   installFeature,
   uninstallFeature,
   listFeatureCatalog,
+  deferredStarts,
 } from "@tinkerbell/jobs";
 import { getBywCollectionsGroupedByUser } from "@tinkerbell/domain.collections";
 import { getLastFailedRun } from "@tinkerbell/domain.stats";
@@ -21,6 +22,13 @@ import { t, procedure } from "./_base.ts";
 
 export const jobsRouter = t.router({
   list: procedure.query(() => getJobs()),
+
+  /**
+   * Scheduled starts currently held back — see `deferral.ts`. Read by the
+   * Schedules settings page so "why hasn't this run" has an answer other than
+   * reading the server log.
+   */
+  deferred: procedure.query(() => deferredStarts()),
 
   runs: procedure
     .input(z.object({ jobId: z.string(), limit: z.number().int().min(1).max(500).optional() }))
