@@ -153,13 +153,28 @@ export const SHOTS: Shot[] = [
     steps: [{ click: "Edit filters" }, { wait: "text=of the following" }],
   },
   {
+    name: "04-collection-edit",
+    description: "Collection detail — the edit wizard, where the name, summary and labels are written",
+    path: "/collections/5001",
+    viewports: DESKTOP,
+    steps: [{ click: "Edit" }, { wait: "text=Name and summary" }],
+  },
+  {
+    name: "04-collection-edit-labels",
+    description: "Collection detail — the edit wizard's label step",
+    path: "/collections/5001",
+    viewports: DESKTOP,
+    steps: [{ click: "Edit" }, { wait: "text=Name and summary" }, { click: "Next" }, { wait: "text=Add a label" }],
+  },
+  {
     // 5003 rather than 5001: the studio renders from the collection's own
     // members, and a smart collection's are resolved by Plex rather than held.
+    // The hero is presentation now, so the way in is the actions menu.
     name: "04-collection-poster",
     description: "Collection detail — the poster studio, with a server-rendered preview",
     path: "/collections/5003",
     viewports: DESKTOP,
-    steps: [{ click: "Change poster" }, { wait: "text=Apply to Plex" }],
+    steps: [{ click: "Collection actions" }, { clickText: "Change poster" }, { wait: "text=Apply to Plex" }],
     settleMs: 1500,
   },
   {

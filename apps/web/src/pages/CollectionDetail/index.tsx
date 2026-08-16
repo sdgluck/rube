@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, Fragment } from "react";
 import { useParams, useNavigate, useLocation, Link, Outlet } from "react-router-dom";
-import { Image, Pin, PinOff, RefreshCw, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Image, Pencil, Pin, PinOff, RefreshCw, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
 import AlertModal from "#components/AlertModal";
@@ -14,6 +14,7 @@ import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer } from "#components/SmartFiltersEditor";
 import { CollectionProvider } from "./context.ts";
+import CollectionEditModal from "./CollectionEditModal.tsx";
 import PosterStudio from "./PosterStudio.tsx";
 import local from "./CollectionDetail.module.css";
 
@@ -39,11 +40,7 @@ export default function CollectionDetailLayout() {
   const utils = trpc.useUtils();
   const { addToast } = useToast();
 
-  const [title, setTitle] = useState("");
-  const [summary, setSummary] = useState("");
-  const [summaryEditing, setSummaryEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [labelInput, setLabelInput] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
@@ -73,64 +70,17 @@ export default function CollectionDetailLayout() {
   const collection = collectionQuery.data;
   const isSmart = collection?.smart === 1;
 
-  const updateMutation = trpc.collections.update.useMutation();
-  const updateLabelsMutation = trpc.collections.updateLabels.useMutation({
-    onMutate: async (input) => {
-      await utils.collections.get.cancel({ ratingKey: input.ratingKey });
-      const prev = utils.collections.get.getData({ ratingKey: input.ratingKey });
-      if (prev) utils.collections.get.setData({ ratingKey: input.ratingKey }, { ...prev, labels: input.labels });
-      return { prev };
-    },
-    onError: (_err, input, ctx) => {
-      if (ctx?.prev) utils.collections.get.setData({ ratingKey: input.ratingKey }, ctx.prev);
-      addToast("Failed to update labels", "error");
-    },
-    onSettled: (_d, _e, input) => utils.collections.get.invalidate({ ratingKey: input.ratingKey }),
-  });
   const deleteMutation = trpc.collections.delete.useMutation();
   const pinMutation = trpc.collections.pin.useMutation();
   const unpinMutation = trpc.collections.unpin.useMutation();
   const syncOneMutation = trpc.collections.syncOne.useMutation();
   const revertMutation = trpc.collections.revertArtwork.useMutation();
 
-  useEffect(() => {
-    if (collection) {
-      setTitle(collection.title);
-      setSummary(collection.summary || "");
-    }
-  }, [collection]);
-
-  const isDirty = useMemo(() => {
-    if (!collection) return false;
-    return title !== collection.title || summary !== (collection.summary || "");
-  }, [title, summary, collection]);
-
   const refresh = () => {
     if (!ratingKey) return;
     utils.collections.get.invalidate({ ratingKey });
     utils.collections.items.invalidate({ ratingKey });
     utils.collections.stats.invalidate({ ratingKey });
-  };
-
-  const handleSave = async () => {
-    if (!ratingKey || !isDirty) return;
-    setSaving(true);
-    try {
-      await updateMutation.mutateAsync({ ratingKey, title, summary });
-      addToast("Collection updated", "success");
-      collectionQuery.refetch();
-    } catch {
-      addToast("Failed to update collection", "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDiscard = () => {
-    if (!collection) return;
-    setTitle(collection.title);
-    setSummary(collection.summary || "");
-    setSummaryEditing(false);
   };
 
   const handleDelete = () => {
@@ -219,6 +169,7 @@ export default function CollectionDetailLayout() {
 
   const items = itemsQuery.data ?? [];
   const labels: string[] = collection.labels ?? [];
+  const visibleLabels = labels.filter((l) => !isPlumbingLabel(l));
   const base = `/collections/${ratingKey}`;
   const pinned = pinQuery.data?.pinned ?? false;
   const rotatedBy = pinQuery.data?.rotatedByRule ?? null;
@@ -246,33 +197,41 @@ export default function CollectionDetailLayout() {
         &larr; Collections
       </a>
 
-      <div className={local.hero}>
+      {/* Presentation only. Everything here is read — the pencil opens the
+          editor, the poster is changed from the actions menu. The header used
+          to be three different edit idioms stacked on each other (an inline
+          title input, an always-open textarea, a label field that appeared on
+          hover) with a sticky bar that slid in to commit two of the three. */}
+      <header className={local.hero}>
         <div className={local.posterFrame}>
           {collection.thumb ? (
             <FadeImage
               className={local.posterImg}
               src={`/api/plex-image?path=${encodeURIComponent(collection.thumb)}`}
-              alt={collection.title}
+              alt=""
             />
           ) : (
             <div className={local.posterEmpty}>No poster</div>
           )}
-          <button type="button" className={local.posterChange} onClick={() => setStudioOpen(true)}>
-            Change poster
-          </button>
         </div>
 
         <div className={local.heroMain}>
           <div className={local.heroTop}>
-            <h2 className="sr-only">{collection.title}</h2>
-            <input
-              className={styles.titleInput}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              aria-label="Collection title"
-              spellCheck={false}
-            />
+            {/* Library, name, facts: three sizes descending, so the eye lands on
+                the name and reads outward from it. */}
+            <div className={local.heroIdentity}>
+              <div className={local.eyebrow}>{collection.sectionTitle}</div>
+              <h2 className={local.heroTitle}>{collection.title}</h2>
+            </div>
             <div className={local.heroActions}>
+              <button
+                className={styles.buttonSecondary}
+                onClick={() => setEditOpen(true)}
+                title="Edit name, summary and labels"
+              >
+                <Pencil size={13} />
+                Edit
+              </button>
               <button
                 className={pinned ? styles.buttonSecondary : styles.button}
                 onClick={handleTogglePin}
@@ -290,13 +249,16 @@ export default function CollectionDetailLayout() {
             </div>
           </div>
 
-          {/* Facts, in one quiet line. These used to be five chips of equal
-              weight to the title, which is why nothing on the page read as
-              primary. */}
+          {/* Facts and state on one line: counts read as running text, the
+              things that are genuinely categorical read as chips, and a hairline
+              keeps the two from being mistaken for each other. These used to be
+              five chips of equal weight to the title, which is why nothing on
+              the page read as primary. */}
           <div className={local.metaLine}>
-            <span>{collection.sectionTitle}</span>
-            <span className={local.metaDot}>·</span>
-            <span>{(items.length || collection.childCount).toLocaleString()} items</span>
+            <span>
+              <strong className={local.metaNum}>{(items.length || collection.childCount).toLocaleString()}</strong>{" "}
+              items
+            </span>
             {collection.addedAt && (
               <>
                 <span className={local.metaDot}>·</span>
@@ -305,53 +267,37 @@ export default function CollectionDetailLayout() {
                 </span>
               </>
             )}
+            {(isSmart || pinned || owningRuleQuery.data) && (
+              <>
+                <span className={local.metaRule} aria-hidden="true" />
+                <span className={local.chipGroup}>
+                  {isSmart && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
+                  {pinned && <span className={styles.metaChip}>Pinned</span>}
+                  {owningRuleQuery.data && (
+                    <Link
+                      to={`/rules?q=${encodeURIComponent(owningRuleQuery.data.name)}`}
+                      className={`${styles.metaChip} ${styles.metaChipLink}`}
+                      title="Open the rule that generates this collection"
+                    >
+                      {owningRuleQuery.data.name}
+                    </Link>
+                  )}
+                </span>
+              </>
+            )}
           </div>
 
-          {/* Chips only for state that is genuinely categorical. */}
-          {(isSmart || pinned || owningRuleQuery.data) && (
-            <div className={local.badgeRow}>
-              {isSmart && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
-              {pinned && <span className={styles.metaChip}>Pinned</span>}
-              {owningRuleQuery.data && (
-                <Link
-                  to={`/rules?q=${encodeURIComponent(owningRuleQuery.data.name)}`}
-                  className={`${styles.metaChip} ${styles.metaChipLink}`}
-                  title="Open the rule that generates this collection"
-                >
-                  {owningRuleQuery.data.name}
-                </Link>
-              )}
-            </div>
-          )}
+          {(collection.summary || visibleLabels.length > 0) && <div className={local.heroRule} />}
 
-          {/* Text until clicked. A permanently-open textarea made an empty
-              summary look like an unfinished form. */}
-          {summaryEditing || summary ? (
-            <textarea
-              className={local.summaryField}
-              rows={2}
-              value={summary}
-              placeholder="Summary"
-              autoFocus={summaryEditing && !summary}
-              onChange={(e) => setSummary(e.target.value)}
-              onFocus={() => setSummaryEditing(true)}
-              onBlur={() => {
-                if (!summary.trim()) setSummaryEditing(false);
-              }}
-            />
-          ) : (
-            <button type="button" className={styles.summaryAdd} onClick={() => setSummaryEditing(true)}>
-              + Add summary
-            </button>
-          )}
+          {collection.summary && <p className={local.summaryText}>{collection.summary}</p>}
 
-          <div className={local.labelRow}>
-            {labels
-              .filter((l) => !isPlumbingLabel(l))
-              .map((label) => (
+          {visibleLabels.length > 0 && (
+            <div className={local.labelRow}>
+              <span className={local.labelLead}>Labels</span>
+              {visibleLabels.map((label) => (
                 <span
                   key={label}
-                  className={`${styles.label} ${
+                  className={`${styles.label} ${local.labelChip} ${
                     SYSTEM_LABELS.includes(label.toLowerCase())
                       ? styles.labelTinkerbell
                       : label.toLowerCase().startsWith("user:")
@@ -360,37 +306,12 @@ export default function CollectionDetailLayout() {
                   }`}
                 >
                   {label}
-                  <button
-                    className={styles.labelRemove}
-                    title={`Remove "${label}"`}
-                    onClick={() => {
-                      if (!ratingKey) return;
-                      updateLabelsMutation.mutate({ ratingKey, labels: labels.filter((l) => l !== label) });
-                    }}
-                    aria-label={`Remove label ${label}`}
-                  >
-                    &times;
-                  </button>
                 </span>
               ))}
-            <input
-              type="text"
-              className={`${styles.labelEditorInput} ${local.labelAdd}`}
-              placeholder="Add label…"
-              value={labelInput}
-              onChange={(e) => setLabelInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                const value = labelInput.trim();
-                if (!value || !ratingKey) return;
-                setLabelInput("");
-                updateLabelsMutation.mutate({ ratingKey, labels: [...new Set([...labels, value])] });
-              }}
-            />
-          </div>
+            </div>
+          )}
         </div>
-      </div>
+      </header>
 
       <div className={local.tabsRow}>
         <PageTabs
@@ -421,16 +342,18 @@ export default function CollectionDetailLayout() {
         </Fragment>
       </CollectionProvider>
 
-      {isDirty && (
-        <div className={styles.stickySaveBar}>
-          <span className={styles.stickySaveLabel}>Unsaved changes</span>
-          <button className={styles.buttonSecondary} onClick={handleDiscard} disabled={saving}>
-            Discard
-          </button>
-          <button className={styles.button} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </button>
-        </div>
+      {editOpen && (
+        <CollectionEditModal
+          ratingKey={ratingKey!}
+          title={collection.title}
+          summary={collection.summary || ""}
+          labels={labels}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => {
+            setEditOpen(false);
+            refresh();
+          }}
+        />
       )}
 
       {studioOpen && (

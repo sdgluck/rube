@@ -1,0 +1,228 @@
+/**
+ * The collection editor wears the same clothes as the rule wizard: a numbered
+ * rail across the top, a step heading and sub, stacked fields with hints, and a
+ * review step whose rows link back to the step that owns them. Two wizards that
+ * look like two different apps is how a console stops feeling like one thing.
+ */
+
+/* ─── Step rail ───────────────────────────────────────────────────────────── */
+
+.stepsWrap {
+  padding: 0 20px 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Each step takes an equal share so the rail reads as a fixed-length journey
+   rather than one that grows with the longest label. */
+.stepSlot {
+  display: contents;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font: inherit;
+  color: var(--ink-4);
+  cursor: pointer;
+}
+
+.step:hover .stepLabel {
+  color: var(--ink);
+}
+
+.stepDot {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--fill-quiet);
+  color: var(--ink-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 10px/1 var(--font-mono);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.step.stepActive .stepDot {
+  background: var(--accent-fill);
+  color: var(--on-accent);
+}
+
+.step.stepDone .stepDot {
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  opacity: 0.75;
+}
+
+.stepLabel {
+  font-size: 12px;
+  color: var(--ink-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step.stepActive .stepLabel {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.stepSep {
+  flex: 1;
+  height: 1px;
+  background: var(--line-soft);
+  min-width: 8px;
+}
+
+/* ─── Body ────────────────────────────────────────────────────────────────── */
+
+.body {
+  padding: 0 4px 4px;
+  animation: stepIn 180ms ease-out;
+}
+
+.stepHeading {
+  margin: 0 0 4px;
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+}
+
+.stepSub {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.field label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.errorText {
+  font-size: 11.5px;
+  color: var(--status-error-fg);
+}
+
+.summaryInput {
+  composes: textarea from "#/styles/controls.module.css";
+  resize: vertical;
+}
+
+/* ─── Labels ──────────────────────────────────────────────────────────────── */
+
+.addRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.addRow input {
+  flex: 1;
+  min-width: 0;
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+  box-shadow: var(--e-flat);
+}
+
+.chip {
+  margin-right: 0;
+}
+
+/* ─── Review ──────────────────────────────────────────────────────────────── */
+
+.summary {
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+  box-shadow: var(--e-flat);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.summaryLabel {
+  flex: 0 0 90px;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.summaryValue {
+  flex: 1;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.summaryEdit {
+  background: none;
+  border: none;
+  color: var(--accent-text);
+  cursor: pointer;
+  font-size: 11.5px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+
+.footerLeft,
+.footerRight {
+  display: flex;
+  gap: 8px;
+}
+
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

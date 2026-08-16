@@ -1,22 +1,33 @@
 /**
  * Layout only. Every colour, control and surface here comes from a token or a
- * primitive — what this file owns is the hero's grid, the strips that sit
- * under it, and the poster's hover affordance.
+ * primitive — what this file owns is the hero's grid and the strips that sit
+ * under it.
  *
- * The hero exists to fix a hierarchy problem: the old page put the title, six
+ * The hero exists to fix a hierarchy problem: the page once put the title, six
  * chips, a label input and a summary field at one level, so nothing read as
- * primary. Here the title is the only large thing, facts are a quiet dot-joined
- * line, and the controls that edit them stay invisible until they are wanted.
+ * primary. It now reads top-down in four steps — library, name, facts, then
+ * description and labels below a hairline — on its own card, so the record is
+ * visibly one object rather than five rows that happen to be stacked.
+ *
+ * Nothing up here edits. The title was an input that only showed its border on
+ * hover, the summary an always-open textarea, and the add-label field appeared
+ * on hover alone — three edit idioms in one header, none of which announced
+ * itself. All three now live in the edit wizard behind the Edit button, and
+ * everything here is type.
  */
 
 /* ─── Hero ────────────────────────────────────────────────────────────────── */
 
 .hero {
   display: grid;
-  grid-template-columns: 148px 1fr;
-  gap: 20px;
+  grid-template-columns: 132px 1fr;
+  gap: 22px;
   align-items: start;
-  margin-bottom: 18px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+  padding: 20px;
+  margin-bottom: 16px;
 }
 
 .posterFrame {
@@ -45,36 +56,6 @@
   font: var(--t-caption);
 }
 
-/* The affordance is the image itself. A permanent "Change poster" button under
-   the poster would be a fourth control competing in a header that already had
-   too many; on a touch screen there is no hover, so it stays visible there. */
-.posterChange {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 10px;
-  border: 0;
-  cursor: pointer;
-  background: linear-gradient(to top, var(--scrim) 0%, transparent 55%);
-  color: var(--on-dark);
-  font: var(--t-data);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.posterFrame:hover .posterChange,
-.posterChange:focus-visible {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .posterChange {
-    opacity: 1;
-  }
-}
-
 .heroMain {
   min-width: 0;
 }
@@ -83,8 +64,32 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 2px;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.heroIdentity {
+  min-width: 0;
+}
+
+/* The library the collection lives in, which is context for the name rather
+   than a fact about the collection — so it sits above it, small, and doesn't
+   take a slot in the facts line. */
+.eyebrow {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+
+/* The only large thing on the page. */
+.heroTitle {
+  font: var(--t-display);
+  letter-spacing: var(--t-display-tracking);
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .heroActions {
@@ -102,8 +107,8 @@
   align-items: center;
   font: var(--t-data);
   color: var(--ink-2);
-  margin-bottom: 10px;
   line-height: 1.5;
+  row-gap: 6px;
 }
 
 .metaDot {
@@ -111,6 +116,28 @@
   margin: 0 8px;
   color: var(--ink-3);
   opacity: 0.6;
+}
+
+/* The item count is the one number anyone comes to this line for. */
+.metaNum {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Facts on the left, state on the right, told apart by a rule rather than by a
+   fourth dot — a chip after a "·" reads as another fact in the sentence. */
+.metaRule {
+  width: 1px;
+  height: 12px;
+  background: var(--line);
+  margin: 0 12px;
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Chips are now reserved for state that is categorical — smart, pinned, the
@@ -123,46 +150,48 @@
   margin-bottom: 10px;
 }
 
-/* A summary is a sentence or two, so it gets the width of a sentence or two.
-   At full page width the field became the largest element in the header —
-   the exact thing this layout exists to stop — and 60px of empty box made an
-   undescribed collection look like an unfinished form. */
-.summaryField {
-  composes: summaryInput from "#/styles/shared.module.css";
-  max-width: 70ch;
-  min-height: 0;
-  margin-bottom: 0;
-  field-sizing: content;
+/* ─── Description and labels ──────────────────────────────────────────────── */
+
+/* Facts above, prose below. The rule is drawn only when there is prose or a
+   label under it, so an undescribed collection ends at its facts line rather
+   than at an empty compartment. */
+.heroRule {
+  height: 1px;
+  background: var(--line-soft);
+  margin: 14px 0 12px;
 }
 
-/* ─── Labels ──────────────────────────────────────────────────────────────── */
+/* A summary is a sentence or two, so it gets the measure of a sentence or two.
+   At full page width it became the widest element in the header, which is the
+   exact thing this layout exists to stop. */
+.summaryText {
+  font: var(--t-body);
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 78ch;
+}
 
 .labelRow {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  margin-top: 10px;
-  min-height: 24px;
+  margin-top: 12px;
 }
 
-/* The add-label input used to be the most prominent control on the page. It
-   earns its space only once someone is looking at the labels. */
-.labelAdd {
-  opacity: 0;
-  transition: opacity 0.15s;
-  max-width: 150px;
+/* Names the row, so a strip of chips isn't left to explain itself. */
+.labelLead {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-right: 2px;
 }
 
-.labelRow:hover .labelAdd,
-.labelRow:focus-within .labelAdd {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .labelAdd {
-    opacity: 1;
-  }
+/* The shared chip carries a right margin for prose runs; in a gapped row that
+   is a second gap on one side only. */
+.labelChip {
+  margin-right: 0;
 }
 
 /* ─── Tabs ────────────────────────────────────────────────────────────────── */
@@ -470,13 +499,33 @@
 
 @media (width <= 700px) {
   .hero {
-    grid-template-columns: 104px 1fr;
+    grid-template-columns: 88px 1fr;
     gap: 14px;
+    padding: 14px;
   }
 
   .heroTop {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .heroTitle {
+    font: var(--t-page);
+    letter-spacing: var(--t-page-tracking);
+  }
+
+  /* Wrapped onto its own line, the action row would otherwise sit hard against
+     the title it belongs to. */
+  .heroActions {
+    flex-wrap: wrap;
+    margin: 6px 0 2px;
+  }
+
+  /* At this width the chips always wrap onto their own line, so the divider
+     that separated them from the facts is left dangling at the end of the
+     facts instead — the wrap is doing the separating. */
+  .metaRule {
+    display: none;
   }
 
   .studio {
