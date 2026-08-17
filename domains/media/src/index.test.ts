@@ -290,3 +290,88 @@ describe("show sizes", () => {
     assert.equal(called, false);
   });
 });
+
+describe("the stale sweep", () => {
+  const TV = { key: "2", title: "TV", type: "movie" };
+
+  /** A client whose listing depends on which section is being walked. */
+  function perSection(bySection: Record<string, FakeItem[]>): PlexClient {
+    return {
+      async *allItems(sectionKey: string) {
+        const items = bySection[sectionKey] ?? [];
+        for (const item of items) {
+          yield { item: { ...item, type: "movie", addedAt: 1_700_000_000 }, totalSize: items.length };
+        }
+      },
+    } as unknown as PlexClient;
+  }
+
+  const both = { "1": [{ ratingKey: "m1", title: "A film" }], "2": [{ ratingKey: "t1", title: "A show" }] };
+
+  test("a sync scoped to one section leaves the other section's rows alone", async () => {
+    // The bug this covers deleted a whole library: the sweep was
+    // `syncedAt < now` with no mention of which sections had been walked, and
+    // both `sync-media`'s job config and `global_plex_libraries` can narrow a
+    // run to one section.
+    await syncMedia(perSection(both), [SECTION, TV]);
+
+    const stats = await syncMedia(perSection(both), [SECTION], undefined, {
+      knownSectionKeys: ["1", "2"],
+    });
+
+    assert.equal(stats.removed, 0);
+    assert.deepEqual(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => r.ratingKey)
+        .sort(),
+      ["m1", "t1"],
+    );
+  });
+
+  test("it still removes what vanished from a section it did walk", async () => {
+    await syncMedia(perSection(both), [SECTION, TV]);
+
+    const stats = await syncMedia(perSection({ ...both, "1": [] }), [SECTION], undefined, {
+      knownSectionKeys: ["1", "2"],
+    });
+
+    assert.equal(stats.removed, 1);
+    assert.deepEqual(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => r.ratingKey),
+      ["t1"],
+    );
+  });
+
+  test("it removes the rows of a library that is no longer managed", async () => {
+    // A section deleted in Plex, or dropped from `global_plex_libraries`, has
+    // no watermark to go by — it is simply absent from the managed set.
+    await syncMedia(perSection(both), [SECTION, TV]);
+
+    const stats = await syncMedia(perSection(both), [SECTION], undefined, { knownSectionKeys: ["1"] });
+
+    assert.equal(stats.removed, 1);
+    assert.deepEqual(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => r.ratingKey),
+      ["m1"],
+    );
+  });
+
+  test("with no managed set given, the sections walked are all there are", async () => {
+    // The `collections.sync` mutation and a full nightly sync both pass every
+    // managed section as the walk list, so the default has to keep sweeping.
+    await syncMedia(perSection(both), [SECTION, TV]);
+    const stats = await syncMedia(perSection(both), [SECTION]);
+    assert.equal(stats.removed, 1);
+  });
+});

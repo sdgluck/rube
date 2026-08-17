@@ -46,9 +46,16 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
   ctx.log(`Syncing collections...`);
 
-  const stats = await syncCollections(client, sections, (current, total, message) => {
-    ctx.progress(current, total, message);
-  });
+  const stats = await syncCollections(
+    client,
+    sections,
+    (current, total, message) => {
+      ctx.progress(current, total, message);
+    },
+    // As in `sync-media`: the sweep must not delete the rows of a library this
+    // run wasn't asked to look at. Cleanup protections resolve through them.
+    { knownSectionKeys: allSections.map((s) => s.key) },
+  );
 
   ctx.log(`Done! Synced ${stats.synced} collection(s), removed ${stats.removed} stale.`);
 }

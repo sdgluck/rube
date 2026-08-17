@@ -2,7 +2,7 @@
  * Media module — sync Plex media items to local SQLite and query them.
  */
 
-import { eq, and, asc, desc, inArray, lt, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, lt, notInArray, or, sql, type InferSelectModel } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { db, mediaItems, likeContains } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
@@ -95,6 +95,24 @@ export interface SyncMediaOptions {
   skipSectionKeys?: readonly string[];
   /** Called once a section has been fully written, so the caller can checkpoint. */
   onSectionComplete?: (sectionKey: string) => void;
+  /**
+   * Every section this install manages, whether or not this run covers it.
+   *
+   * The stale sweep needs both halves of the picture. Within the sections a run
+   * *did* walk, anything left under the old watermark is gone from Plex. Outside
+   * them, the watermark says nothing — a job configured with
+   * `sections: ["Movies"]` (or a narrowed `global_plex_libraries`) never
+   * restamps the TV rows, and sweeping on the watermark alone deleted every one
+   * of them, taking the Storage panel, Duplicates and any cleanup protection
+   * that resolves through a collection with it.
+   *
+   * So rows are only swept if their section was walked, or if their section
+   * isn't managed at all any more — which is how a library deleted in Plex,
+   * or dropped from `global_plex_libraries`, still gets cleaned up.
+   *
+   * Omitted means "the sections passed in are all there are".
+   */
+  knownSectionKeys?: readonly string[];
 }
 
 /**
@@ -250,9 +268,20 @@ export async function syncMedia(
     options.onSectionComplete?.(section.key);
   }
 
-  // Remove stale entries not seen in this sync. Single statement avoids the
-  // race where a concurrent insert lands between the SELECT and DELETE.
-  const result = db.delete(mediaItems).where(lt(mediaItems.syncedAt, now)).run();
+  // Remove stale entries not seen in this sync — but only where this sync had
+  // anything to say. Single statement avoids the race where a concurrent insert
+  // lands between the SELECT and DELETE. See `knownSectionKeys`.
+  const walkedKeys = sections.map((s) => s.key);
+  const managedKeys = [...(options.knownSectionKeys ?? walkedKeys)];
+  const result = db
+    .delete(mediaItems)
+    .where(
+      or(
+        and(lt(mediaItems.syncedAt, now), inArray(mediaItems.sectionId, walkedKeys)),
+        notInArray(mediaItems.sectionId, managedKeys),
+      ),
+    )
+    .run();
   const removed = Number(result.changes ?? 0);
 
   announceAdded(added, hadExisting);
