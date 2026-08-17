@@ -44,6 +44,9 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/users", label: "Users", metric: { kind: "count", key: "users" } },
       { to: "/events", label: "Events", metric: { kind: "count", key: "eventsErrors24h" } },
+      // Beside Events on purpose: Events is what the app said, Changes is what
+      // the app did. The two are read together after a bad night.
+      { to: "/changes", label: "Changes" },
       { to: "/settings", label: "Settings" },
       // Stays after setup finishes rather than disappearing: it is the one
       // page that says what is and isn't connected in one screen, and it is

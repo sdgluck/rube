@@ -66,6 +66,7 @@ const UserSessions = lazy(() => import("#pages/UserDetail/Sessions"));
 const Overlays = lazy(() => import("#pages/Overlays"));
 const Prerolls = lazy(() => import("#pages/Prerolls"));
 const Events = lazy(() => import("#pages/Events"));
+const Changes = lazy(() => import("#pages/Changes"));
 const StressTest = lazy(() => import("#pages/StressTest"));
 const Preview = lazy(() => import("#pages/Preview"));
 const Changelog = lazy(() => import("#pages/Changelog"));
@@ -573,6 +574,14 @@ export default function App() {
                   element={
                     <LazyPage>
                       <More />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/changes"
+                  element={
+                    <LazyPage>
+                      <Changes />
                     </LazyPage>
                   }
                 />

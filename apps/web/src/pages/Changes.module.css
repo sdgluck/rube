@@ -1,0 +1,73 @@
+.filters {
+  composes: filters from "../styles/shared.module.css";
+}
+
+.table {
+  composes: table from "../styles/shared.module.css";
+}
+
+/* The kind of change, as a chip. Colour-coded because the one people scan for
+   is `cleanup` — a deletion should not read the same as an item joining a
+   collection. */
+.kind {
+  composes: statusPill from "../styles/shared.module.css";
+}
+
+.kindCollection {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.kindMetadata {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.kindCleanup {
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+}
+
+.kindRule {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+.kindOverlay {
+  background: var(--status-special-bg);
+  color: var(--status-special-fg);
+}
+
+.title {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detail {
+  color: var(--ink-2);
+}
+
+.rule {
+  color: var(--ink-3);
+}
+
+/* Why a row has no Undo. Deliberately in the same column the button would
+   occupy: "there is no undo, and here's the nearest thing" is the answer,
+   not the absence of one. */
+.noUndo {
+  font: var(--t-caption);
+  color: var(--ink-4);
+  max-width: 34ch;
+  display: inline-block;
+}
+
+.actionsCell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .noUndo {
+    max-width: none;
+  }
+}
