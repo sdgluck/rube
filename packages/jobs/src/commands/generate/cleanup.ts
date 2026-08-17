@@ -370,23 +370,32 @@ async function applyAction(
 }
 
 async function unmonitorViaArr(deps: HandlerDeps, candidate: CleanupCandidate): Promise<void> {
-  const found = await findArrRecord(deps, candidate);
-  if (!found) throw new Error("no matching Radarr/Sonarr record");
+  const found = await findArrRecords(deps, candidate);
+  if (found.length === 0) throw new Error("no matching Radarr/Sonarr record");
   const { setMonitored } = await import("@tinkerbell/arr");
-  await setMonitored(found.config, found.record, false);
+  // Every instance holding it. Leaving one still monitoring is the same defect
+  // as leaving the record behind — see `findArrRecords`.
+  for (const { config, record } of found) await setMonitored(config, record, false);
 }
 
 async function deleteItem(deps: HandlerDeps, action: CleanupActionConfig, candidate: CleanupCandidate): Promise<void> {
   const { ctx, client } = deps;
 
   if (action.viaArr) {
-    const found = await findArrRecord(deps, candidate);
-    if (found) {
+    const found = await findArrRecords(deps, candidate);
+    if (found.length > 0) {
       const { deleteRecord } = await import("@tinkerbell/arr");
-      await deleteRecord(found.config, found.record, {
-        deleteFiles: true,
-        addImportExclusion: action.addImportExclusion,
-      });
+      for (const { config, record } of found) {
+        await deleteRecord(config, record, {
+          deleteFiles: true,
+          addImportExclusion: action.addImportExclusion,
+        });
+      }
+      if (found.length > 1) {
+        ctx.log(
+          `[cleanup] "${candidate.title}" was in ${found.length} ${found[0].config.service} instances — removed from each.`,
+        );
+      }
       return;
     }
     // Falling through to a Plex-only delete would leave the *Arr record
@@ -399,47 +408,51 @@ async function deleteItem(deps: HandlerDeps, action: CleanupActionConfig, candid
   ctx.log(`[cleanup] Deleted "${candidate.title}" from Plex only — the *Arr record (if any) remains.`);
 }
 
+interface ArrMatch {
+  config: { service: "radarr" | "sonarr"; url: string; apiKey: string };
+  record: import("@tinkerbell/arr").ArrRecord;
+}
+
 /**
- * Resolve a Plex item to its *Arr library record, via GUIDs.
+ * Resolve a Plex item to its *Arr library record(s), via GUIDs.
  *
  * Never by title: two films share a name often enough, and the cost of being
  * wrong here is deleting the wrong file.
+ *
+ * Returns every instance that holds it, because more than one can — see the
+ * note inside.
  */
-async function findArrRecord(
-  deps: HandlerDeps,
-  candidate: CleanupCandidate,
-): Promise<{
-  config: { service: "radarr" | "sonarr"; url: string; apiKey: string };
-  record: import("@tinkerbell/arr").ArrRecord;
-} | null> {
+async function findArrRecords(deps: HandlerDeps, candidate: CleanupCandidate): Promise<ArrMatch[]> {
   const { client, sections } = deps;
   const section = sections.find((s) => s.key === candidate.sectionId);
   // Never guess. Defaulting an unresolvable section to Radarr would look up a
   // TV series' TMDb id against the movie library, where it can collide with an
   // unrelated film — which the caller then deletes with `deleteFiles: true`.
-  if (!section) return null;
+  if (!section) return [];
   const service: "radarr" | "sonarr" = section.type === "show" ? "sonarr" : "radarr";
 
   const instances = arrInstances(service);
-  if (instances.length === 0) return null;
+  if (instances.length === 0) return [];
 
   const guids = await client.getItemGuids(candidate.ratingKey);
   const externalId = arrExternalId({ guids }, service);
-  if (!externalId) return null;
+  if (!externalId) return [];
 
   const { findByExternalId } = await import("@tinkerbell/arr");
 
-  // Every instance of the service, not one of them. With a split 4K setup the
-  // film is in whichever instance downloaded it, and there is no way to know
-  // which from the Plex side — so the record is looked up in each until one
-  // has it. Deleting through the wrong instance is not a possible outcome:
-  // an instance that does not hold the record returns nothing to delete.
+  // Every instance of the service, and every one that *holds* the record — not
+  // the first. With a split HD/4K setup the same film is frequently in both, and
+  // there is no way to tell from the Plex side. Stopping at the first holder
+  // deleted from Radarr-HD while Radarr-4K carried on monitoring it, so the film
+  // came back that night: exactly the outcome the "refuse rather than delete
+  // from Plex only" branch above exists to prevent.
+  const found: ArrMatch[] = [];
   for (const instance of instances) {
     const config = { service, url: instance.url, apiKey: instance.apiKey };
     const record = await findByExternalId(config, externalId);
-    if (record) return { config, record };
+    if (record) found.push({ config, record });
   }
-  return null;
+  return found;
 }
 
 function pastTense(mode: string): string {

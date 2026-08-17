@@ -254,6 +254,41 @@ describe("a cleanup rule across three real runs", () => {
     assert.ok(types.includes("cleanup.actioned"));
   });
 
+  it("removes a film from every *Arr instance that holds it", async () => {
+    // The split HD/4K setup the multi-instance change was written for: the same
+    // film is in both Radarrs. Stopping at the first holder deleted from one and
+    // left the other monitoring, so it was re-downloaded that night — precisely
+    // the outcome the "refuse rather than delete from Plex only" branch exists to
+    // prevent, arrived at from the other direction.
+    const second = await startMockRadarr(
+      ITEMS.map((i, idx) => ({ id: 500 + idx, title: i.title, tmdbId: i.tmdbId, monitored: true, hasFile: true })),
+    );
+    setConfig("global_arr_instances", [
+      { id: "radarr-4k", service: "radarr", name: "4K", url: second.origin, apiKey: "key-4k" },
+    ]);
+
+    try {
+      seedRule({
+        kind: "cleanup",
+        mode: "delete",
+        consecutiveRuns: 1,
+        maxActionsPerRun: 25,
+        viaArr: true,
+        dryRun: false,
+      });
+
+      const log = await runGenerate();
+
+      assert.equal(arr.journal.deletes.length, 3, "removed from the default instance");
+      assert.equal(second.journal.deletes.length, 3, "and from the 4K instance that also had them");
+      assert.equal(second.movies.size, ITEMS.length - 3);
+      assert.match(log.join("\n"), /was in 2 radarr instances — removed from each/);
+    } finally {
+      await second.close();
+      setConfig("global_arr_instances", []);
+    }
+  });
+
   it("a run where an item stops matching resets it, so the third run removes nothing", async () => {
     seedRule({
       kind: "cleanup",

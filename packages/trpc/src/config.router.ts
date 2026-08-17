@@ -13,6 +13,7 @@ import {
   type ConfigValue,
 } from "@tinkerbell/core";
 import { restartSchedules, schedulerTimezone } from "@tinkerbell/jobs";
+import { renameArrHealthServices } from "@tinkerbell/domain.health";
 import { t, procedure } from "./_base.ts";
 
 /**
@@ -60,6 +61,12 @@ export const configRouter = t.router({
 
     const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");
 
+    // Snapshotted before the write: an extra *Arr instance's health identity is
+    // derived from its display name, so a rename has to carry its check history,
+    // its mute and any notification routing that named it. See
+    // `renameArrHealthServices`.
+    const arrInstancesBefore = "global_arr_instances" in input ? (getConfig("global_arr_instances") ?? []) : null;
+
     // Narrower than `ConfigKey` now that the auth keys are omitted from the
     // input — indexing `input` with a key it can't hold no longer typechecks.
     for (const key of Object.keys(input) as SavableKey[]) {
@@ -78,6 +85,8 @@ export const configRouter = t.router({
       }
       setConfig(key, value);
     }
+
+    if (arrInstancesBefore) renameArrHealthServices(arrInstancesBefore);
 
     // croner bakes the timezone in at construction, so the live Cron objects
     // would keep evaluating against the old zone until the next restart.

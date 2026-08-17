@@ -726,6 +726,35 @@ export function getPersonalizedSharingStatus(): PersonalizedSharingStatus {
 }
 
 /**
+ * Should the user portal be listening?
+ *
+ * It used to be personalization and nothing else, which stranded the two portal
+ * features that have nothing to do with it:
+ *
+ * - "tell people before their films disappear" was unreachable unless the admin
+ *   also turned on the heavyweight scheme that relabels every item in the
+ *   library and restricts every user's access to it;
+ * - a per-user digest frequency and address can *only* be set in the portal, so
+ *   with the port closed nobody could ever subscribe — while the admin-side
+ *   digest settings happily implied otherwise.
+ *
+ * It also made `portal.personalizationStatus` unreachable by construction: the
+ * portal shows a banner when personalization is off, and the port was closed in
+ * exactly that state.
+ *
+ * So: any portal-served feature being on is enough. Personalization mid-flip
+ * (`enabling`/`disabling`) counts, so the portal doesn't blink during a
+ * transition. Digests are represented by SMTP being configured, because that is
+ * the admin-side half — subscribing is what the portal is for.
+ */
+export function portalShouldRun(): boolean {
+  if (getPersonalizedSharingStatus() !== "disabled") return true;
+  if (getConfig("cleanup_enabled") === true) return true;
+  if ((getConfig("global_smtp")?.host ?? "") !== "") return true;
+  return false;
+}
+
+/**
  * Resolve the LLM provider config, falling back to the legacy
  * `global_anthropic_api_key` slot when `global_llm` hasn't been written yet.
  * Returns undefined when no provider is configured.

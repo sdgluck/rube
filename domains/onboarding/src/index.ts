@@ -108,11 +108,35 @@ export function getOnboardingStatus(): OnboardingStatus {
     dismissedAt: state.dismissedAt,
     completedAt: state.completedAt,
     shouldShowBanner: !complete && state.dismissedAt == null,
-    // Only ever fires on a truly untouched install. Any of started / skipped /
-    // dismissed latches it off for good, which is what stops a redirect loop
-    // for someone who has already made a decision about this flow.
-    shouldRedirect: state.startedAt == null && !state.skipped && state.dismissedAt == null && !complete,
+    // Only ever fires on a truly untouched install.
+    //
+    // Any of started / skipped / dismissed latches it off for good, which is
+    // what stops a redirect loop for someone who has already made a decision
+    // about this flow. But absence of that state is not evidence of a new
+    // install: an install that predates the wizard has no `onboarding_state`
+    // row at all, so upgrading a working server with rules and no notification
+    // provider used to redirect its owner into first-run setup.
+    //
+    // So the install itself has to look untouched too: no Plex connection and no
+    // rules of the user's own. Either one means somebody has used this server,
+    // and the banner is the right way to offer them the tour.
+    shouldRedirect: state.startedAt == null && !state.skipped && state.dismissedAt == null && !complete && looksNew(),
   };
+}
+
+/**
+ * Does this install look like nobody has ever configured it?
+ *
+ * Deliberately narrow: a Plex URL and token is the one thing Tinkerbell cannot
+ * do anything without, and a rule the user chose is proof they got past it. The
+ * seeded rule doesn't count, for the same reason it doesn't count towards the
+ * Rules step.
+ */
+function looksNew(): boolean {
+  const config = getAllConfig();
+  const plexConnected = !!(config.global_plex_url && config.global_plex_token);
+  if (plexConnected) return false;
+  return getRules().filter((r) => !isSeededRule(r)).length === 0;
 }
 
 export function startOnboarding(): void {

@@ -12,7 +12,7 @@ import {
   createLogger,
   errorMessage,
   getConfig,
-  getPersonalizedSharingStatus,
+  portalShouldRun,
   startAuthDisabledWarning,
 } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
@@ -250,16 +250,17 @@ portalServer.on("error", (err) => {
 
 const PORTAL_RECONCILE_MS = 15_000;
 
-// The portal only runs while personalization is enabled. The status flips
-// inside the enable/disable jobs, so we poll and start/stop accordingly.
+// The portal runs while any feature it serves is on — personalization, cleanup
+// warnings, or digests (see `portalShouldRun`). Those switches flip in jobs and
+// in Settings rather than here, so we poll and start/stop accordingly.
 function syncPortalServer(): void {
-  const shouldRun = getPersonalizedSharingStatus() === "enabled";
+  const shouldRun = portalShouldRun();
   if (shouldRun && !portalServer.listening) {
     portalServer.listen(USER_PORT, USER_HOST, () => {
       portalLog.info("listening", { host: USER_HOST, port: USER_PORT });
     });
   } else if (!shouldRun && portalServer.listening) {
-    portalServer.close(() => portalLog.info("stopped (personalization disabled)"));
+    portalServer.close(() => portalLog.info("stopped — no portal feature is enabled"));
   }
 }
 

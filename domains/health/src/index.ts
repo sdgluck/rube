@@ -3,7 +3,15 @@ import { errorMessage } from "@tinkerbell/core";
 import { db, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { getEnvironment, getPlexPrerollStatus } from "@tinkerbell/domain.prerolls";
-import { arrInstances, getAllConfig, getConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
+import {
+  arrInstances,
+  getAllConfig,
+  getConfig,
+  getLlmConfig,
+  setConfig,
+  configSchema,
+  WEEK_MS,
+} from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";
@@ -34,21 +42,51 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   { service: "Prerolls", configuredFn: (c) => !!c.prerolls_plex_path },
 ];
 
+type ArrInstanceLike = { id: string; service: "radarr" | "sonarr"; name: string; isDefault?: boolean };
+
+/**
+ * The health-service name for one extra \*Arr instance.
+ *
+ * Derived from the display name — `Radarr (4K)` — because this string is what
+ * the notification target picker offers and what the Health page shows, and
+ * "Radarr (4K)" is what somebody routing "tell me when the 4K one dies" is
+ * looking for. Two instances sharing a name would otherwise collapse onto one
+ * health row, so a repeat is disambiguated by its id.
+ *
+ * The cost of a display-derived key is that renaming an instance changes it, and
+ * everything filed under the old string — check history, a mute, an entry in a
+ * `global_*_health_targets` allow-list — would be orphaned. `renameArrHealthServices`
+ * carries those over, and the config writer calls it. Stable ids exist for
+ * exactly this reason (see `global_arr_instances[].id`); the compromise here is
+ * that the *stored* key stays legible while the *rename* is handled.
+ */
+function arrHealthServiceName(instance: ArrInstanceLike, all: readonly ArrInstanceLike[]): string {
+  const base = instance.service === "radarr" ? "Radarr" : "Sonarr";
+  const sameName = all.filter((i) => !i.isDefault && i.service === instance.service && i.name === instance.name);
+  const suffix = sameName.length > 1 ? ` #${instance.id}` : "";
+  return `${base} (${instance.name})${suffix}`;
+}
+
+/** Health-service name per extra instance id, for a given set of instances. */
+export function arrHealthServiceNames(instances: readonly ArrInstanceLike[]): Map<string, string> {
+  const extra = instances.filter((i) => !i.isDefault);
+  return new Map(extra.map((i) => [i.id, arrHealthServiceName(i, extra)]));
+}
+
 /**
  * The static list plus one entry per extra \*Arr instance.
  *
  * Instances are configuration, not code, so they cannot live in the array
  * above — but a second Radarr that nobody is watching is exactly as useful as
- * a first one that nobody is watching. Named `Radarr (4K)` after the instance,
- * which is also what the notification target picker will offer, so routing
- * "tell me when the 4K one dies" somewhere specific works without any further
- * plumbing.
+ * a first one that nobody is watching.
  */
 export function healthServices(): Array<{ service: string; configuredFn: (c: ConfigMap) => boolean }> {
-  const extra = arrInstances()
+  const instances = arrInstances();
+  const names = arrHealthServiceNames(instances);
+  const extra = instances
     .filter((i) => !i.isDefault)
     .map((i) => ({
-      service: `${i.service === "radarr" ? "Radarr" : "Sonarr"} (${i.name})`,
+      service: names.get(i.id) ?? `${i.service === "radarr" ? "Radarr" : "Sonarr"} (${i.name})`,
       // Already resolved from config to exist at all, so it is configured by
       // construction — the check itself is what reports whether it answers.
       configuredFn: () => true,
@@ -58,13 +96,61 @@ export function healthServices(): Array<{ service: string; configuredFn: (c: Con
 
 /** The instance behind a derived `Radarr (4K)` health name, if it is one. */
 function instanceForHealthService(service: string): { url: string; apiKey: string } | null {
-  const match = /^(Radarr|Sonarr) \((.+)\)$/.exec(service);
-  if (!match) return null;
-  const found = arrInstances(match[1].toLowerCase() as "radarr" | "sonarr").find(
-    (i) => !i.isDefault && i.name === match[2],
-  );
-  return found ? { url: found.url, apiKey: found.apiKey } : null;
+  const instances = arrInstances();
+  const names = arrHealthServiceNames(instances);
+  for (const instance of instances) {
+    if (instance.isDefault) continue;
+    if (names.get(instance.id) === service) return { url: instance.url, apiKey: instance.apiKey };
+  }
+  return null;
 }
+
+/**
+ * Carry an extra instance's health identity across a rename.
+ *
+ * Called with the instance list as it was *before* a config write. For every id
+ * whose derived health name changed, the check history, any mute and every
+ * notification target allow-list entry move with it — otherwise renaming "4K" to
+ * "UHD" silently detached the instance's whole history and stopped a routing rule
+ * that named it from matching anything, which is the sort of failure nobody
+ * connects to a rename weeks later.
+ */
+export function renameArrHealthServices(before: readonly ArrInstanceLike[]): void {
+  const previous = arrHealthServiceNames(before);
+  const current = arrHealthServiceNames(arrInstances());
+  for (const [id, from] of previous) {
+    const to = current.get(id);
+    if (!to || to === from) continue;
+
+    db.update(healthChecks).set({ service: to }).where(eq(healthChecks.service, from)).run();
+
+    const mutes = getConfig("health_mutes");
+    if (mutes && from in mutes) {
+      const next = { ...mutes, [to]: mutes[from] };
+      delete next[from];
+      setConfig("health_mutes", next);
+    }
+
+    for (const key of HEALTH_TARGET_KEYS) {
+      const targets = getConfig(key);
+      if (!targets?.includes(from)) continue;
+      setConfig(key, [...new Set(targets.map((t) => (t === from ? to : t)))]);
+    }
+  }
+}
+
+/** Every per-service allow-list a health notification is routed through. */
+const HEALTH_TARGET_KEYS = [
+  "global_discord_health_targets",
+  "global_gotify_health_targets",
+  "global_lunasea_health_targets",
+  "global_pushbullet_health_targets",
+  "global_pushover_health_targets",
+  "global_slack_health_targets",
+  "global_smtp_health_targets",
+  "global_telegram_health_targets",
+  "global_webhook_health_targets",
+] as const;
 
 export async function testArrConnection(url: string, apiKey: string) {
   const testUrl = new URL("/api/v3/system/status", url);
