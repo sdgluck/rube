@@ -289,7 +289,7 @@ export function catchUpMissedRuns(now = Date.now()): string[] {
     .where(and(eq(jobs.enabled, 1), ne(jobs.schedule, "")))
     .all();
 
-  const due: string[] = [];
+  const due: Array<{ id: string; name: string }> = [];
   for (const job of enabled) {
     const interval = scheduleIntervalMs(job.schedule, timezone);
     if (interval === null) continue;
@@ -318,16 +318,20 @@ export function catchUpMissedRuns(now = Date.now()): string[] {
     }
 
     log.info("catching up a missed occurrence", { job: job.name, missedAt: previous.toISOString() });
-    due.push(job.id);
+    due.push({ id: job.id, name: job.name });
   }
 
-  due.forEach((jobId, index) => {
-    setTimeout(() => {
-      startJob?.(jobId).catch((err) => log.error("catch-up run failed to start", { jobId, err: errorMessage(err) }));
-    }, index * CATCHUP_STAGGER_MS).unref();
+  // Through `startScheduled`, not `startJob`: a catch-up is the scheduler
+  // deciding to do work, so the maintenance window and "defer while streaming"
+  // apply to it exactly as they do to the occurrence it stands in for. Calling
+  // `startJob` directly meant a restart at 20:30 fired `generate`, `cleanup`,
+  // `metadata` and `sync-media` into the middle of somebody's film — the one
+  // outcome the deferral gate exists to prevent.
+  due.forEach((job, index) => {
+    setTimeout(() => startScheduled(job.id, job.name), index * CATCHUP_STAGGER_MS).unref();
   });
 
-  return due;
+  return due.map((job) => job.id);
 }
 
 /**
