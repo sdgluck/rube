@@ -8,6 +8,7 @@ import AuthBanner from "#/auth/AuthBanner";
 import OnboardingBanner from "#components/OnboardingBanner";
 import useOnboardingRedirect from "#hooks/useOnboardingRedirect";
 import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
+import RouteAnnouncer, { RouteReady } from "#components/RouteAnnouncer";
 import useDocumentTitle from "#hooks/useDocumentTitle";
 import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
 import useMigrationCompletionInvalidator from "#hooks/useMigrationCompletionInvalidator";
@@ -118,9 +119,18 @@ export default function App() {
 
   return (
     <div className="layout">
+      {/* First in the DOM, so it is first in the tab order. */}
+      <a className="skip-link" href="#page-content">
+        Skip to content
+      </a>
+      <RouteAnnouncer />
       <Sidebar onOpenPalette={openPalette} />
       <BottomNav />
-      <main className="content">
+      {/* `tabIndex={-1}` so the skip link can actually move focus here: an
+          anchor to a non-focusable target scrolls the page and leaves the tab
+          order where it was, which is the failure mode that makes skip links
+          look like they work and not work. */}
+      <main className="content" id="page-content" tabIndex={-1}>
         <ScrollRestoration />
         {/* Above the AppBarProvider, so it sits over the breadcrumb rather than
             between it and the page: this is server-wide chrome, not a message
@@ -481,14 +491,20 @@ export default function App() {
                       }
                     />
                   </Route>
-                  <Route
-                    path="stress-test"
-                    element={
-                      <LazyPage>
-                        <StressTest />
-                      </LazyPage>
-                    }
-                  />
+                  {/* Same gate as the rail entry in Settings/sections.ts. The
+                      rail hid the link and the route stayed registered, so a
+                      release build still served the load generator to anyone
+                      who typed the URL — against their real Plex server. */}
+                  {import.meta.env.DEV && (
+                    <Route
+                      path="stress-test"
+                      element={
+                        <LazyPage>
+                          <StressTest />
+                        </LazyPage>
+                      }
+                    />
+                  )}
                   <Route
                     path="posters"
                     element={
@@ -553,6 +569,9 @@ export default function App() {
                 />
                 <Route path="*" element={<Navigate to="/stats" replace />} />
               </Routes>
+              {/* Inside the boundary on purpose — it announces "loaded", and
+                  from out here it would say so while the skeleton was up. */}
+              <RouteReady />
             </Suspense>
           </ErrorBoundary>
         </AppBarProvider>

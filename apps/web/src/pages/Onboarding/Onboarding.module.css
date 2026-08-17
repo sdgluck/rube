@@ -523,7 +523,7 @@
 
 /* ─── Narrow viewports ──────────────────────────────────────────────────── */
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   /* The rail becomes a horizontal stepper — a 220px column would leave the
      forms unusable, and the labels are short enough to scroll sideways. */
   .body {

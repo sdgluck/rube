@@ -31,12 +31,13 @@
 import strictValue from "stylelint-declaration-strict-value";
 import unknownCustomProperties from "stylelint-value-no-unknown-custom-properties";
 import noShadowedPrimitive from "./stylelint-plugins/no-shadowed-primitive.mjs";
+import breakpointScale from "./stylelint-plugins/breakpoint-scale.mjs";
 
 /** Where the vocabulary is defined, for the token-exists rule. */
 const TOKEN_FILES = ["apps/web/src/App.css"];
 
 export default {
-  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive],
+  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale],
 
   reportDescriptionlessDisables: true,
   reportInvalidScopeDisables: true,
@@ -87,6 +88,9 @@ export default {
     "csstools/value-no-unknown-custom-properties": [true, { importFrom: TOKEN_FILES }],
 
     "tinkerbell/no-shadowed-primitive": true,
+
+    /* One responsive scale rather than a breakpoint per panel. */
+    "tinkerbell/breakpoint-scale": true,
   },
 
   overrides: [
@@ -114,6 +118,7 @@ export default {
         "scale-unlimited/declaration-strict-value": null,
         "csstools/value-no-unknown-custom-properties": null,
         "tinkerbell/no-shadowed-primitive": null,
+        "tinkerbell/breakpoint-scale": null,
       },
     },
   ],

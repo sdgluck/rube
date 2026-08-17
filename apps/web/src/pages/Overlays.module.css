@@ -1185,7 +1185,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .bulkGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1392,7 +1392,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .chipList {
     grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   }

@@ -142,7 +142,7 @@
   margin-right: auto;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .backdrop {
     padding: 12px;
     /* Clear the bottom nav so the panel and its footer stay reachable. */

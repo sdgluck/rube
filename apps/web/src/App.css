@@ -304,6 +304,30 @@
   --status-special-fg: #473a8c;
   --status-special-dot: #6e5cc4;
 
+  /* ─── Responsive scale ──────────────────────────────────────────────
+   * Five steps, and stylelint (tinkerbell/breakpoint-scale) rejects a media
+   * query at any other width. There used to be eleven — 480 through 1100,
+   * each one the width at which one particular panel started to look
+   * cramped — and the sum of eleven local answers is that nobody can say
+   * what the app does at 610px.
+   *
+   * These cannot be used inside a media query: custom properties don't
+   * resolve in a media feature. They are the scale's declaration, for
+   * reading here and from JS (getComputedStyle), and the lint rule is what
+   * keeps the stylesheets honouring it.
+   *
+   *   --bp-xs  phone
+   *   --bp-sm  large phone
+   *   --bp-md  the sidebar/bottom-nav swap — the one structural break
+   *   --bp-lg  narrow desktop, two-column panels give up
+   *   --bp-xl  wide two-pane editors (Overlays, Health)
+   */
+  --bp-xs: 480px;
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 900px;
+  --bp-xl: 1100px;
+
   /* ─── Stacking order ────────────────────────────────────────────────
    * Every app-level layer draws from this scale so overlays can never end
    * up behind the mobile bottom nav. Purely-local layering inside a single
@@ -1232,6 +1256,39 @@ input[type="checkbox"]:disabled {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* The first thing in the tab order, and invisible until it has focus.
+   Without it, reaching a page's content from the keyboard meant tabbing past
+   four nav sections and the active-jobs list — on every single navigation,
+   because the sidebar is persistent and the route is what changed. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: var(--z-toast);
+  padding: 10px 14px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  font: var(--t-body);
+  text-decoration: none;
+  /* Off-screen rather than `display: none`: a hidden element is not focusable,
+     which would make this exactly as useful as not having it. */
+  transform: translateY(calc(-100% - 16px));
+  transition: transform 0.15s;
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+/* The landmark the skip link lands on. It takes focus programmatically, and a
+   ring around the whole page column is noise — the browser has already scrolled
+   it into view and the next Tab starts from here, which is the entire point. */
+.content:focus {
+  outline: none;
 }
 
 /* ─── Focus visibility ───────────────────────────────────────────────────────

@@ -16,7 +16,8 @@ const ROUTE_TITLES: [prefix: string, title: string][] = [
   ["/more", "More"],
 ];
 
-function titleForPath(pathname: string): string | null {
+/** Also used by the route announcer, so both say the same thing. */
+export function titleForPath(pathname: string): string | null {
   let best: string | null = null;
   let bestLen = 0;
   for (const [prefix, title] of ROUTE_TITLES) {

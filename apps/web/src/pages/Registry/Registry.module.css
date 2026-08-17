@@ -325,7 +325,7 @@
   font-size: 0.88rem;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 640px) {
   .footer {
     flex-direction: column;
     align-items: stretch;
