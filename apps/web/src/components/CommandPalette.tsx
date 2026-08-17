@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Modal from "./Modal";
 import styles from "./CommandPalette.module.css";
 import { useGlobalSearch, type SearchHit } from "#hooks/useGlobalSearch";
+import { SCOPES } from "#/lib/searchScopes";
+import { pushRecent, readRecents } from "#/lib/recentSearches";
 import { NAV_SECTIONS } from "#/nav";
 import { SETTINGS_LINKS } from "#pages/Settings/sections";
 import { trpc } from "#/trpc";
@@ -54,9 +56,15 @@ interface Props {
   onClose: () => void;
 }
 
+/** The scope prefixes, spelled out for the footer hint. */
+const SCOPE_HINT = SCOPES.map((s) => `${s.prefixes[0]}:`).join(" ");
+
 export default function CommandPalette({ open, initialQuery, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  // Re-read on each open rather than held in state across the app's lifetime:
+  // the list changes on every selection, including from another tab.
+  const [recents, setRecents] = useState<SearchHit[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -148,7 +156,12 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobsQuery.data, rulesQuery.data]);
 
-  const { groups, flat, isLoading } = useGlobalSearch(query, { navigation: NAVIGATION, commands, enabled: open });
+  const { groups, flat, scope, isLoading } = useGlobalSearch(query, {
+    navigation: NAVIGATION,
+    commands,
+    recents,
+    enabled: open,
+  });
 
   const flatHrefs = useMemo(() => flat.map((h) => h.href), [flat]);
 
@@ -165,8 +178,12 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
       // A command does its thing and closes; everything else is a place.
       // Closing either way — leaving the panel open after firing an action
       // invites firing it twice.
-      if (hit.run) hit.run();
-      else navigate(hit.href);
+      if (hit.run) {
+        hit.run();
+      } else {
+        pushRecent(hit);
+        navigate(hit.href);
+      }
       close();
     },
     [flat, navigate, close],
@@ -179,6 +196,7 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
   useEffect(() => {
     if (open) {
       setQuery(initialQuery ?? "");
+      setRecents(readRecents());
       // Modal focuses its first focusable element; that's this input, but the
       // initial query should also be selected so typing replaces it.
       setTimeout(() => inputRef.current?.select(), 0);
@@ -221,7 +239,7 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
         <input
           ref={inputRef}
           className={styles.queryInput}
-          placeholder="Search commands, collections, media…"
+          placeholder="Search commands, collections, media… or scope with rule:, job:, user:"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           role="combobox"
@@ -266,7 +284,8 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
         )}
       </div>
       <div className={styles.footer} aria-hidden="true">
-        ↑↓ move · ↵ run or open · esc close
+        <span>↑↓ move · ↵ run or open · esc close</span>
+        <span className={styles.footerScopes}>{scope ? `scoped to ${scope.label}` : SCOPE_HINT}</span>
       </div>
     </Modal>
   );

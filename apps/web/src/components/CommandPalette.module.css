@@ -109,9 +109,29 @@
 }
 
 .footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   padding: 9px 14px;
   border-top: 1px solid var(--line-soft);
   font: var(--t-data);
   font-size: 11px;
   color: var(--ink-4);
+}
+
+/* The scope prefixes, or the active scope. Quieter than the key hints beside
+   it and first to be dropped when the panel is narrow: it is a thing to
+   discover once, not a thing to read every time. */
+.footerScopes {
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .footerScopes {
+    display: none;
+  }
 }

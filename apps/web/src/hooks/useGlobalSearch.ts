@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Fuse from "fuse.js";
 import { trpc } from "#/trpc";
+import { parseQuery, type SearchKind } from "#/lib/searchScopes";
 
-export type SearchKind =
-  | "navigation"
-  | "command"
-  | "collection"
-  | "media"
-  | "rule"
-  | "job"
-  | "overlayPreset"
-  | "event"
-  | "plexUser"
-  | "plexSection";
+export type { SearchKind };
+
+/** The kinds the server can return — everything except the locally-built ones. */
+export type RemoteSearchKind = Exclude<SearchKind, "navigation" | "command" | "recent">;
 
 export interface SearchHit {
   kind: SearchKind;
@@ -40,6 +34,7 @@ export interface SearchGroup {
 const KIND_LABEL: Record<SearchKind, string> = {
   navigation: "Navigation",
   command: "Actions",
+  recent: "Recent",
   collection: "Collections",
   media: "Media",
   rule: "Rules",
@@ -48,6 +43,7 @@ const KIND_LABEL: Record<SearchKind, string> = {
   event: "Events",
   plexUser: "Users",
   plexSection: "Plex sections",
+  preroll: "Prerolls",
 };
 
 const KIND_ORDER: SearchKind[] = [
@@ -61,6 +57,7 @@ const KIND_ORDER: SearchKind[] = [
   "rule",
   "job",
   "overlayPreset",
+  "preroll",
   "plexSection",
   "plexUser",
   "event",
@@ -79,33 +76,64 @@ interface Options {
   navigation: SearchHit[];
   /** Actions the palette can perform. Matched locally, like navigation. */
   commands?: SearchHit[];
+  /** Previously-selected destinations, shown on an empty query. */
+  recents?: SearchHit[];
   enabled?: boolean;
 }
 
-export function useGlobalSearch(query: string, { navigation, commands = [], enabled = true }: Options) {
-  const debounced = useDebounced(query.trim(), 150);
+export function useGlobalSearch(query: string, { navigation, commands = [], recents = [], enabled = true }: Options) {
+  const parsed = useMemo(() => parseQuery(query), [query]);
+  const debounced = useDebounced(parsed.text.trim(), 150);
+  const scopeKinds = parsed.scope?.kinds;
   const hasQuery = debounced.length > 0;
 
-  const remote = trpc.search.global.useQuery({ query: debounced }, { enabled: enabled && hasQuery, staleTime: 30_000 });
+  // Kinds the server knows about, or undefined for "everything". A scope of
+  // command/navigation alone means there is nothing to ask the server for.
+  const remoteKinds = useMemo(
+    () => scopeKinds?.filter((k): k is RemoteSearchKind => k !== "command" && k !== "navigation" && k !== "recent"),
+    [scopeKinds],
+  );
+  const wantsRemote = !scopeKinds || (remoteKinds?.length ?? 0) > 0;
+
+  const remote = trpc.search.global.useQuery(
+    { query: debounced, kinds: remoteKinds?.length ? remoteKinds : undefined },
+    { enabled: enabled && hasQuery && wantsRemote, staleTime: 30_000 },
+  );
 
   const groups = useMemo<SearchGroup[]>(() => {
+    const inScope = (kind: SearchKind) => !scopeKinds || scopeKinds.includes(kind);
+
     if (!hasQuery) {
-      return [{ kind: "navigation", label: KIND_LABEL.navigation, hits: navigation }];
+      // The resting state. Recents lead: the palette's most common use is
+      // going back to the thing you were just looking at.
+      return [
+        ...(recents.length > 0 && inScope("recent")
+          ? [{ kind: "recent" as const, label: KIND_LABEL.recent, hits: recents }]
+          : []),
+        ...(inScope("navigation")
+          ? [{ kind: "navigation" as const, label: KIND_LABEL.navigation, hits: navigation }]
+          : []),
+        ...(inScope("command") && commands.length > 0
+          ? [{ kind: "command" as const, label: KIND_LABEL.command, hits: commands.slice(0, 8) }]
+          : []),
+      ];
     }
 
-    const navFuse = new Fuse(navigation, {
-      keys: ["title", "subtitle"],
-      threshold: 0.4,
-      ignoreLocation: true,
-    });
-    const navHits = navFuse.search(debounced).map((r) => r.item);
+    const navHits = inScope("navigation")
+      ? new Fuse(navigation, { keys: ["title", "subtitle"], threshold: 0.4, ignoreLocation: true })
+          .search(debounced)
+          .map((r) => r.item)
+      : [];
 
     // Commands are matched more strictly than pages. A loose match on an
     // action is worse than a loose match on a destination: arrowing onto the
     // wrong page costs a click, and arrowing onto the wrong "Run rule" starts
     // it.
-    const commandFuse = new Fuse(commands, { keys: ["title", "subtitle"], threshold: 0.3, ignoreLocation: true });
-    const commandHits = commandFuse.search(debounced).map((r) => r.item);
+    const commandHits = inScope("command")
+      ? new Fuse(commands, { keys: ["title", "subtitle"], threshold: 0.3, ignoreLocation: true })
+          .search(debounced)
+          .map((r) => r.item)
+      : [];
 
     const all: SearchHit[] = [...commandHits, ...navHits, ...(remote.data?.hits ?? [])];
     const byKind = new Map<SearchKind, SearchHit[]>();
@@ -119,13 +147,14 @@ export function useGlobalSearch(query: string, { navigation, commands = [], enab
       const hits = byKind.get(kind);
       return hits && hits.length > 0 ? [{ kind, label: KIND_LABEL[kind], hits }] : [];
     });
-  }, [hasQuery, debounced, navigation, commands, remote.data]);
+  }, [hasQuery, debounced, navigation, commands, recents, remote.data, scopeKinds]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.hits), [groups]);
 
   return {
     groups,
     flat,
-    isLoading: hasQuery && remote.isLoading,
+    scope: parsed.scope,
+    isLoading: hasQuery && wantsRemote && remote.isLoading,
   };
 }
