@@ -110,6 +110,14 @@ interface RuleTableRowProps {
    * "third" meant among the thirty-two it is not showing.
    */
   canReorder?: boolean;
+  /**
+   * Zero-based place in the running order *of this page's rules*.
+   *
+   * Not `rule.position`: that counts across every rule in the install, and each
+   * Rules page shows one ending. The only cleanup rule on a install with one
+   * collection rule sits at position 1 and would otherwise be labelled "2".
+   */
+  orderIndex: number;
   isDragging?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
@@ -146,6 +154,7 @@ export default function RuleTableRow({
   cleanup,
   isMetadata,
   canReorder,
+  orderIndex,
   isDragging,
   onDragStart,
   onDragEnd,
@@ -181,9 +190,27 @@ export default function RuleTableRow({
         data-rule-id={rule.id}
         className={isDragging ? styles.dragging : undefined}
         draggable={canReorder}
-        onDragStart={onDragStart}
+        onDragStart={
+          canReorder
+            ? (e) => {
+                // Chrome and Firefox abandon a drag whose data store is empty,
+                // so the row has to put something on the transfer even though
+                // the drop reads the dragged id from state, not from here.
+                e.dataTransfer.setData("text/plain", rule.id);
+                e.dataTransfer.effectAllowed = "move";
+                onDragStart?.();
+              }
+            : undefined
+        }
         onDragEnd={onDragEnd}
-        onDragOver={canReorder ? (e) => e.preventDefault() : undefined}
+        onDragOver={
+          canReorder
+            ? (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }
+            : undefined
+        }
         onDrop={
           canReorder
             ? (e) => {
@@ -211,7 +238,7 @@ export default function RuleTableRow({
             </span>
           ) : (
             <span className={styles.dragHandle} title="Sort by Order to rearrange">
-              {rule.position + 1}
+              {orderIndex + 1}
             </span>
           )}
         </td>

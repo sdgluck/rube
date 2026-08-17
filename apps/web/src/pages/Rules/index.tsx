@@ -192,6 +192,21 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     [rulesQuery.data],
   );
 
+  /**
+   * Where each rule sits in the running order *of this page*.
+   *
+   * `position` is a single sequence across every rule in the install, but each
+   * Rules page shows one ending — so the only cleanup rule on an install that
+   * also has a collection rule holds position 1 and would read as "2". The
+   * engine still runs the global order; within one ending, the relative order
+   * is all these numbers claim to describe. Independent of the table's current
+   * sort, so the number stays put when sorting by name.
+   */
+  const orderIndexById = useMemo(() => {
+    const ordered = [...allRules].sort((a, b) => a.position - b.position || a.createdAt - b.createdAt);
+    return new Map(ordered.map((r, i) => [r.id, i]));
+  }, [allRules]);
+
   const presentTypes = useMemo(() => {
     const s = new Set<string>();
     for (const r of allRules) s.add(r.type);
@@ -1015,6 +1030,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     onRevertArtwork={() => handleRevertArtwork(rule)}
                     onDetailCleared={() => setExpandedRow(null)}
                     canReorder={canReorder}
+                    orderIndex={orderIndexById.get(rule.id) ?? 0}
                     isDragging={dragId === rule.id}
                     onDragStart={() => setDragId(rule.id)}
                     onDragEnd={() => setDragId(null)}

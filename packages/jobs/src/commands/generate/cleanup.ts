@@ -15,9 +15,17 @@
  *     the library
  *   - nothing is actioned if the local library index is stale
  *
- * The queue collection is built in every mode, including dry run. Being able
- * to browse "what this rule would delete" in Plex before it happens is what
- * makes the feature trustworthy, and it costs one collection.
+ * Nothing here writes a collection to Plex. Cleanup rules used to build an "on
+ * the chopping block" shelf per section so you could browse what a rule would
+ * remove from the sofa, but a rule that matches badly — and matching badly is
+ * exactly what the refusals above exist to catch — puts a collection of most
+ * of the library in front of the whole household before anyone has agreed to
+ * anything. The review surface is Tinkerbell's own Cleanup queue, which costs
+ * the server nothing and can say "streak 1/3" and "held until Friday" in a way
+ * a Plex collection never could.
+ *
+ * The one thing cleanup still writes to Plex is an item label, in `label` mode,
+ * on the items themselves — see `applyAction`.
  */
 import { arrInstances, DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
 import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
@@ -31,12 +39,11 @@ import {
 } from "@tinkerbell/domain.cleanup";
 import { emitEvent } from "@tinkerbell/domain.events";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { commitCollection } from "./finalize.ts";
 import { arrExternalId } from "./guids.ts";
 import { lastSuccessfulRunAt } from "../../queries.ts";
 import type { HandlerDeps } from "./types.ts";
 
-/** Label marking the "on the chopping block" shelf, so it's findable in Plex. */
+/** Applied to the items themselves in `label` mode, so they're findable in Plex. */
 export const CLEANUP_LABEL = "Tinkerbell:Cleanup";
 
 /** Default ceiling on destructive actions across every rule, per rolling day. */
@@ -119,8 +126,6 @@ export interface CleanupOutcome {
 export async function runHandlerWithCleanup(
   deps: HandlerDeps,
   action: CleanupActionConfig,
-  machineId: string,
-  labels: string[],
   budget: CleanupBudget,
   handler: (
     deps: HandlerDeps,
@@ -130,29 +135,24 @@ export async function runHandlerWithCleanup(
 
   // 1. Selection, unchanged — accumulate across every section the rule covers.
   const matches: Array<{ ratingKey: string; sectionId: string; title: string }> = [];
-  const bySection = new Map<string, { section: PlexSection; ratingKeys: string[] }>();
+  const sectionsMatched = new Set<string>();
   for await (const pending of handler(deps)) {
-    const bucket = bySection.get(pending.section.key) ?? { section: pending.section, ratingKeys: [] };
     for (const item of pending.matched) {
       matches.push({ ratingKey: item.ratingKey, sectionId: pending.section.key, title: item.title });
-      bucket.ratingKeys.push(item.ratingKey);
+      sectionsMatched.add(pending.section.key);
     }
-    bySection.set(pending.section.key, bucket);
   }
 
-  ctx.log(`[cleanup] "${rule.name}" matched ${matches.length} item(s) across ${bySection.size} section(s).`);
+  ctx.log(`[cleanup] "${rule.name}" matched ${matches.length} item(s) across ${sectionsMatched.size} section(s).`);
 
   // 2. Record first, always. Even a run that refuses to act should advance the
   //    picture the user sees on the queue page.
   recordMatches(rule.id, matches);
 
-  // 3. The queue collection — in every mode, dry run included.
-  await commitQueueCollections(ctx, client, machineId, labels, rule.name, bySection);
-
-  // 3b. Warn about what goes next time. Deliberately before the due check —
-  //     the run where items reach the final streak is usually a run where
-  //     nothing is due yet, and that is precisely when the warning is useful.
-  //     Suppressed when a standing refusal means the deletion will never come.
+  // 3. Warn about what goes next time. Deliberately before the due check —
+  //    the run where items reach the final streak is usually a run where
+  //    nothing is due yet, and that is precisely when the warning is useful.
+  //    Suppressed when a standing refusal means the deletion will never come.
   if (!standingRefusal()) notifyPending(rule, action);
 
   const due = dueForAction(rule.id, action.consecutiveRuns, action.maxActionsPerRun);
@@ -223,46 +223,6 @@ function notifyPending(rule: { id: string; name: string }, action: CleanupAction
       ` ${titles.slice(0, 10).join(", ")}${titles.length > 10 ? `, and ${titles.length - 10} more` : ""}.${link}`,
     { ruleId: rule.id, ruleName: rule.name, count: nextUp.length, mode: action.mode, titles },
   );
-}
-
-/**
- * Build the "on the chopping block" shelf, one collection per section.
- *
- * Carries the rule's own labels plus `Tinkerbell:Cleanup`, so it is both
- * swept up by the normal rule-collection lifecycle and findable on its own.
- */
-async function commitQueueCollections(
-  ctx: JobContext,
-  client: PlexClient,
-  machineId: string,
-  labels: string[],
-  ruleName: string,
-  bySection: Map<string, { section: PlexSection; ratingKeys: string[] }>,
-): Promise<void> {
-  for (const { section, ratingKeys } of bySection.values()) {
-    if (ratingKeys.length === 0) continue;
-    try {
-      await commitCollection(ctx, client, {
-        section,
-        machineId,
-        name: ruleName,
-        ratingKeys,
-        labels: [...labels, CLEANUP_LABEL],
-        // Never pinned. A homepage row of films about to be deleted is not
-        // what anyone wants their family to open Plex to.
-        pinToHomepage: false,
-        ruleType: "cleanup",
-        // No `ruleId`: the shelf is not one of the rule's presented
-        // collections, so it gets neither a summary nor artwork. "Titles where
-        // watched by everyone" is not a description anyone wants on the row of
-        // things about to be deleted.
-      });
-    } catch (err) {
-      // The shelf is a convenience; failing to build it must not stop the
-      // ledger from advancing or block a legitimate action.
-      ctx.log(`[cleanup] Could not build the queue collection for "${section.title}" — ${errorMessage(err)}`);
-    }
-  }
 }
 
 /**

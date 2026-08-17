@@ -13,7 +13,7 @@
  * for a cleanup rule — three times against real HTTP mock servers, and asserts on what those servers were
  * actually asked to do. The manual verification in `media-lifecycle.md` asks
  * for exactly this sequence: run it three times under dry run, confirm the
- * shelf and the logs, then turn dry run off and confirm precisely the expected
+ * queue and the logs, then turn dry run off and confirm precisely the expected
  * items are removed from both Radarr and Plex.
  *
  * What it cannot do is tell you that real Plex and real Radarr agree with the
@@ -199,12 +199,10 @@ describe("a cleanup rule across three real runs", () => {
     assert.deepEqual(arr.journal.deletes, [], "nothing deleted on a first match");
     assert.deepEqual(plex.journal.deletedItems, []);
 
-    // The shelf exists from the very first run, so it can be reviewed in Plex
-    // long before anything is removed.
-    assert.equal(plex.journal.createdCollections.length, 1);
-    assert.deepEqual(plex.journal.createdCollections[0].memberKeys.sort(), ["100", "101", "102"]);
-    const shelf = [...plex.collections.values()][0];
-    assert.ok(shelf.labels.includes("Tinkerbell:Cleanup"), `shelf labels were ${shelf.labels.join(", ")}`);
+    // Nothing is written to Plex. The candidates are reviewable from the first
+    // run on Tinkerbell's own Cleanup page, which is where the streaks, holds
+    // and Keep buttons live — none of which a Plex collection could express.
+    assert.deepEqual(plex.journal.createdCollections, [], "cleanup builds no collections");
 
     // ── Run 2 ──
     await runGenerate();
@@ -277,7 +275,7 @@ describe("a cleanup rule across three real runs", () => {
 // ─── Dry run ─────────────────────────────────────────────────────────────────
 
 describe("dry run, through the real job", () => {
-  it("builds the shelf on every run and never touches anything", async () => {
+  it("never touches anything, however many times it runs", async () => {
     seedRule({ kind: "cleanup", mode: "delete", consecutiveRuns: 3, maxActionsPerRun: 25, viaArr: true, dryRun: true });
 
     let log: string[] = [];
@@ -286,10 +284,7 @@ describe("dry run, through the real job", () => {
     assert.deepEqual(arr.journal.deletes, []);
     assert.deepEqual(plex.journal.deletedItems, []);
     assert.match(log.join("\n"), /DRY RUN — 3 item\(s\) are due for "delete"/);
-    // Four runs, four shelves — each one replacing the last, since the rule's
-    // old collections are cleared at the top of every run.
-    assert.equal(plex.journal.createdCollections.length, 4);
-    assert.equal(plex.collections.size, 1, "the previous run's shelf is cleaned up, not duplicated");
+    assert.deepEqual(plex.journal.createdCollections, [], "four runs, still no collections");
   });
 });
 

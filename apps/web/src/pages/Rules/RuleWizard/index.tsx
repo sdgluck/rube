@@ -188,7 +188,7 @@ function splitTags(value: string): string[] {
 
 /** One line per mode, saying what it actually does rather than restating it. */
 const CLEANUP_MODE_HINTS: Record<CleanupMode, string> = {
-  collection_only: "Nothing is removed. The queue collection is the whole point — a shelf you review yourself.",
+  collection_only: "Nothing is removed and nothing is written to Plex. Matches just gather on the Cleanup queue.",
   label: "Stamps a Tinkerbell:Cleanup label on each item. Nothing is removed; useful as a dry run with a paper trail.",
   unmonitor: "Leaves the files alone but stops Radarr/Sonarr upgrading or re-grabbing them.",
   delete: "Removes the files from disk. There is no undo.",
@@ -763,13 +763,13 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           <p className={styles.hint}>Heads-up: OMDB API key is not configured in Settings → AI.</p>
         )}
 
-        {/* A cleanup rule's shelf is never pinned, so none of this applies to
-            it — see `rulePins`. The Outcome step comes first precisely so this
-            block can be absent rather than retracted. */}
+        {/* A cleanup rule builds nothing to pin — see `rulePins`. The Outcome
+            step comes first precisely so this block can be absent rather than
+            retracted. */}
         {form.outcome.kind === "cleanup" && (
           <p className={styles.hint}>
-            Cleanup rules don't touch the homepage. The queue collection is created and labelled, but never pinned — a
-            row of items about to be removed isn't something to open Plex to.
+            Cleanup rules build no collections at all, so there's nothing to pin. What matched is on the Cleanup queue
+            here in Tinkerbell.
           </p>
         )}
 
@@ -1196,8 +1196,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
       <>
         <h3 className={styles.stepHeading}>What should happen to matches?</h3>
         <p className={styles.stepSub}>
-          Matching items are tracked over several runs, then labelled, unmonitored, or deleted. A queue collection is
-          built first either way, so you can see what's on the chopping block.
+          Matching items are tracked over several runs, then labelled, unmonitored, or deleted. Nothing is written to
+          Plex until then — what matched shows up on the Cleanup queue here, where you can keep or protect it.
         </p>
 
         {o.kind === "cleanup" && (
@@ -1221,7 +1221,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   );
                 }}
               >
-                <option value="collection_only">Queue only — just build the collection</option>
+                <option value="collection_only">Queue only — track matches, change nothing</option>
                 <option value="label">Label matching items in Plex</option>
                 <option value="unmonitor">Unmonitor in Radarr/Sonarr</option>
                 <option value="delete">Delete the files</option>
@@ -1297,7 +1297,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 Preview only — don't touch anything yet
               </label>
               <span className={styles.hint}>
-                Leave this on until you've run the rule and read the log. The queue collection is built either way.
+                Leave this on until you've run the rule and read the log. The queue fills up either way.
               </span>
             </div>
 

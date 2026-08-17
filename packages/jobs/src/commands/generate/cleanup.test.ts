@@ -22,7 +22,7 @@ const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await im
 const { setConfig } = await import("@tinkerbell/core");
 const { noopCheckpoint } = await import("@tinkerbell/core");
 const { recordMatches, listCandidates, holdCandidate, markActioned } = await import("@tinkerbell/domain.cleanup");
-const { runHandlerWithCleanup, createCleanupBudget, CLEANUP_LABEL } = await import("./cleanup.ts");
+const { runHandlerWithCleanup, createCleanupBudget } = await import("./cleanup.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
 
 const RULE_ID = "cleanup-rule";
@@ -231,8 +231,6 @@ describe("streak", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -251,8 +249,6 @@ describe("streak", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -266,7 +262,7 @@ describe("streak", () => {
 // ─── The dry-run gate ────────────────────────────────────────────────────────
 
 describe("dryRun", () => {
-  it("builds the queue collection and performs no mutation", async () => {
+  it("performs no mutation", async () => {
     primeStreak("100", "The Matrix", 2);
     const calls = stubServers(); // any delete throws
     const { ctx, log } = testContext();
@@ -274,14 +270,12 @@ describe("dryRun", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ dryRun: true }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
 
     assert.equal(out.actioned, 0);
-    assert.ok(calls.collectionsCreated > 0, "the shelf is built in every mode, including dry run");
+    assert.equal(calls.collectionsCreated, 0);
     assert.match(log.join("\n"), /DRY RUN.*would delete: "The Matrix"/s);
     assert.equal(listCandidates(RULE_ID)[0].actionedAt, null);
   });
@@ -299,8 +293,6 @@ describe("cleanup_enabled", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ dryRun: false }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -319,8 +311,6 @@ describe("cleanup_enabled", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ mode: "label", dryRun: false }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -355,8 +345,6 @@ describe("global daily ceiling", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       first,
       handlerYielding([
         { ratingKey: "100", title: "Film 100" },
@@ -405,8 +393,6 @@ describe("global daily ceiling", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ maxActionsPerRun: 30 }),
-      "machine-1",
-      ["Tinkerbell"],
       budget,
       handlerYielding([
         { ratingKey: "100", title: "Film 100" },
@@ -439,8 +425,6 @@ describe("global daily ceiling", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       budget,
       handlerYielding([
         { ratingKey: "100", title: "Film 100" },
@@ -461,8 +445,6 @@ describe("global daily ceiling", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ mode: "label" }),
-      "machine-1",
-      ["Tinkerbell"],
       budget,
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -495,8 +477,6 @@ describe("global daily ceiling", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       budget,
       handlerYielding([{ ratingKey: "100", title: "Film 100" }]),
     );
@@ -528,8 +508,6 @@ describe("global daily ceiling", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       budget,
       handlerYielding([{ ratingKey: "100", title: "Film 100" }]),
     );
@@ -550,14 +528,7 @@ describe("implausible match fraction", () => {
     const calls = stubServers({ sectionTotal: 100 });
     const { ctx, log } = testContext();
 
-    const out = await runHandlerWithCleanup(
-      deps(ctx),
-      cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
-      createCleanupBudget(),
-      handlerYielding(items),
-    );
+    const out = await runHandlerWithCleanup(deps(ctx), cleanupAction(), createCleanupBudget(), handlerYielding(items));
 
     assert.equal(out.actioned, 0);
     assert.deepEqual(calls.deletes, []);
@@ -573,14 +544,7 @@ describe("implausible match fraction", () => {
     const calls = stubServers({ allowDestructive: true, sectionTotal: 100 });
     const { ctx } = testContext();
 
-    const out = await runHandlerWithCleanup(
-      deps(ctx),
-      cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
-      createCleanupBudget(),
-      handlerYielding(items),
-    );
+    const out = await runHandlerWithCleanup(deps(ctx), cleanupAction(), createCleanupBudget(), handlerYielding(items));
 
     assert.equal(out.actioned, 5);
     assert.equal(calls.deletes.length, 5);
@@ -611,8 +575,6 @@ describe("unsizeable library", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -634,8 +596,6 @@ describe("library index staleness", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -654,8 +614,6 @@ describe("library index staleness", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -691,8 +649,6 @@ describe("viaArr", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ viaArr: true }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -711,8 +667,6 @@ describe("viaArr", () => {
     const out = await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ viaArr: false }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -742,8 +696,6 @@ describe("cleanup.pending", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ consecutiveRuns: 3, dryRun: false }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -762,8 +714,6 @@ describe("cleanup.pending", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ consecutiveRuns: 3, dryRun: true }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -779,8 +729,6 @@ describe("cleanup.pending", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ mode: "label", consecutiveRuns: 3, dryRun: false }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -797,8 +745,6 @@ describe("cleanup.pending", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction({ consecutiveRuns: 3, dryRun: false }),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -814,8 +760,6 @@ describe("cleanup.pending", () => {
     await runHandlerWithCleanup(
       deps(ctx),
       cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
@@ -824,29 +768,62 @@ describe("cleanup.pending", () => {
   });
 });
 
-// ─── The shelf ───────────────────────────────────────────────────────────────
+// ─── No collections ──────────────────────────────────────────────────────────
 
-describe("queue collection", () => {
-  it("carries the cleanup label so it can be found in Plex", async () => {
-    stubServers();
+/**
+ * Cleanup used to build a shelf collection per section. It doesn't any more:
+ * a rule matching badly put a collection of most of the library in front of
+ * the household before anyone had agreed to anything, and the review surface
+ * is Tinkerbell's own queue page. These tests are what stops it coming back.
+ */
+describe("no Plex collections", () => {
+  it("writes no collection in any mode", async () => {
+    for (const mode of ["collection_only", "label", "unmonitor", "delete"] as const) {
+      db.delete(cleanupCandidates).run();
+      primeStreak("100", "The Matrix", 2);
+      const calls = stubServers({ allowDestructive: true });
+      const { ctx } = testContext();
+
+      await runHandlerWithCleanup(
+        deps(ctx),
+        cleanupAction({ mode }),
+        createCleanupBudget(),
+        handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+      );
+
+      assert.equal(calls.collectionsCreated, 0, `${mode} must not create a collection`);
+    }
+  });
+
+  it("writes no collection on a dry run either", async () => {
+    primeStreak("100", "The Matrix", 2);
+    const calls = stubServers();
     const { ctx } = testContext();
-    let labelSeen = false;
-    const inner = globalThis.fetch;
-    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-      if (url.search.includes(encodeURIComponent(CLEANUP_LABEL))) labelSeen = true;
-      return inner(input as never, init as never);
-    }) as typeof fetch;
 
     await runHandlerWithCleanup(
       deps(ctx),
-      cleanupAction(),
-      "machine-1",
-      ["Tinkerbell"],
+      cleanupAction({ dryRun: true }),
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
 
-    assert.ok(labelSeen, `expected a request carrying the ${CLEANUP_LABEL} label`);
+    assert.equal(calls.collectionsCreated, 0);
+  });
+
+  it("still labels the items themselves in label mode", async () => {
+    // The one Plex write cleanup still makes. Item labels, not collections.
+    primeStreak("100", "The Matrix", 2);
+    const calls = stubServers({ allowDestructive: true });
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ mode: "label" }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.deepEqual(calls.labelPuts, ["100"]);
+    assert.equal(calls.collectionsCreated, 0);
   });
 });

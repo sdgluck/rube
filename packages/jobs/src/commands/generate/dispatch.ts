@@ -122,10 +122,9 @@ export async function runHandler(
     return { lastCollectionKey: null, collectionCount: 0, itemCount: result.matched };
   }
 
-  const outcome = await runHandlerWithCleanup(deps, action, machineId, labels, budget, handler);
-  // A cleanup rule builds one shelf collection per section, but the rule's
-  // "last collection" pointer is meaningless for it — the Rules table shows
-  // queued/actioned counts instead.
+  const outcome = await runHandlerWithCleanup(deps, action, budget, handler);
+  // A cleanup rule builds no collections at all — the queue lives in
+  // Tinkerbell, and the Rules table shows queued/actioned counts instead.
   return { lastCollectionKey: null, collectionCount: 0, itemCount: outcome.matched };
 }
 

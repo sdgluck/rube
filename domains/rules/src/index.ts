@@ -62,10 +62,25 @@ export function getEnabledRules(): Rule[] {
  * Renumbers rather than nudging one value: gaps and ties accumulate otherwise,
  * and the order the user sees has to be the order the engine reads, with no
  * ambiguity left for `createdAt` to resolve differently after an edit.
+ *
+ * `orderedIds` is usually a *subset* — each Rules page shows one ending, so a
+ * drag on /cleanup/rules sends only the cleanup rules. Numbering that subset
+ * 0..n-1 would stamp it over the collection and metadata rules sharing the
+ * sequence, so instead the named rules are dealt back into the slots they
+ * already occupy in the global order, in their new relative order, and
+ * everything else keeps the slot it had.
  */
 export function reorderRules(orderedIds: string[]): void {
   db.transaction(() => {
-    orderedIds.forEach((id, index) => {
+    const all = db.select({ id: rules.id }).from(rules).orderBy(rules.position, rules.createdAt).all();
+    const known = new Set(all.map((r) => r.id));
+    // An id for a rule deleted between the page load and the drop would
+    // otherwise shift every rule after it by one.
+    const queue = orderedIds.filter((id) => known.has(id));
+    const moving = new Set(queue);
+    let next = 0;
+    const reordered = all.map((r) => (moving.has(r.id) ? queue[next++] : r.id));
+    reordered.forEach((id, index) => {
       db.update(rules).set({ position: index }).where(eq(rules.id, id)).run();
     });
   });
