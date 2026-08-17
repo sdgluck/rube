@@ -488,6 +488,16 @@ export const configSchema = z.object({
    */
   seerr_seen_available: z.array(z.number().int()),
   /**
+   * Whether the Overseerr poller has ever completed a poll.
+   *
+   * Separate from `seerr_seen_available` because an empty set is not evidence of
+   * a first run: an install with no fulfilled requests yet stores nothing, so
+   * "nothing stored" stayed true until the *first genuine* fulfilment — which
+   * was then adopted as history and fired no rules at all, which is the one
+   * event the trigger exists for.
+   */
+  seerr_polled: z.boolean(),
+  /**
    * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
    * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its
    * own filesystem, so the same directory usually has a different mount point

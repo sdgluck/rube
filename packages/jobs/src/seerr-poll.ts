@@ -51,18 +51,37 @@ export async function pollSeerrRequests(ctx: JobContext): Promise<string> {
   // First run on an install with history: adopt everything without firing.
   // Otherwise enabling the trigger would run every listening rule against a
   // hundred requests that were fulfilled months ago.
-  const firstRun = seen.size === 0;
+  //
+  // "Have we polled before", not "is the set empty". An install whose Overseerr
+  // has no fulfilled requests yet stores nothing, so an empty set stayed true
+  // right up to the first genuine fulfilment — which was then adopted as
+  // history and fired nothing, losing the one event the trigger exists for.
+  const firstRun = !(getConfig("seerr_polled") ?? false);
+  setConfig("seerr_polled", true);
 
-  if (available.length > 0) {
+  /** Commit the ids as told-about. Deliberately *after* the rules have run. */
+  const remember = () => {
+    if (available.length === 0) return;
     // Newest ids first, so the cap drops the oldest.
     const merged = [...available.map((r) => r.id), ...seen].slice(0, REMEMBER);
     setConfig("seerr_seen_available", [...new Set(merged)]);
+  };
+
+  if (fresh.length === 0) {
+    remember();
+    return "No newly available requests.";
+  }
+  if (firstRun) {
+    remember();
+    return `Adopted ${fresh.length} already-fulfilled request(s) without running anything.`;
   }
 
-  if (fresh.length === 0) return "No newly available requests.";
-  if (firstRun) return `Adopted ${fresh.length} already-fulfilled request(s) without running anything.`;
-
+  // Marked seen only once the rules have had them. Committing first meant a
+  // rule that threw lost its trigger permanently — the ids were already
+  // remembered, so the next poll saw nothing new. Re-firing on the next poll is
+  // the better failure of the two.
   const triggered = await runTriggeredRules(ctx, "request-fulfilled", fresh.length);
+  remember();
   const summary = `${fresh.length} request(s) became available.`;
   return triggered ? `${summary} ${triggered}` : summary;
 }

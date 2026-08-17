@@ -89,6 +89,11 @@ thead .eventHead {
   color: var(--status-warn-fg);
 }
 
+/* Subscribed with nothing to send through: the send would throw. */
+.unconfigured {
+  color: var(--status-error-fg);
+}
+
 .off {
   color: var(--ink-faint);
 }

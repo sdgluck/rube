@@ -40,11 +40,51 @@ describe("health failure threshold", () => {
     assert.equal(emitted("health.failed"), 1);
   });
 
-  test("a service's very first check announces nothing", () => {
-    // Nothing to transition from. A fresh install would otherwise announce
-    // every unconfigured service the first time it was looked at.
+  test("a service's very first check can still announce a failure", () => {
+    // This used to return early on a missing previous row, on the grounds that a
+    // fresh install would announce every unconfigured service. But
+    // `checkAllConfiguredServices` only probes services that *are* configured, so
+    // a first failing check means a server somebody set up is not answering —
+    // and swallowing it also lost the first failure of a newly added *Arr
+    // instance, and of any service whose rows had been pruned.
     reportHealth("Radarr", "error", "refused");
-    assert.equal(emitted("health.failed"), 0);
+    assert.equal(emitted("health.failed"), 1);
+  });
+
+  test("a recovery with no announced outage behind it stays quiet", () => {
+    // Nothing to recover from as far as anyone was told.
+    reportHealth("Radarr", "ok", "fine");
+    assert.equal(emitted("health.recovered"), 0);
+  });
+
+  test("lowering the threshold mid-outage still announces the failure", () => {
+    // The pairing this whole design is about. The streak used to be read with
+    // the threshold as a row limit, so lowering 5 → 2 during a four-check outage
+    // left `priorFailures` at 2, the failure edge never matched, and no failure
+    // was announced — while the eventual recovery *was*. Silent when it breaks,
+    // chatty when it returns.
+    setConfig("health_failure_threshold", 5);
+    reportHealth("Radarr", "ok", "fine");
+    for (let i = 0; i < 4; i++) reportHealth("Radarr", "error", "refused");
+    assert.equal(emitted("health.failed"), 0, "four of five, so nothing yet");
+
+    setConfig("health_failure_threshold", 2);
+    reportHealth("Radarr", "error", "refused");
+    assert.equal(emitted("health.failed"), 1);
+
+    reportHealth("Radarr", "ok", "fine");
+    assert.equal(emitted("health.recovered"), 1, "announced, so its recovery is announced too");
+  });
+
+  test("raising the threshold mid-outage does not re-announce it", () => {
+    setConfig("health_failure_threshold", 1);
+    reportHealth("Radarr", "ok", "fine");
+    reportHealth("Radarr", "error", "refused");
+    assert.equal(emitted("health.failed"), 1);
+
+    setConfig("health_failure_threshold", 5);
+    for (let i = 0; i < 6; i++) reportHealth("Radarr", "error", "refused");
+    assert.equal(emitted("health.failed"), 1, "one outage, one message");
   });
 
   test("with a threshold of 3, two failures stay quiet and the third speaks", () => {

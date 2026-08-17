@@ -28,6 +28,8 @@ import {
   sendWebhook,
 } from "./senders.ts";
 import { sendSmtp } from "./smtp.ts";
+// Imported separately from the re-export below so `serviceConfigured` can call it.
+import { smtpConfigured as smtpHasCredentials } from "./smtp.ts";
 
 export * from "./types.ts";
 export {
@@ -124,9 +126,42 @@ const AGENTS: Array<{
   },
 ];
 
+/**
+ * Does this service hold enough configuration to send anything at all?
+ *
+ * Subscribing to an event is not the same as being able to deliver it: a Slack
+ * row with every event ticked and no webhook URL throws "Slack webhook URL is
+ * required" on the first send. The routing table used to read "on" for exactly
+ * that, which is the one thing it exists to stop happening.
+ */
+export function serviceConfigured(service: NotificationService): boolean {
+  switch (service) {
+    case "pushover":
+      return !!(getConfig("global_pushover_api_key") && getConfig("global_pushover_user_key"));
+    case "discord":
+      return !!getConfig("global_discord_webhook_url");
+    case "gotify":
+      return !!(getConfig("global_gotify_url") && getConfig("global_gotify_token"));
+    case "lunasea":
+      return !!getConfig("global_lunasea_webhook_url");
+    case "pushbullet":
+      return !!getConfig("global_pushbullet_token");
+    case "slack":
+      return !!getConfig("global_slack_webhook_url");
+    case "telegram":
+      return !!(getConfig("global_telegram_bot_token") && getConfig("global_telegram_chat_id"));
+    case "webhook":
+      return !!getConfig("global_webhook_url");
+    case "smtp":
+      return smtpHasCredentials();
+    default:
+      return false;
+  }
+}
+
 /** Which services currently hold enough configuration to send anything. */
 export function configuredServices(): NotificationService[] {
-  return AGENTS.filter((agent) => (getConfig(agent.eventsKey) ?? []).length > 0).map((agent) => agent.name);
+  return AGENTS.filter((agent) => serviceConfigured(agent.name)).map((agent) => agent.name);
 }
 
 /** Services subscribed to a given event type. */
@@ -197,7 +232,13 @@ export type RoutingState =
   /** Subscribed, and nothing narrows it. */
   | "on"
   /** Subscribed, but an allow-list means only some of these events arrive. */
-  | "filtered";
+  | "filtered"
+  /**
+   * Subscribed, but the service has no credentials — so the send throws.
+   * Distinguished from "on" because a table that cannot tell you this is a
+   * table you would have to verify by sending, which is what it replaced.
+   */
+  | "unconfigured";
 
 export interface RoutingCell {
   service: NotificationService;
@@ -228,6 +269,7 @@ export function routingMatrix(now: Date = new Date()): RoutingRow[] {
     suppressed: suppressionReason(event.id, undefined, now),
     services: AGENTS.map((agent): RoutingCell => {
       if (!(getConfig(agent.eventsKey) ?? []).includes(event.id)) return { service: agent.name, state: "off" };
+      if (!serviceConfigured(agent.name)) return { service: agent.name, state: "unconfigured" };
 
       // An empty allow-list means "all of them", which is why these read as
       // `length > 0` rather than as a plain presence check.

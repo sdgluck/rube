@@ -1,4 +1,4 @@
-import { Check, Filter, Minus } from "lucide-react";
+import { AlertTriangle, Check, Filter, Minus } from "lucide-react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { FormSkeleton } from "#components/Skeleton";
@@ -24,6 +24,7 @@ import styles from "./SettingsNotificationsRouting.module.css";
 const CELL_TITLE = {
   on: "Subscribed — press to send a sample",
   filtered: "Subscribed, but narrowed by an allow-list — press to send a sample",
+  unconfigured: "Subscribed, but this service has no credentials yet — nothing can be delivered",
   off: "Not subscribed",
 } as const;
 
@@ -86,14 +87,21 @@ export default function SettingsNotificationsRouting() {
                   {row.suppressed && <span className={styles.suppressedNote}>held by {row.suppressed}</span>}
                 </th>
                 {row.services.map((cell) => {
-                  const Icon = cell.state === "on" ? Check : cell.state === "filtered" ? Filter : Minus;
+                  const Icon =
+                    cell.state === "on"
+                      ? Check
+                      : cell.state === "filtered"
+                        ? Filter
+                        : cell.state === "unconfigured"
+                          ? AlertTriangle
+                          : Minus;
                   const detail = cell.state === "filtered" ? ` Only: ${cell.filter?.join(", ")}.` : "";
                   return (
                     <td key={cell.service} className={styles.cell}>
                       <button
                         type="button"
                         className={`${styles.cellButton} ${styles[cell.state]}`}
-                        disabled={cell.state === "off" || testEvent.isPending}
+                        disabled={cell.state === "off" || cell.state === "unconfigured" || testEvent.isPending}
                         onClick={() => send(cell.service, row.type, row.label)}
                         title={`${serviceTitle(cell.service)} · ${row.label}. ${CELL_TITLE[cell.state]}.${detail}`}
                         aria-label={`${row.label} to ${serviceTitle(cell.service)}: ${CELL_TITLE[cell.state]}.${detail}`}
@@ -115,6 +123,10 @@ export default function SettingsNotificationsRouting() {
         </span>
         <span className={styles.legendItem}>
           <Filter size={14} className={styles.filtered} aria-hidden /> subscribed, narrowed by an allow-list
+        </span>
+        <span className={styles.legendItem}>
+          <AlertTriangle size={14} className={styles.unconfigured} aria-hidden /> subscribed, but not configured — add
+          its credentials
         </span>
         <span className={styles.legendItem}>
           <Minus size={14} className={styles.off} aria-hidden /> not subscribed

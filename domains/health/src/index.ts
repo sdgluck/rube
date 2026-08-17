@@ -1,6 +1,6 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "@tinkerbell/core";
-import { db, healthChecks } from "@tinkerbell/db";
+import { db, events, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { getEnvironment, getPlexPrerollStatus } from "@tinkerbell/domain.prerolls";
 import {
@@ -382,20 +382,63 @@ export async function checkAllConfiguredServices(signal?: AbortSignal): Promise<
  * only ever compared against a threshold capped at 20, so anything past that
  * is the same answer.
  */
-function consecutiveFailures(service: string, limit: number): number {
+/**
+ * The failing streak this service is currently in, and when it started.
+ *
+ * Not capped at the threshold. It used to be, which broke the pairing the
+ * announce logic promises: lowering the threshold from 5 to 2 during a four-check
+ * outage read the streak as 2, so `priorFailures + 1 === threshold` never matched
+ * and no failure was announced — while the eventual recovery passed
+ * `priorFailures >= threshold` and *was* announced. Silent when it breaks and
+ * chatty when it returns is the exact outcome the docblock below calls the worst
+ * of both.
+ *
+ * Bounded by a generous row cap rather than by the threshold: a check every few
+ * minutes for a week is thousands of rows, and the prune keeps seven days.
+ */
+const STREAK_SCAN_LIMIT = 5_000;
+
+function failureStreak(service: string): { failures: number; since: number | null } {
   const rows = db
-    .select({ status: healthChecks.status })
+    .select({ status: healthChecks.status, timestamp: healthChecks.timestamp })
     .from(healthChecks)
     .where(eq(healthChecks.service, service))
     .orderBy(desc(healthChecks.timestamp))
-    .limit(limit)
+    .limit(STREAK_SCAN_LIMIT)
     .all();
-  let count = 0;
+  let failures = 0;
+  let since: number | null = null;
   for (const row of rows) {
     if (row.status !== "error") break;
-    count++;
+    failures++;
+    since = row.timestamp;
   }
-  return count;
+  return { failures, since };
+}
+
+/**
+ * Has this outage already been announced?
+ *
+ * Read from the events table rather than tracked in memory, for the same reason
+ * the streak is read from the checks table: the process is restarted by every
+ * upgrade, which is exactly when a server is most likely to be unreachable. It is
+ * also what lets the threshold change mid-outage without the announce and the
+ * recovery disagreeing about what happened.
+ */
+function outageAnnounced(service: string, since: number): boolean {
+  const row = db
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        eq(events.type, "health.failed"),
+        gte(events.timestamp, since),
+        sql`json_extract(${events.metadata}, '$.service') = ${service}`,
+      ),
+    )
+    .limit(1)
+    .get();
+  return !!row;
 }
 
 /**
@@ -421,24 +464,26 @@ function consecutiveFailures(service: string, limit: number): number {
 export function reportHealth(service: string, status: "ok" | "error", message: string): void {
   const threshold = getConfig("health_failure_threshold") ?? 1;
 
-  // Read before the insert: `priorFailures` is the state the streak was in
-  // when this check ran, which is what decides whether anything is announced.
-  const prev = db
-    .select({ status: healthChecks.status })
-    .from(healthChecks)
-    .where(eq(healthChecks.service, service))
-    .orderBy(desc(healthChecks.timestamp))
-    .limit(1)
-    .get();
-  const priorFailures = threshold > 1 ? consecutiveFailures(service, threshold) : prev?.status === "error" ? 1 : 0;
+  // Read before the insert: this is the state the streak was in when the check
+  // ran, which is what decides whether anything is announced.
+  const prior = failureStreak(service);
+  const now = Date.now();
+  const outageStart = prior.since ?? now;
+  const announced = prior.failures > 0 && outageAnnounced(service, outageStart);
 
-  db.insert(healthChecks).values({ service, status, message, timestamp: Date.now() }).run();
-
-  // Nothing to compare against on a service's very first check.
-  if (!prev) return;
+  db.insert(healthChecks).values({ service, status, message, timestamp: now }).run();
 
   if (status === "error") {
-    if (priorFailures + 1 === threshold) {
+    // Crossed the threshold, and this outage hasn't been announced yet. Both
+    // halves are needed: without the first a long outage is one message rather
+    // than one an hour, and without the second changing the threshold mid-outage
+    // either re-announces it or silences it for good.
+    //
+    // A service with no history at all is announced on its first failing check
+    // rather than swallowed. It used to return early on a missing previous row,
+    // so a newly added *Arr instance — or one whose checks had been off for a
+    // week and pruned — lost its first failure entirely.
+    if (prior.failures + 1 >= threshold && !announced) {
       emitEvent("health.failed", `${service}: ${message}`, { service });
       // Plex going away stops every job, every rule and the portal, so it gets
       // its own event type on top of the generic one — a user who routes
@@ -449,7 +494,9 @@ export function reportHealth(service: string, status: "ok" | "error", message: s
         emitEvent("plex.unreachable", `Plex is unreachable: ${message}`, { service });
       }
     }
-  } else if (priorFailures >= threshold) {
+  } else if (announced) {
+    // Only an outage somebody was told about gets a recovery. Anything else is
+    // the "chatty when it returns" half of the failure mode above.
     emitEvent("health.recovered", `${service} recovered`, { service });
   }
 }
