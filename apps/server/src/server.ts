@@ -237,7 +237,7 @@ const portalServer = createServer(
         endpoint: "/api/trpc",
         req: fetchReq,
         router: portalRouter,
-        createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders }),
+        createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders, ip: clientIp(req) }),
       });
       await sendFetchResponse(fetchRes, res);
       return;

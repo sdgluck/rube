@@ -19,7 +19,17 @@ import {
 } from "@tinkerbell/core";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { getPlexClient } from "./_base.ts";
-import { COOKIE_NAMES, clearSessionCookie, isSecureRequest, parseCookie, setSessionCookie } from "./cookies.ts";
+import {
+  COOKIE_NAMES,
+  HANDSHAKE_COOKIES,
+  clearHandshakeCookie,
+  clearSessionCookie,
+  isSecureRequest,
+  parseCookie,
+  setHandshakeCookie,
+  setSessionCookie,
+} from "./cookies.ts";
+import { createHandshake, rateLimit, readHandshake, spendHandshake } from "./handshake.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
 import { getCollectionsForUser } from "@tinkerbell/domain.collections";
@@ -32,15 +42,46 @@ export interface PortalContext {
   resHeaders: Headers;
   /** Whether the request arrived over HTTPS, so the cookie can be `Secure`. */
   secure: boolean;
+  /** The in-flight sign-in handshake, if this browser began one. */
+  handshakeNonce?: string;
+  /** Where the browser thinks it is, for the plex.tv return trip. */
+  origin: string;
+  ip: string;
 }
 
-export function createPortalContext(opts: { req: Request; resHeaders: Headers }): PortalContext {
-  const rawToken = parseCookie(opts.req.headers.get("cookie") ?? "", COOKIE_NAMES.portal);
+export function createPortalContext(opts: { req: Request; resHeaders: Headers; ip?: string }): PortalContext {
+  const secure = isSecureRequest(opts.req);
+  const cookies = opts.req.headers.get("cookie") ?? "";
+  const rawToken = parseCookie(cookies, COOKIE_NAMES.portal);
+  const session = getPlexSession(rawToken, "portal");
+
+  // Sliding expiry only moves the DB row; the browser's copy carries its own
+  // Max-Age, so it has to be re-sent or a portal user who visits every day
+  // would still be logged out on the original schedule.
+  if (session?.refreshed && rawToken) {
+    setSessionCookie(opts.resHeaders, rawToken, { scope: "portal", secure });
+  }
+
+  // A session that was valid when it was issued but whose account has since
+  // stopped being a user of this server must stop working immediately, not at
+  // expiry — the admin flow re-checks `isAdminAccount` on every request for
+  // exactly this reason, and unsharing a library is the portal's equivalent.
+  const authorised = session && plexUserExists(session.userId) ? session : undefined;
+
+  // Behind a reverse proxy the Host the browser used is the forwarded one; the
+  // socket's Host is the internal address and would send the user somewhere
+  // they can't reach.
+  const forwardedHost = opts.req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || new URL(opts.req.url).host;
+
   return {
-    session: getPlexSession(rawToken, "portal"),
+    session: authorised && { userId: authorised.userId, username: authorised.username },
     rawToken,
     resHeaders: opts.resHeaders,
-    secure: isSecureRequest(opts.req),
+    secure,
+    handshakeNonce: parseCookie(cookies, HANDSHAKE_COOKIES.portal),
+    origin: `${secure ? "https" : "http"}://${host}`,
+    ip: opts.ip ?? "unknown",
   };
 }
 
@@ -61,17 +102,48 @@ export const portalRouter = tp.router({
   branding: publicProcedure.query(() => getConfig("portal_branding") ?? {}),
 
   auth: tp.router({
-    start: publicProcedure.input(z.object({ forwardUrl: z.string().url().optional() })).mutation(async ({ input }) => {
+    /**
+     * Begin a sign-in. Returns only the plex.tv URL to send the browser to.
+     *
+     * Neither the PIN id nor the return address is the caller's to choose. The
+     * id stays in this process behind a nonce in an HttpOnly cookie, because
+     * plex.tv will hand a PIN's token to anyone who asks with the client id
+     * that minted it and the ids it issues are sequential — polling around the
+     * live range while somebody approves theirs would otherwise hand over
+     * their session. And `forwardUrl` used to be caller-supplied, which let
+     * anyone choose where the browser landed after approving: a genuine
+     * app.plex.tv link that finishes on their page.
+     */
+    start: publicProcedure.mutation(async ({ ctx }) => {
+      rateLimit(ctx.ip);
       const clientId = ensurePlexClientId();
       const pin = await createPlexPin(clientId);
-      const forwardUrl = input.forwardUrl || getConfig("user_app_public_url") || "";
-      return { id: pin.id, authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl }) };
+      const nonce = createHandshake("portal", pin.id);
+      setHandshakeCookie(ctx.resHeaders, nonce, { scope: "portal", secure: ctx.secure });
+      // The admin-configured public URL wins when it is set — behind a proxy
+      // it is the address that actually reaches the portal — and the request's
+      // own origin is the fallback. Both are the server's answer, not the
+      // caller's.
+      const forwardUrl = getConfig("user_app_public_url") || ctx.origin;
+      return { authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl }) };
     }),
 
-    poll: publicProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    poll: publicProcedure.mutation(async ({ ctx }) => {
+      rateLimit(ctx.ip);
+      const pinId = readHandshake("portal", ctx.handshakeNonce);
+      // No cookie, or one this process doesn't recognise: nothing to finish.
+      if (pinId === undefined) {
+        clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
+        return { status: "expired" as const };
+      }
+
       const clientId = ensurePlexClientId();
-      const token = await checkPlexPin(input.id, clientId);
+      const token = await checkPlexPin(pinId, clientId);
       if (!token) return { status: "pending" as const };
+
+      // Redeemed — one way or the other this handshake is spent.
+      spendHandshake("portal", ctx.handshakeNonce);
+      clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
 
       const account = await getPlexAccount(token, clientId);
       if (!plexUserExists(account.id)) {
