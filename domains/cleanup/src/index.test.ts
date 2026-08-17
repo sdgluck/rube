@@ -7,11 +7,21 @@
 import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { setupTempDb } from "@tinkerbell/db/test-support";
+import { eq } from "drizzle-orm";
 
 setupTempDb("tinkerbell-cleanup-test-");
 
-const { db, cleanupCandidates, cleanupKeepVotes, cleanupProtections, collectionItems, collections, rules } =
-  await import("@tinkerbell/db");
+const {
+  db,
+  cleanupCandidates,
+  cleanupKeepVotes,
+  cleanupProtections,
+  collectionItems,
+  collections,
+  jobs,
+  jobRuns,
+  rules,
+} = await import("@tinkerbell/db");
 const {
   recordMatches,
   dueForAction,
@@ -28,7 +38,11 @@ const {
   removeKeepVote,
   keepVotesForUser,
   leavingSoon,
+  setCandidateApproval,
+  standingRefusal,
+  willBeActioned,
 } = await import("./index.ts");
+const { setConfig, deleteConfig } = await import("@tinkerbell/core");
 
 const RULE = "rule-1";
 const OTHER = "rule-2";
@@ -50,7 +64,37 @@ function streakOf(ruleId: string, ratingKey: string): number | undefined {
   return listCandidates(ruleId).find((c) => c.ratingKey === ratingKey)?.streak;
 }
 
+/**
+ * An install where cleanup could actually remove something: the switch on, and
+ * a recent successful library sync. Everything that warns a human about a
+ * pending removal now checks both, so the fixtures have to state them — a
+ * default install removes nothing, which is the whole point.
+ */
+function enableCleanup(at: number = Date.now()): void {
+  setConfig("cleanup_enabled", true);
+  db.insert(jobs)
+    .values({ id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "", enabled: 1, config: {} })
+    .onConflictDoNothing()
+    .run();
+  db.insert(jobRuns)
+    .values({
+      id: `sync-${at}`,
+      jobId: "sync-media",
+      status: "completed",
+      log: "",
+      progress: 1,
+      message: "",
+      startedAt: at,
+      finishedAt: at,
+    })
+    .onConflictDoNothing()
+    .run();
+}
+
 beforeEach(() => {
+  db.delete(jobRuns).run();
+  db.delete(jobs).run();
+  deleteConfig("cleanup_enabled");
   db.delete(cleanupCandidates).run();
   db.delete(cleanupKeepVotes).run();
   db.delete(cleanupProtections).run();
@@ -59,6 +103,7 @@ beforeEach(() => {
   db.delete(rules).run();
   seedRule(RULE, { action: { kind: "cleanup", mode: "delete", consecutiveRuns: 3 } });
   seedRule(OTHER, { action: { kind: "cleanup", mode: "delete", consecutiveRuns: 3 } });
+  enableCleanup();
 });
 
 // ─── Streak accumulation ─────────────────────────────────────────────────────
@@ -446,5 +491,76 @@ describe("leavingSoon", () => {
     seedRule("labeller", { action: { kind: "cleanup", mode: "label", consecutiveRuns: 1 } });
     recordMatches("labeller", [match("300")], T0);
     assert.deepEqual(leavingSoon(), []);
+  });
+
+  test("says nothing at all while cleanup is switched off", () => {
+    // `cleanup_enabled` is off by default, and the engine refuses every
+    // destructive action while it is. Telling a shared user their films are
+    // leaving is then a promise the server has no way of keeping — and this was
+    // the state of every fresh install.
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    deleteConfig("cleanup_enabled");
+    assert.deepEqual(leavingSoon(), []);
+    assert.equal(dueSoonCount(), 0);
+  });
+
+  test("says nothing while the library index is too stale to trust", () => {
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    db.delete(jobRuns).run();
+    // The switch is on, but "nobody has watched this" can't be claimed off a
+    // library nobody has synced.
+    assert.deepEqual(leavingSoon(), []);
+    assert.equal(dueSoonCount(), 0);
+  });
+
+  test("leaves out an item waiting on an approval nobody has given", () => {
+    seedRule("gated", {
+      action: { kind: "cleanup", mode: "delete", consecutiveRuns: 1, requireApproval: true },
+    });
+    recordMatches("gated", [match("400")], T0);
+
+    assert.deepEqual(leavingSoon(), [], "an unapproved item is not going anywhere on its own");
+    assert.equal(dueSoonCount(), 0);
+
+    setCandidateApproval("gated", "400", true);
+    assert.deepEqual(
+      leavingSoon().map((i) => i.ratingKey),
+      ["400"],
+    );
+    assert.equal(dueSoonCount(), 1);
+  });
+
+  test("leaves out the queue of a rule that has been switched off", () => {
+    // A disabled rule never runs, so its queue is history. Warning about it is
+    // warning about something that cannot happen.
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    db.update(rules).set({ enabled: 0 }).where(eq(rules.id, RULE)).run();
+    assert.deepEqual(leavingSoon(), []);
+    assert.equal(dueSoonCount(), 0);
+  });
+});
+
+describe("willBeActioned", () => {
+  test("is the one answer every surface uses", () => {
+    // The regression this guards is four surfaces disagreeing: the queue page
+    // mirrored the engine, the portal ignored the approval gate, the badge
+    // ignored that and protection, and none of them asked whether cleanup was
+    // switched on at all.
+    for (const t of [0, 1, 2]) recordMatches(RULE, [match("100")], T0 + t * DAY);
+    const [row] = queuedCandidates({ now: T0 + 3 * DAY });
+
+    assert.equal(willBeActioned(row), true);
+    assert.equal(willBeActioned({ ...row, isProtected: true }), false);
+    assert.equal(willBeActioned({ ...row, held: true }), false);
+    assert.equal(willBeActioned({ ...row, ruleEnabled: false }), false);
+    assert.equal(willBeActioned({ ...row, requiresApproval: true, approved: false }), false);
+    assert.equal(willBeActioned({ ...row, requiresApproval: true, approved: true }), true);
+    assert.equal(willBeActioned(row, { refusal: "cleanup is off" }), false);
+  });
+
+  test("standingRefusal names the switch, and clears once it is on", () => {
+    assert.equal(standingRefusal(), null);
+    deleteConfig("cleanup_enabled");
+    assert.match(standingRefusal() ?? "", /disabled globally/);
   });
 });

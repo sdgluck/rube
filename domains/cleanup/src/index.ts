@@ -26,9 +26,11 @@ import {
   collectionItems,
   collections,
   db,
+  jobRuns,
   mediaItems,
   rules,
 } from "@tinkerbell/db";
+import { DAY_MS, getConfig } from "@tinkerbell/core";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
 
@@ -55,6 +57,86 @@ export interface CleanupCandidate {
 
 /** SQLite caps host parameters at 999; a rule can match a whole library. */
 const CHUNK = 400;
+
+/** How stale the local library index may be before cleanup refuses to act. */
+export const MAX_INDEX_AGE_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * Note the wording: it stops every *removal*, not every rule. `label` and
+ * `collection_only` are deliberately exempt at action time (they take nothing
+ * away and are how people try the feature out before trusting it), and the
+ * message used to claim otherwise.
+ */
+export const KILL_SWITCH_REFUSAL =
+  "cleanup is disabled globally (Settings → Cleanup). One switch stops every rule from removing anything.";
+
+/** Age of the newest successful `sync-media` run, or null if there isn't one. */
+function indexAgeMs(now: number): number | null {
+  const row = db
+    .select({ finishedAt: jobRuns.finishedAt })
+    .from(jobRuns)
+    .where(and(eq(jobRuns.jobId, "sync-media"), eq(jobRuns.status, "completed")))
+    .orderBy(desc(jobRuns.finishedAt))
+    .limit(1)
+    .get();
+  return row?.finishedAt == null ? null : now - row.finishedAt;
+}
+
+/**
+ * Refusals that hold for the whole install regardless of what matched — the
+ * global switch and a stale library index.
+ *
+ * Lives here rather than in the job that acts on it because it is not only the
+ * engine's question. Everything that *tells someone a deletion is coming* has
+ * to ask it too: the portal's "leaving soon" list, the sidebar badge and the
+ * advance-warning notification all used to promise removals that could not
+ * happen, and `cleanup_enabled` is off by default — so a fresh install with a
+ * cleanup rule told every shared user their films were about to disappear.
+ *
+ * Note this is not the whole refusal set: the implausible-match guard needs a
+ * Plex round trip and can only be answered mid-run, which is exactly why these
+ * two are split out. These are the ones that persist.
+ */
+export function standingRefusal(now: number = Date.now()): string | null {
+  if (!(getConfig("cleanup_enabled") ?? false)) return KILL_SWITCH_REFUSAL;
+
+  const indexAge = indexAgeMs(now);
+  if (indexAge == null) {
+    return "the library has never been synced successfully, so local watch and metadata state cannot be trusted.";
+  }
+  if (indexAge > MAX_INDEX_AGE_MS) {
+    return `the local library index was last synced ${Math.floor(indexAge / DAY_MS)} day(s) ago — "nobody has watched this" is exactly the claim that goes wrong on stale data.`;
+  }
+  return null;
+}
+
+/**
+ * Will this row actually be actioned, as the engine would decide it?
+ *
+ * The queue page, the portal, the badge and the notification each grew their
+ * own version of this question and each got a different answer — the page
+ * mirrored the engine, the portal ignored the approval gate, the badge ignored
+ * both, and none of them consulted the kill switch. One predicate, so a surface
+ * that says "goes on the next run" means it.
+ *
+ * `held`, protection and mode are already resolved onto the row by
+ * `queuedCandidates`; this adds the reasons that live outside it.
+ */
+export function willBeActioned(
+  candidate: Pick<
+    QueuedCandidate,
+    "actionedAt" | "mode" | "held" | "isProtected" | "requiresApproval" | "approved" | "ruleEnabled"
+  >,
+  opts: { refusal?: string | null } = {},
+): boolean {
+  const refusal = opts.refusal === undefined ? standingRefusal() : opts.refusal;
+  if (refusal) return false;
+  if (candidate.actionedAt != null) return false;
+  if (!candidate.ruleEnabled) return false;
+  if (candidate.held || candidate.isProtected) return false;
+  if (candidate.requiresApproval && !candidate.approved) return false;
+  return true;
+}
 
 /**
  * Fold one run's matches into the ledger.
@@ -305,10 +387,16 @@ export function keepVotesForUser(userId: number): Set<string> {
 /**
  * What is about to be removed, for the portal.
  *
- * Only the destructive modes, and only items that are not held or protected:
- * a list that included "will be labelled" or things already spared would be
- * asking people to worry about nothing, and a portal that cries wolf is one
- * nobody reads the week it matters.
+ * Only the destructive modes, and only where the removal can actually happen —
+ * see `willBeActioned`. A list that included "will be labelled", or things
+ * already spared, or every queued item on an install where cleanup is switched
+ * off (which is the default), is asking people to worry about nothing; and a
+ * portal that cries wolf is one nobody reads the week it matters.
+ *
+ * Items short of the streak are still listed, with `runsRemaining` so the
+ * portal can distinguish "goes on the next run" from "three runs away". That
+ * distance is the point of the feature — it is the window in which somebody can
+ * say they would rather it stayed.
  */
 export function leavingSoon(
   limit = 50,
@@ -318,15 +406,10 @@ export function leavingSoon(
   title: string;
   runsRemaining: number;
 }> {
-  const protectedKeys = protectedRatingKeys();
+  const refusal = standingRefusal(now);
+  if (refusal) return [];
   return queuedCandidates({ now })
-    .filter(
-      (c) =>
-        c.actionedAt == null &&
-        (c.mode === "delete" || c.mode === "unmonitor") &&
-        !c.held &&
-        !protectedKeys.has(c.ratingKey),
-    )
+    .filter((c) => (c.mode === "delete" || c.mode === "unmonitor") && willBeActioned(c, { refusal }))
     .slice(0, limit)
     .map((c) => ({ ratingKey: c.ratingKey, title: c.title, runsRemaining: c.runsRemaining }));
 }
@@ -434,6 +517,12 @@ export interface QueuedCandidate extends CleanupCandidate {
    */
   requiresApproval: boolean;
   approved: boolean;
+  /**
+   * Whether the rule that queued this is still switched on. A disabled rule
+   * never runs, so its queue is history — nothing on it is going anywhere, and
+   * anything that warns people has to say so.
+   */
+  ruleEnabled: boolean;
 }
 
 /**
@@ -451,6 +540,7 @@ export function queuedCandidates(
     .select({
       candidate: cleanupCandidates,
       ruleName: rules.name,
+      ruleEnabled: rules.enabled,
       config: rules.config,
       // Left-joined: a queued item the media index has not seen (or a show,
       // which carries no size of its own) still belongs on the list. It
@@ -468,7 +558,7 @@ export function queuedCandidates(
   const protectedKeys = protectedRatingKeys();
   const votes = keepVotesByItem();
 
-  return rows.map(({ candidate, ruleName, config, fileSize }) => {
+  return rows.map(({ candidate, ruleName, ruleEnabled, config, fileSize }) => {
     const action = (
       config as { action?: { consecutiveRuns?: number; mode?: string; requireApproval?: boolean } } | null
     )?.action;
@@ -485,6 +575,7 @@ export function queuedCandidates(
       keepVotes: votes.get(candidate.ratingKey) ?? [],
       requiresApproval: action?.requireApproval === true,
       approved: candidate.approvedAt != null,
+      ruleEnabled: ruleEnabled === 1,
     };
   });
 }
@@ -538,7 +629,17 @@ export function actionedSince(sinceMs: number): number {
   return row?.n ?? 0;
 }
 
-/** Queue size for the sidebar badge — items due now or on the next run. */
+/**
+ * Queue size for the sidebar badge — items due now or on the next run.
+ *
+ * Gated on the same predicate as everything else that claims a removal is
+ * imminent: a badge counting deletions that cannot happen (cleanup switched
+ * off, waiting on an approval nobody has given, owned by a disabled rule) is a
+ * number that teaches people to ignore the badge.
+ */
 export function dueSoonCount(now: number = Date.now()): number {
-  return queuedCandidates({ limit: 1000, now }).filter((r) => r.runsRemaining <= 1 && !r.held).length;
+  const refusal = standingRefusal(now);
+  if (refusal) return 0;
+  return queuedCandidates({ limit: 1000, now }).filter((r) => r.runsRemaining <= 1 && willBeActioned(r, { refusal }))
+    .length;
 }

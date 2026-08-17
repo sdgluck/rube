@@ -18,10 +18,11 @@ import type { JobContext } from "@tinkerbell/core";
 
 setupTempDb("tinkerbell-cleanup-job-test-");
 
-const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await import("@tinkerbell/db");
+const { db, rules, config, jobs, jobRuns, cleanupCandidates, cleanupProtections, events } =
+  await import("@tinkerbell/db");
 const { setConfig } = await import("@tinkerbell/core");
 const { noopCheckpoint } = await import("@tinkerbell/core");
-const { recordMatches, listCandidates, holdCandidate, markActioned, setCandidateApproval } =
+const { recordMatches, listCandidates, holdCandidate, markActioned, setCandidateApproval, addProtection } =
   await import("@tinkerbell/domain.cleanup");
 const { runHandlerWithCleanup, createCleanupBudget } = await import("./cleanup.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
@@ -204,6 +205,7 @@ function seedSyncRun(agoMs: number | null): void {
 
 beforeEach(() => {
   db.delete(cleanupCandidates).run();
+  db.delete(cleanupProtections).run();
   db.delete(events).run();
   db.delete(rules).run();
   db.delete(config).run();
@@ -835,6 +837,51 @@ describe("cleanup.pending", () => {
     );
 
     assert.ok(!eventTypes().includes("cleanup.pending"));
+  });
+
+  it("does not warn about an item that is protected", async () => {
+    // Protection means never, so naming the title in a "goes on the next run"
+    // message is a false alarm — and a channel that cries wolf gets muted.
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 1);
+    addProtection("item", "100", "The Matrix");
+    stubServers();
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ consecutiveRuns: 3, dryRun: false }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(!eventTypes().includes("cleanup.pending"));
+  });
+
+  it("does not warn about an item waiting on an approval", async () => {
+    // An approval-gated rule removes nothing until a human says so, so "on its
+    // next run" is not true of an unapproved item.
+    primeStreaks([{ ratingKey: "100", title: "The Matrix" }], 1);
+    stubServers();
+    const { ctx } = testContext();
+
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ consecutiveRuns: 3, dryRun: false, requireApproval: true }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.ok(!eventTypes().includes("cleanup.pending"));
+
+    // Approved, and the warning is true again.
+    setCandidateApproval(RULE_ID, "100", true);
+    await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ consecutiveRuns: 4, dryRun: false, requireApproval: true }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+    assert.ok(eventTypes().includes("cleanup.pending"));
   });
 
   it("reports what was actioned after the fact", async () => {

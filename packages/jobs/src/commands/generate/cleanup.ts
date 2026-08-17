@@ -9,7 +9,10 @@
  *
  *   - nothing is actioned on the run that first matched it (the streak, in
  *     `domains/cleanup`)
- *   - nothing is actioned unless `cleanup_enabled` is on
+ *   - nothing destructive is actioned unless `cleanup_enabled` is on. The switch
+ *     lives in `standingRefusal` in `domains/cleanup`, because everything that
+ *     *warns* about a removal has to ask the same question the engine does —
+ *     and `label`/`collection_only` are exempt, since they take nothing away
  *   - nothing is actioned beyond a per-rule and a per-run global ceiling
  *   - nothing is actioned if the rule suddenly matched an implausible slice of
  *     the library
@@ -27,20 +30,22 @@
  * The one thing cleanup still writes to Plex is an item label, in `label` mode,
  * on the items themselves — see `applyAction`.
  */
-import { arrInstances, DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
+import { arrInstances, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
 import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
 import {
   actionedSince,
   dueForAction,
+  KILL_SWITCH_REFUSAL,
   listCandidates,
   markActioned,
+  protectedRatingKeys,
   recordMatches,
+  standingRefusal,
   type CleanupCandidate,
 } from "@tinkerbell/domain.cleanup";
 import { emitEvent } from "@tinkerbell/domain.events";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { arrExternalId } from "./guids.ts";
-import { lastSuccessfulRunAt } from "../../queries.ts";
 import type { HandlerDeps } from "./types.ts";
 
 /** Applied to the items themselves in `label` mode, so they're findable in Plex. */
@@ -58,9 +63,6 @@ export const BUDGET_WINDOW_MS = 24 * 60 * 60 * 1000;
  * a smart filter with a typo that suddenly matches everything.
  */
 export const IMPLAUSIBLE_MATCH_FRACTION = 0.25;
-
-/** How stale the local library index may be before cleanup refuses to act. */
-export const MAX_INDEX_AGE_MS = 48 * 60 * 60 * 1000;
 
 /**
  * The ceiling on destructive actions, across every rule and every run.
@@ -226,12 +228,22 @@ export async function runHandlerWithCleanup(
 function notifyPending(rule: { id: string; name: string }, action: CleanupActionConfig): void {
   if (!isDestructiveMode(action.mode) || action.dryRun) return;
 
+  // Protection and the approval gate are checked here as well as at action
+  // time, because this message names titles and says they go on the next run.
+  // A protected item is never going anywhere, and an item on an approval-gated
+  // rule goes when somebody says so, not on a schedule — naming either is the
+  // kind of false alarm that gets a notification channel muted.
+  const protectedKeys = protectedRatingKeys();
+  const needsApproval = action.requireApproval === true;
+
   // One short of the threshold: these are actioned on the next run.
   const nextUp = listCandidates(rule.id).filter(
     (c) =>
       c.actionedAt == null &&
       c.streak === action.consecutiveRuns - 1 &&
-      (c.heldUntil == null || c.heldUntil <= Date.now()),
+      (c.heldUntil == null || c.heldUntil <= Date.now()) &&
+      !protectedKeys.has(c.ratingKey) &&
+      (!needsApproval || c.approvedAt != null),
   );
   if (nextUp.length === 0) return;
 
@@ -273,37 +285,6 @@ async function refusalReason(
   }
 
   return null;
-}
-
-const KILL_SWITCH_REFUSAL = "cleanup is disabled globally (Settings → Cleanup). One switch stops every rule.";
-
-/**
- * Refusals that hold for the whole run regardless of what matched — the global
- * switch and a stale library index.
- *
- * Split out from the full check because they are cheap (no Plex round trip)
- * and because they are the ones that persist: a rule blocked by either of
- * these is blocked every single run, so the pending warning must stay quiet
- * rather than promising a deletion that never arrives. A channel that cries
- * wolf nightly is one people mute.
- */
-function standingRefusal(): string | null {
-  if (!(getConfig("cleanup_enabled") ?? false)) return KILL_SWITCH_REFUSAL;
-
-  const indexAge = indexAgeMs();
-  if (indexAge == null) {
-    return "the library has never been synced successfully, so local watch and metadata state cannot be trusted.";
-  }
-  if (indexAge > MAX_INDEX_AGE_MS) {
-    return `the local library index was last synced ${Math.floor(indexAge / DAY_MS)} day(s) ago — "nobody has watched this" is exactly the claim that goes wrong on stale data.`;
-  }
-  return null;
-}
-
-/** Age of the newest successful `sync-media` run, or null if there isn't one. */
-function indexAgeMs(): number | null {
-  const at = lastSuccessfulRunAt("sync-media");
-  return at == null ? null : Date.now() - at;
 }
 
 /**
