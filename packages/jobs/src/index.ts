@@ -29,6 +29,7 @@ export { getRunsInWindow } from "./queries.ts";
 export { checkpointStatus, discardCheckpoint, type CheckpointStatus } from "./checkpoint.ts";
 export { CHECKPOINT_TTL_MS } from "./limits.ts";
 export { DEFERRABLE_JOBS, isDeferrable } from "./deferral.ts";
+export { registerCoreHooks } from "./hooks.ts";
 export { COMMANDS, isCommandName, type CommandName, type CommandLane } from "./commands/catalog.ts";
 export { internalJobs, isInternalJobName, type InternalJobName } from "./internal-jobs.ts";
 export {

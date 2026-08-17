@@ -260,3 +260,24 @@ describe("cancellation", () => {
     assert.equal(row()?.status, "failed");
   });
 });
+
+describe("core hooks in the worker", () => {
+  it("are wired by importing the worker entrypoint", async () => {
+    // A worker thread runs none of `apps/server`, and every one of these hooks
+    // defaults to a no-op — so before this was registered here, a job's
+    // notification suppression traces, health reports, post-sync provider
+    // rescans and per-user collection counts all silently did nothing.
+    //
+    // Asserted through the observable end of one of them: emitting an event via
+    // the hook has to reach the events table.
+    const { emitEventViaHook } = await import("@tinkerbell/core");
+    const { events } = await import("@tinkerbell/db");
+    db.delete(events).run();
+
+    emitEventViaHook("notification.suppressed", "quiet hours", { service: "discord" });
+
+    const rows = db.select().from(events).all();
+    assert.equal(rows.length, 1, "the hook must not be a no-op inside a worker");
+    assert.equal(rows[0].type, "notification.suppressed");
+  });
+});

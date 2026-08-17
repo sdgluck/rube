@@ -5,7 +5,7 @@ import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter, portalRouter, createPortalContext, createAdminContext } from "@tinkerbell/trpc";
-import { initJobs, stopSidequest } from "@tinkerbell/jobs";
+import { initJobs, registerCoreHooks, stopSidequest } from "@tinkerbell/jobs";
 import {
   adminAuthRequired,
   authDisabledByEnv,
@@ -13,17 +13,9 @@ import {
   errorMessage,
   getConfig,
   getPersonalizedSharingStatus,
-  setEventEmitter,
-  setHealthReporter,
-  setLocalCollectionsReader,
-  setPostCollectionSyncHook,
   startAuthDisabledWarning,
 } from "@tinkerbell/core";
 import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
-import { reportHealth } from "@tinkerbell/domain.health";
-import { scanAllProviders } from "@tinkerbell/domain.migration";
-import { getLocalCollections } from "@tinkerbell/domain.collections";
-import { emitEvent } from "@tinkerbell/domain.events";
 import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
 import { clientIp, rejectIfNotAdmin } from "./auth.ts";
 import { handleCollectionRoute } from "./collections.ts";
@@ -33,18 +25,15 @@ import { guarded, sendFetchResponse, toFetchRequest } from "./http.ts";
 const log = createLogger("server");
 const portalLog = createLogger("portal");
 
-setHealthReporter(reportHealth);
-// `domains/collections` calls this at the end of `syncCollections`.
-// Wired here at boot so the collections domain doesn't have to import
-// the migration domain (avoiding the near-cycle the audit flagged).
-setPostCollectionSyncHook(scanAllProviders);
-// `domains/users` calls this when counting per-user collection labels.
-// Registered here so users doesn't import collections directly (GET-118).
-setLocalCollectionsReader(() => getLocalCollections());
-// `domains/notifications` calls this to record its own send failures
-// in the activity feed without importing events directly (which would
-// form a cycle; events already imports notifications) — GET-125.
-setEventEmitter(emitEvent);
+// The hooks that let a lower-level module reach a higher-level one without an
+// import cycle: health reporting, the notification→events trace, the migration
+// rescan after a collections sync, and the per-user collection-label reader.
+//
+// Shared with the Sidequest worker entrypoint rather than written out here,
+// because a worker thread runs none of this file and every one of these hooks
+// defaults to a no-op — so the jobs, which is where they are mostly used, were
+// quietly getting nothing.
+registerCoreHooks();
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 // Bind to loopback by default. Tinkerbell has no auth: anyone who can reach
