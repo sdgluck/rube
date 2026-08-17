@@ -7,6 +7,13 @@
  * reaches the rule's `consecutiveRuns`. An item that stops matching loses its
  * row and starts from one next time.
  *
+ * A streak counts *days*, not runs. The number is presented as "three runs in a
+ * row" because for the nightly batch they are the same thing, but a rule can
+ * also carry triggers that fire every fifteen minutes, a cron of its own, and a
+ * "Run now" button — so counting runs meant a threshold of three could be
+ * reached in 45 minutes. `recordMatches` therefore advances a row at most once
+ * per calendar day, in the configured timezone.
+ *
  * That gives three things a single-shot filter cannot. A metadata blip or a
  * half-finished library scan can't delete anything on its own. The queue is
  * inspectable before it acts — the UI reads this table to say "these six films
@@ -30,7 +37,7 @@ import {
   mediaItems,
   rules,
 } from "@tinkerbell/db";
-import { DAY_MS, getConfig } from "@tinkerbell/core";
+import { configuredTimezone, localDayKey, DAY_MS, getConfig } from "@tinkerbell/core";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
 
@@ -152,6 +159,21 @@ export function willBeActioned(
  * counted towards a second action.
  */
 export function recordMatches(ruleId: string, matches: CleanupMatch[], now: number = Date.now()): void {
+  // At most one increment per day, whatever started the run.
+  //
+  // The streak's whole value is that it takes *time* — "these six films go
+  // tomorrow unless you keep them" is only true if tomorrow is when it happens.
+  // But nothing restricts a cleanup rule to the nightly batch: it can carry an
+  // `item-added` trigger (`sync-recently-added` fires every 15 minutes), an
+  // `item-watched` trigger (polled every 30 seconds), a cron of its own *plus*
+  // the batch, and "Run now" is unthrottled. A streak of three could therefore
+  // be reached in 45 minutes, or by pressing a button three times, which is the
+  // same defect `preview.ts` already refuses to allow for previews: "previewing
+  // three times would be enough to delete something".
+  //
+  // The day boundary is read in the configured timezone, like the schedules
+  // people set these rules on.
+  const today = localDayKey(now, configuredTimezone());
   // De-duplicate by rating key first. A grouped rule yields one group per
   // director, per language, per decade — and an item belongs to as many of
   // those as it has tracks or credits. Bumping once per appearance would let a
@@ -164,7 +186,11 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
 
   db.transaction(() => {
     const existing = db
-      .select({ ratingKey: cleanupCandidates.ratingKey, actionedAt: cleanupCandidates.actionedAt })
+      .select({
+        ratingKey: cleanupCandidates.ratingKey,
+        actionedAt: cleanupCandidates.actionedAt,
+        lastMatchedAt: cleanupCandidates.lastMatchedAt,
+      })
       .from(cleanupCandidates)
       .where(eq(cleanupCandidates.ruleId, ruleId))
       .all();
@@ -185,6 +211,14 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
     }
 
     const actioned = new Set(existing.filter((r) => r.actionedAt != null).map((r) => r.ratingKey));
+    // Rows this rule has already counted today. A second run on the same day
+    // still refreshes the row — it stops the row being pruned as "no longer
+    // matching", which is the other half of the streak — but does not advance it.
+    const countedToday = new Set(
+      existing
+        .filter((r) => r.actionedAt == null && localDayKey(r.lastMatchedAt, configuredTimezone()) === today)
+        .map((r) => r.ratingKey),
+    );
 
     for (const match of unique) {
       if (actioned.has(match.ratingKey)) continue;
@@ -201,7 +235,9 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
         .onConflictDoUpdate({
           target: [cleanupCandidates.ruleId, cleanupCandidates.ratingKey],
           set: {
-            streak: sql`${cleanupCandidates.streak} + 1`,
+            streak: countedToday.has(match.ratingKey)
+              ? sql`${cleanupCandidates.streak}`
+              : sql`${cleanupCandidates.streak} + 1`,
             lastMatchedAt: now,
             // A retitled item shouldn't show its old name in the queue.
             title: match.title,

@@ -109,6 +109,42 @@ beforeEach(() => {
 // ─── Streak accumulation ─────────────────────────────────────────────────────
 
 describe("recordMatches", () => {
+  test("a second run on the same day does not advance the streak", () => {
+    // The threshold is presented as "three runs in a row", but a cleanup rule
+    // can carry an `item-added` trigger that fires every fifteen minutes, a
+    // cron of its own on top of the nightly batch, and a "Run now" button.
+    // Counting runs meant three of them — 45 minutes, or three clicks — was
+    // enough to delete a file.
+    // Fixed zone and a midday base, so "the same day" is unambiguous wherever
+    // this suite runs.
+    setConfig("global_timezone", "UTC");
+    const noon = Date.parse("2026-08-04T12:00:00Z");
+    recordMatches(RULE, [match("100")], noon);
+    recordMatches(RULE, [match("100")], noon + 60_000);
+    recordMatches(RULE, [match("100")], noon + 6 * 60 * 60 * 1000);
+    assert.equal(streakOf(RULE, "100"), 1);
+
+    // The next day it moves.
+    recordMatches(RULE, [match("100")], noon + DAY);
+    assert.equal(streakOf(RULE, "100"), 2);
+    deleteConfig("global_timezone");
+  });
+
+  test("a same-day run still keeps the row alive", () => {
+    // Not advancing is not the same as not recording: the other half of the
+    // streak is that an item which stops matching loses its row, so a run that
+    // still matches has to refresh it.
+    setConfig("global_timezone", "UTC");
+    const noon = Date.parse("2026-08-04T12:00:00Z");
+    recordMatches(RULE, [match("100")], noon);
+    recordMatches(RULE, [match("100", "The Matrix")], noon + 60_000);
+    const row = listCandidates(RULE).find((c) => c.ratingKey === "100");
+    assert.equal(row?.streak, 1);
+    assert.equal(row?.lastMatchedAt, noon + 60_000);
+    assert.equal(row?.title, "The Matrix", "a retitled item still updates");
+    deleteConfig("global_timezone");
+  });
+
   test("an item matching three runs in a row reaches streak 3", () => {
     recordMatches(RULE, [match("100")], T0);
     assert.equal(streakOf(RULE, "100"), 1);

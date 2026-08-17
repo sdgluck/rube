@@ -873,11 +873,13 @@ describe("cleanup.pending", () => {
 
     assert.ok(!eventTypes().includes("cleanup.pending"));
 
-    // Approved, and the warning is true again.
+    // Approved, and the warning is true again. The streak doesn't move — it
+    // advances once a day — so the same threshold still puts this item one run
+    // short, which is the state the warning is about.
     setCandidateApproval(RULE_ID, "100", true);
     await runHandlerWithCleanup(
       deps(ctx),
-      cleanupAction({ consecutiveRuns: 4, dryRun: false, requireApproval: true }),
+      cleanupAction({ consecutiveRuns: 3, dryRun: false, requireApproval: true }),
       createCleanupBudget(),
       handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
     );
