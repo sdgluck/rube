@@ -7,6 +7,7 @@ import EmptyState from "#components/EmptyState";
 import PageShell, { StatusChip } from "#components/PageShell";
 import RelativeTime from "#components/RelativeTime";
 import RunLog from "#components/RunLog";
+import FilterFunnel from "./FilterFunnel";
 import SortableTh from "#components/SortableTh";
 import { SkeletonTable } from "#components/Skeleton";
 import { useToast } from "#components/Toast";
@@ -267,6 +268,15 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
                         {/* A test sits in the same list and reads identically at
                             a glance, so it says which it is. */}
                         {run.phase === "test" && <span className={styles.runPhaseTag}>test</span>}
+                        {/* A run that succeeded at producing nothing looks
+                            identical to one that succeeded at producing
+                            something. This is the one that has an explanation
+                            attached. */}
+                        {run.hasFunnel && (
+                          <span className={styles.runPhaseTag} title="Matched nothing — this run recorded why">
+                            empty
+                          </span>
+                        )}
                       </td>
                       <td className={shared.cellMuted}>
                         <RelativeTime timestamp={run.startedAt} />
@@ -389,6 +399,8 @@ function RunDetail({ runId, ruleId, outcome }: { runId: string; ruleId: string; 
         </div>
       </CardSection>
 
+      {run.hasFunnel && <EmptyRunDiagnosis runId={runId} />}
+
       {run.phase === "run" &&
         (outcome === "metadata" ? <MetadataWrites ruleId={ruleId} /> : <RunChanges runId={runId} live={live} />)}
 
@@ -507,6 +519,30 @@ function MetadataWrites({ ruleId }: { ruleId: string }) {
  * deletes and recreates its collections, Plex can't tell you either — this is
  * the only place that remembers.
  */
+/**
+ * Why this run produced nothing.
+ *
+ * Fetched separately from the run itself, and only when the run says it has
+ * one: `runDetail` is polled once a second while a run is live, and shipping a
+ * funnel with every poll would be paying for the answer over and over on runs
+ * that don't have a question.
+ */
+function EmptyRunDiagnosis({ runId }: { runId: string }) {
+  const query = trpc.rules.runFunnel.useQuery({ runId }, { staleTime: Infinity });
+  const funnel = query.data?.funnel;
+  if (!funnel || funnel.length === 0) return null;
+
+  return (
+    <CardSection
+      className={shared.runCard}
+      titleClassName={shared.runCardTitle}
+      title="This run matched nothing — here's where the items went"
+    >
+      <FilterFunnel sections={funnel} />
+    </CardSection>
+  );
+}
+
 function RunChanges({ runId, live }: { runId: string; live: boolean }) {
   const utils = trpc.useUtils();
   const { addToast } = useToast();

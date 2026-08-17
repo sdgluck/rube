@@ -413,6 +413,21 @@ export const ruleRuns = sqliteTable(
     collectionCount: integer("collection_count"),
     itemCount: integer("item_count"),
     error: text("error"),
+    /**
+     * Where the items went, clause by clause — one entry per library.
+     *
+     * Only written when a smart-filter rule finishes a *real* run having
+     * matched nothing, which is the one moment the answer is worth the cost
+     * (one Plex count per clause per section). A run that matched something
+     * has no attrition worth attributing, and paying for this on every rule
+     * every night would be minutes of counting to explain nothing.
+     *
+     * Shape is `TestFunnelSection[]` from domain.rule-runs. Stored rather than
+     * recomputed because by the time anyone reads a `rule.empty` notification
+     * the library has moved on, and a funnel measured this morning would not
+     * be the funnel that produced last night's zero.
+     */
+    funnel: text("funnel", { mode: "json" }).$type<unknown>(),
     startedAt: integer("started_at").notNull(),
     /**
      * Heartbeat, pushed forward by every log/progress flush. A worker thread that

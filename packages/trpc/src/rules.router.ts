@@ -20,6 +20,7 @@ import {
   findActiveRuleRun,
   getActiveRuleRuns,
   getRuleRun,
+  getRuleRunFunnel,
   getRuleRunLog,
   getRuleRuns,
   getRuleRunCounts,
@@ -324,6 +325,17 @@ export const rulesRouter = t.router({
     }),
 
   runDetail: procedure.input(z.object({ runId: z.string() })).query(({ input }) => getRuleRun(input.runId)),
+
+  /**
+   * Where the items went, for a run that produced none.
+   *
+   * Its own procedure rather than a field on `runDetail`, which the UI polls
+   * once a second while a run is live: the funnel is written once at the very
+   * end and read only when somebody expands the row that says there is one.
+   */
+  runFunnel: procedure
+    .input(z.object({ runId: z.string() }))
+    .query(({ input }) => ({ funnel: getRuleRunFunnel(input.runId) })),
 
   /** What this run added to and removed from each collection it touched. */
   runChanges: procedure.input(z.object({ runId: z.string() })).query(({ input }) => getRunChanges(input.runId)),

@@ -46,9 +46,22 @@ export function eventLink(event: LinkableEvent): string | null {
     case "media.added":
       return "/media";
 
-    // The Rules table narrows on `?q`, so the rule's name is the deep link.
-    case "collection.created":
+    // A rule that stopped matching now carries the run that noticed, and that
+    // run carries the clause-by-clause funnel explaining why. Landing on the
+    // Rules list instead would mean pressing Test and hoping the library still
+    // looks the way it did when the run happened.
     case "rule.empty": {
+      const ruleId = str(meta, "ruleId");
+      const runId = str(meta, "ruleRunId");
+      if (ruleId && runId) {
+        return `/rules/${encodeURIComponent(ruleId)}/runs?run=${encodeURIComponent(runId)}`;
+      }
+      const ruleName = str(meta, "ruleName");
+      return ruleName ? `/rules?q=${encodeURIComponent(ruleName)}` : "/rules";
+    }
+
+    // The Rules table narrows on `?q`, so the rule's name is the deep link.
+    case "collection.created": {
       const ruleName = str(meta, "ruleName");
       return ruleName ? `/rules?q=${encodeURIComponent(ruleName)}` : "/rules";
     }

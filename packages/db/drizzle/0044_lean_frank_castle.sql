@@ -1,0 +1,1 @@
+ALTER TABLE `rule_runs` ADD `funnel` text;

@@ -56,6 +56,13 @@ export function announceEmptyRule(
   ruleName: string,
   previousItemCount: number | null,
   itemCount: number,
+  /**
+   * The run this happened on, so the notification can link to the funnel that
+   * is about to be written onto it. Optional only because a run isn't always
+   * tracked; when it is, this is the whole difference between "your rule broke"
+   * and "your rule broke, and here is the clause that did it".
+   */
+  ruleRunId?: string | null,
 ): void {
   if (itemCount !== 0) return;
   if (previousItemCount == null || previousItemCount <= 0) return;
@@ -63,6 +70,6 @@ export function announceEmptyRule(
   emitEvent(
     "rule.empty",
     `"${ruleName}" matched nothing this run — it matched ${previousItemCount} item(s) last time`,
-    { ruleId, ruleName, previousItemCount },
+    { ruleId, ruleName, previousItemCount, ...(ruleRunId ? { ruleRunId } : {}) },
   );
 }

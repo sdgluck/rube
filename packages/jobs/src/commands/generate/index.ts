@@ -27,6 +27,7 @@ import {
 } from "@tinkerbell/contracts";
 import { parseRuleConfig } from "./config.ts";
 import { announceEmptyRule, announceNewCollections } from "./events.ts";
+import { diagnoseEmptyRun } from "./diagnose.ts";
 import { runHandler } from "./dispatch.ts";
 import { createCleanupBudget } from "./cleanup.ts";
 import { createMetadataBudget } from "./metadata.ts";
@@ -284,7 +285,18 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
       // and "your cleanup rule has stopped finding anything to delete" is the
       // opposite of a warning.
       if (!isCleanupRule(ruleConfig)) {
-        announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount);
+        announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount, ruleRun.runId);
+        // The explanation the notification can't carry. Measured now, while
+        // the library still looks the way it did when the run produced zero.
+        await diagnoseEmptyRun({
+          ctx: ruleCtx,
+          client,
+          sections,
+          ruleType: rule.type,
+          ruleConfig,
+          ruleRunId: ruleRun.runId,
+          itemCount,
+        });
       }
 
       // Only after the rule has fully committed — a checkpoint written any
@@ -502,7 +514,8 @@ export async function runSingleRule(
   // The caller (`rules.run`) writes this run's counts afterwards, so
   // `previousItemCount` is still the previous run's here.
   if (!isCleanupRule(ruleConfig)) {
-    announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount);
+    announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount, ruleRunId);
+    await diagnoseEmptyRun({ ctx, client, sections, ruleType: rule.type, ruleConfig, ruleRunId, itemCount });
   }
 
   ctx.progress(4, 4, "Done");

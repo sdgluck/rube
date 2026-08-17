@@ -18,6 +18,7 @@ import { and, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm
 import { db, ruleRuns, rules } from "@tinkerbell/db";
 import { errorMessage, noopCheckpoint, type JobContext } from "@tinkerbell/core";
 import { ACTIVE_RULE_RUN_STATUSES, isRuleRunTerminal, type RuleRunStatus } from "./statuses.ts";
+import type { TestFunnelSection } from "./test-results.ts";
 import {
   RULE_RUN_CANCEL_POLL_MS,
   RULE_RUN_FLUSH_INTERVAL_MS,
@@ -45,6 +46,15 @@ export interface RuleRunSummary {
   startedAt: number;
   updatedAt: number;
   finishedAt: number | null;
+  /**
+   * Whether this run recorded a clause-by-clause funnel.
+   *
+   * A flag rather than the payload: this summary is polled once a second
+   * while a run is live, and the funnel is written once at the very end. The
+   * list needs to know a diagnosis exists; only the row you expand needs to
+   * know what it says.
+   */
+  hasFunnel: boolean;
 }
 
 /** A summary plus the rule's name, for views that aren't already rule-scoped. */
@@ -84,6 +94,7 @@ const SUMMARY_COLUMNS = {
   startedAt: ruleRuns.startedAt,
   updatedAt: ruleRuns.updatedAt,
   finishedAt: ruleRuns.finishedAt,
+  hasFunnel: sql<boolean>`${ruleRuns.funnel} IS NOT NULL`,
 };
 
 /**
@@ -390,6 +401,23 @@ export function getRuleRuns(ruleId: string, options: { limit?: number; phase?: R
  */
 export function getRuleRun(runId: string): RuleRunSummary | null {
   return db.select(SUMMARY_COLUMNS).from(ruleRuns).where(eq(ruleRuns.id, runId)).get() ?? null;
+}
+
+/**
+ * Record where the items went, for a run that produced none.
+ *
+ * Written after the run's terminal status rather than as part of it: the
+ * diagnosis is an explanation of a result that already stands, and a funnel
+ * that fails to build must not turn a successful run into a failed one.
+ */
+export function setRuleRunFunnel(runId: string, funnel: TestFunnelSection[]): void {
+  db.update(ruleRuns).set({ funnel }).where(eq(ruleRuns.id, runId)).run();
+}
+
+/** The stored funnel, or null for the overwhelming majority of runs. */
+export function getRuleRunFunnel(runId: string): TestFunnelSection[] | null {
+  const row = db.select({ funnel: ruleRuns.funnel }).from(ruleRuns).where(eq(ruleRuns.id, runId)).get();
+  return (row?.funnel as TestFunnelSection[] | null | undefined) ?? null;
 }
 
 /** A slice of a run's log from `offset`, in codepoints (what SQLite counts). */
