@@ -1,0 +1,138 @@
+.scroller {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--t-body-sm);
+}
+
+.matrix th,
+.matrix td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 0;
+}
+
+.matrix tbody tr:last-child th,
+.matrix tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* The event name column stays put while the nine service columns scroll. */
+.eventHead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  min-width: 200px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+thead .eventHead {
+  background: var(--surface-header);
+}
+
+.serviceHead {
+  padding: 10px 8px;
+  background: var(--surface-header);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  /* Nine columns of service names read as a header row either way, and
+     horizontal is what keeps the table one screen tall. */
+  text-align: center;
+}
+
+.cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* The whole cell is the test-send button — the target is otherwise a 10px dot
+   in a 60px column, and the state it shows is exactly what you want to test. */
+.cellButton {
+  appearance: none;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 10px 8px;
+  cursor: pointer;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cellButton:hover:not(:disabled) {
+  background: var(--fill-hover);
+}
+
+.cellButton:disabled {
+  cursor: default;
+}
+
+.on {
+  color: var(--status-ok-fg);
+}
+
+.filtered {
+  color: var(--status-warn-fg);
+}
+
+.off {
+  color: var(--ink-faint);
+}
+
+/* An event whose row is greyed because quiet hours would drop it right now. */
+.suppressedRow .eventHead,
+.suppressedRow .cell {
+  opacity: 0.55;
+}
+
+.suppressedNote {
+  display: block;
+  font: var(--t-caption);
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.eventLabel {
+  display: block;
+}
+
+/* `digest.sent` is a routing target, not an event anything emits. */
+.notEmitted {
+  font: var(--t-caption);
+  color: var(--ink-faint);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .eventHead {
+    min-width: 150px;
+  }
+}

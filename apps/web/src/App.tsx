@@ -29,6 +29,7 @@ const SettingsDatabasesService = lazy(() => import("#pages/Settings/Databases/Se
 const SettingsNotifications = lazy(() => import("#pages/Settings/Notifications/SettingsNotifications"));
 const SettingsNotificationsService = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsService"));
 const SettingsNotificationsDelivery = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsDelivery"));
+const SettingsNotificationsRouting = lazy(() => import("#pages/Settings/Notifications/SettingsNotificationsRouting"));
 const SettingsBandwidth = lazy(() => import("#pages/Settings/SettingsBandwidth"));
 const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
 const SettingsCleanup = lazy(() => import("#pages/Settings/SettingsCleanup"));
@@ -382,8 +383,16 @@ export default function App() {
                       </LazyPage>
                     }
                   >
-                    <Route index element={<Navigate to="/settings/notifications/discord" replace />} />
-                    {/* Ahead of `:service`, which would otherwise match it. */}
+                    <Route index element={<Navigate to="/settings/notifications/routing" replace />} />
+                    {/* Ahead of `:service`, which would otherwise match them. */}
+                    <Route
+                      path="routing"
+                      element={
+                        <LazyPage>
+                          <SettingsNotificationsRouting />
+                        </LazyPage>
+                      }
+                    />
                     <Route
                       path="delivery"
                       element={

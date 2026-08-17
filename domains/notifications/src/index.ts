@@ -178,6 +178,101 @@ export function suppressionReason(type: string, service: string | undefined, now
   return null;
 }
 
+/* ─── Routing, as something you can look at ─────────────────────────────────
+ *
+ * Routing has three orthogonal axes per service — subscribed event types, a
+ * job-id allow-list, a health-target allow-list — across nine services, plus
+ * quiet hours with an urgent-event exemption on top. Every one of those is a
+ * checkbox on a different tab, and the only feedback the app gave was a test
+ * send that ignored all of it.
+ *
+ * This is the same decision `notifyEvent` makes, evaluated without sending
+ * anything: the routing table you would otherwise have to reconstruct in your
+ * head from four screens.
+ */
+
+export type RoutingState =
+  /** Not subscribed to this event type at all. */
+  | "off"
+  /** Subscribed, and nothing narrows it. */
+  | "on"
+  /** Subscribed, but an allow-list means only some of these events arrive. */
+  | "filtered";
+
+export interface RoutingCell {
+  service: NotificationService;
+  state: RoutingState;
+  /** The allow-list narrowing this cell, when `state` is "filtered". */
+  filter?: string[];
+}
+
+export interface RoutingRow {
+  type: string;
+  label: string;
+  services: RoutingCell[];
+  /** Why this event would be dropped right now, or null if it would go out. */
+  suppressed: string | null;
+  /** False for `digest.sent`, which is a routing target rather than an event. */
+  emitted: boolean;
+}
+
+/** The whole event × service grid, plus why anything is currently muted. */
+export function routingMatrix(now: Date = new Date()): RoutingRow[] {
+  return EVENT_TYPES.map((event) => ({
+    type: event.id,
+    label: event.label,
+    emitted: event.id !== "digest.sent",
+    // No service name: quiet hours are a statement about the server, and the
+    // per-service mute only applies to health events, which the cell's own
+    // allow-list already describes.
+    suppressed: suppressionReason(event.id, undefined, now),
+    services: AGENTS.map((agent): RoutingCell => {
+      if (!(getConfig(agent.eventsKey) ?? []).includes(event.id)) return { service: agent.name, state: "off" };
+
+      // An empty allow-list means "all of them", which is why these read as
+      // `length > 0` rather than as a plain presence check.
+      const filterKey = event.id.startsWith("job.")
+        ? agent.jobsKey
+        : event.id.startsWith("health.")
+          ? agent.healthKey
+          : null;
+      const filter = filterKey ? (getConfig(filterKey) ?? []) : [];
+
+      return filter.length > 0
+        ? { service: agent.name, state: "filtered", filter }
+        : { service: agent.name, state: "on" };
+    }),
+  }));
+}
+
+/**
+ * A representative body for an event type, for a test send.
+ *
+ * Event notifications are `plainMessage(label, text)` — there is no richer
+ * form to preview — so what a test can honestly show is the title the service
+ * will display and a body the same shape as the real one.
+ */
+export function sampleMessageFor(type: string): RichMessage {
+  const label = EVENT_TYPES.find((e) => e.id === type)?.label ?? type;
+  const samples: Record<string, string> = {
+    "job.completed": "Sync Media completed in 42s — 127 items updated.",
+    "job.failed": "Generate failed: Plex returned 401 Unauthorized.",
+    "health.failed": "Radarr is unreachable (connect ETIMEDOUT).",
+    "health.recovered": "Radarr is responding again.",
+    "plex.unreachable": "Plex has not responded for 6 minutes.",
+    "bandwidth.tested": "Downstream 412 Mbps, upstream 38 Mbps.",
+    "cleanup.pending": "6 films are scheduled for deletion tomorrow unless kept.",
+    "cleanup.actioned": "Removed 4 films, freeing 61 GB.",
+    "metadata.written": "Wrote metadata to 18 items (batch 3f2a1c).",
+    "media.added": "127 new files in Movies, including Sinners (2025).",
+    "collection.created": "Created “Directed by Christopher Nolan” with 12 items.",
+    "rule.empty": "“Oscar Winners” matched nothing this run — it matched 34 last run.",
+    "registry.update_available": "3 registry rules have updates available.",
+    "digest.sent": "Your weekly digest — 12 added, 3 leaving soon.",
+  };
+  return plainMessage(label, `${samples[type] ?? "Test notification from Tinkerbell."} (test)`);
+}
+
 export function notifyEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
   const label = EVENT_TYPES.find((e) => e.id === type)?.label ?? type;
   const jobId = typeof metadata?.jobId === "string" ? metadata.jobId : undefined;
@@ -185,7 +280,26 @@ export function notifyEvent(type: string, message: string, metadata?: Record<str
 
   // Checked once for the whole dispatch: quiet hours and mutes are statements
   // about the server, not about any one channel.
-  if (suppressionReason(type, healthService)) return;
+  const suppressed = suppressionReason(type, healthService);
+  if (suppressed) {
+    // Record what didn't go out. Quiet hours were previously invisible: the
+    // event itself is in the feed either way, so an admin reading it in the
+    // morning had no way to tell whether their phone had stayed silent by
+    // design or because a webhook URL had rotted.
+    //
+    // The `notification.` guard is the same recursion break as the send-failure
+    // path below, and it is load-bearing rather than defensive: `emitEvent`
+    // calls straight back into this function.
+    const recipients = servicesForEvent(type);
+    if (!type.startsWith("notification.") && recipients.length > 0) {
+      emitEventViaHook("notification.suppressed", `${label} not sent to ${recipients.join(", ")} — ${suppressed}`, {
+        originalType: type,
+        reason: suppressed,
+        services: recipients,
+      });
+    }
+    return;
+  }
 
   for (const agent of AGENTS) {
     const enabledEvents = getConfig(agent.eventsKey);

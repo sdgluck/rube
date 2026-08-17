@@ -31,6 +31,7 @@ import { healthRouter } from "./health.router.ts";
 import { stressTestRouter } from "./stress-test.router.ts";
 import { previewRouter } from "./preview.router.ts";
 import { searchRouter } from "./search.router.ts";
+import { notificationsRouter } from "./notifications.router.ts";
 import { arrRouter } from "./arr.router.ts";
 import { postersRouter } from "./posters.router.ts";
 import { prerollsRouter } from "./prerolls.router.ts";
@@ -72,6 +73,7 @@ export const appRouter = t.router({
   nav: navRouter,
   views: viewsRouter,
   personalization: personalizationRouter,
+  notifications: notificationsRouter,
 
   /**
    * The server's machine identifier, which is what an `app.plex.tv` deep link
