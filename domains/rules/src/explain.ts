@@ -24,7 +24,7 @@ import {
   type SmartFilterNode,
   type SmartFilterOp,
 } from "@tinkerbell/plex-smart-filter";
-import { describeCondition } from "@tinkerbell/contracts";
+import { describeCondition, ruleCoversSection } from "@tinkerbell/contracts";
 import { completionThreshold, evaluateLocal, watchStateFor, watchStateUserScope } from "@tinkerbell/domain.playback";
 
 /**
@@ -69,7 +69,10 @@ export interface ExplainOptions {
   client: PlexClient;
   ratingKey: string;
   filter: SmartFilterGroup;
-  /** Libraries the rule is scoped to, by title. Empty means all of them. */
+  /**
+   * Libraries the rule is scoped to — titles or section keys, whichever the
+   * config holds. Empty means all of them.
+   */
   ruleSectionTitles: string[];
   /** Every library, so the item's own one can be found. */
   sections: Array<{ key: string; title: string; type: string }>;
@@ -114,7 +117,11 @@ export async function explainItem(opts: ExplainOptions): Promise<ItemExplanation
   // Scope first. A rule that doesn't cover the library is the commonest
   // answer by far, and evaluating six clauses before saying so would be a
   // slower way of being unhelpful.
-  if (ruleSectionTitles.length > 0 && !ruleSectionTitles.includes(section.title)) {
+  //
+  // Asked through `ruleCoversSection` so this agrees with the engine: a rule
+  // whose sections were saved as keys rather than titles is covered by the run
+  // and used to be reported here as out of scope.
+  if (!ruleCoversSection(ruleSectionTitles, section)) {
     return {
       ...base,
       matches: false,

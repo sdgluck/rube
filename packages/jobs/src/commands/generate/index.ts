@@ -9,6 +9,7 @@ import {
   setRuleLastCollection,
   setRuleLastRun,
   setRuleWindowCleared,
+  rulesWithOrderedWrites,
   withRuleLock,
   RuleLockedError,
 } from "@tinkerbell/domain.rules";
@@ -22,6 +23,7 @@ import {
   isCleanupRule,
   isMetadataRule,
   isRuleActiveOn,
+  ruleCoversSection,
   runsInNightlyBatch,
   type RuleSchedule,
 } from "@tinkerbell/contracts";
@@ -195,7 +197,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
           ruleCtx.log("Failed to remove out-of-season collections:", err);
         }
       }
-      ruleRun.finish({ status: "ok" });
+      ruleRun.finish({ status: "ok", message: `Skipped — ${skip.reason}.` });
       completedRuleIds.add(rule.id);
       saveCheckpoint();
       return;
@@ -211,7 +213,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
       const unavailable = llmUnavailableReason();
       if (unavailable) {
         ruleCtx.log(`Skipping AI rule — ${unavailable}.`);
-        ruleRun.finish({ status: "ok" });
+        ruleRun.finish({ status: "ok", message: `Skipped — ${unavailable}.` });
         completedRuleIds.add(rule.id);
         saveCheckpoint();
         return;
@@ -222,7 +224,7 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
     const ruleSectionsOrNull = filterSections(allSections, ruleConfig.sections);
     if (ruleSectionsOrNull === null) {
       ruleCtx.log(`No matching sections for rule config, skipping.`);
-      ruleRun.finish({ status: "ok" });
+      ruleRun.finish({ status: "ok", message: "Skipped — none of this rule's libraries exist on the server." });
       // A rule with nothing to do is done — don't re-evaluate it on a resume.
       completedRuleIds.add(rule.id);
       saveCheckpoint();
@@ -352,15 +354,42 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
     }
   };
 
-  // Rules are independent, so the pool is a plain shared cursor over the
-  // list — no locking needed, since only one worker runs between awaits.
   const pending = enabledRules.filter((r) => !completedRuleIds.has(r.id));
+
+  // Most rules are independent, so the pool is a plain shared cursor over the
+  // list — no locking needed, since only one worker runs between awaits.
+  //
+  // Not all of them are. Two rules writing the same metadata field in the same
+  // library are decided by which goes second, and that is what the Rules page
+  // promises the user their positions mean. Draining those through the pool made
+  // the winner whichever *finished* last, which is neither the same claim nor a
+  // stable one from night to night. So they go first, one at a time, in position
+  // order; everything else still interleaves.
+  const mustNotInterleave = rulesWithOrderedWrites();
+  const sequential = pending.filter((r) => mustNotInterleave.has(r.id));
+  const concurrent = pending.filter((r) => !mustNotInterleave.has(r.id));
+  if (sequential.length > 0) {
+    ctx.log(
+      `${sequential.length} rule(s) write a field another rule also writes — running those in order, one at a time.`,
+    );
+  }
+
   let started = 0;
   let finished = 0;
 
+  for (const rule of sequential) {
+    if (ctx.signal.aborted) break;
+    try {
+      await runOneRule(rule, ctx);
+    } finally {
+      finished++;
+      ctx.progress(finished, pending.length, `Completed ${finished}/${pending.length} rules`);
+    }
+  }
+
   const worker = async (): Promise<void> => {
-    while (started < pending.length && !ctx.signal.aborted) {
-      const rule = pending[started++];
+    while (started < concurrent.length && !ctx.signal.aborted) {
+      const rule = concurrent[started++];
       // With rules interleaved, streaming every line straight to the job log
       // would braid them together and make the log unreadable. Each rule's
       // output is buffered and flushed as one block when it finishes.
@@ -379,7 +408,9 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
   // leave its siblings' rejections unhandled — those surface as an
   // unhandled rejection inside the Sidequest worker thread, where nothing
   // catches them. Every worker is waited for, then the first failure wins.
-  const outcomes = await Promise.allSettled(Array.from({ length: concurrency }, worker));
+  const outcomes = await Promise.allSettled(
+    Array.from({ length: Math.max(1, Math.min(concurrency, concurrent.length)) }, worker),
+  );
   const aborted = outcomes.find((o) => o.status === "rejected");
   if (aborted) throw aborted.reason;
 
@@ -571,8 +602,9 @@ async function connectPlex(
  */
 function filterSections(allSections: PlexSection[], filter: string[] | undefined): PlexSection[] | null | undefined {
   if (!filter || filter.length === 0) return undefined;
-  const names = filter.map((s) => s.trim().toLowerCase());
-  const matched = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
+  // `ruleCoversSection` is the shared predicate — the "why was this skipped?"
+  // panel asks the same question and used to answer it differently.
+  const matched = allSections.filter((s) => ruleCoversSection(filter, s));
   return matched.length === 0 ? null : matched;
 }
 

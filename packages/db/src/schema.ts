@@ -299,6 +299,19 @@ export const deletedRules = sqliteTable(
     config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
     enabled: integer("enabled").notNull().default(1),
     createdAt: integer("created_at").notNull(),
+    /**
+     * Where the rule sat in the running order when it was deleted.
+     *
+     * Carried on the tombstone because position decides which rule wins when
+     * two disagree. Without it a restore fell back to the column default, 0 —
+     * so undoing a delete moved the rule to the *front* of the order, where it
+     * now won every conflict it used to lose. A restore has to put a rule back
+     * where it was, not just back.
+     *
+     * Nullable for tombstones written before this column existed; a restore
+     * treats null as "no better answer than the default".
+     */
+    position: integer("position"),
     registryRuleSlug: text("registry_rule_slug"),
     registryPackSlug: text("registry_pack_slug"),
     registryVersion: integer("registry_version"),

@@ -24,6 +24,7 @@ export {
   conflictsForRule,
   findRuleConflicts,
   rulesProducingCollectionNamed,
+  rulesWithOrderedWrites,
   type ConflictKind,
   type RuleConflict,
 } from "./conflicts.ts";

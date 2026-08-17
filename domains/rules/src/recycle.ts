@@ -59,6 +59,9 @@ export function rememberDeletedRule(id: string): boolean {
       config: rule.config,
       enabled: rule.enabled,
       createdAt: rule.createdAt,
+      // Position decides which rule wins where two disagree, so it is part of
+      // what a restore has to put back — see the column's note on the schema.
+      position: rule.position,
       registryRuleSlug: rule.registryRuleSlug,
       registryPackSlug: rule.registryPackSlug,
       registryVersion: rule.registryVersion,
@@ -74,6 +77,7 @@ export function rememberDeletedRule(id: string): boolean {
         type: rule.type,
         config: rule.config,
         enabled: rule.enabled,
+        position: rule.position,
         deletedAt: Date.now(),
       },
     })
@@ -113,6 +117,9 @@ export function restoreDeletedRules(ids: readonly string[]): { restored: Rule[];
           config: row.config,
           enabled: row.enabled,
           createdAt: row.createdAt,
+          // Null on a tombstone written before the column existed; the table
+          // default (0, i.e. "ties with everything") is the honest answer then.
+          ...(row.position == null ? {} : { position: row.position }),
           registryRuleSlug: row.registryRuleSlug,
           registryPackSlug: row.registryPackSlug,
           registryVersion: row.registryVersion,

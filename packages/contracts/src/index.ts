@@ -36,6 +36,7 @@ export {
   RULE_TYPE_VALUES,
   ruleAction,
   ruleConfigSchema,
+  ruleCoversSection,
   TAG_FIELDS,
 } from "./rule-config.ts";
 export type {

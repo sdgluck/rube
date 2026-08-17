@@ -67,6 +67,14 @@ export interface RuleRunOutcome {
   collectionCount?: number;
   itemCount?: number;
   error?: string;
+  /**
+   * One line saying what happened, for a run that finished without doing
+   * anything: out of season, owned by its own cron, no matching libraries, no
+   * LLM. All of those record `ok` — nothing went wrong — which left the run list
+   * unable to tell "ran and matched nothing" from "did not run at all". The
+   * terminal vocabulary stays three words; this says which of them this was.
+   */
+  message?: string;
 }
 
 export interface RuleRunHandle {
@@ -328,6 +336,7 @@ function attachHandle(runId: string, options: ActivateOptions): RuleRunHandle {
         db.update(ruleRuns)
           .set({
             status: outcome.status,
+            ...(outcome.message ? { message: outcome.message } : {}),
             progress: outcome.status === "ok" ? 1 : progress,
             collectionCount: outcome.collectionCount ?? null,
             itemCount: outcome.itemCount ?? null,

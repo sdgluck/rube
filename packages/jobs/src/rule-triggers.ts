@@ -159,9 +159,18 @@ export async function runTriggeredRules(
 /**
  * Run whatever is chained behind a rule that has just finished elsewhere —
  * the per-rule cron in `rule-schedules`, for instance.
+ *
+ * `seen` belongs to the caller so that one scheduler tick shares a single set:
+ * a rule chained behind two rules that are both due must run once, not twice.
+ * It used to start a fresh set per call, which is exactly how that happened.
  */
-export async function runRulesChainedAfter(ctx: JobContext, ruleId: string): Promise<string | null> {
-  const { ran, failed } = await runChain(ctx, ruleId, new Set([ruleId]), 1);
+export async function runRulesChainedAfter(
+  ctx: JobContext,
+  ruleId: string,
+  seen: Set<string> = new Set(),
+): Promise<string | null> {
+  seen.add(ruleId);
+  const { ran, failed } = await runChain(ctx, ruleId, seen, 1);
   const parts = [];
   if (ran.length) parts.push(`Ran ${ran.length} chained rule(s): ${ran.join(", ")}`);
   if (failed.length) parts.push(`${failed.length} failed: ${failed.join(", ")}`);

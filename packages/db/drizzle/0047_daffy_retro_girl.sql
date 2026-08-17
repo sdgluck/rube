@@ -1,0 +1,1 @@
+ALTER TABLE `deleted_rules` ADD `position` integer;
