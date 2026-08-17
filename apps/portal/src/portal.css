@@ -1,64 +1,4 @@
-/* The portal is the same family as the admin app, softer: a warmer page,
- * bigger targets, and Plex amber reserved for signing in — because signing in
- * is Plex's action, not ours. Radii and elevation are not part of that
- * softness any more; they match the app exactly. */
-
-:root {
-  --bg-page: #e8efec;
-  --bg-surface: #fff;
-  --bg-surface-2: #f6f9f8;
-  --bg-input: #fff;
-  --text-primary: #131c1b;
-  --text-secondary: #5a6866;
-  --text-muted: #5f6d6b;
-  --border-color: #d4dbda;
-  --border-input: #d4dbda;
-  --border-strong: #b9c4c2;
-  --accent: #127f76;
-  --accent-hover: #0f7269;
-  --accent-soft: #e0f1ee;
-  --accent-ink: #0b5f57;
-  --inverse: #0f2624;
-  --love: #0b5940;
-  --like: #127f76;
-  --hate: #b0332c;
-  --plex: #e5a00d;
-  --plex-hover: #cf9009;
-  /* Square and unshadowed, matching the app — see the note at the top of
-     apps/web/src/App.css. This file keeps its own copy of the tokens because
-     the portal ships without the app's stylesheet, so the two have to be
-     changed together. */
-  --radius: 2px;
-  --radius-lg: 2px;
-  --radius-sm: 2px;
-  --font-sans: Archivo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --shadow: inset 0 0 0 1px var(--border-color);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page: #0d1413;
-    --bg-surface: #16201f;
-    --bg-surface-2: #111a19;
-    --bg-input: #16201f;
-    --text-primary: #f2f6f5;
-    --text-secondary: #a6b4b2;
-    --text-muted: #8b9a98;
-    --border-color: #2d3837;
-    --border-input: #2d3837;
-    --border-strong: #46534f;
-    --accent: #1aa79b;
-    --accent-hover: #35c4b7;
-    --accent-soft: #0f3a35;
-    --accent-ink: #9fd8d1;
-    --inverse: #1d3230;
-    --love: #6fd3ab;
-    --like: #1aa79b;
-    --hate: #e0736b;
-    /* No --shadow override: it resolves to a ring in --border-color, which
-       this block already redefines. */
-  }
-}
+/* The portal's components. Tokens live in tokens.css. */
 
 * {
   box-sizing: border-box;
@@ -68,7 +8,7 @@ body {
   margin: 0;
   /* A radial lift behind the card so the page reads as lit rather than flat. */
   background:
-    radial-gradient(120% 60% at 50% 0%, #f3f8f6 0%, var(--bg-page) 60%) no-repeat,
+    radial-gradient(120% 60% at 50% 0%, var(--page-lift) 0%, var(--bg-page) 60%) no-repeat,
     var(--bg-page);
   min-height: 100vh;
   color: var(--text-primary);
@@ -154,7 +94,7 @@ button:hover:not(:disabled) {
 }
 
 button:focus-visible {
-  outline: 3px solid rgba(18, 134, 124, 0.14);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 1px;
   border-color: var(--accent);
 }
@@ -167,7 +107,7 @@ button:disabled {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -179,7 +119,7 @@ button:disabled {
 .btn-plex {
   background: var(--plex);
   border-color: var(--plex);
-  color: #1b1b1b;
+  color: var(--on-plex);
   font-size: 1rem;
   padding: 13px 22px;
   min-height: 48px;
@@ -237,7 +177,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(18, 134, 124, 0.14);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 textarea {
@@ -330,24 +270,24 @@ textarea {
 }
 
 .seg button:hover:not(.on) {
-  background: var(--bg-surface-hover, rgba(127, 127, 127, 0.12));
+  background: var(--fill-hover);
 }
 
 .seg button.on.loved {
   background: var(--love);
-  color: #fff;
+  color: var(--on-accent);
 }
 .seg button.on.liked {
   background: var(--like);
-  color: #fff;
+  color: var(--on-accent);
 }
 .seg button.on.hated {
   background: var(--hate);
-  color: #fff;
+  color: var(--on-accent);
 }
 .seg button.on.none {
   background: var(--text-muted);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ── Mood chips ────────────────────────────────────────────── */
@@ -524,26 +464,26 @@ textarea {
   padding: 10px 14px;
   background: var(--inverse);
   border-radius: var(--radius);
-  color: #e6f2f0;
+  color: var(--on-inverse);
 }
 
 .save-row .btn-primary {
-  background: #127f76;
+  background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .save-row .btn-primary:hover:not(:disabled) {
-  background: #0f7269;
+  background: var(--accent-hover);
   border-color: transparent;
 }
 
 .save-row .ok {
-  color: #9fd8d1;
+  color: var(--on-inverse-ok);
 }
 
 .save-row .err {
-  color: #f0a9a2;
+  color: var(--on-inverse-error);
 }
 
 /* ── Tabs, and the collections behind them ─────────────────── */
@@ -597,4 +537,57 @@ textarea {
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+/* ── Loading, empty and error ──────────────────────────────────────────────
+ *
+ * The portal had one of these, spelled `<p class="muted">Loading…</p>` inline
+ * at five call sites, and no error state at all — so a failed request rendered
+ * the empty state and "the server is unreachable" looked exactly like "you
+ * have no collections yet".
+ */
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px 16px;
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.state-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.state .muted {
+  margin: 0;
+}
+
+/* Shaped like the rows it stands in for rather than a spinner, so the page
+   doesn't jump when the real content arrives. */
+.skeleton-row {
+  height: 64px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-2);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-row {
+    animation: none;
+  }
 }

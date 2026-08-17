@@ -36,6 +36,16 @@ import breakpointScale from "./stylelint-plugins/breakpoint-scale.mjs";
 /** Where the vocabulary is defined, for the token-exists rule. */
 const TOKEN_FILES = ["apps/web/src/App.css"];
 
+/**
+ * The portal's own vocabulary.
+ *
+ * It keeps a separate one on purpose — it ships without the app's stylesheet —
+ * but "separate vocabulary" is not the same as "no vocabulary", and it was
+ * being linted as neither. Its stylesheet is now held to the same rules
+ * against its own tokens: no literals, no unknown custom properties.
+ */
+const PORTAL_TOKEN_FILES = ["apps/portal/src/tokens.css"];
+
 export default {
   plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale],
 
@@ -97,7 +107,11 @@ export default {
     {
       /* The token files define the vocabulary, so they are where the literals
          are supposed to be. */
-      files: TOKEN_FILES.concat("apps/web/src/styles/fonts.css", "apps/portal/src/fonts.css"),
+      files: TOKEN_FILES.concat(
+        PORTAL_TOKEN_FILES,
+        "apps/web/src/styles/fonts.css",
+        "apps/portal/src/fonts.css",
+      ),
       rules: {
         "color-no-hex": null,
         "color-named": null,
@@ -106,11 +120,11 @@ export default {
       },
     },
     {
-      /* The marketing site and the portal are separate products: their own
-         palettes, their own components, no import path to the app's tokens or
-         primitives. Every rule here would be measuring them against a design
-         system they aren't part of. They are linted as CSS, not as this app. */
-      files: ["apps/tinkerbell.dev/**/*.css", "apps/portal/**/*.css"],
+      /* The marketing site is a separate product: its own palette, its own
+         components, no import path to the app's tokens or primitives. Every
+         rule here would be measuring it against a design system it isn't part
+         of. It is linted as CSS, not as this app. */
+      files: ["apps/tinkerbell.dev/**/*.css"],
       rules: {
         "color-no-hex": null,
         "color-named": null,
@@ -119,6 +133,24 @@ export default {
         "csstools/value-no-unknown-custom-properties": null,
         "tinkerbell/no-shadowed-primitive": null,
         "tinkerbell/breakpoint-scale": null,
+      },
+    },
+    {
+      /* The portal is the surface end users actually see, and it was the least
+         governed thing in the repo: its own palette, no lint at all, and a
+         hardcoded `#e5a00d` of exactly the kind the app forbids. It is held to
+         the same rules now, against its own vocabulary in tokens.css.
+
+         Two stay off. `no-shadowed-primitive` checks class names against the
+         app's primitive stylesheets, which the portal has no import path to.
+         The strict-value rule wants the app's radius and font token names; the
+         portal has its own --radius-* and --font-sans, and pointing the rule at
+         the app's names would demand tokens that don't exist here. */
+      files: ["apps/portal/**/*.css"],
+      rules: {
+        "csstools/value-no-unknown-custom-properties": [true, { importFrom: PORTAL_TOKEN_FILES }],
+        "scale-unlimited/declaration-strict-value": null,
+        "tinkerbell/no-shadowed-primitive": null,
       },
     },
   ],

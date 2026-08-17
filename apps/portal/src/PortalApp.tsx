@@ -1,34 +1,35 @@
 import { useEffect, useState } from "react";
 import { portalTrpc } from "./trpc.ts";
-import { getPortalIcon } from "./portalIcons.ts";
+import BrandHeader, { type Branding } from "./components/BrandHeader.tsx";
+import SignIn from "./components/SignIn.tsx";
+import { ErrorState, RowsSkeleton } from "./components/States.tsx";
+import MyCollections from "./tabs/MyCollections.tsx";
+import PreferencesForm from "./tabs/PreferencesForm.tsx";
+import LeavingSoon from "./tabs/LeavingSoon.tsx";
+
+/**
+ * The portal shell: sign-in, branding, and which tab you are on.
+ *
+ * This file used to be the whole product — 656 lines holding the sign-in
+ * screen, the tab bar and all three tabs, in the one surface end users
+ * actually see. Everything below the tab bar now lives in `tabs/`, and the
+ * pieces that were duplicated inline at five call sites (loading, empty,
+ * error) are in `components/States.tsx`.
+ */
 
 const PIN_KEY = "tb_pin";
 
-interface Branding {
-  title?: string;
-  icon?: string;
-  iconColor?: string;
-  backgroundImage?: string;
-}
+const TABS = [
+  // "Your collections" is first on purpose: this was a form you filled in and
+  // never heard back from, so what your answers produced should be the thing
+  // you land on. "Leaving soon" is last because it is the one nobody wants to
+  // be looking at.
+  { id: "collections", label: "Your collections" },
+  { id: "preferences", label: "Your tastes" },
+  { id: "leaving", label: "Leaving soon" },
+] as const;
 
-function BrandHeader({ branding, size = 26 }: { branding: Branding; size?: number }) {
-  const Icon = getPortalIcon(branding.icon);
-  return (
-    <span className="brand-head">
-      <Icon size={size} color={branding.iconColor || "#e5a00d"} />
-      <span>{branding.title?.trim() || "Tinkerbell"}</span>
-    </span>
-  );
-}
-
-function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
+type TabId = (typeof TABS)[number]["id"];
 
 export default function PortalApp() {
   const utils = portalTrpc.useUtils();
@@ -39,7 +40,7 @@ export default function PortalApp() {
   const brandingQuery = portalTrpc.branding.useQuery();
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"collections" | "preferences" | "leaving">("collections");
+  const [tab, setTab] = useState<TabId>("collections");
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PIN_KEY));
 
   // Apply the admin's background image to the page.
@@ -112,26 +113,38 @@ export default function PortalApp() {
   if (meQuery.isLoading) {
     return (
       <div className="page">
-        <div className="card muted">Loading…</div>
+        <div className="card">
+          <RowsSkeleton rows={4} />
+        </div>
+      </div>
+    );
+  }
+
+  // `me` failing with anything other than "not signed in" is a server the
+  // portal cannot reach, and showing the sign-in screen for that sends people
+  // round the Plex handshake to arrive back here.
+  if (meQuery.error && meQuery.error.data?.code !== "UNAUTHORIZED") {
+    return (
+      <div className="page">
+        <div className="card">
+          <h1 className="title">
+            <BrandHeader branding={branding} />
+          </h1>
+          <ErrorState message={meQuery.error.message} onRetry={() => meQuery.refetch()} />
+        </div>
       </div>
     );
   }
 
   if (!meQuery.data) {
     return (
-      <div className="page page-signin">
-        <div className="card card-signin">
-          <h1 className="brand">
-            <BrandHeader branding={branding} size={32} />
-          </h1>
-          <p className="lede">Sign in with your Plex account to personalize your home screen.</p>
-          <button type="button" className="btn-plex" onClick={signIn} disabled={startMutation.isPending || finishing}>
-            {finishing ? "Finishing sign-in…" : startMutation.isPending ? "Redirecting…" : "Sign in with Plex"}
-          </button>
-          <p className="reassurance">Tinkerbell never sees your Plex password.</p>
-          {error && <p className="err">{error}</p>}
-        </div>
-      </div>
+      <SignIn
+        branding={branding}
+        finishing={finishing}
+        redirecting={startMutation.isPending}
+        error={error}
+        onSignIn={signIn}
+      />
     );
   }
 
@@ -151,505 +164,22 @@ export default function PortalApp() {
           </button>
         </div>
 
-        {/* "Your collections" is first on purpose: this was a form you
-            filled in and never heard back from, so what your answers produced
-            should be the thing you land on. "Leaving soon" is last because it
-            is the one nobody wants to be looking at. */}
         <div className="tabs" role="tablist" aria-label="Portal sections">
-          {(["collections", "preferences", "leaving"] as const).map((value) => (
+          {TABS.map(({ id, label }) => (
             <button
-              key={value}
+              key={id}
               type="button"
               role="tab"
-              aria-selected={tab === value}
-              className={`tab ${tab === value ? "tab-on" : ""}`}
-              onClick={() => setTab(value)}
+              aria-selected={tab === id}
+              className={`tab ${tab === id ? "tab-on" : ""}`}
+              onClick={() => setTab(id)}
             >
-              {value === "collections" ? "Your collections" : value === "preferences" ? "Your tastes" : "Leaving soon"}
+              {label}
             </button>
           ))}
         </div>
 
         {tab === "collections" ? <MyCollections /> : tab === "preferences" ? <PreferencesForm /> : <LeavingSoon />}
-      </div>
-    </div>
-  );
-}
-
-/**
- * What a cleanup rule is about to remove, and the way to say you would rather
- * it didn't.
- *
- * The admin's queue page has always been able to show this, to exactly one
- * person. Everybody else found out when the film stopped being there — and
- * the entire argument for the streak is that a scheduled deletion is
- * tolerable only when somebody can see it coming.
- *
- * The button records a vote, not a hold. A shared user must not be able to
- * silently overrule the server owner's rule; what they can do is make sure
- * that removing something turns into a decision the owner makes, rather than
- * one that simply happens at 4am.
- */
-function LeavingSoon() {
-  const utils = portalTrpc.useUtils();
-  const leavingQuery = portalTrpc.leavingSoon.useQuery();
-  const voteKeep = portalTrpc.voteKeep.useMutation({ onSuccess: () => utils.leavingSoon.invalidate() });
-  const summaryQuery = portalTrpc.myWatchSummary.useQuery();
-
-  const items = leavingQuery.data ?? [];
-  const summary = summaryQuery.data;
-
-  return (
-    <div className="stack">
-      {summary && summary.plays > 0 && (
-        <p className="field-hint">
-          You have played {summary.plays} thing{summary.plays === 1 ? "" : "s"} on this server.
-        </p>
-      )}
-
-      {leavingQuery.isLoading && <p className="muted">Checking…</p>}
-
-      {!leavingQuery.isLoading && items.length === 0 && (
-        <p className="muted">Nothing is scheduled to be removed. You will see it here first if that changes.</p>
-      )}
-
-      {items.length > 0 && (
-        <>
-          <p className="field-hint">
-            These are queued for removal. Say if you would rather one stayed — the server owner sees who asked.
-          </p>
-          {items.map((item) => (
-            <div key={item.ratingKey} className="collection-row">
-              <div className="collection-head">
-                <span className="collection-title">{item.title}</span>
-                <span className="muted">
-                  {item.runsRemaining === 0
-                    ? "Goes on the next run"
-                    : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={voteKeep.isPending}
-                onClick={() => voteKeep.mutate({ ratingKey: item.ratingKey, keep: !item.voted })}
-              >
-                {item.voted ? "Asked to keep \u2713" : "Keep this"}
-              </button>
-            </div>
-          ))}
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * What Tinkerbell built for this person, and the one-tap way to say it was
- * wrong.
- *
- * The portal used to be a form with no feedback: you rated fourteen genres,
- * pressed Save, and never learned whether any of it mattered. Showing the
- * output closes that loop, and "Not for me" turns a shrug into the one signal
- * the rules already know how to read.
- */
-function MyCollections() {
-  const utils = portalTrpc.useUtils();
-  const collectionsQuery = portalTrpc.myCollections.useQuery();
-  const notInterested = portalTrpc.notInterested.useMutation();
-  const [excluded, setExcluded] = useState<string[]>([]);
-
-  if (collectionsQuery.isLoading) return <p className="muted">Loading your collections…</p>;
-
-  const collections = collectionsQuery.data ?? [];
-  if (collections.length === 0) {
-    return (
-      <div className="stack">
-        <p className="muted">
-          Nothing yet. Collections appear here once the server has built some for you — set your tastes under{" "}
-          <strong>Your tastes</strong>, and they'll show up after the next nightly run.
-        </p>
-      </div>
-    );
-  }
-
-  const exclude = (title: string) => {
-    // Optimistic, and local: the row is about to disappear from the next run's
-    // output anyway, and waiting on a round-trip to grey out a button makes a
-    // one-tap gesture feel like a form submission.
-    setExcluded((prev) => [...prev, title]);
-    notInterested.mutate({ title }, { onSuccess: () => utils.preferences.get.invalidate() });
-  };
-
-  return (
-    <div className="stack">
-      <p className="field-hint">
-        These are yours — nobody else on the server sees them. Tell us what missed and the next run will leave it out.
-      </p>
-      {collections.map((collection) => (
-        <div key={collection.ratingKey} className="collection-row">
-          <div className="collection-head">
-            <span className="collection-title">{collection.title}</span>
-            <span className="muted">
-              {collection.itemCount} item{collection.itemCount === 1 ? "" : "s"}
-            </span>
-          </div>
-          {collection.summary && <p className="collection-summary">{collection.summary}</p>}
-          <button
-            type="button"
-            className="btn-ghost"
-            disabled={excluded.includes(collection.title)}
-            onClick={() => exclude(collection.title)}
-          >
-            {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-type GenreLevel = "none" | "loved" | "liked" | "hated";
-
-interface FormState {
-  loved: string[];
-  liked: string[];
-  hated: string[];
-  moods: string[];
-  excludedTitles: string[];
-  ratingFloor: string;
-  rowCount: string;
-  watchedBias: "new_to_me" | "include_favorites" | "balanced";
-  strictHate: boolean;
-  optedIn: boolean;
-  digestFrequency: "never" | "weekly" | "monthly";
-  digestEmail: string;
-}
-
-const SEG_LABELS: Record<GenreLevel, string> = { loved: "Love", liked: "Like", hated: "Hate", none: "—" };
-
-const WATCHED_BIAS_HINTS: Record<FormState["watchedBias"], string> = {
-  balanced: "A mix of new titles and ones you've watched before.",
-  new_to_me: "Favour titles you probably haven't watched yet.",
-  include_favorites: "Also resurface titles you've watched and loved.",
-};
-
-const MOOD_OPTIONS = [
-  "Cosy",
-  "Feel-good",
-  "Mind-bending",
-  "Intense",
-  "Dark",
-  "Uplifting",
-  "Nostalgic",
-  "Suspenseful",
-  "Funny",
-  "Romantic",
-  "Epic",
-  "Gritty",
-  "Heartwarming",
-  "Thought-provoking",
-  "Action-packed",
-  "Relaxing",
-  "Quirky",
-  "Tear-jerker",
-];
-
-function PreferencesForm() {
-  const utils = portalTrpc.useUtils();
-  const prefsQuery = portalTrpc.preferences.get.useQuery();
-  const genresQuery = portalTrpc.availableGenres.useQuery();
-  const setMutation = portalTrpc.preferences.set.useMutation();
-  const [form, setForm] = useState<FormState | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  // Title search for the "never recommend" picker.
-  const [titleQuery, setTitleQuery] = useState("");
-  const debouncedTitle = useDebounced(titleQuery, 250);
-  const titleResults = portalTrpc.searchTitles.useQuery(
-    { q: debouncedTitle },
-    { enabled: debouncedTitle.trim().length >= 2 },
-  );
-
-  useEffect(() => {
-    if (!prefsQuery.data) return;
-    const p = prefsQuery.data.preferences;
-    setForm({
-      loved: p.genres.loved,
-      liked: p.genres.liked,
-      hated: p.genres.hated,
-      moods: p.moods,
-      excludedTitles: p.excludedTitles,
-      ratingFloor: p.ratingFloor != null ? String(p.ratingFloor) : "",
-      rowCount: p.rowCount != null ? String(p.rowCount) : "",
-      watchedBias: p.watchedBias,
-      strictHate: p.strictHate,
-      optedIn: prefsQuery.data.optedIn,
-      digestFrequency: p.digest.frequency,
-      digestEmail: p.digest.email,
-    });
-  }, [prefsQuery.data]);
-
-  if (!form) return <p className="muted">Loading your preferences…</p>;
-
-  const genres = genresQuery.data ?? [];
-  const genreLevel = (g: string): GenreLevel =>
-    form.loved.includes(g) ? "loved" : form.liked.includes(g) ? "liked" : form.hated.includes(g) ? "hated" : "none";
-
-  const setGenre = (g: string, level: GenreLevel) =>
-    setForm((f) => {
-      if (!f) return f;
-      const strip = (arr: string[]) => arr.filter((x) => x !== g);
-      const next = { ...f, loved: strip(f.loved), liked: strip(f.liked), hated: strip(f.hated) };
-      if (level === "loved") next.loved.push(g);
-      else if (level === "liked") next.liked.push(g);
-      else if (level === "hated") next.hated.push(g);
-      return next;
-    });
-
-  const toggleMood = (m: string) =>
-    setForm((f) => (f ? { ...f, moods: f.moods.includes(m) ? f.moods.filter((x) => x !== m) : [...f.moods, m] } : f));
-
-  const addExcluded = (title: string) => {
-    const t = title.trim();
-    if (!t) return;
-    setForm((f) => (f && !f.excludedTitles.includes(t) ? { ...f, excludedTitles: [...f.excludedTitles, t] } : f));
-    setTitleQuery("");
-  };
-  const removeExcluded = (title: string) =>
-    setForm((f) => (f ? { ...f, excludedTitles: f.excludedTitles.filter((x) => x !== title) } : f));
-
-  function save() {
-    if (!form) return;
-    setSaved(false);
-    setMutation.mutate(
-      {
-        optedIn: form.optedIn,
-        preferences: {
-          genres: { loved: form.loved, liked: form.liked, hated: form.hated },
-          moods: form.moods,
-          excludedTitles: form.excludedTitles,
-          ratingFloor: Number(form.ratingFloor) > 0 ? Number(form.ratingFloor) : undefined,
-          rowCount: form.rowCount.trim() ? Number(form.rowCount) : undefined,
-          watchedBias: form.watchedBias,
-          strictHate: form.strictHate,
-          digest: {
-            frequency: form.digestFrequency,
-            // Cleared alongside the subscription: leaving an address stored
-            // for someone who has just unsubscribed is the sort of thing that
-            // makes people distrust an unsubscribe button.
-            email: form.digestFrequency === "never" ? "" : form.digestEmail.trim(),
-          },
-        },
-      },
-      {
-        onSuccess: () => {
-          setSaved(true);
-          utils.preferences.get.invalidate();
-        },
-      },
-    );
-  }
-
-  const suggestions = (titleResults.data ?? []).filter((t) => !form.excludedTitles.includes(t));
-
-  return (
-    <div className="stack">
-      <div className="field">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={form.optedIn}
-            onChange={(e) => setForm({ ...form, optedIn: e.target.checked })}
-          />
-          Personalize my home screen
-        </label>
-        <span className="field-hint">Master switch for your account — turn your saved preferences on or off.</span>
-      </div>
-
-      <div className="field">
-        <span className="field-label">Genres</span>
-        <span className="field-hint">
-          Rate the genres in your library so we show more of what you love and less of what you don't. Love = lots more
-          · Like = a bit more · Hate = keep away.
-        </span>
-        <div className="genre-box">
-          {genres.length === 0 && <div className="genre-row muted">No genres available.</div>}
-          {genres.map((g) => {
-            const level = genreLevel(g);
-            return (
-              <div key={g} className="genre-row">
-                <span>{g}</span>
-                <span className="seg">
-                  {(["loved", "liked", "hated", "none"] as GenreLevel[]).map((lv) => (
-                    <button
-                      key={lv}
-                      type="button"
-                      className={`${lv} ${level === lv ? "on" : ""}`}
-                      onClick={() => setGenre(g, lv)}
-                    >
-                      {SEG_LABELS[lv]}
-                    </button>
-                  ))}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="field">
-        <span className="field-label">Moods</span>
-        <span className="field-hint">Pick the moods you're in for — recommendations will lean toward them.</span>
-        <div className="chips">
-          {MOOD_OPTIONS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={`chip ${form.moods.includes(m) ? "on" : ""}`}
-              onClick={() => toggleMood(m)}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="field">
-        <span className="field-label">Never recommend</span>
-        <span className="field-hint">Search your library and add titles you never want suggested.</span>
-        {form.excludedTitles.length > 0 && (
-          <div className="pills">
-            {form.excludedTitles.map((t) => (
-              <span key={t} className="pill">
-                {t}
-                <button type="button" aria-label={`Remove ${t}`} onClick={() => removeExcluded(t)}>
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="combo">
-          <input
-            type="text"
-            value={titleQuery}
-            onChange={(e) => setTitleQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addExcluded(titleQuery);
-              }
-            }}
-            placeholder="Search titles…"
-          />
-          {suggestions.length > 0 && (
-            <div className="combo-results">
-              {suggestions.map((t) => (
-                <button key={t} type="button" onClick={() => addExcluded(t)}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <label className="field">
-        <span className="field-label">Minimum rating</span>
-        <span className="field-hint">Only suggest titles rated at least this high. Set to "Any" for no limit.</span>
-        <div className="slider-row">
-          <input
-            type="range"
-            min={0}
-            max={10}
-            step={0.5}
-            value={form.ratingFloor || "0"}
-            onChange={(e) => setForm({ ...form, ratingFloor: e.target.value })}
-          />
-          <span className="slider-val">
-            {Number(form.ratingFloor || 0) === 0 ? "Any" : Number(form.ratingFloor).toFixed(1)}
-          </span>
-        </div>
-      </label>
-
-      <label className="field narrow">
-        <span className="field-label">Rows on my home</span>
-        <span className="field-hint">How many personalized rows to add to your Plex home screen.</span>
-        <input
-          type="number"
-          min={1}
-          max={20}
-          value={form.rowCount}
-          onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
-        />
-      </label>
-
-      <div className="field">
-        <span className="field-label">Watched bias</span>
-        <select
-          value={form.watchedBias}
-          onChange={(e) => setForm({ ...form, watchedBias: e.target.value as FormState["watchedBias"] })}
-          style={{ alignSelf: "flex-start" }}
-        >
-          <option value="balanced">Balanced</option>
-          <option value="new_to_me">New to me</option>
-          <option value="include_favorites">Include favourites</option>
-        </select>
-        <span className="field-hint">{WATCHED_BIAS_HINTS[form.watchedBias]}</span>
-      </div>
-
-      <div className="field">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={form.strictHate}
-            onChange={(e) => setForm({ ...form, strictHate: e.target.checked })}
-          />
-          Strictly avoid my hated genres
-        </label>
-        <span className="field-hint">
-          When on, hated genres are never included. When off, they're just shown less often.
-        </span>
-      </div>
-
-      <div className="field">
-        <span className="field-label">Email digest</span>
-        <span className="field-hint">
-          A summary of what's been added, what people have been watching, and anything about to be removed. Only sent to
-          the address you enter here, and you can stop it at any time by choosing “Never”.
-        </span>
-        <select
-          value={form.digestFrequency}
-          onChange={(e) => setForm({ ...form, digestFrequency: e.target.value as FormState["digestFrequency"] })}
-          style={{ alignSelf: "flex-start" }}
-        >
-          <option value="never">Never</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-        {form.digestFrequency !== "never" && (
-          <>
-            <input
-              type="email"
-              value={form.digestEmail}
-              onChange={(e) => setForm({ ...form, digestEmail: e.target.value })}
-              placeholder="you@example.com"
-              style={{ marginTop: 8 }}
-            />
-            <span className="field-hint">
-              Used for this digest and nothing else. Leave it blank and no email is sent.
-            </span>
-          </>
-        )}
-      </div>
-
-      <div className="save-row">
-        <button type="button" className="btn-primary" onClick={save} disabled={setMutation.isPending}>
-          {setMutation.isPending ? "Saving…" : "Save"}
-        </button>
-        {saved && <span className="ok">Saved ✓</span>}
-        {setMutation.error && <span className="err">{setMutation.error.message}</span>}
       </div>
     </div>
   );

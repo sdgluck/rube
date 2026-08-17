@@ -1,0 +1,82 @@
+/* The portal is the same family as the admin app, softer: a warmer page,
+ * bigger targets, and Plex amber reserved for signing in — because signing in
+ * is Plex's action, not ours. Radii and elevation are not part of that
+ * softness any more; they match the app exactly. */
+
+:root {
+  --bg-page: #e8efec;
+  --bg-surface: #fff;
+  --bg-surface-2: #f6f9f8;
+  --bg-input: #fff;
+  --text-primary: #131c1b;
+  --text-secondary: #5a6866;
+  --text-muted: #5f6d6b;
+  --border-color: #d4dbda;
+  --border-input: #d4dbda;
+  --border-strong: #b9c4c2;
+  --accent: #127f76;
+  --accent-hover: #0f7269;
+  --accent-soft: #e0f1ee;
+  --accent-ink: #0b5f57;
+  --inverse: #0f2624;
+  --love: #0b5940;
+  --like: #127f76;
+  --hate: #b0332c;
+  --plex: #e5a00d;
+  --plex-hover: #cf9009;
+  /* Square and unshadowed, matching the app — see the note at the top of
+     apps/web/src/App.css. This file keeps its own copy of the tokens because
+     the portal ships without the app's stylesheet, so the two have to be
+     changed together. */
+  --radius: 2px;
+  --radius-lg: 2px;
+  --radius-sm: 2px;
+  --font-sans: Archivo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --shadow: inset 0 0 0 1px var(--border-color);
+
+  /* ─── Ink on a fill ────────────────────────────────────────────────────
+   * Text that sits on a coloured background rather than on the page. These
+   * do not flip with the scheme, because the fill underneath them doesn't
+   * either — the same reason the app has an --on-* family. They were spelled
+   * `#fff` in seven places and `#1b1b1b` in one. */
+  --on-accent: #fff;
+  --on-plex: #1b1b1b;
+  --on-inverse: #e6f2f0;
+  --on-inverse-ok: #9fd8d1;
+  --on-inverse-error: #f0a9a2;
+
+  /* The focus ring, and the quiet hover fill under a segmented control. */
+  --focus-ring: rgba(18, 134, 124, 0.14);
+  --fill-hover: rgba(127, 127, 127, 0.12);
+
+  /* The radial lift behind the card, so the page reads as lit not flat. */
+  --page-lift: #f3f8f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #0d1413;
+    --bg-surface: #16201f;
+    --bg-surface-2: #111a19;
+    --bg-input: #16201f;
+    --text-primary: #f2f6f5;
+    --text-secondary: #a6b4b2;
+    --text-muted: #8b9a98;
+    --border-color: #2d3837;
+    --border-input: #2d3837;
+    --border-strong: #46534f;
+    --accent: #1aa79b;
+    --accent-hover: #35c4b7;
+    --accent-soft: #0f3a35;
+    --accent-ink: #9fd8d1;
+    --inverse: #1d3230;
+    --love: #6fd3ab;
+    --like: #1aa79b;
+    --hate: #e0736b;
+    /* No --shadow override: it resolves to a ring in --border-color, which
+       this block already redefines. */
+
+    --focus-ring: rgba(26, 167, 155, 0.24);
+    --page-lift: #101a19;
+  }
+}
