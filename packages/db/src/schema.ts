@@ -852,7 +852,16 @@ export const sharingRestrictionBackups = sqliteTable("sharing_restriction_backup
 export const userPreferences = sqliteTable("user_preferences", {
   userId: integer("user_id").primaryKey(),
   preferences: text("preferences", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
-  optedIn: integer("opted_in").notNull().default(1),
+  /**
+   * Consent to a personalised home screen, per user.
+   *
+   * Defaults to 0 — *not* consented. It defaulted to 1, which is the wrong way
+   * round for a consent column: any insert that omitted it would have opted
+   * somebody in silently. Latent, because every writer passes it explicitly and
+   * `getUserPreferences` already reports `false` for a user with no row at all,
+   * but a default is exactly the sort of thing a future writer trusts.
+   */
+  optedIn: integer("opted_in").notNull().default(0),
   updatedAt: integer("updated_at").notNull(),
 });
 

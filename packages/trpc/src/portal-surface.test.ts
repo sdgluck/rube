@@ -139,3 +139,73 @@ describe("portal router surface", () => {
     assert.equal(res.status, "expired");
   });
 });
+
+describe("a shared user's own data", () => {
+  /** A signed-in portal caller for user 7. */
+  async function signedIn(userId = 7) {
+    return caller({ session: { userId, username: `user${userId}` } });
+  }
+
+  test('"Not for me" records the row, not a film nobody mentioned', async () => {
+    // It used to write the *collection's* name into `excludedTitles`, which every
+    // consumer matches against item titles: the row was rebuilt identically on
+    // the next run, and the entry then appeared in the user's "Never recommend"
+    // list as a film they had never named.
+    const client = await signedIn();
+    await client.notInterested({ title: "Directed by Christopher Nolan" });
+
+    const prefs = await client.preferences.get();
+    assert.deepEqual(prefs.preferences.excludedCollections, ["Directed by Christopher Nolan"]);
+    assert.deepEqual(prefs.preferences.excludedTitles, []);
+
+    // Idempotent.
+    await client.notInterested({ title: "Directed by Christopher Nolan" });
+    assert.equal((await client.preferences.get()).preferences.excludedCollections.length, 1);
+  });
+
+  test("saving preferences from the form does not wipe what the form omits", async () => {
+    // Its own user: these tests share one database, and preferences are per user.
+    const client = await signedIn(8);
+    await client.notInterested({ title: "A row I hid" });
+
+    // What the portal's form sends: the fields it renders, and nothing else.
+    await client.preferences.set({
+      optedIn: true,
+      preferences: { moods: ["cosy"], excludedTitles: ["Cats"] },
+    });
+
+    const prefs = await client.preferences.get();
+    assert.deepEqual(prefs.preferences.moods, ["cosy"]);
+    assert.deepEqual(prefs.preferences.excludedTitles, ["Cats"]);
+    assert.deepEqual(prefs.preferences.excludedCollections, ["A row I hid"], "the other tab's work survives a save");
+    assert.equal(prefs.optedIn, true);
+  });
+
+  test("a present key still clears a list", async () => {
+    const client = await signedIn(9);
+    await client.preferences.set({ optedIn: false, preferences: { excludedTitles: ["Cats"] } });
+    await client.preferences.set({ optedIn: false, preferences: { excludedTitles: [] } });
+    assert.deepEqual((await client.preferences.get()).preferences.excludedTitles, []);
+  });
+
+  test("voteKeep refuses a rating key no rule has queued", async () => {
+    // The vote is shown on the admin's queue with the voter's name against it, so
+    // an unchecked key let a shared user put named rows there for items nothing
+    // had ever matched.
+    const client = await signedIn();
+    await assert.rejects(
+      () => client.voteKeep({ ratingKey: "made-up", keep: true }),
+      (err: { code?: string }) => {
+        assert.equal(err.code, "NOT_FOUND");
+        return true;
+      },
+    );
+  });
+
+  test("withdrawing a vote is always allowed", async () => {
+    // Removing something that isn't there is not an error, and refusing it would
+    // strand a vote whose candidate has since been actioned.
+    const client = await signedIn();
+    assert.deepEqual(await client.voteKeep({ ratingKey: "made-up", keep: false }), { ok: true });
+  });
+});

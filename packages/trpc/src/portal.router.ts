@@ -13,6 +13,7 @@ import {
   getPlexSession,
   deletePlexSession,
   plexUserExists,
+  sharedSectionKeys,
   getUserPreferences,
   setUserPreferences,
   userPreferencesSchema,
@@ -33,7 +34,13 @@ import { createHandshake, rateLimit, readHandshake, spendHandshake } from "./han
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
 import { getCollectionsForUser } from "@tinkerbell/domain.collections";
-import { keepVotesForUser, leavingSoon, recordKeepVote, removeKeepVote } from "@tinkerbell/domain.cleanup";
+import {
+  isQueuedCandidate,
+  keepVotesForUser,
+  leavingSoon,
+  recordKeepVote,
+  removeKeepVote,
+} from "@tinkerbell/domain.cleanup";
 import { userTotals } from "@tinkerbell/domain.playback";
 
 export interface PortalContext {
@@ -171,10 +178,30 @@ export const portalRouter = tp.router({
   preferences: tp.router({
     get: userProcedure.query(({ ctx }) => getUserPreferences(ctx.session.userId)),
 
+    /**
+     * Merged over what is stored, not written over it.
+     *
+     * The form sends the fields it renders; the schema fills in defaults for
+     * everything else. Taking that as the new state meant every save silently
+     * wiped the fields the form doesn't know about — `people`, `eras`,
+     * `runtime`, `languages`, `vibe`, `contentRatingCeiling`, and the
+     * "Not for me" rows the *other* tab writes. A key that is present wins, so
+     * clearing a list still clears it; a key that is absent is left alone.
+     */
     set: userProcedure
-      .input(z.object({ preferences: userPreferencesSchema, optedIn: z.boolean() }))
+      // Deliberately not `userPreferencesSchema.partial()`: the field defaults
+      // survive `.partial()`, so an absent key arrives as `[]` and is
+      // indistinguishable from the user clearing it. The raw keys are merged over
+      // what is stored and the *result* is validated, which keeps "absent means
+      // unchanged" while still refusing a malformed value.
+      .input(z.object({ preferences: z.record(z.string(), z.unknown()), optedIn: z.boolean() }))
       .mutation(({ ctx, input }) => {
-        setUserPreferences(ctx.session.userId, input.preferences, input.optedIn);
+        const current = getUserPreferences(ctx.session.userId);
+        const provided = Object.fromEntries(
+          Object.entries(input.preferences).filter(([, value]) => value !== undefined),
+        );
+        const merged = userPreferencesSchema.parse({ ...current.preferences, ...provided });
+        setUserPreferences(ctx.session.userId, merged, input.optedIn);
         return { ok: true };
       }),
   }),
@@ -205,10 +232,13 @@ export const portalRouter = tp.router({
   /**
    * "Not for me."
    *
-   * Adds the title to `excludedTitles`, which is the same list the portal's
-   * own picker writes to and the one every rule already honours — so this is a
-   * new way to say something the system could already hear, rather than a
-   * second preference store to keep in step.
+   * Pressed on a *row*, so it records a collection name in
+   * `excludedCollections`, which `personalize` and `because-you-watched` check
+   * before building a row for this user. It used to write into `excludedTitles`,
+   * the list of *item* titles the portal's own picker fills — where the
+   * collection's name never matched anything, the row was rebuilt identically on
+   * the next run, and the entry then showed up in the user's "Never recommend"
+   * list as a film they had never mentioned.
    *
    * Idempotent: pressing it twice is one exclusion, not two.
    */
@@ -216,17 +246,20 @@ export const portalRouter = tp.router({
     .input(z.object({ title: z.string().trim().min(1).max(500) }))
     .mutation(({ ctx, input }) => {
       const current = getUserPreferences(ctx.session.userId);
-      const excludedTitles = current.preferences.excludedTitles.includes(input.title)
-        ? current.preferences.excludedTitles
-        : [...current.preferences.excludedTitles, input.title];
+      // The collection's name, not an item's — this button is pressed on a row.
+      // It used to be added to `excludedTitles`, which every consumer matches
+      // against item titles, so the row came back unchanged on the next run.
+      const excludedCollections = current.preferences.excludedCollections.includes(input.title)
+        ? current.preferences.excludedCollections
+        : [...current.preferences.excludedCollections, input.title];
       setUserPreferences(
         ctx.session.userId,
-        { ...current.preferences, excludedTitles },
+        { ...current.preferences, excludedCollections },
         // Opt-in is left exactly as it was. Saying "not this one" is not
         // consent to have your whole home screen rearranged.
         current.optedIn,
       );
-      return { ok: true as const, excluded: excludedTitles.length };
+      return { ok: true as const, excluded: excludedCollections.length };
     }),
 
   /**
@@ -244,7 +277,9 @@ export const portalRouter = tp.router({
    */
   leavingSoon: userProcedure.query(({ ctx }) => {
     const voted = keepVotesForUser(ctx.session.userId);
-    return leavingSoon().map((item) => ({ ...item, voted: voted.has(item.ratingKey) }));
+    // Scoped to the libraries shared with this user — see `sharedSectionKeys`.
+    const sections = sharedSectionKeys(ctx.session.userId);
+    return leavingSoon(50, Date.now(), sections).map((item) => ({ ...item, voted: voted.has(item.ratingKey) }));
   }),
 
   /**
@@ -258,8 +293,18 @@ export const portalRouter = tp.router({
   voteKeep: userProcedure
     .input(z.object({ ratingKey: z.string().min(1), keep: z.boolean() }))
     .mutation(({ ctx, input }) => {
-      if (input.keep) recordKeepVote(input.ratingKey, ctx.session.userId, ctx.session.username);
-      else removeKeepVote(input.ratingKey, ctx.session.userId);
+      // Only for something a rule has actually queued. The vote shows up on the
+      // admin's queue with the voter's name against it, so an unchecked rating
+      // key let a shared user put named rows there for items no rule had ever
+      // looked at — noise on the one page that has to be trustworthy.
+      if (input.keep) {
+        if (!isQueuedCandidate(input.ratingKey)) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "That isn't queued for removal." });
+        }
+        recordKeepVote(input.ratingKey, ctx.session.userId, ctx.session.username);
+      } else {
+        removeKeepVote(input.ratingKey, ctx.session.userId);
+      }
       return { ok: true as const };
     }),
 
@@ -272,7 +317,9 @@ export const portalRouter = tp.router({
    */
   myWatchSummary: userProcedure.query(({ ctx }) => userTotals(ctx.session.userId)),
 
-  searchTitles: userProcedure.input(z.object({ q: z.string() })).query(({ input }) => searchMediaTitles(input.q, 15)),
+  searchTitles: userProcedure
+    .input(z.object({ q: z.string() }))
+    .query(({ ctx, input }) => searchMediaTitles(input.q, 15, sharedSectionKeys(ctx.session.userId))),
 
   availableGenres: userProcedure.query(async () => {
     const client = getPlexClient();

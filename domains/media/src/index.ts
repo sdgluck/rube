@@ -410,13 +410,20 @@ export function getSizeForItems(ratingKeys: string[]): { bytes: number; sized: n
 }
 
 /** Distinct "Title (Year)" labels matching a query — for type-ahead pickers. */
-export function searchMediaTitles(query: string, limit = 20): string[] {
+export function searchMediaTitles(query: string, limit = 20, sectionKeys: readonly string[] = []): string[] {
   const q = query.trim();
   if (!q) return [];
+  // Scoped to the caller's libraries when it names any. The portal passes the
+  // sections actually shared with the signed-in user, because a user shared only
+  // "Kids Movies" could otherwise search every title on the server.
+  const scope =
+    sectionKeys.length > 0
+      ? and(likeContains(mediaItems.title, q), inArray(mediaItems.sectionId, [...sectionKeys]))
+      : likeContains(mediaItems.title, q);
   const rows = db
     .select({ title: mediaItems.title, year: mediaItems.year })
     .from(mediaItems)
-    .where(likeContains(mediaItems.title, q))
+    .where(scope)
     .orderBy(asc(mediaItems.title))
     .limit(limit * 2)
     .all();

@@ -482,12 +482,17 @@ export function forgetCollections(ratingKeys: string[]): number {
  * Matched on the JSON array with LIKE, the same shape `getBywCollectionsGroupedByUser`
  * uses. An exact `"User:<name>"` match including the quotes, so a user called
  * `sam` doesn't collect the collections belonging to `samantha`.
+ *
+ * Through `likeContains`, which escapes the pattern: a name is not a pattern,
+ * and this query is a per-user boundary. A managed user called `a_b` would
+ * otherwise have matched `a?b`, and one containing `%` would have matched every
+ * `User:`-labelled collection on the server — including other people's.
  */
 export function getCollectionsForUser(username: string): CollectionRow[] {
   return db
     .select()
     .from(collections)
-    .where(like(collections.labels, `%"User:${username}"%`))
+    .where(likeContains(collections.labels, `"User:${username}"`))
     .orderBy(desc(collections.addedAt))
     .all();
 }

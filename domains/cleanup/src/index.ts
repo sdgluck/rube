@@ -398,6 +398,24 @@ export function removeKeepVote(ratingKey: string, userId: number): void {
     .run();
 }
 
+/**
+ * Is this item on somebody's cleanup queue at all?
+ *
+ * For the portal's Keep button, which is the one place a rating key arrives from
+ * outside. A vote is shown on the admin's queue with the voter's name against
+ * it, so an unqueued key would put a named row there for an item no rule has
+ * ever matched.
+ */
+export function isQueuedCandidate(ratingKey: string): boolean {
+  const row = db
+    .select({ ratingKey: cleanupCandidates.ratingKey })
+    .from(cleanupCandidates)
+    .where(and(eq(cleanupCandidates.ratingKey, ratingKey), isNull(cleanupCandidates.actionedAt)))
+    .limit(1)
+    .get();
+  return !!row;
+}
+
 /** Who has asked for each item to stay, keyed by rating key. */
 export function keepVotesByItem(): Map<string, string[]> {
   const rows = db.select().from(cleanupKeepVotes).all();
@@ -437,6 +455,7 @@ export function keepVotesForUser(userId: number): Set<string> {
 export function leavingSoon(
   limit = 50,
   now: number = Date.now(),
+  sectionKeys: readonly string[] = [],
 ): Array<{
   ratingKey: string;
   title: string;
@@ -444,8 +463,17 @@ export function leavingSoon(
 }> {
   const refusal = standingRefusal(now);
   if (refusal) return [];
+  // Restricted to the libraries the viewer can see, when the caller says which:
+  // warning somebody about a film in a library they cannot open is noise they
+  // can do nothing about.
+  const inScope = sectionKeys.length > 0 ? new Set(sectionKeys) : null;
   return queuedCandidates({ now })
-    .filter((c) => (c.mode === "delete" || c.mode === "unmonitor") && willBeActioned(c, { refusal }))
+    .filter(
+      (c) =>
+        (c.mode === "delete" || c.mode === "unmonitor") &&
+        willBeActioned(c, { refusal }) &&
+        (!inScope || inScope.has(c.sectionId)),
+    )
     .slice(0, limit)
     .map((c) => ({ ratingKey: c.ratingKey, title: c.title, runsRemaining: c.runsRemaining }));
 }
