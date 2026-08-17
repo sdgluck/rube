@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { createPosterCache } from "./cache.ts";
 
 let dir: string;
@@ -257,5 +259,32 @@ test("written blob round-trips byte-for-byte", async () => {
     );
     assert.deepEqual(new Uint8Array(onDisk), new Uint8Array(payload));
     assert.deepEqual(new Uint8Array(result.buffer), new Uint8Array(payload));
+  }
+});
+
+test("a 404 drops the cached file as well as marking it missing", async () => {
+  // Without this the cache keeps a blob its own sidecar says is missing, so it
+  // grows by every poster that ever disappears and holds bytes nothing will ever
+  // serve.
+  {
+    let status = 200;
+    const cache = createPosterCache({
+      dir,
+      fetchImpl: (async () =>
+        status === 200
+          ? new Response(Buffer.from("jpegbytes"), { status: 200 })
+          : new Response(null, { status: 404 })) as unknown as typeof fetch,
+    });
+
+    const first = await cache.getOrFetch("https://example.com/p.jpg");
+    assert.equal(first.status, "ok");
+    const key = createHash("sha256").update("https://example.com/p.jpg").digest("hex");
+    assert.ok(existsSync(join(dir, `${key}.jpg`)), "cached to begin with");
+
+    status = 404;
+    const second = await cache.refresh("https://example.com/p.jpg");
+    assert.equal(second.status, "missing");
+    assert.equal(existsSync(join(dir, `${key}.jpg`)), false, "the file goes with it");
+    assert.ok(existsSync(join(dir, `${key}.json`)), "the sidecar stays, so the miss is remembered");
   }
 });

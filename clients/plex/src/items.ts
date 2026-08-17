@@ -47,14 +47,23 @@ export function createItemsModule(http: PlexHttp) {
       const rawLen = Array.isArray(data?.MediaContainer?.Metadata) ? data.MediaContainer.Metadata.length : 0;
       if (rawLen === 0) break;
 
-      const totalSize: number = data?.MediaContainer?.totalSize ?? 0;
+      // `totalSize` is what Plex says the section holds. When it is missing,
+      // don't take 0 for it: `offset >= 0` is true immediately, so the walk
+      // stopped after one page and reported a library of 100 items as complete —
+      // plausible, and wrong, which is the worst combination for a figure like
+      // "how much storage do my shows take". Falling back to the page length
+      // means paging continues until a short page ends it.
+      const reportedTotal: number | undefined = data?.MediaContainer?.totalSize;
+      const totalSize: number = typeof reportedTotal === "number" ? reportedTotal : offset + rawLen;
 
       for (const item of batch) {
         yield { item, totalSize };
       }
 
       offset += rawLen;
-      if (offset >= totalSize) break;
+      // A short page is the end of the listing whatever the total claimed.
+      if (rawLen < pageSize) break;
+      if (typeof reportedTotal === "number" && offset >= reportedTotal) break;
     }
   }
 

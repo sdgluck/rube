@@ -218,6 +218,9 @@ export async function syncMedia(
     // carry their parts in the listing below and skip this entirely.
     const episodeBytes = section.type === "show" ? await episodeSizes(client, section, onProgress) : null;
 
+    // Reset per section, because the progress bar is per section — see below.
+    let sectionSynced = 0;
+
     for await (const { item, totalSize } of client.allItems(section.key)) {
       const ratingKey = item.ratingKey;
       if (!ratingKey) continue;
@@ -279,7 +282,11 @@ export async function syncMedia(
       }
 
       if (onProgress) {
-        onProgress(synced, totalSize, `Syncing ${section.title}...`);
+        // Per section, both halves: `synced` is cumulative across every section,
+        // and `totalSize` is this section's count — so on the third of three
+        // libraries the bar reported 300 of 100.
+        sectionSynced++;
+        onProgress(sectionSynced, totalSize, `Syncing ${section.title}...`);
       }
     }
     options.onSectionComplete?.(section.key);
