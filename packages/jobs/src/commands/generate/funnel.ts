@@ -7,9 +7,11 @@
  * time — 4,312 → genre → 812 → rating → 63 → watched-by-nobody → 0 names the
  * clause that did it.
  *
- * Only ever built during a *test*. It costs one count per clause per section,
- * which is fine for something a person pressed and far too much for the nightly
- * run.
+ * Built during a *test*, and by `diagnose` when a real run matched nothing at
+ * all — the same question, asked at the only other moment anybody wants it. It
+ * costs one count per clause per section, which is fine for something a person
+ * pressed, or for a run that has already found nothing, and far too much for the
+ * nightly pass over rules that are working.
  */
 
 import { SECTION_TYPE_MAP, type PlexClient, type PlexSection } from "@tinkerbell/plex";

@@ -77,7 +77,11 @@ export function reorderRules(orderedIds: string[]): void {
     const known = new Set(all.map((r) => r.id));
     // An id for a rule deleted between the page load and the drop would
     // otherwise shift every rule after it by one.
-    const queue = orderedIds.filter((id) => known.has(id));
+    // De-duplicated as well as filtered. A payload naming the same id twice —
+    // which the input schema doesn't forbid — dealt that id into two slots and
+    // dropped the last entry off the end, leaving one rule never updated and two
+    // holding positions that don't match what was dropped.
+    const queue = [...new Set(orderedIds.filter((id) => known.has(id)))];
     const moving = new Set(queue);
     let next = 0;
     const reordered = all.map((r) => (moving.has(r.id) ? queue[next++] : r.id));

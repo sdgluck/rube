@@ -36,14 +36,17 @@ const portalLog = createLogger("portal");
 registerCoreHooks();
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
-// Bind to loopback by default. Tinkerbell has no auth: anyone who can reach
-// the port can call every tRPC mutation. The Docker image sets HOST=0.0.0.0
-// because the container must be reachable from outside, and trusts the user
-// to put it behind a reverse proxy / firewall.
+// Bind to loopback by default. Admin auth exists now (Settings → Security) but
+// is off until somebody turns it on, and an upgrade never turns it on for them —
+// so the default has to assume it is off, in which case anyone who can reach the
+// port can call every tRPC mutation. The Docker image sets HOST=0.0.0.0 because
+// the container must be reachable from outside, and trusts the user to put it
+// behind a reverse proxy / firewall.
 const HOST = process.env.HOST || "127.0.0.1";
 // The user portal (Sign-in-with-Plex). Served on its own port so it can be
-// exposed publicly without exposing the unauthenticated admin API. Defaults to
-// loopback like the admin server; the Docker image opens this one to the host.
+// exposed publicly without exposing the admin API, which may or may not require
+// a sign-in. Defaults to loopback like the admin server; the Docker image opens
+// this one to the host.
 const USER_PORT = parseInt(process.env.USER_PORT || "3100", 10);
 const USER_HOST = process.env.USER_HOST || HOST;
 // The address to print at boot. `api.tinkerbell.localhost` is the localias
@@ -229,6 +232,16 @@ const portalServer = createServer(
         createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders, ip: clientIp(req) }),
       });
       await sendFetchResponse(fetchRes, res);
+      return;
+    }
+
+    // An `/api/...` path this server doesn't implement is a 404, not the SPA.
+    // `/api/plex-image` and `/api/prerolls/…` exist only on the admin server, and
+    // answering them here with `index.html` and a 200 made a missing endpoint
+    // look like a broken image rather than a wrong port.
+    if (path.startsWith("/api/")) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not found");
       return;
     }
 

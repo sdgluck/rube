@@ -186,10 +186,12 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
       ruleCtx.log(`Skipping — ${skip.reason}.`);
       // Only rules that build collections have anything to tear down. A
       // metadata rule's writes are not undone by going out of season — that
-      // would be a startling thing for a calendar window to do — so the
-      // teardown would be a Plex round trip per section that finds nothing,
-      // announced with a line claiming it removed something.
-      if (skip.tearDown && !isMetadataRule(ruleConfig)) {
+      // would be a startling thing for a calendar window to do — and a cleanup
+      // rule owns no collections either, since it stopped building an "on the
+      // chopping block" shelf. For both, the teardown would be a Plex round trip
+      // per section that finds nothing, announced with a line claiming it
+      // removed something.
+      if (skip.tearDown && !isMetadataRule(ruleConfig) && !isCleanupRule(ruleConfig)) {
         try {
           await clearOutOfSeasonCollections(ruleCtx, rule, ctx.signal);
           ruleCtx.log("Removed this rule's collections until it is back in season.");

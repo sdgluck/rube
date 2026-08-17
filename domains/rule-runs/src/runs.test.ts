@@ -1,6 +1,7 @@
 import { test, before, describe } from "node:test";
 import assert from "node:assert/strict";
 import { setupTempDb } from "@tinkerbell/db/test-support";
+import { eq } from "drizzle-orm";
 
 setupTempDb("tinkerbell-rule-runs-test-");
 
@@ -196,5 +197,49 @@ describe("retention", () => {
     live.finish({ status: "ok" });
     runs.pruneRuleRuns(Date.now() + 60_000);
     assert.equal(runs.getRuleRun(live.runId), null);
+  });
+});
+
+describe("run tallies for the rules table", () => {
+  test("counts per rule, and resolves a millisecond tie the same way every time", () => {
+    // A "run all" burst creates runs in the same millisecond, and re-runs of one
+    // rule can land in the same millisecond too. The id used to be resolved by
+    // `startedAt = max(startedAt)` in a second query, which returns whichever row
+    // the planner reached first — so the Runs column could link to a different run
+    // on each render. Two runs that started in the same millisecond are genuinely
+    // indistinguishable, so what is asserted is consistency, not chronology.
+    const ruleId = makeRule();
+    const other = makeRule();
+    const at = Date.now();
+
+    const first = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
+    const second = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
+    runs.createRuleRun({ ruleId: other, phase: "run", trigger: "manual" });
+
+    // Same timestamp for both of this rule's runs.
+    for (const id of [first, second]) {
+      dbmod.db.update(dbmod.ruleRuns).set({ startedAt: at }).where(eq(dbmod.ruleRuns.id, id)).run();
+    }
+
+    const tallies = runs.getRuleRunCounts();
+    assert.equal(tallies[ruleId].count, 2);
+    assert.equal(tallies[other].count, 1);
+    assert.ok([first, second].includes(tallies[ruleId].lastRunId ?? ""));
+    for (let i = 0; i < 5; i++) {
+      assert.equal(runs.getRuleRunCounts()[ruleId].lastRunId, tallies[ruleId].lastRunId);
+    }
+  });
+
+  test("a later run at a later time still wins", () => {
+    const ruleId = makeRule();
+    const older = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
+    const newer = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
+    dbmod.db
+      .update(dbmod.ruleRuns)
+      .set({ startedAt: Date.now() - 60_000 })
+      .where(eq(dbmod.ruleRuns.id, older))
+      .run();
+
+    assert.equal(runs.getRuleRunCounts()[ruleId].lastRunId, newer);
   });
 });

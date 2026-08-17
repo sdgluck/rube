@@ -63,7 +63,24 @@ const RESOLUTION_RANK: Record<string, number> = {
 
 function resolutionRank(value: string | null): number {
   if (!value) return 0;
-  return RESOLUTION_RANK[value.toLowerCase()] ?? 0;
+  const label = value.toLowerCase();
+  const known = RESOLUTION_RANK[label];
+  if (known !== undefined) return known;
+  // Plex normally reports `4k`, `1080`, `720`, `sd` — but not always, and an
+  // unrecognised label used to rank 0, i.e. equal to "no idea". So a server
+  // reporting `2160` tied its 4K copy with a copy of unknown resolution and the
+  // group fell through to the size tie-break, or to "nothing separates these".
+  // A bare number is a height, which is directly comparable.
+  const height = Number.parseInt(label, 10);
+  if (Number.isFinite(height) && height > 0) {
+    if (height >= 4320) return 6;
+    if (height >= 2160) return 5;
+    if (height >= 1080) return 4;
+    if (height >= 720) return 3;
+    if (height >= 480) return 2;
+    return 1;
+  }
+  return 0;
 }
 
 /**
