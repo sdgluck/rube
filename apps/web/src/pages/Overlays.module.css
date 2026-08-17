@@ -16,10 +16,11 @@
   background-position: 0 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .root {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
-  }
+/* Keyed off the resolved `data-theme` attribute rather than
+   prefers-color-scheme, like the token block in App.css — the scheme is a
+   user choice now, and the OS query is only one input to it. */
+:root[data-theme="dark"] .root {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
 }
 
 .header {

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { routeTrail } from "#/nav";
+import ThemeToggle from "#components/ThemeToggle";
 import styles from "./AppBar.module.css";
 
 type Slots = { meta: HTMLElement | null; actions: HTMLElement | null };
@@ -150,6 +151,10 @@ function AppBar({
       <span className={styles.meta} ref={metaRef} />
       <span className={styles.spacer} />
       <span className={styles.actions} ref={actionsRef} />
+      {/* After the page's own actions, not inside them: this belongs to the
+          app, and a page that portals a primary button in should still have
+          the rightmost say about its own screen. */}
+      <ThemeToggle compact />
     </div>
   );
 }

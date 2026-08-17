@@ -6,8 +6,13 @@ import { trpc, trpcClient } from "#/trpc";
 import { ToastProvider } from "#components/Toast";
 import AuthGate from "#/auth/AuthGate";
 import App from "#/App";
+import { startThemeWatch } from "#/theme";
 import "#/styles/fonts.css";
 import "#/App.css";
+
+// index.html has already painted the resolved theme onto <html>; this takes
+// over from the boot script so that `system` keeps following the OS after load.
+startThemeWatch();
 
 /**
  * Capture mode, for the screenshot harness only.

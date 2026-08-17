@@ -1,0 +1,30 @@
+.group {
+  composes: segmented from "../styles/controls.module.css";
+}
+
+.item {
+  composes: segmentedItem from "../styles/controls.module.css";
+}
+
+.itemActive {
+  composes: segmentedItemActive from "../styles/controls.module.css";
+}
+
+/* Icon-only variant, for the app bar: the three words don't fit beside a
+   breadcrumb, and the icons carry the meaning on their own once the label is
+   on the button as an aria-label. */
+.icons .item {
+  padding: 0 8px;
+}
+
+.label {
+  margin-left: 6px;
+}
+
+/* Below the app bar's narrowest gutter the toggle is the first thing to give
+   up its space — Settings › Appearance still has the full control. */
+@media (max-width: 640px) {
+  .icons {
+    display: none;
+  }
+}

@@ -11,6 +11,7 @@ import KeyboardShortcutsHelp from "#components/KeyboardShortcutsHelp";
 import useDocumentTitle from "#hooks/useDocumentTitle";
 import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
 import useMigrationCompletionInvalidator from "#hooks/useMigrationCompletionInvalidator";
+import useThemeConfigSync from "#hooks/useThemeConfigSync";
 import Settings from "#pages/Settings/Settings";
 import Sidebar from "#layout/Sidebar";
 import BottomNav from "#layout/BottomNav";
@@ -97,6 +98,7 @@ export default function App() {
   useKeyboardShortcuts(setShortcutsHelpOpen, openPalette);
   useMigrationCompletionInvalidator();
   useOnboardingRedirect();
+  useThemeConfigSync();
 
   /**
    * Setup renders outside the app shell — no sidebar, no bottom nav, no app

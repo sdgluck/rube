@@ -61,9 +61,17 @@ dark in _both_ themes (`--on-accent`, `--on-dark`, `--on-inverse`, `--on-plex`),
 ### Adding a token
 
 Add it when the app has a role it didn't have, not when you want a shade. Give
-it a value in **both** `:root` and the `prefers-color-scheme: dark` block, and a
+it a value in **both** `:root` and the `:root[data-theme="dark"]` block, and a
 comment saying when to reach for it. If the answer is "one element on one
 page", you want a local value in that module, not a token.
+
+The dark block is keyed off an attribute rather than `prefers-color-scheme`
+because the scheme is a user choice — System / Light / Dark, in Settings ›
+Appearance and in the app bar. `src/theme.ts` resolves the choice (consulting
+the media query only in System mode) and writes the answer to `<html>`; a boot
+script in `index.html` does the same before first paint. Style against
+`:root[data-theme="dark"]`, never against the media query — a media-query rule
+would ignore a pinned scheme.
 
 ## Exceptions
 

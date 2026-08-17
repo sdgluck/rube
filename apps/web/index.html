@@ -8,6 +8,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0f1615" />
+    <!-- The stylesheet reads `data-theme` off <html> and has no
+         prefers-color-scheme block of its own, so the attribute has to exist
+         before the first paint or the page draws light and flips. Inline and
+         synchronous for that reason: a module import resolves after layout.
+         The key is mirrored from src/theme.ts — keep the two spellings equal. -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem("tb.theme") || "system";
+          var dark = mode === "dark" || (mode === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <!-- Archivo for interface text, IBM Plex Mono for anything the machine
          produced. Both are self-hosted from /fonts — see src/styles/fonts.css.
          Preloading the two latin faces the first paint needs keeps the swap

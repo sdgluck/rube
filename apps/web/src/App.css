@@ -23,6 +23,12 @@
  */
 
 :root {
+  /* Native chrome — scrollbars, date pickers, form controls — is drawn by the
+     UA, not by this file, and it follows `color-scheme` rather than any token
+     below. Pinned to the resolved theme so that choosing Light on a machine
+     set to dark doesn't leave dark scrollbars down the side of a light page. */
+  color-scheme: light;
+
   /* ─── Surfaces and ink ──────────────────────────────────────────────── */
   --page: #edf1f0;
   --surface: #fff;
@@ -318,88 +324,95 @@
  * lines darken, the accent brightens to hold contrast, and status backgrounds
  * become 16% tints of their dot colour so they read as part of the surface
  * rather than pasted-on light chips.
+ *
+ * Keyed off `data-theme`, not `prefers-color-scheme`. The scheme is a choice
+ * now — System / Light / Dark, see src/theme.ts — and "system, unless pinned"
+ * is not something a media query can say without a second copy of every
+ * declaration below. The attribute always holds the *resolved* theme, written
+ * before first paint by the boot script in index.html, so the media query is
+ * resolved in JS instead and this block stays the only place dark is spelled.
  */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #0d1413;
-    --surface: #16201f;
-    --surface-sunken: #111a19;
-    --surface-header: #131d1c;
-    --fill-quiet: #1b2524;
-    --line: #2d3837;
-    --line-soft: #1e2827;
-    /* A shade above --surface, the way the light pair sits a shade below the
-       page: a placeholder reads as an absence of content, not as content. */
-    --skeleton-base: #1b2524;
-    --skeleton-sheen: #24302e;
-    /* Proportionally further from --line than the light pair, because the
-       whole dark range is compressed: an overlay edge that only just beats the
-       surface below it disappears entirely on a dim panel. */
-    --line-strong: #46534f;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --ink: #f2f6f5;
-    --ink-2: #a6b4b2;
-    --ink-3: #8b9a98;
-    --ink-4: #8b9a98;
-    --ink-faint: #5e6c6a;
+  --page: #0d1413;
+  --surface: #16201f;
+  --surface-sunken: #111a19;
+  --surface-header: #131d1c;
+  --fill-quiet: #1b2524;
+  --line: #2d3837;
+  --line-soft: #1e2827;
+  /* A shade above --surface, the way the light pair sits a shade below the
+     page: a placeholder reads as an absence of content, not as content. */
+  --skeleton-base: #1b2524;
+  --skeleton-sheen: #24302e;
+  /* Proportionally further from --line than the light pair, because the
+     whole dark range is compressed: an overlay edge that only just beats the
+     surface below it disappears entirely on a dim panel. */
+  --line-strong: #46534f;
 
-    --accent: #1aa79b;
-    --accent-fill: #12867c;
-    --accent-text: #35c4b7;
-    --accent-soft: #0f3a35;
-    --accent-ink: #9fd8d1;
+  --ink: #f2f6f5;
+  --ink-2: #a6b4b2;
+  --ink-3: #8b9a98;
+  --ink-4: #8b9a98;
+  --ink-faint: #5e6c6a;
 
-    --inverse: #1d3230;
-    --sidebar: #0a100f;
+  --accent: #1aa79b;
+  --accent-fill: #12867c;
+  --accent-text: #35c4b7;
+  --accent-soft: #0f3a35;
+  --accent-ink: #9fd8d1;
 
-    --ramp-1: #1aa79b;
-    --ramp-2: #148a80;
-    --ramp-3: #106a62;
-    --ramp-4: #0d4b46;
+  --inverse: #1d3230;
+  --sidebar: #0a100f;
 
-    /* No --e-* overrides here any more. The elevation tokens resolve to
-       borders in --line-strong, which this block already redefines, so they
-       follow the theme without a second copy to keep in sync. */
+  --ramp-1: #1aa79b;
+  --ramp-2: #148a80;
+  --ramp-3: #106a62;
+  --ramp-4: #0d4b46;
 
-    --line-hover: #3d4a48;
-    --line-accent: #17544c;
+  /* No --e-* overrides here any more. The elevation tokens resolve to
+     borders in --line-strong, which this block already redefines, so they
+     follow the theme without a second copy to keep in sync. */
 
-    --fill-hover: rgba(255, 255, 255, 0.06);
-    --fill-track: #1b2524;
-    --fill-inert: #2d3837;
+  --line-hover: #3d4a48;
+  --line-accent: #17544c;
 
-    --surface-poster: #1b2524;
-    --checker-a: #1b2524;
-    --checker-b: #141d1c;
+  --fill-hover: rgba(255, 255, 255, 0.06);
+  --fill-track: #1b2524;
+  --fill-inert: #2d3837;
 
-    --danger: #e0736b;
-    --danger-hover: #ec8b84;
-    --danger-line: #5a2a26;
+  --surface-poster: #1b2524;
+  --checker-a: #1b2524;
+  --checker-b: #141d1c;
 
-    --input-focus-ring: 0 0 0 3px rgba(26, 167, 155, 0.2);
+  --danger: #e0736b;
+  --danger-hover: #ec8b84;
+  --danger-line: #5a2a26;
 
-    /* Tinted translucent fills read as "part of the surface" on dark, where
-     * the light palette's solid pastels read as pasted-on light chips. */
-    --status-ok-bg: rgba(18, 134, 124, 0.16);
-    --status-ok-fg: #6fd3ab;
-    --status-ok-dot: #1aa79b;
+  --input-focus-ring: 0 0 0 3px rgba(26, 167, 155, 0.2);
 
-    --status-warn-bg: rgba(240, 180, 41, 0.16);
-    --status-warn-fg: #f0c46b;
+  /* Tinted translucent fills read as "part of the surface" on dark, where
+   * the light palette's solid pastels read as pasted-on light chips. */
+  --status-ok-bg: rgba(18, 134, 124, 0.16);
+  --status-ok-fg: #6fd3ab;
+  --status-ok-dot: #1aa79b;
 
-    --status-error-bg: rgba(176, 51, 44, 0.16);
-    --status-error-fg: #f0a9a2;
+  --status-warn-bg: rgba(240, 180, 41, 0.16);
+  --status-warn-fg: #f0c46b;
 
-    --status-info-bg: rgba(11, 127, 158, 0.18);
-    --status-info-fg: #7fc9dd;
+  --status-error-bg: rgba(176, 51, 44, 0.16);
+  --status-error-fg: #f0a9a2;
 
-    --status-neutral-bg: #1b2524;
-    --status-neutral-fg: #a6b4b2;
+  --status-info-bg: rgba(11, 127, 158, 0.18);
+  --status-info-fg: #7fc9dd;
 
-    --status-special-bg: rgba(110, 92, 196, 0.2);
-    --status-special-fg: #b6abec;
-  }
+  --status-neutral-bg: #1b2524;
+  --status-neutral-fg: #a6b4b2;
+
+  --status-special-bg: rgba(110, 92, 196, 0.2);
+  --status-special-fg: #b6abec;
 }
 
 *,

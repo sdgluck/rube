@@ -415,6 +415,17 @@ export const configSchema = z.object({
   jobs_summary_tiles: z.array(z.string()).max(6),
   jobs_panel_order: z.array(z.string()).max(20),
   /**
+   * Which colour scheme the admin UI draws in. `system` follows
+   * `prefers-color-scheme`; the other two pin it.
+   *
+   * Stored server-side, alongside the other UI persistence keys, so the choice
+   * follows the admin between browsers rather than being relearned on every
+   * machine. The browser also keeps a localStorage mirror, which is what the
+   * boot script in `index.html` reads — the theme has to be on `<html>` before
+   * the first paint, and the config round trip lands long after it.
+   */
+  ui_theme: z.enum(["system", "light", "dark"]),
+  /**
    * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
    * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its
    * own filesystem, so the same directory usually has a different mount point

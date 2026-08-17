@@ -7,6 +7,7 @@ import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import { FormSkeleton } from "#components/Skeleton";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
+import ThemeToggle from "#components/ThemeToggle";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 import CardSection from "#components/CardSection";
@@ -101,6 +102,24 @@ export default function SettingsAppearance() {
   return (
     <div className={styles.form}>
       <SettingsPageHeader title="Appearance" />
+
+      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Interface">
+        <label className={styles.field}>
+          <span className={styles.label}>Colour scheme</span>
+          <div>
+            <ThemeToggle />
+          </div>
+        </label>
+        <p className={styles.hint}>
+          <strong>System</strong> follows the operating system's light/dark setting and changes with it — including
+          mid-session, when the OS switches at sunset. The other two pin it.
+        </p>
+        <p className={styles.hint}>
+          Saved to the server, so the choice follows you to another browser, and mirrored into this browser's local
+          storage, which is what the page reads before it first paints. A browser that has already been given a scheme
+          keeps it: this setting seeds new browsers rather than overruling them.
+        </p>
+      </CardSection>
 
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Collection artwork">
         <p className={styles.hint}>
