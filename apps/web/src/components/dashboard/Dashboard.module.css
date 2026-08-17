@@ -76,6 +76,18 @@
   min-height: 1.1em;
 }
 
+/* The value itself, kept to one line and shrunk to fit by useFitValue. It takes
+   the free space on the line so its own box is the width the measurement wants;
+   the trend keeps its size beside it. */
+.summaryValueText {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Timestamps and names don't carry a metric's weight at metric size. */
 .summaryValueSmall {
   font-size: 15px;

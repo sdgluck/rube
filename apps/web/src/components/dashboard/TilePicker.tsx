@@ -1,6 +1,6 @@
 import { LayoutGrid } from "lucide-react";
 import type React from "react";
-import { Children, useEffect, useRef, useState } from "react";
+import { Children, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMediaQuery } from "#hooks/useMediaQuery";
 import { Sparkline } from "./Sparkline";
@@ -22,6 +22,58 @@ export function resolveTiles(saved: string[] | undefined, registry: TileDef[], d
   const known = registry.map((t) => t.id);
   const cleaned = (saved ?? []).filter((id) => known.includes(id));
   return (cleaned.length > 0 ? cleaned : defaults).slice(0, max);
+}
+
+/**
+ * The smallest a value is allowed to shrink, as a fraction of the tile's metric
+ * size. Below this a metric stops reading as the headline of its tile, so a
+ * value that still doesn't fit is ellipsised instead — by then the number is
+ * long enough that the tile can't tell the whole story anyway, and the panel
+ * or linked page behind it can.
+ */
+const MIN_VALUE_SCALE = 0.6;
+
+/**
+ * Shrinks a tile's value until it fits on one line. Tiles are laid out on a
+ * shared grid track, so the widest value in the row can't be given more room —
+ * "48.90 TB" would otherwise wrap onto a second line and make every tile in the
+ * bar taller. Measured rather than guessed from string length: the value can be
+ * a skeleton, an arrow or a sparkline as easily as digits.
+ */
+function useFitValue(value: React.ReactNode) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const line = el?.parentElement;
+    if (!el || !line) return;
+
+    let lastWidth = -1;
+    const fit = () => {
+      // Measure at full size every time: a value that just got shorter (or a
+      // tile that just got wider) should grow back, not stay where it was.
+      el.style.fontSize = "";
+      const base = Number.parseFloat(getComputedStyle(el).fontSize);
+      if (!Number.isFinite(base) || el.scrollWidth <= el.clientWidth) return;
+      const scale = Math.max(el.clientWidth / el.scrollWidth, MIN_VALUE_SCALE);
+      el.style.fontSize = `${Math.floor(base * scale * 10) / 10}px`;
+    };
+
+    fit();
+    // The line, not the value: resizing the value is what this effect *does*,
+    // so observing it would re-enter on its own change. Width-only guard for
+    // the same reason — shrinking the text changes the line's height too.
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      if (width === lastWidth) return;
+      lastWidth = width;
+      fit();
+    });
+    observer.observe(line);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return ref;
 }
 
 /** A single metric card in the summary bar. */
@@ -51,6 +103,7 @@ export function SummaryTile({
    */
   to?: string;
 }) {
+  const valueRef = useFitValue(value);
   const valueClass = [
     styles.summaryValue,
     tone === "small" ? styles.summaryValueSmall : "",
@@ -69,7 +122,9 @@ export function SummaryTile({
       <span className={styles.summaryLabel}>{label}</span>
       <span className={valueClass}>
         <span className={styles.summaryValueLine}>
-          {value}
+          <span className={styles.summaryValueText} ref={valueRef}>
+            {value}
+          </span>
           {trend && trend.length > 1 && <Sparkline values={trend} label="Recent history" />}
         </span>
         <span className={styles.summarySub}>

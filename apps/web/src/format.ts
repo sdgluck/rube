@@ -96,9 +96,11 @@ export function formatNumber(n: number): string {
   return n.toLocaleString();
 }
 
-/** Byte count: `840 KB`, `12.4 MB`, `3.21 GB`. */
+/** Byte count: `840 KB`, `12.4 MB`, `3.21 GB`, `48.9 TB`. */
 export function formatFileSize(bytes: number | null | undefined): string {
   if (!bytes) return EMPTY;
+  if (bytes >= 1e15) return `${(bytes / 1e15).toFixed(2)} PB`;
+  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(2)} TB`;
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
   if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
   return `${(bytes / 1e3).toFixed(0)} KB`;
