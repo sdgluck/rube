@@ -61,6 +61,57 @@ export function minutesOfDay(date: Date, timezone?: string): number {
 }
 
 /**
+ * Midnight at the start of `now`'s day, as a timestamp.
+ *
+ * Derived by subtracting the wall-clock time already elapsed in `timezone`
+ * rather than by constructing a date, which keeps it right across a DST
+ * transition without any offset arithmetic. Falls back to the process clock for
+ * an unset or unknown zone, as everything else here does.
+ */
+export function startOfLocalDay(now: number, timezone?: string): number {
+  const date = new Date(now);
+  if (!timezone) return date.setHours(0, 0, 0, 0);
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).formatToParts(date);
+    const value = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? "0");
+    // Intl renders midnight as 24 in some ICU versions under hour12: false.
+    const elapsed = ((value("hour") % 24) * 3600 + value("minute") * 60 + value("second")) * 1000 + (now % 1000);
+    return now - elapsed;
+  } catch {
+    return new Date(now).setHours(0, 0, 0, 0);
+  }
+}
+
+/**
+ * `YYYY-MM-DD` for `now` in `timezone` — a stable name for "which day is it",
+ * for anything that needs to happen at most once a day.
+ */
+export function localDayKey(now: number, timezone?: string): string {
+  const date = new Date(now);
+  if (!timezone) {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+  try {
+    // `en-CA` renders as YYYY-MM-DD, which is the shape we want anyway.
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  } catch {
+    return localDayKey(now);
+  }
+}
+
+/**
  * Is `now` inside the `from`–`to` window?
  *
  * A window whose end precedes its start spans midnight, which is the common

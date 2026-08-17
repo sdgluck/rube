@@ -101,6 +101,32 @@ function monthDayOrdinal(value: string): number {
 }
 
 /**
+ * Which `MM-DD` it is where the server is configured to live.
+ *
+ * `contracts` holds no dependency on the config store, so the zone arrives as an
+ * argument; the jobs that evaluate a schedule pass `configuredTimezone()`. An
+ * unset or unknown zone falls back to the process clock, as everything else
+ * touching timezones does.
+ */
+function todayOrdinal(date: Date, timezone?: string): number {
+  const local = () => (date.getMonth() + 1) * 100 + date.getDate();
+  if (!timezone) return local();
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const value = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? "0");
+    const month = value("month");
+    const day = value("day");
+    return month && day ? month * 100 + day : local();
+  } catch {
+    return local();
+  }
+}
+
+/**
  * Is the rule inside its calendar window on this date?
  *
  * A window whose end is before its start wraps the year end, which is the case
@@ -108,12 +134,16 @@ function monthDayOrdinal(value: string): number {
  * range would silently disable the rule for the one month it exists for.
  *
  * A rule with no window is always active.
+ *
+ * Evaluated in `timezone` for the same reason the cron is: a one-day window
+ * like `10-31` → `10-31` read off a UTC container is Halloween somewhere else,
+ * and the rule turns itself on and off eight hours from when it should.
  */
-export function isRuleActiveOn(schedule: RuleSchedule | undefined, date: Date): boolean {
+export function isRuleActiveOn(schedule: RuleSchedule | undefined, date: Date, timezone?: string): boolean {
   if (!schedule?.activeFrom || !schedule.activeTo) return true;
   const from = monthDayOrdinal(schedule.activeFrom);
   const to = monthDayOrdinal(schedule.activeTo);
-  const today = (date.getMonth() + 1) * 100 + date.getDate();
+  const today = todayOrdinal(date, timezone);
   // Inclusive at both ends: a window of `10-31` → `10-31` is Halloween itself,
   // and an exclusive end would make it empty.
   return from <= to ? today >= from && today <= to : today >= from || today <= to;

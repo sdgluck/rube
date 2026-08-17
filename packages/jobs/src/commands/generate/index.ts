@@ -1,5 +1,5 @@
 import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
-import { getConfig } from "@tinkerbell/core";
+import { configuredTimezone, getConfig } from "@tinkerbell/core";
 import { plexHealthCallback } from "@tinkerbell/core";
 import {
   getEnabledRules,
@@ -595,7 +595,7 @@ export function batchSkipReason(
   config: { schedule?: RuleSchedule },
   now: Date,
 ): BatchSkip | null {
-  if (!isRuleActiveOn(config.schedule, now)) {
+  if (!isRuleActiveOn(config.schedule, now, configuredTimezone())) {
     const window = describeRuleWindow(config.schedule);
     return {
       reason: `outside this rule's season (${window})`,

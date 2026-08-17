@@ -20,7 +20,7 @@
  * your collections are three months stale.
  */
 
-import { createLogger, errorMessage, type JobContext } from "@tinkerbell/core";
+import { configuredTimezone, createLogger, errorMessage, type JobContext } from "@tinkerbell/core";
 import { getEnabledRules, setRuleLastRun } from "@tinkerbell/domain.rules";
 import { isRuleActiveOn, type RuleTrigger } from "@tinkerbell/contracts";
 import { scheduleOf } from "./rule-schedules.ts";
@@ -114,8 +114,9 @@ async function runChain(ctx: JobContext, ruleId: string, seen: Set<string>, dept
     if (candidate.id === ruleId) return false;
     const schedule = scheduleOf(candidate);
     if (!schedule?.afterRules?.includes(ruleId)) return false;
-    // A seasonal rule stays out of season however it was started.
-    return isRuleActiveOn(schedule, now);
+    // A seasonal rule stays out of season however it was started, and its
+    // season is read where the server lives — not where the container does.
+    return isRuleActiveOn(schedule, now, configuredTimezone());
   });
   if (downstream.length === 0) return { ran: [], failed: [] };
 
@@ -139,8 +140,9 @@ export async function runTriggeredRules(
   const listening = getEnabledRules().filter((rule) => {
     const schedule = scheduleOf(rule);
     if (!schedule?.triggers?.includes(trigger)) return false;
-    // A seasonal rule stays out of season however it was started.
-    return isRuleActiveOn(schedule, now);
+    // A seasonal rule stays out of season however it was started, and its
+    // season is read where the server lives — not where the container does.
+    return isRuleActiveOn(schedule, now, configuredTimezone());
   });
   if (listening.length === 0) return null;
 

@@ -59,6 +59,16 @@ test("isWithinWindow", async (t) => {
   await t.test("a zero-width window is always open, not never", () => {
     assert.equal(isWithinWindow("03:00", "03:00", at(15)), true);
   });
+
+  await t.test("reads the clock in the configured zone, not the container's", () => {
+    // The bug this covers: a UTC container configured for Los Angeles enforced
+    // "overnight" eight hours out, holding jobs back all evening and releasing
+    // them mid-afternoon. 03:00 UTC is 19:00 the previous day in LA.
+    const utcEarlyMorning = new Date(Date.UTC(2027, 0, 15, 3, 0));
+    assert.equal(isWithinWindow("01:00", "06:00", utcEarlyMorning, "UTC"), true);
+    assert.equal(isWithinWindow("01:00", "06:00", utcEarlyMorning, "America/Los_Angeles"), false);
+    assert.equal(isWithinWindow("18:00", "23:00", utcEarlyMorning, "America/Los_Angeles"), true);
+  });
 });
 
 test("isDeferrable", async (t) => {

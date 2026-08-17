@@ -13,6 +13,10 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, config } from "@tinkerbell/db";
+import { createLogger } from "./logger.ts";
+import { errorMessage } from "./util.ts";
+
+const timezoneLog = createLogger("timezone");
 
 /**
  * Does the runtime's ICU data recognise this timezone?
@@ -30,6 +34,51 @@ export function isValidTimezone(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The timezone this install lives in: `global_timezone`, else `TZ`, else the
+ * process clock.
+ *
+ * Lives here rather than beside the scheduler because "what day is it" and
+ * "what time is it" are not only the scheduler's questions. Cron was
+ * zone-aware from the start, while the maintenance window read `getHours()`,
+ * seasonal rule windows read `getMonth()/getDate()` and the stats day
+ * boundaries read `setHours(0,0,0,0)` — so a UTC container configured for
+ * `America/Los_Angeles` enforced its quiet hours eight hours out and rolled
+ * "today" over at 17:00 local.
+ *
+ * Both sources are validated rather than trusted. `global_timezone` is
+ * schema-checked on save, but a row written by an older build (or by hand)
+ * bypasses that, and `TZ` never goes through the schema at all — setting it in
+ * a compose file is the first thing a self-hoster does. A bad value propagated
+ * into every `new Cron` throws during `initJobs`, which the server turns into
+ * `process.exit(1)`: a crash-loop with no UI left to fix it from.
+ */
+export function configuredTimezone(): string | undefined {
+  let configured: string | undefined;
+  try {
+    configured = getConfig("global_timezone")?.trim();
+  } catch (err) {
+    // `getConfig` parses the stored value against the schema, so a corrupt row
+    // throws here. Callers include `initJobs`, where an exception escaping is a
+    // boot failure — precisely what this guards against.
+    timezoneLog.error("could not read the configured timezone", { err: errorMessage(err) });
+  }
+  if (configured) {
+    if (isValidTimezone(configured)) return configured;
+    timezoneLog.error("ignoring invalid configured timezone", { timezone: configured });
+  }
+
+  const env = process.env.TZ?.trim();
+  if (env) {
+    if (isValidTimezone(env)) return env;
+    timezoneLog.error("ignoring invalid TZ environment variable", { TZ: env });
+  }
+
+  // undefined = follow the process's own local time, which is the behaviour we
+  // had before the setting existed. Degraded, but running.
+  return undefined;
 }
 
 export const configSchema = z.object({

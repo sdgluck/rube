@@ -74,7 +74,7 @@ export function isDue(
   // A rule out of season doesn't run on its own cron either — otherwise the
   // window would only be honoured by the batch, and a seasonal rule with a
   // cron of its own would quietly ignore its own season.
-  if (!isRuleActiveOn(schedule, now)) return null;
+  if (!isRuleActiveOn(schedule, now, timezone)) return null;
   // Never looked at before: `adoptNewSchedules` stamps a starting point, and
   // firing here instead would run every rule the moment it was saved.
   if (lastScheduledAt == null) return null;

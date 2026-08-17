@@ -12,7 +12,7 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import { Cron } from "croner";
 import { db, jobRuns, jobs } from "@tinkerbell/db";
-import { createLogger, errorMessage, getConfig, isValidTimezone, DAY_MS, HOUR_MS, MINUTE_MS } from "@tinkerbell/core";
+import { configuredTimezone, createLogger, errorMessage, DAY_MS, HOUR_MS, MINUTE_MS } from "@tinkerbell/core";
 import { deferralFor, maxDeferralMs } from "./deferral.ts";
 
 const log = createLogger("jobs");
@@ -39,41 +39,13 @@ export const cronJobs = new Map<string, Cron>();
 /**
  * The timezone every schedule is evaluated in.
  *
- * Without this, croner follows the container's local time with nothing telling
- * the user what that is, and `0 3 * * *` double-fires or skips on DST
- * transitions. `global_timezone` is the user-visible setting; `TZ` is the
- * fallback for anyone who set it on the container instead.
+ * Kept as the scheduler's own name for it — croner is the reason the setting
+ * exists — but resolved in core, because the maintenance window, seasonal rule
+ * windows and the stats day boundaries all have to agree with cron about what
+ * time it is.
  */
 export function schedulerTimezone(): string | undefined {
-  // Both sources are validated here rather than trusted. `global_timezone` is
-  // schema-checked on save, but a row written by an older build (or by hand)
-  // bypasses that, and `TZ` never goes through the schema at all — setting it
-  // in a compose file is the first thing a self-hoster does. A bad value
-  // propagated into every `new Cron` throws during `initJobs`, which the server
-  // turns into `process.exit(1)`: a crash-loop with no UI left to fix it from.
-  let configured: string | undefined;
-  try {
-    configured = getConfig("global_timezone")?.trim();
-  } catch (err) {
-    // `getConfig` parses the stored value against the schema, so a corrupt row
-    // throws here. This function runs inside `initJobs`; an exception escaping
-    // it is a boot failure, which is precisely what we're guarding against.
-    log.error("could not read the configured timezone", { err: errorMessage(err) });
-  }
-  if (configured) {
-    if (isValidTimezone(configured)) return configured;
-    log.error("ignoring invalid configured timezone", { timezone: configured });
-  }
-
-  const env = process.env.TZ?.trim();
-  if (env) {
-    if (isValidTimezone(env)) return env;
-    log.error("ignoring invalid TZ environment variable", { TZ: env });
-  }
-
-  // undefined = croner follows the process's own local time, which is the
-  // behaviour we had before the setting existed. Degraded, but running.
-  return undefined;
+  return configuredTimezone();
 }
 
 /** Only catch up on schedules that fire less often than this. */

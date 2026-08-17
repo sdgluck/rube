@@ -1,6 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatDuration, isWithinClockWindow, parseClock, MINUTE_MS, SECOND_MS } from "./time.ts";
+import {
+  formatDuration,
+  isWithinClockWindow,
+  localDayKey,
+  parseClock,
+  startOfLocalDay,
+  MINUTE_MS,
+  SECOND_MS,
+} from "./time.ts";
 
 /**
  * `formatDuration`'s output is embedded verbatim in `job.completed` event
@@ -86,5 +94,30 @@ describe("parseClock", () => {
     assert.equal(parseClock("24:00"), null);
     assert.equal(parseClock("7:5"), null);
     assert.equal(parseClock(""), null);
+  });
+});
+
+describe("startOfLocalDay", () => {
+  it("cuts the day where the configured zone says midnight is", () => {
+    // 02:00 UTC on the 15th is still the 14th in Los Angeles, so "today" there
+    // began 24 hours earlier than a UTC reading would claim.
+    const at = Date.UTC(2027, 0, 15, 2, 0);
+    assert.equal(new Date(startOfLocalDay(at, "UTC")).toISOString(), "2027-01-15T00:00:00.000Z");
+    assert.equal(new Date(startOfLocalDay(at, "America/Los_Angeles")).toISOString(), "2027-01-14T08:00:00.000Z");
+  });
+
+  it("falls back to the process clock for an unknown zone", () => {
+    const at = Date.UTC(2027, 0, 15, 2, 0);
+    assert.equal(startOfLocalDay(at, "Not/AZone"), new Date(at).setHours(0, 0, 0, 0));
+    assert.equal(startOfLocalDay(at), new Date(at).setHours(0, 0, 0, 0));
+  });
+});
+
+describe("localDayKey", () => {
+  it("names the day in the given zone", () => {
+    const at = Date.UTC(2027, 0, 15, 2, 0);
+    assert.equal(localDayKey(at, "UTC"), "2027-01-15");
+    assert.equal(localDayKey(at, "America/Los_Angeles"), "2027-01-14");
+    assert.equal(localDayKey(at, "Asia/Tokyo"), "2027-01-15");
   });
 });

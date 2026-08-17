@@ -18,7 +18,7 @@ import { db, statsCache, jobs, jobRuns, mediaItems, playbackSessions, plexUsers 
 const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
-import { getConfig, DAY_MS, WEEK_MS } from "@tinkerbell/core";
+import { configuredTimezone, getConfig, startOfLocalDay, DAY_MS, WEEK_MS } from "@tinkerbell/core";
 import { topPlayed, type TopPlayedRank } from "@tinkerbell/domain.playback";
 import type { PlexRecentItem } from "@tinkerbell/plex";
 
@@ -132,7 +132,11 @@ export function getActivitySummary(now: number = Date.now()): {
   topUserToday: { name: string; plays: number } | null;
 } {
   const weekCutoff = now - WEEK_MS;
-  const todayCutoff = new Date(now).setHours(0, 0, 0, 0);
+  // Midnight where the server is configured to live, not where the container
+  // runs: a UTC container set to `America/Los_Angeles` rolled "today" over at
+  // 17:00 local, and disagreed with the digest, which has always done this
+  // properly, and with every cron-scheduled day window.
+  const todayCutoff = startOfLocalDay(now, configuredTimezone());
 
   const week = db
     .select({
@@ -180,14 +184,14 @@ export function getActivitySummary(now: number = Date.now()): {
 /**
  * Plays per day, oldest first, the last entry being today so far.
  *
- * Bucketed by integer division from local midnight rather than SQLite's
- * `date()`, which buckets by UTC and would cut the day in the wrong place for
- * anyone west of Greenwich. The boundaries are therefore fixed 24h steps: a DST
- * change inside the window shifts one of them by an hour, which is invisible in
- * a sparkline and not worth a per-row timezone conversion.
+ * Bucketed by integer division from midnight in the configured timezone rather
+ * than SQLite's `date()`, which buckets by UTC and would cut the day in the
+ * wrong place for anyone west of Greenwich. The boundaries are therefore fixed
+ * 24h steps from there: a DST change inside the window shifts one of them by an
+ * hour, which is invisible in a sparkline and not worth a per-row conversion.
  */
 export function getActivitySeries(days: number, now: number = Date.now()): number[] {
-  const start = new Date(now).setHours(0, 0, 0, 0) - (days - 1) * DAY_MS;
+  const start = startOfLocalDay(now, configuredTimezone()) - (days - 1) * DAY_MS;
   const rows = db
     .select({
       bucket: sql<number>`cast((${playbackSessions.startedAt} - ${start}) / ${DAY_MS} as integer)`,

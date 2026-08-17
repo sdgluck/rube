@@ -18,6 +18,16 @@ test("isRuleActiveOn", async (t) => {
     assert.equal(isRuleActiveOn({}, on(3, 15)), true);
   });
 
+  await t.test("a one-day window is read in the given zone", () => {
+    // 01:00 UTC on 1 November is still Halloween in Los Angeles. A rule whose
+    // season is a single day used to flip on the container's clock, so it was
+    // out of season for the hours its owner actually watches films.
+    const halloween = { activeFrom: "10-31", activeTo: "10-31" };
+    const utcAfterMidnight = new Date(Date.UTC(2027, 10, 1, 1, 0));
+    assert.equal(isRuleActiveOn(halloween, utcAfterMidnight, "UTC"), false);
+    assert.equal(isRuleActiveOn(halloween, utcAfterMidnight, "America/Los_Angeles"), true);
+  });
+
   await t.test("a rule with only a cron is always active", () => {
     assert.equal(isRuleActiveOn({ cron: "0 3 * * *" }, on(3, 15)), true);
   });
