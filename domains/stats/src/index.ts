@@ -11,7 +11,7 @@
  *     is meaningless a minute later.
  */
 
-import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, statsCache, jobs, jobRuns, mediaItems, playbackSessions, plexUsers } from "@tinkerbell/db";
 
@@ -107,9 +107,25 @@ export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled:
  */
 export function getMostWatched(opts: { since?: number; limit?: number; rank?: TopPlayedRank } = {}): MostWatchedItem[] {
   const since = opts.since ?? Date.now() - WEEK_MS;
-  return topPlayed({ since, limit: opts.limit ?? 10, rank: opts.rank }).map((row) => ({
+  const rows = topPlayed({ since, limit: opts.limit ?? 10, rank: opts.rank });
+  // The year comes from the library index rather than the playback rows, which
+  // don't carry one. One query for the whole page: the field existed on this
+  // type and was rendered by the panel, but nothing ever filled it in.
+  const keys = rows.map((r) => r.ratingKey).filter((k): k is string => !!k);
+  const years = new Map<string, number>();
+  if (keys.length > 0) {
+    for (const row of db
+      .select({ ratingKey: mediaItems.ratingKey, year: mediaItems.year })
+      .from(mediaItems)
+      .where(inArray(mediaItems.ratingKey, keys))
+      .all()) {
+      if (row.year != null) years.set(row.ratingKey, row.year);
+    }
+  }
+  return rows.map((row) => ({
     ratingKey: row.ratingKey,
     title: row.title,
+    year: row.ratingKey ? years.get(row.ratingKey) : undefined,
     type: row.type,
     grandparentTitle: row.grandparentTitle ?? undefined,
     plays: row.plays,
@@ -141,7 +157,10 @@ export function getActivitySummary(now: number = Date.now()): {
   const week = db
     .select({
       plays: sql<number>`count(*)`,
-      users: sql<number>`count(distinct ${playbackSessions.userId})`,
+      // Excludes the unknown-user sentinel, as `topPlayed` does — see the note
+      // there. Counting 0 as somebody made a week of unidentified plays look
+      // like one active user.
+      users: sql<number>`count(distinct nullif(${playbackSessions.userId}, 0))`,
     })
     .from(playbackSessions)
     .where(gte(playbackSessions.startedAt, weekCutoff))
@@ -329,7 +348,18 @@ export function getLibraryOverview() {
     .all();
   const movieCount = typeCounts.find((t) => t.type === "movie")?.count ?? 0;
   const showCount = typeCounts.find((t) => t.type === "show")?.count ?? 0;
-  const episodeCount = typeCounts.find((t) => t.type === "episode")?.count ?? 0;
+  // Summed from the shows' own `leafCount`, not counted as rows: the sync walks
+  // a section's top-level items, so a TV library indexes shows and never
+  // episodes. Counting `type = 'episode'` rows was therefore always zero, which
+  // the Shows tile rendered as "~0 episodes each" and the library split as
+  // "100% movies" on every install.
+  const episodeCount = Number(
+    db
+      .select({ total: sql<number>`coalesce(sum(${mediaItems.leafCount}), 0)` })
+      .from(mediaItems)
+      .where(eq(mediaItems.type, "show"))
+      .get()?.total ?? 0,
+  );
 
   const count4k =
     db

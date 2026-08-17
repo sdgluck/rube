@@ -107,7 +107,7 @@ export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps)
               </tr>
             </thead>
             <tbody>
-              {sorted.slice(0, 8).map((item, i) => (
+              {sorted.map((item, i) => (
                 <tr key={i}>
                   <td className={styles.rankCell}>{i + 1}</td>
                   <td className={styles.titleCell}>

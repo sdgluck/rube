@@ -688,6 +688,28 @@ export const mediaItems = sqliteTable(
      * total would happily add up, and every consumer says "unknown" instead.
      */
     fileSize: integer("file_size"),
+    /**
+     * Episodes Plex reports for a show (`leafCount`). Null for movies, and for a
+     * show Plex didn't count.
+     *
+     * Stored because the library stats used to count `type = 'episode'` rows —
+     * and there are none. The sync walks a section's top-level rows, so a TV
+     * library indexes shows, never episodes: "~0 episodes each" on the Shows
+     * tile and "100% movies" on the library split were both structural, not a
+     * missing sync. The number comes free in the listing already being paged.
+     */
+    leafCount: integer("leaf_count"),
+    /**
+     * Episodes of this show whose size Plex wouldn't report. Null for movies and
+     * for anything not measured at episode level.
+     *
+     * `fileSize` above is the sum of what *could* be read, so a show with two of
+     * four episodes sized carries a real but incomplete number. Without this
+     * column that show counted as fully sized, and the Storage panel showed a
+     * total short by half with no caveat at all — the panel's own caveat line
+     * exists precisely to say "N items couldn't be accounted for".
+     */
+    sizeUnknownParts: integer("size_unknown_parts"),
     /** Overall bitrate in kbps, as Plex reports it for the first version. */
     bitrate: integer("bitrate"),
     /**

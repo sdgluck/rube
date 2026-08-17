@@ -179,15 +179,18 @@ const ALL_COLUMNS: TableColumn<MediaItem, SortKey>[] = [
   {
     id: "size",
     label: "Size",
-    // A show has no size of its own — its episodes hold the files. Showing a
-    // dash says "not known here" where a 0 B would say "empty".
+    // A show carries the sum over its episodes — the files belong to them, and
+    // the sync rolls the total up. A dash still means "not known here", which a
+    // 0 B would have read as "empty".
     render: (item) => (item.fileSize != null ? formatFileSize(item.fileSize) : EMPTY),
     mono: true,
     mobile: "hide",
   },
 ];
 
-const DEFAULT_VISIBLE = ["title", "section", "type", "year", "added"];
+// `size` is included because the Storage tile links here sorted by it, and a
+// list sorted by a column it doesn't show is a page that looks unsorted.
+const DEFAULT_VISIBLE = ["title", "section", "type", "year", "added", "size"];
 
 function childToMediaItem(child: {
   ratingKey: string;

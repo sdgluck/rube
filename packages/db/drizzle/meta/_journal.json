@@ -337,6 +337,13 @@
       "when": 1786988681761,
       "tag": "0047_daffy_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1786990262255,
+      "tag": "0048_cuddly_lionheart",
+      "breakpoints": true
     }
   ]
 }

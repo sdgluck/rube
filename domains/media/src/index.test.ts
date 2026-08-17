@@ -11,7 +11,7 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 setupTempDb("tinkerbell-media-test-");
 
 const { db, events, mediaItems } = await import("@tinkerbell/db");
-const { syncMedia } = await import("./index.ts");
+const { syncMedia, getStorageBySection } = await import("./index.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
 
 type PlexClient = ReturnType<typeof createPlexClient>;
@@ -22,6 +22,7 @@ interface FakeItem {
   ratingKey: string;
   title: string;
   year?: number;
+  leafCount?: number;
   Genre?: Array<{ tag: string }>;
   rating?: number;
   audienceRating?: number;
@@ -250,14 +251,46 @@ describe("show sizes", () => {
     assert.equal(db.select().from(mediaItems).all()[0].fileSize, null);
   });
 
-  test("a partially sized show reports what is known", async () => {
-    // Short of the truth, but the direction is right and the panel says how
-    // many items it couldn't account for.
+  test("a partially sized show reports what is known, and says how much it isn't", async () => {
+    // Short of the truth, but the direction is right — and the panel can only
+    // say how many items it couldn't account for if the row admits to being
+    // incomplete. It used to keep the bytes and drop the coverage, so a
+    // half-measured TV library reported a total half its real size with no
+    // caveat at all.
     await syncMedia(
       fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 500, episodes: 4, unsized: 2 } }),
       [SHOW_SECTION],
     );
-    assert.equal(db.select().from(mediaItems).all()[0].fileSize, 500);
+    const row = db.select().from(mediaItems).all()[0];
+    assert.equal(row.fileSize, 500);
+    assert.equal(row.sizeUnknownParts, 2);
+
+    const [section] = getStorageBySection();
+    assert.equal(section.bytes, 500);
+    assert.equal(section.unsized, 0, "the row has a size, so it is not unknown");
+    assert.equal(section.partial, 1, "…but it is incomplete, and the panel says so");
+    assert.equal(section.unknownEpisodes, 2);
+  });
+
+  test("a show's episode count comes from the listing, since episodes are never rows", async () => {
+    // The sync walks a section's top-level items, so a TV library indexes shows
+    // and never episodes — which is why counting `type = 'episode'` rows was
+    // always zero, and the Shows tile always said "~0 episodes each".
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show", leafCount: 24 }], {
+        s1: { bytes: 900, episodes: 24, unsized: 0 },
+      }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].leafCount, 24);
+  });
+
+  test("a show Plex didn't count falls back to the episodes actually walked", async () => {
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 900, episodes: 3, unsized: 0 } }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].leafCount, 3);
   });
 
   test("a failed episode walk still indexes the library", async () => {
