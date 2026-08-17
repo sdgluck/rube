@@ -487,8 +487,26 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     // a collection rule writes no action key at all and stays byte-identical
     // to how it was stored before this existed.
     if (next.outcome.kind === "cleanup") {
-      const { kind: _kind, mode, consecutiveRuns, maxActionsPerRun, viaArr, addImportExclusion, dryRun } = next.outcome;
-      config.action = { kind: "cleanup", mode, consecutiveRuns, maxActionsPerRun, viaArr, addImportExclusion, dryRun };
+      const {
+        kind: _kind,
+        mode,
+        consecutiveRuns,
+        maxActionsPerRun,
+        viaArr,
+        addImportExclusion,
+        dryRun,
+        requireApproval,
+      } = next.outcome;
+      config.action = {
+        kind: "cleanup",
+        mode,
+        consecutiveRuns,
+        maxActionsPerRun,
+        viaArr,
+        addImportExclusion,
+        dryRun,
+        requireApproval,
+      };
     }
     if (next.outcome.kind === "metadata") {
       const o = next.outcome;

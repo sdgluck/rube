@@ -4,6 +4,7 @@ import {
   addProtection,
   countsByRule,
   holdCandidate,
+  setCandidateApproval,
   listCandidates,
   listProtections,
   queuedCandidates,
@@ -32,6 +33,21 @@ export const cleanupRouter = t.router({
    * status cell needs this on every render of the list.
    */
   counts: procedure.query(() => Object.fromEntries(countsByRule())),
+
+  /**
+   * Say yes to one item, for a rule that holds destructive actions until
+   * asked.
+   *
+   * One item per call, deliberately. The value of the gate is that somebody
+   * looks at the titles, and a bulk "approve everything due" is a way of not
+   * looking at them that takes one click.
+   */
+  approve: procedure
+    .input(z.object({ ruleId: z.string(), ratingKey: z.string(), approved: z.boolean() }))
+    .mutation(({ input }) => {
+      setCandidateApproval(input.ruleId, input.ratingKey, input.approved);
+      return { ok: true as const };
+    }),
 
   /**
    * Standing protections — the things no cleanup rule may ever action.

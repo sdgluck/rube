@@ -60,13 +60,14 @@ const HOLD_OPTIONS = [
   { value: 365, label: "A year" },
 ];
 
-const STATUS_FILTERS = ["all", "due", "waiting", "held"] as const;
+const STATUS_FILTERS = ["all", "due", "awaitingApproval", "waiting", "held"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 const STATUS_LABELS: Record<StatusFilter, string> = {
   all: "All",
   due: "Due next run",
   waiting: "Waiting",
   held: "Held",
+  awaitingApproval: "Awaiting approval",
 };
 
 type QueueRow = {
@@ -89,6 +90,9 @@ type QueueRow = {
   isProtected: boolean;
   /** Portal users who have asked for this to stay. Advisory, not a hold. */
   keepVotes: string[];
+  /** This rule holds destructive actions until a human says yes to each item. */
+  requiresApproval: boolean;
+  approved: boolean;
 };
 
 export default function Cleanup() {
@@ -113,6 +117,7 @@ export default function Cleanup() {
   const holdMutation = trpc.cleanup.hold.useMutation({ onSuccess: invalidate });
   const holdManyMutation = trpc.cleanup.holdMany.useMutation({ onSuccess: invalidate });
   const restoreMutation = trpc.cleanup.restoreHolds.useMutation({ onSuccess: invalidate });
+  const approveMutation = trpc.cleanup.approve.useMutation({ onSuccess: invalidate });
   const protectMutation = trpc.cleanup.protect.useMutation({
     onSuccess: () => {
       invalidate();
@@ -123,7 +128,13 @@ export default function Cleanup() {
   const rows = (query.data ?? []) as QueueRow[];
   // A held item is explicitly not due, however long its streak. `held` comes
   // from the server so this can't disagree with what the engine will do.
-  const dueNow = rows.filter((r) => r.actionedAt == null && r.runsRemaining === 0 && !r.held && !r.isProtected);
+  // Approval-gated rows that nobody has approved are not due: the next run
+  // will log them and move on. Counting them here would put a number in the
+  // header that no run will act on.
+  const dueNow = rows.filter(
+    (r) =>
+      r.actionedAt == null && r.runsRemaining === 0 && !r.held && !r.isProtected && (!r.requiresApproval || r.approved),
+  );
 
   const ruleOptions = useMemo(() => {
     const names = new Map<string, string>();
@@ -145,6 +156,9 @@ export default function Cleanup() {
       if (ruleFilter.length > 0 && !ruleFilter.includes(row.ruleId)) return false;
       if (modeFilter.length > 0 && !modeFilter.includes(row.mode)) return false;
       if (status === "due") return row.actionedAt == null && row.runsRemaining === 0 && !row.held && !row.isProtected;
+      if (status === "awaitingApproval") {
+        return row.actionedAt == null && row.requiresApproval && !row.approved && row.runsRemaining === 0 && !row.held;
+      }
       if (status === "waiting") return row.actionedAt == null && row.runsRemaining > 0 && !row.held;
       if (status === "held") return row.actionedAt == null && row.held;
       return true;
@@ -493,6 +507,31 @@ export default function Cleanup() {
                               Keep
                             </button>
                           )}
+                          {/* The approval gate, where a rule has one. Only on
+                              rows that are actually due: approving something
+                              three runs out is agreeing to a deletion whose
+                              case hasn't been made yet, and the streak may
+                              still reset. */}
+                          {row.requiresApproval && row.runsRemaining === 0 && !held && (
+                            <button
+                              className={sharedStyles.buttonSecondary}
+                              onClick={() =>
+                                approveMutation.mutate({
+                                  ruleId: row.ruleId,
+                                  ratingKey: row.ratingKey,
+                                  approved: !row.approved,
+                                })
+                              }
+                              disabled={approveMutation.isPending}
+                              title={
+                                row.approved
+                                  ? "Withdraw approval — the next run will leave this alone"
+                                  : "Approve this item for the next run"
+                              }
+                            >
+                              {row.approved ? "Unapprove" : "Approve"}
+                            </button>
+                          )}
                           {/* Beside Keep, because the choice between them is
                               the whole point: Keep buys time, Protect settles
                               it. Someone pressing Keep for the third time on
@@ -548,6 +587,8 @@ function statusText(
     actionedAt: number | null;
     action: string;
     isProtected: boolean;
+    requiresApproval: boolean;
+    approved: boolean;
   },
   held: boolean,
   actioned: boolean,
@@ -573,7 +614,15 @@ function statusText(
       </span>
     );
   }
-  if (row.runsRemaining === 0) return <span className={styles.statusDue}>Due on the next run</span>;
+  if (row.runsRemaining === 0) {
+    // A rule with an approval gate has two "due" states, and conflating them
+    // is the failure this whole feature exists to prevent: "due on the next
+    // run" on a row nothing will touch is exactly the wrong reassurance.
+    if (row.requiresApproval && !row.approved) {
+      return <span className={styles.statusWaiting}>Due — waiting for approval</span>;
+    }
+    return <span className={styles.statusDue}>Due on the next run</span>;
+  }
   return (
     <span className={styles.statusWaiting}>
       {row.runsRemaining} more run{row.runsRemaining === 1 ? "" : "s"}

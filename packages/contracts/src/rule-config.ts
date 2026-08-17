@@ -138,6 +138,20 @@ const cleanupActionSchema = z
        * has seen at least one preview.
        */
       dryRun: z.boolean().default(true),
+      /**
+       * Hold every destructive action until a human approves that item.
+       *
+       * `consecutiveRuns` protects against a metadata blip; it does not
+       * protect against a filter that is *consistently* wrong, which matches
+       * the same 400 films every night and is therefore exactly as confident
+       * on run three as on run one. This is the second lock: a rule can be
+       * live and scheduled and still not delete anything nobody has looked at.
+       *
+       * Off by default. On, a rule needs someone at a keyboard, which is the
+       * wrong trade for most rules and the right one for the rule that
+       * deletes.
+       */
+      requireApproval: z.boolean().default(false),
     }),
   ])
   .optional();

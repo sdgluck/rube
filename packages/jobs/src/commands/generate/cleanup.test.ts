@@ -21,7 +21,8 @@ setupTempDb("tinkerbell-cleanup-job-test-");
 const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await import("@tinkerbell/db");
 const { setConfig } = await import("@tinkerbell/core");
 const { noopCheckpoint } = await import("@tinkerbell/core");
-const { recordMatches, listCandidates, holdCandidate, markActioned } = await import("@tinkerbell/domain.cleanup");
+const { recordMatches, listCandidates, holdCandidate, markActioned, setCandidateApproval } =
+  await import("@tinkerbell/domain.cleanup");
 const { runHandlerWithCleanup, createCleanupBudget } = await import("./cleanup.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
 
@@ -145,6 +146,7 @@ function cleanupAction(over: Record<string, unknown> = {}) {
     viaArr: true,
     addImportExclusion: false,
     dryRun: false,
+    requireApproval: false,
     ...over,
   };
 }
@@ -278,6 +280,89 @@ describe("dryRun", () => {
     assert.equal(calls.collectionsCreated, 0);
     assert.match(log.join("\n"), /DRY RUN.*would delete: "The Matrix"/s);
     assert.equal(listCandidates(RULE_ID)[0].actionedAt, null);
+  });
+});
+
+// ─── The approval gate ───────────────────────────────────────────────────────
+
+describe("requireApproval", () => {
+  it("leaves a due item alone until somebody says yes to it", async () => {
+    primeStreak("100", "The Matrix", 2);
+    const calls = stubServers(); // any delete throws
+    const { ctx, log } = testContext();
+
+    const out = await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ dryRun: false, requireApproval: true }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.equal(out.actioned, 0);
+    assert.deepEqual(calls.deletes, []);
+    assert.match(log.join("\n"), /waiting for approval/);
+    // Still queued, not consumed: the streak survives so the item is due
+    // again the moment it is approved.
+    assert.equal(listCandidates(RULE_ID)[0].actionedAt, null);
+  });
+
+  it("acts once the item is approved", async () => {
+    primeStreak("100", "The Matrix", 2);
+    setCandidateApproval(RULE_ID, "100", true);
+    const calls = stubServers({ allowDestructive: true });
+    const { ctx } = testContext();
+
+    const out = await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ dryRun: false, requireApproval: true }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.equal(out.actioned, 1);
+    assert.equal(calls.deletes.length, 1);
+  });
+
+  it("approves one item without approving its neighbours", async () => {
+    primeStreaks(
+      [
+        { ratingKey: "100", title: "The Matrix" },
+        { ratingKey: "200", title: "Heat" },
+      ],
+      2,
+    );
+    setCandidateApproval(RULE_ID, "100", true);
+    stubServers({ allowDestructive: true });
+    const { ctx } = testContext();
+
+    const out = await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ dryRun: false, requireApproval: true }),
+      createCleanupBudget(),
+      handlerYielding([
+        { ratingKey: "100", title: "The Matrix" },
+        { ratingKey: "200", title: "Heat" },
+      ]),
+    );
+
+    assert.equal(out.actioned, 1);
+    assert.equal(listCandidates(RULE_ID).find((c) => c.ratingKey === "200")?.actionedAt, null);
+  });
+
+  it("is ignored by a non-destructive mode — there is nothing to approve", async () => {
+    primeStreak("100", "The Matrix", 2);
+    const calls = stubServers();
+    const { ctx } = testContext();
+
+    const out = await runHandlerWithCleanup(
+      deps(ctx),
+      cleanupAction({ mode: "label", dryRun: false, requireApproval: true }),
+      createCleanupBudget(),
+      handlerYielding([{ ratingKey: "100", title: "The Matrix" }]),
+    );
+
+    assert.equal(out.actioned, 1);
+    assert.equal(calls.deletes.length, 0);
   });
 });
 

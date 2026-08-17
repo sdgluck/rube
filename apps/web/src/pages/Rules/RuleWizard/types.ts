@@ -38,6 +38,8 @@ export interface OutcomeFormState {
   viaArr: boolean;
   addImportExclusion: boolean;
   dryRun: boolean;
+  /** Cleanup: hold every destructive action until a human approves that item. */
+  requireApproval: boolean;
   /**
    * Metadata: the fields this rule writes, as templates. Held as a full map
    * with empty strings for "don't touch", so clearing a field and typing it
@@ -187,6 +189,7 @@ export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
   viaArr: true,
   addImportExclusion: false,
   dryRun: true,
+  requireApproval: false,
   set: { ...EMPTY_METADATA_SET },
   addGenres: [],
   addLabels: [],

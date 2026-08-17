@@ -323,6 +323,13 @@
       "when": 1786958524372,
       "tag": "0045_late_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1786958726712,
+      "tag": "0046_supreme_blackheart",
+      "breakpoints": true
     }
   ]
 }

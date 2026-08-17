@@ -1153,6 +1153,15 @@ export const cleanupCandidates = sqliteTable(
      * rule itself, which nobody is going to do carefully at 1am.
      */
     heldUntil: integer("held_until"),
+    /**
+     * When a human said yes to this specific item.
+     *
+     * Only consulted by rules with `requireApproval`, where it is the
+     * difference between "this rule may delete" and "this rule may delete
+     * *these*". Cleared when the item leaves the queue, so an approval never
+     * outlives the streak that earned it.
+     */
+    approvedAt: integer("approved_at"),
   },
   (table) => [
     uniqueIndex("idx_cleanup_candidates_pk").on(table.ruleId, table.ratingKey),

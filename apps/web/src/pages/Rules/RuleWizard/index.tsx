@@ -1341,6 +1341,27 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </span>
             </div>
 
+            {/* Only meaningful for a rule that actually removes something, and
+                only once it is live: an approval queue for a preview run is a
+                queue of decisions with no consequences. */}
+            {destructive && !o.dryRun && (
+              <div className={styles.field}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={o.requireApproval}
+                    onChange={(e) => setOutcome({ requireApproval: e.target.checked })}
+                  />{" "}
+                  Ask me before removing each item
+                </label>
+                <span className={styles.hint}>
+                  Items still build their streak and still reach the queue; nothing is {o.mode}d until you approve it
+                  there. The streak protects against a metadata blip — this protects against a filter that is
+                  consistently wrong, which looks exactly as confident on run three as on run one.
+                </span>
+              </div>
+            )}
+
             {destructive && !o.dryRun && (
               <div className={styles.dangerPanel} role="alert">
                 <p className={styles.dangerPanelHeading}>
@@ -1360,6 +1381,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                       : "unmonitored in Radarr/Sonarr"}
                   </strong>
                   , up to {o.maxActionsPerRun} item{o.maxActionsPerRun === 1 ? "" : "s"} per run.{" "}
+                  {o.requireApproval && "Each item waits for your approval on the Cleanup page first. "}
                   {o.mode === "delete" && "There is no undo."}
                 </p>
                 <p className={styles.dangerPanelBody}>

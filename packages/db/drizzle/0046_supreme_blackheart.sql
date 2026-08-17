@@ -1,0 +1,1 @@
+ALTER TABLE `cleanup_candidates` ADD `approved_at` integer;

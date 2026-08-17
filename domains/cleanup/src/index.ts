@@ -49,6 +49,8 @@ export interface CleanupCandidate {
   actionedAt: number | null;
   action: string;
   heldUntil: number | null;
+  /** When a human approved this item, for a rule with `requireApproval`. */
+  approvedAt: number | null;
 }
 
 /** SQLite caps host parameters at 999; a rule can match a whole library. */
@@ -329,6 +331,26 @@ export function leavingSoon(
     .map((c) => ({ ratingKey: c.ratingKey, title: c.title, runsRemaining: c.runsRemaining }));
 }
 
+/**
+ * Say yes (or take it back) to one item, for a rule that holds destructive
+ * actions until asked.
+ *
+ * Per item rather than per rule or per batch. The whole value of the gate is
+ * that it makes somebody look at the titles, and an "approve all" is a way of
+ * not looking at them that takes one click.
+ */
+export function setCandidateApproval(
+  ruleId: string,
+  ratingKey: string,
+  approved: boolean,
+  now: number = Date.now(),
+): void {
+  db.update(cleanupCandidates)
+    .set({ approvedAt: approved ? now : null })
+    .where(and(eq(cleanupCandidates.ruleId, ruleId), eq(cleanupCandidates.ratingKey, ratingKey)))
+    .run();
+}
+
 /** Stamp a candidate as done. The row stays as the audit trail. */
 export function markActioned(ruleId: string, ratingKey: string, action: CleanupAction, now: number = Date.now()): void {
   db.update(cleanupCandidates)
@@ -401,6 +423,17 @@ export interface QueuedCandidate extends CleanupCandidate {
    * simply happened at 4am.
    */
   keepVotes: string[];
+  /**
+   * Whether this rule holds destructive actions until a human says yes, and
+   * whether this item has had that yes.
+   *
+   * Both on the row rather than looked up per rule in the page: the queue is
+   * cross-rule, so "is this waiting on me" is a per-row question with a
+   * per-rule answer, and computing it in the browser means the page can
+   * disagree with the engine about what is about to happen.
+   */
+  requiresApproval: boolean;
+  approved: boolean;
 }
 
 /**
@@ -436,7 +469,9 @@ export function queuedCandidates(
   const votes = keepVotesByItem();
 
   return rows.map(({ candidate, ruleName, config, fileSize }) => {
-    const action = (config as { action?: { consecutiveRuns?: number; mode?: string } } | null)?.action;
+    const action = (
+      config as { action?: { consecutiveRuns?: number; mode?: string; requireApproval?: boolean } } | null
+    )?.action;
     const consecutiveRuns = action?.consecutiveRuns ?? 3;
     return {
       ...candidate,
@@ -448,6 +483,8 @@ export function queuedCandidates(
       fileSize: fileSize ?? null,
       isProtected: protectedKeys.has(candidate.ratingKey),
       keepVotes: votes.get(candidate.ratingKey) ?? [],
+      requiresApproval: action?.requireApproval === true,
+      approved: candidate.approvedAt != null,
     };
   });
 }

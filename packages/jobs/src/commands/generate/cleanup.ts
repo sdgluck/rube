@@ -155,10 +155,32 @@ export async function runHandlerWithCleanup(
   //    Suppressed when a standing refusal means the deletion will never come.
   if (!standingRefusal()) notifyPending(rule, action);
 
-  const due = dueForAction(rule.id, action.consecutiveRuns, action.maxActionsPerRun);
+  const allDue = dueForAction(rule.id, action.consecutiveRuns, action.maxActionsPerRun);
+
+  // 3b. The approval gate, for a rule that has one.
+  //
+  // `consecutiveRuns` protects against a metadata blip. It does not protect
+  // against a filter that is *consistently* wrong — one that matches the same
+  // 400 films every night is exactly as confident on run three as on run one.
+  // Applied after `dueForAction` rather than inside it so the log can say what
+  // is waiting on a human, which is the only reason anyone would ever go and
+  // look.
+  let due = allDue;
+  if (action.requireApproval && isDestructiveMode(action.mode)) {
+    due = allDue.filter((c) => c.approvedAt != null);
+    const waiting = allDue.length - due.length;
+    if (waiting > 0) {
+      ctx.log(`[cleanup] ${waiting} due item(s) are waiting for approval and will not be ${action.mode}d:`);
+      for (const c of allDue.filter((x) => x.approvedAt == null))
+        ctx.log(`[cleanup]   awaiting approval: "${c.title}"`);
+    }
+  }
+
   if (due.length === 0) {
     ctx.log(
-      `[cleanup] Nothing due yet — items must match ${action.consecutiveRuns} run(s) in a row (${matches.length} tracked).`,
+      allDue.length > 0
+        ? `[cleanup] Nothing approved — ${allDue.length} item(s) are due but this rule holds destructive actions until a human says yes.`
+        : `[cleanup] Nothing due yet — items must match ${action.consecutiveRuns} run(s) in a row (${matches.length} tracked).`,
     );
     return { matched: matches.length, queued: matches.length, actioned: 0 };
   }
