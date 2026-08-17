@@ -11,6 +11,7 @@ import type { Job } from "#pages/Jobs/types";
 import { getJobDescription } from "#pages/Jobs/descriptions";
 import { getJobFields } from "#pages/Jobs/fields";
 import { useJobActions } from "./useJobActions";
+import CheckpointNotice from "./CheckpointNotice";
 import { formatElapsed } from "#/format";
 
 interface Props {
@@ -95,6 +96,11 @@ export default function JobPageShell({ job, actions, children }: Props) {
       </div>
 
       {description && <p className={styles.jobDescription}>{description}</p>}
+
+      {/* In the shell rather than per job page: which commands checkpoint is
+          the runner's business, and the notice renders nothing for the ones
+          that don't. */}
+      <CheckpointNotice jobId={job.id} />
 
       {children}
 

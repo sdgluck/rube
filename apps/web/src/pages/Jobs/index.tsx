@@ -26,15 +26,17 @@ import { FeaturesPanel } from "./panels/FeaturesPanel";
 import { RecentLogsPanel } from "./panels/RecentLogsPanel";
 import { RecentRunsPanel } from "./panels/RecentRunsPanel";
 import { SystemTasksPanel } from "./panels/SystemTasksPanel";
+import { TimelinePanel } from "./panels/TimelinePanel";
 import { UpcomingPanel, useUpcomingRuns } from "./panels/UpcomingPanel";
 
 // ─── Panels ─────────────────────────────────────────────────────────────────
 
-const PANEL_IDS = ["recentRuns", "upcoming", "systemTasks", "features", "recentLogs"] as const;
+const PANEL_IDS = ["recentRuns", "timeline", "upcoming", "systemTasks", "features", "recentLogs"] as const;
 type PanelId = (typeof PANEL_IDS)[number];
 
 const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>> = {
   recentRuns: RecentRunsPanel,
+  timeline: TimelinePanel,
   upcoming: UpcomingPanel,
   systemTasks: SystemTasksPanel,
   features: FeaturesPanel,

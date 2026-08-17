@@ -107,6 +107,24 @@ export default function JobRun() {
             <span>{run.message}</span>
           </>
         )}
+        {/* "Tinkerbell gave up on this run" and "the command threw" are
+            different facts, and only the first one comes with a caveat: a
+            command job runs in a worker thread we cannot actually interrupt,
+            so a watchdog failure means the row is final and the work might
+            not be. That used to be recoverable only by finding `[watchdog]`
+            somewhere in a multi-megabyte log. */}
+        {run.failureKind && (
+          <>
+            <span className={styles.metaLabel}>Failed by</span>
+            <span>
+              {run.failureKind === "watchdog"
+                ? "Watchdog — it blew its time budget without unwinding. If it was a command job, the work may still be running in its worker thread."
+                : run.failureKind === "cancel-timeout"
+                  ? "Cancellation timed out — it was asked to stop and never did."
+                  : run.failureKind}
+            </span>
+          </>
+        )}
       </div>
 
       {run.status === "running" && run.progress > 0 && (

@@ -458,6 +458,20 @@ export const jobRuns = sqliteTable(
     log: text("log").notNull().default(""),
     progress: real("progress").notNull().default(0),
     message: text("message").notNull().default(""),
+    /**
+     * How a failed run failed, when it wasn't the command's own doing.
+     *
+     * `"watchdog"` — the sweep force-failed it for blowing its budget without
+     * unwinding. `"cancel-timeout"` — a cancellation that never completed.
+     * Null for every ordinary failure, which is the command throwing.
+     *
+     * The distinction is not cosmetic: a watchdog failure means the run may
+     * still be executing inside a worker thread we cannot interrupt, and it
+     * reads in the UI as "Tinkerbell gave up on it", not "your rule is wrong".
+     * Previously this was only recoverable by grepping the log for
+     * `[watchdog]`.
+     */
+    failureKind: text("failure_kind"),
     startedAt: integer("started_at").notNull(),
     finishedAt: integer("finished_at"),
   },

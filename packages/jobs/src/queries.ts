@@ -42,6 +42,7 @@ export function getJobRuns(jobId: string, limit = 20): Array<Omit<JobRun, "log">
       status: jobRuns.status,
       progress: jobRuns.progress,
       message: jobRuns.message,
+      failureKind: jobRuns.failureKind,
       startedAt: jobRuns.startedAt,
       finishedAt: jobRuns.finishedAt,
     })
@@ -88,6 +89,7 @@ export function getJobRun(runId: string): Omit<JobRun, "log"> | null {
         status: jobRuns.status,
         progress: jobRuns.progress,
         message: jobRuns.message,
+        failureKind: jobRuns.failureKind,
         startedAt: jobRuns.startedAt,
         finishedAt: jobRuns.finishedAt,
       })
@@ -187,5 +189,49 @@ export function getRecentRuns(limit = 8): Array<{
     .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
     .orderBy(desc(jobRuns.startedAt))
     .limit(limit)
+    .all();
+}
+
+/**
+ * Every run that overlapped the last `windowMs`, for the timeline.
+ *
+ * Overlapped, not started in — a four-hour Generate that began at 23:00 is the
+ * most interesting bar on a 24-hour view and the one a `startedAt >= cutoff`
+ * filter would drop.
+ *
+ * `finishedAt` is null for a run still going, which the timeline draws as
+ * running to "now" rather than as zero-width.
+ */
+export function getRunsInWindow(
+  windowMs: number,
+  now = Date.now(),
+): Array<{
+  id: string;
+  jobId: string;
+  jobName: string;
+  command: string;
+  status: string;
+  message: string;
+  failureKind: string | null;
+  startedAt: number;
+  finishedAt: number | null;
+}> {
+  const cutoff = now - windowMs;
+  return db
+    .select({
+      id: jobRuns.id,
+      jobId: jobRuns.jobId,
+      jobName: jobs.name,
+      command: jobs.command,
+      status: jobRuns.status,
+      message: jobRuns.message,
+      failureKind: jobRuns.failureKind,
+      startedAt: jobRuns.startedAt,
+      finishedAt: jobRuns.finishedAt,
+    })
+    .from(jobRuns)
+    .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
+    .where(sql`COALESCE(${jobRuns.finishedAt}, ${now}) >= ${cutoff}`)
+    .orderBy(jobRuns.startedAt)
     .all();
 }

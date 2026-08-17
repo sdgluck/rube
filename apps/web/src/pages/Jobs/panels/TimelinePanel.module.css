@@ -1,0 +1,141 @@
+/* ─── 24-hour run timeline ────────────────────────────────────────────────
+ *
+ * One row per lane rather than per job. Lanes are the thing that explains the
+ * shape of a night: `default` runs one job at a time, so the nightly batch is
+ * a chain of bars end to end rather than the pile-up the cron schedule reads
+ * like, and `interactive` is why pressing Run now while Generate is going
+ * doesn't wait four hours.
+ */
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.laneRow {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.laneName {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.track {
+  position: relative;
+  height: 26px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.bar {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  min-width: 2px;
+  border-radius: var(--r-sm);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--ramp-2);
+}
+
+.bar:hover,
+.bar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  z-index: 1;
+}
+
+.completed {
+  background: var(--ramp-2);
+}
+
+.running {
+  background: var(--accent-fill);
+}
+
+.failed {
+  background: var(--danger);
+}
+
+.cancelled {
+  background: var(--ink-faint);
+}
+
+/* A start the scheduler is holding back. Not a run — it has no duration yet,
+   so it is drawn at "now" with a hatch rather than as a bar with a length it
+   does not have. */
+.held {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--status-warn-fg),
+    var(--status-warn-fg) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.axis {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.ticks {
+  position: relative;
+  height: 14px;
+}
+
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font: var(--t-caption);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-sm);
+  display: inline-block;
+}
+
+.heldNote {
+  margin-top: 10px;
+  font: var(--t-caption);
+  color: var(--status-warn-fg);
+}
+
+@media (max-width: 640px) {
+  .laneRow,
+  .axis {
+    grid-template-columns: 62px 1fr;
+  }
+}

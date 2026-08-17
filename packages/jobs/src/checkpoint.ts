@@ -56,3 +56,34 @@ export function createCheckpoint(jobId: string): JobCheckpoint {
     },
   };
 }
+
+export interface CheckpointStatus {
+  jobId: string;
+  updatedAt: number;
+  /** Past the TTL, so the next run will discard it rather than resume from it. */
+  expired: boolean;
+  expiresAt: number;
+}
+
+/**
+ * Whether a job is currently carrying resumable state, for the UI.
+ *
+ * Read-only and deliberately non-destructive, unlike `read()`, which deletes an
+ * expired row as a side effect. Somebody looking at a job's page should not
+ * silently change what its next run will do.
+ */
+export function checkpointStatus(jobId: string): CheckpointStatus | null {
+  const row = db.select().from(jobCheckpoints).where(eq(jobCheckpoints.jobId, jobId)).get();
+  if (!row) return null;
+  return {
+    jobId,
+    updatedAt: row.updatedAt,
+    expired: Date.now() - row.updatedAt > CHECKPOINT_TTL_MS,
+    expiresAt: row.updatedAt + CHECKPOINT_TTL_MS,
+  };
+}
+
+/** Throw away resumable state, so the next run starts from scratch. */
+export function discardCheckpoint(jobId: string): boolean {
+  return db.delete(jobCheckpoints).where(eq(jobCheckpoints.jobId, jobId)).run().changes > 0;
+}

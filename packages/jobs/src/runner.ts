@@ -647,6 +647,11 @@ export function sweepStuckRuns(now = Date.now()): number {
         status: "failed",
         log: sql`${jobRuns.log} || ${`\n[watchdog] ${reason}. Marking the run as failed.\n`}`,
         message: reason,
+        // Recorded structurally as well as in the log: "Tinkerbell gave up on
+        // this run" and "this run threw" want to read differently in the UI,
+        // and grepping a multi-megabyte log for `[watchdog]` is not a way to
+        // tell them apart.
+        failureKind: run.status === "cancelling" ? "cancel-timeout" : "watchdog",
         finishedAt: now,
       })
       .where(eq(jobRuns.id, run.id))

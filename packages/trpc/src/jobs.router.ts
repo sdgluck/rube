@@ -15,6 +15,11 @@ import {
   uninstallFeature,
   listFeatureCatalog,
   deferredStarts,
+  getRunsInWindow,
+  checkpointStatus,
+  discardCheckpoint,
+  COMMANDS,
+  isCommandName,
 } from "@tinkerbell/jobs";
 import { getBywCollectionsGroupedByUser } from "@tinkerbell/domain.collections";
 import { getLastFailedRun } from "@tinkerbell/domain.stats";
@@ -29,6 +34,58 @@ export const jobsRouter = t.router({
    * reading the server log.
    */
   deferred: procedure.query(() => deferredStarts()),
+
+  /**
+   * What ran, and when, over a window — for the timeline on the Jobs page.
+   *
+   * The runner is far more sophisticated than the UI let on: two lanes with
+   * independent concurrency, scheduled starts held back while somebody is
+   * streaming, a watchdog that force-fails a wedged run. None of it was
+   * legible. A list of recent runs answers "what happened"; it does not answer
+   * "why did the nightly job start at 02:40", which is the question people
+   * actually arrive with.
+   *
+   * Deferred starts come back alongside the runs because they are the answer
+   * to that question and they are not runs — they exist only in the
+   * scheduler's memory until they either start or hit their ceiling.
+   */
+  timeline: procedure
+    .input(
+      z.object({
+        windowMs: z
+          .number()
+          .int()
+          .min(60_000)
+          .max(7 * 24 * 3_600_000)
+          .default(24 * 3_600_000),
+      }),
+    )
+    .query(({ input }) => {
+      const now = Date.now();
+      const runs = getRunsInWindow(input.windowMs, now).map((run) => ({
+        ...run,
+        // The lane is a property of the command, not of the run, and it is
+        // what explains why two jobs due at the same minute didn't overlap.
+        lane: isCommandName(run.command) ? COMMANDS[run.command].lane : "internal",
+      }));
+      return { now, windowMs: input.windowMs, runs, deferred: deferredStarts() };
+    }),
+
+  /**
+   * Resumable state a previous run abandoned.
+   *
+   * `generate` (per rule) and `sync-media` (per section) checkpoint their
+   * progress so a container restart doesn't redo hours of work. That has
+   * always worked silently, which means the one time it matters — a failed run
+   * that will pick up where it left off — looked identical to one that will
+   * start over.
+   */
+  checkpoint: procedure.input(z.object({ jobId: z.string() })).query(({ input }) => checkpointStatus(input.jobId)),
+
+  /** Throw the checkpoint away, so the next run starts from scratch. */
+  discardCheckpoint: procedure
+    .input(z.object({ jobId: z.string() }))
+    .mutation(({ input }) => ({ discarded: discardCheckpoint(input.jobId) })),
 
   runs: procedure
     .input(z.object({ jobId: z.string(), limit: z.number().int().min(1).max(500).optional() }))
