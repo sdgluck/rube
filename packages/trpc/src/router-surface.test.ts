@@ -132,6 +132,36 @@ describe("admin router surface", () => {
     assert.equal(getConfig("admin_auth_enabled"), undefined);
   });
 
+  test("saving an *Arr instance whose key came back redacted keeps the stored key", async () => {
+    const caller = t.createCallerFactory(appRouter)({ ...anonymousContext(), authRequired: false });
+    const { getConfig, REDACTED_SECRET } = await import("@tinkerbell/core");
+
+    await caller.config.save({
+      global_arr_instances: [
+        { id: "hd", service: "radarr", name: "HD", url: "http://radarr:7878", apiKey: "real-hd-key" },
+        { id: "uhd", service: "radarr", name: "4K", url: "http://radarr4k:7878", apiKey: "real-4k-key" },
+      ],
+    });
+
+    // What a form round-trip looks like: one instance renamed, both keys still
+    // the sentinel the browser was given because nobody retyped them.
+    await caller.config.save({
+      global_arr_instances: [
+        { id: "hd", service: "radarr", name: "HD", url: "http://radarr:7878", apiKey: REDACTED_SECRET },
+        { id: "uhd", service: "radarr", name: "UHD", url: "http://radarr4k:7878", apiKey: REDACTED_SECRET },
+      ],
+    });
+
+    const saved = getConfig("global_arr_instances");
+    assert.deepEqual(
+      saved?.map((i) => [i.name, i.apiKey]),
+      [
+        ["HD", "real-hd-key"],
+        ["UHD", "real-4k-key"],
+      ],
+    );
+  });
+
   test("with auth switched off, the gate stands aside", async () => {
     const caller = t.createCallerFactory(appRouter)({ ...anonymousContext(), authRequired: false });
     // `notificationEventTypes` is a pure constant lookup, so it exercises the

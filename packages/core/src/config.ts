@@ -579,8 +579,8 @@ export const REDACTED_SECRET = `__redacted__:${randomUUID()}`;
 /**
  * Top-level config keys whose values must never be sent to the browser.
  * Webhook URLs are included because they typically contain bearer tokens.
- * `global_llm.apiKey` is a nested secret handled separately in
- * `getAllConfigForClient`.
+ * Secrets that live *inside* a structured value are listed in
+ * `NESTED_SECRETS` instead.
  */
 export const SECRET_KEYS = new Set<ConfigKey>([
   "global_plex_token",
@@ -601,6 +601,41 @@ export const SECRET_KEYS = new Set<ConfigKey>([
   "global_slack_webhook_url",
   "global_webhook_url",
 ]);
+
+/**
+ * Secrets that live inside a structured value, where `SECRET_KEYS` can't reach
+ * them. Declared as a table rather than written out at each site because the
+ * two that were: `global_arr_instances[].apiKey` arrived with multi-instance
+ * \*Arr support and matched neither hand-written case, so every additional
+ * Radarr/Sonarr key went to the browser in full.
+ *
+ * `each` marks a list — the secret is a field of every element, and elements
+ * are matched back up by `id` when a save restores them.
+ */
+export const NESTED_SECRETS: ReadonlyArray<{ key: ConfigKey; field: string; each?: boolean }> = [
+  { key: "global_llm", field: "apiKey" },
+  { key: "global_smtp", field: "password" },
+  { key: "global_arr_instances", field: "apiKey", each: true },
+];
+
+/** Keys carrying a nested secret, for callers that only need the question answered. */
+export const NESTED_SECRET_KEYS = new Set<ConfigKey>(NESTED_SECRETS.map((n) => n.key));
+
+type Unknowns = Record<string, unknown>;
+
+function redactField(entry: unknown, field: string): unknown {
+  if (!entry || typeof entry !== "object") return entry;
+  const value = (entry as Unknowns)[field];
+  if (typeof value !== "string" || value === "") return entry;
+  return { ...(entry as Unknowns), [field]: REDACTED_SECRET };
+}
+
+function restoreField(next: unknown, stored: unknown, field: string): unknown {
+  if (!next || typeof next !== "object") return next;
+  if ((next as Unknowns)[field] !== REDACTED_SECRET) return next;
+  const kept = stored && typeof stored === "object" ? (stored as Unknowns)[field] : undefined;
+  return { ...(next as Unknowns), [field]: kept };
+}
 
 export function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
   const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
@@ -677,19 +712,50 @@ export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
  * exercised by unit tests without standing up a SQLite instance.
  */
 export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.infer<ConfigSchema>> {
-  const all = { ...input } as Record<string, unknown>;
+  const all = { ...input } as Unknowns;
   for (const key of SECRET_KEYS) {
     if (typeof all[key] === "string" && all[key] !== "") all[key] = REDACTED_SECRET;
   }
-  const llm = all["global_llm"] as ConfigValue<"global_llm"> | undefined;
-  if (llm && typeof llm.apiKey === "string" && llm.apiKey !== "") {
-    all["global_llm"] = { ...llm, apiKey: REDACTED_SECRET };
-  }
-  const smtp = all["global_smtp"] as ConfigValue<"global_smtp"> | undefined;
-  if (smtp && typeof smtp.password === "string" && smtp.password !== "") {
-    all["global_smtp"] = { ...smtp, password: REDACTED_SECRET };
+  for (const { key, field, each } of NESTED_SECRETS) {
+    const value = all[key];
+    if (value === undefined || value === null) continue;
+    if (each) {
+      if (Array.isArray(value)) all[key] = value.map((entry) => redactField(entry, field));
+    } else {
+      all[key] = redactField(value, field);
+    }
   }
   return all as Partial<z.infer<ConfigSchema>>;
+}
+
+/**
+ * The inverse, for one key on the way back in: a form echoes the sentinel for a
+ * secret the user didn't retype, and saving that verbatim would erase it. Lists
+ * are matched element to element by `id`, so reordering or renaming an \*Arr
+ * instance keeps its key and a genuinely new instance gets no borrowed one.
+ */
+export function restoreNestedSecrets<K extends ConfigKey>(key: K, value: ConfigValue<K>): ConfigValue<K> {
+  const stored = getConfig(key);
+  let next: unknown = value;
+  for (const nested of NESTED_SECRETS) {
+    if (nested.key !== key) continue;
+    if (nested.each) {
+      if (!Array.isArray(next)) continue;
+      const byId = new Map<unknown, unknown>();
+      if (Array.isArray(stored)) {
+        for (const entry of stored) {
+          if (entry && typeof entry === "object") byId.set((entry as Unknowns).id, entry);
+        }
+      }
+      next = next.map((entry) => {
+        const id = entry && typeof entry === "object" ? (entry as Unknowns).id : undefined;
+        return restoreField(entry, byId.get(id), nested.field);
+      });
+    } else {
+      next = restoreField(next, stored, nested.field);
+    }
+  }
+  return next as ConfigValue<K>;
 }
 
 /**

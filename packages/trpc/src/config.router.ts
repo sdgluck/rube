@@ -6,7 +6,9 @@ import {
   setConfig,
   configSchema,
   SECRET_KEYS,
+  NESTED_SECRET_KEYS,
   REDACTED_SECRET,
+  restoreNestedSecrets,
   type ConfigKey,
   type ConfigValue,
 } from "@tinkerbell/core";
@@ -66,24 +68,13 @@ export const configRouter = t.router({
       // The form may echo back the redaction sentinel for secrets the user
       // didn't change. Treat that as "keep the stored value".
       if (SECRET_KEYS.has(key) && value === REDACTED_SECRET) continue;
-      if (key === "global_llm") {
-        const llm = value as ConfigValue<"global_llm">;
-        if (llm.apiKey === REDACTED_SECRET) {
-          const existing = getConfig("global_llm");
-          setConfig("global_llm", { ...llm, apiKey: existing?.apiKey });
-          continue;
-        }
-      }
-      // Same nested-secret round trip as `global_llm.apiKey`: the SMTP form
-      // renders the sentinel for a stored password the user didn't retype, and
-      // saving must not erase it.
-      if (key === "global_smtp") {
-        const smtp = value as ConfigValue<"global_smtp">;
-        if (smtp.password === REDACTED_SECRET) {
-          const existing = getConfig("global_smtp");
-          setConfig("global_smtp", { ...smtp, password: existing?.password });
-          continue;
-        }
+      // Nested secrets round-trip the same way, but the sentinel is a field of
+      // a structured value rather than the value itself. One table in core
+      // covers all of them, so a new one can't be missed here — which is how
+      // the extra *Arr instances' keys came to be sent to the browser in full.
+      if (NESTED_SECRET_KEYS.has(key)) {
+        setConfig(key, restoreNestedSecrets(key, value as ConfigValue<typeof key>));
+        continue;
       }
       setConfig(key, value);
     }
