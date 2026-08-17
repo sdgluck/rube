@@ -124,6 +124,7 @@ export {
   describeRuleWindow,
   isRuleActiveOn,
   RULE_TRIGGER_LABELS,
+  RULE_TRIGGER_NOTES,
   RULE_TRIGGERS,
   ruleScheduleSchema,
   runsInNightlyBatch,

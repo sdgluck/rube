@@ -426,6 +426,19 @@ export const configSchema = z.object({
    */
   ui_theme: z.enum(["system", "light", "dark"]),
   /**
+   * Overseerr request ids already seen as available, for the
+   * `request-fulfilled` rule trigger.
+   *
+   * A watermark on `updatedAt` would be the obvious design and the wrong one:
+   * Overseerr does not expose one on the request list, and a request can be
+   * marked available, reverted and marked again. Ids are what it does have.
+   *
+   * Capped when written — this is a "have I told anyone about this yet" set,
+   * not a history, and an install with ten thousand fulfilled requests does
+   * not need to remember the first nine thousand.
+   */
+  seerr_seen_available: z.array(z.number().int()),
+  /**
    * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
    * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its
    * own filesystem, so the same directory usually has a different mount point

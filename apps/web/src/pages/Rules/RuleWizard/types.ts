@@ -7,7 +7,13 @@
  */
 
 import { DEFAULT_MAX_WRITES_PER_RUN, METADATA_SETTABLE_FIELDS } from "@tinkerbell/contracts";
-import type { CleanupMode, MetadataSettableField, PosterSource, SummarySource } from "@tinkerbell/contracts";
+import type {
+  CleanupMode,
+  MetadataSettableField,
+  PosterSource,
+  RuleTrigger,
+  SummarySource,
+} from "@tinkerbell/contracts";
 import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
 
 export type { CleanupMode, MetadataSettableField };
@@ -145,7 +151,10 @@ export interface ScheduleFormState {
   useWindow: boolean;
   activeFrom: string;
   activeTo: string;
-  runOnItemAdded: boolean;
+  /** Events that also start this rule. Empty means clock-only. */
+  triggers: RuleTrigger[];
+  /** Rule ids this one runs after, when they run outside the nightly batch. */
+  afterRules: string[];
 }
 
 /** Every part off: the nightly batch, all year round, as it always was. */
@@ -158,7 +167,8 @@ export const DEFAULT_SCHEDULE_FORM: ScheduleFormState = {
   useWindow: false,
   activeFrom: "10-01",
   activeTo: "11-05",
-  runOnItemAdded: false,
+  triggers: [],
+  afterRules: [],
 };
 
 /** Every settable field, blank. Blank means "leave this alone". */

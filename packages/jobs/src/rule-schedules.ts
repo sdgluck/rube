@@ -194,6 +194,15 @@ export async function runDueRules(ctx: JobContext): Promise<string> {
       });
       ruleRun.finish({ status: "ok", collectionCount: result.collectionCount, itemCount: result.itemCount });
       ran.push(rule.name);
+
+      // Anything chained behind it. A rule on an hourly cron that feeds a
+      // curated shelf is the case this exists for: without it the pool is
+      // refreshed every hour and the shelf built from it waits until midnight.
+      // Imported lazily to keep the cycle between these two modules at run
+      // time — rule-triggers imports `scheduleOf` from here.
+      const { runRulesChainedAfter } = await import("./rule-triggers.ts");
+      const chained = await runRulesChainedAfter(ctx, rule.id);
+      if (chained) ctx.log(chained);
     } catch (err) {
       const message = errorMessage(err);
       setRuleLastRun(rule.id, { status: "error", durationMs: Date.now() - startedAt, error: message });

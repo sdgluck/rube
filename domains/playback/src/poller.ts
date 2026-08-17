@@ -51,6 +51,8 @@ export interface PollResult {
   polled: boolean;
   opened: number;
   closed: number;
+  /** Closes that counted as a completed play — what `item-watched` fires on. */
+  completed: number;
   recovered: number;
 }
 
@@ -63,7 +65,7 @@ export interface PollResult {
  * needs to see 2,880 times a day.
  */
 export async function pollPlaybackOnce(signal?: AbortSignal, now: number = Date.now()): Promise<PollResult> {
-  const idle: PollResult = { polled: false, opened: 0, closed: 0, recovered: 0 };
+  const idle: PollResult = { polled: false, opened: 0, closed: 0, completed: 0, recovered: 0 };
 
   // A slow Plex must not let ticks stack up: overlapping polls would both read
   // the same open rows and both decide to open a duplicate session.
@@ -79,7 +81,7 @@ export async function pollPlaybackOnce(signal?: AbortSignal, now: number = Date.
     const recovered = bootRecovered ? 0 : recoverOpenSessions(now);
     const client = createPlexClient({ url, token, signal, onHealth: plexHealthCallback });
     const sessions = await client.getActiveSessions();
-    const { opened, closed } = recordPollSnapshot(sessions, now);
+    const { opened, closed, completed } = recordPollSnapshot(sessions, now);
     // What the sessions cost, alongside what they were. Written on every tick
     // including the empty ones: a gap in the series would be indistinguishable
     // from a poller that had stopped, and "nothing was streaming" is the most
@@ -90,7 +92,7 @@ export async function pollPlaybackOnce(signal?: AbortSignal, now: number = Date.
       streams: sessions.length,
     });
     backoffUntil = 0;
-    return { polled: true, opened, closed, recovered };
+    return { polled: true, opened, closed, completed, recovered };
   } catch {
     // Deliberately swallowed. `plexHealthCallback` has already recorded the
     // failure against the Plex service, which is where an operator looks — a

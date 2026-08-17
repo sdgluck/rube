@@ -19,6 +19,7 @@ import { getCachedRecentlyAdded, syncRecentlyAdded } from "@tinkerbell/domain.st
 import { announceRegistryUpdates } from "./registry-updates.ts";
 import { runDueRules } from "./rule-schedules.ts";
 import { runTriggeredRules } from "./rule-triggers.ts";
+import { pollSeerrRequests } from "./seerr-poll.ts";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { JOB_RUN_RETENTION_MS } from "./limits.ts";
 
@@ -128,6 +129,15 @@ export const internalJobs = {
     // stable text that keeps those minutes out of the activity feed.
     quiet: true,
   },
+  "seerr-poll": {
+    run: (ctx: JobContext) => pollSeerrRequests(ctx),
+    // One paged GET against Overseerr, and then possibly whole rules — same
+    // budget as the other trigger hosts.
+    timeoutMs: 30 * MINUTE_MS,
+    // Most polls find nothing new, and "No newly available requests." said
+    // ninety-six times a day is not information.
+    quiet: true,
+  },
   "playback-poll": {
     run: async (ctx: JobContext) => {
       const result = await pollPlaybackOnce(ctx.signal);
@@ -136,14 +146,21 @@ export const internalJobs = {
       if (result.recovered) parts.push(`recovered ${result.recovered} session(s) after restart`);
       if (result.opened) parts.push(`opened ${result.opened}`);
       if (result.closed) parts.push(`closed ${result.closed}`);
+      // Fires on a *completed* play, not on any close. "Watched" has to mean
+      // the same thing here as it does in `watch_state`, or a rule that
+      // collects what you finished would also collect what you gave up on.
+      const triggered = await runTriggeredRules(ctx, "item-watched", result.completed);
+      if (triggered) parts.push(triggered);
       // The quiet flag suppresses the event only when this text is unchanged,
       // so a tick where nothing happened must produce a stable string — hence
       // one phrasing for "no change" rather than counts that are always zero.
       return parts.length ? `Playback: ${parts.join(", ")}.` : "Playback poll: no change.";
     },
-    // Runs every 30 seconds. A poll that takes more than a minute has wedged;
-    // the poller's own in-flight latch drops overlapping ticks before then.
-    timeoutMs: MINUTE_MS,
+    // Runs every 30 seconds normally, but a tick that finds a completed play
+    // may run whole rules inside it — the same budget the trigger's other
+    // hosts allow. The poller's in-flight latch drops overlapping ticks, so a
+    // long one delays the next poll rather than doubling it.
+    timeoutMs: 30 * MINUTE_MS,
     quiet: true,
   },
 } as const satisfies Record<string, InternalJobDescriptor>;

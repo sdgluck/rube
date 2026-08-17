@@ -1,5 +1,5 @@
 import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
-import { describeCondition } from "@tinkerbell/contracts";
+import { describeCondition, RULE_TRIGGERS } from "@tinkerbell/contracts";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
 import {
   DEFAULT_OUTCOME_FORM,
@@ -257,6 +257,7 @@ export function scheduleFromConfig(schedule: unknown): ScheduleFormState {
   const activeFrom = typeof s.activeFrom === "string" ? s.activeFrom : "";
   const activeTo = typeof s.activeTo === "string" ? s.activeTo : "";
   const triggers = Array.isArray(s.triggers) ? (s.triggers as string[]) : [];
+  const afterRules = Array.isArray(s.afterRules) ? (s.afterRules as unknown[]).map(String) : [];
   return {
     useCron: cron.length > 0,
     cron: cron || DEFAULT_SCHEDULE_FORM.cron,
@@ -264,7 +265,11 @@ export function scheduleFromConfig(schedule: unknown): ScheduleFormState {
     useWindow: activeFrom.length > 0 && activeTo.length > 0,
     activeFrom: activeFrom || DEFAULT_SCHEDULE_FORM.activeFrom,
     activeTo: activeTo || DEFAULT_SCHEDULE_FORM.activeTo,
-    runOnItemAdded: triggers.includes("item-added"),
+    // Filtered against the known set rather than trusted: a rule imported from
+    // a registry pack built against a newer Tinkerbell can name a trigger this
+    // build has never heard of, and an unknown checkbox is not a checkbox.
+    triggers: RULE_TRIGGERS.filter((t) => triggers.includes(t)),
+    afterRules,
   };
 }
 
@@ -285,7 +290,8 @@ export function scheduleToConfig(form: ScheduleFormState): Record<string, unknow
     schedule.activeFrom = form.activeFrom;
     schedule.activeTo = form.activeTo;
   }
-  if (form.runOnItemAdded) schedule.triggers = ["item-added"];
+  if (form.triggers.length > 0) schedule.triggers = form.triggers;
+  if (form.afterRules.length > 0) schedule.afterRules = form.afterRules;
   return Object.keys(schedule).length > 0 ? schedule : undefined;
 }
 

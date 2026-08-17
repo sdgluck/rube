@@ -12,12 +12,24 @@ import {
   Square,
   Trash2,
 } from "lucide-react";
-import { describeRuleWindow, type RuleSchedule } from "@tinkerbell/contracts";
+import { describeRuleWindow, RULE_TRIGGER_NOTES, type RuleSchedule, type RuleTrigger } from "@tinkerbell/contracts";
 import { EMPTY } from "#/format";
 import { Link, useNavigate } from "react-router-dom";
 import RowActions from "#components/RowActions";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { CONFIG_SUMMARY, summarizeSmartFilterTree, TYPE_BADGE, TYPE_LABELS } from "./constants";
+
+/**
+ * Badge text per trigger. Shorter than `RULE_TRIGGER_LABELS`, which are
+ * sentences for a checkbox — a table cell wants two words, with the sentence
+ * on the tooltip.
+ */
+const TRIGGER_BADGES: Record<RuleTrigger, string> = {
+  "item-added": "on new items",
+  "item-watched": "on watched",
+  "item-removed": "on removed",
+  "request-fulfilled": "on requests",
+};
 import RuleDetailRow from "./DetailRow";
 import RulePreviewRow from "./RulePreviewRow";
 import StatusCell from "./StatusCell";
@@ -57,9 +69,17 @@ function ScheduleBadges({ config }: { config: unknown }) {
           {window}
         </span>
       )}
-      {schedule.triggers?.includes("item-added") && (
-        <span className={styles.scheduleBadge} title="Also runs shortly after new items are added to the library">
-          on new items
+      {(schedule.triggers ?? []).map((trigger) => (
+        <span key={trigger} className={styles.scheduleBadge} title={RULE_TRIGGER_NOTES[trigger]}>
+          {TRIGGER_BADGES[trigger]}
+        </span>
+      ))}
+      {(schedule.afterRules?.length ?? 0) > 0 && (
+        <span
+          className={styles.scheduleBadge}
+          title="Runs after another rule finishes, when that rule runs outside the nightly batch"
+        >
+          chained
         </span>
       )}
     </>

@@ -42,6 +42,11 @@ const fields: Record<string, JobFieldsConfig> = {
   // seed for it. Neither is something you "install".
   "registry-updates": { kind: "system", enabled: "required" },
   "playback-poll": { kind: "system" },
+  // Only the source of the `request-fulfilled` rule trigger, so its schedule
+  // is the trigger's latency and worth being able to edit. It no-ops in
+  // microseconds when Overseerr isn't configured, which is why it is not
+  // gated on that.
+  "seerr-poll": { kind: "system" },
   "playback-backfill": { kind: "system", enabled: "required", schedule: "hidden" },
 
   // ── Features (opt-in) ────────────────────────────────────────────────────

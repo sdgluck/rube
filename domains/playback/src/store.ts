@@ -108,8 +108,9 @@ function applyToWatchState(close: SessionClose, row: { ratingKey: string; userId
     .run();
 }
 
-function persistCloses(closes: SessionClose[], threshold: number): void {
-  if (closes.length === 0) return;
+/** Returns how many of the closes counted as a completed play. */
+function persistCloses(closes: SessionClose[], threshold: number): number {
+  if (closes.length === 0) return 0;
   const rows = db
     .select({ id: playbackSessions.id, ratingKey: playbackSessions.ratingKey, userId: playbackSessions.userId })
     .from(playbackSessions)
@@ -122,9 +123,13 @@ function persistCloses(closes: SessionClose[], threshold: number): void {
     .all();
   const byId = new Map(rows.map((r) => [r.id, r]));
 
+  let completed = 0;
   for (const close of closes) {
     const row = byId.get(close.id);
     if (!row) continue;
+    // Same test `applyToWatchState` applies, and deliberately the same one the
+    // `item-watched` trigger fires on: "watched" has to mean one thing.
+    if (close.state !== "stale" && (close.state === "completed" || close.completionPct >= threshold)) completed++;
     db.update(playbackSessions)
       .set({
         endedAt: close.endedAt,
@@ -137,6 +142,7 @@ function persistCloses(closes: SessionClose[], threshold: number): void {
       .run();
     applyToWatchState(close, row, threshold);
   }
+  return completed;
 }
 
 /**
@@ -149,13 +155,17 @@ function persistCloses(closes: SessionClose[], threshold: number): void {
  * row and folding it into `watch_state` would otherwise lose a play or, worse,
  * double-count it on the retry.
  */
-export function recordPollSnapshot(sessions: PlexSession[], now: number): { opened: number; closed: number } {
+export function recordPollSnapshot(
+  sessions: PlexSession[],
+  now: number,
+): { opened: number; closed: number; completed: number } {
   const threshold = completionThreshold();
   const diff = diffSnapshot(openSessions(), sessions, now, {
     completionThreshold: threshold,
     intervalMs: POLL_INTERVAL_MS,
   });
 
+  let completed = 0;
   db.transaction(() => {
     for (const open of diff.opens) {
       db.insert(playbackSessions)
@@ -166,10 +176,10 @@ export function recordPollSnapshot(sessions: PlexSession[], now: number): { open
       const { id, ...set } = update;
       db.update(playbackSessions).set(set).where(eq(playbackSessions.id, id)).run();
     }
-    persistCloses(diff.closes, threshold);
+    completed = persistCloses(diff.closes, threshold);
   });
 
-  return { opened: diff.opens.length, closed: diff.closes.length };
+  return { opened: diff.opens.length, closed: diff.closes.length, completed };
 }
 
 /**

@@ -2,6 +2,7 @@ import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig } from "@tinkerbell/core";
 import { syncMedia } from "@tinkerbell/domain.media";
+import { runTriggeredRules } from "../rule-triggers.ts";
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 export default async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
@@ -81,6 +82,13 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   // The stale sweep has run, so there is nothing left to resume.
   ctx.checkpoint.clear();
   ctx.log(`Done! Synced ${stats.synced} item(s), removed ${stats.removed} stale.`);
+
+  // The removed-item trigger rides on this job for the same reason the added
+  // one rides on the recently-added sync: this is already the thing that knows
+  // what vanished. It runs after the checkpoint is cleared, so a rule that
+  // fails here doesn't cost the sync its resumability.
+  const triggered = await runTriggeredRules(ctx, "item-removed", stats.removed);
+  if (triggered) ctx.log(triggered);
 }
 
 interface SyncMediaCheckpoint {

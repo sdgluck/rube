@@ -5,7 +5,9 @@ import {
   describeRuleWindow,
   estimateCollectionCount,
   isDestructiveMode,
+  RULE_TRIGGERS,
   RULE_TRIGGER_LABELS,
+  RULE_TRIGGER_NOTES,
   METADATA_SETTABLE_FIELDS,
   METADATA_TOKENS,
   SORT_ARTICLES,
@@ -15,6 +17,7 @@ import {
 } from "@tinkerbell/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import CronPreview from "#components/CronPreview";
+import MultiSelect from "#components/MultiSelect";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
@@ -247,6 +250,17 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
   const configQuery = trpc.config.get.useQuery(undefined, { staleTime: 60_000 });
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
+
+  // Candidates for `afterRules`. Fetched only while the wizard is open —
+  // everything else on this screen is local, and a list of every rule is not
+  // worth holding for a panel most visits never scroll to. Self is excluded
+  // here as well as in the runner: a rule offering to run after itself reads
+  // as a feature rather than as the no-op it is.
+  const rulesQuery = trpc.rules.list.useQuery(undefined, { enabled: open, staleTime: 30_000 });
+  const chainableRules = useMemo(
+    () => (rulesQuery.data ?? []).filter((r) => r.id !== form.id).map((r) => ({ value: r.id, label: r.name })),
+    [rulesQuery.data, form.id],
+  );
   const sections = sectionsQuery.data || [];
 
   const omdbConfigured = !!configQuery.data?.global_omdb_api_key;
@@ -991,18 +1005,44 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
         </div>
 
         <div className={styles.field}>
-          <label>
-            <input
-              type="checkbox"
-              checked={s.runOnItemAdded}
-              onChange={(e) => setSchedule({ runOnItemAdded: e.target.checked })}
-            />{" "}
-            {RULE_TRIGGER_LABELS["item-added"]}
-          </label>
+          <span className={styles.label}>Also run when…</span>
+          {RULE_TRIGGERS.map((trigger) => (
+            <label key={trigger}>
+              <input
+                type="checkbox"
+                checked={s.triggers.includes(trigger)}
+                onChange={(e) =>
+                  setSchedule({
+                    triggers: e.target.checked ? [...s.triggers, trigger] : s.triggers.filter((t) => t !== trigger),
+                  })
+                }
+              />{" "}
+              {RULE_TRIGGER_LABELS[trigger]}
+              <span className={styles.hint}>{RULE_TRIGGER_NOTES[trigger]}</span>
+            </label>
+          ))}
           <span className={styles.hint}>
-            Runs shortly after new items appear, on the back of the Sync Recently Added job — so its cadence is that
-            job's, and a bulk import of five hundred files is one run rather than five hundred. The nightly run still
-            happens either way.
+            Each trigger rides on the job that already knows the answer, so it inherits that job's cadence rather than
+            firing the instant something happens. The nightly run still happens either way.
+          </span>
+        </div>
+
+        {/* Chaining. Deliberately below the triggers: it is the same idea —
+            "run because something happened" — where the something is another
+            rule finishing. */}
+        <div className={styles.field}>
+          <span className={styles.label}>Run after these rules</span>
+          <MultiSelect
+            allLabel="Nothing — run on its own"
+            ariaLabel="Rules this one runs after"
+            options={chainableRules}
+            selected={s.afterRules}
+            onChange={(afterRules) => setSchedule({ afterRules })}
+          />
+          <span className={styles.hint}>
+            For two-stage curation: one rule builds a pool, this one curates it. Only applies when the upstream rule
+            runs <em>outside</em> the nightly batch — on its own cron, or from a trigger. Inside the batch the rule
+            order on the Rules page already decides this.
           </span>
         </div>
       </div>

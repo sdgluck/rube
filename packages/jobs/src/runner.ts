@@ -61,6 +61,10 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     enabled: 1,
   },
   { id: "sync-users", name: "Sync Plex Users", command: "sync-users", schedule: "0 */6 * * *", enabled: 1 },
+  // Same cadence as the recently-added sync, and for the same reason: it is
+  // the source of a rule trigger, so its period is the trigger's latency. It
+  // no-ops in a few microseconds when Overseerr isn't configured.
+  { id: "seerr-poll", name: "Poll Overseerr Requests", command: "seerr-poll", schedule: "*/15 * * * *", enabled: 1 },
   // Every minute, because it is a poll for "has any rule's own cron come due"
   // rather than work in itself — see rule-schedules.ts for why a poll and not
   // a live Cron per rule. Most ticks read the rules table and stop.

@@ -22,11 +22,32 @@
 import { z } from "zod";
 
 /** Events that can start a rule. */
-export const RULE_TRIGGERS = ["item-added"] as const;
+export const RULE_TRIGGERS = ["item-added", "item-watched", "item-removed", "request-fulfilled"] as const;
 export type RuleTrigger = (typeof RULE_TRIGGERS)[number];
 
 export const RULE_TRIGGER_LABELS: Record<RuleTrigger, string> = {
   "item-added": "Something new is added to the library",
+  "item-watched": "Somebody finishes watching something",
+  "item-removed": "Something disappears from the library",
+  "request-fulfilled": "An Overseerr request becomes available",
+};
+
+/**
+ * The honest small print for each trigger, shown beside its checkbox.
+ *
+ * Every one of these rides on a job that was already asking the question, so
+ * every one inherits that job's cadence and its idea of what happened. Saying
+ * so on the checkbox is cheaper than the support thread about why a rule
+ * didn't fire "instantly".
+ */
+export const RULE_TRIGGER_NOTES: Record<RuleTrigger, string> = {
+  "item-added":
+    "Fires shortly after the recently-added sync notices new files. A bulk import is one trigger, not one per file.",
+  "item-watched":
+    "Fires when the playback poller closes a session past the completion threshold. A part-watched film is not a trigger.",
+  "item-removed": "Fires after a media sync finds items that are no longer on the server. Nightly by default.",
+  "request-fulfilled":
+    "Fires when Overseerr reports a request as available. Needs Overseerr configured; polled on its own schedule.",
 };
 
 /** `MM-DD`. Year-less on purpose: a season recurs, a date doesn't. */
@@ -47,6 +68,22 @@ export const ruleScheduleSchema = z
     activeFrom: z.string().regex(MONTH_DAY, "Use MM-DD").optional(),
     activeTo: z.string().regex(MONTH_DAY, "Use MM-DD").optional(),
     triggers: z.array(z.enum(RULE_TRIGGERS)).optional(),
+    /**
+     * Rule ids this rule runs after, whenever one of them runs outside the
+     * nightly batch.
+     *
+     * The pattern it exists for is two-stage curation: one rule builds a pool
+     * (every Nolan film), a second one curates it (the three with the highest
+     * IMDb rating). Inside the nightly batch `position` already orders them;
+     * this is what makes the pair work when the first is on an hourly cron or
+     * an event trigger and the second would otherwise sit stale until
+     * midnight.
+     *
+     * Cycles are possible to express and are broken at run time rather than
+     * rejected here: a rule can be edited into a cycle from either end, so the
+     * only place with enough information is the runner.
+     */
+    afterRules: z.array(z.string()).optional(),
   })
   .refine((s) => (s.activeFrom == null) === (s.activeTo == null), {
     message: "A date window needs both a start and an end.",
