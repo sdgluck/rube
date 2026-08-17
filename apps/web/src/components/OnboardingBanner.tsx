@@ -11,8 +11,9 @@ import styles from "./OnboardingBanner.module.css";
  * which needs no action at all, and dismissing it, which is permanent and
  * server-side so it holds on every browser the admin uses.
  *
- * Dismissing hides the banner, not the flow: `/onboarding` stays reachable
- * from the sidebar, and Stats grows a card in its place.
+ * Dismissing hides the banner, not the flow: `/onboarding` stays in the sidebar
+ * for as long as setup is unfinished (and under Settings › Setup for good), and
+ * Stats grows a card in its place.
  */
 export default function OnboardingBanner() {
   const { addToast } = useToast();

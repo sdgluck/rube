@@ -49,7 +49,8 @@ export default function DoneStep() {
       </div>
 
       <p className={styles.fieldHint}>
-        This setup stays available under <strong>Setup</strong> in the sidebar — nothing here is a one-time chance.
+        This setup stays available under <strong>Settings › Setup</strong> — nothing here is a one-time chance. It
+        leaves the sidebar once every step is done, and comes back if one ever needs attention again.
       </p>
     </div>
   );

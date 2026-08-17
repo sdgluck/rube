@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import PageShell from "#components/PageShell";
-import { MORE_SECTIONS, type NavItem } from "#/nav";
+import { MORE_SECTIONS, visibleSections, type NavItem } from "#/nav";
 import { trpc } from "#/trpc";
 import styles from "./More.module.css";
 
@@ -41,11 +41,13 @@ export default function More() {
     staleTime: 30_000,
   });
   const metrics = metricsQuery.data as NavMetrics | undefined;
+  const setupQuery = trpc.onboarding.status.useQuery(undefined, { retry: false });
+  const sections = visibleSections(MORE_SECTIONS, setupQuery.data?.complete);
 
   return (
     <PageShell>
       <nav aria-label="More pages" className={styles.sections}>
-        {MORE_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <section key={section.label}>
             <h2 className={styles.sectionTitle}>{section.label}</h2>
             <div className={styles.list}>

@@ -100,12 +100,14 @@ export interface SyncMediaOptions {
 /**
  * Bytes on disk for one item, across every version and every part.
  *
- * Null rather than 0 when Plex hangs no parts off the item, which is the
- * normal case for a show row: the files belong to its episodes, and the
- * section listing this walks does not descend into them. Zero would be a
- * claim ("this occupies nothing") that a storage total would then happily
- * add up; null is the truth, and every reader of the column treats it as
- * unknown.
+ * Null rather than 0 when Plex hangs no parts off the item, which is the normal
+ * case for a show row: the files belong to its episodes, and the section listing
+ * this walks does not descend into them. Zero would be a claim ("this occupies
+ * nothing") that a storage total would then happily add up; null is the truth,
+ * and every reader of the column treats it as unknown.
+ *
+ * Show rows are filled in separately, from a second walk at episode level —
+ * see `showSizes` in the Plex client and its use below.
  */
 function totalPartSize(media: Array<{ Part?: Array<{ size?: number }> }> | undefined): number | null {
   if (!media || media.length === 0) return null;
@@ -120,6 +122,38 @@ function totalPartSize(media: Array<{ Part?: Array<{ size?: number }> }> | undef
     }
   }
   return seen ? total : null;
+}
+
+/**
+ * Bytes per show for one TV section, or null if Plex wouldn't say.
+ *
+ * A storage figure is a nicety; the index is not. A library whose episode walk
+ * fails — an old server, a section mid-scan, a timeout on a 40,000-episode
+ * library — still gets its show rows written, with sizes left unknown exactly
+ * as they were before this walk existed. Throwing here would cost the whole
+ * sync for a number on one panel.
+ */
+async function episodeSizes(
+  client: PlexClient,
+  section: PlexSection,
+  onProgress?: (current: number, total: number, message: string) => void,
+): Promise<Map<string, number> | null> {
+  try {
+    const sizes = await client.showSizes(section.key, (walked, total) => {
+      onProgress?.(walked, total, `Measuring ${section.title}...`);
+    });
+    const bytes = new Map<string, number>();
+    for (const [showKey, entry] of sizes) {
+      // Every episode sizeless means we learned nothing about this show, which
+      // is not the same as a show that occupies nothing — leave it unknown.
+      if (entry.unsized === entry.episodes) continue;
+      bytes.set(showKey, entry.bytes);
+    }
+    return bytes;
+  } catch (err) {
+    console.warn(`[media] Couldn't measure episodes in ${section.title}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
 }
 
 export async function syncMedia(
@@ -151,13 +185,22 @@ export async function syncMedia(
 
   for (const section of sections) {
     if (skip.has(section.key)) continue;
+
+    // A TV section's sizes live one level down, so they need a second walk
+    // before the show rows are written — see `episodeSizes`. Movie sections
+    // carry their parts in the listing below and skip this entirely.
+    const episodeBytes = section.type === "show" ? await episodeSizes(client, section, onProgress) : null;
+
     for await (const { item, totalSize } of client.allItems(section.key)) {
       const ratingKey = item.ratingKey;
       if (!ratingKey) continue;
 
       const media = item.Media?.[0];
       const genres = item.Genre?.map((g) => g.tag).filter((tag) => tag.length > 0) ?? [];
-      const fileSize = totalPartSize(item.Media);
+      // The item's own parts where it has them, else what its episodes came to.
+      // A show has no parts, so the second term is the only answer for TV; the
+      // fallback order matters for the rare item that has both.
+      const fileSize = totalPartSize(item.Media) ?? episodeBytes?.get(ratingKey) ?? null;
       const values = {
         ratingKey,
         sectionId: section.key,
@@ -232,7 +275,8 @@ const SORT_COLUMNS = {
   audioChannels: mediaItems.audioChannels,
   container: mediaItems.container,
   // Like `added`, this is asked for in one direction — biggest first — and
-  // SQLite puts the nulls (every show; see the column note) at the end there.
+  // SQLite puts the nulls (items of unknown size; see the column note) at the
+  // end there.
   size: mediaItems.fileSize,
 } as const;
 
@@ -249,10 +293,12 @@ export interface SectionStorage {
 /**
  * Bytes per library, plus how much of each library the figure actually covers.
  *
- * The coverage counts are not decoration. A TV library reports zero known
- * sizes (Plex hangs no parts off a show row), and a total of "0 B" next to
- * "Shows" would read as an empty library rather than as an unanswerable
- * question. Callers show the caveat wherever `unsized` is non-zero.
+ * The coverage counts are not decoration. Both libraries can now be measured —
+ * TV via the episode roll-up the sync does — but neither is guaranteed complete:
+ * an unmatched item, a show mid-scan or a library synced before the roll-up
+ * existed all leave rows with no size. A total is only as good as what it
+ * covers, so callers show the caveat wherever `unsized` is non-zero rather than
+ * presenting a partial figure as the whole.
  */
 export function getStorageBySection(): SectionStorage[] {
   const rows = db

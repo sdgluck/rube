@@ -206,3 +206,87 @@ describe("file size", () => {
     assert.equal(row.bitrate, 8000);
   });
 });
+
+/**
+ * A show row carries no files, so the only honest size for one is the sum of
+ * its episodes. The failure that matters here is a *plausible* number: a show
+ * credited with 0 B, or with only the episodes Plex happened to size, feeds a
+ * storage total somebody reads as the truth.
+ */
+describe("show sizes", () => {
+  const SHOW_SECTION = { key: "2", title: "TV Shows", type: "show" };
+
+  function fakeShowClient(
+    shows: FakeItem[],
+    sizes: Record<string, { bytes: number; episodes: number; unsized: number }>,
+    onShowSizes?: (sectionId: string) => void,
+  ): PlexClient {
+    return {
+      async *allItems() {
+        for (const item of shows) {
+          yield { item: { ...item, type: "show", addedAt: 1_700_000_000 }, totalSize: shows.length };
+        }
+      },
+      async showSizes(sectionId: string) {
+        onShowSizes?.(sectionId);
+        return new Map(Object.entries(sizes));
+      },
+    } as unknown as PlexClient;
+  }
+
+  test("a show is credited with the bytes of its episodes", async () => {
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 900, episodes: 3, unsized: 0 } }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].fileSize, 900);
+  });
+
+  test("a show whose every episode is sizeless stays unknown, not zero", async () => {
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 0, episodes: 4, unsized: 4 } }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].fileSize, null);
+  });
+
+  test("a partially sized show reports what is known", async () => {
+    // Short of the truth, but the direction is right and the panel says how
+    // many items it couldn't account for.
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 500, episodes: 4, unsized: 2 } }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].fileSize, 500);
+  });
+
+  test("a failed episode walk still indexes the library", async () => {
+    // The index is the job; the size is a nicety. Losing a whole TV section's
+    // rows because one extra listing timed out would be a bad trade.
+    const client = {
+      async *allItems() {
+        yield { item: { ratingKey: "s1", title: "A show", type: "show" }, totalSize: 1 };
+      },
+      async showSizes() {
+        throw new Error("boom");
+      },
+    } as unknown as PlexClient;
+    const stats = await syncMedia(client, [SHOW_SECTION]);
+    assert.equal(stats.synced, 1);
+    assert.equal(db.select().from(mediaItems).all()[0].fileSize, null);
+  });
+
+  test("movie sections are not walked twice", async () => {
+    // The episode walk is a second pass over the whole library. A movie
+    // library's sizes are already in the listing, so paying for it there would
+    // double every sync for nothing.
+    let called = false;
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "1", title: "A film", Media: [{ Part: [{ size: 10 }] }] }], {}, () => {
+        called = true;
+      }),
+      [SECTION],
+    );
+    assert.equal(called, false);
+  });
+});

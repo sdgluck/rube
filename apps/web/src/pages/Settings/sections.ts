@@ -33,6 +33,11 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     heading: "Tools",
     links: [
+      // The setup flow's permanent home. It leaves the sidebar once every step
+      // is done (see `hideWhenSetupComplete` in nav.ts) but never stops being
+      // worth reopening — it is the one screen that says what is and isn't
+      // connected, and steps skipped early are picked up here later.
+      { to: "/onboarding", label: "Setup" },
       { to: "/settings/security", label: "Security" },
       { to: "/settings/migrate", label: "Migrate" },
       { to: "/settings/maintenance", label: "Maintenance" },

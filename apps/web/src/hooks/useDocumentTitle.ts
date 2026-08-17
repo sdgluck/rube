@@ -9,7 +9,12 @@ import { SETTINGS_SECTIONS } from "#pages/Settings/sections";
  * sidebar and settings rail render, so a new page gets a title for free.
  */
 const ROUTE_TITLES: [prefix: string, title: string][] = [
-  ...SETTINGS_SECTIONS.flatMap((s) => s.links.map((l) => [l.to, `Settings: ${l.label}`] as [string, string])),
+  // The rail can point at a page that lives outside /settings — Setup does —
+  // and "Settings: Setup" would be the wrong name for a full-screen wizard.
+  // Those keep whatever the nav below calls them.
+  ...SETTINGS_SECTIONS.flatMap((s) =>
+    s.links.filter((l) => l.to.startsWith("/settings/")).map((l) => [l.to, `Settings: ${l.label}`] as [string, string]),
+  ),
   ...NAV_SECTIONS.flatMap((s) => s.items.map((i) => [i.to, i.label] as [string, string])),
   ["/settings/changelog", "Changelog"],
   ["/cleanup/rules", "Cleanup rules"],

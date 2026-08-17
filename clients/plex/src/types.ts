@@ -3,6 +3,14 @@ export const SECTION_TYPE_MAP: Record<string, number> = { movie: 1, show: 2, art
 /** Plex `type` enum for a collection — used by /library/sections/:id/all filtering and label PUTs. */
 export const PLEX_COLLECTION_TYPE = 18;
 
+/**
+ * Plex `type` enum for an episode.
+ *
+ * Passed to a *section* listing to walk a TV library at episode level, which is
+ * where the files live — a show row carries none.
+ */
+export const PLEX_EPISODE_TYPE = 4;
+
 export type PlexHealthCallback = (service: "Plex" | "Plex.tv", status: "ok" | "error", message: string) => void;
 
 export interface PlexClientOptions {

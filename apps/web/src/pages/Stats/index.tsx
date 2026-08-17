@@ -16,7 +16,15 @@ import {
   type TileDef,
 } from "#components/dashboard";
 import { trpc } from "#/trpc";
-import { EMPTY, formatBandwidth, formatMbps, formatNumber, formatRelativeShort, formatUptime } from "#/format";
+import {
+  EMPTY,
+  formatBandwidth,
+  formatFileSize,
+  formatMbps,
+  formatNumber,
+  formatRelativeShort,
+  formatUptime,
+} from "#/format";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
 import { HistoryPanel } from "./HistoryPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
@@ -51,19 +59,29 @@ const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>
 // ─── Summary tile config ────────────────────────────────────────────────────
 
 const DEFAULT_TILES = ["streams", "bandwidth", "playsToday", "library", "users"];
-const MAX_TILES = 6;
+/**
+ * The row is `auto-fit` over a 158px minimum, so tiles past the first line wrap
+ * rather than squeezing — ten fills two comfortable rows on a laptop and stays
+ * legible on a phone, where the minimum drops to 104px.
+ */
+const MAX_TILES = 10;
 
 const TILE_REGISTRY: TileDef[] = [
   { id: "streams", label: "Streams", group: "Live" },
   { id: "transcodes", label: "Transcodes", group: "Live" },
+  { id: "directPlay", label: "Direct Play", group: "Live" },
+  { id: "paused", label: "Paused", group: "Live" },
+  { id: "remoteStreams", label: "Remote Streams", group: "Live" },
   { id: "bandwidth", label: "Bandwidth", group: "Live" },
   { id: "playsToday", label: "Plays Today", group: "Activity" },
   { id: "playsWeek", label: "Plays (7d)", group: "Activity" },
   { id: "topUserToday", label: "Top User Today", group: "Activity" },
   { id: "library", label: "Library", group: "Library" },
+  { id: "storage", label: "Storage", group: "Library" },
   { id: "addedThisWeek", label: "Added (7d)", group: "Library" },
   { id: "pct4k", label: "4K Library", group: "Library" },
   { id: "librarySplit", label: "Movies / Episodes", group: "Library" },
+  { id: "shows", label: "Shows", group: "Library" },
   { id: "users", label: "Users", group: "Users" },
   { id: "activeUsers", label: "Active Users (7d)", group: "Users" },
   { id: "failedJobs", label: "Failed Jobs (24h)", group: "Ops" },
@@ -103,6 +121,10 @@ export default function Stats() {
     { hours: 24, buckets: 24 },
     { enabled: selectedTiles.includes("bandwidth"), refetchInterval: 60_000, refetchOnWindowFocus: false },
   );
+  // Not gated on the tile being shown, unlike the two above: the Storage panel
+  // asks for the same thing on every load, so the tile joins an existing cache
+  // entry rather than adding a request. It doesn't poll — it changes on a sync.
+  const storageQuery = trpc.stats.storage.useQuery(undefined, { refetchOnWindowFocus: false });
 
   const utils = trpc.useUtils();
   const saveConfigMutation = trpc.config.save.useMutation({
@@ -142,6 +164,37 @@ export default function Stats() {
         value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : transcodingCount;
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
+      case "directPlay": {
+        // The number worth watching on a server that transcodes: how much of
+        // the load is the CPU's problem. Its complement is the Transcodes tile,
+        // and a row can hold both.
+        const direct = sessions.length - transcodingCount;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : direct;
+        if (sessions.length > 0) sub = `of ${sessions.length}`;
+        break;
+      }
+      case "paused": {
+        const paused = sessions.filter((s) => s.state === "paused").length;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : paused;
+        // A paused stream still holds a session, which is what makes it worth
+        // its own tile: the Streams count includes it and looks like demand.
+        if (sessions.length > 0) sub = `of ${sessions.length}`;
+        break;
+      }
+      case "remoteStreams": {
+        // `local === false`, not `!local`: Plex omits the flag on some clients,
+        // and an unknown location counted as remote would overstate the figure
+        // this tile exists to watch — remote playback is the bandwidth that
+        // leaves the house.
+        const remote = sessions.filter((s) => s.local === false).length;
+        const relayed = sessions.filter((s) => s.relayed).length;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : remote;
+        // Relayed is the subset that goes through Plex's relay rather than a
+        // direct connection — capped at 2 Mbps, so it explains a bad stream.
+        if (relayed > 0) sub = `${relayed} relayed`;
+        else if (sessions.length > 0) sub = `of ${sessions.length}`;
+        break;
+      }
       case "bandwidth": {
         // In use over capacity. The denominator is the measured *upload*
         // figure: serving a remote stream is this server uploading, so an
@@ -207,6 +260,36 @@ export default function Stats() {
           sub = `+${overviewQuery.data.addedThisWeek} this week`;
         to = "/media";
         break;
+      case "storage": {
+        const sections = storageQuery.data ?? [];
+        const bytes = sections.reduce((sum, s) => sum + s.bytes, 0);
+        const unsized = sections.reduce((sum, s) => sum + s.unsized, 0);
+        const measured = sections.filter((s) => s.bytes > 0);
+        value = storageQuery.isLoading ? <SkeletonLine width="60px" /> : bytes > 0 ? formatFileSize(bytes) : EMPTY;
+        if (bytes === 0) {
+          // Nothing measured yet reads as "nothing stored", which is never
+          // true. Say where the number comes from instead.
+          sub = storageQuery.isLoading ? null : "Read during Sync Media";
+        } else if (unsized > 0) {
+          // The caveat outranks the breakdown: a total that leaves items out is
+          // the first thing to say about it, and the panel says the rest.
+          sub = `${formatNumber(unsized)} not measured`;
+        } else {
+          sub = `across ${measured.length} librar${measured.length === 1 ? "y" : "ies"}`;
+        }
+        if (bytes > 0) to = "/media?sort=size&dir=desc";
+        break;
+      }
+      case "shows": {
+        const shows = overviewQuery.data?.showCount ?? 0;
+        const episodes = overviewQuery.data?.episodeCount ?? 0;
+        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : formatNumber(shows);
+        // Shows alone can't tell a library of long-running series from a shelf
+        // of miniseries, and the ratio is the thing you'd work out by hand.
+        if (shows > 0) sub = `~${Math.round(episodes / shows)} episodes each`;
+        if (shows > 0) to = "/media?type=show";
+        break;
+      }
       case "addedThisWeek": {
         const added = overviewQuery.data?.addedThisWeek ?? 0;
         value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : added;

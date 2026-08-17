@@ -9,6 +9,7 @@ function errorMessage(err: unknown): string {
 import { plexMetadataRawSchema, parseMetadataArray, type PlexMetadataRaw } from "./schemas.ts";
 import {
   SECTION_TYPE_MAP,
+  PLEX_EPISODE_TYPE,
   type PlexItem,
   type PlexDirectoryEntry,
   type PlexMediaItem,
@@ -24,7 +25,7 @@ import {
 export function createItemsModule(http: PlexHttp) {
   async function* allItems(
     sectionId: string,
-    opts?: { includeGuids?: boolean },
+    opts?: { includeGuids?: boolean; type?: number },
   ): AsyncGenerator<{ item: PlexMetadataRaw; totalSize: number }> {
     const pageSize = 100;
     let offset = 0;
@@ -35,6 +36,10 @@ export function createItemsModule(http: PlexHttp) {
           "X-Plex-Container-Start": offset,
           "X-Plex-Container-Size": pageSize,
           ...(opts?.includeGuids ? { includeGuids: 1 } : {}),
+          // A section listing returns its top-level rows — shows, not episodes.
+          // `type` asks for a different level of the same library, which is the
+          // only way to reach the rows that actually carry the files.
+          ...(opts?.type ? { type: opts.type } : {}),
         },
       });
 
@@ -51,6 +56,54 @@ export function createItemsModule(http: PlexHttp) {
       offset += rawLen;
       if (offset >= totalSize) break;
     }
+  }
+
+  /**
+   * Bytes on disk per show in a TV section, summed from that show's episodes.
+   *
+   * The only way to answer "how much room does this library take" for TV. Plex
+   * hangs no `Media` off a show row, so the section listing a sync walks has
+   * nothing to add up; the files belong to the episodes.
+   *
+   * One paged walk of the section at episode level, not a request per show:
+   * every episode row carries both its parts and its `grandparentRatingKey`, so
+   * a 700-show library costs ~200 pages instead of ~5,000 `/children` calls. It
+   * is a second walk of the same library, which is why the caller does it once
+   * per sync and only for sections that need it.
+   *
+   * `episodes` counts the rows seen and `unsized` those Plex gave no size for,
+   * so a caller can tell "this show has no files" from "we couldn't tell".
+   */
+  async function showSizes(
+    sectionId: string,
+    onProgress?: (walked: number, total: number) => void,
+  ): Promise<Map<string, { bytes: number; episodes: number; unsized: number }>> {
+    const sizes = new Map<string, { bytes: number; episodes: number; unsized: number }>();
+    let walked = 0;
+    for await (const { item, totalSize } of allItems(sectionId, { type: PLEX_EPISODE_TYPE })) {
+      walked++;
+      if (onProgress) onProgress(walked, totalSize);
+      const showKey = item.grandparentRatingKey;
+      if (!showKey) continue;
+
+      let bytes = 0;
+      let sized = false;
+      for (const version of item.Media ?? []) {
+        for (const part of version.Part ?? []) {
+          if (typeof part.size === "number") {
+            bytes += part.size;
+            sized = true;
+          }
+        }
+      }
+
+      const entry = sizes.get(showKey) ?? { bytes: 0, episodes: 0, unsized: 0 };
+      entry.bytes += bytes;
+      entry.episodes++;
+      if (!sized) entry.unsized++;
+      sizes.set(showKey, entry);
+    }
+    return sizes;
   }
 
   async function fetchAllItems(sectionId: string): Promise<PlexItem[]> {
@@ -545,6 +598,7 @@ export function createItemsModule(http: PlexHttp) {
 
   return {
     allItems,
+    showSizes,
     fetchAllItems,
     fetchItemsSorted,
     fetchGroupedByField,

@@ -2,7 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA, GIT_SHA } from "#/version";
-import { NAV_SECTIONS, type NavMetric } from "#/nav";
+import { NAV_SECTIONS, visibleSections, type NavMetric } from "#/nav";
 import { modChord } from "#components/Kbd";
 import styles from "./Sidebar.module.css";
 
@@ -208,6 +208,10 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
     staleTime: 30_000,
   });
   const metrics = metricsQuery.data;
+  // Shared with the setup banner and the Stats setup card, so this is a cache
+  // read rather than a third request.
+  const setupQuery = trpc.onboarding.status.useQuery(undefined, { retry: false });
+  const sections = visibleSections(NAV_SECTIONS, setupQuery.data?.complete);
 
   return (
     <aside className="sidebar">
@@ -236,7 +240,7 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
       </button>
       <hr className="sidebar-search-divider" />
       <nav aria-label="Main">
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.label} className="nav-section">
             <div className="nav-section-title">{section.label}</div>
             {section.items.map((item) => (

@@ -19,7 +19,7 @@ const PROCESS_STARTED_AT_MS = Date.now();
 import { createPlexClient } from "@tinkerbell/plex";
 import { plexHealthCallback } from "@tinkerbell/core";
 import { getConfig, DAY_MS, WEEK_MS } from "@tinkerbell/core";
-import { topPlayed } from "@tinkerbell/domain.playback";
+import { topPlayed, type TopPlayedRank } from "@tinkerbell/domain.playback";
 import type { PlexRecentItem } from "@tinkerbell/plex";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
@@ -85,6 +85,8 @@ export interface MostWatchedItem {
   type: string;
   grandparentTitle?: string;
   plays: number;
+  /** Distinct people who played it — a rewatcher counts once. */
+  viewers: number;
 }
 
 // ─── Read functions (called by tRPC endpoints) ───────────────────────────────
@@ -103,14 +105,15 @@ export function getCachedRecentlyAdded(): { items: PlexRecentItem[]; jobEnabled:
  * playback history, which makes the period selectable and the numbers exact —
  * and removes an entire scheduled job.
  */
-export function getMostWatched(opts: { since?: number; limit?: number } = {}): MostWatchedItem[] {
+export function getMostWatched(opts: { since?: number; limit?: number; rank?: TopPlayedRank } = {}): MostWatchedItem[] {
   const since = opts.since ?? Date.now() - WEEK_MS;
-  return topPlayed({ since, limit: opts.limit ?? 10 }).map((row) => ({
+  return topPlayed({ since, limit: opts.limit ?? 10, rank: opts.rank }).map((row) => ({
     ratingKey: row.ratingKey,
     title: row.title,
     type: row.type,
     grandparentTitle: row.grandparentTitle ?? undefined,
     plays: row.plays,
+    viewers: row.viewers,
   }));
 }
 

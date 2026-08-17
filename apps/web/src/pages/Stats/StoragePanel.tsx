@@ -8,11 +8,12 @@ import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 /**
  * How much room each library takes, and how much of that is actually known.
  *
- * The coverage line is not a disclaimer to be tidied away later. Plex hangs no
- * files off a show row, so a TV library legitimately reports nothing — and a
- * bare "0 B" beside "TV Shows" would read as an empty library rather than as
- * an unanswered question. Saying "no sizes known" is the honest version, and
- * it is also the one that stops someone concluding their shows are missing.
+ * The coverage line is not a disclaimer to be tidied away later. TV libraries
+ * are measured now — the sync rolls episode sizes up onto their show — but a
+ * total can still be short: an unmatched item, a show whose episodes Plex gave
+ * no sizes for, a library last synced before the roll-up existed. Naming the
+ * gap is what stops someone reading a partial figure as the whole, and stops a
+ * bare "0 B" beside a library reading as "this library is empty".
  */
 export function StoragePanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const storageQuery = trpc.stats.storage.useQuery();
@@ -46,8 +47,8 @@ export function StoragePanel({ dragHandle, dragProps }: DashboardPanelProps) {
           </div>
           {unsized > 0 && (
             <div className={styles.muted}>
-              {formatNumber(unsized)} item{unsized === 1 ? "" : "s"} of unknown size — shows keep their files on their
-              episodes, which this index does not walk.
+              Not counted: {formatNumber(unsized)} item{unsized === 1 ? "" : "s"} of unknown size. Sizes are read during
+              Sync Media, so anything indexed before the last run fills in on the next one.
             </div>
           )}
         </>

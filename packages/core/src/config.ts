@@ -408,7 +408,7 @@ export const configSchema = z.object({
   metadata_undo_pending_batch: z.string(),
   media_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   collections_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
-  stats_summary_tiles: z.array(z.string()).max(6),
+  stats_summary_tiles: z.array(z.string()).max(10),
   stats_panel_order: z.array(z.string()).max(20),
   /** Visible columns of the Active Streams panel, in display order. */
   stats_streams_columns: z.array(z.string()).max(20),

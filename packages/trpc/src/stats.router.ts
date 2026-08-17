@@ -36,9 +36,16 @@ export const statsRouter = t.router({
     return client.getActiveSessions();
   }),
   recentlyAdded: procedure.query(() => getCachedRecentlyAdded()),
+  /**
+   * The period's top items, ranked either by plays or by how many different
+   * people played them.
+   *
+   * `rank` is a server concern rather than a column the table sorts on: it
+   * decides which rows make the top ten in the first place.
+   */
   mostWatched: procedure
-    .input(z.object({ periodDays: periodSchema }).optional())
-    .query(({ input }) => getMostWatched({ since: sinceFor(input?.periodDays ?? 7) })),
+    .input(z.object({ periodDays: periodSchema, rank: z.enum(["plays", "viewers"]).default("plays") }).optional())
+    .query(({ input }) => getMostWatched({ since: sinceFor(input?.periodDays ?? 7), rank: input?.rank ?? "plays" })),
   periods: procedure.query(() => PERIOD_DAYS),
   overview: procedure.query(() => getLibraryOverview()),
   activity: procedure.query(() => getActivitySummary()),

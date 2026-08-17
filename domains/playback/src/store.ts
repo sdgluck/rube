@@ -330,9 +330,20 @@ export interface WatchSummary {
   grandparentTitle: string | null;
   type: string;
   plays: number;
+  /**
+   * How many distinct people played it — repeat plays by one person count once.
+   *
+   * The honest answer to "what is popular here". One household member who
+   * rewatches a comfort show four times outranks a film everybody watched, and
+   * the plays column can't tell those apart.
+   */
+  viewers: number;
   totalWatchedMs: number;
   lastPlayedAt: number | null;
 }
+
+/** What "top" means: total plays, or how many different people played it. */
+export type TopPlayedRank = "plays" | "viewers";
 
 /**
  * Most-played items in a period.
@@ -340,11 +351,28 @@ export interface WatchSummary {
  * Reads the session log rather than `watch_state` because the rollup has no
  * notion of a period — it is a lifetime total by design. A period query over an
  * indexed `started_at` is cheap; keeping per-period counters would not be.
+ *
+ * Both counts come back either way — they cost one extra aggregate over rows
+ * already grouped — but `rank` has to be a parameter rather than a client-side
+ * sort, because it decides which rows survive the `limit`. Sorting the top ten
+ * by plays into viewer order is not the top ten by viewers.
  */
-export function topPlayed(opts: { since: number; limit: number; userId?: number; type?: string }): WatchSummary[] {
+export function topPlayed(opts: {
+  since: number;
+  limit: number;
+  userId?: number;
+  type?: string;
+  rank?: TopPlayedRank;
+}): WatchSummary[] {
   const filters = [gte(playbackSessions.startedAt, opts.since)];
   if (opts.userId != null) filters.push(eq(playbackSessions.userId, opts.userId));
   if (opts.type) filters.push(eq(playbackSessions.type, opts.type));
+
+  const viewers = sql<number>`count(distinct ${playbackSessions.userId})`;
+  // Ties on the ranked metric fall back to the other one, so a viewers-ranked
+  // list still puts the more-played of two one-viewer items first rather than
+  // leaving the order to SQLite.
+  const order = opts.rank === "viewers" ? [desc(viewers), desc(sql`count(*)`)] : [desc(sql`count(*)`), desc(viewers)];
 
   return db
     .select({
@@ -353,13 +381,14 @@ export function topPlayed(opts: { since: number; limit: number; userId?: number;
       grandparentTitle: sql<string | null>`max(${playbackSessions.grandparentTitle})`,
       type: sql<string>`max(${playbackSessions.type})`,
       plays: sql<number>`count(*)`,
+      viewers,
       totalWatchedMs: sql<number>`coalesce(sum(${playbackSessions.watchedMs}), 0)`,
       lastPlayedAt: sql<number | null>`max(${playbackSessions.startedAt})`,
     })
     .from(playbackSessions)
     .where(and(...filters))
     .groupBy(playbackSessions.ratingKey)
-    .orderBy(desc(sql`count(*)`))
+    .orderBy(...order)
     .limit(opts.limit)
     .all();
 }

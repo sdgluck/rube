@@ -201,11 +201,20 @@
   cursor: grabbing;
 }
 
+/* Every panel header is the same height whatever it holds.
+
+   Without the min-height the row is as tall as its tallest child, so a panel
+   with a period selector or a button in its header (32px of control) sat 14px
+   taller than one with only a title — and in a two-column grid that put the
+   titles of side-by-side panels on different lines, which reads as a rendering
+   fault rather than as a difference in content. Sizing the row to the control
+   height up front means adding a control to a header never moves anything. */
 .panelHeader {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 15px 18px 12px;
+  min-height: var(--control-h);
+  padding: 11px 18px 10px;
 }
 
 .panelTitle {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ListSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
@@ -9,26 +10,68 @@ import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
 
+/**
+ * What "most watched" counts.
+ *
+ * "Plays" is every play; "Viewers" counts each person once, so one household
+ * member rewatching a comfort show four times stops outranking the film
+ * everybody actually watched. Not a sort of the same ten rows — it changes
+ * which ten rows the server returns, which is why it lives in the query.
+ */
+const RANKS = [
+  { id: "plays" as const, label: "Plays" },
+  { id: "viewers" as const, label: "Viewers" },
+];
+type Rank = (typeof RANKS)[number]["id"];
+
 export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const { periodDays, setPeriodDays, label } = usePeriod();
-  const mostWatchedQuery = trpc.stats.mostWatched.useQuery({ periodDays });
-  const maxPlays = mostWatchedQuery.data?.[0]?.plays ?? 1;
+  const [rank, setRank] = useState<Rank>("plays");
+  const mostWatchedQuery = trpc.stats.mostWatched.useQuery({ periodDays, rank });
+
+  const countOf = (item: { plays: number; viewers: number }) => (rank === "viewers" ? item.viewers : item.plays);
+  const rows = mostWatchedQuery.data ?? [];
+  const maxCount = rows.length > 0 ? Math.max(...rows.map(countOf)) : 1;
+  const countLabel = rank === "viewers" ? "Viewers" : "Plays";
 
   const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
-    rows: mostWatchedQuery.data ?? [],
+    rows,
     accessors: {
       title: (i) => (i.grandparentTitle ? `${i.grandparentTitle} — ${i.title}` : i.title),
-      plays: (i) => i.plays,
+      count: countOf,
     },
-    defaultKey: "plays",
+    defaultKey: "count",
     defaultDir: "desc",
-    descFirst: ["plays"],
+    descFirst: ["count"],
   });
 
   return (
     <PanelShell
       title="Most Watched"
-      actions={<PeriodSelector value={periodDays} onChange={setPeriodDays} />}
+      actions={
+        <>
+          <div className={styles.segmented} role="tablist" aria-label="Count by">
+            {RANKS.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                role="tab"
+                aria-selected={rank === r.id}
+                className={`${styles.segmentedBtn} ${rank === r.id ? styles.segmentedBtnActive : ""}`}
+                onClick={() => setRank(r.id)}
+                title={
+                  r.id === "viewers"
+                    ? "Count each person once, however many times they played it"
+                    : "Count every play, including repeats by the same person"
+                }
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <PeriodSelector value={periodDays} onChange={setPeriodDays} />
+        </>
+      }
       dragHandle={dragHandle}
       dragProps={dragProps}
     >
@@ -53,13 +96,13 @@ export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps)
                   Title
                 </SortableTh>
                 <SortableTh
-                  sortKey="plays"
+                  sortKey="count"
                   activeKey={sortKey}
                   activeDir={sortDir}
                   onSort={toggleSort}
                   className={styles.playsCol}
                 >
-                  Plays
+                  {countLabel}
                 </SortableTh>
               </tr>
             </thead>
@@ -84,8 +127,8 @@ export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps)
                   </td>
                   <td className={styles.playsCell}>
                     <div className={styles.playsBar}>
-                      <div className={styles.playsBarFill} style={{ width: `${(item.plays / maxPlays) * 100}%` }} />
-                      <span className={styles.playsCount}>{item.plays}</span>
+                      <div className={styles.playsBarFill} style={{ width: `${(countOf(item) / maxCount) * 100}%` }} />
+                      <span className={styles.playsCount}>{countOf(item)}</span>
                     </div>
                   </td>
                 </tr>

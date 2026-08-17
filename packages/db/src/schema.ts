@@ -662,13 +662,17 @@ export const mediaItems = sqliteTable(
      * versions occupies both — and the number's whole purpose is to answer
      * "how much do I get back if this goes", where the answer is all of it.
      *
-     * Null for shows. The section listing this is read from returns show rows
-     * for a TV library, and Plex hangs no `Media` off those — the files belong
-     * to the episodes. Reading it would mean walking every episode of every
-     * show on every sync, which is a different and much more expensive job.
-     * So a movie library totals correctly and a TV library reports what it
-     * knows, which is nothing; every consumer treats null as "unknown" and
-     * says so rather than counting it as zero.
+     * For a show this is the sum over its episodes. Plex hangs no `Media` off a
+     * show row — the files belong to the episodes — so the sync walks a TV
+     * section a second time at episode level and rolls the totals up onto the
+     * show. It is one extra paged walk per TV library per sync, which is what
+     * "how much room do my shows take" costs; the alternative was a column that
+     * was null for every show.
+     *
+     * Still null wherever nothing could be read: an item Plex reports no parts
+     * for, a show whose episodes all lack sizes, or a section whose episode
+     * walk failed. Null is "unknown", never zero — zero is a claim a storage
+     * total would happily add up, and every consumer says "unknown" instead.
      */
     fileSize: integer("file_size"),
     /** Overall bitrate in kbps, as Plex reports it for the first version. */

@@ -8,7 +8,20 @@ export type NavMetric =
   | { kind: "status"; key: "overlaysStatus" | "jobsStatus" }
   | { kind: "streams" };
 
-export type NavItem = { to: string; label: string; metric?: NavMetric };
+export type NavItem = {
+  to: string;
+  label: string;
+  metric?: NavMetric;
+  /**
+   * Drop this item from the menus once setup is finished.
+   *
+   * For pages that are scaffolding rather than furniture: worth a permanent
+   * slot while they still have something to say, clutter afterwards. The page
+   * stays routed and stays listed under Settings — hiding the shortcut is not
+   * the same as taking the page away.
+   */
+  hideWhenSetupComplete?: boolean;
+};
 export type NavSection = { label: string; items: NavItem[] };
 
 export const NAV_SECTIONS: NavSection[] = [
@@ -48,13 +61,31 @@ export const NAV_SECTIONS: NavSection[] = [
       // the app did. The two are read together after a bad night.
       { to: "/changes", label: "Changes" },
       { to: "/settings", label: "Settings" },
-      // Stays after setup finishes rather than disappearing: it is the one
-      // page that says what is and isn't connected in one screen, and it is
-      // how someone who dismissed the banner gets back to an unfinished step.
-      { to: "/onboarding", label: "Setup" },
+      // Here only while there is still setup to do — that is when a sidebar
+      // slot earns its place, including for someone who dismissed the banner
+      // and needs a way back to an unfinished step. Once every step is done it
+      // moves to Settings › Setup, which is where you would look for it on the
+      // day you want to re-read what is connected.
+      { to: "/onboarding", label: "Setup", hideWhenSetupComplete: true },
     ],
   },
 ];
+
+/**
+ * The menu as it should render for this install.
+ *
+ * Takes the flag rather than reading it, so the same filter serves the sidebar
+ * and the mobile More page from one query. `setupComplete` is undefined while
+ * that query is in flight, and an item stays put until we know otherwise —
+ * hiding it first and putting it back a moment later would be a menu that
+ * flickers on every page load.
+ */
+export function visibleSections(sections: NavSection[], setupComplete: boolean | undefined): NavSection[] {
+  if (!setupComplete) return sections;
+  return sections
+    .map((s) => ({ ...s, items: s.items.filter((i) => !i.hideWhenSetupComplete) }))
+    .filter((s) => s.items.length > 0);
+}
 
 export type Crumb = { label: string; to: string };
 
@@ -68,7 +99,11 @@ export type Crumb = { label: string; to: string };
  * exception that can be resolved from the path alone.
  */
 export function routeTrail(pathname: string): Crumb[] {
-  const settings = SETTINGS_LINKS.find((l) => pathname === l.to || pathname.startsWith(`${l.to}/`));
+  // Rail links that leave /settings (Setup) belong to whatever section they
+  // actually live in, not under a Settings crumb.
+  const settings = SETTINGS_LINKS.find(
+    (l) => l.to.startsWith("/settings/") && (pathname === l.to || pathname.startsWith(`${l.to}/`)),
+  );
   if (settings)
     return [
       { label: "Settings", to: "/settings" },
