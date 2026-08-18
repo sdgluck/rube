@@ -66,6 +66,35 @@
           }
         ]
       }
+    },
+    {
+      "files": ["domains/**/*.ts", "packages/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@tinkerbell/db",
+                "importNames": ["createDb", "defaultDataDir"],
+                "message": "Only @tinkerbell/composition opens the database. Take `db: Db` as a dependency and let the container provide it \u2014 a second connection to the same file is how the import-time singleton behaved, and why tests needed a subprocess."
+              },
+              {
+                "name": "@tinkerbell/composition",
+                "importNames": ["buildContainer"],
+                "message": "Building a container is an entrypoint's job (apps/server, the Sidequest worker, test-support). A library that builds its own gets a second object graph, which is the bug this replaced."
+              }
+            ]
+          }
+        ]
+      },
+      "excludeFiles": [
+        "packages/composition/**/*.ts",
+        "packages/db/**/*.ts",
+        "packages/container/**/*.ts",
+        "**/*.test.ts",
+        "packages/jobs/src/sidequest/job.ts"
+      ]
     }
   ]
 }
