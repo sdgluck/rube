@@ -6,8 +6,7 @@
  * an integration that isn't configured, a name that already exists. Import
  * itself then does no thinking — it writes what the plan says.
  */
-import { getConfig } from "@tinkerbell/core";
-import { getRules } from "@tinkerbell/domain.rules";
+
 import type {
   ImportPlan,
   ImportPlanItem,
@@ -15,30 +14,12 @@ import type {
   RegistryRequirement,
   RegistryRule,
 } from "@tinkerbell/contracts";
-import { getRegistry } from "./fetch.ts";
+
 import { applyImportOverrides } from "./overrides.ts";
 import { resolveRuleForImport, type ResolveTarget, type TagLookup } from "./resolve.ts";
-
-/** Integrations a rule can depend on, and how to tell if they're set up. */
-function missingRequirements(rule: RegistryRule): RegistryRequirement[] {
-  const missing: RegistryRequirement[] = [];
-  for (const req of rule.requires) {
-    const configured =
-      req === "omdb"
-        ? !!getConfig("global_omdb_api_key")
-        : req === "tmdb"
-          ? !!getConfig("global_tmdb_api_key")
-          : req === "seerr"
-            ? !!getConfig("global_seerr_url") && !!getConfig("global_seerr_api_key")
-            : req === "mdblist"
-              ? !!getConfig("global_mdblist_api_key")
-              : req === "llm"
-                ? !!getConfig("global_llm")?.provider || !!getConfig("global_anthropic_api_key")
-                : true;
-    if (!configured) missing.push(req);
-  }
-  return missing;
-}
+import { type ConfigStore } from "@tinkerbell/core";
+import { type Rules } from "@tinkerbell/domain.rules";
+import { type RegistryFetch } from "./fetch.ts";
 
 /**
  * Suffix a colliding name rather than refusing the import. Matches the
@@ -61,48 +42,82 @@ export interface BuildPlanInput {
   overrides?: RegistryImportOverrides;
 }
 
-export async function buildImportPlan(input: BuildPlanInput, lookup: TagLookup): Promise<ImportPlan> {
-  const { packsBySlug, rulesBySlug } = await getRegistry();
+export interface PlanDeps {
+  config: ConfigStore;
+  rules: Rules;
+  registry: RegistryFetch;
+}
+export function createPlan(deps: PlanDeps) {
+  const { getConfig } = deps.config;
+  const { getRules } = deps.rules;
+  const { getRegistry } = deps.registry;
 
-  if (input.targets.length === 0) {
-    throw new Error("Pick at least one library to import into.");
+  /** Integrations a rule can depend on, and how to tell if they're set up. */
+  function missingRequirements(rule: RegistryRule): RegistryRequirement[] {
+    const missing: RegistryRequirement[] = [];
+    for (const req of rule.requires) {
+      const configured =
+        req === "omdb"
+          ? !!getConfig("global_omdb_api_key")
+          : req === "tmdb"
+            ? !!getConfig("global_tmdb_api_key")
+            : req === "seerr"
+              ? !!getConfig("global_seerr_url") && !!getConfig("global_seerr_api_key")
+              : req === "mdblist"
+                ? !!getConfig("global_mdblist_api_key")
+                : req === "llm"
+                  ? !!getConfig("global_llm")?.provider || !!getConfig("global_anthropic_api_key")
+                  : true;
+      if (!configured) missing.push(req);
+    }
+    return missing;
   }
 
-  const pack = input.packSlug ? packsBySlug.get(input.packSlug) : null;
-  if (input.packSlug && !pack) {
-    throw new Error(`Unknown registry pack "${input.packSlug}".`);
+  async function buildImportPlan(input: BuildPlanInput, lookup: TagLookup): Promise<ImportPlan> {
+    const { packsBySlug, rulesBySlug } = await getRegistry();
+
+    if (input.targets.length === 0) {
+      throw new Error("Pick at least one library to import into.");
+    }
+
+    const pack = input.packSlug ? packsBySlug.get(input.packSlug) : null;
+    if (input.packSlug && !pack) {
+      throw new Error(`Unknown registry pack "${input.packSlug}".`);
+    }
+
+    // Seeded from existing rules so a pack importing two rules that would both
+    // collide gets "(2)" and "(3)", not "(2)" twice.
+    const taken = new Set(getRules().map((r) => r.name));
+    const items: ImportPlanItem[] = [];
+
+    for (const slug of input.ruleSlugs) {
+      const rule = rulesBySlug.get(slug);
+      if (!rule) throw new Error(`Unknown registry rule "${slug}".`);
+
+      const { config, warnings } = await resolveRuleForImport(rule, input.targets, lookup);
+      // Overrides land after resolution so the preview shows exactly what gets
+      // written — the plan is the contract, and import does no thinking.
+      const overridden = applyImportOverrides(rule.type, config, input.overrides);
+      const { name, collided } = dedupeName(rule.name, taken);
+      taken.add(name);
+
+      items.push({
+        rule,
+        config: overridden,
+        name,
+        nameCollision: collided,
+        resolutionWarnings: warnings,
+        missingRequirements: missingRequirements(rule),
+      });
+    }
+
+    return {
+      packSlug: pack?.slug ?? null,
+      packVersion: pack?.version ?? null,
+      sectionTitles: input.targets.map((t) => t.sectionTitle),
+      items,
+    };
   }
 
-  // Seeded from existing rules so a pack importing two rules that would both
-  // collide gets "(2)" and "(3)", not "(2)" twice.
-  const taken = new Set(getRules().map((r) => r.name));
-  const items: ImportPlanItem[] = [];
-
-  for (const slug of input.ruleSlugs) {
-    const rule = rulesBySlug.get(slug);
-    if (!rule) throw new Error(`Unknown registry rule "${slug}".`);
-
-    const { config, warnings } = await resolveRuleForImport(rule, input.targets, lookup);
-    // Overrides land after resolution so the preview shows exactly what gets
-    // written — the plan is the contract, and import does no thinking.
-    const overridden = applyImportOverrides(rule.type, config, input.overrides);
-    const { name, collided } = dedupeName(rule.name, taken);
-    taken.add(name);
-
-    items.push({
-      rule,
-      config: overridden,
-      name,
-      nameCollision: collided,
-      resolutionWarnings: warnings,
-      missingRequirements: missingRequirements(rule),
-    });
-  }
-
-  return {
-    packSlug: pack?.slug ?? null,
-    packVersion: pack?.version ?? null,
-    sectionTitles: input.targets.map((t) => t.sectionTitle),
-    items,
-  };
+  return { buildImportPlan };
 }

@@ -25,7 +25,7 @@ import {
   type SmartFilterOp,
 } from "@tinkerbell/plex-smart-filter";
 import { describeCondition, ruleCoversSection } from "@tinkerbell/contracts";
-import { completionThreshold, evaluateLocal, watchStateFor, watchStateUserScope } from "@tinkerbell/domain.playback";
+import { evaluateLocal, type Playback } from "@tinkerbell/domain.playback";
 
 /**
  * A branch as a sentence fragment.
@@ -93,88 +93,101 @@ function pathForBranch(
   return `/library/sections/${section.key}/all?${parts.join("&")}`;
 }
 
-/**
- * Evaluate each of a rule's top-level clauses against one item.
- *
- * Top-level only, matching the funnel: a nested group is reported as a single
- * clause that passed or didn't, rather than expanded into a tree nobody asked
- * to read. The clause that fails is the one people are looking for, and it is
- * almost always at the top.
- */
-export async function explainItem(opts: ExplainOptions): Promise<ItemExplanation> {
-  const { client, ratingKey, filter, ruleSectionTitles, sections } = opts;
+export interface ExplainDeps {
+  playback: Playback;
+}
+export function createExplain(deps: ExplainDeps) {
+  const { completionThreshold, watchStateFor, watchStateUserScope } = deps.playback;
 
-  const detail = await client.getItemFields(ratingKey);
-  const itemTitle = detail.title;
-  const section = sections.find((s) => s.key === detail.sectionId);
+  /**
+   * Evaluate each of a rule's top-level clauses against one item.
+   *
+   * Top-level only, matching the funnel: a nested group is reported as a single
+   * clause that passed or didn't, rather than expanded into a tree nobody asked
+   * to read. The clause that fails is the one people are looking for, and it is
+   * almost always at the top.
+   */
+  async function explainItem(opts: ExplainOptions): Promise<ItemExplanation> {
+    const { client, ratingKey, filter, ruleSectionTitles, sections } = opts;
 
-  const base = { ratingKey, itemTitle, combinator: filter.combinator, clauses: [] as ClauseVerdict[] };
+    const detail = await client.getItemFields(ratingKey);
+    const itemTitle = detail.title;
+    const section = sections.find((s) => s.key === detail.sectionId);
 
-  if (!section) {
-    return { ...base, matches: false, reason: "Plex didn't say which library this item is in." };
-  }
+    const base = { ratingKey, itemTitle, combinator: filter.combinator, clauses: [] as ClauseVerdict[] };
 
-  // Scope first. A rule that doesn't cover the library is the commonest
-  // answer by far, and evaluating six clauses before saying so would be a
-  // slower way of being unhelpful.
-  //
-  // Asked through `ruleCoversSection` so this agrees with the engine: a rule
-  // whose sections were saved as keys rather than titles is covered by the run
-  // and used to be reported here as out of scope.
-  if (!ruleCoversSection(ruleSectionTitles, section)) {
-    return {
-      ...base,
-      matches: false,
-      reason: `This rule only covers ${ruleSectionTitles.join(", ")}, and this item is in ${section.title}.`,
-    };
-  }
+    if (!section) {
+      return { ...base, matches: false, reason: "Plex didn't say which library this item is in." };
+    }
 
-  const { plexTree, localLeaves, error } = splitLocalLeaves(filter);
-  if (error) {
-    return { ...base, matches: false, reason: "This rule mixes watch-state clauses into an OR, which can't be split." };
-  }
+    // Scope first. A rule that doesn't cover the library is the commonest
+    // answer by far, and evaluating six clauses before saying so would be a
+    // slower way of being unhelpful.
+    //
+    // Asked through `ruleCoversSection` so this agrees with the engine: a rule
+    // whose sections were saved as keys rather than titles is covered by the run
+    // and used to be reported here as out of scope.
+    if (!ruleCoversSection(ruleSectionTitles, section)) {
+      return {
+        ...base,
+        matches: false,
+        reason: `This rule only covers ${ruleSectionTitles.join(", ")}, and this item is in ${section.title}.`,
+      };
+    }
 
-  const branches = plexTree.children;
-  if (branches.length === 0 && localLeaves.length === 0) {
-    return { ...base, matches: true, reason: "This rule has no filter, so it matches everything in its libraries." };
-  }
+    const { plexTree, localLeaves, error } = splitLocalLeaves(filter);
+    if (error) {
+      return {
+        ...base,
+        matches: false,
+        reason: "This rule mixes watch-state clauses into an OR, which can't be split.",
+      };
+    }
 
-  const clauses: ClauseVerdict[] = [];
+    const branches = plexTree.children;
+    if (branches.length === 0 && localLeaves.length === 0) {
+      return { ...base, matches: true, reason: "This rule has no filter, so it matches everything in its libraries." };
+    }
 
-  for (const branch of branches) {
-    const path = pathForBranch(section, plexTree.combinator, [branch], itemTitle);
-    const found = await client.fetchItemsByFilter(path);
-    clauses.push({
-      label: describeBranchLabel(branch),
-      passed: found.some((item) => item.ratingKey === ratingKey),
-      source: "plex",
-    });
-  }
+    const clauses: ClauseVerdict[] = [];
 
-  if (localLeaves.length > 0) {
-    const state = watchStateFor([ratingKey]);
-    const scope = watchStateUserScope();
-    const localCtx = { userIds: scope.userIds, now: Date.now(), completionThreshold: completionThreshold() };
-    for (const leaf of localLeaves) {
+    for (const branch of branches) {
+      const path = pathForBranch(section, plexTree.combinator, [branch], itemTitle);
+      const found = await client.fetchItemsByFilter(path);
       clauses.push({
-        label: describeCondition(leaf.field, leaf.op as SmartFilterOp, [leaf.value]),
-        passed: evaluateLocal(leaf, state.get(ratingKey), localCtx),
-        source: "local",
+        label: describeBranchLabel(branch),
+        passed: found.some((item) => item.ratingKey === ratingKey),
+        source: "plex",
       });
     }
+
+    if (localLeaves.length > 0) {
+      const state = watchStateFor([ratingKey]);
+      const scope = watchStateUserScope();
+      const localCtx = { userIds: scope.userIds, now: Date.now(), completionThreshold: completionThreshold() };
+      for (const leaf of localLeaves) {
+        clauses.push({
+          label: describeCondition(leaf.field, leaf.op as SmartFilterOp, [leaf.value]),
+          passed: evaluateLocal(leaf, state.get(ratingKey), localCtx),
+          source: "local",
+        });
+      }
+    }
+
+    // The Plex half combines the way the tree says; the local half is always
+    // AND'd on top, which is the same shape the generate handler applies.
+    const plexClauses = clauses.filter((c) => c.source === "plex");
+    const localClauses = clauses.filter((c) => c.source === "local");
+    const plexPassed =
+      plexClauses.length === 0
+        ? true
+        : plexTree.combinator === "any"
+          ? plexClauses.some((c) => c.passed)
+          : plexClauses.every((c) => c.passed);
+    const matches = plexPassed && localClauses.every((c) => c.passed);
+
+    return { ...base, matches, clauses };
   }
 
-  // The Plex half combines the way the tree says; the local half is always
-  // AND'd on top, which is the same shape the generate handler applies.
-  const plexClauses = clauses.filter((c) => c.source === "plex");
-  const localClauses = clauses.filter((c) => c.source === "local");
-  const plexPassed =
-    plexClauses.length === 0
-      ? true
-      : plexTree.combinator === "any"
-        ? plexClauses.some((c) => c.passed)
-        : plexClauses.every((c) => c.passed);
-  const matches = plexPassed && localClauses.every((c) => c.passed);
-
-  return { ...base, matches, clauses };
+  return { explainItem };
 }

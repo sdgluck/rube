@@ -8,14 +8,18 @@
  * Against a real migrated database rather than a fake config: the whole point
  * is that this agrees with what `notifyEvent` reads.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-notif-routing-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { NotificationsToken } from "@tinkerbell/domain.notifications";
 
-const { setConfig } = await import("@tinkerbell/core");
-const { routingMatrix } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { routingMatrix } = c.resolve(NotificationsToken);
 
 /** 09:00 UTC on a Wednesday — outside any quiet window these tests set. */
 const DAYTIME = new Date("2025-01-15T09:00:00Z");

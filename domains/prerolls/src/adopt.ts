@@ -16,15 +16,7 @@
 import { readdir, rename, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { prerollsDir } from "@tinkerbell/core";
-import {
-  createPreroll,
-  deletePreroll,
-  ensurePrerollDirs,
-  extensionOf,
-  incomingPath,
-  listPrerolls,
-  type Preroll,
-} from "./index.ts";
+import { ensurePrerollDirs, extensionOf, incomingPath, type CreatePrerollInput, type Preroll } from "./index.ts";
 import { ALLOWED_EXTENSIONS, assertSupportedFilename } from "./ingest.ts";
 import { isBareFilename } from "./safe-name.ts";
 
@@ -42,90 +34,110 @@ export class OrphanNotFoundError extends Error {
   }
 }
 
-/** Filenames the database already accounts for, so a scan can skip them. */
-function trackedFilenames(): Set<string> {
-  const tracked = new Set<string>();
-  for (const row of listPrerolls()) {
-    if (row.filename) tracked.add(row.filename);
-  }
-  return tracked;
-}
-
-/**
- * List adoptable videos at the top level of `PREROLLS_DIR`.
- *
- * Only the top level: `incoming/` holds half-written uploads and files the
- * processing job is about to consume, and `thumbs/` holds jpegs — neither is
- * something to offer the user. Sorted by name so the list is stable across
- * polls rather than in whatever order the filesystem hands them back.
- */
-export async function scanOrphans(): Promise<OrphanFile[]> {
-  await ensurePrerollDirs();
-  const dir = prerollsDir();
-  const tracked = trackedFilenames();
-
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    // An unreadable directory is already reported by `getEnvironment` as "not
-    // writable"; there's nothing more useful to say from here.
-    return [];
-  }
-
-  const found: OrphanFile[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile()) continue;
-    if (tracked.has(entry.name)) continue;
-    if (!ALLOWED_EXTENSIONS.has(extensionOf(entry.name))) continue;
-    try {
-      const info = await stat(join(dir, entry.name));
-      found.push({ filename: entry.name, sizeBytes: info.size, modifiedAt: info.mtimeMs });
-    } catch {
-      // Raced with a delete between readdir and stat — just leave it out.
-    }
-  }
-  return found.sort((a, b) => a.filename.localeCompare(b.filename));
-}
-
-/**
- * Adopt one orphan: create its row and move the file into `incoming/` for the
- * processing job to pick up.
- *
- * A move rather than a copy. The file is already inside the directory
- * Tinkerbell owns, the destination is the same filesystem so the rename is
- * atomic and free, and copying would silently double the disk footprint of a
- * library that can run to gigabytes. If processing fails the bytes are still
- * there under the row's id, and the failed row offers a retry.
- */
-export async function adoptOrphan(filename: string, name?: string): Promise<Preroll> {
-  // The filename comes from the browser, so it gets the path check before it
-  // gets anywhere near a `join`.
-  if (!isBareFilename(filename)) throw new OrphanNotFoundError(filename);
-  if (trackedFilenames().has(filename)) throw new OrphanNotFoundError(filename);
-
-  const ext = assertSupportedFilename(filename);
-  const source = join(prerollsDir(), filename);
-  const info = await stat(source).catch(() => null);
-  if (!info?.isFile()) throw new OrphanNotFoundError(filename);
-
-  await ensurePrerollDirs();
-  const row = createPreroll({ name: name?.trim() || stripExtension(filename), originalFilename: filename });
-
-  try {
-    await rename(source, incomingPath(row.id, ext));
-  } catch (err) {
-    // The row is deleted rather than left `failed`: nothing moved, so the file
-    // is still adoptable and a failed row would just be noise the user has to
-    // clear before trying again.
-    await deletePreroll(row.id);
-    throw err;
-  }
-
-  return row;
-}
-
 function stripExtension(filename: string): string {
   const ext = extensionOf(filename);
   return ext ? filename.slice(0, -ext.length) : filename;
+}
+
+/**
+ * Structural rather than `prerolls: Prerolls`.
+ *
+ * `Prerolls` is `ReturnType<typeof createPrerolls>`, and `createPrerolls` is
+ * what supplies this — naming the whole type here makes the alias reference
+ * itself. Listing the three functions actually used says more anyway.
+ */
+export interface AdoptDeps {
+  prerolls: {
+    createPreroll(input: CreatePrerollInput): Preroll;
+    deletePreroll(id: string): Promise<boolean>;
+    listPrerolls(): Preroll[];
+  };
+}
+export function createAdopt(deps: AdoptDeps) {
+  const { createPreroll, deletePreroll, listPrerolls } = deps.prerolls;
+
+  /** Filenames the database already accounts for, so a scan can skip them. */
+  function trackedFilenames(): Set<string> {
+    const tracked = new Set<string>();
+    for (const row of listPrerolls()) {
+      if (row.filename) tracked.add(row.filename);
+    }
+    return tracked;
+  }
+
+  /**
+   * List adoptable videos at the top level of `PREROLLS_DIR`.
+   *
+   * Only the top level: `incoming/` holds half-written uploads and files the
+   * processing job is about to consume, and `thumbs/` holds jpegs — neither is
+   * something to offer the user. Sorted by name so the list is stable across
+   * polls rather than in whatever order the filesystem hands them back.
+   */
+  async function scanOrphans(): Promise<OrphanFile[]> {
+    await ensurePrerollDirs();
+    const dir = prerollsDir();
+    const tracked = trackedFilenames();
+
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      // An unreadable directory is already reported by `getEnvironment` as "not
+      // writable"; there's nothing more useful to say from here.
+      return [];
+    }
+
+    const found: OrphanFile[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (tracked.has(entry.name)) continue;
+      if (!ALLOWED_EXTENSIONS.has(extensionOf(entry.name))) continue;
+      try {
+        const info = await stat(join(dir, entry.name));
+        found.push({ filename: entry.name, sizeBytes: info.size, modifiedAt: info.mtimeMs });
+      } catch {
+        // Raced with a delete between readdir and stat — just leave it out.
+      }
+    }
+    return found.sort((a, b) => a.filename.localeCompare(b.filename));
+  }
+
+  /**
+   * Adopt one orphan: create its row and move the file into `incoming/` for the
+   * processing job to pick up.
+   *
+   * A move rather than a copy. The file is already inside the directory
+   * Tinkerbell owns, the destination is the same filesystem so the rename is
+   * atomic and free, and copying would silently double the disk footprint of a
+   * library that can run to gigabytes. If processing fails the bytes are still
+   * there under the row's id, and the failed row offers a retry.
+   */
+  async function adoptOrphan(filename: string, name?: string): Promise<Preroll> {
+    // The filename comes from the browser, so it gets the path check before it
+    // gets anywhere near a `join`.
+    if (!isBareFilename(filename)) throw new OrphanNotFoundError(filename);
+    if (trackedFilenames().has(filename)) throw new OrphanNotFoundError(filename);
+
+    const ext = assertSupportedFilename(filename);
+    const source = join(prerollsDir(), filename);
+    const info = await stat(source).catch(() => null);
+    if (!info?.isFile()) throw new OrphanNotFoundError(filename);
+
+    await ensurePrerollDirs();
+    const row = createPreroll({ name: name?.trim() || stripExtension(filename), originalFilename: filename });
+
+    try {
+      await rename(source, incomingPath(row.id, ext));
+    } catch (err) {
+      // The row is deleted rather than left `failed`: nothing moved, so the file
+      // is still adoptable and a failed row would just be noise the user has to
+      // clear before trying again.
+      await deletePreroll(row.id);
+      throw err;
+    }
+
+    return row;
+  }
+
+  return { scanOrphans, adoptOrphan };
 }

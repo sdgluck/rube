@@ -1,3 +1,4 @@
+import { isDigestEmpty, renderDigest } from "@tinkerbell/domain.digest";
 /**
  * `buildDigest` is pure and DB-only, so the interesting half is testable
  * against a seeded database with no network at all — which is the property
@@ -8,29 +9,34 @@
  * is half-open, so "an item added exactly on the boundary appears once" is the
  * assertion that catches both mistakes at the same time.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-digest-test-");
-
-const {
-  db,
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import {
   cleanupCandidates,
   collections,
   digestDeliveries,
-  jobs,
   jobRuns,
+  jobs,
   mediaItems,
   playbackSessions,
   rules,
   watchState,
-} = await import("@tinkerbell/db");
-const { buildDigest, isDigestEmpty, tailor } = await import("./build.ts");
-const { claimDelivery, completeDelivery, lastSentAt, releaseDelivery } = await import("./deliveries.ts");
-const { periodFor, startOfDay } = await import("./period.ts");
-const { renderDigest } = await import("./render.ts");
-const { defaultUserPreferences, setConfig, userPreferencesSchema } = await import("@tinkerbell/core");
+} from "@tinkerbell/db";
+import { DigestToken } from "@tinkerbell/domain.digest";
+import { defaultUserPreferences, userPreferencesSchema } from "@tinkerbell/core";
+
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { buildDigest, tailor } = c.resolve(DigestToken);
+const { claimDelivery, completeDelivery, lastSentAt, releaseDelivery } = c.resolve(DigestToken);
+const { periodFor, startOfDay } = c.resolve(DigestToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
 
 /**
  * An install where cleanup could actually remove something: the switch on, and a

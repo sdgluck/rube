@@ -1,17 +1,23 @@
+import { recommendKeeper } from "@tinkerbell/domain.media";
 /**
  * A duplicate finder is asking someone to delete a file on its say-so, so the
  * two things that matter are that it never groups things that aren't the same
  * (a remake shares a title with its original) and that it never recommends a
  * keeper it cannot justify.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-duplicates-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { mediaItems } from "@tinkerbell/db";
+import { MediaToken } from "@tinkerbell/domain.media";
 
-const { db, mediaItems } = await import("@tinkerbell/db");
-const { findDuplicates, recommendKeeper } = await import("./duplicates.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { findDuplicates } = c.resolve(MediaToken);
 
 const T0 = 1_700_000_000;
 

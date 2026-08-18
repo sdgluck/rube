@@ -5,14 +5,19 @@
  * every rule, and the interesting cases are all about what happens to the ones
  * it *didn't* name.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-rules-order-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { rules } from "@tinkerbell/db";
+import { RulesToken } from "@tinkerbell/domain.rules";
 
-const { db, rules } = await import("@tinkerbell/db");
-const { reorderRules, getRules } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { reorderRules, getRules } = c.resolve(RulesToken);
 
 const T0 = 1_700_000_000_000;
 

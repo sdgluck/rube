@@ -4,15 +4,20 @@
  * that fired on it would be dismissed once and ignored for ever — so most of
  * these tests are about what is *not* reported.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-rules-conflicts-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { cleanupCandidates, ruleCollectionMembers, rules } from "@tinkerbell/db";
+import { RulesToken } from "@tinkerbell/domain.rules";
 
-const { db, cleanupCandidates, ruleCollectionMembers, rules } = await import("@tinkerbell/db");
-const { findRuleConflicts, rulesProducingCollectionNamed, rulesRequiringOrder } = await import("./conflicts.ts");
-const { reorderRules } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { findRuleConflicts, rulesProducingCollectionNamed, rulesRequiringOrder } = c.resolve(RulesToken);
+const { reorderRules } = c.resolve(RulesToken);
 
 const T0 = 1_700_000_000_000;
 

@@ -4,24 +4,29 @@
  * the upsert-and-prune is expressed in SQL, and a fake would be testing the
  * fake.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import { eq } from "drizzle-orm";
 
-setupTempDb("tinkerbell-cleanup-test-");
-
-const {
-  db,
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import {
   cleanupCandidates,
   cleanupKeepVotes,
   cleanupProtections,
   collectionItems,
   collections,
-  jobs,
   jobRuns,
+  jobs,
   rules,
-} = await import("@tinkerbell/db");
+} from "@tinkerbell/db";
+import { CleanupToken } from "@tinkerbell/domain.cleanup";
+
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
 const {
   recordMatches,
   dueForAction,
@@ -41,8 +46,8 @@ const {
   setCandidateApproval,
   standingRefusal,
   willBeActioned,
-} = await import("./index.ts");
-const { setConfig, deleteConfig } = await import("@tinkerbell/core");
+} = c.resolve(CleanupToken);
+const { setConfig, deleteConfig } = c.resolve(ConfigStoreToken);
 
 const RULE = "rule-1";
 const OTHER = "rule-2";

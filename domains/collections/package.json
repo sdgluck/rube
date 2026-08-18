@@ -14,12 +14,15 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@tinkerbell/container": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
+    "@tinkerbell/composition": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

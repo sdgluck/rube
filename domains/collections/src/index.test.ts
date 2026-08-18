@@ -7,14 +7,20 @@
  * silently resolves those protections to nothing, and the next cleanup run
  * deletes items somebody explicitly protected. Hence the section scoping.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-collections-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { collectionItems, collections } from "@tinkerbell/db";
+import { CollectionsToken } from "@tinkerbell/domain.collections";
 
-const { db, collections, collectionItems } = await import("@tinkerbell/db");
-const { syncCollections } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { syncCollections } = c.resolve(CollectionsToken);
+
 const { createPlexClient } = await import("@tinkerbell/plex");
 
 type PlexClient = ReturnType<typeof createPlexClient>;

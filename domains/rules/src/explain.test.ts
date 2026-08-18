@@ -8,14 +8,19 @@
  * combining, and the query construction is exercised by asserting on the
  * paths the fake is asked for.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-rules-explain-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { watchState } from "@tinkerbell/db";
+import { RulesToken } from "@tinkerbell/domain.rules";
 
-const { db, watchState } = await import("@tinkerbell/db");
-const { explainItem } = await import("./explain.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { explainItem } = c.resolve(RulesToken);
 
 const SECTIONS = [
   { key: "1", title: "Movies", type: "movie" },

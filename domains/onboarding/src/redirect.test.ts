@@ -8,26 +8,22 @@
  * and reading it that way sent working servers into first-run setup after an
  * upgrade.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { RulesToken } from "@tinkerbell/domain.rules";
+import { OnboardingToken } from "./index.ts";
 
-// This package doesn't depend on `@tinkerbell/db` — it reads through core and
-// `domains/rules` — so the scratch database is migrated by spawning the migrate
-// entrypoint by path rather than importing the package.
-process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-onboarding-redirect-test-"));
-execFileSync(
-  process.execPath,
-  ["--experimental-strip-types", join(import.meta.dirname, "..", "..", "..", "packages", "db", "src", "migrate.ts")],
-  { env: { ...process.env }, stdio: "ignore" },
-);
+// This package used to migrate a scratch database by spawning the migrate
+// entrypoint by path, because it doesn't depend on `@tinkerbell/db` and the
+// connection opened on import. The container does both, in-process.
+const c = createTestContainer();
+after(() => c.dispose());
 
-const { setConfig, deleteConfig } = await import("@tinkerbell/core");
-const { createRule, deleteRule, getRules } = await import("@tinkerbell/domain.rules");
-const { getOnboardingStatus, startOnboarding, dismissOnboarding, skipOnboarding } = await import("./index.ts");
+const { setConfig, deleteConfig } = c.resolve(ConfigStoreToken);
+const { createRule, deleteRule, getRules } = c.resolve(RulesToken);
+const { getOnboardingStatus, startOnboarding, dismissOnboarding, skipOnboarding } = c.resolve(OnboardingToken);
 
 function connectPlex(): void {
   setConfig("global_plex_url", "http://plex.local:32400");

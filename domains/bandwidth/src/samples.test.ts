@@ -6,14 +6,19 @@
  * one minute the link was full — and that a re-sampled instant overwrites
  * itself rather than doubling that bucket.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { bandwidthSamples } from "@tinkerbell/db";
+import { BandwidthToken } from "@tinkerbell/domain.bandwidth";
 
-const { db, bandwidthSamples } = await import("@tinkerbell/db");
-const { getBandwidthSeries, recordBandwidthSample, pruneBandwidthSamples } = await import("./store.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { getBandwidthSeries, recordBandwidthSample, pruneBandwidthSamples } = c.resolve(BandwidthToken);
 
 const HOUR = 3_600_000;
 const NOW = 1_760_000_000_000;

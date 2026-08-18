@@ -9,10 +9,11 @@
  * portal opt-in).
  */
 
-import { getPersonalizedSharingStatus } from "@tinkerbell/core";
 import { getFilterClause } from "@tinkerbell/plex";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { getLocalUser, type LocalUser } from "./query.ts";
+import type { Db } from "@tinkerbell/db";
+import { createQuery, type LocalUser } from "./query.ts";
+import { type ConfigStore } from "@tinkerbell/core";
 
 export interface UserShareState {
   /** Null when the server isn't shared with them (Home users often aren't). */
@@ -44,39 +45,50 @@ export interface UserDetail {
   personalization: { status: string; ownsLabels: boolean };
 }
 
-export async function getUserDetail(client: PlexClient, userId: number): Promise<UserDetail | null> {
-  const user = getLocalUser(userId);
-  if (!user) return null;
+export interface DetailDeps {
+  db: Db;
+  config: ConfigStore;
+}
+export function createDetail(deps: DetailDeps) {
+  const { getLocalUser } = createQuery(deps);
+  const { getPersonalizedSharingStatus } = deps.config;
 
-  const identity = await client.getIdentity();
-  const [shares, sections] = await Promise.all([
-    client.getSharedServersFull(identity.machineIdentifier).catch(() => []),
-    client.getSections().catch(() => [] as PlexSection[]),
-  ]);
+  async function getUserDetail(client: PlexClient, userId: number): Promise<UserDetail | null> {
+    const user = getLocalUser(userId);
+    if (!user) return null;
 
-  const found = shares.find((s) => s.userId === userId);
-  const share: UserShareState | null = found
-    ? {
-        sharedServerId: found.sharedServerId,
-        accepted: found.accepted,
-        allowSync: found.allowSync,
-        allowTuners: found.allowTuners,
-        allowChannels: found.allowChannels,
-        allowCameraUpload: found.allowCameraUpload,
-        librarySectionIds: found.librarySectionIds,
-        contentRatingMovies: getFilterClause(found.filterMovies, "contentRating"),
-        contentRatingTelevision: getFilterClause(found.filterTelevision, "contentRating"),
-        labelsMovies: getFilterClause(found.filterMovies, "label"),
-        labelsTelevision: getFilterClause(found.filterTelevision, "label"),
-      }
-    : null;
+    const identity = await client.getIdentity();
+    const [shares, sections] = await Promise.all([
+      client.getSharedServersFull(identity.machineIdentifier).catch(() => []),
+      client.getSections().catch(() => [] as PlexSection[]),
+    ]);
 
-  const status = getPersonalizedSharingStatus();
+    const found = shares.find((s) => s.userId === userId);
+    const share: UserShareState | null = found
+      ? {
+          sharedServerId: found.sharedServerId,
+          accepted: found.accepted,
+          allowSync: found.allowSync,
+          allowTuners: found.allowTuners,
+          allowChannels: found.allowChannels,
+          allowCameraUpload: found.allowCameraUpload,
+          librarySectionIds: found.librarySectionIds,
+          contentRatingMovies: getFilterClause(found.filterMovies, "contentRating"),
+          contentRatingTelevision: getFilterClause(found.filterTelevision, "contentRating"),
+          labelsMovies: getFilterClause(found.filterMovies, "label"),
+          labelsTelevision: getFilterClause(found.filterTelevision, "label"),
+        }
+      : null;
 
-  return {
-    user,
-    share,
-    sections,
-    personalization: { status, ownsLabels: status !== "disabled" },
-  };
+    const status = getPersonalizedSharingStatus();
+
+    return {
+      user,
+      share,
+      sections,
+      personalization: { status, ownsLabels: status !== "disabled" },
+    };
+  }
+
+  return { getUserDetail };
 }

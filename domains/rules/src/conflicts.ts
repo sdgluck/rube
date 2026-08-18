@@ -17,7 +17,7 @@
  * just be an invisible precedence rule again.
  */
 import { inArray } from "drizzle-orm";
-import { cleanupCandidates, db, ruleCollectionMembers, rules } from "@tinkerbell/db";
+import { cleanupCandidates, ruleCollectionMembers, rules, type Db } from "@tinkerbell/db";
 import { ruleAction, type RuleConfig } from "@tinkerbell/contracts";
 
 export type ConflictKind = "collection-name" | "metadata-field" | "cleanup-vs-collection";
@@ -44,54 +44,6 @@ interface RuleRow {
 /** Running order: position, then creation. Matches `getRules`. */
 function inRunningOrder(rows: RuleRow[]): RuleRow[] {
   return [...rows].sort((a, b) => a.position - b.position || a.createdAt - b.createdAt);
-}
-
-/**
- * Two rules producing a collection of the same name.
- *
- * Plex allows it, so this fails silently and spectacularly: you get two
- * collections both called "Top Rated", each rebuilt nightly by a different
- * rule, and which one a user sees depends on the order they were made in.
- * Read from what the rules actually built, so two rules that merely *could*
- * collide are not reported until they do.
- */
-function collectionNameConflicts(ordered: RuleRow[]): RuleConflict[] {
-  const byId = new Map(ordered.map((r) => [r.id, r]));
-  const members = db
-    .select({
-      ruleId: ruleCollectionMembers.ruleId,
-      sectionKey: ruleCollectionMembers.sectionKey,
-      collectionName: ruleCollectionMembers.collectionName,
-    })
-    .from(ruleCollectionMembers)
-    .all();
-
-  // Same name in the same section is the collision; the same name in two
-  // different libraries is two different collections and entirely normal.
-  // Keyed as a JSON pair rather than a joined string: nearly every collection
-  // name contains a space, and the display name is carried in the value so it
-  // never has to be parsed back out of the key.
-  const owners = new Map<string, { displayName: string; ruleIds: Set<string> }>();
-  for (const row of members) {
-    if (!byId.has(row.ruleId)) continue;
-    const key = JSON.stringify([row.sectionKey, row.collectionName.toLowerCase()]);
-    const entry = owners.get(key) ?? { displayName: row.collectionName, ruleIds: new Set<string>() };
-    entry.ruleIds.add(row.ruleId);
-    owners.set(key, entry);
-  }
-
-  const conflicts: RuleConflict[] = [];
-  for (const { displayName, ruleIds } of owners.values()) {
-    if (ruleIds.size < 2) continue;
-    const involved = ordered.filter((r) => ruleIds.has(r.id));
-    conflicts.push({
-      kind: "collection-name",
-      rules: involved.map((r) => ({ id: r.id, name: r.name })),
-      subject: displayName,
-      detail: `Both build a collection called "${displayName}" in the same library. Plex allows two collections with one name, so you get two — and which one a user sees depends on the order they were built.`,
-    });
-  }
-  return conflicts;
 }
 
 /** Every metadata field a rule writes: scalars set, and tags added or removed. */
@@ -152,177 +104,6 @@ function metadataFieldConflicts(ordered: RuleRow[]): RuleConflict[] {
 }
 
 /**
- * An item queued for deletion that a collection rule is currently featuring.
- *
- * The most expensive of the three to be wrong about, and the least visible:
- * the collection rule rebuilds happily every night right up until the file
- * disappears underneath it.
- */
-function cleanupVsCollectionConflicts(ordered: RuleRow[]): RuleConflict[] {
-  const byId = new Map(ordered.map((r) => [r.id, r]));
-
-  const queued = db
-    .select({
-      ruleId: cleanupCandidates.ruleId,
-      ratingKey: cleanupCandidates.ratingKey,
-      title: cleanupCandidates.title,
-      actionedAt: cleanupCandidates.actionedAt,
-    })
-    .from(cleanupCandidates)
-    .all()
-    .filter((c) => c.actionedAt == null);
-  if (queued.length === 0) return [];
-
-  // Only the destructive modes matter here: a rule that labels an item is not
-  // in conflict with one that features it.
-  const destructiveRuleIds = new Set(
-    queued
-      .map((q) => q.ruleId)
-      .filter((id) => {
-        const row = byId.get(id);
-        if (!row || row.enabled !== 1) return false;
-        const action = ruleAction(row.config as RuleConfig);
-        return action.kind === "cleanup" && (action.mode === "delete" || action.mode === "unmonitor");
-      }),
-  );
-  if (destructiveRuleIds.size === 0) return [];
-
-  const members = db.select().from(ruleCollectionMembers).all();
-
-  const conflicts: RuleConflict[] = [];
-  for (const candidate of queued) {
-    if (!destructiveRuleIds.has(candidate.ruleId)) continue;
-    for (const member of members) {
-      const owner = byId.get(member.ruleId);
-      if (!owner || owner.id === candidate.ruleId || owner.enabled !== 1) continue;
-      if (!member.members.some((m) => m.ratingKey === candidate.ratingKey)) continue;
-
-      const cleanupRule = byId.get(candidate.ruleId);
-      conflicts.push({
-        kind: "cleanup-vs-collection",
-        rules: [
-          { id: candidate.ruleId, name: cleanupRule?.name ?? candidate.ruleId },
-          { id: owner.id, name: owner.name },
-        ],
-        subject: candidate.title,
-        detail: `"${candidate.title}" is queued for removal by "${cleanupRule?.name}" while "${owner.name}" is featuring it in "${member.collectionName}".`,
-      });
-      break;
-    }
-  }
-  return conflicts;
-}
-
-/**
- * Every conflict currently detectable, most consequential first.
- *
- * Deletion outranks a metadata disagreement, which outranks two collections
- * sharing a name — that is the order in which they cost you something you
- * cannot get back.
- */
-export function findRuleConflicts(): RuleConflict[] {
-  const all = db.select().from(rules).all() as RuleRow[];
-  const ordered = inRunningOrder(all);
-  return [
-    ...cleanupVsCollectionConflicts(ordered),
-    ...metadataFieldConflicts(ordered),
-    ...collectionNameConflicts(ordered),
-  ];
-}
-
-/**
- * The rules whose order the batch has to respect, and the order itself.
- *
- * Two independent constraints, unioned because the batch can only honour them
- * with one mechanism — running the constrained rules one at a time:
- *
- * - **Same field, two writers.** The Rules page tells the user, in as many
- *   words, that where two rules write the same field the later one's value "is
- *   the one that survives the night". The batch drains rules through a pool of
- *   three workers, which made the survivor whichever *finished* last — a
- *   different claim, and not a stable one. Position order decides instead.
- * - **`afterRules`.** A rule that curates a pool another rule builds. This was
- *   honoured everywhere *except* the nightly batch: `runChain` fires for a cron
- *   or a trigger, but `runBatch` never calls it, on the reasoning that the batch
- *   runs every enabled rule anyway. True, and beside the point — it runs them
- *   three at a time, so the curate rule routinely read a pool that was still
- *   being rebuilt. The dependency was expressible, documented, and silently
- *   ignored in the one configuration every rule starts in.
- *
- * Returns a rank rather than a sorted list because the caller has its own
- * subset — one batch job owns collection rules, another owns cleanup — and a
- * rank survives filtering while a list does not.
- */
-export function rulesRequiringOrder(): { ids: Set<string>; rank: Map<string, number> } {
-  const all = db
-    .select({
-      id: rules.id,
-      name: rules.name,
-      enabled: rules.enabled,
-      config: rules.config,
-      position: rules.position,
-      createdAt: rules.createdAt,
-    })
-    .from(rules)
-    .all();
-  const ordered = inRunningOrder(all).filter((row) => row.enabled);
-  const byId = new Map(ordered.map((row) => [row.id, row]));
-
-  const ids = new Set<string>();
-  for (const conflict of metadataFieldConflicts(ordered)) {
-    for (const rule of conflict.rules) ids.add(rule.id);
-  }
-
-  // `after` → the rules that must follow it.
-  const followers = new Map<string, string[]>();
-  const indegree = new Map<string, number>();
-  for (const row of ordered) {
-    for (const after of afterRulesOf(row.config)) {
-      // An edge to a rule that is disabled or deleted is not a constraint —
-      // nothing is going to run and satisfy it, and treating it as one would
-      // strand the dependent rule in the sequential lane forever.
-      if (after === row.id || !byId.has(after)) continue;
-      followers.set(after, [...(followers.get(after) ?? []), row.id]);
-      indegree.set(row.id, (indegree.get(row.id) ?? 0) + 1);
-      ids.add(after);
-      ids.add(row.id);
-    }
-  }
-
-  // Kahn's, walking `ordered` so ties break on position then creation — the
-  // same running order everything else here uses, and stable night to night.
-  const rank = new Map<string, number>();
-  const constrained = ordered.filter((row) => ids.has(row.id));
-  const ready = constrained.filter((row) => (indegree.get(row.id) ?? 0) === 0).map((row) => row.id);
-  while (ready.length > 0) {
-    const id = ready.shift() as string;
-    rank.set(id, rank.size);
-    for (const follower of followers.get(id) ?? []) {
-      const remaining = (indegree.get(follower) ?? 0) - 1;
-      indegree.set(follower, remaining);
-      if (remaining === 0) {
-        // Re-inserted in running order rather than appended, so a rule freed by
-        // an early dependency doesn't jump ahead of one freed later but ordered
-        // sooner.
-        const at = ready.findIndex((other) => runsAfter(byId.get(other), byId.get(follower)));
-        if (at === -1) ready.push(follower);
-        else ready.splice(at, 0, follower);
-      }
-    }
-  }
-
-  // Anything left is in a cycle. `afterRules` can be edited into one from either
-  // end, so this is a real state rather than a corrupt one — the runtime has
-  // always broken cycles rather than rejecting them (see MAX_CHAIN_DEPTH). Fall
-  // back to running order for those, which is at least deterministic.
-  for (const row of constrained) {
-    if (!rank.has(row.id)) rank.set(row.id, rank.size);
-  }
-
-  return { ids, rank };
-}
-
-/**
  * `config.schedule.afterRules`, read without trusting the config.
  *
  * Deliberately not via `ruleConfigSchema`: a config that fails validation for an
@@ -344,30 +125,257 @@ function runsAfter(a: RuleRow | undefined, b: RuleRow | undefined): boolean {
   return a.createdAt > b.createdAt;
 }
 
-/**
- * Rules already producing a collection of this name, ignoring one rule.
- *
- * For the wizard, which needs to warn *before* a rule exists and so cannot
- * use the observed-conflict path above. `excludeRuleId` keeps a rule being
- * edited from colliding with itself.
- */
-export function rulesProducingCollectionNamed(
-  name: string,
-  excludeRuleId?: string,
-): Array<{ id: string; name: string }> {
-  const trimmed = name.trim().toLowerCase();
-  if (!trimmed) return [];
-  const rows = db.select().from(ruleCollectionMembers).all();
-  const ids = [
-    ...new Set(
-      rows.filter((r) => r.collectionName.toLowerCase() === trimmed && r.ruleId !== excludeRuleId).map((r) => r.ruleId),
-    ),
-  ];
-  if (ids.length === 0) return [];
-  return db.select({ id: rules.id, name: rules.name }).from(rules).where(inArray(rules.id, ids)).all();
+export interface ConflictsDeps {
+  db: Db;
 }
+export function createConflicts(deps: ConflictsDeps) {
+  const { db } = deps;
 
-/** Conflicts involving one rule — for its own row and its detail view. */
-export function conflictsForRule(ruleId: string): RuleConflict[] {
-  return findRuleConflicts().filter((c) => c.rules.some((r) => r.id === ruleId));
+  /**
+   * Two rules producing a collection of the same name.
+   *
+   * Plex allows it, so this fails silently and spectacularly: you get two
+   * collections both called "Top Rated", each rebuilt nightly by a different
+   * rule, and which one a user sees depends on the order they were made in.
+   * Read from what the rules actually built, so two rules that merely *could*
+   * collide are not reported until they do.
+   */
+  function collectionNameConflicts(ordered: RuleRow[]): RuleConflict[] {
+    const byId = new Map(ordered.map((r) => [r.id, r]));
+    const members = db
+      .select({
+        ruleId: ruleCollectionMembers.ruleId,
+        sectionKey: ruleCollectionMembers.sectionKey,
+        collectionName: ruleCollectionMembers.collectionName,
+      })
+      .from(ruleCollectionMembers)
+      .all();
+
+    // Same name in the same section is the collision; the same name in two
+    // different libraries is two different collections and entirely normal.
+    // Keyed as a JSON pair rather than a joined string: nearly every collection
+    // name contains a space, and the display name is carried in the value so it
+    // never has to be parsed back out of the key.
+    const owners = new Map<string, { displayName: string; ruleIds: Set<string> }>();
+    for (const row of members) {
+      if (!byId.has(row.ruleId)) continue;
+      const key = JSON.stringify([row.sectionKey, row.collectionName.toLowerCase()]);
+      const entry = owners.get(key) ?? { displayName: row.collectionName, ruleIds: new Set<string>() };
+      entry.ruleIds.add(row.ruleId);
+      owners.set(key, entry);
+    }
+
+    const conflicts: RuleConflict[] = [];
+    for (const { displayName, ruleIds } of owners.values()) {
+      if (ruleIds.size < 2) continue;
+      const involved = ordered.filter((r) => ruleIds.has(r.id));
+      conflicts.push({
+        kind: "collection-name",
+        rules: involved.map((r) => ({ id: r.id, name: r.name })),
+        subject: displayName,
+        detail: `Both build a collection called "${displayName}" in the same library. Plex allows two collections with one name, so you get two — and which one a user sees depends on the order they were built.`,
+      });
+    }
+    return conflicts;
+  }
+
+  /**
+   * An item queued for deletion that a collection rule is currently featuring.
+   *
+   * The most expensive of the three to be wrong about, and the least visible:
+   * the collection rule rebuilds happily every night right up until the file
+   * disappears underneath it.
+   */
+  function cleanupVsCollectionConflicts(ordered: RuleRow[]): RuleConflict[] {
+    const byId = new Map(ordered.map((r) => [r.id, r]));
+
+    const queued = db
+      .select({
+        ruleId: cleanupCandidates.ruleId,
+        ratingKey: cleanupCandidates.ratingKey,
+        title: cleanupCandidates.title,
+        actionedAt: cleanupCandidates.actionedAt,
+      })
+      .from(cleanupCandidates)
+      .all()
+      .filter((c) => c.actionedAt == null);
+    if (queued.length === 0) return [];
+
+    // Only the destructive modes matter here: a rule that labels an item is not
+    // in conflict with one that features it.
+    const destructiveRuleIds = new Set(
+      queued
+        .map((q) => q.ruleId)
+        .filter((id) => {
+          const row = byId.get(id);
+          if (!row || row.enabled !== 1) return false;
+          const action = ruleAction(row.config as RuleConfig);
+          return action.kind === "cleanup" && (action.mode === "delete" || action.mode === "unmonitor");
+        }),
+    );
+    if (destructiveRuleIds.size === 0) return [];
+
+    const members = db.select().from(ruleCollectionMembers).all();
+
+    const conflicts: RuleConflict[] = [];
+    for (const candidate of queued) {
+      if (!destructiveRuleIds.has(candidate.ruleId)) continue;
+      for (const member of members) {
+        const owner = byId.get(member.ruleId);
+        if (!owner || owner.id === candidate.ruleId || owner.enabled !== 1) continue;
+        if (!member.members.some((m) => m.ratingKey === candidate.ratingKey)) continue;
+
+        const cleanupRule = byId.get(candidate.ruleId);
+        conflicts.push({
+          kind: "cleanup-vs-collection",
+          rules: [
+            { id: candidate.ruleId, name: cleanupRule?.name ?? candidate.ruleId },
+            { id: owner.id, name: owner.name },
+          ],
+          subject: candidate.title,
+          detail: `"${candidate.title}" is queued for removal by "${cleanupRule?.name}" while "${owner.name}" is featuring it in "${member.collectionName}".`,
+        });
+        break;
+      }
+    }
+    return conflicts;
+  }
+
+  /**
+   * Every conflict currently detectable, most consequential first.
+   *
+   * Deletion outranks a metadata disagreement, which outranks two collections
+   * sharing a name — that is the order in which they cost you something you
+   * cannot get back.
+   */
+  function findRuleConflicts(): RuleConflict[] {
+    const all = db.select().from(rules).all() as RuleRow[];
+    const ordered = inRunningOrder(all);
+    return [
+      ...cleanupVsCollectionConflicts(ordered),
+      ...metadataFieldConflicts(ordered),
+      ...collectionNameConflicts(ordered),
+    ];
+  }
+
+  /**
+   * The rules whose order the batch has to respect, and the order itself.
+   *
+   * Two independent constraints, unioned because the batch can only honour them
+   * with one mechanism — running the constrained rules one at a time:
+   *
+   * - **Same field, two writers.** The Rules page tells the user, in as many
+   *   words, that where two rules write the same field the later one's value "is
+   *   the one that survives the night". The batch drains rules through a pool of
+   *   three workers, which made the survivor whichever *finished* last — a
+   *   different claim, and not a stable one. Position order decides instead.
+   * - **`afterRules`.** A rule that curates a pool another rule builds. This was
+   *   honoured everywhere *except* the nightly batch: `runChain` fires for a cron
+   *   or a trigger, but `runBatch` never calls it, on the reasoning that the batch
+   *   runs every enabled rule anyway. True, and beside the point — it runs them
+   *   three at a time, so the curate rule routinely read a pool that was still
+   *   being rebuilt. The dependency was expressible, documented, and silently
+   *   ignored in the one configuration every rule starts in.
+   *
+   * Returns a rank rather than a sorted list because the caller has its own
+   * subset — one batch job owns collection rules, another owns cleanup — and a
+   * rank survives filtering while a list does not.
+   */
+  function rulesRequiringOrder(): { ids: Set<string>; rank: Map<string, number> } {
+    const all = db
+      .select({
+        id: rules.id,
+        name: rules.name,
+        enabled: rules.enabled,
+        config: rules.config,
+        position: rules.position,
+        createdAt: rules.createdAt,
+      })
+      .from(rules)
+      .all();
+    const ordered = inRunningOrder(all).filter((row) => row.enabled);
+    const byId = new Map(ordered.map((row) => [row.id, row]));
+
+    const ids = new Set<string>();
+    for (const conflict of metadataFieldConflicts(ordered)) {
+      for (const rule of conflict.rules) ids.add(rule.id);
+    }
+
+    // `after` → the rules that must follow it.
+    const followers = new Map<string, string[]>();
+    const indegree = new Map<string, number>();
+    for (const row of ordered) {
+      for (const after of afterRulesOf(row.config)) {
+        // An edge to a rule that is disabled or deleted is not a constraint —
+        // nothing is going to run and satisfy it, and treating it as one would
+        // strand the dependent rule in the sequential lane forever.
+        if (after === row.id || !byId.has(after)) continue;
+        followers.set(after, [...(followers.get(after) ?? []), row.id]);
+        indegree.set(row.id, (indegree.get(row.id) ?? 0) + 1);
+        ids.add(after);
+        ids.add(row.id);
+      }
+    }
+
+    // Kahn's, walking `ordered` so ties break on position then creation — the
+    // same running order everything else here uses, and stable night to night.
+    const rank = new Map<string, number>();
+    const constrained = ordered.filter((row) => ids.has(row.id));
+    const ready = constrained.filter((row) => (indegree.get(row.id) ?? 0) === 0).map((row) => row.id);
+    while (ready.length > 0) {
+      const id = ready.shift() as string;
+      rank.set(id, rank.size);
+      for (const follower of followers.get(id) ?? []) {
+        const remaining = (indegree.get(follower) ?? 0) - 1;
+        indegree.set(follower, remaining);
+        if (remaining === 0) {
+          // Re-inserted in running order rather than appended, so a rule freed by
+          // an early dependency doesn't jump ahead of one freed later but ordered
+          // sooner.
+          const at = ready.findIndex((other) => runsAfter(byId.get(other), byId.get(follower)));
+          if (at === -1) ready.push(follower);
+          else ready.splice(at, 0, follower);
+        }
+      }
+    }
+
+    // Anything left is in a cycle. `afterRules` can be edited into one from either
+    // end, so this is a real state rather than a corrupt one — the runtime has
+    // always broken cycles rather than rejecting them (see MAX_CHAIN_DEPTH). Fall
+    // back to running order for those, which is at least deterministic.
+    for (const row of constrained) {
+      if (!rank.has(row.id)) rank.set(row.id, rank.size);
+    }
+
+    return { ids, rank };
+  }
+
+  /**
+   * Rules already producing a collection of this name, ignoring one rule.
+   *
+   * For the wizard, which needs to warn *before* a rule exists and so cannot
+   * use the observed-conflict path above. `excludeRuleId` keeps a rule being
+   * edited from colliding with itself.
+   */
+  function rulesProducingCollectionNamed(name: string, excludeRuleId?: string): Array<{ id: string; name: string }> {
+    const trimmed = name.trim().toLowerCase();
+    if (!trimmed) return [];
+    const rows = db.select().from(ruleCollectionMembers).all();
+    const ids = [
+      ...new Set(
+        rows
+          .filter((r) => r.collectionName.toLowerCase() === trimmed && r.ruleId !== excludeRuleId)
+          .map((r) => r.ruleId),
+      ),
+    ];
+    if (ids.length === 0) return [];
+    return db.select({ id: rules.id, name: rules.name }).from(rules).where(inArray(rules.id, ids)).all();
+  }
+
+  /** Conflicts involving one rule — for its own row and its detail view. */
+  function conflictsForRule(ruleId: string): RuleConflict[] {
+    return findRuleConflicts().filter((c) => c.rules.some((r) => r.id === ruleId));
+  }
+
+  return { findRuleConflicts, rulesRequiringOrder, rulesProducingCollectionNamed, conflictsForRule };
 }

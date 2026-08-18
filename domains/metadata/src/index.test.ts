@@ -1,18 +1,23 @@
+import { decodeTags } from "./index.ts";
 /**
  * The ledger is the only thing standing between a bad rule and permanently
  * lost hand-curated metadata, so it is tested against a real migrated database
  * rather than a fake — the aggregation is expressed in SQL, and a fake would
  * be testing the fake.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-metadata-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { metadataOriginals } from "@tinkerbell/db";
+import { MetadataToken } from "@tinkerbell/domain.metadata";
 
-const { db, metadataOriginals } = await import("@tinkerbell/db");
-const { snapshotWrites, batchRows, markReverted, listBatches, itemHistory, decodeTags, pruneOlderThan } =
-  await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { snapshotWrites, batchRows, markReverted, listBatches, itemHistory, pruneOlderThan } = c.resolve(MetadataToken);
 
 const T0 = 1_700_000_000_000;
 const DAY = 86_400_000;

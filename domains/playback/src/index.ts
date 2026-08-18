@@ -17,9 +17,49 @@
  *               isn't blind for the weeks it takes the poller to accumulate
  *   evaluate.ts the `tb.` smart-filter predicates, pure — the questions Plex
  *               cannot answer because it only ever sees one token's view state
+ *
+ * `diff.ts` and `evaluate.ts` are pure and stay plain module exports; the three
+ * that touch the database or Plex are factories, composed here.
  */
+import { token } from "@tinkerbell/container";
+import type { Db } from "@tinkerbell/db";
+import type { Clients, ConfigStore } from "@tinkerbell/core";
+import type { Bandwidth } from "@tinkerbell/domain.bandwidth";
+import { createStore } from "./store.ts";
+import { createPoller } from "./poller.ts";
+import { createBackfill } from "./backfill.ts";
+
 export * from "./diff.ts";
-export * from "./store.ts";
-export * from "./poller.ts";
-export * from "./backfill.ts";
 export * from "./evaluate.ts";
+export {
+  HISTORY_SORTS,
+  type HistorySort,
+  type PlaybackBreakdown,
+  type PlaybackRow,
+  type TopPlayedRank,
+  type TopUserRow,
+  type WatchedByRow,
+  type WatchHistoryCoverage,
+  type WatchStateRow,
+  type WatchStateUserScope,
+  type WatchSummary,
+} from "./store.ts";
+
+export interface PlaybackDeps {
+  db: Db;
+  config: ConfigStore;
+  clients: Clients;
+  bandwidth: Bandwidth;
+}
+
+export function createPlayback(deps: PlaybackDeps) {
+  return {
+    ...createStore(deps),
+    ...createPoller(deps),
+    ...createBackfill(deps),
+  };
+}
+
+export type Playback = ReturnType<typeof createPlayback>;
+
+export const PlaybackToken = token<Playback>("playback");

@@ -1,3 +1,5 @@
+import type { RuleRunsDeps } from "./index.ts";
+import { perDeps } from "@tinkerbell/container";
 /**
  * Serialises manual rule runs inside this process.
  *
@@ -12,24 +14,28 @@
  * with a different answer: the `rule_locks` lease, which works across processes.
  */
 
-let chain: Promise<unknown> = Promise.resolve();
+export const createRuleRunQueue = perDeps(function createRuleRunQueue(_deps: RuleRunsDeps) {
+  let chain: Promise<unknown> = Promise.resolve();
 
-/** Run `task` after everything already queued has settled, pass or fail. */
-export function queueRuleRun<T>(task: () => Promise<T>): Promise<T> {
-  const result = chain.then(task, task);
-  // The chain must never reject, or every later task would inherit the
-  // rejection and skip its turn.
-  chain = result.then(
-    () => {},
-    () => {},
-  );
-  return result;
-}
+  /** Run `task` after everything already queued has settled, pass or fail. */
+  function queueRuleRun<T>(task: () => Promise<T>): Promise<T> {
+    const result = chain.then(task, task);
+    // The chain must never reject, or every later task would inherit the
+    // rejection and skip its turn.
+    chain = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  }
 
-/** How many runs are waiting or executing. Diagnostics and tests only. */
-export function queueIsIdle(): Promise<void> {
-  return chain.then(
-    () => {},
-    () => {},
-  );
-}
+  /** How many runs are waiting or executing. Diagnostics and tests only. */
+  function queueIsIdle(): Promise<void> {
+    return chain.then(
+      () => {},
+      () => {},
+    );
+  }
+
+  return { queueRuleRun, queueIsIdle };
+});

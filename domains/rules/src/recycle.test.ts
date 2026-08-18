@@ -6,15 +6,20 @@
  * to the front of the running order, where it now won every conflict it used to
  * lose. That is a change nobody asked for, made by a button labelled "Undo".
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import { eq } from "drizzle-orm";
 
-setupTempDb("tinkerbell-rules-recycle-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { deletedRules, rules } from "@tinkerbell/db";
+import { RulesToken } from "@tinkerbell/domain.rules";
 
-const { db, deletedRules, rules } = await import("@tinkerbell/db");
-const { rememberDeletedRule, restoreDeletedRules, listDeletedRules } = await import("./recycle.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { rememberDeletedRule, restoreDeletedRules, listDeletedRules } = c.resolve(RulesToken);
 
 const T0 = 1_700_000_000_000;
 

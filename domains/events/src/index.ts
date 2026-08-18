@@ -1,20 +1,8 @@
 import { desc, asc, eq, and, inArray, sql } from "drizzle-orm";
-import { db, events, likeContains } from "@tinkerbell/db";
+import { events, likeContains, type Db } from "@tinkerbell/db";
 import { MONTH_MS } from "@tinkerbell/core";
-import { notifyEvent } from "@tinkerbell/domain.notifications";
-
-export function emitEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
-  db.insert(events)
-    .values({
-      type,
-      message,
-      metadata: metadata ?? null,
-      timestamp: Date.now(),
-    })
-    .run();
-
-  notifyEvent(type, message, metadata);
-}
+import { type Notifier } from "@tinkerbell/ports";
+import { token } from "@tinkerbell/container";
 
 interface EventFilters {
   limit?: number;
@@ -107,43 +95,70 @@ export function rollupConsecutiveEvents(
   return result;
 }
 
-export function getEvents(filters: EventFilters): { items: EventItem[]; total: number } {
-  const { limit = 50, offset = 0 } = filters;
-  const conditions = [];
+export interface EventsDeps {
+  db: Db;
+  notifyEvent: Notifier;
+}
+export function createEvents(deps: EventsDeps) {
+  const { db, notifyEvent } = deps;
 
-  const types = filters.types ?? [];
-  if (types.length > 0) {
-    conditions.push(types.length === 1 ? eq(events.type, types[0]) : inArray(events.type, types));
+  function emitEvent(type: string, message: string, metadata?: Record<string, unknown>): void {
+    db.insert(events)
+      .values({
+        type,
+        message,
+        metadata: metadata ?? null,
+        timestamp: Date.now(),
+      })
+      .run();
+
+    notifyEvent(type, message, metadata);
   }
-  if (filters.search) {
-    conditions.push(likeContains(events.message, filters.search));
+
+  function getEvents(filters: EventFilters): { items: EventItem[]; total: number } {
+    const { limit = 50, offset = 0 } = filters;
+    const conditions = [];
+
+    const types = filters.types ?? [];
+    if (types.length > 0) {
+      conditions.push(types.length === 1 ? eq(events.type, types[0]) : inArray(events.type, types));
+    }
+    if (filters.search) {
+      conditions.push(likeContains(events.message, filters.search));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const allRows = db.select().from(events).where(whereClause).orderBy(desc(events.timestamp)).all();
+    const rolled = rollupConsecutiveEvents(allRows);
+
+    const sortKey = (filters.sort as keyof typeof SORT_COLUMNS) ?? "timestamp";
+    const dir = filters.sortDir === "asc" ? 1 : -1;
+    const sorted = [...rolled].sort((a, b) => {
+      if (sortKey === "type") return a.type.localeCompare(b.type) * dir;
+      if (sortKey === "message") return a.message.localeCompare(b.message) * dir;
+      return (a.timestamp - b.timestamp) * dir;
+    });
+
+    const items = sorted.slice(offset, offset + limit);
+    return { items, total: rolled.length };
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  function getEventTypes(): string[] {
+    const rows = db.select({ type: events.type }).from(events).groupBy(events.type).orderBy(asc(events.type)).all();
+    return rows.map((r) => r.type);
+  }
 
-  const allRows = db.select().from(events).where(whereClause).orderBy(desc(events.timestamp)).all();
-  const rolled = rollupConsecutiveEvents(allRows);
+  function pruneEvents(): void {
+    const cutoff = Date.now() - MONTH_MS;
+    db.delete(events)
+      .where(sql`${events.timestamp} < ${cutoff}`)
+      .run();
+  }
 
-  const sortKey = (filters.sort as keyof typeof SORT_COLUMNS) ?? "timestamp";
-  const dir = filters.sortDir === "asc" ? 1 : -1;
-  const sorted = [...rolled].sort((a, b) => {
-    if (sortKey === "type") return a.type.localeCompare(b.type) * dir;
-    if (sortKey === "message") return a.message.localeCompare(b.message) * dir;
-    return (a.timestamp - b.timestamp) * dir;
-  });
-
-  const items = sorted.slice(offset, offset + limit);
-  return { items, total: rolled.length };
+  return { emitEvent, getEvents, getEventTypes, pruneEvents };
 }
 
-export function getEventTypes(): string[] {
-  const rows = db.select({ type: events.type }).from(events).groupBy(events.type).orderBy(asc(events.type)).all();
-  return rows.map((r) => r.type);
-}
+export type Events = ReturnType<typeof createEvents>;
 
-export function pruneEvents(): void {
-  const cutoff = Date.now() - MONTH_MS;
-  db.delete(events)
-    .where(sql`${events.timestamp} < ${cutoff}`)
-    .run();
-}
+export const EventsToken = token<Events>("events");

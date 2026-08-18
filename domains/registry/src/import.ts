@@ -7,7 +7,7 @@
  * would add a pending-plan config slot and a single-writer handoff to protect
  * work that finishes in milliseconds.
  */
-import { createRule, type Rule } from "@tinkerbell/domain.rules";
+import { type Rule, type Rules } from "@tinkerbell/domain.rules";
 import type { ImportPlan } from "@tinkerbell/contracts";
 import { hashConfig } from "./hash.ts";
 
@@ -17,26 +17,35 @@ export interface ImportOptions {
   enabled?: boolean;
 }
 
-export function importPlan(plan: ImportPlan, opts: ImportOptions = {}): Rule[] {
-  const created: Rule[] = [];
-  for (const item of plan.items) {
-    created.push(
-      createRule({
-        name: item.name,
-        type: item.rule.type,
-        config: item.config,
-        enabled: opts.enabled === true,
-        registryRuleSlug: item.rule.slug,
-        registryPackSlug: plan.packSlug,
-        // Pack version, not rule version — rules have no version of their own,
-        // and it's the pack the user chose to track.
-        registryVersion: plan.packVersion,
-        // Hash the config *as written*, post-resolution. Hashing the published
-        // config instead would mark every imported rule as locally modified
-        // the moment resolution rewrote a tag value.
-        registryConfigHash: hashConfig(item.config),
-      }),
-    );
+export interface ImportDeps {
+  rules: Rules;
+}
+export function createImport(deps: ImportDeps) {
+  const { createRule } = deps.rules;
+
+  function importPlan(plan: ImportPlan, opts: ImportOptions = {}): Rule[] {
+    const created: Rule[] = [];
+    for (const item of plan.items) {
+      created.push(
+        createRule({
+          name: item.name,
+          type: item.rule.type,
+          config: item.config,
+          enabled: opts.enabled === true,
+          registryRuleSlug: item.rule.slug,
+          registryPackSlug: plan.packSlug,
+          // Pack version, not rule version — rules have no version of their own,
+          // and it's the pack the user chose to track.
+          registryVersion: plan.packVersion,
+          // Hash the config *as written*, post-resolution. Hashing the published
+          // config instead would mark every imported rule as locally modified
+          // the moment resolution rewrote a tag value.
+          registryConfigHash: hashConfig(item.config),
+        }),
+      );
+    }
+    return created;
   }
-  return created;
+
+  return { importPlan };
 }

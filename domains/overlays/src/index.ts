@@ -1,6 +1,6 @@
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
-import { db, overlayConfigs, overlayOriginals, overlayPresets } from "@tinkerbell/db";
+import { overlayConfigs, overlayOriginals, overlayPresets, type Db } from "@tinkerbell/db";
 import {
   badgeStyleSchema,
   conditionalRuleSchema,
@@ -11,6 +11,7 @@ import {
   type OverlayPosition,
   type OverlayType,
 } from "@tinkerbell/overlays";
+import { token } from "@tinkerbell/container";
 
 export {
   overlayPositionSchema,
@@ -75,199 +76,6 @@ function parseOverlayRows(rows: unknown[]): OverlayConfigRow[] {
   return out;
 }
 
-export function getOverlayConfigs(sectionId: string): OverlayConfigRow[] {
-  const rows = db.select().from(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).all();
-  return parseOverlayRows(rows).sort((a, b) => {
-    if (a.position !== b.position) return a.position.localeCompare(b.position);
-    return a.order - b.order;
-  });
-}
-
-export function getOverlayConfig(id: number): OverlayConfigRow | null {
-  const row = db.select().from(overlayConfigs).where(eq(overlayConfigs.id, id)).get();
-  if (!row) return null;
-  const parsed = overlayConfigRowSchema.safeParse(row);
-  return parsed.success ? parsed.data : null;
-}
-
-/** Add a new overlay at the end of its position stack. Returns the inserted row. */
-export function addOverlayConfig(input: {
-  sectionId: string;
-  position: OverlayPosition;
-  overlayType: OverlayType;
-  style?: BadgeStyle | null;
-  rule?: ConditionalRule | null;
-}): OverlayConfigRow {
-  const existing = db
-    .select({ maxOrder: max(overlayConfigs.order) })
-    .from(overlayConfigs)
-    .where(and(eq(overlayConfigs.sectionId, input.sectionId), eq(overlayConfigs.position, input.position)))
-    .get();
-  const nextOrder = (existing?.maxOrder ?? -1) + 1;
-
-  const inserted = db
-    .insert(overlayConfigs)
-    .values({
-      sectionId: input.sectionId,
-      position: input.position,
-      overlayType: input.overlayType,
-      order: nextOrder,
-      style: input.style ? JSON.stringify(input.style) : null,
-      rule: input.rule ? JSON.stringify(input.rule) : null,
-      createdAt: Date.now(),
-    })
-    .returning()
-    .get();
-
-  const parsed = overlayConfigRowSchema.parse(inserted);
-  return parsed;
-}
-
-export function updateOverlayConfig(
-  id: number,
-  patch: { style?: BadgeStyle | null; rule?: ConditionalRule | null; overlayType?: OverlayType },
-): void {
-  const set: Record<string, unknown> = {};
-  if (patch.style !== undefined) set.style = patch.style ? JSON.stringify(patch.style) : null;
-  if (patch.rule !== undefined) set.rule = patch.rule ? JSON.stringify(patch.rule) : null;
-  if (patch.overlayType !== undefined) set.overlayType = patch.overlayType;
-  if (Object.keys(set).length === 0) return;
-  db.update(overlayConfigs).set(set).where(eq(overlayConfigs.id, id)).run();
-}
-
-export function removeOverlayConfigById(id: number): void {
-  db.delete(overlayConfigs).where(eq(overlayConfigs.id, id)).run();
-}
-
-/**
- * Move an overlay to a different position+order. Re-numbers within the
- * target stack.
- *
- * The negative-tmp dance below is safe against concurrent reorders because
- * `db.transaction` (better-sqlite3) is synchronous and SQLite serialises
- * writers: a second reorder cannot interleave with the first. Within a
- * single transaction the tmp orders never collide because they're assigned
- * sequentially.
- */
-export function moveOverlayConfig(id: number, targetPosition: OverlayPosition, targetOrder: number): void {
-  const row = getOverlayConfig(id);
-  if (!row) return;
-  db.transaction((tx) => {
-    // Take all rows in target position (excluding the one being moved).
-    const targetRows = tx
-      .select()
-      .from(overlayConfigs)
-      .where(and(eq(overlayConfigs.sectionId, row.sectionId), eq(overlayConfigs.position, targetPosition)))
-      .all()
-      .filter((r) => r.id !== id)
-      .sort((a, b) => a.order - b.order);
-
-    // Insert moved row at targetOrder.
-    const newOrderList = [...targetRows];
-    const clampedTarget = Math.min(Math.max(0, targetOrder), newOrderList.length);
-    newOrderList.splice(clampedTarget, 0, { id, order: -1 } as never);
-
-    // Sort rows in source position too.
-    const sourceRows =
-      row.position === targetPosition
-        ? []
-        : tx
-            .select()
-            .from(overlayConfigs)
-            .where(and(eq(overlayConfigs.sectionId, row.sectionId), eq(overlayConfigs.position, row.position)))
-            .all()
-            .filter((r) => r.id !== id)
-            .sort((a, b) => a.order - b.order);
-
-    // Strategy: temporarily set all touched rows to negative order to dodge unique index, then renumber.
-    const touched = [...newOrderList.map((r) => r.id), ...sourceRows.map((r) => r.id)];
-    let tmp = -1;
-    for (const tid of touched) {
-      tx.update(overlayConfigs)
-        .set({ order: tmp-- })
-        .where(eq(overlayConfigs.id, tid as number))
-        .run();
-    }
-
-    // Apply final ordering for target.
-    newOrderList.forEach((r, i) => {
-      tx.update(overlayConfigs)
-        .set({ order: i, position: targetPosition })
-        .where(eq(overlayConfigs.id, r.id as number))
-        .run();
-    });
-    sourceRows.forEach((r, i) => {
-      tx.update(overlayConfigs)
-        .set({ order: i })
-        .where(eq(overlayConfigs.id, r.id as number))
-        .run();
-    });
-  });
-}
-
-/** Reorder overlays within a single position. ids should list all overlays in that position in their new order. */
-export function reorderOverlayConfigs(sectionId: string, position: OverlayPosition, ids: number[]): void {
-  db.transaction((tx) => {
-    let tmp = -1;
-    for (const id of ids) {
-      tx.update(overlayConfigs)
-        .set({ order: tmp-- })
-        .where(and(eq(overlayConfigs.id, id), eq(overlayConfigs.sectionId, sectionId)))
-        .run();
-    }
-    ids.forEach((id, i) => {
-      tx.update(overlayConfigs)
-        .set({ order: i, position })
-        .where(and(eq(overlayConfigs.id, id), eq(overlayConfigs.sectionId, sectionId)))
-        .run();
-    });
-  });
-}
-
-export function clearOverlayConfigs(sectionId: string) {
-  db.delete(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).run();
-}
-
-/** Replace all overlays for a section atomically (used for preset apply). */
-export function replaceOverlayConfigs(
-  sectionId: string,
-  configs: Array<{
-    position: OverlayPosition;
-    overlayType: OverlayType;
-    style?: BadgeStyle | null;
-    rule?: ConditionalRule | null;
-    order?: number;
-  }>,
-): void {
-  db.transaction((tx) => {
-    tx.delete(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).run();
-    // Group by position and assign sequential orders if not given.
-    const byPos = new Map<OverlayPosition, typeof configs>();
-    for (const c of configs) {
-      const list = byPos.get(c.position) ?? [];
-      list.push(c);
-      byPos.set(c.position, list);
-    }
-    const now = Date.now();
-    for (const [position, list] of byPos) {
-      list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      list.forEach((c, i) => {
-        tx.insert(overlayConfigs)
-          .values({
-            sectionId,
-            position,
-            overlayType: c.overlayType,
-            order: i,
-            style: c.style ? JSON.stringify(c.style) : null,
-            rule: c.rule ? JSON.stringify(c.rule) : null,
-            createdAt: now,
-          })
-          .run();
-      });
-    }
-  });
-}
-
 /** Conditional rule evaluation. Returns true if the badge should be shown. */
 export function evaluateRule(
   rule: ConditionalRule | null | undefined,
@@ -292,30 +100,6 @@ export function evaluateRule(
   return true;
 }
 
-export function getOriginalPoster(ratingKey: string) {
-  return db.select().from(overlayOriginals).where(eq(overlayOriginals.ratingKey, ratingKey)).get();
-}
-
-export function saveOriginalPoster(ratingKey: string, sectionId: string, originalPosterUrl: string) {
-  db.insert(overlayOriginals)
-    .values({ ratingKey, sectionId, originalPosterUrl, appliedAt: Date.now() })
-    .onConflictDoNothing()
-    .run();
-}
-
-export function removeOriginalPoster(ratingKey: string) {
-  db.delete(overlayOriginals).where(eq(overlayOriginals.ratingKey, ratingKey)).run();
-}
-
-export function getOverlaidItems(sectionId: string) {
-  return db.select().from(overlayOriginals).where(eq(overlayOriginals.sectionId, sectionId)).all();
-}
-
-export function getOverlaidItemCount(sectionId: string): number {
-  const rows = db.select().from(overlayOriginals).where(eq(overlayOriginals.sectionId, sectionId)).all();
-  return rows.length;
-}
-
 /* ─── Presets ────────────────────────────────────────────────────────────── */
 
 export const presetDataSchema = z.object({
@@ -338,51 +122,6 @@ export interface OverlayPresetRow {
   builtIn: boolean;
   data: PresetData;
   createdAt: number;
-}
-
-export function listPresets(): OverlayPresetRow[] {
-  const rows = db.select().from(overlayPresets).all();
-  return rows
-    .map((r) => {
-      const parsed = presetDataSchema.safeParse(JSON.parse(r.data));
-      if (!parsed.success) return null;
-      return {
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        builtIn: r.builtIn === 1,
-        data: parsed.data,
-        createdAt: r.createdAt,
-      };
-    })
-    .filter((r): r is OverlayPresetRow => r !== null)
-    .sort((a, b) => Number(b.builtIn) - Number(a.builtIn) || a.name.localeCompare(b.name));
-}
-
-export function savePreset(input: { id?: string; name: string; description?: string; data: PresetData }): string {
-  const id = input.id || `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  db.insert(overlayPresets)
-    .values({
-      id,
-      name: input.name,
-      description: input.description || "",
-      builtIn: 0,
-      data: JSON.stringify(input.data),
-      createdAt: Date.now(),
-    })
-    .onConflictDoUpdate({
-      target: overlayPresets.id,
-      set: { name: input.name, description: input.description || "", data: JSON.stringify(input.data) },
-    })
-    .run();
-  return id;
-}
-
-export function deletePreset(id: string): void {
-  // Don't delete built-ins.
-  const row = db.select().from(overlayPresets).where(eq(overlayPresets.id, id)).get();
-  if (!row || row.builtIn === 1) return;
-  db.delete(overlayPresets).where(eq(overlayPresets.id, id)).run();
 }
 
 const BUILT_IN_PRESETS: Array<{ id: string; name: string; description: string; data: PresetData }> = [
@@ -483,31 +222,325 @@ const BUILT_IN_PRESETS: Array<{ id: string; name: string; description: string; d
   },
 ];
 
-export function ensureBuiltInPresets(): void {
-  for (const p of BUILT_IN_PRESETS) {
-    const existing = db.select().from(overlayPresets).where(eq(overlayPresets.id, p.id)).get();
-    if (existing) {
-      // Refresh data so updates ship via app version.
-      db.update(overlayPresets)
-        .set({
-          name: p.name,
-          description: p.description,
-          builtIn: 1,
-          data: JSON.stringify(p.data),
-        })
-        .where(eq(overlayPresets.id, p.id))
-        .run();
-    } else {
-      db.insert(overlayPresets)
-        .values({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          builtIn: 1,
-          data: JSON.stringify(p.data),
-          createdAt: Date.now(),
-        })
-        .run();
+export interface OverlaysDeps {
+  db: Db;
+}
+export function createOverlays(deps: OverlaysDeps) {
+  const { db } = deps;
+
+  function getOverlayConfigs(sectionId: string): OverlayConfigRow[] {
+    const rows = db.select().from(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).all();
+    return parseOverlayRows(rows).sort((a, b) => {
+      if (a.position !== b.position) return a.position.localeCompare(b.position);
+      return a.order - b.order;
+    });
+  }
+
+  function getOverlayConfig(id: number): OverlayConfigRow | null {
+    const row = db.select().from(overlayConfigs).where(eq(overlayConfigs.id, id)).get();
+    if (!row) return null;
+    const parsed = overlayConfigRowSchema.safeParse(row);
+    return parsed.success ? parsed.data : null;
+  }
+
+  /** Add a new overlay at the end of its position stack. Returns the inserted row. */
+  function addOverlayConfig(input: {
+    sectionId: string;
+    position: OverlayPosition;
+    overlayType: OverlayType;
+    style?: BadgeStyle | null;
+    rule?: ConditionalRule | null;
+  }): OverlayConfigRow {
+    const existing = db
+      .select({ maxOrder: max(overlayConfigs.order) })
+      .from(overlayConfigs)
+      .where(and(eq(overlayConfigs.sectionId, input.sectionId), eq(overlayConfigs.position, input.position)))
+      .get();
+    const nextOrder = (existing?.maxOrder ?? -1) + 1;
+
+    const inserted = db
+      .insert(overlayConfigs)
+      .values({
+        sectionId: input.sectionId,
+        position: input.position,
+        overlayType: input.overlayType,
+        order: nextOrder,
+        style: input.style ? JSON.stringify(input.style) : null,
+        rule: input.rule ? JSON.stringify(input.rule) : null,
+        createdAt: Date.now(),
+      })
+      .returning()
+      .get();
+
+    const parsed = overlayConfigRowSchema.parse(inserted);
+    return parsed;
+  }
+
+  function updateOverlayConfig(
+    id: number,
+    patch: { style?: BadgeStyle | null; rule?: ConditionalRule | null; overlayType?: OverlayType },
+  ): void {
+    const set: Record<string, unknown> = {};
+    if (patch.style !== undefined) set.style = patch.style ? JSON.stringify(patch.style) : null;
+    if (patch.rule !== undefined) set.rule = patch.rule ? JSON.stringify(patch.rule) : null;
+    if (patch.overlayType !== undefined) set.overlayType = patch.overlayType;
+    if (Object.keys(set).length === 0) return;
+    db.update(overlayConfigs).set(set).where(eq(overlayConfigs.id, id)).run();
+  }
+
+  function removeOverlayConfigById(id: number): void {
+    db.delete(overlayConfigs).where(eq(overlayConfigs.id, id)).run();
+  }
+
+  /**
+   * Move an overlay to a different position+order. Re-numbers within the
+   * target stack.
+   *
+   * The negative-tmp dance below is safe against concurrent reorders because
+   * `db.transaction` (better-sqlite3) is synchronous and SQLite serialises
+   * writers: a second reorder cannot interleave with the first. Within a
+   * single transaction the tmp orders never collide because they're assigned
+   * sequentially.
+   */
+  function moveOverlayConfig(id: number, targetPosition: OverlayPosition, targetOrder: number): void {
+    const row = getOverlayConfig(id);
+    if (!row) return;
+    db.transaction((tx) => {
+      // Take all rows in target position (excluding the one being moved).
+      const targetRows = tx
+        .select()
+        .from(overlayConfigs)
+        .where(and(eq(overlayConfigs.sectionId, row.sectionId), eq(overlayConfigs.position, targetPosition)))
+        .all()
+        .filter((r) => r.id !== id)
+        .sort((a, b) => a.order - b.order);
+
+      // Insert moved row at targetOrder.
+      const newOrderList = [...targetRows];
+      const clampedTarget = Math.min(Math.max(0, targetOrder), newOrderList.length);
+      newOrderList.splice(clampedTarget, 0, { id, order: -1 } as never);
+
+      // Sort rows in source position too.
+      const sourceRows =
+        row.position === targetPosition
+          ? []
+          : tx
+              .select()
+              .from(overlayConfigs)
+              .where(and(eq(overlayConfigs.sectionId, row.sectionId), eq(overlayConfigs.position, row.position)))
+              .all()
+              .filter((r) => r.id !== id)
+              .sort((a, b) => a.order - b.order);
+
+      // Strategy: temporarily set all touched rows to negative order to dodge unique index, then renumber.
+      const touched = [...newOrderList.map((r) => r.id), ...sourceRows.map((r) => r.id)];
+      let tmp = -1;
+      for (const tid of touched) {
+        tx.update(overlayConfigs)
+          .set({ order: tmp-- })
+          .where(eq(overlayConfigs.id, tid as number))
+          .run();
+      }
+
+      // Apply final ordering for target.
+      newOrderList.forEach((r, i) => {
+        tx.update(overlayConfigs)
+          .set({ order: i, position: targetPosition })
+          .where(eq(overlayConfigs.id, r.id as number))
+          .run();
+      });
+      sourceRows.forEach((r, i) => {
+        tx.update(overlayConfigs)
+          .set({ order: i })
+          .where(eq(overlayConfigs.id, r.id as number))
+          .run();
+      });
+    });
+  }
+
+  /** Reorder overlays within a single position. ids should list all overlays in that position in their new order. */
+  function reorderOverlayConfigs(sectionId: string, position: OverlayPosition, ids: number[]): void {
+    db.transaction((tx) => {
+      let tmp = -1;
+      for (const id of ids) {
+        tx.update(overlayConfigs)
+          .set({ order: tmp-- })
+          .where(and(eq(overlayConfigs.id, id), eq(overlayConfigs.sectionId, sectionId)))
+          .run();
+      }
+      ids.forEach((id, i) => {
+        tx.update(overlayConfigs)
+          .set({ order: i, position })
+          .where(and(eq(overlayConfigs.id, id), eq(overlayConfigs.sectionId, sectionId)))
+          .run();
+      });
+    });
+  }
+
+  function clearOverlayConfigs(sectionId: string) {
+    db.delete(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).run();
+  }
+
+  /** Replace all overlays for a section atomically (used for preset apply). */
+  function replaceOverlayConfigs(
+    sectionId: string,
+    configs: Array<{
+      position: OverlayPosition;
+      overlayType: OverlayType;
+      style?: BadgeStyle | null;
+      rule?: ConditionalRule | null;
+      order?: number;
+    }>,
+  ): void {
+    db.transaction((tx) => {
+      tx.delete(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).run();
+      // Group by position and assign sequential orders if not given.
+      const byPos = new Map<OverlayPosition, typeof configs>();
+      for (const c of configs) {
+        const list = byPos.get(c.position) ?? [];
+        list.push(c);
+        byPos.set(c.position, list);
+      }
+      const now = Date.now();
+      for (const [position, list] of byPos) {
+        list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        list.forEach((c, i) => {
+          tx.insert(overlayConfigs)
+            .values({
+              sectionId,
+              position,
+              overlayType: c.overlayType,
+              order: i,
+              style: c.style ? JSON.stringify(c.style) : null,
+              rule: c.rule ? JSON.stringify(c.rule) : null,
+              createdAt: now,
+            })
+            .run();
+        });
+      }
+    });
+  }
+
+  function getOriginalPoster(ratingKey: string) {
+    return db.select().from(overlayOriginals).where(eq(overlayOriginals.ratingKey, ratingKey)).get();
+  }
+
+  function saveOriginalPoster(ratingKey: string, sectionId: string, originalPosterUrl: string) {
+    db.insert(overlayOriginals)
+      .values({ ratingKey, sectionId, originalPosterUrl, appliedAt: Date.now() })
+      .onConflictDoNothing()
+      .run();
+  }
+
+  function removeOriginalPoster(ratingKey: string) {
+    db.delete(overlayOriginals).where(eq(overlayOriginals.ratingKey, ratingKey)).run();
+  }
+
+  function getOverlaidItems(sectionId: string) {
+    return db.select().from(overlayOriginals).where(eq(overlayOriginals.sectionId, sectionId)).all();
+  }
+
+  function getOverlaidItemCount(sectionId: string): number {
+    const rows = db.select().from(overlayOriginals).where(eq(overlayOriginals.sectionId, sectionId)).all();
+    return rows.length;
+  }
+
+  function listPresets(): OverlayPresetRow[] {
+    const rows = db.select().from(overlayPresets).all();
+    return rows
+      .map((r) => {
+        const parsed = presetDataSchema.safeParse(JSON.parse(r.data));
+        if (!parsed.success) return null;
+        return {
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          builtIn: r.builtIn === 1,
+          data: parsed.data,
+          createdAt: r.createdAt,
+        };
+      })
+      .filter((r): r is OverlayPresetRow => r !== null)
+      .sort((a, b) => Number(b.builtIn) - Number(a.builtIn) || a.name.localeCompare(b.name));
+  }
+
+  function savePreset(input: { id?: string; name: string; description?: string; data: PresetData }): string {
+    const id = input.id || `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    db.insert(overlayPresets)
+      .values({
+        id,
+        name: input.name,
+        description: input.description || "",
+        builtIn: 0,
+        data: JSON.stringify(input.data),
+        createdAt: Date.now(),
+      })
+      .onConflictDoUpdate({
+        target: overlayPresets.id,
+        set: { name: input.name, description: input.description || "", data: JSON.stringify(input.data) },
+      })
+      .run();
+    return id;
+  }
+
+  function deletePreset(id: string): void {
+    // Don't delete built-ins.
+    const row = db.select().from(overlayPresets).where(eq(overlayPresets.id, id)).get();
+    if (!row || row.builtIn === 1) return;
+    db.delete(overlayPresets).where(eq(overlayPresets.id, id)).run();
+  }
+
+  function ensureBuiltInPresets(): void {
+    for (const p of BUILT_IN_PRESETS) {
+      const existing = db.select().from(overlayPresets).where(eq(overlayPresets.id, p.id)).get();
+      if (existing) {
+        // Refresh data so updates ship via app version.
+        db.update(overlayPresets)
+          .set({
+            name: p.name,
+            description: p.description,
+            builtIn: 1,
+            data: JSON.stringify(p.data),
+          })
+          .where(eq(overlayPresets.id, p.id))
+          .run();
+      } else {
+        db.insert(overlayPresets)
+          .values({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            builtIn: 1,
+            data: JSON.stringify(p.data),
+            createdAt: Date.now(),
+          })
+          .run();
+      }
     }
   }
+
+  return {
+    getOverlayConfigs,
+    getOverlayConfig,
+    addOverlayConfig,
+    updateOverlayConfig,
+    removeOverlayConfigById,
+    moveOverlayConfig,
+    reorderOverlayConfigs,
+    clearOverlayConfigs,
+    replaceOverlayConfigs,
+    getOriginalPoster,
+    saveOriginalPoster,
+    removeOriginalPoster,
+    getOverlaidItems,
+    getOverlaidItemCount,
+    listPresets,
+    savePreset,
+    deletePreset,
+    ensureBuiltInPresets,
+  };
 }
+
+export type Overlays = ReturnType<typeof createOverlays>;
+
+export const OverlaysToken = token<Overlays>("overlays");

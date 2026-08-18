@@ -4,14 +4,20 @@
  * the first time it is indexed. Both are easy to get wrong in ways that only
  * show up on somebody else's 50,000-item server.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-media-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { events, mediaItems } from "@tinkerbell/db";
+import { MediaToken } from "@tinkerbell/domain.media";
 
-const { db, events, mediaItems } = await import("@tinkerbell/db");
-const { syncMedia, getStorageBySection } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { syncMedia, getStorageBySection } = c.resolve(MediaToken);
+
 const { createPlexClient } = await import("@tinkerbell/plex");
 
 type PlexClient = ReturnType<typeof createPlexClient>;

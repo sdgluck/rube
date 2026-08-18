@@ -8,17 +8,26 @@
  * that silently sent the headline and swallowed the list would look like it
  * was working.
  */
-import { describe, test, beforeEach, afterEach } from "node:test";
+import { describe, test, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-notifications-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import {
+  flattenMessage,
+  NotificationsToken,
+  plainMessage,
+  renderEmailHtml,
+  SmtpNotConfiguredError,
+} from "@tinkerbell/domain.notifications";
 
-const { setConfig, deleteConfig } = await import("@tinkerbell/core");
-const { flattenMessage, plainMessage } = await import("./types.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const { setConfig, deleteConfig } = c.resolve(ConfigStoreToken);
 const { sendDiscord, sendSlack, sendTelegram, sendWebhook, sendGotify, sendPushover, sendPushbullet, sendLunaSea } =
-  await import("./senders.ts");
-const { renderEmailHtml, smtpConfigured, sendSmtp, SmtpNotConfiguredError } = await import("./smtp.ts");
+  c.resolve(NotificationsToken);
+const { smtpConfigured, sendSmtp } = c.resolve(NotificationsToken);
 
 const RICH = {
   title: "Your library, 8 Nov – 14 Nov",

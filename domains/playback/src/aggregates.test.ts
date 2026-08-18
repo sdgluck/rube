@@ -9,14 +9,19 @@
  * would shrink the denominator and report a transcoding server as a direct-play
  * one.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { playbackSessions, plexUsers } from "@tinkerbell/db";
+import { PlaybackToken } from "@tinkerbell/domain.playback";
 
-const { db, playbackSessions, plexUsers } = await import("@tinkerbell/db");
-const { playbackBreakdown, playsByHour, topUsers } = await import("./store.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { playbackBreakdown, playsByHour, topUsers } = c.resolve(PlaybackToken);
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;

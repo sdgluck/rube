@@ -13,8 +13,10 @@
  * a stalled socket can't outlive the job.
  */
 import { randomFillSync, randomUUID } from "node:crypto";
-import { errorMessage, getPlexClient, type JobContext } from "@tinkerbell/core";
-import { emitEvent } from "@tinkerbell/domain.events";
+import { createStore } from "./store.ts";
+import { errorMessage, type JobContext, type Clients } from "@tinkerbell/core";
+import type { Db } from "@tinkerbell/db";
+
 import {
   isSlowerThanUsual,
   MAX_CHUNK_BYTES,
@@ -23,18 +25,11 @@ import {
   summarise,
   throughputMbps,
 } from "./math.ts";
-import { recentUpMbps, recordBandwidthTest } from "./store.ts";
 import { download, ENDPOINT, LATENCY_PROBES, runPhase, STREAMS, upload } from "./transfer.ts";
+import { type EventBus } from "@tinkerbell/ports";
+import { token } from "@tinkerbell/container";
 
-export {
-  getBandwidthHistory,
-  getBandwidthSeries,
-  getLatestBandwidthTest,
-  pruneBandwidthSamples,
-  pruneBandwidthTests,
-  recordBandwidthSample,
-  type BandwidthTest,
-} from "./store.ts";
+export type { BandwidthTest } from "./store.ts";
 export { isSlowerThanUsual, summarise, throughputMbps } from "./math.ts";
 export { runPhase } from "./transfer.ts";
 
@@ -80,110 +75,128 @@ async function measureLatency(deadline: AbortSignal): Promise<{ latencyMs: numbe
   return { latencyMs: median(measured), jitterMs: meanAbsoluteDeviation(measured) };
 }
 
-/** Live session bandwidth in kbps, or 0 if Plex isn't reachable/configured. */
-async function concurrentStreamKbps(): Promise<number> {
-  try {
-    const sessions = await getPlexClient().getActiveSessions();
-    return sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
-  } catch {
-    // The bandwidth test does not need Plex to be healthy to be useful.
-    return 0;
-  }
+export interface BandwidthDeps {
+  db: Db;
+  clients: Clients;
+  emitEvent: EventBus;
 }
+export function createBandwidth(deps: BandwidthDeps) {
+  const store = createStore(deps);
+  const { recentUpMbps, recordBandwidthTest } = store;
+  const { getPlexClient } = deps.clients;
+  const { emitEvent } = deps;
 
-/**
- * The `bandwidth-test` internal job. Writes exactly one row — including when
- * it fails part-way, so "download fine, upload timed out" survives as a fact.
- */
-export async function runBandwidthTest(ctx: JobContext): Promise<string> {
-  const id = randomUUID();
-  const startedAt = Date.now();
-  const deadline = AbortSignal.any([ctx.signal, AbortSignal.timeout(TOTAL_BUDGET_MS)]);
-
-  const concurrentKbps = await concurrentStreamKbps();
-  if (concurrentKbps > 0) {
-    ctx.log(`Warning: ${(concurrentKbps / 1000).toFixed(1)} Mbps of playback is in flight — results will be lower.`);
+  /** Live session bandwidth in kbps, or 0 if Plex isn't reachable/configured. */
+  async function concurrentStreamKbps(): Promise<number> {
+    try {
+      const sessions = await getPlexClient().getActiveSessions();
+      return sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
+    } catch {
+      // The bandwidth test does not need Plex to be healthy to be useful.
+      return 0;
+    }
   }
 
-  let downMbps: number | null = null;
-  let upMbps: number | null = null;
-  let latencyMs: number | null = null;
-  let jitterMs: number | null = null;
-  let bytesDown = 0;
-  let bytesUp = 0;
-  let pop: string | null = null;
+  /**
+   * The `bandwidth-test` internal job. Writes exactly one row — including when
+   * it fails part-way, so "download fine, upload timed out" survives as a fact.
+   */
+  async function runBandwidthTest(ctx: JobContext): Promise<string> {
+    const id = randomUUID();
+    const startedAt = Date.now();
+    const deadline = AbortSignal.any([ctx.signal, AbortSignal.timeout(TOTAL_BUDGET_MS)]);
 
-  const finish = (status: "ok" | "error" | "cancelled", error: string | null) => {
-    recordBandwidthTest({
-      id,
+    const concurrentKbps = await concurrentStreamKbps();
+    if (concurrentKbps > 0) {
+      ctx.log(`Warning: ${(concurrentKbps / 1000).toFixed(1)} Mbps of playback is in flight — results will be lower.`);
+    }
+
+    let downMbps: number | null = null;
+    let upMbps: number | null = null;
+    let latencyMs: number | null = null;
+    let jitterMs: number | null = null;
+    let bytesDown = 0;
+    let bytesUp = 0;
+    let pop: string | null = null;
+
+    const finish = (status: "ok" | "error" | "cancelled", error: string | null) => {
+      recordBandwidthTest({
+        id,
+        downMbps,
+        upMbps,
+        latencyMs,
+        jitterMs,
+        endpoint: ENDPOINT,
+        pop,
+        streams: STREAMS,
+        bytesDown,
+        bytesUp,
+        status,
+        error,
+        concurrentKbps,
+        startedAt,
+        finishedAt: Date.now(),
+      });
+    };
+
+    try {
+      ctx.progress(0, 3, "Measuring latency");
+      const latency = await measureLatency(deadline);
+      latencyMs = latency.latencyMs;
+      jitterMs = latency.jitterMs;
+      if (latencyMs != null) ctx.log(`Latency ${latencyMs.toFixed(0)} ms (jitter ${jitterMs?.toFixed(0)} ms)`);
+
+      ctx.progress(1, 3, "Measuring download");
+      const down = await runPhase(DOWN_CAP_BYTES, download, deadline);
+      bytesDown = down.movedBytes;
+      pop ??= down.pop;
+      downMbps = throughputMbps(down.measuredBytes, down.measuredMs);
+      ctx.log(`Download ${downMbps.toFixed(1)} Mbps (${(bytesDown / 1e6).toFixed(0)} MB moved)`);
+
+      ctx.progress(2, 3, "Measuring upload");
+      // One buffer, reused: the payload is random so it can't be compressed in
+      // transit, and re-randomising it per request would measure the CPU.
+      const payload = randomFillSync(new Uint8Array(MAX_CHUNK_BYTES));
+      const up = await runPhase(UP_CAP_BYTES, (size, signal) => upload(payload.subarray(0, size), signal), deadline);
+      bytesUp = up.movedBytes;
+      pop ??= up.pop;
+      upMbps = throughputMbps(up.measuredBytes, up.measuredMs);
+      ctx.log(`Upload ${upMbps.toFixed(1)} Mbps (${(bytesUp / 1e6).toFixed(0)} MB moved)`);
+      ctx.progress(3, 3, "Done");
+    } catch (err) {
+      // A cancel is a decision, not a fault: record what was measured and say so
+      // rather than failing the run.
+      if (ctx.signal.aborted) {
+        finish("cancelled", null);
+        return `Bandwidth test cancelled — ${summarise({ downMbps, upMbps, latencyMs, pop })}`;
+      }
+      // The whole-test deadline aborts the same way a cancel does, and its
+      // AbortError says only "This operation was aborted" — which reads as a
+      // mystery rather than as the budget doing its job.
+      const message = deadline.aborted ? `no result within ${TOTAL_BUDGET_MS / 1000}s` : errorMessage(err);
+      finish("error", message);
+      throw new Error(`Bandwidth test failed: ${message}`);
+    }
+
+    // Baseline is read before the new row is written, so it can't include itself.
+    const baseline = recentUpMbps();
+    finish("ok", null);
+
+    const summary = summarise({ downMbps, upMbps, latencyMs, pop });
+    const regressed = upMbps != null && isSlowerThanUsual(upMbps, baseline);
+    emitEvent("bandwidth.tested", regressed ? `${summary} — slower than usual` : summary, {
       downMbps,
       upMbps,
       latencyMs,
-      jitterMs,
-      endpoint: ENDPOINT,
-      pop,
-      streams: STREAMS,
-      bytesDown,
-      bytesUp,
-      status,
-      error,
-      concurrentKbps,
-      startedAt,
-      finishedAt: Date.now(),
+      regressed,
     });
-  };
 
-  try {
-    ctx.progress(0, 3, "Measuring latency");
-    const latency = await measureLatency(deadline);
-    latencyMs = latency.latencyMs;
-    jitterMs = latency.jitterMs;
-    if (latencyMs != null) ctx.log(`Latency ${latencyMs.toFixed(0)} ms (jitter ${jitterMs?.toFixed(0)} ms)`);
-
-    ctx.progress(1, 3, "Measuring download");
-    const down = await runPhase(DOWN_CAP_BYTES, download, deadline);
-    bytesDown = down.movedBytes;
-    pop ??= down.pop;
-    downMbps = throughputMbps(down.measuredBytes, down.measuredMs);
-    ctx.log(`Download ${downMbps.toFixed(1)} Mbps (${(bytesDown / 1e6).toFixed(0)} MB moved)`);
-
-    ctx.progress(2, 3, "Measuring upload");
-    // One buffer, reused: the payload is random so it can't be compressed in
-    // transit, and re-randomising it per request would measure the CPU.
-    const payload = randomFillSync(new Uint8Array(MAX_CHUNK_BYTES));
-    const up = await runPhase(UP_CAP_BYTES, (size, signal) => upload(payload.subarray(0, size), signal), deadline);
-    bytesUp = up.movedBytes;
-    pop ??= up.pop;
-    upMbps = throughputMbps(up.measuredBytes, up.measuredMs);
-    ctx.log(`Upload ${upMbps.toFixed(1)} Mbps (${(bytesUp / 1e6).toFixed(0)} MB moved)`);
-    ctx.progress(3, 3, "Done");
-  } catch (err) {
-    // A cancel is a decision, not a fault: record what was measured and say so
-    // rather than failing the run.
-    if (ctx.signal.aborted) {
-      finish("cancelled", null);
-      return `Bandwidth test cancelled — ${summarise({ downMbps, upMbps, latencyMs, pop })}`;
-    }
-    // The whole-test deadline aborts the same way a cancel does, and its
-    // AbortError says only "This operation was aborted" — which reads as a
-    // mystery rather than as the budget doing its job.
-    const message = deadline.aborted ? `no result within ${TOTAL_BUDGET_MS / 1000}s` : errorMessage(err);
-    finish("error", message);
-    throw new Error(`Bandwidth test failed: ${message}`);
+    return summary;
   }
 
-  // Baseline is read before the new row is written, so it can't include itself.
-  const baseline = recentUpMbps();
-  finish("ok", null);
-
-  const summary = summarise({ downMbps, upMbps, latencyMs, pop });
-  const regressed = upMbps != null && isSlowerThanUsual(upMbps, baseline);
-  emitEvent("bandwidth.tested", regressed ? `${summary} — slower than usual` : summary, {
-    downMbps,
-    upMbps,
-    latencyMs,
-    regressed,
-  });
-
-  return summary;
+  return { ...store, runBandwidthTest };
 }
+
+export type Bandwidth = ReturnType<typeof createBandwidth>;
+
+export const BandwidthToken = token<Bandwidth>("bandwidth");

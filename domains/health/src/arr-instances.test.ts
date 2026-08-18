@@ -1,3 +1,4 @@
+import { arrHealthServiceNames } from "@tinkerbell/domain.health";
 /**
  * An extra \*Arr instance's health identity is its display name — `Radarr (4K)` —
  * because that string is what the notification target picker offers and what
@@ -8,15 +9,21 @@
  * mute, and every allow-list entry that named it. That is the sort of breakage
  * nobody connects to a rename weeks later, so the rename carries them over.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-health-arr-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { healthChecks } from "@tinkerbell/db";
+import { HealthToken } from "@tinkerbell/domain.health";
 
-const { db, healthChecks } = await import("@tinkerbell/db");
-const { getConfig, setConfig, deleteConfig } = await import("@tinkerbell/core");
-const { arrHealthServiceNames, healthServices, renameArrHealthServices, reportHealth } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { getConfig, setConfig, deleteConfig } = c.resolve(ConfigStoreToken);
+const { healthServices, renameArrHealthServices, reportHealth } = c.resolve(HealthToken);
 
 const HD = { id: "radarr-hd", service: "radarr" as const, name: "HD", url: "http://hd:7878", apiKey: "k1" };
 const UHD = { id: "radarr-4k", service: "radarr" as const, name: "4K", url: "http://uhd:7878", apiKey: "k2" };

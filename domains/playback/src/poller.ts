@@ -10,9 +10,10 @@
  * quietly until the next tick.
  */
 import { createPlexClient } from "@tinkerbell/plex";
-import { getConfig, plexHealthCallback, MINUTE_MS } from "@tinkerbell/core";
-import { recordBandwidthSample } from "@tinkerbell/domain.bandwidth";
-import { closeStaleSessions, recordPollSnapshot } from "./store.ts";
+import { MINUTE_MS, type ConfigStore, type Clients } from "@tinkerbell/core";
+import type { Db } from "@tinkerbell/db";
+import type { Bandwidth } from "@tinkerbell/domain.bandwidth";
+import { createStore } from "./store.ts";
 
 /**
  * Back-off applied after a failed poll.
@@ -29,9 +30,6 @@ const ERROR_BACKOFF_MS = 5 * MINUTE_MS;
  * latch and the back-off deadline are only meaningful for the lifetime of this
  * process, and open sessions are recovered from `playback_sessions` at boot.
  */
-let inFlight = false;
-let backoffUntil = 0;
-let bootRecovered = false;
 
 /**
  * Recover from a restart before the first poll.
@@ -41,10 +39,6 @@ let bootRecovered = false;
  * finished. Rows inside the cutoff are left open and simply picked up again by
  * the next diff, which is what makes a quick restart lossless.
  */
-function recoverOpenSessions(now: number): number {
-  bootRecovered = true;
-  return closeStaleSessions(now);
-}
 
 export interface PollResult {
   /** False when the tick did no work — unconfigured, backed off, or already running. */
@@ -56,57 +50,80 @@ export interface PollResult {
   recovered: number;
 }
 
-/**
- * One poll tick.
- *
- * Returns rather than throws on every expected condition (Plex unconfigured, a
- * poll already in flight, a Plex that is down) so the job runner records a
- * completed run instead of a failure — none of those are faults the operator
- * needs to see 2,880 times a day.
- */
-export async function pollPlaybackOnce(signal?: AbortSignal, now: number = Date.now()): Promise<PollResult> {
-  const idle: PollResult = { polled: false, opened: 0, closed: 0, completed: 0, recovered: 0 };
-
-  // A slow Plex must not let ticks stack up: overlapping polls would both read
-  // the same open rows and both decide to open a duplicate session.
-  if (inFlight) return idle;
-  if (now < backoffUntil) return idle;
-
-  const url = getConfig("global_plex_url");
-  const token = getConfig("global_plex_token");
-  if (!url || !token) return idle;
-
-  inFlight = true;
-  try {
-    const recovered = bootRecovered ? 0 : recoverOpenSessions(now);
-    const client = createPlexClient({ url, token, signal, onHealth: plexHealthCallback });
-    const sessions = await client.getActiveSessions();
-    const { opened, closed, completed } = recordPollSnapshot(sessions, now);
-    // What the sessions cost, alongside what they were. Written on every tick
-    // including the empty ones: a gap in the series would be indistinguishable
-    // from a poller that had stopped, and "nothing was streaming" is the most
-    // common true answer.
-    recordBandwidthSample({
-      sampledAt: now,
-      kbps: sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0),
-      streams: sessions.length,
-    });
-    backoffUntil = 0;
-    return { polled: true, opened, closed, completed, recovered };
-  } catch {
-    // Deliberately swallowed. `plexHealthCallback` has already recorded the
-    // failure against the Plex service, which is where an operator looks — a
-    // thrown error here would additionally mark the job run failed every 30s.
-    backoffUntil = now + ERROR_BACKOFF_MS;
-    return idle;
-  } finally {
-    inFlight = false;
-  }
+export interface PollerDeps {
+  db: Db;
+  config: ConfigStore;
+  clients: Clients;
+  bandwidth: Bandwidth;
 }
+export function createPoller(deps: PollerDeps) {
+  const { closeStaleSessions, recordPollSnapshot } = createStore(deps);
+  const { recordBandwidthSample } = deps.bandwidth;
 
-/** Test seam: reset the module-local latch, back-off and boot-recovery flag. */
-export function resetPollerState(): void {
-  inFlight = false;
-  backoffUntil = 0;
-  bootRecovered = false;
+  // Poller state: the re-entrancy latch, the failure back-off, and whether
+  // boot recovery has run. These were module-level `let`s, which is why this
+  // file used to export a `resetPollerState` test seam — one process could only
+  // ever have one poller, and a test had to reach in and clear it. Held in the
+  // closure they belong to, a second poller is just a second call.
+  let inFlight = false;
+  let backoffUntil = 0;
+  let bootRecovered = false;
+
+  function recoverOpenSessions(now: number): number {
+    bootRecovered = true;
+    return closeStaleSessions(now);
+  }
+
+  const { getConfig } = deps.config;
+  const { plexHealthCallback } = deps.clients;
+
+  /**
+   * One poll tick.
+   *
+   * Returns rather than throws on every expected condition (Plex unconfigured, a
+   * poll already in flight, a Plex that is down) so the job runner records a
+   * completed run instead of a failure — none of those are faults the operator
+   * needs to see 2,880 times a day.
+   */
+  async function pollPlaybackOnce(signal?: AbortSignal, now: number = Date.now()): Promise<PollResult> {
+    const idle: PollResult = { polled: false, opened: 0, closed: 0, completed: 0, recovered: 0 };
+
+    // A slow Plex must not let ticks stack up: overlapping polls would both read
+    // the same open rows and both decide to open a duplicate session.
+    if (inFlight) return idle;
+    if (now < backoffUntil) return idle;
+
+    const url = getConfig("global_plex_url");
+    const token = getConfig("global_plex_token");
+    if (!url || !token) return idle;
+
+    inFlight = true;
+    try {
+      const recovered = bootRecovered ? 0 : recoverOpenSessions(now);
+      const client = createPlexClient({ url, token, signal, onHealth: plexHealthCallback });
+      const sessions = await client.getActiveSessions();
+      const { opened, closed, completed } = recordPollSnapshot(sessions, now);
+      // What the sessions cost, alongside what they were. Written on every tick
+      // including the empty ones: a gap in the series would be indistinguishable
+      // from a poller that had stopped, and "nothing was streaming" is the most
+      // common true answer.
+      recordBandwidthSample({
+        sampledAt: now,
+        kbps: sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0),
+        streams: sessions.length,
+      });
+      backoffUntil = 0;
+      return { polled: true, opened, closed, completed, recovered };
+    } catch {
+      // Deliberately swallowed. `plexHealthCallback` has already recorded the
+      // failure against the Plex service, which is where an operator looks — a
+      // thrown error here would additionally mark the job run failed every 30s.
+      backoffUntil = now + ERROR_BACKOFF_MS;
+      return idle;
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  return { pollPlaybackOnce };
 }

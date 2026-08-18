@@ -7,8 +7,9 @@
  * assumptions.
  */
 import { httpRequestJson } from "@tinkerbell/http";
-import { getConfig, setConfig } from "@tinkerbell/core";
+
 import { DEFAULT_REGISTRY_URL, registryIndexSchema, type RegistryIndex } from "@tinkerbell/contracts";
+import { type ConfigStore } from "@tinkerbell/core";
 
 /**
  * Short, because somebody is watching a skeleton while this runs. 15s with two
@@ -31,57 +32,68 @@ interface CachedIndex {
   index: RegistryIndex;
 }
 
-function readCache(): CachedIndex | null {
-  const cached = getConfig("registry_cache") as CachedIndex | undefined;
-  if (!cached) return null;
-  // A changed REGISTRY_URL must not be served the previous URL's catalogue.
-  if (cached.url !== registryUrl()) return null;
-  if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) return null;
-  const parsed = registryIndexSchema.safeParse(cached.index);
-  return parsed.success ? { ...cached, index: parsed.data } : null;
+export interface FetchDeps {
+  config: ConfigStore;
 }
+export function createFetch(deps: FetchDeps) {
+  const { getConfig, setConfig } = deps.config;
 
-export async function fetchRegistryIndex(opts: { force?: boolean } = {}): Promise<RegistryIndex> {
-  if (!opts.force) {
-    const cached = readCache();
-    if (cached) return cached.index;
+  function readCache(): CachedIndex | null {
+    const cached = getConfig("registry_cache") as CachedIndex | undefined;
+    if (!cached) return null;
+    // A changed REGISTRY_URL must not be served the previous URL's catalogue.
+    if (cached.url !== registryUrl()) return null;
+    if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) return null;
+    const parsed = registryIndexSchema.safeParse(cached.index);
+    return parsed.success ? { ...cached, index: parsed.data } : null;
   }
 
-  const url = registryUrl();
-  let payload: unknown;
-  try {
-    payload = await httpRequestJson<unknown>({ url, timeoutMs: FETCH_TIMEOUT_MS, retries: FETCH_RETRIES });
-  } catch (err) {
-    // Plenty of Tinkerbell installs have no outbound internet at all. Say so
-    // plainly rather than surfacing a bare fetch error.
-    throw new Error(
-      `Could not reach the rule registry at ${url}. Check this server's internet access, then try again. (${
-        (err as Error).message
-      })`,
-    );
-  }
+  async function fetchRegistryIndex(opts: { force?: boolean } = {}): Promise<RegistryIndex> {
+    if (!opts.force) {
+      const cached = readCache();
+      if (cached) return cached.index;
+    }
 
-  const parsed = registryIndexSchema.safeParse(payload);
-  if (!parsed.success) {
-    const version = (payload as { formatVersion?: unknown })?.formatVersion;
-    if (typeof version === "number" && version > registryIndexSchema.shape.formatVersion.value) {
+    const url = registryUrl();
+    let payload: unknown;
+    try {
+      payload = await httpRequestJson<unknown>({ url, timeoutMs: FETCH_TIMEOUT_MS, retries: FETCH_RETRIES });
+    } catch (err) {
+      // Plenty of Tinkerbell installs have no outbound internet at all. Say so
+      // plainly rather than surfacing a bare fetch error.
       throw new Error(
-        `The rule registry uses format version ${version}, which this version of Tinkerbell doesn't understand. Update Tinkerbell to import from it.`,
+        `Could not reach the rule registry at ${url}. Check this server's internet access, then try again. (${
+          (err as Error).message
+        })`,
       );
     }
-    throw new Error(`The rule registry returned data Tinkerbell couldn't read: ${parsed.error.message}`);
+
+    const parsed = registryIndexSchema.safeParse(payload);
+    if (!parsed.success) {
+      const version = (payload as { formatVersion?: unknown })?.formatVersion;
+      if (typeof version === "number" && version > registryIndexSchema.shape.formatVersion.value) {
+        throw new Error(
+          `The rule registry uses format version ${version}, which this version of Tinkerbell doesn't understand. Update Tinkerbell to import from it.`,
+        );
+      }
+      throw new Error(`The rule registry returned data Tinkerbell couldn't read: ${parsed.error.message}`);
+    }
+
+    setConfig("registry_cache", { fetchedAt: Date.now(), url, index: parsed.data });
+    return parsed.data;
   }
 
-  setConfig("registry_cache", { fetchedAt: Date.now(), url, index: parsed.data });
-  return parsed.data;
+  /** Cached catalogue plus the lookups every caller immediately builds. */
+  async function getRegistry(opts: { force?: boolean } = {}) {
+    const index = await fetchRegistryIndex(opts);
+    return {
+      index,
+      packsBySlug: new Map(index.packs.map((p) => [p.slug, p])),
+      rulesBySlug: new Map(index.rules.map((r) => [r.slug, r])),
+    };
+  }
+
+  return { fetchRegistryIndex, getRegistry };
 }
 
-/** Cached catalogue plus the lookups every caller immediately builds. */
-export async function getRegistry(opts: { force?: boolean } = {}) {
-  const index = await fetchRegistryIndex(opts);
-  return {
-    index,
-    packsBySlug: new Map(index.packs.map((p) => [p.slug, p])),
-    rulesBySlug: new Map(index.rules.map((r) => [r.slug, r])),
-  };
-}
+export type RegistryFetch = ReturnType<typeof createFetch>;

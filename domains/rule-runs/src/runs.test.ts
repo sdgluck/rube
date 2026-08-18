@@ -1,31 +1,25 @@
-import { test, before, describe } from "node:test";
+import { test, after, describe } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import { eq } from "drizzle-orm";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken, ruleRuns, rules as rulesTable } from "@tinkerbell/db";
+import { RuleRunsToken } from "./index.ts";
 
-setupTempDb("tinkerbell-rule-runs-test-");
+const c = createTestContainer();
+after(() => c.dispose());
 
-type Runs = typeof import("./runs.ts");
-type Db = typeof import("@tinkerbell/db");
-
-let runs: Runs;
-let dbmod: Db;
+const db = c.resolve(DbToken);
+const runs = c.resolve(RuleRunsToken);
 let ruleSeq = 0;
 
 /** A rule to hang runs off — `rule_runs.rule_id` is a real foreign key. */
 function makeRule(): string {
   const id = `rule-${++ruleSeq}`;
-  dbmod.db
-    .insert(dbmod.rules)
+  db.insert(rulesTable)
     .values({ id, name: `Rule ${ruleSeq}`, type: "smart_filter", createdAt: Date.now() })
     .run();
   return id;
 }
-
-before(async () => {
-  runs = await import("./runs.ts");
-  dbmod = await import("@tinkerbell/db");
-});
 
 describe("attaching to a run already in flight", () => {
   test("an active run is findable; a finished one is not", () => {
@@ -224,7 +218,7 @@ describe("run tallies for the rules table", () => {
 
     // Same timestamp for both of this rule's runs.
     for (const id of [first, second]) {
-      dbmod.db.update(dbmod.ruleRuns).set({ startedAt: at }).where(eq(dbmod.ruleRuns.id, id)).run();
+      db.update(ruleRuns).set({ startedAt: at }).where(eq(ruleRuns.id, id)).run();
     }
 
     const tallies = runs.getRuleRunCounts();
@@ -240,10 +234,9 @@ describe("run tallies for the rules table", () => {
     const ruleId = makeRule();
     const older = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
     const newer = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
-    dbmod.db
-      .update(dbmod.ruleRuns)
+    db.update(ruleRuns)
       .set({ startedAt: Date.now() - 60_000 })
-      .where(eq(dbmod.ruleRuns.id, older))
+      .where(eq(ruleRuns.id, older))
       .run();
 
     assert.equal(runs.getRuleRunCounts()[ruleId].lastRunId, newer);

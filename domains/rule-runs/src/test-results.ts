@@ -1,3 +1,5 @@
+import type { RuleRunsDeps } from "./index.ts";
+import { perDeps } from "@tinkerbell/container";
 /**
  * The most recent test *preview* for each rule, in memory.
  *
@@ -96,20 +98,24 @@ export interface TestFunnelSection {
   mode: "narrowing" | "contributing";
 }
 
-const lastTestResultByRule = new Map<string, PersistedTestResult>();
+export const createTestResults = perDeps(function createTestResults(_deps: RuleRunsDeps) {
+  const lastTestResultByRule = new Map<string, PersistedTestResult>();
 
-export function getLastTestResult(ruleId: string): PersistedTestResult | undefined {
-  return lastTestResultByRule.get(ruleId);
-}
+  function getLastTestResult(ruleId: string): PersistedTestResult | undefined {
+    return lastTestResultByRule.get(ruleId);
+  }
 
-export function hasLastTestResult(ruleId: string): boolean {
-  return lastTestResultByRule.has(ruleId);
-}
+  function hasLastTestResult(ruleId: string): boolean {
+    return lastTestResultByRule.has(ruleId);
+  }
 
-export function setLastTestResult(result: PersistedTestResult): void {
-  lastTestResultByRule.set(result.ruleId, result);
-}
+  function setLastTestResult(result: PersistedTestResult): void {
+    lastTestResultByRule.set(result.ruleId, result);
+  }
 
-export function clearLastTestResult(ruleId: string): void {
-  lastTestResultByRule.delete(ruleId);
-}
+  function clearLastTestResult(ruleId: string): void {
+    lastTestResultByRule.delete(ruleId);
+  }
+
+  return { getLastTestResult, hasLastTestResult, setLastTestResult, clearLastTestResult };
+});

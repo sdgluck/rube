@@ -15,7 +15,7 @@
  */
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { db, playbackSessions, watchState } from "@tinkerbell/db";
+import { playbackSessions, watchState, type Db } from "@tinkerbell/db";
 import type { PlexHistoryItem } from "@tinkerbell/plex";
 
 export const BACKFILL_SOURCE = "plex-history";
@@ -121,120 +121,129 @@ function toRow(item: PlexHistoryItem): typeof playbackSessions.$inferInsert | nu
   };
 }
 
-/** True when we already have a play for this user and item close enough in time. */
-function alreadyRecorded(userId: number, ratingKey: string, at: number): boolean {
-  const hit = db
-    .select({ id: playbackSessions.id })
-    .from(playbackSessions)
-    .where(
-      and(
-        eq(playbackSessions.userId, userId),
-        eq(playbackSessions.ratingKey, ratingKey),
-        gte(playbackSessions.startedAt, at - DEDUPE_WINDOW_MS),
-        lte(playbackSessions.startedAt, at + DEDUPE_WINDOW_MS),
-      ),
-    )
-    .get();
-  return hit != null;
+export interface BackfillDeps {
+  db: Db;
 }
+export function createBackfill(deps: BackfillDeps) {
+  const { db } = deps;
 
-/** Timestamp of the newest backfilled row, so a re-run resumes rather than restarts. */
-export function lastBackfilledAt(): number {
-  const row = db
-    .select({ at: sql<number | null>`max(${playbackSessions.startedAt})` })
-    .from(playbackSessions)
-    .where(eq(playbackSessions.source, BACKFILL_SOURCE))
-    .get();
-  return row?.at ?? 0;
-}
-
-/**
- * Walk Plex's view history and import what we don't already have.
- *
- * Takes a fetch function rather than a client so the paging and dedupe logic
- * can be exercised without a Plex server.
- */
-export async function backfillFromHistory(
-  fetchPage: HistoryPager,
-  opts: { since?: number; signal?: AbortSignal; onProgress?: BackfillProgress } = {},
-): Promise<BackfillResult> {
-  // Resume from the newest row we already imported rather than re-walking
-  // everything. Plex's `viewedAt>` filter is in seconds.
-  const since = opts.since ?? lastBackfilledAt();
-  const viewedAfter = since > 0 ? Math.floor(since / 1000) : undefined;
-
-  let scanned = 0;
-  let imported = 0;
-  let skipped = 0;
-  let pages = 0;
-
-  for await (const page of historyPages(fetchPage, { viewedAfter, signal: opts.signal })) {
-    pages++;
-    scanned += page.length;
-    const rows = page.map(toRow).filter((r): r is typeof playbackSessions.$inferInsert => r != null);
-
-    // One transaction per page rather than per row: a 20k-entry history is
-    // 20k transactions otherwise, and the whole import takes minutes.
-    db.transaction(() => {
-      for (const row of rows) {
-        if (alreadyRecorded(row.userId, row.ratingKey, row.startedAt)) {
-          skipped++;
-          continue;
-        }
-        db.insert(playbackSessions).values(row).run();
-        foldIntoWatchState(row);
-        imported++;
-      }
-    });
-
-    opts.onProgress?.(scanned, imported);
+  /** True when we already have a play for this user and item close enough in time. */
+  function alreadyRecorded(userId: number, ratingKey: string, at: number): boolean {
+    const hit = db
+      .select({ id: playbackSessions.id })
+      .from(playbackSessions)
+      .where(
+        and(
+          eq(playbackSessions.userId, userId),
+          eq(playbackSessions.ratingKey, ratingKey),
+          gte(playbackSessions.startedAt, at - DEDUPE_WINDOW_MS),
+          lte(playbackSessions.startedAt, at + DEDUPE_WINDOW_MS),
+        ),
+      )
+      .get();
+    return hit != null;
   }
 
-  return { scanned, imported, skipped, pages };
-}
+  /** Timestamp of the newest backfilled row, so a re-run resumes rather than restarts. */
+  function lastBackfilledAt(): number {
+    const row = db
+      .select({ at: sql<number | null>`max(${playbackSessions.startedAt})` })
+      .from(playbackSessions)
+      .where(eq(playbackSessions.source, BACKFILL_SOURCE))
+      .get();
+    return row?.at ?? 0;
+  }
 
-/**
- * Fold a backfilled play into the rollup.
- *
- * Kept separate from the poller's version because the inputs differ: a history
- * entry is always a completed play with no measurable watch time, so it must
- * add to `plays` and `completedPlays` but contribute nothing to
- * `totalWatchedMs` — adding zero is correct, adding a guess would not be.
- */
-function foldIntoWatchState(row: typeof playbackSessions.$inferInsert): void {
-  const at = row.startedAt;
-  const existing = db
-    .select()
-    .from(watchState)
-    .where(and(eq(watchState.ratingKey, row.ratingKey), eq(watchState.userId, row.userId)))
-    .get();
+  /**
+   * Walk Plex's view history and import what we don't already have.
+   *
+   * Takes a fetch function rather than a client so the paging and dedupe logic
+   * can be exercised without a Plex server.
+   */
+  async function backfillFromHistory(
+    fetchPage: HistoryPager,
+    opts: { since?: number; signal?: AbortSignal; onProgress?: BackfillProgress } = {},
+  ): Promise<BackfillResult> {
+    // Resume from the newest row we already imported rather than re-walking
+    // everything. Plex's `viewedAt>` filter is in seconds.
+    const since = opts.since ?? lastBackfilledAt();
+    const viewedAfter = since > 0 ? Math.floor(since / 1000) : undefined;
 
-  if (!existing) {
-    db.insert(watchState)
-      .values({
-        ratingKey: row.ratingKey,
-        userId: row.userId,
-        plays: 1,
-        completedPlays: 1,
-        firstPlayedAt: at,
-        lastPlayedAt: at,
-        totalWatchedMs: 0,
+    let scanned = 0;
+    let imported = 0;
+    let skipped = 0;
+    let pages = 0;
+
+    for await (const page of historyPages(fetchPage, { viewedAfter, signal: opts.signal })) {
+      pages++;
+      scanned += page.length;
+      const rows = page.map(toRow).filter((r): r is typeof playbackSessions.$inferInsert => r != null);
+
+      // One transaction per page rather than per row: a 20k-entry history is
+      // 20k transactions otherwise, and the whole import takes minutes.
+      db.transaction(() => {
+        for (const row of rows) {
+          if (alreadyRecorded(row.userId, row.ratingKey, row.startedAt)) {
+            skipped++;
+            continue;
+          }
+          db.insert(playbackSessions).values(row).run();
+          foldIntoWatchState(row);
+          imported++;
+        }
+      });
+
+      opts.onProgress?.(scanned, imported);
+    }
+
+    return { scanned, imported, skipped, pages };
+  }
+
+  /**
+   * Fold a backfilled play into the rollup.
+   *
+   * Kept separate from the poller's version because the inputs differ: a history
+   * entry is always a completed play with no measurable watch time, so it must
+   * add to `plays` and `completedPlays` but contribute nothing to
+   * `totalWatchedMs` — adding zero is correct, adding a guess would not be.
+   */
+  function foldIntoWatchState(row: typeof playbackSessions.$inferInsert): void {
+    const at = row.startedAt;
+    const existing = db
+      .select()
+      .from(watchState)
+      .where(and(eq(watchState.ratingKey, row.ratingKey), eq(watchState.userId, row.userId)))
+      .get();
+
+    if (!existing) {
+      db.insert(watchState)
+        .values({
+          ratingKey: row.ratingKey,
+          userId: row.userId,
+          plays: 1,
+          completedPlays: 1,
+          firstPlayedAt: at,
+          lastPlayedAt: at,
+          totalWatchedMs: 0,
+          maxCompletionPct: 1,
+        })
+        .run();
+      return;
+    }
+
+    db.update(watchState)
+      .set({
+        plays: existing.plays + 1,
+        completedPlays: existing.completedPlays + 1,
+        firstPlayedAt: Math.min(existing.firstPlayedAt ?? at, at),
+        lastPlayedAt: Math.max(existing.lastPlayedAt ?? at, at),
+        // Plex only logs a history entry for a play it considered finished, so
+        // this is a completion — the one thing a backfilled row does tell us.
         maxCompletionPct: 1,
       })
+      .where(and(eq(watchState.ratingKey, row.ratingKey), eq(watchState.userId, row.userId)))
       .run();
-    return;
   }
 
-  db.update(watchState)
-    .set({
-      plays: existing.plays + 1,
-      completedPlays: existing.completedPlays + 1,
-      firstPlayedAt: Math.min(existing.firstPlayedAt ?? at, at),
-      lastPlayedAt: Math.max(existing.lastPlayedAt ?? at, at),
-      // Plex only logs a history entry for a play it considered finished, so
-      // this is a completion — the one thing a backfilled row does tell us.
-      maxCompletionPct: 1,
-    })
-    .where(and(eq(watchState.ratingKey, row.ratingKey), eq(watchState.userId, row.userId)))
-    .run();
+  return { lastBackfilledAt, backfillFromHistory };
 }

@@ -10,15 +10,21 @@
  * cannot reset the streak and re-announce — the process is restarted by every
  * upgrade, which is exactly when a server is most likely to be unreachable.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-health-threshold-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { events, healthChecks } from "@tinkerbell/db";
+import { HealthToken } from "@tinkerbell/domain.health";
 
-const { db, events, healthChecks } = await import("@tinkerbell/db");
-const { setConfig } = await import("@tinkerbell/core");
-const { reportHealth } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { reportHealth } = c.resolve(HealthToken);
 
 function emitted(type: string): number {
   return db

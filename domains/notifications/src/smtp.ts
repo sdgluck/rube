@@ -18,8 +18,9 @@
  * layout beats a customisation surface nobody asked for.
  */
 import { createTransport, type Transporter } from "nodemailer";
-import { getConfig } from "@tinkerbell/core";
+
 import { flattenMessage, type RichMessage } from "./types.ts";
+import { type ConfigStore } from "@tinkerbell/core";
 
 const TIMEOUT_MS = 20_000;
 
@@ -39,56 +40,6 @@ export class SmtpNotConfiguredError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SmtpNotConfiguredError";
-  }
-}
-
-export function smtpConfigured(): boolean {
-  const cfg = getConfig("global_smtp");
-  return !!(cfg?.host && cfg.port && cfg.from);
-}
-
-function transport(): { transporter: Transporter; from: string } {
-  const cfg = getConfig("global_smtp");
-  if (!cfg?.host || !cfg.port || !cfg.from) {
-    throw new SmtpNotConfiguredError("SMTP host, port and from address are required");
-  }
-
-  return {
-    transporter: createTransport({
-      host: cfg.host,
-      port: cfg.port,
-      secure: cfg.secure,
-      // Only pass auth when there is a user: an open relay on the LAN (a very
-      // common home-server setup) rejects an empty AUTH rather than ignoring it.
-      ...(cfg.user ? { auth: { user: cfg.user, pass: cfg.password ?? "" } } : {}),
-      connectionTimeout: TIMEOUT_MS,
-      greetingTimeout: TIMEOUT_MS,
-      socketTimeout: TIMEOUT_MS,
-    }),
-    from: cfg.from,
-  };
-}
-
-export async function sendSmtp(message: RichMessage, target: SmtpTarget = {}): Promise<void> {
-  const to = target.to || getConfig("global_smtp")?.to;
-  if (!to) {
-    throw new SmtpNotConfiguredError("No recipient address — set one in Settings, or address the message explicitly");
-  }
-
-  const { transporter, from } = transport();
-  try {
-    await transporter.sendMail({
-      from,
-      to,
-      subject: message.title,
-      text: flattenMessage(message),
-      html: renderEmailHtml(message),
-    });
-  } finally {
-    // Each send opens its own connection. A digest run sends to a handful of
-    // people once a week, so pooling would keep a socket open for days to save
-    // nothing.
-    transporter.close();
   }
 }
 
@@ -173,4 +124,63 @@ export function renderEmailHtml(message: RichMessage): string {
     </td>
   </tr>
 </table>`;
+}
+
+export interface SmtpDeps {
+  config: ConfigStore;
+}
+export function createSmtp(deps: SmtpDeps) {
+  const { getConfig } = deps.config;
+
+  function smtpConfigured(): boolean {
+    const cfg = getConfig("global_smtp");
+    return !!(cfg?.host && cfg.port && cfg.from);
+  }
+
+  function transport(): { transporter: Transporter; from: string } {
+    const cfg = getConfig("global_smtp");
+    if (!cfg?.host || !cfg.port || !cfg.from) {
+      throw new SmtpNotConfiguredError("SMTP host, port and from address are required");
+    }
+
+    return {
+      transporter: createTransport({
+        host: cfg.host,
+        port: cfg.port,
+        secure: cfg.secure,
+        // Only pass auth when there is a user: an open relay on the LAN (a very
+        // common home-server setup) rejects an empty AUTH rather than ignoring it.
+        ...(cfg.user ? { auth: { user: cfg.user, pass: cfg.password ?? "" } } : {}),
+        connectionTimeout: TIMEOUT_MS,
+        greetingTimeout: TIMEOUT_MS,
+        socketTimeout: TIMEOUT_MS,
+      }),
+      from: cfg.from,
+    };
+  }
+
+  async function sendSmtp(message: RichMessage, target: SmtpTarget = {}): Promise<void> {
+    const to = target.to || getConfig("global_smtp")?.to;
+    if (!to) {
+      throw new SmtpNotConfiguredError("No recipient address — set one in Settings, or address the message explicitly");
+    }
+
+    const { transporter, from } = transport();
+    try {
+      await transporter.sendMail({
+        from,
+        to,
+        subject: message.title,
+        text: flattenMessage(message),
+        html: renderEmailHtml(message),
+      });
+    } finally {
+      // Each send opens its own connection. A digest run sends to a handful of
+      // people once a week, so pooling would keep a socket open for days to save
+      // nothing.
+      transporter.close();
+    }
+  }
+
+  return { smtpConfigured, sendSmtp };
 }

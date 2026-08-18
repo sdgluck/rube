@@ -14,7 +14,7 @@
  * and no round trip to the server.
  */
 import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
-import { db, mediaItems } from "@tinkerbell/db";
+import { mediaItems, type Db } from "@tinkerbell/db";
 
 export interface DuplicateItem {
   ratingKey: string;
@@ -138,103 +138,112 @@ function toItem(row: typeof mediaItems.$inferSelect): DuplicateItem {
   };
 }
 
-/** Items Plex holds more than one file for. */
-function versionGroups(): DuplicateGroup[] {
-  const rows = db
-    .select()
-    .from(mediaItems)
-    .where(gt(mediaItems.versionCount, 1))
-    .orderBy(desc(mediaItems.fileSize))
-    .all();
-
-  return rows.map((row) => {
-    const item = toItem(row);
-    return {
-      kind: "versions" as const,
-      title: row.title,
-      year: row.year,
-      sectionTitle: row.sectionTitle,
-      items: [item],
-      bytes: row.fileSize ?? 0,
-      // See the field comment: the index holds one summed size per item, not
-      // one per version, so there is no honest per-version figure to give.
-      reclaimable: 0,
-      keeperRatingKey: null,
-      keeperReason: `Plex holds ${row.versionCount} versions of this item. Which to keep is decided in Plex, where the individual files are listed.`,
-    };
-  });
-}
-
-/**
- * Separate items that are the same thing.
- *
- * Grouped on lower-cased title plus year within one library. Year matters:
- * remakes share a title and are emphatically not duplicates of each other,
- * and grouping them would be the kind of false positive that gets a whole
- * page distrusted. Items with no year are grouped only with each other.
- */
-function entryGroups(): DuplicateGroup[] {
-  const dupeKeys = db
-    .select({
-      sectionId: mediaItems.sectionId,
-      title: sql<string>`lower(${mediaItems.title})`.as("lower_title"),
-      year: mediaItems.year,
-      n: sql<number>`count(*)`.as("n"),
-    })
-    .from(mediaItems)
-    .where(and(isNotNull(mediaItems.title), eq(mediaItems.type, "movie")))
-    .groupBy(mediaItems.sectionId, sql`lower(${mediaItems.title})`, mediaItems.year)
-    .having(sql`count(*) > 1`)
-    .all();
-
-  const groups: DuplicateGroup[] = [];
-  for (const key of dupeKeys) {
-    const rows = db
-      .select()
-      .from(mediaItems)
-      .where(
-        and(
-          eq(mediaItems.sectionId, key.sectionId),
-          sql`lower(${mediaItems.title}) = ${key.title}`,
-          key.year == null ? sql`${mediaItems.year} is null` : eq(mediaItems.year, key.year),
-        ),
-      )
-      .all();
-    if (rows.length < 2) continue;
-
-    const items = rows.map(toItem);
-    const keeper = recommendKeeper(items);
-    const bytes = items.reduce((sum, i) => sum + (i.fileSize ?? 0), 0);
-    const keeperSize = items.find((i) => i.ratingKey === keeper.ratingKey)?.fileSize ?? 0;
-
-    groups.push({
-      kind: "entries",
-      title: rows[0].title,
-      year: key.year,
-      sectionTitle: rows[0].sectionTitle,
-      items,
-      bytes,
-      // Only claimed when there is a keeper to measure against, and only over
-      // the copies whose size is actually known.
-      reclaimable: keeper.ratingKey ? Math.max(0, bytes - keeperSize) : 0,
-      keeperRatingKey: keeper.ratingKey,
-      keeperReason: keeper.reason,
-    });
-  }
-
-  return groups.sort((a, b) => b.reclaimable - a.reclaimable);
-}
-
 export interface DuplicateReport {
   groups: DuplicateGroup[];
   /** Total that could come back if every recommendation were followed. */
   reclaimable: number;
 }
 
-export function findDuplicates(): DuplicateReport {
-  const groups = [...entryGroups(), ...versionGroups()];
-  return {
-    groups,
-    reclaimable: groups.reduce((sum, g) => sum + g.reclaimable, 0),
-  };
+export interface DuplicatesDeps {
+  db: Db;
+}
+export function createDuplicates(deps: DuplicatesDeps) {
+  const { db } = deps;
+
+  /** Items Plex holds more than one file for. */
+  function versionGroups(): DuplicateGroup[] {
+    const rows = db
+      .select()
+      .from(mediaItems)
+      .where(gt(mediaItems.versionCount, 1))
+      .orderBy(desc(mediaItems.fileSize))
+      .all();
+
+    return rows.map((row) => {
+      const item = toItem(row);
+      return {
+        kind: "versions" as const,
+        title: row.title,
+        year: row.year,
+        sectionTitle: row.sectionTitle,
+        items: [item],
+        bytes: row.fileSize ?? 0,
+        // See the field comment: the index holds one summed size per item, not
+        // one per version, so there is no honest per-version figure to give.
+        reclaimable: 0,
+        keeperRatingKey: null,
+        keeperReason: `Plex holds ${row.versionCount} versions of this item. Which to keep is decided in Plex, where the individual files are listed.`,
+      };
+    });
+  }
+
+  /**
+   * Separate items that are the same thing.
+   *
+   * Grouped on lower-cased title plus year within one library. Year matters:
+   * remakes share a title and are emphatically not duplicates of each other,
+   * and grouping them would be the kind of false positive that gets a whole
+   * page distrusted. Items with no year are grouped only with each other.
+   */
+  function entryGroups(): DuplicateGroup[] {
+    const dupeKeys = db
+      .select({
+        sectionId: mediaItems.sectionId,
+        title: sql<string>`lower(${mediaItems.title})`.as("lower_title"),
+        year: mediaItems.year,
+        n: sql<number>`count(*)`.as("n"),
+      })
+      .from(mediaItems)
+      .where(and(isNotNull(mediaItems.title), eq(mediaItems.type, "movie")))
+      .groupBy(mediaItems.sectionId, sql`lower(${mediaItems.title})`, mediaItems.year)
+      .having(sql`count(*) > 1`)
+      .all();
+
+    const groups: DuplicateGroup[] = [];
+    for (const key of dupeKeys) {
+      const rows = db
+        .select()
+        .from(mediaItems)
+        .where(
+          and(
+            eq(mediaItems.sectionId, key.sectionId),
+            sql`lower(${mediaItems.title}) = ${key.title}`,
+            key.year == null ? sql`${mediaItems.year} is null` : eq(mediaItems.year, key.year),
+          ),
+        )
+        .all();
+      if (rows.length < 2) continue;
+
+      const items = rows.map(toItem);
+      const keeper = recommendKeeper(items);
+      const bytes = items.reduce((sum, i) => sum + (i.fileSize ?? 0), 0);
+      const keeperSize = items.find((i) => i.ratingKey === keeper.ratingKey)?.fileSize ?? 0;
+
+      groups.push({
+        kind: "entries",
+        title: rows[0].title,
+        year: key.year,
+        sectionTitle: rows[0].sectionTitle,
+        items,
+        bytes,
+        // Only claimed when there is a keeper to measure against, and only over
+        // the copies whose size is actually known.
+        reclaimable: keeper.ratingKey ? Math.max(0, bytes - keeperSize) : 0,
+        keeperRatingKey: keeper.ratingKey,
+        keeperReason: keeper.reason,
+      });
+    }
+
+    return groups.sort((a, b) => b.reclaimable - a.reclaimable);
+  }
+
+  function findDuplicates(): DuplicateReport {
+    const groups = [...entryGroups(), ...versionGroups()];
+    return {
+      groups,
+      reclaimable: groups.reduce((sum, g) => sum + g.reclaimable, 0),
+    };
+  }
+
+  return { findDuplicates };
 }

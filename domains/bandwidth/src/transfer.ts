@@ -2,10 +2,10 @@
  * The transfers themselves, and the budget arithmetic that decides when to
  * stop making them.
  *
- * Kept apart from `index.ts` so it can be tested without pulling in the
- * database: `@tinkerbell/db` opens its SQLite connection at import time, and a
- * unit test of "does a phase use its byte budget" has no business creating a
- * database file to answer that.
+ * Kept apart from `index.ts` because it is pure: the byte arithmetic answers
+ * "does a phase use its budget" without a database, a Plex, or a container.
+ * (It was split for a blunter reason — importing the db package used to open a
+ * SQLite file — but the separation is worth keeping on its own merits.)
  */
 import { MIN_CHUNK_BYTES, nextChunkBytes } from "./math.ts";
 

@@ -12,9 +12,11 @@
   ],
   "scripts": {},
   "dependencies": {
+    "@tinkerbell/container": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {

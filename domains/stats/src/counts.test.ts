@@ -11,14 +11,19 @@
  * so every unidentified play collapsed onto one "viewer" and an item nobody was
  * named for could never rank above 1.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-stats-counts-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { mediaItems, playbackSessions } from "@tinkerbell/db";
+import { StatsToken } from "@tinkerbell/domain.stats";
 
-const { db, mediaItems, playbackSessions } = await import("@tinkerbell/db");
-const { getLibraryOverview, getMostWatched, getActivitySummary } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { getLibraryOverview, getMostWatched, getActivitySummary } = c.resolve(StatsToken);
 
 const NOW = Date.parse("2026-08-04T12:00:00Z");
 

@@ -6,14 +6,19 @@
  * throws, and both look entirely plausible in a 44px graph — so the boundaries
  * are asserted rather than eyeballed.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { playbackSessions } from "@tinkerbell/db";
+import { StatsToken } from "@tinkerbell/domain.stats";
 
-const { db, playbackSessions } = await import("@tinkerbell/db");
-const { getActivitySeries } = await import("./index.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { getActivitySeries } = c.resolve(StatsToken);
 
 const DAY = 86_400_000;
 /** A fixed "now": mid-afternoon, so today's bucket is genuinely partial. */

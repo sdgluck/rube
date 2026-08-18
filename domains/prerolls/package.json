@@ -14,6 +14,7 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@tinkerbell/container": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/http": "workspace:*",
