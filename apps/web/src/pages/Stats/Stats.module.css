@@ -362,6 +362,127 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ─── Bar chart ─────────────────────────────────────────────────────────── */
+
+.barChart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barChartBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 86px;
+}
+
+/* Each bar gets an equal share of the width and grows from the bottom. The slot
+   is the hover target rather than the bar, so a zero bucket is still hoverable
+   — "0 plays" is the answer someone checking a quiet hour is after. */
+.barChartSlot {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.barChartBar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: var(--accent-fill);
+  opacity: 0.55;
+  transition: height 0.3s ease;
+}
+
+.barChartSlot:hover .barChartBar {
+  opacity: 0.85;
+}
+
+/* The bucket the reader is standing in — today, this hour. Full strength, so
+   the comparison the chart is for ("is today unusual?") needs no counting. */
+.barChartBar[data-highlight="true"] {
+  opacity: 1;
+}
+
+/* A floor rather than a bar: the slot is empty, but the row of them should read
+   as a baseline instead of gaps in a fence. */
+.barChartBar[data-zero="true"] {
+  height: 2px;
+  background: var(--line-soft);
+  opacity: 1;
+}
+
+.barChartAxis {
+  display: flex;
+  gap: 2px;
+}
+
+.barChartTick {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font: var(--t-data);
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ─── Panel sub-blocks ──────────────────────────────────────────────────── */
+
+/* Two figures side by side under a chart or a bar — "38 plays / 4h 12m". */
+.factRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 10px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.factLabel {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.factValue {
+  font: var(--t-data);
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The user cell in Top Users: a name that can be long beside a count that can't
+   be allowed to wrap under it. */
+.userNameCell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0;
+  width: 100%;
+}
+
+.watchedCol,
+.watchedCell {
+  width: 78px;
+  text-align: right;
+  font: var(--t-data);
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ─── States ────────────────────────────────────────────────────────────── */
 
 .muted {
@@ -374,6 +495,19 @@
   font-size: 11.5px;
   color: var(--status-error-fg);
   padding: 8px 0;
+}
+
+/* A dashboard with every panel switched off is otherwise a summary bar above
+   nothing, which reads as a page that failed to load rather than as a choice
+   the reader made and can undo. */
+.emptyPanels {
+  padding: 28px 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  background: var(--surface);
+  border-radius: var(--r-panel);
+  box-shadow: var(--e-card);
 }
 
 .hideOnMobile {

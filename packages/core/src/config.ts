@@ -459,6 +459,19 @@ export const configSchema = z.object({
   collections_columns: z.array(z.object({ id: z.string(), visible: z.boolean() })),
   stats_summary_tiles: z.array(z.string()).max(10),
   stats_panel_order: z.array(z.string()).max(20),
+  /**
+   * Stats panels the user has switched off.
+   *
+   * Stored as the hidden set rather than the visible one so that a panel added
+   * in a later release is shown by default — the same reasoning as
+   * `usePanelOrder`'s handling of unknown ids, and the opposite of
+   * `media_columns`, where an explicit per-column record is the point. A saved
+   * "visible" list would freeze every install's dashboard at the panels that
+   * existed the day they last opened the picker.
+   */
+  stats_panels_hidden: z.array(z.string()).max(30),
+  /** Stats panels rolled up to their header. Collapsed panels are not rendered at all, so their queries don't run. */
+  stats_panels_collapsed: z.array(z.string()).max(30),
   /** Visible columns of the Active Streams panel, in display order. */
   stats_streams_columns: z.array(z.string()).max(20),
   jobs_summary_tiles: z.array(z.string()).max(6),

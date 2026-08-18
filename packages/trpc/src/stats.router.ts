@@ -10,7 +10,10 @@ import {
 import {
   allUserTotals,
   HISTORY_SORTS,
+  playbackBreakdown,
+  playsByHour,
   serverHistory,
+  topUsers,
   userTotals,
   watchedBy,
   watchHistoryCoverage,
@@ -53,6 +56,28 @@ export const statsRouter = t.router({
     .input(z.object({ days: z.number().int().min(2).max(90) }).optional())
     .query(({ input }) => getActivitySeries(input?.days ?? 14)),
   ops: procedure.query(() => getOpsSummary()),
+
+  /** Who watched the most in a period — the Top Users panel. */
+  topUsers: procedure
+    .input(z.object({ periodDays: periodSchema, limit: z.number().int().min(1).max(50).default(10) }).optional())
+    .query(({ input }) =>
+      topUsers({ since: sinceFor(input?.periodDays ?? 7) || undefined, limit: input?.limit ?? 10 }),
+    ),
+
+  /**
+   * Apps, devices, transcode decisions and local/remote splits for a period.
+   *
+   * One endpoint for what the Devices & Apps and Stream Quality panels both
+   * ask, so having both on screen costs one query rather than two.
+   */
+  playbackBreakdown: procedure
+    .input(z.object({ periodDays: periodSchema }).optional())
+    .query(({ input }) => playbackBreakdown({ since: sinceFor(input?.periodDays ?? 7) || undefined })),
+
+  /** Plays per hour of the local day — the Playback Activity panel. */
+  playsByHour: procedure
+    .input(z.object({ periodDays: periodSchema }).optional())
+    .query(({ input }) => playsByHour({ since: sinceFor(input?.periodDays ?? 7) || undefined })),
 
   /**
    * How much playback history there is to filter on.

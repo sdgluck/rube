@@ -13,7 +13,8 @@
  */
 import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { getConfig, DAY_MS } from "@tinkerbell/core";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+import { configuredTimezone, getConfig, startOfLocalDay, DAY_MS, HOUR_MS } from "@tinkerbell/core";
 import { db, playbackSessions, plexUsers, watchState } from "@tinkerbell/db";
 import type { PlexSession } from "@tinkerbell/plex";
 import { diffSnapshot, staleCloses, type OpenSession, type SessionClose } from "./diff.ts";
@@ -554,6 +555,148 @@ export function userTotals(userId: number, since?: number): { plays: number; wat
     .where(and(...filters))
     .get();
   return { plays: row?.plays ?? 0, watchedMs: row?.watchedMs ?? 0 };
+}
+
+// ─── Aggregates over the session log (the Stats dashboard panels) ────────────
+
+export interface TopUserRow {
+  userId: number;
+  name: string;
+  plays: number;
+  /**
+   * Lower bound, and knowingly so: rows reconstructed by `playback-backfill`
+   * carry no watched duration at all (see `source` on the table), so a server
+   * whose history predates the poller shows plays against a small or zero time.
+   */
+  watchedMs: number;
+  lastPlayedAt: number | null;
+}
+
+/**
+ * Who watched the most in a period.
+ *
+ * Ranked by plays rather than time: `watchedMs` is missing from backfilled
+ * rows, so a time-ranked list would silently put whoever happens to have been
+ * observed live at the top. The time still comes back — beside the count it
+ * says the thing the count can't, which is whether those plays were a film or
+ * four minutes of a menu screen.
+ */
+export function topUsers(opts: { since?: number; limit?: number } = {}): TopUserRow[] {
+  const rows = db
+    .select({
+      userId: playbackSessions.userId,
+      plays: sql<number>`count(*)`,
+      watchedMs: sql<number>`coalesce(sum(${playbackSessions.watchedMs}), 0)`,
+      lastPlayedAt: sql<number | null>`max(${playbackSessions.startedAt})`,
+      // Wrapped in `max()` rather than selected bare: they come from the joined
+      // row, not the grouping key, and bare columns under GROUP BY are a SQLite
+      // extension we don't need to lean on.
+      name: sql<string | null>`max(${plexUsers.name})`,
+      username: sql<string | null>`max(${plexUsers.username})`,
+      // The name Plex reported at play time, which is all a user removed from
+      // the server since leaves behind.
+      sessionName: sql<string | null>`max(${playbackSessions.username})`,
+    })
+    .from(playbackSessions)
+    .leftJoin(plexUsers, eq(plexUsers.userId, playbackSessions.userId))
+    .where(opts.since == null ? undefined : gte(playbackSessions.startedAt, opts.since))
+    .groupBy(playbackSessions.userId)
+    .orderBy(desc(sql`count(*)`))
+    .limit(opts.limit ?? 10)
+    .all();
+
+  return rows.map((row) => ({
+    userId: row.userId,
+    // 0 is the unknown-user sentinel — see the note in `topPlayed`. Naming it
+    // is better than rendering "User 0", which reads as an account.
+    name: row.userId === 0 ? "Unknown" : row.name || row.username || row.sessionName || `User ${row.userId}`,
+    plays: row.plays,
+    watchedMs: row.watchedMs,
+    lastPlayedAt: row.lastPlayedAt,
+  }));
+}
+
+export interface PlaybackBreakdown {
+  total: number;
+  /** Apps: "Plex for Apple TV", "Plex Web". */
+  platforms: { value: string; count: number }[];
+  /** Devices: "Living Room", "Sam's iPhone". */
+  players: { value: string; count: number }[];
+  /** `directplay` | `copy` | `transcode`, plus `""` for rows that never said. */
+  decisions: { value: string; count: number }[];
+  /** `local` | `remote`. */
+  locations: { value: string; count: number }[];
+}
+
+/**
+ * How playback was actually delivered in a period, four ways.
+ *
+ * One function rather than four endpoints because the panels that read it —
+ * Devices & Apps, Stream Quality — ask about the same window at the same time,
+ * so a single cache entry serves both.
+ *
+ * Empty strings are kept rather than filtered: they are backfilled rows, which
+ * carry no player, platform or decision, and dropping them would quietly shrink
+ * the denominator until a transcode-happy week looked like a direct-play one.
+ * The panels label them "Unknown" and the count stays honest.
+ */
+export function playbackBreakdown(opts: { since?: number } = {}): PlaybackBreakdown {
+  const where = opts.since == null ? undefined : gte(playbackSessions.startedAt, opts.since);
+  const countOf = sql<number>`count(*)`;
+
+  const groupBy = (column: SQLiteColumn) =>
+    db
+      .select({ value: column, count: countOf })
+      .from(playbackSessions)
+      .where(where)
+      .groupBy(column)
+      .orderBy(desc(countOf))
+      .all()
+      .map((row) => ({ value: String(row.value ?? ""), count: row.count }));
+
+  const total = db.select({ count: countOf }).from(playbackSessions).where(where).get()?.count ?? 0;
+
+  return {
+    total,
+    platforms: groupBy(playbackSessions.platform),
+    players: groupBy(playbackSessions.player),
+    decisions: groupBy(playbackSessions.decision),
+    locations: groupBy(playbackSessions.local).map((row) => ({
+      value: row.value === "1" ? "local" : "remote",
+      count: row.count,
+    })),
+  };
+}
+
+/**
+ * Plays per hour of the day, midnight first, in the configured timezone.
+ *
+ * Bucketed by arithmetic from local midnight rather than SQLite's `strftime`,
+ * which only knows UTC and would put a west-coast server's prime time in the
+ * small hours. The same fixed-offset trade-off as `getActivitySeries`: a DST
+ * change inside the window moves one hour's worth of plays into its neighbour,
+ * which is invisible at this resolution and not worth a per-row conversion.
+ */
+export function playsByHour(opts: { since?: number; now?: number } = {}): number[] {
+  const midnight = startOfLocalDay(opts.now ?? Date.now(), configuredTimezone());
+  // `((x % d) + d) % d` — SQLite's `%` truncates toward zero, so a play before
+  // today's midnight (which every one of them is, bar today's) yields a
+  // negative remainder that would index off the front of the array.
+  const bucket = sql<number>`
+    cast(((((${playbackSessions.startedAt} - ${midnight}) % ${DAY_MS}) + ${DAY_MS}) % ${DAY_MS}) / ${HOUR_MS} as integer)
+  `;
+  const rows = db
+    .select({ bucket, plays: sql<number>`count(*)` })
+    .from(playbackSessions)
+    .where(opts.since == null ? undefined : gte(playbackSessions.startedAt, opts.since))
+    .groupBy(sql`1`)
+    .all();
+
+  const hours: number[] = Array.from({ length: 24 }, () => 0);
+  for (const row of rows) {
+    if (row.bucket >= 0 && row.bucket < 24) hours[row.bucket] = row.plays;
+  }
+  return hours;
 }
 
 /**

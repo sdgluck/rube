@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- Five new Stats panels: **Top Users** (who watches most, and for how long), **Playback Activity** (plays by day, or by hour of a typical day, with the busiest and quietest stretches called out), **Stream Quality** (transcode vs. direct play, local vs. remote, over a period rather than this instant), **Devices & Apps** (which apps and devices playback actually comes from), and **Bandwidth** (24 hours of streaming demand against your measured upload capacity).
+- Stats panels can be switched on and off individually, from a new panels button beside the tile picker. Panels added in a later release are shown by default rather than staying hidden behind a saved layout.
+- Stats panels can be collapsed to their title by clicking it. A collapsed panel stops making requests entirely, so rolling up Active Streams also stops it polling Plex every five seconds.
+
 ## [0.19.0] - 2026-08-16
 
 ### Added

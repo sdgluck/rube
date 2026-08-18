@@ -4,15 +4,21 @@ import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
 import SetupCard from "./SetupCard";
+import styles from "./Stats.module.css";
 import {
+  CollapsedPanel,
   DashboardGrid,
   DashboardLayout,
+  PanelCollapseProvider,
+  PanelPicker,
   SummaryBar,
   SummaryTile,
   TilePicker,
   resolveTiles,
   usePanelOrder,
+  usePanelToggle,
   type DashboardPanelProps,
+  type PanelDef,
   type TileDef,
 } from "#components/dashboard";
 import { trpc } from "#/trpc";
@@ -27,25 +33,49 @@ import {
 } from "#/format";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
 import { isTranscoding, streamKind } from "#lib/streamDecision";
+import { BandwidthPanel } from "./BandwidthPanel";
+import { DevicesPanel } from "./DevicesPanel";
 import { HistoryPanel } from "./HistoryPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
+import { PlaybackActivityPanel } from "./PlaybackActivityPanel";
 import { RecentlyAddedPanel } from "./RecentlyAddedPanel";
+import { StreamQualityPanel } from "./StreamQualityPanel";
 import { StreamsPanel } from "./StreamsPanel";
 import { StoragePanel } from "./StoragePanel";
 import { SystemPanel } from "./SystemPanel";
+import { TopUsersPanel } from "./TopUsersPanel";
 
-// ─── Panel order ────────────────────────────────────────────────────────────
+// ─── Panels ─────────────────────────────────────────────────────────────────
 
-const PANEL_IDS = [
-  "streams",
-  "system",
-  "recentlyAdded",
-  "mostWatched",
-  "history",
-  "libraryBreakdown",
-  "storage",
-] as const;
-type PanelId = (typeof PANEL_IDS)[number];
+/**
+ * Every panel the page can show, in the order a fresh install sees them.
+ *
+ * The order here is the *default*; `usePanelOrder` owns what a given install
+ * actually renders. New panels are appended rather than slotted in beside their
+ * relatives, so that an install with a saved order gets them at the end instead
+ * of having its layout quietly rearranged by an upgrade.
+ *
+ * `label` is the panel's own title, and has to stay in step with the string the
+ * panel passes to `PanelShell` — the picker and the header naming the same
+ * thing differently is worse than either name being wrong.
+ */
+const PANELS = [
+  { id: "streams", label: "Active Streams", hint: "What's playing right now" },
+  { id: "system", label: "System Status", hint: "Service health, running jobs, recent events" },
+  { id: "recentlyAdded", label: "Recently Added", hint: "The latest arrivals in your libraries" },
+  { id: "mostWatched", label: "Most Watched", hint: "Top items by plays or by distinct viewers" },
+  { id: "history", label: "Playback History", hint: "Every recorded play, filterable" },
+  { id: "libraryBreakdown", label: "Library Breakdown", hint: "Resolution and codec mix" },
+  { id: "storage", label: "Storage", hint: "Disk used per library" },
+  { id: "topUsers", label: "Top Users", hint: "Who watches most, and for how long" },
+  { id: "playbackActivity", label: "Playback Activity", hint: "Plays by day, and the shape of a typical day" },
+  { id: "streamQuality", label: "Stream Quality", hint: "Transcode vs. direct play, local vs. remote" },
+  { id: "devices", label: "Devices & Apps", hint: "Which apps and devices playback comes from" },
+  { id: "bandwidth", label: "Bandwidth", hint: "Streaming demand over 24 hours against capacity" },
+] as const satisfies readonly PanelDef[];
+
+const PANEL_IDS = PANELS.map((p) => p.id);
+type PanelId = (typeof PANELS)[number]["id"];
 
 const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>> = {
   streams: StreamsPanel,
@@ -55,7 +85,17 @@ const PANEL_COMPONENTS: Record<PanelId, React.ComponentType<DashboardPanelProps>
   history: HistoryPanel,
   libraryBreakdown: LibraryBreakdownPanel,
   storage: StoragePanel,
+  topUsers: TopUsersPanel,
+  playbackActivity: PlaybackActivityPanel,
+  streamQuality: StreamQualityPanel,
+  devices: DevicesPanel,
+  bandwidth: BandwidthPanel,
 };
+
+const PANEL_LABELS: Record<PanelId, string> = Object.fromEntries(PANELS.map((p) => [p.id, p.label])) as Record<
+  PanelId,
+  string
+>;
 
 // ─── Summary tile config ────────────────────────────────────────────────────
 
@@ -386,6 +426,19 @@ export default function Stats() {
     onSave: (next) => saveConfigMutation.mutate({ stats_panel_order: next }),
   });
 
+  const hidden = usePanelToggle<PanelId>({
+    ids: PANEL_IDS,
+    saved: configQuery.data?.stats_panels_hidden,
+    onSave: (next) => saveConfigMutation.mutate({ stats_panels_hidden: next }),
+  });
+  const collapsed = usePanelToggle<PanelId>({
+    ids: PANEL_IDS,
+    saved: configQuery.data?.stats_panels_collapsed,
+    onSave: (next) => saveConfigMutation.mutate({ stats_panels_collapsed: next }),
+  });
+
+  const visible = order.filter((id) => !hidden.has(id));
+
   // Individual panels report their own failures. When every core stat query is
   // down the server itself is unreachable, and a page of empty panels reads as
   // "your library is empty" — so say what actually happened instead.
@@ -407,12 +460,20 @@ export default function Stats() {
           ) : undefined
         }
         actions={
-          <TilePicker
-            registry={TILE_REGISTRY}
-            selected={selectedTiles}
-            max={MAX_TILES}
-            onSave={(next) => saveConfigMutation.mutate({ stats_summary_tiles: next.slice(0, MAX_TILES) })}
-          />
+          <>
+            <TilePicker
+              registry={TILE_REGISTRY}
+              selected={selectedTiles}
+              max={MAX_TILES}
+              onSave={(next) => saveConfigMutation.mutate({ stats_summary_tiles: next.slice(0, MAX_TILES) })}
+            />
+            <PanelPicker
+              registry={PANELS}
+              hidden={(id) => hidden.has(id as PanelId)}
+              onToggle={(id) => hidden.toggle(id as PanelId)}
+              onShowAll={() => hidden.replace([])}
+            />
+          </>
         }
       >
         <DashboardLayout>
@@ -425,11 +486,40 @@ export default function Stats() {
 
           {/* ─── Two-column masonry ───────────────────────────────────── */}
           <DashboardGrid>
-            {order.map((id, i) => {
+            {visible.map((id) => {
+              // Indices are into the *full* order, not the visible subset: a
+              // drop has to land at a position in the list that gets saved, and
+              // a hidden panel between two visible ones is still occupying one.
+              const index = order.indexOf(id);
+              const dragHandle = dragHandleFor(index);
+              const dragProps = dragPropsFor(id, index);
+              const toggle = () => collapsed.toggle(id);
+
+              if (collapsed.has(id)) {
+                return (
+                  <CollapsedPanel
+                    key={id}
+                    title={PANEL_LABELS[id]}
+                    onToggle={toggle}
+                    dragHandle={dragHandle}
+                    dragProps={dragProps}
+                  />
+                );
+              }
+
               const Panel = PANEL_COMPONENTS[id];
-              return <Panel key={id} dragHandle={dragHandleFor(i)} dragProps={dragPropsFor(id, i)} />;
+              return (
+                <PanelCollapseProvider key={id} onToggle={toggle}>
+                  <Panel dragHandle={dragHandle} dragProps={dragProps} />
+                </PanelCollapseProvider>
+              );
             })}
           </DashboardGrid>
+          {visible.length === 0 && (
+            <div className={styles.emptyPanels}>
+              Every panel is switched off. Turn some back on with the panels button above.
+            </div>
+          )}
         </DashboardLayout>
       </PageShell>
     </PullToRefresh>
