@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./test-support": "./src/test-support.ts"
+    "./test-db": "./src/test-db.ts"
   },
   "files": [
     "src",
@@ -14,9 +14,11 @@
   ],
   "scripts": {
     "generate": "drizzle-kit generate",
-    "migrate": "node src/migrate.ts"
+    "migrate": "node src/migrate.ts",
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@tinkerbell/container": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1"
   },

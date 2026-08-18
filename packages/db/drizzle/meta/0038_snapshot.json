@@ -34,9 +34,7 @@
       "indexes": {
         "idx_bandwidth_samples_sampled": {
           "name": "idx_bandwidth_samples_sampled",
-          "columns": [
-            "sampled_at"
-          ],
+          "columns": ["sampled_at"],
           "isUnique": false
         }
       },
@@ -160,9 +158,7 @@
       "indexes": {
         "idx_bandwidth_tests_started": {
           "name": "idx_bandwidth_tests_started",
-          "columns": [
-            "started_at"
-          ],
+          "columns": ["started_at"],
           "isUnique": false
         }
       },
@@ -250,26 +246,17 @@
       "indexes": {
         "idx_cleanup_candidates_pk": {
           "name": "idx_cleanup_candidates_pk",
-          "columns": [
-            "rule_id",
-            "rating_key"
-          ],
+          "columns": ["rule_id", "rating_key"],
           "isUnique": true
         },
         "idx_cleanup_candidates_rule_streak": {
           "name": "idx_cleanup_candidates_rule_streak",
-          "columns": [
-            "rule_id",
-            "streak"
-          ],
+          "columns": ["rule_id", "streak"],
           "isUnique": false
         },
         "idx_cleanup_candidates_actioned": {
           "name": "idx_cleanup_candidates_actioned",
-          "columns": [
-            "actioned_at",
-            "streak"
-          ],
+          "columns": ["actioned_at", "streak"],
           "isUnique": false
         }
       },
@@ -278,12 +265,8 @@
           "name": "cleanup_candidates_rule_id_rules_id_fk",
           "tableFrom": "cleanup_candidates",
           "tableTo": "rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -381,10 +364,7 @@
       "indexes": {
         "idx_collection_artwork_pk": {
           "name": "idx_collection_artwork_pk",
-          "columns": [
-            "rule_id",
-            "collection_name"
-          ],
+          "columns": ["rule_id", "collection_name"],
           "isUnique": true
         }
       },
@@ -393,12 +373,8 @@
           "name": "collection_artwork_rule_id_rules_id_fk",
           "tableFrom": "collection_artwork",
           "tableTo": "rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -428,17 +404,12 @@
       "indexes": {
         "idx_collection_items_pk": {
           "name": "idx_collection_items_pk",
-          "columns": [
-            "collection_rating_key",
-            "item_rating_key"
-          ],
+          "columns": ["collection_rating_key", "item_rating_key"],
           "isUnique": true
         },
         "idx_collection_items_item": {
           "name": "idx_collection_items_item",
-          "columns": [
-            "item_rating_key"
-          ],
+          "columns": ["item_rating_key"],
           "isUnique": false
         }
       },
@@ -544,9 +515,7 @@
       "indexes": {
         "idx_collections_section": {
           "name": "idx_collections_section",
-          "columns": [
-            "section_id"
-          ],
+          "columns": ["section_id"],
           "isUnique": false
         }
       },
@@ -665,9 +634,7 @@
       "indexes": {
         "idx_deleted_rules_deleted_at": {
           "name": "idx_deleted_rules_deleted_at",
-          "columns": [
-            "deleted_at"
-          ],
+          "columns": ["deleted_at"],
           "isUnique": false
         }
       },
@@ -749,18 +716,12 @@
       "indexes": {
         "idx_digest_deliveries_unique": {
           "name": "idx_digest_deliveries_unique",
-          "columns": [
-            "period_start",
-            "user_id",
-            "channel"
-          ],
+          "columns": ["period_start", "user_id", "channel"],
           "isUnique": true
         },
         "idx_digest_deliveries_sent": {
           "name": "idx_digest_deliveries_sent",
-          "columns": [
-            "sent_at"
-          ],
+          "columns": ["sent_at"],
           "isUnique": false
         }
       },
@@ -811,9 +772,7 @@
       "indexes": {
         "idx_events_timestamp": {
           "name": "idx_events_timestamp",
-          "columns": [
-            "timestamp"
-          ],
+          "columns": ["timestamp"],
           "isUnique": false
         }
       },
@@ -864,10 +823,7 @@
       "indexes": {
         "idx_health_checks_service_timestamp": {
           "name": "idx_health_checks_service_timestamp",
-          "columns": [
-            "service",
-            "timestamp"
-          ],
+          "columns": ["service", "timestamp"],
           "isUnique": false
         }
       },
@@ -907,12 +863,8 @@
           "name": "job_checkpoints_job_id_jobs_id_fk",
           "tableFrom": "job_checkpoints",
           "tableTo": "jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -988,11 +940,7 @@
       "indexes": {
         "idx_job_runs_job_status_started": {
           "name": "idx_job_runs_job_status_started",
-          "columns": [
-            "job_id",
-            "status",
-            "started_at"
-          ],
+          "columns": ["job_id", "status", "started_at"],
           "isUnique": false
         }
       },
@@ -1001,12 +949,8 @@
           "name": "job_runs_job_id_jobs_id_fk",
           "tableFrom": "job_runs",
           "tableTo": "jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1203,59 +1147,42 @@
       "indexes": {
         "idx_media_items_section_type": {
           "name": "idx_media_items_section_type",
-          "columns": [
-            "section_id",
-            "type"
-          ],
+          "columns": ["section_id", "type"],
           "isUnique": false
         },
         "idx_media_items_type": {
           "name": "idx_media_items_type",
-          "columns": [
-            "type"
-          ],
+          "columns": ["type"],
           "isUnique": false
         },
         "idx_media_items_title": {
           "name": "idx_media_items_title",
-          "columns": [
-            "title"
-          ],
+          "columns": ["title"],
           "isUnique": false
         },
         "idx_media_items_video_resolution": {
           "name": "idx_media_items_video_resolution",
-          "columns": [
-            "video_resolution"
-          ],
+          "columns": ["video_resolution"],
           "isUnique": false
         },
         "idx_media_items_video_codec": {
           "name": "idx_media_items_video_codec",
-          "columns": [
-            "video_codec"
-          ],
+          "columns": ["video_codec"],
           "isUnique": false
         },
         "idx_media_items_audio_codec": {
           "name": "idx_media_items_audio_codec",
-          "columns": [
-            "audio_codec"
-          ],
+          "columns": ["audio_codec"],
           "isUnique": false
         },
         "idx_media_items_audio_channels": {
           "name": "idx_media_items_audio_channels",
-          "columns": [
-            "audio_channels"
-          ],
+          "columns": ["audio_channels"],
           "isUnique": false
         },
         "idx_media_items_container": {
           "name": "idx_media_items_container",
-          "columns": [
-            "container"
-          ],
+          "columns": ["container"],
           "isUnique": false
         }
       },
@@ -1373,23 +1300,17 @@
       "indexes": {
         "idx_metadata_originals_batch": {
           "name": "idx_metadata_originals_batch",
-          "columns": [
-            "batch_id"
-          ],
+          "columns": ["batch_id"],
           "isUnique": false
         },
         "idx_metadata_originals_item": {
           "name": "idx_metadata_originals_item",
-          "columns": [
-            "rating_key"
-          ],
+          "columns": ["rating_key"],
           "isUnique": false
         },
         "idx_metadata_originals_applied": {
           "name": "idx_metadata_originals_applied",
-          "columns": [
-            "applied_at"
-          ],
+          "columns": ["applied_at"],
           "isUnique": false
         }
       },
@@ -1507,18 +1428,12 @@
       "indexes": {
         "idx_overlay_configs_section": {
           "name": "idx_overlay_configs_section",
-          "columns": [
-            "section_id"
-          ],
+          "columns": ["section_id"],
           "isUnique": false
         },
         "idx_overlay_configs_section_position_order": {
           "name": "idx_overlay_configs_section_position_order",
-          "columns": [
-            "section_id",
-            "position",
-            "order"
-          ],
+          "columns": ["section_id", "position", "order"],
           "isUnique": true
         }
       },
@@ -1562,9 +1477,7 @@
       "indexes": {
         "idx_overlay_originals_section": {
           "name": "idx_overlay_originals_section",
-          "columns": [
-            "section_id"
-          ],
+          "columns": ["section_id"],
           "isUnique": false
         }
       },
@@ -1807,40 +1720,27 @@
       "indexes": {
         "idx_playback_user_started": {
           "name": "idx_playback_user_started",
-          "columns": [
-            "user_id",
-            "started_at"
-          ],
+          "columns": ["user_id", "started_at"],
           "isUnique": false
         },
         "idx_playback_rating_key": {
           "name": "idx_playback_rating_key",
-          "columns": [
-            "rating_key"
-          ],
+          "columns": ["rating_key"],
           "isUnique": false
         },
         "idx_playback_started": {
           "name": "idx_playback_started",
-          "columns": [
-            "started_at"
-          ],
+          "columns": ["started_at"],
           "isUnique": false
         },
         "idx_playback_open": {
           "name": "idx_playback_open",
-          "columns": [
-            "ended_at"
-          ],
+          "columns": ["ended_at"],
           "isUnique": false
         },
         "idx_playback_dedupe": {
           "name": "idx_playback_dedupe",
-          "columns": [
-            "user_id",
-            "rating_key",
-            "started_at"
-          ],
+          "columns": ["user_id", "rating_key", "started_at"],
           "isUnique": false
         }
       },
@@ -1998,9 +1898,7 @@
       "indexes": {
         "idx_plex_sessions_expires": {
           "name": "idx_plex_sessions_expires",
-          "columns": [
-            "expires_at"
-          ],
+          "columns": ["expires_at"],
           "isUnique": false
         }
       },
@@ -2229,9 +2127,7 @@
       "indexes": {
         "idx_plex_users_username": {
           "name": "idx_plex_users_username",
-          "columns": [
-            "username"
-          ],
+          "columns": ["username"],
           "isUnique": false
         }
       },
@@ -2409,17 +2305,12 @@
       "indexes": {
         "idx_prerolls_status": {
           "name": "idx_prerolls_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_prerolls_enabled_position": {
           "name": "idx_prerolls_enabled_position",
-          "columns": [
-            "enabled",
-            "position"
-          ],
+          "columns": ["enabled", "position"],
           "isUnique": false
         }
       },
@@ -2478,11 +2369,7 @@
       "indexes": {
         "idx_rule_members_unique": {
           "name": "idx_rule_members_unique",
-          "columns": [
-            "rule_id",
-            "section_key",
-            "collection_name"
-          ],
+          "columns": ["rule_id", "section_key", "collection_name"],
           "isUnique": true
         }
       },
@@ -2491,12 +2378,8 @@
           "name": "rule_collection_members_rule_id_rules_id_fk",
           "tableFrom": "rule_collection_members",
           "tableTo": "rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2555,11 +2438,7 @@
       "indexes": {
         "idx_rule_history_rule_section_run": {
           "name": "idx_rule_history_rule_section_run",
-          "columns": [
-            "rule_id",
-            "section_key",
-            "run_at"
-          ],
+          "columns": ["rule_id", "section_key", "run_at"],
           "isUnique": false
         }
       },
@@ -2568,12 +2447,8 @@
           "name": "rule_history_rule_id_rules_id_fk",
           "tableFrom": "rule_history",
           "tableTo": "rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2712,17 +2587,12 @@
       "indexes": {
         "idx_rule_run_changes_run": {
           "name": "idx_rule_run_changes_run",
-          "columns": [
-            "run_id"
-          ],
+          "columns": ["run_id"],
           "isUnique": false
         },
         "idx_rule_run_changes_rule_at": {
           "name": "idx_rule_run_changes_rule_at",
-          "columns": [
-            "rule_id",
-            "at"
-          ],
+          "columns": ["rule_id", "at"],
           "isUnique": false
         }
       },
@@ -2731,12 +2601,8 @@
           "name": "rule_run_changes_rule_id_rules_id_fk",
           "tableFrom": "rule_run_changes",
           "tableTo": "rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2861,25 +2727,17 @@
       "indexes": {
         "idx_rule_runs_rule_started": {
           "name": "idx_rule_runs_rule_started",
-          "columns": [
-            "rule_id",
-            "started_at"
-          ],
+          "columns": ["rule_id", "started_at"],
           "isUnique": false
         },
         "idx_rule_runs_status_started": {
           "name": "idx_rule_runs_status_started",
-          "columns": [
-            "status",
-            "started_at"
-          ],
+          "columns": ["status", "started_at"],
           "isUnique": false
         },
         "idx_rule_runs_job_run": {
           "name": "idx_rule_runs_job_run",
-          "columns": [
-            "job_run_id"
-          ],
+          "columns": ["job_run_id"],
           "isUnique": false
         }
       },
@@ -2888,12 +2746,8 @@
           "name": "rule_runs_rule_id_rules_id_fk",
           "tableFrom": "rule_runs",
           "tableTo": "rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3160,10 +3014,7 @@
       "indexes": {
         "idx_saved_views_page_name": {
           "name": "idx_saved_views_page_name",
-          "columns": [
-            "page",
-            "name"
-          ],
+          "columns": ["page", "name"],
           "isUnique": true
         }
       },
@@ -3384,9 +3235,7 @@
       "indexes": {
         "idx_tmdb_cache_fetched_at": {
           "name": "idx_tmdb_cache_fetched_at",
-          "columns": [
-            "fetched_at"
-          ],
+          "columns": ["fetched_at"],
           "isUnique": false
         }
       },
@@ -3502,25 +3351,17 @@
       "indexes": {
         "idx_watch_state_pk": {
           "name": "idx_watch_state_pk",
-          "columns": [
-            "rating_key",
-            "user_id"
-          ],
+          "columns": ["rating_key", "user_id"],
           "isUnique": true
         },
         "idx_watch_state_user_last": {
           "name": "idx_watch_state_user_last",
-          "columns": [
-            "user_id",
-            "last_played_at"
-          ],
+          "columns": ["user_id", "last_played_at"],
           "isUnique": false
         },
         "idx_watch_state_rating_key": {
           "name": "idx_watch_state_rating_key",
-          "columns": [
-            "rating_key"
-          ],
+          "columns": ["rating_key"],
           "isUnique": false
         }
       },
