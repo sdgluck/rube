@@ -1,0 +1,53 @@
+{
+  "name": "@tinkerbell/composition",
+  "version": "0.19.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./test-support": "./src/test-support.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@tinkerbell/container": "workspace:*",
+    "@tinkerbell/core": "workspace:*",
+    "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.bandwidth": "workspace:*",
+    "@tinkerbell/domain.changes": "workspace:*",
+    "@tinkerbell/domain.cleanup": "workspace:*",
+    "@tinkerbell/domain.collections": "workspace:*",
+    "@tinkerbell/domain.digest": "workspace:*",
+    "@tinkerbell/domain.events": "workspace:*",
+    "@tinkerbell/domain.health": "workspace:*",
+    "@tinkerbell/domain.media": "workspace:*",
+    "@tinkerbell/domain.metadata": "workspace:*",
+    "@tinkerbell/domain.migration": "workspace:*",
+    "@tinkerbell/domain.notifications": "workspace:*",
+    "@tinkerbell/domain.onboarding": "workspace:*",
+    "@tinkerbell/domain.overlays": "workspace:*",
+    "@tinkerbell/domain.playback": "workspace:*",
+    "@tinkerbell/domain.prerolls": "workspace:*",
+    "@tinkerbell/domain.preview": "workspace:*",
+    "@tinkerbell/domain.registry": "workspace:*",
+    "@tinkerbell/domain.rule-history": "workspace:*",
+    "@tinkerbell/domain.rule-runs": "workspace:*",
+    "@tinkerbell/domain.rules": "workspace:*",
+    "@tinkerbell/domain.search": "workspace:*",
+    "@tinkerbell/domain.sections": "workspace:*",
+    "@tinkerbell/domain.shuffle-hubs": "workspace:*",
+    "@tinkerbell/domain.stats": "workspace:*",
+    "@tinkerbell/domain.users": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
+    "@tinkerbell/posters": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^7.0.2"
+  }
+}
