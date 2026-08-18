@@ -95,6 +95,13 @@ export interface PlexJournal {
   summaryWrites: Array<{ ratingKey: string; summary: string }>;
   /** Every poster upload, with the byte count that arrived. */
   posterUploads: Array<{ ratingKey: string; bytes: number }>;
+  /** Members added to an existing collection, rather than created with one. */
+  collectionItemAdds: Array<{ ratingKey: string; itemKeys: string[] }>;
+  /** Members removed one at a time — Plex offers no bulk form. */
+  collectionItemRemoves: Array<{ ratingKey: string; itemKey: string }>;
+  /** Collections promoted to the homepage, and demoted from it. */
+  pinned: string[];
+  unpinned: string[];
   /** Paths that arrived at an endpoint this mock does not implement. */
   unhandled: string[];
 }
@@ -118,8 +125,14 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
     labelFilteredListings: [],
     summaryWrites: [],
     posterUploads: [],
+    collectionItemAdds: [],
+    collectionItemRemoves: [],
+    pinned: [],
+    unpinned: [],
     unhandled: [],
   };
+  /** Which collections are on the homepage, per section. */
+  const pinnedBySection = new Map<string, Set<string>>();
   let nextCollectionKey = 9000;
   let nextThumbVersion = 1;
 
@@ -335,6 +348,85 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
         return;
       }
       notFound();
+      return;
+    }
+
+    // ── Collection membership, edited in place ──────────────────────────────
+    // The endpoints reconciling depends on. `items` appends (the same PUT smart
+    // collections use for their filter URI, which is why the client guards on
+    // `smart` before calling it); `children/:key` removes exactly one.
+    const addItems = path.match(/^\/library\/collections\/([^/]+)\/items$/);
+    if (addItems && method === "PUT") {
+      const collection = collections.get(addItems[1]);
+      if (!collection) {
+        notFound();
+        return;
+      }
+      const uri = q.get("uri") ?? "";
+      const itemKeys = (uri.split("/library/metadata/")[1] ?? "").split(",").filter(Boolean);
+      // Re-adding an existing member is a no-op on Plex's side, not a duplicate.
+      for (const key of itemKeys) {
+        if (!collection.memberKeys.includes(key)) collection.memberKeys.push(key);
+      }
+      journal.collectionItemAdds.push({ ratingKey: collection.ratingKey, itemKeys });
+      emptyOk();
+      return;
+    }
+
+    const removeItem = path.match(/^\/library\/collections\/([^/]+)\/children\/([^/]+)$/);
+    if (removeItem && method === "DELETE") {
+      const collection = collections.get(removeItem[1]);
+      const itemKey = removeItem[2];
+      if (!collection || !collection.memberKeys.includes(itemKey)) {
+        notFound();
+        return;
+      }
+      collection.memberKeys = collection.memberKeys.filter((k) => k !== itemKey);
+      journal.collectionItemRemoves.push({ ratingKey: collection.ratingKey, itemKey });
+      emptyOk();
+      return;
+    }
+
+    // ── The homepage ────────────────────────────────────────────────────────
+    // Pinning is a POST to promote plus a PUT carrying the three `promotedTo*`
+    // flags; unpinning is a DELETE against the same identifier. Reconciling
+    // reads this listing to find out what is already pinned, so it has to
+    // report state rather than just accept writes.
+    const manageHub = path.match(/^\/hubs\/sections\/([^/]+)\/manage\/(.+)$/);
+    if (manageHub) {
+      const sectionId = manageHub[1];
+      const ratingKey = manageHub[2].split(".").pop() ?? "";
+      const pinnedHere = pinnedBySection.get(sectionId) ?? new Set<string>();
+      if (method === "DELETE") {
+        pinnedHere.delete(ratingKey);
+        journal.unpinned.push(ratingKey);
+      } else {
+        pinnedHere.add(ratingKey);
+        journal.pinned.push(ratingKey);
+      }
+      pinnedBySection.set(sectionId, pinnedHere);
+      emptyOk();
+      return;
+    }
+
+    const manageSection = path.match(/^\/hubs\/sections\/([^/]+)\/manage$/);
+    if (manageSection) {
+      const sectionId = manageSection[1];
+      if (method === "POST") {
+        // Promotion is a two-step dance; this half only makes the hub exist.
+        emptyOk();
+        return;
+      }
+      const keys = [...(pinnedBySection.get(sectionId) ?? [])];
+      json({
+        Hub: keys.map((key) => ({
+          identifier: `custom.collection.${sectionId}.${key}`,
+          title: collections.get(key)?.title ?? "",
+          promotedToOwnHome: 1,
+          promotedToRecommendedHome: 1,
+          promotedToSharedHome: 1,
+        })),
+      });
       return;
     }
 

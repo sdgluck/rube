@@ -126,6 +126,7 @@ export {
   isRuleActiveOn,
   RULE_TRIGGER_LABELS,
   RULE_TRIGGER_NOTES,
+  RULE_RUN_TRIGGER_LABELS,
   RULE_TRIGGERS,
   ruleScheduleSchema,
   runsInNightlyBatch,

@@ -83,8 +83,8 @@ export function deferredStarts(): Array<{ jobId: string; jobName: string; waitin
  * what the UI's "Run now" still uses — a deferral applies to work the server
  * decided to do, never to work a person asked for.
  */
-function startScheduled(jobId: string, jobName: string): void {
-  const verdict = deferralFor(jobId);
+function startScheduled(jobId: string, jobName: string, at: Date = new Date()): void {
+  const verdict = deferralFor(jobId, at);
   if (!verdict) {
     deferred.delete(jobId);
     startJob?.(jobId).catch((err) => log.error("failed to start job", { job: jobName, err: errorMessage(err) }));
@@ -299,8 +299,13 @@ export function catchUpMissedRuns(now = Date.now()): string[] {
   // `startJob` directly meant a restart at 20:30 fired `generate`, `cleanup`,
   // `metadata` and `sync-media` into the middle of somebody's film — the one
   // outcome the deferral gate exists to prevent.
+  // Judged at `now` — the instant the occurrence was decided to be owed —
+  // rather than whenever the stagger happens to fire. Re-reading the clock
+  // inside the timeout made the gate answer for a moment up to a minute after
+  // the one the catch-up reasoned about, which is both slightly wrong and, for
+  // a window boundary, not reproducible.
   due.forEach((job, index) => {
-    setTimeout(() => startScheduled(job.id, job.name), index * CATCHUP_STAGGER_MS).unref();
+    setTimeout(() => startScheduled(job.id, job.name, new Date(now)), index * CATCHUP_STAGGER_MS).unref();
   });
 
   return due.map((job) => job.id);

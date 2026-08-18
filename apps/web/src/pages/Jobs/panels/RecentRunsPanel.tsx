@@ -20,18 +20,22 @@ import { trpc } from "#/trpc";
  * rollup collapse a rule run ten times in an afternoon into one "×10" row.
  */
 function ruleRunsAsRecentRuns(runs: RuleRunRow[]): RecentRun[] {
-  return runs
-    .filter((run) => run.trigger === "manual")
-    .map((run) => ({
-      id: run.id,
-      jobId: `rule:${run.ruleId}`,
-      jobName: `${run.ruleName}${run.phase === "test" ? " (test)" : ""}`,
-      status: RULE_STATUS_TO_JOB_STATUS[run.status] ?? run.status,
-      progress: run.progress,
-      startedAt: run.startedAt,
-      finishedAt: run.finishedAt,
-      href: `/rules/${run.ruleId}/runs?run=${run.id}`,
-    }));
+  return (
+    runs
+      // Not the ones the nightly batch owns — its own run row already reports
+      // those. Everything else has no other row to appear as.
+      .filter((run) => run.trigger !== "job")
+      .map((run) => ({
+        id: run.id,
+        jobId: `rule:${run.ruleId}`,
+        jobName: `${run.ruleName}${run.phase === "test" ? " (test)" : ""}`,
+        status: RULE_STATUS_TO_JOB_STATUS[run.status] ?? run.status,
+        progress: run.progress,
+        startedAt: run.startedAt,
+        finishedAt: run.finishedAt,
+        href: `/rules/${run.ruleId}/runs?run=${run.id}`,
+      }))
+  );
 }
 
 /** `.statusDot` is styled by job-run vocabulary; rule runs speak a shorter one. */

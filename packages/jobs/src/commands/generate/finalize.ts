@@ -1,6 +1,11 @@
 import PQueue from "p-queue";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { getCollectionArtwork, recordCollectionArtwork, upsertCollectionByKey } from "@tinkerbell/domain.collections";
+import {
+  forgetCollections,
+  getCollectionArtwork,
+  recordCollectionArtwork,
+  upsertCollectionByKey,
+} from "@tinkerbell/domain.collections";
 import type { JobContext } from "@tinkerbell/core";
 import { fetchAutoPoster } from "@tinkerbell/core";
 import {
@@ -10,6 +15,7 @@ import {
   type RuleConfig,
 } from "@tinkerbell/contracts";
 import { bufferLog } from "./log-buffer.ts";
+import { reconcileMembership, type ExistingCollection } from "./reconcile.ts";
 import { tagResolverFor } from "./tag-labels.ts";
 
 /**
@@ -34,8 +40,15 @@ export interface CommitCollectionOptions {
   name: string;
   ratingKeys: string[];
   labels: string[];
-  pinToHomepage: boolean;
   ruleType: string;
+  /**
+   * The collection this rule already owns under this name, if it has one.
+   *
+   * Present means reconcile: diff the membership and apply the difference,
+   * rather than build a new collection over the corpse of the old one. Absent
+   * means there is nothing to reconcile against and this is a genuine create.
+   */
+  existing?: ExistingCollection;
   /**
    * Set for a rule's own collections; absent for the cleanup queue shelf,
    * which belongs to no rule's presentation config and gets no summary.
@@ -50,9 +63,17 @@ export interface CommitCollectionOptions {
 }
 
 /**
- * The full "create + pin + describe + mirror" sequence we want for every
- * generated collection. Returns the Plex collection key, or null if creation
- * failed.
+ * Bring one collection to the state the rule asked for: reconciled against what
+ * is already there when this rule owns something under the name, built from
+ * nothing when it doesn't, then described and mirrored locally.
+ *
+ * Pinning is deliberately not here. It used to be, because a freshly created
+ * collection is unpinned and so the only question was whether to pin it. A
+ * reconciled collection keeps whatever pin it had, which makes the question
+ * "does the homepage match?" — one that can only be answered once every
+ * collection is known. `reconcilePins` answers it at the end of the run.
+ *
+ * Returns the Plex collection key, or null if creation failed.
  *
  * Commits run concurrently, so this collection's log lines are buffered and
  * emitted as one block — otherwise six collections' progress braids together
@@ -67,6 +88,23 @@ export async function commitCollection(
   const { section, name, ratingKeys } = opts;
   try {
     return await commitQueue.add(async () => {
+      // Reconcile if this rule already owns a collection under this name. Only
+      // falls through to a rebuild when the diff declines the job — a smart
+      // collection, or churn past the point where removing items one at a time
+      // costs more than one POST.
+      if (opts.existing) {
+        const reconciled = await reconcileMembership(ctx, client, opts.existing, opts.machineId, ratingKeys);
+        if (reconciled) {
+          await applySummary(ctx, client, reconciled.ratingKey, opts);
+          await upsertCollectionByKey(client, section, reconciled.ratingKey);
+          return reconciled.ratingKey;
+        }
+        // Declined. The old collection has to go before its replacement is
+        // built, or Plex keeps both under the same title.
+        await client.deleteItem(opts.existing.ratingKey).catch(() => {});
+        forgetCollections([opts.existing.ratingKey]);
+      }
+
       ctx.log(`Creating "${name}" (${ratingKeys.length} items)...`);
 
       const collectionKey = await client.createCollectionWithLabel(
@@ -78,15 +116,6 @@ export async function commitCollection(
         opts.labels,
       );
       if (!collectionKey) return null;
-
-      if (opts.pinToHomepage) {
-        await client.pinToHomepage(section.key, collectionKey, {
-          promotedToOwnHome: 1,
-          promotedToRecommendedHome: 1,
-          promotedToSharedHome: 1,
-        });
-        ctx.log(`Pinned "${name}" to homepage`);
-      }
 
       await applySummary(ctx, client, collectionKey, opts);
       await applyAutoPoster(ctx, client, opts, collectionKey);
@@ -136,6 +165,12 @@ async function applySummary(
     ctx.log(`Summary for "${opts.name}" was edited in Plex — leaving it alone.`);
     return;
   }
+
+  // Unchanged since we last wrote it. Cheap to skip and worth skipping: under
+  // delete-and-recreate every collection was new every night so this always had
+  // to be written, and now the overwhelmingly common case is a collection whose
+  // description is already exactly right.
+  if (ledger?.summary === resolved.text) return;
 
   try {
     await client.updateCollection(ratingKey, { summary: resolved.text });

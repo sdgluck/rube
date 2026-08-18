@@ -29,7 +29,24 @@ import {
 } from "./limits.ts";
 
 export type RuleRunPhase = "run" | "test";
-export type RuleRunTrigger = "manual" | "job";
+/**
+ * Why this run happened.
+ *
+ * "job" is the nightly batch, which owns its rules directly. Everything else
+ * arrives through the rule queue, and the reason is recorded because it is the
+ * first question asked of a run nobody remembers starting — a rule that rebuilt
+ * itself at 14:20 was either on a cron, listening for something, or standing
+ * behind another rule, and the run list could not previously tell you which.
+ */
+export type RuleRunTrigger =
+  | "manual"
+  | "job"
+  | "cron"
+  | "chain"
+  | "item-added"
+  | "item-watched"
+  | "item-removed"
+  | "request-fulfilled";
 
 export interface RuleRunSummary {
   id: string;
@@ -368,8 +385,9 @@ function formatLogArg(arg: unknown): string {
 /**
  * The run to attach to when someone presses Run on a rule that is already
  * going. Pressing Run twice should join the run in progress, not start a
- * second one — a rule run is delete-then-recreate, and two of them produce
- * duplicate collections in Plex.
+ * second one. Two runs of one rule interleave their writes to the same
+ * collections, and before reconciling landed they produced outright duplicates
+ * — both would delete, both would create, and Plex kept both sets.
  */
 export function findActiveRuleRun(ruleId: string, phase?: RuleRunPhase): RuleRunSummary | null {
   const where = phase
@@ -380,6 +398,24 @@ export function findActiveRuleRun(ruleId: string, phase?: RuleRunPhase): RuleRun
       )
     : and(eq(ruleRuns.ruleId, ruleId), inArray(ruleRuns.status, [...ACTIVE_RULE_RUN_STATUSES]));
   return db.select(SUMMARY_COLUMNS).from(ruleRuns).where(where).orderBy(desc(ruleRuns.startedAt)).get() ?? null;
+}
+
+/**
+ * Runs waiting their turn, oldest first — the rule queue's backlog.
+ *
+ * Oldest first because a queue that ran newest-first would starve whatever was
+ * enqueued during a busy stretch, and the batch enqueues its whole rule set at
+ * once. Ordering *within* the drain is the drainer's business: it has the
+ * dependency ranks, which this query has no business knowing about.
+ */
+export function getQueuedRuleRuns(phase: RuleRunPhase = "run"): ActiveRuleRun[] {
+  return db
+    .select({ ...SUMMARY_COLUMNS, ruleName: rules.name })
+    .from(ruleRuns)
+    .innerJoin(rules, eq(rules.id, ruleRuns.ruleId))
+    .where(and(eq(ruleRuns.status, "queued"), eq(ruleRuns.phase, phase)))
+    .orderBy(ruleRuns.startedAt)
+    .all();
 }
 
 export function getActiveRuleRuns(): ActiveRuleRun[] {
@@ -551,11 +587,19 @@ export function requestRuleRunCancel(runId: string): "cancelled" | "cancelling" 
 // ── Sweeps ───────────────────────────────────────────────────────────────
 
 /**
- * Fail every active run at boot.
+ * Fail every *executing* run at boot.
  *
- * Nothing survives a restart: the API process's runs die with it, and the
+ * No execution survives a restart: the API process's runs die with it, and the
  * worker threads die with theirs. A row left saying `running` would show a
  * spinner forever for work that stopped when the process did.
+ *
+ * `queued` is deliberately exempt. It used to be swept up with the rest,
+ * which was harmless when a queued row lived for the microseconds between
+ * `createRuleRun` and the router activating it. It is not harmless now: the
+ * rule queue's whole point is that a request outlives the process that made it,
+ * and the cron will not ask again — it stamps `lastScheduledAt` when it queues,
+ * so the occurrence is spent. Failing those rows would silently drop a night's
+ * work on any restart. The queue drains them instead, once `initJobs` is done.
  */
 export function markStaleRuleRunsAsFailed(): number {
   const now = Date.now();
@@ -567,7 +611,7 @@ export function markStaleRuleRunsAsFailed(): number {
       finishedAt: now,
       updatedAt: now,
     })
-    .where(inArray(ruleRuns.status, [...ACTIVE_RULE_RUN_STATUSES]))
+    .where(inArray(ruleRuns.status, ["running", "cancelling"]))
     .run();
   return result.changes;
 }

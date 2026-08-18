@@ -141,8 +141,10 @@ function SidebarActiveJobs() {
 
   const runs = activeRunsQuery.data;
   // Rule runs a job owns are already represented by that job's own row; listing
-  // both would report one piece of work twice.
-  const ruleRuns = (activeRuleRunsQuery.data ?? []).filter((run) => run.trigger === "manual");
+  // both would report one piece of work twice. Everything else — a cron rule, a
+  // rule woken by a trigger, one standing behind another — has no other row to
+  // appear as, and `rule-schedules` now returns the moment it has queued them.
+  const ruleRuns = (activeRuleRunsQuery.data ?? []).filter((run) => run.trigger !== "job");
   if ((!runs || runs.length === 0) && ruleRuns.length === 0) return null;
 
   return (

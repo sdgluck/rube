@@ -15,6 +15,7 @@ import {
   uninstallFeature,
   listFeatureCatalog,
   deferredStarts,
+  deferredRuleStarts,
   getRunsInWindow,
   checkpointStatus,
   discardCheckpoint,
@@ -32,8 +33,13 @@ export const jobsRouter = t.router({
    * Scheduled starts currently held back — see `deferral.ts`. Read by the
    * Schedules settings page so "why hasn't this run" has an answer other than
    * reading the server log.
+   *
+   * Jobs and rules are reported separately because they are held by different
+   * machinery — a job start waits in `schedule.ts`, a due rule waits in
+   * `rule-schedules.ts` — and because "Halloween Films is waiting" and "Cleanup
+   * is waiting" are different sentences to the person reading them.
    */
-  deferred: procedure.query(() => deferredStarts()),
+  deferred: procedure.query(() => ({ jobs: deferredStarts(), rules: deferredRuleStarts() })),
 
   /**
    * What ran, and when, over a window — for the timeline on the Jobs page.

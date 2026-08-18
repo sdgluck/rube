@@ -9,7 +9,7 @@ import {
   setRuleLastCollection,
   setRuleLastRun,
   setRuleWindowCleared,
-  rulesWithOrderedWrites,
+  rulesRequiringOrder,
   withRuleLock,
   RuleLockedError,
 } from "@tinkerbell/domain.rules";
@@ -255,10 +255,10 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
         rule.id,
         "the Generate Collections job",
         async () => {
-          // Inside the try: a Plex hiccup while clearing one rule's old
-          // collections is no more fatal than the rule's own handler failing.
-          await deleteOldCollections(ruleCtx, client, sections, rule.id);
-
+          // No delete-then-recreate here any more: the commit layer reconciles
+          // each collection against what this rule already owns and sweeps
+          // whatever it no longer produces at the end of the run. See
+          // `reconcile.ts` for why that is worth the extra reads.
           return runHandler(
             { ctx: ruleCtx, client, sections, rule, ruleConfig, ruleRunId: ruleRun.runId },
             machineId,
@@ -361,19 +361,27 @@ export async function runBatch(ctx: JobContext, config: GenerateJobConfig, opts:
   // Most rules are independent, so the pool is a plain shared cursor over the
   // list — no locking needed, since only one worker runs between awaits.
   //
-  // Not all of them are. Two rules writing the same metadata field in the same
-  // library are decided by which goes second, and that is what the Rules page
-  // promises the user their positions mean. Draining those through the pool made
-  // the winner whichever *finished* last, which is neither the same claim nor a
-  // stable one from night to night. So they go first, one at a time, in position
-  // order; everything else still interleaves.
-  const mustNotInterleave = rulesWithOrderedWrites();
-  const sequential = pending.filter((r) => mustNotInterleave.has(r.id));
+  // Not all of them are, for two reasons that need the same treatment.
+  //
+  // Two rules writing the same metadata field in the same library are decided by
+  // which goes second, and that is what the Rules page promises the user their
+  // positions mean. Draining those through the pool made the winner whichever
+  // *finished* last, which is neither the same claim nor a stable one from night
+  // to night.
+  //
+  // A rule listing another in `afterRules` has the same problem and used to have
+  // none of the fix: the batch runs both, so nothing was missing, but it ran them
+  // three at a time and the rule curating a pool would read it mid-rebuild.
+  //
+  // So both go first, one at a time, in an order that satisfies the dependencies;
+  // everything else still interleaves.
+  const { ids: mustNotInterleave, rank } = rulesRequiringOrder();
+  const sequential = pending
+    .filter((r) => mustNotInterleave.has(r.id))
+    .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
   const concurrent = pending.filter((r) => !mustNotInterleave.has(r.id));
   if (sequential.length > 0) {
-    ctx.log(
-      `${sequential.length} rule(s) write a field another rule also writes — running those in order, one at a time.`,
-    );
+    ctx.log(`${sequential.length} rule(s) depend on another rule's order — running those in order, one at a time.`);
   }
 
   let started = 0;
@@ -478,12 +486,23 @@ function sameRuleSet(saved: string[], current: { id: string }[]): boolean {
   return saved.every((id) => ids.has(id));
 }
 
-/** Single-rule entry point used by the admin UI's "Run now" action. */
+/**
+ * Single-rule entry point used by the admin UI's "Run now" action and by the
+ * rule queue.
+ *
+ * `plex` is the shared connection when one is on offer. It matters more than it
+ * looks: `connectPlex` wraps its client in `withItemCache`, which memoizes the
+ * full library walk *per client*, so a caller running twenty rules with twenty
+ * clients pays for twenty walks of the same few thousand items. The batch has
+ * always avoided that by connecting once and keeping the client for the whole
+ * run; this is how everything else gets the same deal.
+ */
 export async function runSingleRule(
   ruleId: string,
   signal?: AbortSignal,
   ctxIn?: JobContext,
   ruleRunId?: string,
+  plex?: PlexRunContext,
 ): Promise<{ lastCollectionKey: string | null; collectionCount: number; itemCount: number }> {
   const rule = getRule(ruleId);
   if (!rule) throw new Error(`Rule "${ruleId}" not found`);
@@ -499,7 +518,7 @@ export async function runSingleRule(
   ctx.progress(0, 4, `Running rule "${rule.name}"…`);
   ctx.log(`Running rule "${rule.name}" (${rule.type})`);
 
-  const { client, machineId, allSections } = await connectPlex(ctx, signal);
+  const { client, machineId, allSections } = plex ?? (await connectPlex(ctx, signal));
   const ruleConfig = parseRuleConfig(rule);
 
   const ruleSectionsOrNull = filterSections(allSections, ruleConfig.sections);
@@ -522,8 +541,6 @@ export async function runSingleRule(
     rule.id,
     `a manual run of "${rule.name}"`,
     async () => {
-      await deleteOldCollections(ctx, client, sections, rule.id);
-
       ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
       const labels = ["Tinkerbell", `Rule:${rule.id}`];
       return runHandler(
@@ -557,14 +574,24 @@ export async function runSingleRule(
 }
 
 /**
+ * One Plex connection, shared by every rule that runs under it.
+ *
+ * The `client` carries a memoized library walk (see `withItemCache`), so the
+ * scope of this object *is* the scope of that cache — hold it across a batch or
+ * a queue drain and the twenty rules inside pay for one walk between them.
+ */
+export interface PlexRunContext {
+  client: PlexClient;
+  machineId: string;
+  allSections: PlexSection[];
+}
+
+/**
  * Open a Plex client, fetch identity + sections, and apply the global
  * library allowlist. Shared by `run` and `runSingleRule` because both
  * need the same setup before doing anything rule-specific.
  */
-async function connectPlex(
-  ctx: JobContext,
-  signal?: AbortSignal,
-): Promise<{ client: PlexClient; machineId: string; allSections: PlexSection[] }> {
+export async function connectPlex(ctx: JobContext, signal?: AbortSignal): Promise<PlexRunContext> {
   const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
   const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
   if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");

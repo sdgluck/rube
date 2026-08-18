@@ -231,20 +231,29 @@ export function findRuleConflicts(): RuleConflict[] {
 }
 
 /**
- * Rules whose running order is load-bearing.
+ * The rules whose order the batch has to respect, and the order itself.
  *
- * The Rules page tells the user, in as many words, that where two rules write
- * the same field the later one's value "is the one that survives the night".
- * The nightly batch then drained rules through a pool of three workers, so the
- * survivor was whichever *finished* last — a different claim, and not a stable
- * one. Rather than drop the promise, the batch runs these rules one at a time in
- * position order; everything else still interleaves.
+ * Two independent constraints, unioned because the batch can only honour them
+ * with one mechanism — running the constrained rules one at a time:
  *
- * Config-derived, like `metadataFieldConflicts` itself: the observable version
- * only names the loser after the damage is done, and this has to be known before
- * the run starts.
+ * - **Same field, two writers.** The Rules page tells the user, in as many
+ *   words, that where two rules write the same field the later one's value "is
+ *   the one that survives the night". The batch drains rules through a pool of
+ *   three workers, which made the survivor whichever *finished* last — a
+ *   different claim, and not a stable one. Position order decides instead.
+ * - **`afterRules`.** A rule that curates a pool another rule builds. This was
+ *   honoured everywhere *except* the nightly batch: `runChain` fires for a cron
+ *   or a trigger, but `runBatch` never calls it, on the reasoning that the batch
+ *   runs every enabled rule anyway. True, and beside the point — it runs them
+ *   three at a time, so the curate rule routinely read a pool that was still
+ *   being rebuilt. The dependency was expressible, documented, and silently
+ *   ignored in the one configuration every rule starts in.
+ *
+ * Returns a rank rather than a sorted list because the caller has its own
+ * subset — one batch job owns collection rules, another owns cleanup — and a
+ * rank survives filtering while a list does not.
  */
-export function rulesWithOrderedWrites(): Set<string> {
+export function rulesRequiringOrder(): { ids: Set<string>; rank: Map<string, number> } {
   const all = db
     .select({
       id: rules.id,
@@ -256,11 +265,83 @@ export function rulesWithOrderedWrites(): Set<string> {
     })
     .from(rules)
     .all();
+  const ordered = inRunningOrder(all).filter((row) => row.enabled);
+  const byId = new Map(ordered.map((row) => [row.id, row]));
+
   const ids = new Set<string>();
-  for (const conflict of metadataFieldConflicts(inRunningOrder(all))) {
+  for (const conflict of metadataFieldConflicts(ordered)) {
     for (const rule of conflict.rules) ids.add(rule.id);
   }
-  return ids;
+
+  // `after` → the rules that must follow it.
+  const followers = new Map<string, string[]>();
+  const indegree = new Map<string, number>();
+  for (const row of ordered) {
+    for (const after of afterRulesOf(row.config)) {
+      // An edge to a rule that is disabled or deleted is not a constraint —
+      // nothing is going to run and satisfy it, and treating it as one would
+      // strand the dependent rule in the sequential lane forever.
+      if (after === row.id || !byId.has(after)) continue;
+      followers.set(after, [...(followers.get(after) ?? []), row.id]);
+      indegree.set(row.id, (indegree.get(row.id) ?? 0) + 1);
+      ids.add(after);
+      ids.add(row.id);
+    }
+  }
+
+  // Kahn's, walking `ordered` so ties break on position then creation — the
+  // same running order everything else here uses, and stable night to night.
+  const rank = new Map<string, number>();
+  const constrained = ordered.filter((row) => ids.has(row.id));
+  const ready = constrained.filter((row) => (indegree.get(row.id) ?? 0) === 0).map((row) => row.id);
+  while (ready.length > 0) {
+    const id = ready.shift() as string;
+    rank.set(id, rank.size);
+    for (const follower of followers.get(id) ?? []) {
+      const remaining = (indegree.get(follower) ?? 0) - 1;
+      indegree.set(follower, remaining);
+      if (remaining === 0) {
+        // Re-inserted in running order rather than appended, so a rule freed by
+        // an early dependency doesn't jump ahead of one freed later but ordered
+        // sooner.
+        const at = ready.findIndex((other) => runsAfter(byId.get(other), byId.get(follower)));
+        if (at === -1) ready.push(follower);
+        else ready.splice(at, 0, follower);
+      }
+    }
+  }
+
+  // Anything left is in a cycle. `afterRules` can be edited into one from either
+  // end, so this is a real state rather than a corrupt one — the runtime has
+  // always broken cycles rather than rejecting them (see MAX_CHAIN_DEPTH). Fall
+  // back to running order for those, which is at least deterministic.
+  for (const row of constrained) {
+    if (!rank.has(row.id)) rank.set(row.id, rank.size);
+  }
+
+  return { ids, rank };
+}
+
+/**
+ * `config.schedule.afterRules`, read without trusting the config.
+ *
+ * Deliberately not via `ruleConfigSchema`: a config that fails validation for an
+ * unrelated reason would lose its ordering constraint, and losing an ordering
+ * constraint is silent and produces a wrong shelf. Reading the one field
+ * defensively fails in the safer direction.
+ */
+function afterRulesOf(config: Record<string, unknown>): string[] {
+  const schedule = config?.schedule;
+  if (!schedule || typeof schedule !== "object") return [];
+  const after = (schedule as Record<string, unknown>).afterRules;
+  return Array.isArray(after) ? after.filter((id): id is string => typeof id === "string") : [];
+}
+
+/** Does `a` come after `b` in running order? */
+function runsAfter(a: RuleRow | undefined, b: RuleRow | undefined): boolean {
+  if (!a || !b) return false;
+  if (a.position !== b.position) return a.position > b.position;
+  return a.createdAt > b.createdAt;
 }
 
 /**

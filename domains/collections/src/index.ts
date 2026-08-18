@@ -371,8 +371,10 @@ export function getLocalCollection(ratingKey: string): CollectionRow | undefined
  * Titles of the collections the local mirror currently attributes to a rule.
  *
  * Read either side of a rule run to tell which collections are *new* this
- * time. Titles rather than rating keys because a run is delete-then-recreate:
- * every collection gets a fresh rating key each night, so keys can't be
+ * time. Titles rather than rating keys because a run used to be
+ * delete-then-recreate: every collection got a fresh rating key each night,
+ * and while reconciling now keeps them stable, a rebuilt one still changes, so
+ * keys can't be
  * compared across runs but names can — the same reasoning as
  * `rules.lastPinnedCollections`.
  */

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { RULE_RUN_TRIGGER_LABELS } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import ConfirmModal from "#components/ConfirmModal";
@@ -372,7 +373,7 @@ function RunDetail({ runId, ruleId, outcome }: { runId: string; ruleId: string; 
                 "Generate job"
               )
             ) : (
-              "Manual"
+              (RULE_RUN_TRIGGER_LABELS[run.trigger] ?? "Manual")
             )}
           </span>
           {run.collectionCount != null && (
@@ -515,9 +516,9 @@ function MetadataWrites({ ruleId }: { ruleId: string }) {
  * What the run did to each collection, item by item, and the way back.
  *
  * The counts on the run tell you 900 items were committed; they can't tell you
- * that the collection you care about lost fourteen of them. Since every run
- * deletes and recreates its collections, Plex can't tell you either — this is
- * the only place that remembers.
+ * that the collection you care about lost fourteen of them. Plex holds only
+ * what the run left behind and no record of what preceded it, so it can't tell
+ * you either — this is the only place that remembers.
  */
 /**
  * Why this run produced nothing.

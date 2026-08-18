@@ -11,7 +11,7 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 setupTempDb("tinkerbell-rules-conflicts-test-");
 
 const { db, cleanupCandidates, ruleCollectionMembers, rules } = await import("@tinkerbell/db");
-const { findRuleConflicts, rulesProducingCollectionNamed, rulesWithOrderedWrites } = await import("./conflicts.ts");
+const { findRuleConflicts, rulesProducingCollectionNamed, rulesRequiringOrder } = await import("./conflicts.ts");
 const { reorderRules } = await import("./index.ts");
 
 const T0 = 1_700_000_000_000;
@@ -226,11 +226,17 @@ describe("rulesProducingCollectionNamed", () => {
   });
 });
 
-describe("rulesWithOrderedWrites", () => {
+describe("rulesRequiringOrder", () => {
   const writes = (field: string, sections?: string[]) => ({
     action: { kind: "metadata", set: { [field]: "x" } },
     ...(sections ? { sections } : {}),
   });
+  const after = (...ids: string[]) => ({ schedule: { afterRules: ids } });
+  /** The constrained rules in the order the batch will run them. */
+  const order = () => {
+    const { ids, rank } = rulesRequiringOrder();
+    return [...ids].sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0));
+  };
 
   test("names both rules that write the same field in the same library", () => {
     // The nightly batch runs these one at a time, in position order, because
@@ -238,7 +244,7 @@ describe("rulesWithOrderedWrites", () => {
     // survives — and a pool of three workers made that whichever finished last.
     seedRule("a", "Sort titles", writes("titleSort"), 1, 0);
     seedRule("b", "Also sort titles", writes("titleSort"), 1, 1);
-    assert.deepEqual([...rulesWithOrderedWrites()].sort(), ["a", "b"]);
+    assert.deepEqual(order(), ["a", "b"]);
   });
 
   test("says nothing about rules that cannot collide", () => {
@@ -247,12 +253,52 @@ describe("rulesWithOrderedWrites", () => {
     seedRule("a", "Sort titles", writes("titleSort", ["Films"]), 1, 0);
     seedRule("b", "Content ratings", writes("contentRating", ["Films"]), 1, 1);
     seedRule("c", "Sort titles on TV", writes("titleSort", ["TV"]), 1, 2);
-    assert.deepEqual([...rulesWithOrderedWrites()], []);
+    assert.deepEqual(order(), []);
   });
 
   test("ignores a disabled rule", () => {
     seedRule("a", "Sort titles", writes("titleSort"), 1, 0);
     seedRule("b", "Also sort titles", writes("titleSort"), 0, 1);
-    assert.deepEqual([...rulesWithOrderedWrites()], []);
+    assert.deepEqual(order(), []);
+  });
+
+  test("puts a rule after the one it declares itself to run after", () => {
+    // The two-stage curation pair: "a" builds the pool, "b" picks from it. The
+    // batch used to run both concurrently, so "b" read a pool mid-rebuild.
+    seedRule("a", "Every Nolan film", {}, 1, 0);
+    seedRule("b", "Best three Nolan films", after("a"), 1, 1);
+    assert.deepEqual(order(), ["a", "b"]);
+  });
+
+  test("respects the dependency even when position disagrees", () => {
+    // Position says "b" first; `afterRules` says otherwise, and the explicit
+    // dependency is the stronger statement of intent.
+    seedRule("a", "Pool", {}, 1, 5);
+    seedRule("b", "Curated", after("a"), 1, 0);
+    assert.deepEqual(order(), ["a", "b"]);
+  });
+
+  test("orders a chain three deep", () => {
+    seedRule("c", "Third", after("b"), 1, 0);
+    seedRule("b", "Second", after("a"), 1, 1);
+    seedRule("a", "First", {}, 1, 2);
+    assert.deepEqual(order(), ["a", "b", "c"]);
+  });
+
+  test("ignores an edge to a rule that is disabled or gone", () => {
+    // Nothing is going to run and satisfy it, so treating it as a constraint
+    // would strand the dependent rule in the sequential lane forever.
+    seedRule("a", "Pool", {}, 0, 0);
+    seedRule("b", "Curated", after("a"), 1, 1);
+    seedRule("c", "Orphaned", after("nonexistent"), 1, 2);
+    assert.deepEqual(order(), []);
+  });
+
+  test("falls back to running order for a cycle rather than dropping the rules", () => {
+    // `afterRules` can be edited into a cycle from either end, so this is a real
+    // state. Deterministic beats correct-or-nothing here.
+    seedRule("a", "One", after("b"), 1, 0);
+    seedRule("b", "Two", after("a"), 1, 1);
+    assert.deepEqual(order(), ["a", "b"]);
   });
 });

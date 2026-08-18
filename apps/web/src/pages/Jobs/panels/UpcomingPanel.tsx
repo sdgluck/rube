@@ -1,31 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Cron } from "croner";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { formatTimeUntil } from "#/format";
-import { findScheduleCollisions } from "#lib/cron.ts";
+import { cronNextRuns, findScheduleCollisions } from "#lib/cron.ts";
 import styles from "#pages/Jobs/Jobs.module.css";
 import { useJobsData } from "#pages/Jobs/useJobsData";
+import { trpc } from "#/trpc";
 
 /** The next fire time of every enabled job with a schedule, soonest first. */
 export function useUpcomingRuns(limit = 8) {
   const { rawJobs } = useJobsData();
+  // The server evaluates every schedule in its configured zone, so "0 3 * * *"
+  // means 3am *there*. This panel built its Cron without one and so read the
+  // expression in the browser's zone — a user in a different one, or on a UTC
+  // container, was shown a next-run time hours from when the job actually
+  // fires. `CronPreview` already asked the same question the right way; this
+  // now goes through the same helper rather than keeping a second idiom.
+  const timezone = trpc.config.effectiveTimezone.useQuery(undefined, { staleTime: 5 * 60_000 }).data?.timezone;
   return useMemo(
     () =>
       rawJobs
         .filter((j) => j.enabled && j.schedule)
-        .map((j) => {
-          try {
-            const next = new Cron(j.schedule).nextRun();
-            return { name: j.name, jobId: j.id, nextRun: next?.getTime() ?? null };
-          } catch {
-            return { name: j.name, jobId: j.id, nextRun: null };
-          }
-        })
+        .map((j) => ({
+          name: j.name,
+          jobId: j.id,
+          nextRun: cronNextRuns(j.schedule, timezone, 1).next[0]?.getTime() ?? null,
+        }))
         .filter((j): j is { name: string; jobId: string; nextRun: number } => j.nextRun != null)
         .sort((a, b) => a.nextRun - b.nextRun)
         .slice(0, limit),
-    [rawJobs, limit],
+    [rawJobs, limit, timezone],
   );
 }
 

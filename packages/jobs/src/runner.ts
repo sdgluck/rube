@@ -18,6 +18,7 @@ import {
 import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
 import { internalJobs, isInternalJobName, type InternalJobDescriptor, type InternalJobName } from "./internal-jobs.ts";
 import { initSchedule, scheduleCron, startCronSchedules } from "./schedule.ts";
+import { hasQueuedRuleWork, scheduleRuleDrain } from "./rule-queue.ts";
 import { COMMANDS, isCommandName, type CommandName } from "./commands/catalog.ts";
 import { ACTIVE_RUN_STATUSES, isTerminalStatus } from "./statuses.ts";
 import {
@@ -728,4 +729,13 @@ export async function initJobs(): Promise<void> {
   await startSidequest();
   startCronSchedules({ catchUp: true });
   startWatchdog();
+
+  // Pick up anything the last process queued and didn't get to. Rule runs that
+  // were *executing* were just failed above; these were only ever waiting, and
+  // nothing else will ask for them again — the cron spends its occurrence when
+  // it queues, not when the rule runs.
+  if (hasQueuedRuleWork()) {
+    log.info("draining rule work left over from the last run");
+    scheduleRuleDrain();
+  }
 }
