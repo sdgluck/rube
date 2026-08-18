@@ -106,8 +106,17 @@ const p = await sharp({create:{width:600,height:900,channels:4,background:{r:10,
 const o = await compositeOverlays(p, [{position:'top-left',type:'imdb_rating',value:'8.4'}]);\
 if ((await sharp(o).metadata()).format !== 'jpeg') throw new Error('sharp composite failed');\
 console.log('smoke: sharp', sharp.versions.sharp, 'libvips', sharp.versions.vips);"
+# The router is built from a container now, so the guard builds one — the same
+# two calls the server makes at boot, against a throwaway data directory. That
+# makes this a guard on the composition root as well: every domain the graph
+# registers has to resolve for the router to exist at all.
 RUN cd apps/server && node --input-type=module -e "\
-import { appRouter } from '@tinkerbell/trpc';\
+import { mkdtempSync } from 'node:fs'; import { tmpdir } from 'node:os'; import { join } from 'node:path';\
+import { buildContainer, ServicesToken } from '@tinkerbell/composition';\
+import { JobsToken, registerJobs } from '@tinkerbell/jobs';\
+import { createTrpc } from '@tinkerbell/trpc';\
+const c = buildContainer({ dataDir: mkdtempSync(join(tmpdir(), 'tb-smoke-')) }, [registerJobs]);\
+const { appRouter } = createTrpc({ ...c.resolve(ServicesToken), jobs: c.resolve(JobsToken) });\
 const n = Object.keys(appRouter._def.procedures).length;\
 if (n < 100) throw new Error('trpc router did not load fully: ' + n);\
 console.log('smoke: trpc router loaded,', n, 'procedures');"
