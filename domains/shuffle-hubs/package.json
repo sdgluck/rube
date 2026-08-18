@@ -10,7 +10,9 @@
   "files": [
     "src"
   ],
-  "scripts": {},
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+  },
   "dependencies": {
     "@tinkerbell/plex": "workspace:*"
   },

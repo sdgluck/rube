@@ -11,7 +11,7 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 setupTempDb("tinkerbell-rules-conflicts-test-");
 
 const { db, cleanupCandidates, ruleCollectionMembers, rules } = await import("@tinkerbell/db");
-const { findRuleConflicts, rulesProducingCollectionNamed } = await import("./conflicts.ts");
+const { findRuleConflicts, rulesProducingCollectionNamed, rulesWithOrderedWrites } = await import("./conflicts.ts");
 const { reorderRules } = await import("./index.ts");
 
 const T0 = 1_700_000_000_000;
@@ -223,5 +223,36 @@ describe("rulesProducingCollectionNamed", () => {
     seedRule("a", "A");
     seedBuilt("a", "1", "Top Rated");
     assert.deepEqual(rulesProducingCollectionNamed("   "), []);
+  });
+});
+
+describe("rulesWithOrderedWrites", () => {
+  const writes = (field: string, sections?: string[]) => ({
+    action: { kind: "metadata", set: { [field]: "x" } },
+    ...(sections ? { sections } : {}),
+  });
+
+  test("names both rules that write the same field in the same library", () => {
+    // The nightly batch runs these one at a time, in position order, because
+    // the Rules page tells the user the later one's value is the one that
+    // survives — and a pool of three workers made that whichever finished last.
+    seedRule("a", "Sort titles", writes("titleSort"), 1, 0);
+    seedRule("b", "Also sort titles", writes("titleSort"), 1, 1);
+    assert.deepEqual([...rulesWithOrderedWrites()].sort(), ["a", "b"]);
+  });
+
+  test("says nothing about rules that cannot collide", () => {
+    // Different fields, and different libraries: both are the normal case, and
+    // serialising them would cost the batch its concurrency for nothing.
+    seedRule("a", "Sort titles", writes("titleSort", ["Films"]), 1, 0);
+    seedRule("b", "Content ratings", writes("contentRating", ["Films"]), 1, 1);
+    seedRule("c", "Sort titles on TV", writes("titleSort", ["TV"]), 1, 2);
+    assert.deepEqual([...rulesWithOrderedWrites()], []);
+  });
+
+  test("ignores a disabled rule", () => {
+    seedRule("a", "Sort titles", writes("titleSort"), 1, 0);
+    seedRule("b", "Also sort titles", writes("titleSort"), 0, 1);
+    assert.deepEqual([...rulesWithOrderedWrites()], []);
   });
 });

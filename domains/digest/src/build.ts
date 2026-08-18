@@ -15,8 +15,8 @@
  */
 import { and, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { db, collections, mediaItems, playbackSessions, watchState } from "@tinkerbell/db";
-import { queuedCandidates } from "@tinkerbell/domain.cleanup";
-import type { UserPreferences } from "@tinkerbell/core";
+import { leavingSoon as cleanupLeavingSoon } from "@tinkerbell/domain.cleanup";
+import { sharedSectionKeys, type UserPreferences } from "@tinkerbell/core";
 
 export interface DigestInput {
   /** Inclusive lower bound, epoch ms. */
@@ -85,9 +85,6 @@ function toPlexSeconds(ms: number): number {
   return Math.floor(ms / 1000);
 }
 
-/** Only the modes that actually remove something count as "leaving". */
-const REMOVING_MODES = new Set(["unmonitor", "delete"]);
-
 export function buildDigest(input: DigestInput): Digest {
   const { since, until, userId } = input;
 
@@ -95,7 +92,11 @@ export function buildDigest(input: DigestInput): Digest {
   const watched = watchedInPeriod(since, until, userId);
   const topTitles = topPlayedInPeriod(since, until, userId);
   const newCollections = collectionsInPeriod(since, until);
-  const leaving = leavingSoon();
+  // Scoped to the libraries shared with this user, where there is one: telling
+  // somebody about a film leaving a library they cannot open is noise they can do
+  // nothing about. The server-wide digest goes to the admin, so it sees all of it.
+  const sections = userId == null ? [] : sharedSectionKeys(userId);
+  const leaving = leavingSoon(sections);
   const stats = periodStats(since, until, added.length);
 
   if (userId == null) {
@@ -244,12 +245,18 @@ function collectionsInPeriod(since: number, until: number): string[] {
  * Items a cleanup rule is about to remove.
  *
  * Not period-scoped: "leaving soon" is a statement about the future, and the
- * whole reason it belongs in a digest is that there is still time to act. Held
- * items are excluded — someone has already rescued those.
+ * whole reason it belongs in a digest is that there is still time to act.
+ *
+ * Asked through the cleanup domain rather than filtered here, so this inherits
+ * the same predicate the portal and the engine use — held, protected, awaiting an
+ * approval nobody has given, owned by a disabled rule, or an install where
+ * cleanup is switched off entirely. This used to check `held` and the mode only,
+ * and so promised removals that could not happen. Narrowed further to the next
+ * run, because a digest is a weekly email: "three runs away" is not news.
  */
-function leavingSoon(): DigestItem[] {
-  return queuedCandidates({ limit: 200 })
-    .filter((c) => !c.held && REMOVING_MODES.has(c.mode) && c.runsRemaining <= 1)
+function leavingSoon(sectionKeys: readonly string[]): DigestItem[] {
+  return cleanupLeavingSoon(200, Date.now(), sectionKeys)
+    .filter((c) => c.runsRemaining <= 1)
     .slice(0, LEAVING_SOON_LIMIT)
     .map((c) => ({
       ratingKey: c.ratingKey,

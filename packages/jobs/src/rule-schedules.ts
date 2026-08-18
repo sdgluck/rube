@@ -16,7 +16,7 @@
 
 import { Cron } from "croner";
 import { createLogger, errorMessage, type JobContext } from "@tinkerbell/core";
-import { getEnabledRules, setRuleLastScheduled, type Rule } from "@tinkerbell/domain.rules";
+import { getEnabledRules, RuleLockedError, setRuleLastScheduled, type Rule } from "@tinkerbell/domain.rules";
 import { isRuleActiveOn, ruleConfigSchema, type RuleSchedule } from "@tinkerbell/contracts";
 import { schedulerTimezone } from "./schedule.ts";
 
@@ -74,7 +74,7 @@ export function isDue(
   // A rule out of season doesn't run on its own cron either — otherwise the
   // window would only be honoured by the batch, and a seasonal rule with a
   // cron of its own would quietly ignore its own season.
-  if (!isRuleActiveOn(schedule, now)) return null;
+  if (!isRuleActiveOn(schedule, now, timezone)) return null;
   // Never looked at before: `adoptNewSchedules` stamps a starting point, and
   // firing here instead would run every rule the moment it was saved.
   if (lastScheduledAt == null) return null;
@@ -169,12 +169,19 @@ export async function runDueRules(ctx: JobContext): Promise<string> {
 
   const ran: string[] = [];
   const failed: string[] = [];
+  // One `seen` set for the whole tick, not one per rule. Two rules due at 03:00
+  // with a third chained behind both used to run that third rule twice, back to
+  // back — deleting and recreating its collections twice, or advancing its
+  // cleanup streak twice. `runTriggeredRules` has always shared one set across
+  // a dispatch; this is the same guard, one level up.
+  const seen = new Set<string>();
   for (const { rule, occurrence } of due) {
     ctx.signal?.throwIfAborted();
     // Recorded before the run, not after: a rule that fails must not re-fire
     // every minute until it succeeds, and the next occurrence is the right
     // time to try again.
     setRuleLastScheduled(rule.id, occurrence);
+    seen.add(rule.id);
 
     const ruleRun = startRuleRun({
       ruleId: rule.id,
@@ -201,9 +208,18 @@ export async function runDueRules(ctx: JobContext): Promise<string> {
       // Imported lazily to keep the cycle between these two modules at run
       // time — rule-triggers imports `scheduleOf` from here.
       const { runRulesChainedAfter } = await import("./rule-triggers.ts");
-      const chained = await runRulesChainedAfter(ctx, rule.id);
+      const chained = await runRulesChainedAfter(ctx, rule.id, seen);
       if (chained) ctx.log(chained);
     } catch (err) {
+      // Contention isn't failure, exactly as in the nightly batch: the rule is
+      // being generated right now by someone else, and that run's output is as
+      // good as this one's. Recording it as an error painted a red row in the
+      // Rules table for a run that was correctly skipped.
+      if (err instanceof RuleLockedError) {
+        ctx.log(`Skipping "${rule.name}" — ${err.heldBy || "another run"} is already generating it.`);
+        ruleRun.finish({ status: "cancelled" });
+        continue;
+      }
       const message = errorMessage(err);
       setRuleLastRun(rule.id, { status: "error", durationMs: Date.now() - startedAt, error: message });
       ruleRun.finish({ status: "error", error: message });

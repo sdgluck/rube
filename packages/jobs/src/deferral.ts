@@ -18,7 +18,7 @@
 
 import { and, isNull, sql } from "drizzle-orm";
 import { db, playbackSessions } from "@tinkerbell/db";
-import { getConfig, MINUTE_MS } from "@tinkerbell/core";
+import { configuredTimezone, getConfig, minutesOfDay, parseClock, MINUTE_MS } from "@tinkerbell/core";
 
 /**
  * The jobs worth deferring: the ones that render, transcode or walk the whole
@@ -70,12 +70,10 @@ export function openStreamCount(transcodesOnly: boolean): number {
   return row?.n ?? 0;
 }
 
-/** `HH:MM` → minutes past midnight, or null if it isn't a time. */
-export function parseClock(value: string): number | null {
-  const match = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
-  if (!match) return null;
-  return Number(match[1]) * 60 + Number(match[2]);
-}
+// `parseClock` and `minutesOfDay` come from core, which grew the same pair for
+// notification quiet hours — the zone-aware half is the part that was missing
+// here, and two copies of it is how they came to disagree.
+export { parseClock };
 
 /**
  * Is `now` inside the window?
@@ -83,14 +81,22 @@ export function parseClock(value: string): number | null {
  * A window whose end precedes its start spans midnight, which is the common
  * shape for a maintenance window — 01:00 to 06:00 is easy, but 22:00 to 06:00
  * is what people actually mean by "overnight".
+ *
+ * Read in the configured timezone, like the cron schedules these windows exist
+ * to gate. It used to read `now.getHours()`, i.e. the container clock, so a UTC
+ * container set to `America/Los_Angeles` enforced "overnight" eight hours out —
+ * holding jobs back through the evening and releasing them mid-afternoon.
+ *
+ * Not `isWithinClockWindow` from core, which returns false for an unparseable
+ * window because its callers use it to suppress notifications. Here false means
+ * "defer", and a typo in a time field must not silently stop every heavy job on
+ * the server, so this one fails open.
  */
-export function isWithinWindow(from: string, to: string, now: Date): boolean {
+export function isWithinWindow(from: string, to: string, now: Date, timezone = configuredTimezone()): boolean {
   const start = parseClock(from);
   const end = parseClock(to);
-  // An unparseable window is not a window. Failing open matters here: a typo
-  // in a time field should not silently stop every heavy job on the server.
   if (start == null || end == null) return true;
-  const minutes = now.getHours() * 60 + now.getMinutes();
+  const minutes = minutesOfDay(now, timezone);
   if (start === end) return true;
   return start < end ? minutes >= start && minutes < end : minutes >= start || minutes < end;
 }

@@ -13,6 +13,10 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, config } from "@tinkerbell/db";
+import { createLogger } from "./logger.ts";
+import { errorMessage } from "./util.ts";
+
+const timezoneLog = createLogger("timezone");
 
 /**
  * Does the runtime's ICU data recognise this timezone?
@@ -30,6 +34,51 @@ export function isValidTimezone(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The timezone this install lives in: `global_timezone`, else `TZ`, else the
+ * process clock.
+ *
+ * Lives here rather than beside the scheduler because "what day is it" and
+ * "what time is it" are not only the scheduler's questions. Cron was
+ * zone-aware from the start, while the maintenance window read `getHours()`,
+ * seasonal rule windows read `getMonth()/getDate()` and the stats day
+ * boundaries read `setHours(0,0,0,0)` — so a UTC container configured for
+ * `America/Los_Angeles` enforced its quiet hours eight hours out and rolled
+ * "today" over at 17:00 local.
+ *
+ * Both sources are validated rather than trusted. `global_timezone` is
+ * schema-checked on save, but a row written by an older build (or by hand)
+ * bypasses that, and `TZ` never goes through the schema at all — setting it in
+ * a compose file is the first thing a self-hoster does. A bad value propagated
+ * into every `new Cron` throws during `initJobs`, which the server turns into
+ * `process.exit(1)`: a crash-loop with no UI left to fix it from.
+ */
+export function configuredTimezone(): string | undefined {
+  let configured: string | undefined;
+  try {
+    configured = getConfig("global_timezone")?.trim();
+  } catch (err) {
+    // `getConfig` parses the stored value against the schema, so a corrupt row
+    // throws here. Callers include `initJobs`, where an exception escaping is a
+    // boot failure — precisely what this guards against.
+    timezoneLog.error("could not read the configured timezone", { err: errorMessage(err) });
+  }
+  if (configured) {
+    if (isValidTimezone(configured)) return configured;
+    timezoneLog.error("ignoring invalid configured timezone", { timezone: configured });
+  }
+
+  const env = process.env.TZ?.trim();
+  if (env) {
+    if (isValidTimezone(env)) return env;
+    timezoneLog.error("ignoring invalid TZ environment variable", { TZ: env });
+  }
+
+  // undefined = follow the process's own local time, which is the behaviour we
+  // had before the setting existed. Degraded, but running.
+  return undefined;
 }
 
 export const configSchema = z.object({
@@ -439,6 +488,16 @@ export const configSchema = z.object({
    */
   seerr_seen_available: z.array(z.number().int()),
   /**
+   * Whether the Overseerr poller has ever completed a poll.
+   *
+   * Separate from `seerr_seen_available` because an empty set is not evidence of
+   * a first run: an install with no fulfilled requests yet stores nothing, so
+   * "nothing stored" stayed true until the *first genuine* fulfilment — which
+   * was then adopted as history and fired no rules at all, which is the one
+   * event the trigger exists for.
+   */
+  seerr_polled: z.boolean(),
+  /**
    * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
    * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its
    * own filesystem, so the same directory usually has a different mount point
@@ -579,8 +638,8 @@ export const REDACTED_SECRET = `__redacted__:${randomUUID()}`;
 /**
  * Top-level config keys whose values must never be sent to the browser.
  * Webhook URLs are included because they typically contain bearer tokens.
- * `global_llm.apiKey` is a nested secret handled separately in
- * `getAllConfigForClient`.
+ * Secrets that live *inside* a structured value are listed in
+ * `NESTED_SECRETS` instead.
  */
 export const SECRET_KEYS = new Set<ConfigKey>([
   "global_plex_token",
@@ -601,6 +660,41 @@ export const SECRET_KEYS = new Set<ConfigKey>([
   "global_slack_webhook_url",
   "global_webhook_url",
 ]);
+
+/**
+ * Secrets that live inside a structured value, where `SECRET_KEYS` can't reach
+ * them. Declared as a table rather than written out at each site because the
+ * two that were: `global_arr_instances[].apiKey` arrived with multi-instance
+ * \*Arr support and matched neither hand-written case, so every additional
+ * Radarr/Sonarr key went to the browser in full.
+ *
+ * `each` marks a list — the secret is a field of every element, and elements
+ * are matched back up by `id` when a save restores them.
+ */
+export const NESTED_SECRETS: ReadonlyArray<{ key: ConfigKey; field: string; each?: boolean }> = [
+  { key: "global_llm", field: "apiKey" },
+  { key: "global_smtp", field: "password" },
+  { key: "global_arr_instances", field: "apiKey", each: true },
+];
+
+/** Keys carrying a nested secret, for callers that only need the question answered. */
+export const NESTED_SECRET_KEYS = new Set<ConfigKey>(NESTED_SECRETS.map((n) => n.key));
+
+type Unknowns = Record<string, unknown>;
+
+function redactField(entry: unknown, field: string): unknown {
+  if (!entry || typeof entry !== "object") return entry;
+  const value = (entry as Unknowns)[field];
+  if (typeof value !== "string" || value === "") return entry;
+  return { ...(entry as Unknowns), [field]: REDACTED_SECRET };
+}
+
+function restoreField(next: unknown, stored: unknown, field: string): unknown {
+  if (!next || typeof next !== "object") return next;
+  if ((next as Unknowns)[field] !== REDACTED_SECRET) return next;
+  const kept = stored && typeof stored === "object" ? (stored as Unknowns)[field] : undefined;
+  return { ...(next as Unknowns), [field]: kept };
+}
 
 export function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
   const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
@@ -642,6 +736,35 @@ export function getPersonalizedSharingStatus(): PersonalizedSharingStatus {
 }
 
 /**
+ * Should the user portal be listening?
+ *
+ * It used to be personalization and nothing else, which stranded the two portal
+ * features that have nothing to do with it:
+ *
+ * - "tell people before their films disappear" was unreachable unless the admin
+ *   also turned on the heavyweight scheme that relabels every item in the
+ *   library and restricts every user's access to it;
+ * - a per-user digest frequency and address can *only* be set in the portal, so
+ *   with the port closed nobody could ever subscribe — while the admin-side
+ *   digest settings happily implied otherwise.
+ *
+ * It also made `portal.personalizationStatus` unreachable by construction: the
+ * portal shows a banner when personalization is off, and the port was closed in
+ * exactly that state.
+ *
+ * So: any portal-served feature being on is enough. Personalization mid-flip
+ * (`enabling`/`disabling`) counts, so the portal doesn't blink during a
+ * transition. Digests are represented by SMTP being configured, because that is
+ * the admin-side half — subscribing is what the portal is for.
+ */
+export function portalShouldRun(): boolean {
+  if (getPersonalizedSharingStatus() !== "disabled") return true;
+  if (getConfig("cleanup_enabled") === true) return true;
+  if ((getConfig("global_smtp")?.host ?? "") !== "") return true;
+  return false;
+}
+
+/**
  * Resolve the LLM provider config, falling back to the legacy
  * `global_anthropic_api_key` slot when `global_llm` hasn't been written yet.
  * Returns undefined when no provider is configured.
@@ -677,19 +800,50 @@ export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
  * exercised by unit tests without standing up a SQLite instance.
  */
 export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.infer<ConfigSchema>> {
-  const all = { ...input } as Record<string, unknown>;
+  const all = { ...input } as Unknowns;
   for (const key of SECRET_KEYS) {
     if (typeof all[key] === "string" && all[key] !== "") all[key] = REDACTED_SECRET;
   }
-  const llm = all["global_llm"] as ConfigValue<"global_llm"> | undefined;
-  if (llm && typeof llm.apiKey === "string" && llm.apiKey !== "") {
-    all["global_llm"] = { ...llm, apiKey: REDACTED_SECRET };
-  }
-  const smtp = all["global_smtp"] as ConfigValue<"global_smtp"> | undefined;
-  if (smtp && typeof smtp.password === "string" && smtp.password !== "") {
-    all["global_smtp"] = { ...smtp, password: REDACTED_SECRET };
+  for (const { key, field, each } of NESTED_SECRETS) {
+    const value = all[key];
+    if (value === undefined || value === null) continue;
+    if (each) {
+      if (Array.isArray(value)) all[key] = value.map((entry) => redactField(entry, field));
+    } else {
+      all[key] = redactField(value, field);
+    }
   }
   return all as Partial<z.infer<ConfigSchema>>;
+}
+
+/**
+ * The inverse, for one key on the way back in: a form echoes the sentinel for a
+ * secret the user didn't retype, and saving that verbatim would erase it. Lists
+ * are matched element to element by `id`, so reordering or renaming an \*Arr
+ * instance keeps its key and a genuinely new instance gets no borrowed one.
+ */
+export function restoreNestedSecrets<K extends ConfigKey>(key: K, value: ConfigValue<K>): ConfigValue<K> {
+  const stored = getConfig(key);
+  let next: unknown = value;
+  for (const nested of NESTED_SECRETS) {
+    if (nested.key !== key) continue;
+    if (nested.each) {
+      if (!Array.isArray(next)) continue;
+      const byId = new Map<unknown, unknown>();
+      if (Array.isArray(stored)) {
+        for (const entry of stored) {
+          if (entry && typeof entry === "object") byId.set((entry as Unknowns).id, entry);
+        }
+      }
+      next = next.map((entry) => {
+        const id = entry && typeof entry === "object" ? (entry as Unknowns).id : undefined;
+        return restoreField(entry, byId.get(id), nested.field);
+      });
+    } else {
+      next = restoreField(next, stored, nested.field);
+    }
+  }
+  return next as ConfigValue<K>;
 }
 
 /**

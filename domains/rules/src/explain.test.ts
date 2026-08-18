@@ -126,6 +126,35 @@ describe("explainItem", () => {
     assert.equal(asked.length, 0);
   });
 
+  test("a rule scoped by section key covers that library, as the engine says it does", async () => {
+    // The engine matches a section by lower-cased title *or* by key, and both
+    // are legal in a saved config — migration and hand-written rules use keys.
+    // This panel compared titles exactly, so it confidently told the user a rule
+    // did not cover a library the run had just processed.
+    const { client, asked } = fakeClient({ genre: [ITEM] }, "1");
+    const result = await explainItem({
+      client,
+      ratingKey: ITEM,
+      filter: group("all", [leaf("genre", "=", "Horror")]) as never,
+      ruleSectionTitles: ["1", "2"],
+      sections: SECTIONS,
+    });
+    assert.equal(result.matches, true, "in scope, so the clauses actually run");
+    assert.ok(asked.length > 0);
+  });
+
+  test("case and padding don't put an item out of scope either", async () => {
+    const { client } = fakeClient({ genre: [ITEM] }, "1");
+    const result = await explainItem({
+      client,
+      ratingKey: ITEM,
+      filter: group("all", [leaf("genre", "=", "Horror")]) as never,
+      ruleSectionTitles: [" movies "],
+      sections: SECTIONS,
+    });
+    assert.equal(result.matches, true);
+  });
+
   test("a rule with no clauses matches everything in its libraries", async () => {
     const { client } = fakeClient({});
     const result = await explainItem({

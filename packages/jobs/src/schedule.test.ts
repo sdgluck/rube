@@ -10,8 +10,16 @@ import { setupTempDb } from "./test-support/temp-db.ts";
 setupTempDb();
 
 const { db, config, jobs, jobRuns } = await import("@tinkerbell/db");
-const { catchUpMissedRuns, cronJobs, initSchedule, scheduleCron, schedulerTimezone, startCronSchedules } =
-  await import("./schedule.ts");
+const {
+  catchUpMissedRuns,
+  clearDeferredStarts,
+  cronJobs,
+  deferredStarts,
+  initSchedule,
+  scheduleCron,
+  schedulerTimezone,
+  startCronSchedules,
+} = await import("./schedule.ts");
 const { setConfig, deleteConfig, DAY_MS, HOUR_MS } = await import("@tinkerbell/core");
 
 /** 2026-08-04T12:00:00Z — a fixed "now" so the assertions don't drift. */
@@ -27,9 +35,20 @@ function seedRun(jobId: string, startedAt: number): void {
     .run();
 }
 
+/**
+ * Which job ids a run actually started. Asserted by id rather than by call
+ * count: catch-up starts are staggered timeouts, so an earlier test's timer can
+ * still land on the current mock.
+ */
+function startedIds(started: { mock: { calls: Array<{ arguments: unknown[] }> } }): string[] {
+  return started.mock.calls.map((call) => call.arguments[0] as string);
+}
+
 beforeEach(() => {
   db.delete(jobRuns).run();
   db.delete(jobs).run();
+  clearDeferredStarts();
+  deleteConfig("jobs_maintenance_window");
   deleteConfig("global_timezone");
   // UTC keeps the fixture arithmetic honest regardless of where this runs.
   setConfig("global_timezone", "UTC");
@@ -95,6 +114,38 @@ describe("catchUpMissedRuns", () => {
     seedJob("annual", "0 3 1 1 *");
 
     assert.deepEqual(catchUpMissedRuns(NOW), []);
+  });
+
+  it("holds a caught-up job back when the maintenance window says so", async () => {
+    // Catch-up used to call `startJob` directly, so a restart in the evening
+    // stampeded every heavy job past the gate that exists to keep them out of
+    // it. It is the scheduler deciding to work, so the window applies.
+    const started = mock.fn(async () => ({ ok: true as const, runId: "x" }));
+    initSchedule(started);
+    // `generate` is on the deferrable list; the window is the small hours.
+    seedJob("generate", "0 3 * * *");
+    setConfig("jobs_maintenance_window", { enabled: true, from: "01:00", to: "06:00" });
+
+    // Still reported as due — the occurrence was missed either way.
+    assert.deepEqual(catchUpMissedRuns(NOW), ["generate"]);
+    // …but held rather than started. The stagger is a timeout, so let it fire.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.ok(!startedIds(started).includes("generate"), "the held job should not have started");
+    assert.deepEqual(
+      deferredStarts().map((d) => d.jobId),
+      ["generate"],
+    );
+  });
+
+  it("starts a caught-up job when nothing is holding it back", async () => {
+    const started = mock.fn(async () => ({ ok: true as const, runId: "x" }));
+    initSchedule(started);
+    seedJob("generate", "0 3 * * *");
+
+    assert.deepEqual(catchUpMissedRuns(NOW), ["generate"]);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.ok(startedIds(started).includes("generate"));
+    assert.deepEqual(deferredStarts(), []);
   });
 
   it("survives an unparseable schedule without taking the boot down", () => {

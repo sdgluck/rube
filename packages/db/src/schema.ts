@@ -299,6 +299,19 @@ export const deletedRules = sqliteTable(
     config: text("config", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
     enabled: integer("enabled").notNull().default(1),
     createdAt: integer("created_at").notNull(),
+    /**
+     * Where the rule sat in the running order when it was deleted.
+     *
+     * Carried on the tombstone because position decides which rule wins when
+     * two disagree. Without it a restore fell back to the column default, 0 —
+     * so undoing a delete moved the rule to the *front* of the order, where it
+     * now won every conflict it used to lose. A restore has to put a rule back
+     * where it was, not just back.
+     *
+     * Nullable for tombstones written before this column existed; a restore
+     * treats null as "no better answer than the default".
+     */
+    position: integer("position"),
     registryRuleSlug: text("registry_rule_slug"),
     registryPackSlug: text("registry_pack_slug"),
     registryVersion: integer("registry_version"),
@@ -675,6 +688,28 @@ export const mediaItems = sqliteTable(
      * total would happily add up, and every consumer says "unknown" instead.
      */
     fileSize: integer("file_size"),
+    /**
+     * Episodes Plex reports for a show (`leafCount`). Null for movies, and for a
+     * show Plex didn't count.
+     *
+     * Stored because the library stats used to count `type = 'episode'` rows —
+     * and there are none. The sync walks a section's top-level rows, so a TV
+     * library indexes shows, never episodes: "~0 episodes each" on the Shows
+     * tile and "100% movies" on the library split were both structural, not a
+     * missing sync. The number comes free in the listing already being paged.
+     */
+    leafCount: integer("leaf_count"),
+    /**
+     * Episodes of this show whose size Plex wouldn't report. Null for movies and
+     * for anything not measured at episode level.
+     *
+     * `fileSize` above is the sum of what *could* be read, so a show with two of
+     * four episodes sized carries a real but incomplete number. Without this
+     * column that show counted as fully sized, and the Storage panel showed a
+     * total short by half with no caveat at all — the panel's own caveat line
+     * exists precisely to say "N items couldn't be accounted for".
+     */
+    sizeUnknownParts: integer("size_unknown_parts"),
     /** Overall bitrate in kbps, as Plex reports it for the first version. */
     bitrate: integer("bitrate"),
     /**
@@ -817,7 +852,16 @@ export const sharingRestrictionBackups = sqliteTable("sharing_restriction_backup
 export const userPreferences = sqliteTable("user_preferences", {
   userId: integer("user_id").primaryKey(),
   preferences: text("preferences", { mode: "json" }).$type<Record<string, unknown>>().notNull().default({}),
-  optedIn: integer("opted_in").notNull().default(1),
+  /**
+   * Consent to a personalised home screen, per user.
+   *
+   * Defaults to 0 — *not* consented. It defaulted to 1, which is the wrong way
+   * round for a consent column: any insert that omitted it would have opted
+   * somebody in silently. Latent, because every writer passes it explicitly and
+   * `getUserPreferences` already reports `false` for a user with no row at all,
+   * but a default is exactly the sort of thing a future writer trusts.
+   */
+  optedIn: integer("opted_in").notNull().default(0),
   updatedAt: integer("updated_at").notNull(),
 });
 

@@ -2,7 +2,20 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import { eq, and, or, like, asc, desc, lt, sql, inArray, type SQL, type InferSelectModel } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  like,
+  asc,
+  desc,
+  lt,
+  notInArray,
+  sql,
+  inArray,
+  type SQL,
+  type InferSelectModel,
+} from "drizzle-orm";
 import { db, collections, collectionItems, likeContains } from "@tinkerbell/db";
 import { runPostCollectionSyncHook } from "@tinkerbell/core";
 import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
@@ -111,10 +124,30 @@ export function getCollectionsForItem(itemRatingKey: string): CollectionRow[] {
     .all();
 }
 
+export interface SyncCollectionsOptions {
+  /**
+   * Every section this install manages, whether or not this run covers it.
+   *
+   * The stale sweep is scoped to the sections actually walked, because this
+   * mirror is not only a cache: cleanup's "never delete anything in this
+   * collection" protections resolve *through* `collections` and
+   * `collection_items`. A `sync-collections` job configured with
+   * `sections: ["Movies"]` used to delete every TV-library collection row,
+   * which quietly resolved those protections to the empty set and let a
+   * cleanup rule delete items somebody had explicitly protected.
+   *
+   * Rows outside the managed set are still swept, so a library deleted in Plex
+   * (or dropped from `global_plex_libraries`) doesn't linger. Omitted means
+   * "the sections passed in are all there are".
+   */
+  knownSectionKeys?: readonly string[];
+}
+
 export async function syncCollections(
   client: PlexClient,
   sections: PlexSection[],
   onProgress?: (current: number, total: number, message: string) => void,
+  options: SyncCollectionsOptions = {},
 ): Promise<SyncStats> {
   const now = Date.now();
 
@@ -205,7 +238,17 @@ export async function syncCollections(
       }
     }
 
-    const result = tx.delete(collections).where(lt(collections.syncedAt, now)).run();
+    const walkedKeys = sections.map((s) => s.key);
+    const managedKeys = [...(options.knownSectionKeys ?? walkedKeys)];
+    const result = tx
+      .delete(collections)
+      .where(
+        or(
+          and(lt(collections.syncedAt, now), inArray(collections.sectionId, walkedKeys)),
+          notInArray(collections.sectionId, managedKeys),
+        ),
+      )
+      .run();
 
     // Drop membership rows for collections that no longer exist locally.
     tx.run(
@@ -439,12 +482,17 @@ export function forgetCollections(ratingKeys: string[]): number {
  * Matched on the JSON array with LIKE, the same shape `getBywCollectionsGroupedByUser`
  * uses. An exact `"User:<name>"` match including the quotes, so a user called
  * `sam` doesn't collect the collections belonging to `samantha`.
+ *
+ * Through `likeContains`, which escapes the pattern: a name is not a pattern,
+ * and this query is a per-user boundary. A managed user called `a_b` would
+ * otherwise have matched `a?b`, and one containing `%` would have matched every
+ * `User:`-labelled collection on the server — including other people's.
  */
 export function getCollectionsForUser(username: string): CollectionRow[] {
   return db
     .select()
     .from(collections)
-    .where(like(collections.labels, `%"User:${username}"%`))
+    .where(likeContains(collections.labels, `"User:${username}"`))
     .orderBy(desc(collections.addedAt))
     .all();
 }

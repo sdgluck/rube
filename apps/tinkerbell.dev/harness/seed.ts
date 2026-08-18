@@ -63,6 +63,19 @@ for (const s of SECTIONS) {
     .run();
 }
 
+/**
+ * A believable size on disk, derived from the rating key so it never moves
+ * between captures. Roughly: 4K films tens of GB, HD films a few GB, a show the
+ * sum of a season or two of episodes.
+ */
+function seededFileSize(it: { ratingKey: string; type: string; videoResolution?: string }): number {
+  const spread = fnv1a(it.ratingKey) % 100;
+  const GB = 1_000_000_000;
+  if (it.type === "show") return (40 + spread * 4) * GB;
+  if (it.videoResolution === "4k") return (18 + spread / 4) * GB;
+  return (2 + spread / 20) * GB;
+}
+
 // ── Media items ─────────────────────────────────────────────────────────────
 for (const it of ITEMS) {
   db.insert(mediaItems)
@@ -87,6 +100,12 @@ for (const it of ITEMS) {
       audioCodec: it.audioCodec,
       audioChannels: it.audioChannels,
       container: it.container,
+      // Stable per item, like `addedAt`, and plausible per type: a 4K film is
+      // tens of gigabytes, a show is its whole run. Without these the Storage
+      // panel and tile render "no file sizes known yet" — in the release
+      // screenshots, which is where most people see this page first.
+      fileSize: seededFileSize(it),
+      leafCount: it.type === "show" ? 6 + (fnv1a(it.ratingKey) % 40) : null,
       syncedAt: now,
     })
     .onConflictDoNothing()

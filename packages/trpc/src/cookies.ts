@@ -16,8 +16,15 @@ export const COOKIE_NAMES: Record<SessionScope, string> = {
  * Carries the in-flight sign-in handshake. Holds an unguessable nonce, never
  * the plex.tv PIN id — the id stays server-side so no caller can present one
  * of their choosing.
+ *
+ * Named per scope for the same reason the session cookies are: the two apps
+ * share a host, so one name would have a sign-in on one port clobber a
+ * handshake in flight on the other.
  */
-export const HANDSHAKE_COOKIE = "tb_admin_handshake";
+export const HANDSHAKE_COOKIES: Record<SessionScope, string> = {
+  portal: "tb_handshake",
+  admin: "tb_admin_handshake",
+};
 
 /** Long enough for a human to finish signing in, short enough to age out. */
 export const HANDSHAKE_MAX_AGE = 15 * 60; // seconds
@@ -62,14 +69,24 @@ export function clearSessionCookie(headers: Headers, opts: { scope: SessionScope
   headers.append("Set-Cookie", attrs.join("; "));
 }
 
-export function setHandshakeCookie(headers: Headers, nonce: string, opts: { secure: boolean }): void {
-  const attrs = [`${HANDSHAKE_COOKIE}=${nonce}`, "HttpOnly", "Path=/", `Max-Age=${HANDSHAKE_MAX_AGE}`, "SameSite=Lax"];
+export function setHandshakeCookie(
+  headers: Headers,
+  nonce: string,
+  opts: { scope: SessionScope; secure: boolean },
+): void {
+  const attrs = [
+    `${HANDSHAKE_COOKIES[opts.scope]}=${nonce}`,
+    "HttpOnly",
+    "Path=/",
+    `Max-Age=${HANDSHAKE_MAX_AGE}`,
+    "SameSite=Lax",
+  ];
   if (opts.secure) attrs.push("Secure");
   headers.append("Set-Cookie", attrs.join("; "));
 }
 
-export function clearHandshakeCookie(headers: Headers, opts: { secure: boolean }): void {
-  const attrs = [`${HANDSHAKE_COOKIE}=`, "HttpOnly", "Path=/", "Max-Age=0", "SameSite=Lax"];
+export function clearHandshakeCookie(headers: Headers, opts: { scope: SessionScope; secure: boolean }): void {
+  const attrs = [`${HANDSHAKE_COOKIES[opts.scope]}=`, "HttpOnly", "Path=/", "Max-Age=0", "SameSite=Lax"];
   if (opts.secure) attrs.push("Secure");
   headers.append("Set-Cookie", attrs.join("; "));
 }

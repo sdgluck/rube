@@ -31,6 +31,10 @@ export function StoragePanel({ dragHandle, dragProps }: DashboardPanelProps) {
 
   const total = sections.reduce((sum, s) => sum + s.bytes, 0);
   const unsized = sections.reduce((sum, s) => sum + s.unsized, 0);
+  // Shows counted, but only partly: some of their episodes had no size. Saying
+  // nothing about these made a half-measured TV library look fully measured.
+  const partial = sections.reduce((sum, s) => sum + s.partial, 0);
+  const unknownEpisodes = sections.reduce((sum, s) => sum + s.unknownEpisodes, 0);
   const known = sections.filter((s) => s.bytes > 0);
 
   return (
@@ -49,6 +53,13 @@ export function StoragePanel({ dragHandle, dragProps }: DashboardPanelProps) {
             <div className={styles.muted}>
               Not counted: {formatNumber(unsized)} item{unsized === 1 ? "" : "s"} of unknown size. Sizes are read during
               Sync Media, so anything indexed before the last run fills in on the next one.
+            </div>
+          )}
+          {partial > 0 && (
+            <div className={styles.muted}>
+              Partly counted: {formatNumber(partial)} show{partial === 1 ? "" : "s"} where Plex reported no size for{" "}
+              {formatNumber(unknownEpisodes)} episode{unknownEpisodes === 1 ? "" : "s"}, so the total above is short by
+              that much.
             </div>
           )}
         </>

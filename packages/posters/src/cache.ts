@@ -110,6 +110,11 @@ export function createPosterCache(opts: PosterCacheOptions): PosterCache {
     if (res.status === 404) {
       const sidecar: Sidecar = { url, status: "missing", fetchedAt: now() };
       await writeAtomic(metaPath, JSON.stringify(sidecar));
+      // The blob goes with it. Keeping a file the sidecar has just declared
+      // missing means the cache grows by every poster that ever disappears, and
+      // holds bytes nothing will ever serve.
+      const { rm } = await import("node:fs/promises");
+      await rm(blobPath, { force: true });
       return { status: "missing", fromCache: false };
     }
 

@@ -13,6 +13,7 @@ import {
   explainItem,
   reorderRules,
   rulesProducingCollectionNamed,
+  RuleLockedError,
 } from "@tinkerbell/domain.rules";
 import {
   activateRuleRun,
@@ -140,6 +141,15 @@ async function executeRuleRun(ruleId: string, phase: RuleRunPhase, runId: string
     });
     handle.finish({ status: "ok", collectionCount: result.collections.length, itemCount });
   } catch (err) {
+    // Contention isn't failure — the same call the nightly batch and the
+    // per-rule scheduler make. The rule is being generated right now by
+    // something else, and that run's output is as good as this one's, so this
+    // slice yields rather than painting a red row in the Rules table.
+    if (err instanceof RuleLockedError) {
+      console.log(`${consolePrefix} Skipping rule "${ruleId}" — ${err.heldBy || "another run"} already holds it`);
+      handle.finish({ status: "cancelled" });
+      return;
+    }
     // The row, not the exception type, decides how this is recorded: a run
     // cancelled from another tab surfaces here as a plain AbortError.
     const aborted = handle.cancelRequested() || (err instanceof Error && err.name === "AbortError");

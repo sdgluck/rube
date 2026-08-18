@@ -13,17 +13,34 @@ import {
   getPlexSession,
   deletePlexSession,
   plexUserExists,
+  sharedSectionKeys,
   getUserPreferences,
   setUserPreferences,
   userPreferencesSchema,
 } from "@tinkerbell/core";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { getPlexClient } from "./_base.ts";
-import { COOKIE_NAMES, clearSessionCookie, isSecureRequest, parseCookie, setSessionCookie } from "./cookies.ts";
+import {
+  COOKIE_NAMES,
+  HANDSHAKE_COOKIES,
+  clearHandshakeCookie,
+  clearSessionCookie,
+  isSecureRequest,
+  parseCookie,
+  setHandshakeCookie,
+  setSessionCookie,
+} from "./cookies.ts";
+import { createHandshake, rateLimit, readHandshake, spendHandshake } from "./handshake.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 import { searchMediaTitles } from "@tinkerbell/domain.media";
 import { getCollectionsForUser } from "@tinkerbell/domain.collections";
-import { keepVotesForUser, leavingSoon, recordKeepVote, removeKeepVote } from "@tinkerbell/domain.cleanup";
+import {
+  isQueuedCandidate,
+  keepVotesForUser,
+  leavingSoon,
+  recordKeepVote,
+  removeKeepVote,
+} from "@tinkerbell/domain.cleanup";
 import { userTotals } from "@tinkerbell/domain.playback";
 
 export interface PortalContext {
@@ -32,15 +49,46 @@ export interface PortalContext {
   resHeaders: Headers;
   /** Whether the request arrived over HTTPS, so the cookie can be `Secure`. */
   secure: boolean;
+  /** The in-flight sign-in handshake, if this browser began one. */
+  handshakeNonce?: string;
+  /** Where the browser thinks it is, for the plex.tv return trip. */
+  origin: string;
+  ip: string;
 }
 
-export function createPortalContext(opts: { req: Request; resHeaders: Headers }): PortalContext {
-  const rawToken = parseCookie(opts.req.headers.get("cookie") ?? "", COOKIE_NAMES.portal);
+export function createPortalContext(opts: { req: Request; resHeaders: Headers; ip?: string }): PortalContext {
+  const secure = isSecureRequest(opts.req);
+  const cookies = opts.req.headers.get("cookie") ?? "";
+  const rawToken = parseCookie(cookies, COOKIE_NAMES.portal);
+  const session = getPlexSession(rawToken, "portal");
+
+  // Sliding expiry only moves the DB row; the browser's copy carries its own
+  // Max-Age, so it has to be re-sent or a portal user who visits every day
+  // would still be logged out on the original schedule.
+  if (session?.refreshed && rawToken) {
+    setSessionCookie(opts.resHeaders, rawToken, { scope: "portal", secure });
+  }
+
+  // A session that was valid when it was issued but whose account has since
+  // stopped being a user of this server must stop working immediately, not at
+  // expiry — the admin flow re-checks `isAdminAccount` on every request for
+  // exactly this reason, and unsharing a library is the portal's equivalent.
+  const authorised = session && plexUserExists(session.userId) ? session : undefined;
+
+  // Behind a reverse proxy the Host the browser used is the forwarded one; the
+  // socket's Host is the internal address and would send the user somewhere
+  // they can't reach.
+  const forwardedHost = opts.req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || new URL(opts.req.url).host;
+
   return {
-    session: getPlexSession(rawToken, "portal"),
+    session: authorised && { userId: authorised.userId, username: authorised.username },
     rawToken,
     resHeaders: opts.resHeaders,
-    secure: isSecureRequest(opts.req),
+    secure,
+    handshakeNonce: parseCookie(cookies, HANDSHAKE_COOKIES.portal),
+    origin: `${secure ? "https" : "http"}://${host}`,
+    ip: opts.ip ?? "unknown",
   };
 }
 
@@ -61,17 +109,48 @@ export const portalRouter = tp.router({
   branding: publicProcedure.query(() => getConfig("portal_branding") ?? {}),
 
   auth: tp.router({
-    start: publicProcedure.input(z.object({ forwardUrl: z.string().url().optional() })).mutation(async ({ input }) => {
+    /**
+     * Begin a sign-in. Returns only the plex.tv URL to send the browser to.
+     *
+     * Neither the PIN id nor the return address is the caller's to choose. The
+     * id stays in this process behind a nonce in an HttpOnly cookie, because
+     * plex.tv will hand a PIN's token to anyone who asks with the client id
+     * that minted it and the ids it issues are sequential — polling around the
+     * live range while somebody approves theirs would otherwise hand over
+     * their session. And `forwardUrl` used to be caller-supplied, which let
+     * anyone choose where the browser landed after approving: a genuine
+     * app.plex.tv link that finishes on their page.
+     */
+    start: publicProcedure.mutation(async ({ ctx }) => {
+      rateLimit(ctx.ip);
       const clientId = ensurePlexClientId();
       const pin = await createPlexPin(clientId);
-      const forwardUrl = input.forwardUrl || getConfig("user_app_public_url") || "";
-      return { id: pin.id, authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl }) };
+      const nonce = createHandshake("portal", pin.id);
+      setHandshakeCookie(ctx.resHeaders, nonce, { scope: "portal", secure: ctx.secure });
+      // The admin-configured public URL wins when it is set — behind a proxy
+      // it is the address that actually reaches the portal — and the request's
+      // own origin is the fallback. Both are the server's answer, not the
+      // caller's.
+      const forwardUrl = getConfig("user_app_public_url") || ctx.origin;
+      return { authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl }) };
     }),
 
-    poll: publicProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    poll: publicProcedure.mutation(async ({ ctx }) => {
+      rateLimit(ctx.ip);
+      const pinId = readHandshake("portal", ctx.handshakeNonce);
+      // No cookie, or one this process doesn't recognise: nothing to finish.
+      if (pinId === undefined) {
+        clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
+        return { status: "expired" as const };
+      }
+
       const clientId = ensurePlexClientId();
-      const token = await checkPlexPin(input.id, clientId);
+      const token = await checkPlexPin(pinId, clientId);
       if (!token) return { status: "pending" as const };
+
+      // Redeemed — one way or the other this handshake is spent.
+      spendHandshake("portal", ctx.handshakeNonce);
+      clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
 
       const account = await getPlexAccount(token, clientId);
       if (!plexUserExists(account.id)) {
@@ -99,10 +178,30 @@ export const portalRouter = tp.router({
   preferences: tp.router({
     get: userProcedure.query(({ ctx }) => getUserPreferences(ctx.session.userId)),
 
+    /**
+     * Merged over what is stored, not written over it.
+     *
+     * The form sends the fields it renders; the schema fills in defaults for
+     * everything else. Taking that as the new state meant every save silently
+     * wiped the fields the form doesn't know about — `people`, `eras`,
+     * `runtime`, `languages`, `vibe`, `contentRatingCeiling`, and the
+     * "Not for me" rows the *other* tab writes. A key that is present wins, so
+     * clearing a list still clears it; a key that is absent is left alone.
+     */
     set: userProcedure
-      .input(z.object({ preferences: userPreferencesSchema, optedIn: z.boolean() }))
+      // Deliberately not `userPreferencesSchema.partial()`: the field defaults
+      // survive `.partial()`, so an absent key arrives as `[]` and is
+      // indistinguishable from the user clearing it. The raw keys are merged over
+      // what is stored and the *result* is validated, which keeps "absent means
+      // unchanged" while still refusing a malformed value.
+      .input(z.object({ preferences: z.record(z.string(), z.unknown()), optedIn: z.boolean() }))
       .mutation(({ ctx, input }) => {
-        setUserPreferences(ctx.session.userId, input.preferences, input.optedIn);
+        const current = getUserPreferences(ctx.session.userId);
+        const provided = Object.fromEntries(
+          Object.entries(input.preferences).filter(([, value]) => value !== undefined),
+        );
+        const merged = userPreferencesSchema.parse({ ...current.preferences, ...provided });
+        setUserPreferences(ctx.session.userId, merged, input.optedIn);
         return { ok: true };
       }),
   }),
@@ -133,10 +232,13 @@ export const portalRouter = tp.router({
   /**
    * "Not for me."
    *
-   * Adds the title to `excludedTitles`, which is the same list the portal's
-   * own picker writes to and the one every rule already honours — so this is a
-   * new way to say something the system could already hear, rather than a
-   * second preference store to keep in step.
+   * Pressed on a *row*, so it records a collection name in
+   * `excludedCollections`, which `personalize` and `because-you-watched` check
+   * before building a row for this user. It used to write into `excludedTitles`,
+   * the list of *item* titles the portal's own picker fills — where the
+   * collection's name never matched anything, the row was rebuilt identically on
+   * the next run, and the entry then showed up in the user's "Never recommend"
+   * list as a film they had never mentioned.
    *
    * Idempotent: pressing it twice is one exclusion, not two.
    */
@@ -144,17 +246,20 @@ export const portalRouter = tp.router({
     .input(z.object({ title: z.string().trim().min(1).max(500) }))
     .mutation(({ ctx, input }) => {
       const current = getUserPreferences(ctx.session.userId);
-      const excludedTitles = current.preferences.excludedTitles.includes(input.title)
-        ? current.preferences.excludedTitles
-        : [...current.preferences.excludedTitles, input.title];
+      // The collection's name, not an item's — this button is pressed on a row.
+      // It used to be added to `excludedTitles`, which every consumer matches
+      // against item titles, so the row came back unchanged on the next run.
+      const excludedCollections = current.preferences.excludedCollections.includes(input.title)
+        ? current.preferences.excludedCollections
+        : [...current.preferences.excludedCollections, input.title];
       setUserPreferences(
         ctx.session.userId,
-        { ...current.preferences, excludedTitles },
+        { ...current.preferences, excludedCollections },
         // Opt-in is left exactly as it was. Saying "not this one" is not
         // consent to have your whole home screen rearranged.
         current.optedIn,
       );
-      return { ok: true as const, excluded: excludedTitles.length };
+      return { ok: true as const, excluded: excludedCollections.length };
     }),
 
   /**
@@ -172,7 +277,9 @@ export const portalRouter = tp.router({
    */
   leavingSoon: userProcedure.query(({ ctx }) => {
     const voted = keepVotesForUser(ctx.session.userId);
-    return leavingSoon().map((item) => ({ ...item, voted: voted.has(item.ratingKey) }));
+    // Scoped to the libraries shared with this user — see `sharedSectionKeys`.
+    const sections = sharedSectionKeys(ctx.session.userId);
+    return leavingSoon(50, Date.now(), sections).map((item) => ({ ...item, voted: voted.has(item.ratingKey) }));
   }),
 
   /**
@@ -186,8 +293,18 @@ export const portalRouter = tp.router({
   voteKeep: userProcedure
     .input(z.object({ ratingKey: z.string().min(1), keep: z.boolean() }))
     .mutation(({ ctx, input }) => {
-      if (input.keep) recordKeepVote(input.ratingKey, ctx.session.userId, ctx.session.username);
-      else removeKeepVote(input.ratingKey, ctx.session.userId);
+      // Only for something a rule has actually queued. The vote shows up on the
+      // admin's queue with the voter's name against it, so an unchecked rating
+      // key let a shared user put named rows there for items no rule had ever
+      // looked at — noise on the one page that has to be trustworthy.
+      if (input.keep) {
+        if (!isQueuedCandidate(input.ratingKey)) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "That isn't queued for removal." });
+        }
+        recordKeepVote(input.ratingKey, ctx.session.userId, ctx.session.username);
+      } else {
+        removeKeepVote(input.ratingKey, ctx.session.userId);
+      }
       return { ok: true as const };
     }),
 
@@ -200,7 +317,9 @@ export const portalRouter = tp.router({
    */
   myWatchSummary: userProcedure.query(({ ctx }) => userTotals(ctx.session.userId)),
 
-  searchTitles: userProcedure.input(z.object({ q: z.string() })).query(({ input }) => searchMediaTitles(input.q, 15)),
+  searchTitles: userProcedure
+    .input(z.object({ q: z.string() }))
+    .query(({ ctx, input }) => searchMediaTitles(input.q, 15, sharedSectionKeys(ctx.session.userId))),
 
   availableGenres: userProcedure.query(async () => {
     const client = getPlexClient();

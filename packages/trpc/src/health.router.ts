@@ -74,6 +74,14 @@ export const healthRouter = t.router({
     }),
 
   check: procedure.input(z.object({ service: z.string() })).mutation(async ({ input }) => {
+    // Checked against the live service list before anything is recorded. An
+    // unknown name used to throw "Unknown service" from `checkServiceHealth` and
+    // then be *written as a failing health row for it* — so a caller could
+    // invent a service, and a second call would announce `health.failed` for
+    // something that does not exist.
+    if (!healthServices().some((s) => s.service === input.service)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown service: ${input.service}` });
+    }
     try {
       await checkServiceHealth(input.service);
       return { ok: true };

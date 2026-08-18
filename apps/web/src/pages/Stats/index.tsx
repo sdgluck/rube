@@ -26,6 +26,7 @@ import {
   formatUptime,
 } from "#/format";
 import { LibraryBreakdownPanel } from "./LibraryBreakdownPanel";
+import { isTranscoding, streamKind } from "#lib/streamDecision";
 import { HistoryPanel } from "./HistoryPanel";
 import { MostWatchedPanel } from "./MostWatchedPanel";
 import { RecentlyAddedPanel } from "./RecentlyAddedPanel";
@@ -133,7 +134,11 @@ export default function Stats() {
 
   const sessions = sessionsQuery.data ?? [];
   const totalBandwidth = sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
-  const transcodingCount = sessions.filter((s) => s.videoDecision === "transcode").length;
+  // One classifier for the whole page — see `streamDecision`. The tiles used to
+  // count `videoDecision` alone, so an audio-only transcode read "0 transcoding"
+  // here while the row beneath said "Transcode (audio)".
+  const transcodingCount = sessions.filter(isTranscoding).length;
+  const directPlayCount = sessions.filter((s) => streamKind(s) === "direct-play").length;
   const series = activitySeriesQuery.data;
 
   const handleRefresh = () => {
@@ -165,11 +170,12 @@ export default function Stats() {
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
       case "directPlay": {
-        // The number worth watching on a server that transcodes: how much of
-        // the load is the CPU's problem. Its complement is the Transcodes tile,
-        // and a row can hold both.
-        const direct = sessions.length - transcodingCount;
-        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : direct;
+        // The number worth watching on a server that transcodes: how much of the
+        // load is the CPU's problem. Not simply "everything that isn't
+        // transcoding" — a remux is a Direct Stream, which Plex reports
+        // separately and the Streams panel labels as such, so counting it here
+        // as direct play made the two disagree about the same session.
+        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : directPlayCount;
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
       }

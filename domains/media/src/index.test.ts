@@ -11,7 +11,7 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 setupTempDb("tinkerbell-media-test-");
 
 const { db, events, mediaItems } = await import("@tinkerbell/db");
-const { syncMedia } = await import("./index.ts");
+const { syncMedia, getStorageBySection } = await import("./index.ts");
 const { createPlexClient } = await import("@tinkerbell/plex");
 
 type PlexClient = ReturnType<typeof createPlexClient>;
@@ -22,6 +22,7 @@ interface FakeItem {
   ratingKey: string;
   title: string;
   year?: number;
+  leafCount?: number;
   Genre?: Array<{ tag: string }>;
   rating?: number;
   audienceRating?: number;
@@ -250,14 +251,46 @@ describe("show sizes", () => {
     assert.equal(db.select().from(mediaItems).all()[0].fileSize, null);
   });
 
-  test("a partially sized show reports what is known", async () => {
-    // Short of the truth, but the direction is right and the panel says how
-    // many items it couldn't account for.
+  test("a partially sized show reports what is known, and says how much it isn't", async () => {
+    // Short of the truth, but the direction is right — and the panel can only
+    // say how many items it couldn't account for if the row admits to being
+    // incomplete. It used to keep the bytes and drop the coverage, so a
+    // half-measured TV library reported a total half its real size with no
+    // caveat at all.
     await syncMedia(
       fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 500, episodes: 4, unsized: 2 } }),
       [SHOW_SECTION],
     );
-    assert.equal(db.select().from(mediaItems).all()[0].fileSize, 500);
+    const row = db.select().from(mediaItems).all()[0];
+    assert.equal(row.fileSize, 500);
+    assert.equal(row.sizeUnknownParts, 2);
+
+    const [section] = getStorageBySection();
+    assert.equal(section.bytes, 500);
+    assert.equal(section.unsized, 0, "the row has a size, so it is not unknown");
+    assert.equal(section.partial, 1, "…but it is incomplete, and the panel says so");
+    assert.equal(section.unknownEpisodes, 2);
+  });
+
+  test("a show's episode count comes from the listing, since episodes are never rows", async () => {
+    // The sync walks a section's top-level items, so a TV library indexes shows
+    // and never episodes — which is why counting `type = 'episode'` rows was
+    // always zero, and the Shows tile always said "~0 episodes each".
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show", leafCount: 24 }], {
+        s1: { bytes: 900, episodes: 24, unsized: 0 },
+      }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].leafCount, 24);
+  });
+
+  test("a show Plex didn't count falls back to the episodes actually walked", async () => {
+    await syncMedia(
+      fakeShowClient([{ ratingKey: "s1", title: "A show" }], { s1: { bytes: 900, episodes: 3, unsized: 0 } }),
+      [SHOW_SECTION],
+    );
+    assert.equal(db.select().from(mediaItems).all()[0].leafCount, 3);
   });
 
   test("a failed episode walk still indexes the library", async () => {
@@ -288,5 +321,90 @@ describe("show sizes", () => {
       [SECTION],
     );
     assert.equal(called, false);
+  });
+});
+
+describe("the stale sweep", () => {
+  const TV = { key: "2", title: "TV", type: "movie" };
+
+  /** A client whose listing depends on which section is being walked. */
+  function perSection(bySection: Record<string, FakeItem[]>): PlexClient {
+    return {
+      async *allItems(sectionKey: string) {
+        const items = bySection[sectionKey] ?? [];
+        for (const item of items) {
+          yield { item: { ...item, type: "movie", addedAt: 1_700_000_000 }, totalSize: items.length };
+        }
+      },
+    } as unknown as PlexClient;
+  }
+
+  const both = { "1": [{ ratingKey: "m1", title: "A film" }], "2": [{ ratingKey: "t1", title: "A show" }] };
+
+  test("a sync scoped to one section leaves the other section's rows alone", async () => {
+    // The bug this covers deleted a whole library: the sweep was
+    // `syncedAt < now` with no mention of which sections had been walked, and
+    // both `sync-media`'s job config and `global_plex_libraries` can narrow a
+    // run to one section.
+    await syncMedia(perSection(both), [SECTION, TV]);
+
+    const stats = await syncMedia(perSection(both), [SECTION], undefined, {
+      knownSectionKeys: ["1", "2"],
+    });
+
+    assert.equal(stats.removed, 0);
+    assert.deepEqual(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => r.ratingKey)
+        .sort(),
+      ["m1", "t1"],
+    );
+  });
+
+  test("it still removes what vanished from a section it did walk", async () => {
+    await syncMedia(perSection(both), [SECTION, TV]);
+
+    const stats = await syncMedia(perSection({ ...both, "1": [] }), [SECTION], undefined, {
+      knownSectionKeys: ["1", "2"],
+    });
+
+    assert.equal(stats.removed, 1);
+    assert.deepEqual(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => r.ratingKey),
+      ["t1"],
+    );
+  });
+
+  test("it removes the rows of a library that is no longer managed", async () => {
+    // A section deleted in Plex, or dropped from `global_plex_libraries`, has
+    // no watermark to go by — it is simply absent from the managed set.
+    await syncMedia(perSection(both), [SECTION, TV]);
+
+    const stats = await syncMedia(perSection(both), [SECTION], undefined, { knownSectionKeys: ["1"] });
+
+    assert.equal(stats.removed, 1);
+    assert.deepEqual(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => r.ratingKey),
+      ["m1"],
+    );
+  });
+
+  test("with no managed set given, the sections walked are all there are", async () => {
+    // The `collections.sync` mutation and a full nightly sync both pass every
+    // managed section as the walk list, so the default has to keep sweeping.
+    await syncMedia(perSection(both), [SECTION, TV]);
+    const stats = await syncMedia(perSection(both), [SECTION]);
+    assert.equal(stats.removed, 1);
   });
 });

@@ -1,9 +1,17 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { errorMessage } from "@tinkerbell/core";
-import { db, healthChecks } from "@tinkerbell/db";
+import { db, events, healthChecks } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
 import { getEnvironment, getPlexPrerollStatus } from "@tinkerbell/domain.prerolls";
-import { arrInstances, getAllConfig, getConfig, getLlmConfig, configSchema, WEEK_MS } from "@tinkerbell/core";
+import {
+  arrInstances,
+  getAllConfig,
+  getConfig,
+  getLlmConfig,
+  setConfig,
+  configSchema,
+  WEEK_MS,
+} from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
 import { z } from "zod";
@@ -34,21 +42,51 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   { service: "Prerolls", configuredFn: (c) => !!c.prerolls_plex_path },
 ];
 
+type ArrInstanceLike = { id: string; service: "radarr" | "sonarr"; name: string; isDefault?: boolean };
+
+/**
+ * The health-service name for one extra \*Arr instance.
+ *
+ * Derived from the display name — `Radarr (4K)` — because this string is what
+ * the notification target picker offers and what the Health page shows, and
+ * "Radarr (4K)" is what somebody routing "tell me when the 4K one dies" is
+ * looking for. Two instances sharing a name would otherwise collapse onto one
+ * health row, so a repeat is disambiguated by its id.
+ *
+ * The cost of a display-derived key is that renaming an instance changes it, and
+ * everything filed under the old string — check history, a mute, an entry in a
+ * `global_*_health_targets` allow-list — would be orphaned. `renameArrHealthServices`
+ * carries those over, and the config writer calls it. Stable ids exist for
+ * exactly this reason (see `global_arr_instances[].id`); the compromise here is
+ * that the *stored* key stays legible while the *rename* is handled.
+ */
+function arrHealthServiceName(instance: ArrInstanceLike, all: readonly ArrInstanceLike[]): string {
+  const base = instance.service === "radarr" ? "Radarr" : "Sonarr";
+  const sameName = all.filter((i) => !i.isDefault && i.service === instance.service && i.name === instance.name);
+  const suffix = sameName.length > 1 ? ` #${instance.id}` : "";
+  return `${base} (${instance.name})${suffix}`;
+}
+
+/** Health-service name per extra instance id, for a given set of instances. */
+export function arrHealthServiceNames(instances: readonly ArrInstanceLike[]): Map<string, string> {
+  const extra = instances.filter((i) => !i.isDefault);
+  return new Map(extra.map((i) => [i.id, arrHealthServiceName(i, extra)]));
+}
+
 /**
  * The static list plus one entry per extra \*Arr instance.
  *
  * Instances are configuration, not code, so they cannot live in the array
  * above — but a second Radarr that nobody is watching is exactly as useful as
- * a first one that nobody is watching. Named `Radarr (4K)` after the instance,
- * which is also what the notification target picker will offer, so routing
- * "tell me when the 4K one dies" somewhere specific works without any further
- * plumbing.
+ * a first one that nobody is watching.
  */
 export function healthServices(): Array<{ service: string; configuredFn: (c: ConfigMap) => boolean }> {
-  const extra = arrInstances()
+  const instances = arrInstances();
+  const names = arrHealthServiceNames(instances);
+  const extra = instances
     .filter((i) => !i.isDefault)
     .map((i) => ({
-      service: `${i.service === "radarr" ? "Radarr" : "Sonarr"} (${i.name})`,
+      service: names.get(i.id) ?? `${i.service === "radarr" ? "Radarr" : "Sonarr"} (${i.name})`,
       // Already resolved from config to exist at all, so it is configured by
       // construction — the check itself is what reports whether it answers.
       configuredFn: () => true,
@@ -58,13 +96,61 @@ export function healthServices(): Array<{ service: string; configuredFn: (c: Con
 
 /** The instance behind a derived `Radarr (4K)` health name, if it is one. */
 function instanceForHealthService(service: string): { url: string; apiKey: string } | null {
-  const match = /^(Radarr|Sonarr) \((.+)\)$/.exec(service);
-  if (!match) return null;
-  const found = arrInstances(match[1].toLowerCase() as "radarr" | "sonarr").find(
-    (i) => !i.isDefault && i.name === match[2],
-  );
-  return found ? { url: found.url, apiKey: found.apiKey } : null;
+  const instances = arrInstances();
+  const names = arrHealthServiceNames(instances);
+  for (const instance of instances) {
+    if (instance.isDefault) continue;
+    if (names.get(instance.id) === service) return { url: instance.url, apiKey: instance.apiKey };
+  }
+  return null;
 }
+
+/**
+ * Carry an extra instance's health identity across a rename.
+ *
+ * Called with the instance list as it was *before* a config write. For every id
+ * whose derived health name changed, the check history, any mute and every
+ * notification target allow-list entry move with it — otherwise renaming "4K" to
+ * "UHD" silently detached the instance's whole history and stopped a routing rule
+ * that named it from matching anything, which is the sort of failure nobody
+ * connects to a rename weeks later.
+ */
+export function renameArrHealthServices(before: readonly ArrInstanceLike[]): void {
+  const previous = arrHealthServiceNames(before);
+  const current = arrHealthServiceNames(arrInstances());
+  for (const [id, from] of previous) {
+    const to = current.get(id);
+    if (!to || to === from) continue;
+
+    db.update(healthChecks).set({ service: to }).where(eq(healthChecks.service, from)).run();
+
+    const mutes = getConfig("health_mutes");
+    if (mutes && from in mutes) {
+      const next = { ...mutes, [to]: mutes[from] };
+      delete next[from];
+      setConfig("health_mutes", next);
+    }
+
+    for (const key of HEALTH_TARGET_KEYS) {
+      const targets = getConfig(key);
+      if (!targets?.includes(from)) continue;
+      setConfig(key, [...new Set(targets.map((t) => (t === from ? to : t)))]);
+    }
+  }
+}
+
+/** Every per-service allow-list a health notification is routed through. */
+const HEALTH_TARGET_KEYS = [
+  "global_discord_health_targets",
+  "global_gotify_health_targets",
+  "global_lunasea_health_targets",
+  "global_pushbullet_health_targets",
+  "global_pushover_health_targets",
+  "global_slack_health_targets",
+  "global_smtp_health_targets",
+  "global_telegram_health_targets",
+  "global_webhook_health_targets",
+] as const;
 
 export async function testArrConnection(url: string, apiKey: string) {
   const testUrl = new URL("/api/v3/system/status", url);
@@ -296,20 +382,63 @@ export async function checkAllConfiguredServices(signal?: AbortSignal): Promise<
  * only ever compared against a threshold capped at 20, so anything past that
  * is the same answer.
  */
-function consecutiveFailures(service: string, limit: number): number {
+/**
+ * The failing streak this service is currently in, and when it started.
+ *
+ * Not capped at the threshold. It used to be, which broke the pairing the
+ * announce logic promises: lowering the threshold from 5 to 2 during a four-check
+ * outage read the streak as 2, so `priorFailures + 1 === threshold` never matched
+ * and no failure was announced — while the eventual recovery passed
+ * `priorFailures >= threshold` and *was* announced. Silent when it breaks and
+ * chatty when it returns is the exact outcome the docblock below calls the worst
+ * of both.
+ *
+ * Bounded by a generous row cap rather than by the threshold: a check every few
+ * minutes for a week is thousands of rows, and the prune keeps seven days.
+ */
+const STREAK_SCAN_LIMIT = 5_000;
+
+function failureStreak(service: string): { failures: number; since: number | null } {
   const rows = db
-    .select({ status: healthChecks.status })
+    .select({ status: healthChecks.status, timestamp: healthChecks.timestamp })
     .from(healthChecks)
     .where(eq(healthChecks.service, service))
     .orderBy(desc(healthChecks.timestamp))
-    .limit(limit)
+    .limit(STREAK_SCAN_LIMIT)
     .all();
-  let count = 0;
+  let failures = 0;
+  let since: number | null = null;
   for (const row of rows) {
     if (row.status !== "error") break;
-    count++;
+    failures++;
+    since = row.timestamp;
   }
-  return count;
+  return { failures, since };
+}
+
+/**
+ * Has this outage already been announced?
+ *
+ * Read from the events table rather than tracked in memory, for the same reason
+ * the streak is read from the checks table: the process is restarted by every
+ * upgrade, which is exactly when a server is most likely to be unreachable. It is
+ * also what lets the threshold change mid-outage without the announce and the
+ * recovery disagreeing about what happened.
+ */
+function outageAnnounced(service: string, since: number): boolean {
+  const row = db
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        eq(events.type, "health.failed"),
+        gte(events.timestamp, since),
+        sql`json_extract(${events.metadata}, '$.service') = ${service}`,
+      ),
+    )
+    .limit(1)
+    .get();
+  return !!row;
 }
 
 /**
@@ -335,24 +464,26 @@ function consecutiveFailures(service: string, limit: number): number {
 export function reportHealth(service: string, status: "ok" | "error", message: string): void {
   const threshold = getConfig("health_failure_threshold") ?? 1;
 
-  // Read before the insert: `priorFailures` is the state the streak was in
-  // when this check ran, which is what decides whether anything is announced.
-  const prev = db
-    .select({ status: healthChecks.status })
-    .from(healthChecks)
-    .where(eq(healthChecks.service, service))
-    .orderBy(desc(healthChecks.timestamp))
-    .limit(1)
-    .get();
-  const priorFailures = threshold > 1 ? consecutiveFailures(service, threshold) : prev?.status === "error" ? 1 : 0;
+  // Read before the insert: this is the state the streak was in when the check
+  // ran, which is what decides whether anything is announced.
+  const prior = failureStreak(service);
+  const now = Date.now();
+  const outageStart = prior.since ?? now;
+  const announced = prior.failures > 0 && outageAnnounced(service, outageStart);
 
-  db.insert(healthChecks).values({ service, status, message, timestamp: Date.now() }).run();
-
-  // Nothing to compare against on a service's very first check.
-  if (!prev) return;
+  db.insert(healthChecks).values({ service, status, message, timestamp: now }).run();
 
   if (status === "error") {
-    if (priorFailures + 1 === threshold) {
+    // Crossed the threshold, and this outage hasn't been announced yet. Both
+    // halves are needed: without the first a long outage is one message rather
+    // than one an hour, and without the second changing the threshold mid-outage
+    // either re-announces it or silences it for good.
+    //
+    // A service with no history at all is announced on its first failing check
+    // rather than swallowed. It used to return early on a missing previous row,
+    // so a newly added *Arr instance — or one whose checks had been off for a
+    // week and pruned — lost its first failure entirely.
+    if (prior.failures + 1 >= threshold && !announced) {
       emitEvent("health.failed", `${service}: ${message}`, { service });
       // Plex going away stops every job, every rule and the portal, so it gets
       // its own event type on top of the generic one — a user who routes
@@ -363,7 +494,9 @@ export function reportHealth(service: string, status: "ok" | "error", message: s
         emitEvent("plex.unreachable", `Plex is unreachable: ${message}`, { service });
       }
     }
-  } else if (priorFailures >= threshold) {
+  } else if (announced) {
+    // Only an outage somebody was told about gets a recovery. Anything else is
+    // the "chatty when it returns" half of the failure mode above.
     emitEvent("health.recovered", `${service} recovered`, { service });
   }
 }

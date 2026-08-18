@@ -368,7 +368,13 @@ export function topPlayed(opts: {
   if (opts.userId != null) filters.push(eq(playbackSessions.userId, opts.userId));
   if (opts.type) filters.push(eq(playbackSessions.type, opts.type));
 
-  const viewers = sql<number>`count(distinct ${playbackSessions.userId})`;
+  // `nullif(user_id, 0)`: unknown users are all stored as 0 (the column is
+  // notNull, and both the session differ and the history backfill fall back to
+  // it when Plex names nobody). Counting 0 as a user collapsed every
+  // unidentified play onto one "viewer", so an item played forty times by five
+  // people whose accounts Plex didn't report could never exceed 1 — which is
+  // exactly the item a viewers-ranked list should not be quietly burying.
+  const viewers = sql<number>`count(distinct nullif(${playbackSessions.userId}, 0))`;
   // Ties on the ranked metric fall back to the other one, so a viewers-ranked
   // list still puts the more-played of two one-viewer items first rather than
   // leaving the order to SQLite.

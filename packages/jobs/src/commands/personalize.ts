@@ -64,6 +64,8 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   for (const user of users) {
     const userLabel = `User:${user.username}`;
     const excluded = new Set(user.preferences.excludedTitles.map((t) => t.toLowerCase()));
+    // Rows this person has said aren't for them, from the portal's "Not for me".
+    const excludedRows = new Set(user.preferences.excludedCollections.map((t) => t.toLowerCase()));
     const rowCap = user.preferences.rowCount ?? Infinity;
     let rowsCreated = 0;
 
@@ -100,6 +102,10 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
           userPrefs: user.preferences,
         })) {
           if (rowsCreated >= rowCap) break;
+          if (excludedRows.has(pending.name.toLowerCase())) {
+            ctx.log(`Skipped "${pending.name}" for ${user.username} — they said it wasn't for them.`);
+            continue;
+          }
           const matched = pending.matched.filter((m) => !excluded.has(m.title.toLowerCase()));
           if (matched.length === 0) continue;
 

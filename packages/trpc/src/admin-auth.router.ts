@@ -6,7 +6,6 @@
  * the portal admits any shared user, this admits only the server owner (and
  * anyone the owner allow-listed).
  */
-import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -31,8 +30,7 @@ import { emitEvent } from "@tinkerbell/domain.events";
 import { t, publicProcedure, procedure, type AdminContext } from "./_base.ts";
 import {
   COOKIE_NAMES,
-  HANDSHAKE_COOKIE,
-  HANDSHAKE_MAX_AGE,
+  HANDSHAKE_COOKIES,
   clearHandshakeCookie,
   clearSessionCookie,
   isSecureRequest,
@@ -40,6 +38,7 @@ import {
   setHandshakeCookie,
   setSessionCookie,
 } from "./cookies.ts";
+import { createHandshake, rateLimit, readHandshake, spendHandshake } from "./handshake.ts";
 
 const log = createLogger("auth");
 
@@ -72,72 +71,11 @@ export function createAdminContext(opts: { req: Request; resHeaders: Headers; ip
     rawToken,
     resHeaders: opts.resHeaders,
     secure,
-    handshakeNonce: parseCookie(cookies, HANDSHAKE_COOKIE),
+    handshakeNonce: parseCookie(cookies, HANDSHAKE_COOKIES.admin),
     origin: `${secure ? "https" : "http"}://${host}`,
     ip: opts.ip ?? "unknown",
     authRequired: adminAuthRequired(),
   };
-}
-
-// ─── Sign-in handshakes ───────────────────────────────────────────────────
-// A PIN id is not a secret: plex.tv hands its auth token to anyone who asks
-// with the client identifier that created it. So the id never leaves this
-// process. `start` keeps it here against an unguessable nonce and gives the
-// browser only the nonce, in an HttpOnly cookie; `poll` looks the id back up
-// from that cookie and accepts no id from the caller at all.
-//
-// In memory on purpose: a handshake is worthless after 15 minutes, and a
-// restart mid-sign-in costs one click to retry.
-
-const HANDSHAKE_TTL_MS = HANDSHAKE_MAX_AGE * 1000;
-const handshakes = new Map<string, { pinId: number; expiresAt: number }>();
-
-function createHandshake(pinId: number): string {
-  const now = Date.now();
-  for (const [key, value] of handshakes) if (value.expiresAt < now) handshakes.delete(key);
-  const nonce = randomBytes(32).toString("hex");
-  handshakes.set(nonce, { pinId, expiresAt: now + HANDSHAKE_TTL_MS });
-  return nonce;
-}
-
-/** Resolve a nonce to its PIN id, or undefined if unknown or expired. */
-function readHandshake(nonce: string | undefined): number | undefined {
-  if (!nonce) return undefined;
-  const entry = handshakes.get(nonce);
-  if (!entry) return undefined;
-  if (entry.expiresAt < Date.now()) {
-    handshakes.delete(nonce);
-    return undefined;
-  }
-  return entry.pinId;
-}
-
-// ─── Rate limiting ────────────────────────────────────────────────────────
-// `auth.poll` talks to plex.tv on every call, so an unauthenticated caller
-// could otherwise use this server to hammer someone else's API. An in-memory
-// counter is enough: it resets on restart, which is fine for a home server,
-// and it needs no storage.
-
-const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 60;
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimit(ip: string): void {
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    // Opportunistic sweep — without it a rotating source address grows the
-    // map without bound.
-    if (attempts.size > 1000) {
-      for (const [key, value] of attempts) if (value.resetAt < now) attempts.delete(key);
-    }
-    return;
-  }
-  entry.count++;
-  if (entry.count > RATE_MAX) {
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many sign-in attempts. Wait a minute." });
-  }
 }
 
 export const adminAuthRouter = t.router({
@@ -180,8 +118,8 @@ export const adminAuthRouter = t.router({
     await requireOwner();
     const clientId = ensureAdminPlexClientId();
     const pin = await createPlexPin(clientId);
-    const nonce = createHandshake(pin.id);
-    setHandshakeCookie(ctx.resHeaders, nonce, { secure: ctx.secure });
+    const nonce = createHandshake("admin", pin.id);
+    setHandshakeCookie(ctx.resHeaders, nonce, { scope: "admin", secure: ctx.secure });
     return {
       // `forwardUrl` is this server's own origin, derived from the request.
       // It used to be caller-supplied, which let anyone choose where the
@@ -192,12 +130,12 @@ export const adminAuthRouter = t.router({
 
   poll: publicProcedure.mutation(async ({ ctx }) => {
     rateLimit(ctx.ip);
-    const pinId = readHandshake(ctx.handshakeNonce);
+    const pinId = readHandshake("admin", ctx.handshakeNonce);
     // No cookie, or one this process doesn't recognise: there is nothing to
     // finish. The client starts over rather than being told anything about
     // which PINs exist.
     if (pinId === undefined) {
-      clearHandshakeCookie(ctx.resHeaders, { secure: ctx.secure });
+      clearHandshakeCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
       return { status: "expired" as const };
     }
 
@@ -206,8 +144,8 @@ export const adminAuthRouter = t.router({
     if (!token) return { status: "pending" as const };
 
     // Redeemed — one way or the other this handshake is spent.
-    handshakes.delete(ctx.handshakeNonce!);
-    clearHandshakeCookie(ctx.resHeaders, { secure: ctx.secure });
+    spendHandshake("admin", ctx.handshakeNonce);
+    clearHandshakeCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
 
     const account = await getPlexAccount(token, clientId);
     await requireOwner();

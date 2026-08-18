@@ -25,11 +25,12 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 import type { MockArr } from "../../test-support/mock-arr-server.ts";
+import { sql } from "drizzle-orm";
 
 setupTempDb("tinkerbell-cleanup-e2e-");
 
 const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await import("@tinkerbell/db");
-const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
+const { setConfig, noopCheckpoint, DAY_MS } = await import("@tinkerbell/core");
 const { listCandidates } = await import("@tinkerbell/domain.cleanup");
 const { startMockPlex } = await import("../../test-support/mock-plex-server.ts");
 const { startMockRadarr } = await import("../../test-support/mock-arr-server.ts");
@@ -142,7 +143,20 @@ function seedFreshIndex(): void {
     .run();
 }
 
+/**
+ * One nightly run of the cleanup job.
+ *
+ * A streak advances at most once per calendar day (see `recordMatches`) — a
+ * cleanup rule can be triggered every fifteen minutes, so counting runs would
+ * make "three runs in a row" reachable in under an hour. This suite drives its
+ * three runs milliseconds apart, so each one first ages the ledger by a day:
+ * exactly what the clock does between two real nightly runs, and the sequence
+ * `media-lifecycle.md` asks a human to perform over three nights.
+ */
 async function runGenerate(): Promise<string[]> {
+  db.update(cleanupCandidates)
+    .set({ lastMatchedAt: sql`${cleanupCandidates.lastMatchedAt} - ${DAY_MS}` })
+    .run();
   const { ctx, log } = testContext();
   await runCleanup(ctx, {});
   return log;
@@ -238,6 +252,41 @@ describe("a cleanup rule across three real runs", () => {
       .all()
       .map((e) => e.type);
     assert.ok(types.includes("cleanup.actioned"));
+  });
+
+  it("removes a film from every *Arr instance that holds it", async () => {
+    // The split HD/4K setup the multi-instance change was written for: the same
+    // film is in both Radarrs. Stopping at the first holder deleted from one and
+    // left the other monitoring, so it was re-downloaded that night — precisely
+    // the outcome the "refuse rather than delete from Plex only" branch exists to
+    // prevent, arrived at from the other direction.
+    const second = await startMockRadarr(
+      ITEMS.map((i, idx) => ({ id: 500 + idx, title: i.title, tmdbId: i.tmdbId, monitored: true, hasFile: true })),
+    );
+    setConfig("global_arr_instances", [
+      { id: "radarr-4k", service: "radarr", name: "4K", url: second.origin, apiKey: "key-4k" },
+    ]);
+
+    try {
+      seedRule({
+        kind: "cleanup",
+        mode: "delete",
+        consecutiveRuns: 1,
+        maxActionsPerRun: 25,
+        viaArr: true,
+        dryRun: false,
+      });
+
+      const log = await runGenerate();
+
+      assert.equal(arr.journal.deletes.length, 3, "removed from the default instance");
+      assert.equal(second.journal.deletes.length, 3, "and from the 4K instance that also had them");
+      assert.equal(second.movies.size, ITEMS.length - 3);
+      assert.match(log.join("\n"), /was in 2 radarr instances — removed from each/);
+    } finally {
+      await second.close();
+      setConfig("global_arr_instances", []);
+    }
   });
 
   it("a run where an item stops matching resets it, so the third run removes nothing", async () => {

@@ -163,3 +163,36 @@ describe("findDuplicates", () => {
     assert.deepEqual(findDuplicates().groups, []);
   });
 });
+
+describe("resolution labels Plex doesn't normalise", () => {
+  test("a numeric height beats an unknown resolution", () => {
+    // Plex usually reports `4k`, but not always. An unrecognised label used to
+    // rank 0 — equal to "no idea at all" — so a `2160` copy tied with a copy of
+    // unknown resolution, and the group fell through to the size tie-break or to
+    // "nothing separates these copies".
+    const keeper = recommendKeeper([
+      item({ ratingKey: "a", videoResolution: null, fileSize: 9_000 }),
+      item({ ratingKey: "b", videoResolution: "2160", fileSize: 1_000 }),
+    ]);
+    assert.equal(keeper.ratingKey, "b");
+    assert.match(keeper.reason, /resolution/i);
+  });
+
+  test("a numeric height sits in the right tier against a named one", () => {
+    const keeper = recommendKeeper([
+      item({ ratingKey: "a", videoResolution: "1080", fileSize: 9_000 }),
+      item({ ratingKey: "b", videoResolution: "2160", fileSize: 1_000 }),
+    ]);
+    assert.equal(keeper.ratingKey, "b");
+  });
+
+  test("a label that isn't a height at all is still unknown", () => {
+    const keeper = recommendKeeper([
+      item({ ratingKey: "a", videoResolution: "mystery", fileSize: 9_000 }),
+      item({ ratingKey: "b", videoResolution: "wat", fileSize: 1_000 }),
+    ]);
+    // Nothing to choose on resolution, so size decides.
+    assert.equal(keeper.ratingKey, "a");
+    assert.match(keeper.reason, /largest/i);
+  });
+});

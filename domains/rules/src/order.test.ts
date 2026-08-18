@@ -80,3 +80,25 @@ describe("reorderRules", () => {
     assert.deepEqual(order(), ["b", "a"]);
   });
 });
+
+describe("a malformed payload", () => {
+  test("an id named twice moves it once, and drops nobody", () => {
+    // The input schema doesn't enforce uniqueness. A duplicate used to be dealt
+    // into two slots and push the last entry off the end, so one rule was never
+    // updated and two held positions that didn't match the drop.
+    seed("a", 0);
+    seed("b", 1);
+    seed("c", 2);
+
+    reorderRules(["c", "c", "a"]);
+
+    assert.deepEqual(order(), ["c", "b", "a"]);
+  });
+
+  test("an id for a rule that no longer exists is ignored", () => {
+    seed("a", 0);
+    seed("b", 1);
+    reorderRules(["b", "ghost", "a"]);
+    assert.deepEqual(order(), ["b", "a"]);
+  });
+});

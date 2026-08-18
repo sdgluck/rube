@@ -14,6 +14,7 @@ import {
   formatResolution,
 } from "#/format";
 import SortableTh from "#components/SortableTh";
+import { playbackLabel as decisionLabel } from "#lib/streamDecision";
 import { useLocalSort } from "#hooks/useLocalSort";
 import {
   ColumnPicker,
@@ -63,20 +64,6 @@ function StateIcon({ state }: { state: string }) {
       <Icon size={13} strokeWidth={2} fill={state === "buffering" ? "none" : "currentColor"} aria-label={state} />
     </span>
   );
-}
-
-/** Direct Play / Direct Stream / Transcode, from the per-stream decisions. */
-function playbackLabel(s: Session): string {
-  if (s.decision === "transcode" || s.videoDecision === "transcode" || s.audioDecision === "transcode") {
-    // Which half is being transcoded is the part that explains the CPU load.
-    const parts: string[] = [];
-    if (s.videoDecision === "transcode") parts.push("video");
-    if (s.audioDecision === "transcode") parts.push("audio");
-    return parts.length > 0 ? `Transcode (${parts.join(" + ")})` : "Transcode";
-  }
-  if (s.decision === "copy" || s.videoDecision === "copy" || s.audioDecision === "copy") return "Direct Stream";
-  if (s.decision === "directplay") return "Direct Play";
-  return s.decision ? s.decision : EMPTY;
 }
 
 function remainingMs(s: Session): number | null {
@@ -145,8 +132,8 @@ const COLUMNS: StreamColumn[] = [
     id: "playback",
     label: "Playback",
     group: "Stream",
-    sortValue: (s) => playbackLabel(s),
-    render: (s) => playbackLabel(s),
+    sortValue: (s) => decisionLabel(s, EMPTY),
+    render: (s) => decisionLabel(s, EMPTY),
     hideOnMobile: true,
   },
   {

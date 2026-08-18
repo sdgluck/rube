@@ -218,6 +218,15 @@ const baseRuleConfigSchema = z.object({
    * that implies before saving.
    */
   minItems: z.number().optional(),
+  /**
+   * Libraries this rule covers. Empty or absent means every library.
+   *
+   * Entries may be section *titles* or section *keys* — the wizard writes
+   * titles, migration and hand-written configs write keys, and the engine has
+   * always accepted either. Ask `ruleCoversSection` rather than comparing these
+   * yourself; the "why did this rule skip my item?" panel compared titles
+   * exactly and confidently gave the wrong answer for a key-scoped rule.
+   */
   sections: z.array(z.string()).optional(),
   chart: z.string().optional(),
   listId: z.string().optional(),
@@ -527,3 +536,20 @@ export function isNonPortableField(field: string): boolean {
 
 /** Local field defs, re-exported so callers need only one import. */
 export { LOCAL_FIELD_DEFS };
+
+/**
+ * Does a rule scoped to `scope` cover this section?
+ *
+ * One predicate, because there were two: the engine matched a lower-cased title
+ * or the section key, and `explainItem` matched the title exactly. A rule whose
+ * sections were saved as keys was therefore covered by the engine and reported
+ * as out of scope by the panel explaining the engine.
+ */
+export function ruleCoversSection(
+  scope: readonly string[] | undefined,
+  section: { key: string; title: string },
+): boolean {
+  if (!scope || scope.length === 0) return true;
+  const names = scope.map((s) => s.trim().toLowerCase());
+  return names.includes(section.key) || names.includes(section.title.toLowerCase());
+}

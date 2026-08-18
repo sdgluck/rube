@@ -21,8 +21,16 @@ import {
   JOB_TIMEOUT_GRACE_MS,
 } from "../limits.ts";
 import { isShuttingDown } from "../runner.ts";
+import { registerCoreHooks } from "../hooks.ts";
 
 const baseLog = createLogger("jobs");
+
+// This module is loaded in a Sidequest **worker thread**, which has its own
+// module graph: none of `apps/server`'s boot runs here. The hooks default to
+// no-ops, so without this the effects they carry — suppression traces, health
+// reports, provider rescans, per-user collection counts — silently didn't happen
+// for any job, which is where nearly all of them originate.
+registerCoreHooks();
 
 export class CommandJob extends Job {
   async run(commandName: string, runId: string, configJson: string, jobName: string, jobId: string) {

@@ -254,7 +254,12 @@ export async function runHandlerWithMetadata(
     } catch (err) {
       ctx.log(`[metadata] Could not read "${item.title}" — ${errorMessage(err)}`);
     }
-    if (planned.length >= action.maxWritesPerRun) break;
+    // Counted against the budget: only writes that will actually happen. A
+    // locked field is a refusal, not a write, and stopping the walk once fifty
+    // of them had piled up meant a rule whose first fifty matches were locked
+    // planned nothing and reported "nothing to change" — the opposite of what
+    // happened.
+    if (planned.filter((p) => !p.blocked).length >= action.maxWritesPerRun) break;
   }
 
   const blocked = planned.filter((p) => p.blocked);
@@ -267,7 +272,11 @@ export async function runHandlerWithMetadata(
 
   const writable = planned.filter((p) => !p.blocked).slice(0, action.maxWritesPerRun);
   if (writable.length === 0) {
-    ctx.log(`[metadata] Nothing to change — every matched field already holds the right value.`);
+    ctx.log(
+      blocked.length > 0
+        ? `[metadata] Nothing to write — all ${blocked.length} planned change(s) are on locked fields.`
+        : `[metadata] Nothing to change — every matched field already holds the right value.`,
+    );
     return { matched: matches.length, planned: 0, written: 0, blocked: blocked.length, batchId: null };
   }
 

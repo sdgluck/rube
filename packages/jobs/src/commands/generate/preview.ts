@@ -5,7 +5,7 @@ import { getRule } from "@tinkerbell/domain.rules";
 import { createLogger, noopCheckpoint, type JobContext } from "@tinkerbell/core";
 
 import { ruleAction, type MetadataActionConfig } from "@tinkerbell/contracts";
-import { listCandidates } from "@tinkerbell/domain.cleanup";
+import { listCandidates, protectedRatingKeys, standingRefusal } from "@tinkerbell/domain.cleanup";
 import { parseRuleConfig } from "./config.ts";
 import { handlerForRule } from "./dispatch.ts";
 import { buildFilterFunnel, type SectionFunnel } from "./funnel.ts";
@@ -191,29 +191,53 @@ export async function testRule(ruleId: string, signal?: AbortSignal, ctxIn?: Job
   let cleanup: TestCleanupPreview | undefined;
   if (action.kind === "cleanup") {
     const existing = new Map(listCandidates(rule.id).map((c) => [c.ratingKey, c]));
-    const due: string[] = [];
-    let waiting = 0;
+    // De-duplicated by rating key, for the same reason `recordMatches` and
+    // `previewMetadata` are: a grouped rule yields one group per director, per
+    // language, per decade, and an item belongs to as many of those as it has
+    // credits or tracks. Counting the appearances made "Test" report three times
+    // the matches a real run would record, and name the same film three times.
+    const uniqueItems = new Map<string, { ratingKey: string; title: string }>();
     for (const collection of collections) {
       for (const item of collection.items) {
-        const row = existing.get(item.ratingKey);
-        if (row?.actionedAt != null) continue;
-        const held = row?.heldUntil != null && row.heldUntil > Date.now();
-        const wouldBe = (row?.streak ?? 0) + 1;
-        if (!held && wouldBe >= action.consecutiveRuns) due.push(item.title);
-        else waiting++;
+        if (!uniqueItems.has(item.ratingKey)) uniqueItems.set(item.ratingKey, item);
       }
+    }
+
+    // The refusals the run would apply, asked the same way it asks them. A Test
+    // that lists items the engine refuses to touch is a Test that disagrees with
+    // the thing it is previewing.
+    const protectedKeys = protectedRatingKeys();
+    const refusal = standingRefusal();
+    const due: string[] = [];
+    let waiting = 0;
+    let spared = 0;
+    for (const item of uniqueItems.values()) {
+      const row = existing.get(item.ratingKey);
+      if (row?.actionedAt != null) continue;
+      const held = row?.heldUntil != null && row.heldUntil > Date.now();
+      if (held || protectedKeys.has(item.ratingKey)) {
+        spared++;
+        continue;
+      }
+      const wouldBe = (row?.streak ?? 0) + 1;
+      const approved = !action.requireApproval || row?.approvedAt != null;
+      if (wouldBe >= action.consecutiveRuns && approved && !refusal) due.push(item.title);
+      else waiting++;
     }
     cleanup = {
       mode: action.mode,
       dryRun: action.dryRun,
       consecutiveRuns: action.consecutiveRuns,
-      matched: totalItems,
+      matched: uniqueItems.size,
       dueThisRun: due.length,
       waiting,
       dueTitles: due.slice(0, 50),
     };
+    const spareNote = spared > 0 ? `; ${spared} held or protected` : "";
+    const refusalNote = refusal ? ` Nothing would be actioned: ${refusal}` : "";
     log(
-      `Cleanup preview: ${totalItems} item(s) match; ${due.length} would be ${action.mode}d on a real run; ${waiting} need more consecutive matches.`,
+      `Cleanup preview: ${uniqueItems.size} item(s) match; ${due.length} would be ${action.mode}d on a real run;` +
+        ` ${waiting} need more consecutive matches${spareNote}.${refusalNote}`,
     );
   }
 

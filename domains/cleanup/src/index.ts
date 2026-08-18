@@ -7,6 +7,13 @@
  * reaches the rule's `consecutiveRuns`. An item that stops matching loses its
  * row and starts from one next time.
  *
+ * A streak counts *days*, not runs. The number is presented as "three runs in a
+ * row" because for the nightly batch they are the same thing, but a rule can
+ * also carry triggers that fire every fifteen minutes, a cron of its own, and a
+ * "Run now" button — so counting runs meant a threshold of three could be
+ * reached in 45 minutes. `recordMatches` therefore advances a row at most once
+ * per calendar day, in the configured timezone.
+ *
  * That gives three things a single-shot filter cannot. A metadata blip or a
  * half-finished library scan can't delete anything on its own. The queue is
  * inspectable before it acts — the UI reads this table to say "these six films
@@ -26,9 +33,11 @@ import {
   collectionItems,
   collections,
   db,
+  jobRuns,
   mediaItems,
   rules,
 } from "@tinkerbell/db";
+import { configuredTimezone, localDayKey, DAY_MS, getConfig } from "@tinkerbell/core";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
 
@@ -56,6 +65,86 @@ export interface CleanupCandidate {
 /** SQLite caps host parameters at 999; a rule can match a whole library. */
 const CHUNK = 400;
 
+/** How stale the local library index may be before cleanup refuses to act. */
+export const MAX_INDEX_AGE_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * Note the wording: it stops every *removal*, not every rule. `label` and
+ * `collection_only` are deliberately exempt at action time (they take nothing
+ * away and are how people try the feature out before trusting it), and the
+ * message used to claim otherwise.
+ */
+export const KILL_SWITCH_REFUSAL =
+  "cleanup is disabled globally (Settings → Cleanup). One switch stops every rule from removing anything.";
+
+/** Age of the newest successful `sync-media` run, or null if there isn't one. */
+function indexAgeMs(now: number): number | null {
+  const row = db
+    .select({ finishedAt: jobRuns.finishedAt })
+    .from(jobRuns)
+    .where(and(eq(jobRuns.jobId, "sync-media"), eq(jobRuns.status, "completed")))
+    .orderBy(desc(jobRuns.finishedAt))
+    .limit(1)
+    .get();
+  return row?.finishedAt == null ? null : now - row.finishedAt;
+}
+
+/**
+ * Refusals that hold for the whole install regardless of what matched — the
+ * global switch and a stale library index.
+ *
+ * Lives here rather than in the job that acts on it because it is not only the
+ * engine's question. Everything that *tells someone a deletion is coming* has
+ * to ask it too: the portal's "leaving soon" list, the sidebar badge and the
+ * advance-warning notification all used to promise removals that could not
+ * happen, and `cleanup_enabled` is off by default — so a fresh install with a
+ * cleanup rule told every shared user their films were about to disappear.
+ *
+ * Note this is not the whole refusal set: the implausible-match guard needs a
+ * Plex round trip and can only be answered mid-run, which is exactly why these
+ * two are split out. These are the ones that persist.
+ */
+export function standingRefusal(now: number = Date.now()): string | null {
+  if (!(getConfig("cleanup_enabled") ?? false)) return KILL_SWITCH_REFUSAL;
+
+  const indexAge = indexAgeMs(now);
+  if (indexAge == null) {
+    return "the library has never been synced successfully, so local watch and metadata state cannot be trusted.";
+  }
+  if (indexAge > MAX_INDEX_AGE_MS) {
+    return `the local library index was last synced ${Math.floor(indexAge / DAY_MS)} day(s) ago — "nobody has watched this" is exactly the claim that goes wrong on stale data.`;
+  }
+  return null;
+}
+
+/**
+ * Will this row actually be actioned, as the engine would decide it?
+ *
+ * The queue page, the portal, the badge and the notification each grew their
+ * own version of this question and each got a different answer — the page
+ * mirrored the engine, the portal ignored the approval gate, the badge ignored
+ * both, and none of them consulted the kill switch. One predicate, so a surface
+ * that says "goes on the next run" means it.
+ *
+ * `held`, protection and mode are already resolved onto the row by
+ * `queuedCandidates`; this adds the reasons that live outside it.
+ */
+export function willBeActioned(
+  candidate: Pick<
+    QueuedCandidate,
+    "actionedAt" | "mode" | "held" | "isProtected" | "requiresApproval" | "approved" | "ruleEnabled"
+  >,
+  opts: { refusal?: string | null } = {},
+): boolean {
+  const refusal = opts.refusal === undefined ? standingRefusal() : opts.refusal;
+  if (refusal) return false;
+  if (candidate.actionedAt != null) return false;
+  if (!candidate.ruleEnabled) return false;
+  if (candidate.held || candidate.isProtected) return false;
+  if (candidate.requiresApproval && !candidate.approved) return false;
+  return true;
+}
+
 /**
  * Fold one run's matches into the ledger.
  *
@@ -70,6 +159,21 @@ const CHUNK = 400;
  * counted towards a second action.
  */
 export function recordMatches(ruleId: string, matches: CleanupMatch[], now: number = Date.now()): void {
+  // At most one increment per day, whatever started the run.
+  //
+  // The streak's whole value is that it takes *time* — "these six films go
+  // tomorrow unless you keep them" is only true if tomorrow is when it happens.
+  // But nothing restricts a cleanup rule to the nightly batch: it can carry an
+  // `item-added` trigger (`sync-recently-added` fires every 15 minutes), an
+  // `item-watched` trigger (polled every 30 seconds), a cron of its own *plus*
+  // the batch, and "Run now" is unthrottled. A streak of three could therefore
+  // be reached in 45 minutes, or by pressing a button three times, which is the
+  // same defect `preview.ts` already refuses to allow for previews: "previewing
+  // three times would be enough to delete something".
+  //
+  // The day boundary is read in the configured timezone, like the schedules
+  // people set these rules on.
+  const today = localDayKey(now, configuredTimezone());
   // De-duplicate by rating key first. A grouped rule yields one group per
   // director, per language, per decade — and an item belongs to as many of
   // those as it has tracks or credits. Bumping once per appearance would let a
@@ -82,7 +186,11 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
 
   db.transaction(() => {
     const existing = db
-      .select({ ratingKey: cleanupCandidates.ratingKey, actionedAt: cleanupCandidates.actionedAt })
+      .select({
+        ratingKey: cleanupCandidates.ratingKey,
+        actionedAt: cleanupCandidates.actionedAt,
+        lastMatchedAt: cleanupCandidates.lastMatchedAt,
+      })
       .from(cleanupCandidates)
       .where(eq(cleanupCandidates.ruleId, ruleId))
       .all();
@@ -103,6 +211,14 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
     }
 
     const actioned = new Set(existing.filter((r) => r.actionedAt != null).map((r) => r.ratingKey));
+    // Rows this rule has already counted today. A second run on the same day
+    // still refreshes the row — it stops the row being pruned as "no longer
+    // matching", which is the other half of the streak — but does not advance it.
+    const countedToday = new Set(
+      existing
+        .filter((r) => r.actionedAt == null && localDayKey(r.lastMatchedAt, configuredTimezone()) === today)
+        .map((r) => r.ratingKey),
+    );
 
     for (const match of unique) {
       if (actioned.has(match.ratingKey)) continue;
@@ -119,7 +235,9 @@ export function recordMatches(ruleId: string, matches: CleanupMatch[], now: numb
         .onConflictDoUpdate({
           target: [cleanupCandidates.ruleId, cleanupCandidates.ratingKey],
           set: {
-            streak: sql`${cleanupCandidates.streak} + 1`,
+            streak: countedToday.has(match.ratingKey)
+              ? sql`${cleanupCandidates.streak}`
+              : sql`${cleanupCandidates.streak} + 1`,
             lastMatchedAt: now,
             // A retitled item shouldn't show its old name in the queue.
             title: match.title,
@@ -280,6 +398,24 @@ export function removeKeepVote(ratingKey: string, userId: number): void {
     .run();
 }
 
+/**
+ * Is this item on somebody's cleanup queue at all?
+ *
+ * For the portal's Keep button, which is the one place a rating key arrives from
+ * outside. A vote is shown on the admin's queue with the voter's name against
+ * it, so an unqueued key would put a named row there for an item no rule has
+ * ever matched.
+ */
+export function isQueuedCandidate(ratingKey: string): boolean {
+  const row = db
+    .select({ ratingKey: cleanupCandidates.ratingKey })
+    .from(cleanupCandidates)
+    .where(and(eq(cleanupCandidates.ratingKey, ratingKey), isNull(cleanupCandidates.actionedAt)))
+    .limit(1)
+    .get();
+  return !!row;
+}
+
 /** Who has asked for each item to stay, keyed by rating key. */
 export function keepVotesByItem(): Map<string, string[]> {
   const rows = db.select().from(cleanupKeepVotes).all();
@@ -305,27 +441,38 @@ export function keepVotesForUser(userId: number): Set<string> {
 /**
  * What is about to be removed, for the portal.
  *
- * Only the destructive modes, and only items that are not held or protected:
- * a list that included "will be labelled" or things already spared would be
- * asking people to worry about nothing, and a portal that cries wolf is one
- * nobody reads the week it matters.
+ * Only the destructive modes, and only where the removal can actually happen —
+ * see `willBeActioned`. A list that included "will be labelled", or things
+ * already spared, or every queued item on an install where cleanup is switched
+ * off (which is the default), is asking people to worry about nothing; and a
+ * portal that cries wolf is one nobody reads the week it matters.
+ *
+ * Items short of the streak are still listed, with `runsRemaining` so the
+ * portal can distinguish "goes on the next run" from "three runs away". That
+ * distance is the point of the feature — it is the window in which somebody can
+ * say they would rather it stayed.
  */
 export function leavingSoon(
   limit = 50,
   now: number = Date.now(),
+  sectionKeys: readonly string[] = [],
 ): Array<{
   ratingKey: string;
   title: string;
   runsRemaining: number;
 }> {
-  const protectedKeys = protectedRatingKeys();
+  const refusal = standingRefusal(now);
+  if (refusal) return [];
+  // Restricted to the libraries the viewer can see, when the caller says which:
+  // warning somebody about a film in a library they cannot open is noise they
+  // can do nothing about.
+  const inScope = sectionKeys.length > 0 ? new Set(sectionKeys) : null;
   return queuedCandidates({ now })
     .filter(
       (c) =>
-        c.actionedAt == null &&
         (c.mode === "delete" || c.mode === "unmonitor") &&
-        !c.held &&
-        !protectedKeys.has(c.ratingKey),
+        willBeActioned(c, { refusal }) &&
+        (!inScope || inScope.has(c.sectionId)),
     )
     .slice(0, limit)
     .map((c) => ({ ratingKey: c.ratingKey, title: c.title, runsRemaining: c.runsRemaining }));
@@ -434,6 +581,12 @@ export interface QueuedCandidate extends CleanupCandidate {
    */
   requiresApproval: boolean;
   approved: boolean;
+  /**
+   * Whether the rule that queued this is still switched on. A disabled rule
+   * never runs, so its queue is history — nothing on it is going anywhere, and
+   * anything that warns people has to say so.
+   */
+  ruleEnabled: boolean;
 }
 
 /**
@@ -451,6 +604,7 @@ export function queuedCandidates(
     .select({
       candidate: cleanupCandidates,
       ruleName: rules.name,
+      ruleEnabled: rules.enabled,
       config: rules.config,
       // Left-joined: a queued item the media index has not seen (or a show,
       // which carries no size of its own) still belongs on the list. It
@@ -468,7 +622,7 @@ export function queuedCandidates(
   const protectedKeys = protectedRatingKeys();
   const votes = keepVotesByItem();
 
-  return rows.map(({ candidate, ruleName, config, fileSize }) => {
+  return rows.map(({ candidate, ruleName, ruleEnabled, config, fileSize }) => {
     const action = (
       config as { action?: { consecutiveRuns?: number; mode?: string; requireApproval?: boolean } } | null
     )?.action;
@@ -485,6 +639,7 @@ export function queuedCandidates(
       keepVotes: votes.get(candidate.ratingKey) ?? [],
       requiresApproval: action?.requireApproval === true,
       approved: candidate.approvedAt != null,
+      ruleEnabled: ruleEnabled === 1,
     };
   });
 }
@@ -538,7 +693,17 @@ export function actionedSince(sinceMs: number): number {
   return row?.n ?? 0;
 }
 
-/** Queue size for the sidebar badge — items due now or on the next run. */
+/**
+ * Queue size for the sidebar badge — items due now or on the next run.
+ *
+ * Gated on the same predicate as everything else that claims a removal is
+ * imminent: a badge counting deletions that cannot happen (cleanup switched
+ * off, waiting on an approval nobody has given, owned by a disabled rule) is a
+ * number that teaches people to ignore the badge.
+ */
 export function dueSoonCount(now: number = Date.now()): number {
-  return queuedCandidates({ limit: 1000, now }).filter((r) => r.runsRemaining <= 1 && !r.held).length;
+  const refusal = standingRefusal(now);
+  if (refusal) return 0;
+  return queuedCandidates({ limit: 1000, now }).filter((r) => r.runsRemaining <= 1 && willBeActioned(r, { refusal }))
+    .length;
 }

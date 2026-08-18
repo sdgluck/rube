@@ -69,6 +69,9 @@ export default async function run(ctx: JobContext, config: CommonJobConfig): Pro
   const stats = await syncMedia(client, sections, (current, total, message) => ctx.progress(current, total, message), {
     syncedAt,
     skipSectionKeys: completed,
+    // Every library this install manages, not just the ones this run walked, so
+    // a job scoped to one section doesn't sweep away the others' rows.
+    knownSectionKeys: allSections.map((s) => s.key),
     onSectionComplete: (sectionKey) => {
       completed.push(sectionKey);
       ctx.checkpoint.write({

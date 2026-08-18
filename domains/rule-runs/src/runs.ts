@@ -67,6 +67,14 @@ export interface RuleRunOutcome {
   collectionCount?: number;
   itemCount?: number;
   error?: string;
+  /**
+   * One line saying what happened, for a run that finished without doing
+   * anything: out of season, owned by its own cron, no matching libraries, no
+   * LLM. All of those record `ok` — nothing went wrong — which left the run list
+   * unable to tell "ran and matched nothing" from "did not run at all". The
+   * terminal vocabulary stays three words; this says which of them this was.
+   */
+  message?: string;
 }
 
 export interface RuleRunHandle {
@@ -328,6 +336,7 @@ function attachHandle(runId: string, options: ActivateOptions): RuleRunHandle {
         db.update(ruleRuns)
           .set({
             status: outcome.status,
+            ...(outcome.message ? { message: outcome.message } : {}),
             progress: outcome.status === "ok" ? 1 : progress,
             collectionCount: outcome.collectionCount ?? null,
             itemCount: outcome.itemCount ?? null,
@@ -471,13 +480,30 @@ export interface RuleRunTally {
 /**
  * Run counts for every rule at once — the rules table renders a Runs column for
  * each row, and one grouped query beats a query per row.
+ *
+ * Which it now is. It used to group for the counts and then issue a *second*
+ * query per rule to resolve the latest run's id, which is the thing the comment
+ * says it avoids. And that lookup matched on `startedAt = max(startedAt)`, so two
+ * runs of one rule created in the same millisecond — a "run all" burst does
+ * exactly that — returned an arbitrary one of them.
+ *
+ * The tie is now broken by id, which is stable: two runs that started in the
+ * same millisecond are genuinely indistinguishable in the data, so the goal is a
+ * *consistent* answer rather than a true one — the same run every time the page
+ * renders, instead of whichever row the query planner reached first. (`rowid`
+ * looks like the honest answer here and isn't: SQLite reuses freed rowids, and
+ * `purge-runs` frees them constantly.)
  */
 export function getRuleRunCounts(): Record<string, RuleRunTally> {
   const rows = db
     .select({
       ruleId: ruleRuns.ruleId,
       count: sql<number>`count(*)`,
-      lastStartedAt: sql<number>`max(${ruleRuns.startedAt})`,
+      // The id of the newest run, chosen by (startedAt, id) so a millisecond tie
+      // is resolved rather than left to the query planner. SQLite compares the
+      // concatenation lexicographically, so `startedAt` is zero-padded to a fixed
+      // width — without that, "9" would sort above "10".
+      lastRunId: sql<string | null>`substr(max(printf('%020d', ${ruleRuns.startedAt}) || '|' || ${ruleRuns.id}), 22)`,
     })
     .from(ruleRuns)
     .groupBy(ruleRuns.ruleId)
@@ -485,12 +511,7 @@ export function getRuleRunCounts(): Record<string, RuleRunTally> {
 
   const out: Record<string, RuleRunTally> = {};
   for (const row of rows) {
-    const latest = db
-      .select({ id: ruleRuns.id })
-      .from(ruleRuns)
-      .where(and(eq(ruleRuns.ruleId, row.ruleId), eq(ruleRuns.startedAt, row.lastStartedAt)))
-      .get();
-    out[row.ruleId] = { count: row.count, lastRunId: latest?.id ?? null };
+    out[row.ruleId] = { count: row.count, lastRunId: row.lastRunId ?? null };
   }
   return out;
 }

@@ -231,6 +231,39 @@ export function findRuleConflicts(): RuleConflict[] {
 }
 
 /**
+ * Rules whose running order is load-bearing.
+ *
+ * The Rules page tells the user, in as many words, that where two rules write
+ * the same field the later one's value "is the one that survives the night".
+ * The nightly batch then drained rules through a pool of three workers, so the
+ * survivor was whichever *finished* last — a different claim, and not a stable
+ * one. Rather than drop the promise, the batch runs these rules one at a time in
+ * position order; everything else still interleaves.
+ *
+ * Config-derived, like `metadataFieldConflicts` itself: the observable version
+ * only names the loser after the damage is done, and this has to be known before
+ * the run starts.
+ */
+export function rulesWithOrderedWrites(): Set<string> {
+  const all = db
+    .select({
+      id: rules.id,
+      name: rules.name,
+      enabled: rules.enabled,
+      config: rules.config,
+      position: rules.position,
+      createdAt: rules.createdAt,
+    })
+    .from(rules)
+    .all();
+  const ids = new Set<string>();
+  for (const conflict of metadataFieldConflicts(inRunningOrder(all))) {
+    for (const rule of conflict.rules) ids.add(rule.id);
+  }
+  return ids;
+}
+
+/**
  * Rules already producing a collection of this name, ignoring one rule.
  *
  * For the wizard, which needs to warn *before* a rule exists and so cannot

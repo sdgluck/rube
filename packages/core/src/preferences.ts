@@ -49,7 +49,19 @@ export const userPreferencesSchema = z.object({
   watchedBias: z.enum(["new_to_me", "include_favorites", "balanced"]).default("balanced"),
   moods: z.array(z.string()).default([]),
   vibe: z.enum(["playful", "serious", "mixed"]).optional(),
+  /** Titles this user never wants recommended — matched against *item* titles. */
   excludedTitles: z.array(z.string()).default([]),
+  /**
+   * Rows this user has said aren't for them, by collection name.
+   *
+   * Separate from `excludedTitles` because they are matched against different
+   * things, and conflating them made the portal's "Not for me" button a no-op:
+   * it wrote the *collection's* title into the item-title list, where every
+   * consumer compared it against film titles and nothing ever matched. The row
+   * was rebuilt identically on the next run, and the phantom entry turned up in
+   * the user's "Never recommend" list.
+   */
+  excludedCollections: z.array(z.string()).default([]),
   rowCount: z.number().int().min(1).max(20).optional(),
   /** When true (default), hated genres are a hard exclude; otherwise a down-weight. */
   strictHate: z.boolean().default(true),

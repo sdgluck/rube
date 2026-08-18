@@ -17,7 +17,17 @@ import LeavingSoon from "./tabs/LeavingSoon.tsx";
  * error) are in `components/States.tsx`.
  */
 
-const PIN_KEY = "tb_pin";
+/**
+ * Signing in leaves the page entirely — Plex takes over the tab and sends the
+ * browser back afterwards — so nothing in React state survives the round trip.
+ * This flag is the reminder to resume polling on the way back.
+ *
+ * It is only a flag. The handshake itself lives in an HttpOnly cookie the
+ * server set when the flow began, which is what ties the sign-in to this
+ * browser. This used to hold the plex.tv PIN id and send it back to `poll`,
+ * which meant the server accepted whichever id a caller presented.
+ */
+const PENDING_KEY = "tb_portal_signin_pending";
 
 const TABS = [
   // "Your collections" is first on purpose: this was a form you filled in and
@@ -41,7 +51,7 @@ export default function PortalApp() {
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("collections");
-  const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PIN_KEY));
+  const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PENDING_KEY));
 
   // Apply the admin's background image to the page.
   useEffect(() => {
@@ -60,54 +70,58 @@ export default function PortalApp() {
     };
   }, [branding.backgroundImage]);
 
-  // After returning from Plex, finish the handshake by polling the pin.
+  // Coming back from Plex: finish the handshake. The server reads which PIN
+  // this is from the handshake cookie, so there is nothing to pass.
   useEffect(() => {
-    const pinId = localStorage.getItem(PIN_KEY);
-    if (!pinId) return;
+    if (!localStorage.getItem(PENDING_KEY)) return;
     let cancelled = false;
     let attempts = 0;
+
+    const stop = () => {
+      localStorage.removeItem(PENDING_KEY);
+      setFinishing(false);
+    };
+
     const tick = async () => {
       attempts++;
       try {
-        const res = await pollMutation.mutateAsync({ id: Number(pinId) });
+        const res = await pollMutation.mutateAsync();
         if (res.status === "ok") {
-          localStorage.removeItem(PIN_KEY);
-          setFinishing(false);
+          stop();
           await utils.me.invalidate();
           return;
         }
+        if (res.status === "expired") {
+          // The handshake cookie is gone or too old — nothing to finish.
+          stop();
+          setError("That sign-in took too long. Try again.");
+          return;
+        }
       } catch (e) {
-        localStorage.removeItem(PIN_KEY);
-        setFinishing(false);
+        stop();
         setError(e instanceof Error ? e.message : "Sign-in failed.");
         return;
       }
       if (!cancelled && attempts < 60) setTimeout(tick, 2000);
-      else {
-        localStorage.removeItem(PIN_KEY);
-        setFinishing(false);
-      }
+      else stop();
     };
     tick();
     return () => {
       cancelled = true;
     };
-    // Run once on mount; the pin id is read from storage inside.
+    // Run once on mount; the pending flag is read from storage inside.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function signIn() {
     setError(null);
-    startMutation.mutate(
-      { forwardUrl: window.location.origin },
-      {
-        onSuccess: ({ id, authUrl }) => {
-          localStorage.setItem(PIN_KEY, String(id));
-          window.location.href = authUrl;
-        },
-        onError: (e) => setError(e.message),
+    startMutation.mutate(undefined, {
+      onSuccess: ({ authUrl }) => {
+        localStorage.setItem(PENDING_KEY, "1");
+        window.location.href = authUrl;
       },
-    );
+      onError: (e) => setError(e.message),
+    });
   }
 
   if (meQuery.isLoading) {

@@ -14,13 +14,50 @@ import { setupTempDb } from "@tinkerbell/db/test-support";
 
 setupTempDb("tinkerbell-digest-test-");
 
-const { db, cleanupCandidates, collections, digestDeliveries, mediaItems, playbackSessions, rules, watchState } =
-  await import("@tinkerbell/db");
+const {
+  db,
+  cleanupCandidates,
+  collections,
+  digestDeliveries,
+  jobs,
+  jobRuns,
+  mediaItems,
+  playbackSessions,
+  rules,
+  watchState,
+} = await import("@tinkerbell/db");
 const { buildDigest, isDigestEmpty, tailor } = await import("./build.ts");
 const { claimDelivery, completeDelivery, lastSentAt, releaseDelivery } = await import("./deliveries.ts");
 const { periodFor, startOfDay } = await import("./period.ts");
 const { renderDigest } = await import("./render.ts");
-const { defaultUserPreferences, userPreferencesSchema } = await import("@tinkerbell/core");
+const { defaultUserPreferences, setConfig, userPreferencesSchema } = await import("@tinkerbell/core");
+
+/**
+ * An install where cleanup could actually remove something: the switch on, and a
+ * recent successful library sync. The digest's leaving-soon list asks the cleanup
+ * domain the same question the engine does, so a default install — where cleanup
+ * is off — correctly has nothing to announce.
+ */
+function enableCleanup(): void {
+  setConfig("cleanup_enabled", true);
+  db.insert(jobs)
+    .values({ id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "", enabled: 1, config: {} })
+    .onConflictDoNothing()
+    .run();
+  db.insert(jobRuns)
+    .values({
+      id: "sync-now",
+      jobId: "sync-media",
+      status: "completed",
+      log: "",
+      progress: 1,
+      message: "",
+      startedAt: Date.now(),
+      finishedAt: Date.now(),
+    })
+    .onConflictDoNothing()
+    .run();
+}
 
 const DAY = 86_400_000;
 /** 2023-11-14T22:13:20Z — deliberately not midnight, so alignment is tested. */
@@ -89,6 +126,8 @@ beforeEach(() => {
   db.delete(digestDeliveries).run();
   db.delete(watchState).run();
   db.delete(rules).run();
+  db.delete(jobRuns).run();
+  db.delete(jobs).run();
 });
 
 // ─── Period boundaries ───────────────────────────────────────────────────────
@@ -347,6 +386,7 @@ describe("isDigestEmpty", () => {
   });
 
   test("something about to be deleted is worth sending on its own", () => {
+    enableCleanup();
     db.insert(rules)
       .values({
         id: "r1",

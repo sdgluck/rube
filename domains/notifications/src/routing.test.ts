@@ -34,6 +34,10 @@ function cell(type: string, service: string, now = DAYTIME) {
 
 describe("routingMatrix", () => {
   beforeEach(() => {
+    // Credentials, because a subscribed service with none reads as
+    // "unconfigured" rather than "on" — see the case for it at the bottom.
+    setConfig("global_discord_webhook_url", "https://discord.com/api/webhooks/1/abc");
+    setConfig("global_slack_webhook_url", "https://hooks.slack.com/services/a/b");
     setConfig("global_discord_events", []);
     setConfig("global_discord_jobs", []);
     setConfig("global_discord_health_targets", []);
@@ -104,5 +108,17 @@ describe("routingMatrix", () => {
     assert.equal(digest.emitted, false);
     // Everything else is a real event.
     assert.ok(routingMatrix(DAYTIME).every((r) => r.emitted || r.type === "digest.sent"));
+  });
+  test("a subscribed service with no credentials says so rather than claiming to be on", () => {
+    // The table's whole purpose is to answer "would this arrive?" without a test
+    // send. A Slack row with every event ticked and no webhook URL would throw
+    // "Slack webhook URL is required" on the first send, and the cell used to
+    // show a tick.
+    setConfig("global_slack_events", ["job.failed"]);
+    setConfig("global_slack_webhook_url", "");
+    assert.equal(cell("job.failed", "slack").state, "unconfigured");
+
+    setConfig("global_slack_webhook_url", "https://hooks.slack.com/services/a/b");
+    assert.equal(cell("job.failed", "slack").state, "on");
   });
 });

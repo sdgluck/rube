@@ -296,6 +296,15 @@ async function generateBYWCollection(
   maxItems: number,
   prefs?: UserPreferences,
 ): Promise<AiCollection | null> {
+  // A row this person has already said isn't for them: don't spend a model call
+  // rebuilding it. The name is fixed, so it can be checked before anything else.
+  const rowName = `Because you watched ${watchedTitle}`;
+  const excludedRows = new Set((prefs?.excludedCollections ?? []).map((t) => t.toLowerCase()));
+  if (excludedRows.has(rowName.toLowerCase())) {
+    ctx.log(`Skipping "${rowName}" — the user said it wasn't for them.`);
+    return null;
+  }
+
   // Hard-exclude any titles the user never wants recommended before the
   // candidate list even reaches the model.
   const excluded = new Set((prefs?.excludedTitles ?? []).map((t) => t.toLowerCase()));

@@ -6,11 +6,14 @@ import {
   setConfig,
   configSchema,
   SECRET_KEYS,
+  NESTED_SECRET_KEYS,
   REDACTED_SECRET,
+  restoreNestedSecrets,
   type ConfigKey,
   type ConfigValue,
 } from "@tinkerbell/core";
 import { restartSchedules, schedulerTimezone } from "@tinkerbell/jobs";
+import { renameArrHealthServices } from "@tinkerbell/domain.health";
 import { t, procedure } from "./_base.ts";
 
 /**
@@ -58,6 +61,12 @@ export const configRouter = t.router({
 
     const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");
 
+    // Snapshotted before the write: an extra *Arr instance's health identity is
+    // derived from its display name, so a rename has to carry its check history,
+    // its mute and any notification routing that named it. See
+    // `renameArrHealthServices`.
+    const arrInstancesBefore = "global_arr_instances" in input ? (getConfig("global_arr_instances") ?? []) : null;
+
     // Narrower than `ConfigKey` now that the auth keys are omitted from the
     // input — indexing `input` with a key it can't hold no longer typechecks.
     for (const key of Object.keys(input) as SavableKey[]) {
@@ -66,27 +75,18 @@ export const configRouter = t.router({
       // The form may echo back the redaction sentinel for secrets the user
       // didn't change. Treat that as "keep the stored value".
       if (SECRET_KEYS.has(key) && value === REDACTED_SECRET) continue;
-      if (key === "global_llm") {
-        const llm = value as ConfigValue<"global_llm">;
-        if (llm.apiKey === REDACTED_SECRET) {
-          const existing = getConfig("global_llm");
-          setConfig("global_llm", { ...llm, apiKey: existing?.apiKey });
-          continue;
-        }
-      }
-      // Same nested-secret round trip as `global_llm.apiKey`: the SMTP form
-      // renders the sentinel for a stored password the user didn't retype, and
-      // saving must not erase it.
-      if (key === "global_smtp") {
-        const smtp = value as ConfigValue<"global_smtp">;
-        if (smtp.password === REDACTED_SECRET) {
-          const existing = getConfig("global_smtp");
-          setConfig("global_smtp", { ...smtp, password: existing?.password });
-          continue;
-        }
+      // Nested secrets round-trip the same way, but the sentinel is a field of
+      // a structured value rather than the value itself. One table in core
+      // covers all of them, so a new one can't be missed here — which is how
+      // the extra *Arr instances' keys came to be sent to the browser in full.
+      if (NESTED_SECRET_KEYS.has(key)) {
+        setConfig(key, restoreNestedSecrets(key, value as ConfigValue<typeof key>));
+        continue;
       }
       setConfig(key, value);
     }
+
+    if (arrInstancesBefore) renameArrHealthServices(arrInstancesBefore);
 
     // croner bakes the timezone in at construction, so the live Cron objects
     // would keep evaluating against the old zone until the next restart.

@@ -2,7 +2,7 @@
  * Media module — sync Plex media items to local SQLite and query them.
  */
 
-import { eq, and, asc, desc, inArray, lt, sql, type InferSelectModel } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, lt, notInArray, or, sql, type InferSelectModel } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { db, mediaItems, likeContains } from "@tinkerbell/db";
 import { emitEvent } from "@tinkerbell/domain.events";
@@ -95,6 +95,24 @@ export interface SyncMediaOptions {
   skipSectionKeys?: readonly string[];
   /** Called once a section has been fully written, so the caller can checkpoint. */
   onSectionComplete?: (sectionKey: string) => void;
+  /**
+   * Every section this install manages, whether or not this run covers it.
+   *
+   * The stale sweep needs both halves of the picture. Within the sections a run
+   * *did* walk, anything left under the old watermark is gone from Plex. Outside
+   * them, the watermark says nothing — a job configured with
+   * `sections: ["Movies"]` (or a narrowed `global_plex_libraries`) never
+   * restamps the TV rows, and sweeping on the watermark alone deleted every one
+   * of them, taking the Storage panel, Duplicates and any cleanup protection
+   * that resolves through a collection with it.
+   *
+   * So rows are only swept if their section was walked, or if their section
+   * isn't managed at all any more — which is how a library deleted in Plex,
+   * or dropped from `global_plex_libraries`, still gets cleaned up.
+   *
+   * Omitted means "the sections passed in are all there are".
+   */
+  knownSectionKeys?: readonly string[];
 }
 
 /**
@@ -133,23 +151,32 @@ function totalPartSize(media: Array<{ Part?: Array<{ size?: number }> }> | undef
  * as they were before this walk existed. Throwing here would cost the whole
  * sync for a number on one panel.
  */
+interface ShowSizeEntry {
+  bytes: number;
+  episodes: number;
+  unsized: number;
+}
+
 async function episodeSizes(
   client: PlexClient,
   section: PlexSection,
   onProgress?: (current: number, total: number, message: string) => void,
-): Promise<Map<string, number> | null> {
+): Promise<Map<string, ShowSizeEntry> | null> {
   try {
     const sizes = await client.showSizes(section.key, (walked, total) => {
       onProgress?.(walked, total, `Measuring ${section.title}...`);
     });
-    const bytes = new Map<string, number>();
+    const byShow = new Map<string, ShowSizeEntry>();
     for (const [showKey, entry] of sizes) {
       // Every episode sizeless means we learned nothing about this show, which
       // is not the same as a show that occupies nothing — leave it unknown.
       if (entry.unsized === entry.episodes) continue;
-      bytes.set(showKey, entry.bytes);
+      // The coverage counts are kept, not dropped: a show with two of four
+      // episodes sized carries a real but incomplete total, and the panel that
+      // reports it has to be able to say so.
+      byShow.set(showKey, { bytes: entry.bytes, episodes: entry.episodes, unsized: entry.unsized });
     }
-    return bytes;
+    return byShow;
   } catch (err) {
     console.warn(`[media] Couldn't measure episodes in ${section.title}:`, err instanceof Error ? err.message : err);
     return null;
@@ -191,6 +218,9 @@ export async function syncMedia(
     // carry their parts in the listing below and skip this entirely.
     const episodeBytes = section.type === "show" ? await episodeSizes(client, section, onProgress) : null;
 
+    // Reset per section, because the progress bar is per section — see below.
+    let sectionSynced = 0;
+
     for await (const { item, totalSize } of client.allItems(section.key)) {
       const ratingKey = item.ratingKey;
       if (!ratingKey) continue;
@@ -200,7 +230,8 @@ export async function syncMedia(
       // The item's own parts where it has them, else what its episodes came to.
       // A show has no parts, so the second term is the only answer for TV; the
       // fallback order matters for the rare item that has both.
-      const fileSize = totalPartSize(item.Media) ?? episodeBytes?.get(ratingKey) ?? null;
+      const episodeEntry = episodeBytes?.get(ratingKey);
+      const fileSize = totalPartSize(item.Media) ?? episodeEntry?.bytes ?? null;
       const values = {
         ratingKey,
         sectionId: section.key,
@@ -224,6 +255,13 @@ export async function syncMedia(
         audioChannels: media?.audioChannels ?? null,
         container: media?.container ?? null,
         fileSize,
+        // Free in the listing this loop is already paging through. Without it
+        // "how many episodes" had no answer at all: the sync indexes a section's
+        // top-level rows, so there is never an `episode` row to count.
+        leafCount: item.leafCount ?? episodeEntry?.episodes ?? null,
+        // How much of that `fileSize` is missing, so a partial total can say so
+        // rather than passing for a complete one.
+        sizeUnknownParts: episodeEntry ? episodeEntry.unsized : null,
         bitrate: media?.bitrate ?? null,
         versionCount: item.Media?.length ?? 1,
         syncedAt: now,
@@ -244,15 +282,30 @@ export async function syncMedia(
       }
 
       if (onProgress) {
-        onProgress(synced, totalSize, `Syncing ${section.title}...`);
+        // Per section, both halves: `synced` is cumulative across every section,
+        // and `totalSize` is this section's count — so on the third of three
+        // libraries the bar reported 300 of 100.
+        sectionSynced++;
+        onProgress(sectionSynced, totalSize, `Syncing ${section.title}...`);
       }
     }
     options.onSectionComplete?.(section.key);
   }
 
-  // Remove stale entries not seen in this sync. Single statement avoids the
-  // race where a concurrent insert lands between the SELECT and DELETE.
-  const result = db.delete(mediaItems).where(lt(mediaItems.syncedAt, now)).run();
+  // Remove stale entries not seen in this sync — but only where this sync had
+  // anything to say. Single statement avoids the race where a concurrent insert
+  // lands between the SELECT and DELETE. See `knownSectionKeys`.
+  const walkedKeys = sections.map((s) => s.key);
+  const managedKeys = [...(options.knownSectionKeys ?? walkedKeys)];
+  const result = db
+    .delete(mediaItems)
+    .where(
+      or(
+        and(lt(mediaItems.syncedAt, now), inArray(mediaItems.sectionId, walkedKeys)),
+        notInArray(mediaItems.sectionId, managedKeys),
+      ),
+    )
+    .run();
   const removed = Number(result.changes ?? 0);
 
   announceAdded(added, hadExisting);
@@ -288,6 +341,10 @@ export interface SectionStorage {
   /** How many items contributed, and how many could not — see `fileSize`. */
   sized: number;
   unsized: number;
+  /** Items whose figure is real but incomplete: some episodes had no size. */
+  partial: number;
+  /** Episodes those partial items couldn't account for. */
+  unknownEpisodes: number;
 }
 
 /**
@@ -308,6 +365,13 @@ export function getStorageBySection(): SectionStorage[] {
       bytes: sql<number>`coalesce(sum(${mediaItems.fileSize}), 0)`,
       sized: sql<number>`sum(case when ${mediaItems.fileSize} is null then 0 else 1 end)`,
       unsized: sql<number>`sum(case when ${mediaItems.fileSize} is null then 1 else 0 end)`,
+      // Shows whose total is real but short: some episodes were sized and some
+      // weren't. Counted separately from `unsized`, because "we know nothing
+      // about this" and "we know part of this" are different admissions, and
+      // treating the second as complete is what made a half-measured TV library
+      // report a total ~50% low with no caveat at all.
+      partial: sql<number>`sum(case when ${mediaItems.fileSize} is not null and coalesce(${mediaItems.sizeUnknownParts}, 0) > 0 then 1 else 0 end)`,
+      unknownEpisodes: sql<number>`coalesce(sum(case when ${mediaItems.fileSize} is not null then coalesce(${mediaItems.sizeUnknownParts}, 0) else 0 end), 0)`,
     })
     .from(mediaItems)
     .groupBy(mediaItems.sectionId, mediaItems.sectionTitle)
@@ -319,6 +383,8 @@ export function getStorageBySection(): SectionStorage[] {
       bytes: Number(r.bytes ?? 0),
       sized: Number(r.sized ?? 0),
       unsized: Number(r.unsized ?? 0),
+      partial: Number(r.partial ?? 0),
+      unknownEpisodes: Number(r.unknownEpisodes ?? 0),
     }))
     .sort((a, b) => b.bytes - a.bytes);
 }
@@ -351,13 +417,20 @@ export function getSizeForItems(ratingKeys: string[]): { bytes: number; sized: n
 }
 
 /** Distinct "Title (Year)" labels matching a query — for type-ahead pickers. */
-export function searchMediaTitles(query: string, limit = 20): string[] {
+export function searchMediaTitles(query: string, limit = 20, sectionKeys: readonly string[] = []): string[] {
   const q = query.trim();
   if (!q) return [];
+  // Scoped to the caller's libraries when it names any. The portal passes the
+  // sections actually shared with the signed-in user, because a user shared only
+  // "Kids Movies" could otherwise search every title on the server.
+  const scope =
+    sectionKeys.length > 0
+      ? and(likeContains(mediaItems.title, q), inArray(mediaItems.sectionId, [...sectionKeys]))
+      : likeContains(mediaItems.title, q);
   const rows = db
     .select({ title: mediaItems.title, year: mediaItems.year })
     .from(mediaItems)
-    .where(likeContains(mediaItems.title, q))
+    .where(scope)
     .orderBy(asc(mediaItems.title))
     .limit(limit * 2)
     .all();

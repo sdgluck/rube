@@ -100,9 +100,14 @@ export const statsRouter = t.router({
   /**
    * Bytes per library, and how much of each library the figure covers.
    *
-   * Read straight from the media index rather than from Plex: the sizes were
-   * already carried in the listing every sync walks, so this costs one local
-   * query and no round trip to the server.
+   * Read straight from the media index rather than from Plex, so this costs one
+   * local query and no round trip.
+   *
+   * Filling that index is not free, though, and the note here used to imply it
+   * was: a movie's size comes with the listing the sync already walks, but a
+   * show's belongs to its episodes, so a TV library is walked a second time at
+   * episode level. One extra paged walk per TV library per sync is what "how much
+   * room do my shows take" costs.
    */
   storage: procedure.query(() => getStorageBySection()),
 
