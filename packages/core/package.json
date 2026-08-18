@@ -14,8 +14,10 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@tinkerbell/container": "workspace:*",
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/imdb": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",

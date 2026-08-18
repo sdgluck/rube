@@ -14,17 +14,32 @@
  * owner is the one person for whom server-wide is correct.
  */
 import { eq } from "drizzle-orm";
-import { db, plexUserShares } from "@tinkerbell/db";
+import { token } from "@tinkerbell/container";
+import { plexUserShares, type Db } from "@tinkerbell/db";
 
-/**
- * Section keys shared with this user, as strings to match `media_items.sectionId`.
- * Empty means "no restriction" — do not filter.
- */
-export function sharedSectionKeys(userId: number): string[] {
-  const row = db
-    .select({ sectionIds: plexUserShares.sectionIds })
-    .from(plexUserShares)
-    .where(eq(plexUserShares.userId, userId))
-    .get();
-  return (row?.sectionIds ?? []).map((id) => String(id));
+export interface SharingDeps {
+  db: Db;
 }
+
+export function createSharing(deps: SharingDeps) {
+  const { db } = deps;
+
+  /**
+   * Section keys shared with this user, as strings to match `media_items.sectionId`.
+   * Empty means "no restriction" — do not filter.
+   */
+  function sharedSectionKeys(userId: number): string[] {
+    const row = db
+      .select({ sectionIds: plexUserShares.sectionIds })
+      .from(plexUserShares)
+      .where(eq(plexUserShares.userId, userId))
+      .get();
+    return (row?.sectionIds ?? []).map((id) => String(id));
+  }
+
+  return { sharedSectionKeys };
+}
+
+export type Sharing = ReturnType<typeof createSharing>;
+
+export const SharingToken = token<Sharing>("sharing");

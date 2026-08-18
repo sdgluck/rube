@@ -1,18 +1,27 @@
 /**
  * SQLite-backed key/value config store with a typed Zod schema.
  *
+ * The schema, the secret tables and the redaction transforms are pure and stay
+ * at module level — they are data, not dependencies, and `ConfigSchema` is
+ * `typeof configSchema`, so moving it would break every type derived from it.
+ * Everything that reads or writes the database lives inside
+ * `createConfigStore`, which the container builds once per process.
+ *
  * Usage:
- *   import { getConfig, setConfig, getAllConfig } from "./config.ts";
- *   setConfig("global_plex_url", "http://localhost:32400");
- *   const url = getConfig("global_plex_url");   // string | undefined
- *   setConfig("global_plex_libraries", ["Movies", "TV"]);
- *   const libs = getConfig("global_plex_libraries"); // string[] | undefined
+ *   const config = scope.resolve(ConfigStoreToken);
+ *   config.setConfig("global_plex_url", "http://localhost:32400");
+ *
+ * Inside a module that has the store injected, destructuring keeps the old
+ * call shape verbatim:
+ *
+ *   const { getConfig, setConfig } = deps.config;
  */
 
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db, config } from "@tinkerbell/db";
+import { token } from "@tinkerbell/container";
+import { config, type Db } from "@tinkerbell/db";
 import { createLogger } from "./logger.ts";
 import { errorMessage } from "./util.ts";
 
@@ -34,51 +43,6 @@ export function isValidTimezone(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-/**
- * The timezone this install lives in: `global_timezone`, else `TZ`, else the
- * process clock.
- *
- * Lives here rather than beside the scheduler because "what day is it" and
- * "what time is it" are not only the scheduler's questions. Cron was
- * zone-aware from the start, while the maintenance window read `getHours()`,
- * seasonal rule windows read `getMonth()/getDate()` and the stats day
- * boundaries read `setHours(0,0,0,0)` — so a UTC container configured for
- * `America/Los_Angeles` enforced its quiet hours eight hours out and rolled
- * "today" over at 17:00 local.
- *
- * Both sources are validated rather than trusted. `global_timezone` is
- * schema-checked on save, but a row written by an older build (or by hand)
- * bypasses that, and `TZ` never goes through the schema at all — setting it in
- * a compose file is the first thing a self-hoster does. A bad value propagated
- * into every `new Cron` throws during `initJobs`, which the server turns into
- * `process.exit(1)`: a crash-loop with no UI left to fix it from.
- */
-export function configuredTimezone(): string | undefined {
-  let configured: string | undefined;
-  try {
-    configured = getConfig("global_timezone")?.trim();
-  } catch (err) {
-    // `getConfig` parses the stored value against the schema, so a corrupt row
-    // throws here. Callers include `initJobs`, where an exception escaping is a
-    // boot failure — precisely what this guards against.
-    timezoneLog.error("could not read the configured timezone", { err: errorMessage(err) });
-  }
-  if (configured) {
-    if (isValidTimezone(configured)) return configured;
-    timezoneLog.error("ignoring invalid configured timezone", { timezone: configured });
-  }
-
-  const env = process.env.TZ?.trim();
-  if (env) {
-    if (isValidTimezone(env)) return env;
-    timezoneLog.error("ignoring invalid TZ environment variable", { TZ: env });
-  }
-
-  // undefined = follow the process's own local time, which is the behaviour we
-  // had before the setting existed. Degraded, but running.
-  return undefined;
 }
 
 export const configSchema = z.object({
@@ -709,103 +673,7 @@ function restoreField(next: unknown, stored: unknown, field: string): unknown {
   return { ...(next as Unknowns), [field]: kept };
 }
 
-export function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
-  const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
-  if (row?.value === undefined || row.value === null) return undefined;
-  return configSchema.shape[key].parse(row.value) as ConfigValue<K>;
-}
-
-export function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
-  db.insert(config).values({ key, value }).onConflictDoUpdate({ target: config.key, set: { value } }).run();
-}
-
-export function deleteConfig(key: ConfigKey): void {
-  db.delete(config).where(eq(config.key, key)).run();
-}
-
-/**
- * Carry a configured `cleanup_max_deletes_per_run` over to its replacement.
- *
- * The ceiling changed from per-run to per-rolling-day when cleanup got its own
- * job (a per-run cap bounded one batch and nothing else). The number a user
- * chose still expresses what they meant — "don't remove more than this without
- * me looking" — so it moves across rather than silently reverting to the
- * default. Called once from `initJobs`, before anything reads either key.
- */
-export function migrateCleanupBudgetKey(): void {
-  const legacy = getConfig("cleanup_max_deletes_per_run");
-  if (legacy === undefined) return;
-  if (getConfig("cleanup_max_deletes_per_day") === undefined) {
-    setConfig("cleanup_max_deletes_per_day", legacy);
-  }
-  deleteConfig("cleanup_max_deletes_per_run");
-}
-
 export type PersonalizedSharingStatus = "disabled" | "enabling" | "enabled" | "disabling";
-
-/** Current personalization master-switch status (defaults to "disabled"). */
-export function getPersonalizedSharingStatus(): PersonalizedSharingStatus {
-  return getConfig("global_personalized_sharing")?.status ?? "disabled";
-}
-
-/**
- * Should the user portal be listening?
- *
- * It used to be personalization and nothing else, which stranded the two portal
- * features that have nothing to do with it:
- *
- * - "tell people before their films disappear" was unreachable unless the admin
- *   also turned on the heavyweight scheme that relabels every item in the
- *   library and restricts every user's access to it;
- * - a per-user digest frequency and address can *only* be set in the portal, so
- *   with the port closed nobody could ever subscribe — while the admin-side
- *   digest settings happily implied otherwise.
- *
- * It also made `portal.personalizationStatus` unreachable by construction: the
- * portal shows a banner when personalization is off, and the port was closed in
- * exactly that state.
- *
- * So: any portal-served feature being on is enough. Personalization mid-flip
- * (`enabling`/`disabling`) counts, so the portal doesn't blink during a
- * transition. Digests are represented by SMTP being configured, because that is
- * the admin-side half — subscribing is what the portal is for.
- */
-export function portalShouldRun(): boolean {
-  if (getPersonalizedSharingStatus() !== "disabled") return true;
-  if (getConfig("cleanup_enabled") === true) return true;
-  if ((getConfig("global_smtp")?.host ?? "") !== "") return true;
-  return false;
-}
-
-/**
- * Resolve the LLM provider config, falling back to the legacy
- * `global_anthropic_api_key` slot when `global_llm` hasn't been written yet.
- * Returns undefined when no provider is configured.
- */
-export function getLlmConfig(): ConfigValue<"global_llm"> | undefined {
-  const explicit = getConfig("global_llm");
-  if (explicit) return explicit;
-  const legacyKey = getConfig("global_anthropic_api_key");
-  if (legacyKey) {
-    return {
-      provider: "anthropic",
-      model: "claude-sonnet-4-5-20250929",
-      apiKey: legacyKey,
-    };
-  }
-  return undefined;
-}
-
-export function getAllConfig(): Partial<z.infer<ConfigSchema>> {
-  const rows = db.select().from(config).all();
-  const raw: Record<string, unknown> = {};
-  for (const row of rows) {
-    if (row.key in configSchema.shape) {
-      raw[row.key] = row.value;
-    }
-  }
-  return configSchema.partial().parse(raw);
-}
 
 /**
  * Pure transform: take a config blob and replace every secret value with
@@ -829,41 +697,208 @@ export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.
   return all as Partial<z.infer<ConfigSchema>>;
 }
 
-/**
- * The inverse, for one key on the way back in: a form echoes the sentinel for a
- * secret the user didn't retype, and saving that verbatim would erase it. Lists
- * are matched element to element by `id`, so reordering or renaming an \*Arr
- * instance keeps its key and a genuinely new instance gets no borrowed one.
- */
-export function restoreNestedSecrets<K extends ConfigKey>(key: K, value: ConfigValue<K>): ConfigValue<K> {
-  const stored = getConfig(key);
-  let next: unknown = value;
-  for (const nested of NESTED_SECRETS) {
-    if (nested.key !== key) continue;
-    if (nested.each) {
-      if (!Array.isArray(next)) continue;
-      const byId = new Map<unknown, unknown>();
-      if (Array.isArray(stored)) {
-        for (const entry of stored) {
-          if (entry && typeof entry === "object") byId.set((entry as Unknowns).id, entry);
-        }
-      }
-      next = next.map((entry) => {
-        const id = entry && typeof entry === "object" ? (entry as Unknowns).id : undefined;
-        return restoreField(entry, byId.get(id), nested.field);
-      });
-    } else {
-      next = restoreField(next, stored, nested.field);
-    }
-  }
-  return next as ConfigValue<K>;
+export interface ConfigStoreDeps {
+  db: Db;
 }
 
-/**
- * Browser-safe variant of `getAllConfig`: keys in `SECRET_KEYS` that are
- * stored come back as `REDACTED_SECRET`; unset keys are omitted as usual.
- * `global_llm.apiKey` is a nested secret and is redacted in place.
- */
-export function getAllConfigForClient(): Partial<z.infer<ConfigSchema>> {
-  return redactSecrets(getAllConfig());
+export function createConfigStore(deps: ConfigStoreDeps) {
+  const { db } = deps;
+
+  /**
+   * The timezone this install lives in: `global_timezone`, else `TZ`, else the
+   * process clock.
+   *
+   * Lives here rather than beside the scheduler because "what day is it" and
+   * "what time is it" are not only the scheduler's questions. Cron was
+   * zone-aware from the start, while the maintenance window read `getHours()`,
+   * seasonal rule windows read `getMonth()/getDate()` and the stats day
+   * boundaries read `setHours(0,0,0,0)` — so a UTC container configured for
+   * `America/Los_Angeles` enforced its quiet hours eight hours out and rolled
+   * "today" over at 17:00 local.
+   *
+   * Both sources are validated rather than trusted. `global_timezone` is
+   * schema-checked on save, but a row written by an older build (or by hand)
+   * bypasses that, and `TZ` never goes through the schema at all — setting it in
+   * a compose file is the first thing a self-hoster does. A bad value propagated
+   * into every `new Cron` throws during `initJobs`, which the server turns into
+   * `process.exit(1)`: a crash-loop with no UI left to fix it from.
+   */
+  function configuredTimezone(): string | undefined {
+    let configured: string | undefined;
+    try {
+      configured = getConfig("global_timezone")?.trim();
+    } catch (err) {
+      // `getConfig` parses the stored value against the schema, so a corrupt row
+      // throws here. Callers include `initJobs`, where an exception escaping is a
+      // boot failure — precisely what this guards against.
+      timezoneLog.error("could not read the configured timezone", { err: errorMessage(err) });
+    }
+    if (configured) {
+      if (isValidTimezone(configured)) return configured;
+      timezoneLog.error("ignoring invalid configured timezone", { timezone: configured });
+    }
+
+    const env = process.env.TZ?.trim();
+    if (env) {
+      if (isValidTimezone(env)) return env;
+      timezoneLog.error("ignoring invalid TZ environment variable", { TZ: env });
+    }
+
+    // undefined = follow the process's own local time, which is the behaviour we
+    // had before the setting existed. Degraded, but running.
+    return undefined;
+  }
+
+  function getConfig<K extends ConfigKey>(key: K): ConfigValue<K> | undefined {
+    const row = db.select({ value: config.value }).from(config).where(eq(config.key, key)).get();
+    if (row?.value === undefined || row.value === null) return undefined;
+    return configSchema.shape[key].parse(row.value) as ConfigValue<K>;
+  }
+
+  function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
+    db.insert(config).values({ key, value }).onConflictDoUpdate({ target: config.key, set: { value } }).run();
+  }
+
+  function deleteConfig(key: ConfigKey): void {
+    db.delete(config).where(eq(config.key, key)).run();
+  }
+
+  /**
+   * Carry a configured `cleanup_max_deletes_per_run` over to its replacement.
+   *
+   * The ceiling changed from per-run to per-rolling-day when cleanup got its own
+   * job (a per-run cap bounded one batch and nothing else). The number a user
+   * chose still expresses what they meant — "don't remove more than this without
+   * me looking" — so it moves across rather than silently reverting to the
+   * default. Called once from `initJobs`, before anything reads either key.
+   */
+  function migrateCleanupBudgetKey(): void {
+    const legacy = getConfig("cleanup_max_deletes_per_run");
+    if (legacy === undefined) return;
+    if (getConfig("cleanup_max_deletes_per_day") === undefined) {
+      setConfig("cleanup_max_deletes_per_day", legacy);
+    }
+    deleteConfig("cleanup_max_deletes_per_run");
+  }
+
+  /** Current personalization master-switch status (defaults to "disabled"). */
+  function getPersonalizedSharingStatus(): PersonalizedSharingStatus {
+    return getConfig("global_personalized_sharing")?.status ?? "disabled";
+  }
+
+  /**
+   * Should the user portal be listening?
+   *
+   * It used to be personalization and nothing else, which stranded the two portal
+   * features that have nothing to do with it:
+   *
+   * - "tell people before their films disappear" was unreachable unless the admin
+   *   also turned on the heavyweight scheme that relabels every item in the
+   *   library and restricts every user's access to it;
+   * - a per-user digest frequency and address can *only* be set in the portal, so
+   *   with the port closed nobody could ever subscribe — while the admin-side
+   *   digest settings happily implied otherwise.
+   *
+   * It also made `portal.personalizationStatus` unreachable by construction: the
+   * portal shows a banner when personalization is off, and the port was closed in
+   * exactly that state.
+   *
+   * So: any portal-served feature being on is enough. Personalization mid-flip
+   * (`enabling`/`disabling`) counts, so the portal doesn't blink during a
+   * transition. Digests are represented by SMTP being configured, because that is
+   * the admin-side half — subscribing is what the portal is for.
+   */
+  function portalShouldRun(): boolean {
+    if (getPersonalizedSharingStatus() !== "disabled") return true;
+    if (getConfig("cleanup_enabled") === true) return true;
+    if ((getConfig("global_smtp")?.host ?? "") !== "") return true;
+    return false;
+  }
+
+  /**
+   * Resolve the LLM provider config, falling back to the legacy
+   * `global_anthropic_api_key` slot when `global_llm` hasn't been written yet.
+   * Returns undefined when no provider is configured.
+   */
+  function getLlmConfig(): ConfigValue<"global_llm"> | undefined {
+    const explicit = getConfig("global_llm");
+    if (explicit) return explicit;
+    const legacyKey = getConfig("global_anthropic_api_key");
+    if (legacyKey) {
+      return {
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929",
+        apiKey: legacyKey,
+      };
+    }
+    return undefined;
+  }
+
+  function getAllConfig(): Partial<z.infer<ConfigSchema>> {
+    const rows = db.select().from(config).all();
+    const raw: Record<string, unknown> = {};
+    for (const row of rows) {
+      if (row.key in configSchema.shape) {
+        raw[row.key] = row.value;
+      }
+    }
+    return configSchema.partial().parse(raw);
+  }
+
+  /**
+   * The inverse, for one key on the way back in: a form echoes the sentinel for a
+   * secret the user didn't retype, and saving that verbatim would erase it. Lists
+   * are matched element to element by `id`, so reordering or renaming an \*Arr
+   * instance keeps its key and a genuinely new instance gets no borrowed one.
+   */
+  function restoreNestedSecrets<K extends ConfigKey>(key: K, value: ConfigValue<K>): ConfigValue<K> {
+    const stored = getConfig(key);
+    let next: unknown = value;
+    for (const nested of NESTED_SECRETS) {
+      if (nested.key !== key) continue;
+      if (nested.each) {
+        if (!Array.isArray(next)) continue;
+        const byId = new Map<unknown, unknown>();
+        if (Array.isArray(stored)) {
+          for (const entry of stored) {
+            if (entry && typeof entry === "object") byId.set((entry as Unknowns).id, entry);
+          }
+        }
+        next = next.map((entry) => {
+          const id = entry && typeof entry === "object" ? (entry as Unknowns).id : undefined;
+          return restoreField(entry, byId.get(id), nested.field);
+        });
+      } else {
+        next = restoreField(next, stored, nested.field);
+      }
+    }
+    return next as ConfigValue<K>;
+  }
+
+  /**
+   * Browser-safe variant of `getAllConfig`: keys in `SECRET_KEYS` that are
+   * stored come back as `REDACTED_SECRET`; unset keys are omitted as usual.
+   * `global_llm.apiKey` is a nested secret and is redacted in place.
+   */
+  function getAllConfigForClient(): Partial<z.infer<ConfigSchema>> {
+    return redactSecrets(getAllConfig());
+  }
+
+  return {
+    configuredTimezone,
+    getConfig,
+    setConfig,
+    deleteConfig,
+    migrateCleanupBudgetKey,
+    getPersonalizedSharingStatus,
+    portalShouldRun,
+    getLlmConfig,
+    getAllConfig,
+    restoreNestedSecrets,
+    getAllConfigForClient,
+  };
 }
+
+export type ConfigStore = ReturnType<typeof createConfigStore>;
+
+export const ConfigStoreToken = token<ConfigStore>("config");

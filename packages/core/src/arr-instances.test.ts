@@ -5,15 +5,20 @@
  * the ways it could quietly be broken — a deleted instance, a config row
  * claiming a reserved id, a half-filled instance.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
+import { config } from "@tinkerbell/db";
+import { createTestDb } from "@tinkerbell/db/test-db";
+import { createConfigStore } from "./config.ts";
+import { createArrInstances, DEFAULT_ARR_IDS } from "./arr-instances.ts";
 
-setupTempDb("tinkerbell-arr-instances-test-");
+const testDb = createTestDb("tinkerbell-arr-instances-test-");
+after(testDb.dispose);
 
-const { db, config } = await import("@tinkerbell/db");
-const { setConfig } = await import("./config.ts");
-const { arrInstances, resolveArrInstance, DEFAULT_ARR_IDS } = await import("./arr-instances.ts");
+const db = testDb.db;
+const configStore = createConfigStore({ db });
+const { setConfig } = configStore;
+const { arrInstances, resolveArrInstance } = createArrInstances({ config: configStore });
 
 function configureDefaults(): void {
   setConfig("global_radarr_url", "http://radarr:7878");

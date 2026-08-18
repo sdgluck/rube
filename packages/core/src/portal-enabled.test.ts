@@ -8,13 +8,15 @@
  * worse than unreachable: the portal is the only place to set a digest address,
  * so a closed port made the admin-side digest settings unusable by construction.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
+import { createTestDb } from "@tinkerbell/db/test-db";
+import { createConfigStore } from "./config.ts";
 
-setupTempDb("tinkerbell-portal-enabled-test-");
+const testDb = createTestDb("tinkerbell-portal-enabled-test-");
+after(testDb.dispose);
 
-const { getConfig, setConfig, deleteConfig, portalShouldRun } = await import("./config.ts");
+const { getConfig, setConfig, deleteConfig, portalShouldRun } = createConfigStore({ db: testDb.db });
 
 beforeEach(() => {
   deleteConfig("global_personalized_sharing");

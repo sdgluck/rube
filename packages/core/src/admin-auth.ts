@@ -14,9 +14,11 @@
  * account.
  */
 import { createHash } from "node:crypto";
+import { token as containerToken } from "@tinkerbell/container";
 import { getPlexAccount } from "@tinkerbell/plex";
-import { getConfig, setConfig } from "./config.ts";
-import { ensurePlexClientId } from "./sessions.ts";
+import type { ConfigStore } from "./config.ts";
+import type { Sessions } from "./sessions.ts";
+
 import { createLogger } from "./logger.ts";
 
 const log = createLogger("auth");
@@ -49,16 +51,6 @@ export function startAuthDisabledWarning(): void {
   setInterval(warn, DISABLED_WARNING_MS).unref();
 }
 
-/** True when the admin switch is on in config, regardless of the env bypass. */
-export function adminAuthConfigured(): boolean {
-  return getConfig("admin_auth_enabled") === true;
-}
-
-/** True when calls must actually carry an admin session. */
-export function adminAuthRequired(): boolean {
-  return adminAuthConfigured() && !authDisabledByEnv();
-}
-
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -66,29 +58,6 @@ function tokenHash(token: string): string {
 export interface OwnerAccount {
   userId: number;
   username: string;
-}
-
-/**
- * The cached owner, or undefined if it was never resolved or the Plex token
- * has changed since. Synchronous and offline — this is what the request path
- * uses.
- */
-export function cachedOwner(): OwnerAccount | undefined {
-  const userId = getConfig("global_plex_owner_id");
-  const username = getConfig("global_plex_owner_username");
-  if (userId === undefined) return undefined;
-  const token = getConfig("global_plex_token");
-  const storedHash = getConfig("global_plex_owner_token_hash");
-  // A token change invalidates the cache: the new token may belong to a
-  // different account, and admitting the previous owner on the strength of a
-  // stale lookup is precisely the failure this guards against.
-  //
-  // A *missing* hash fails closed too. `resolveOwner` always writes the id and
-  // the hash together, so an id standing on its own didn't come from there —
-  // it was written directly, and an unbound owner id is a standing admin grant
-  // for whoever chose it.
-  if (!token || !storedHash || tokenHash(token) !== storedHash) return undefined;
-  return { userId, username: username ?? "owner" };
 }
 
 /**
@@ -103,49 +72,98 @@ export class OwnerUnresolvedError extends Error {
   }
 }
 
-/**
- * Resolve (and cache) the Plex account behind the configured server token.
- * The server token is the owner's own account token, so plex.tv's account
- * endpoint answers this directly.
- */
-export async function resolveOwner(opts: { force?: boolean } = {}): Promise<OwnerAccount> {
-  if (!opts.force) {
-    const cached = cachedOwner();
-    if (cached) return cached;
-  }
-
-  const token = getConfig("global_plex_token");
-  if (!token) {
-    throw new OwnerUnresolvedError(
-      "No Plex token is configured, so Tinkerbell can't tell who owns this server. Add one in Settings → Plex first.",
-    );
-  }
-
-  let account;
-  try {
-    account = await getPlexAccount(token, ensurePlexClientId());
-  } catch (err) {
-    throw new OwnerUnresolvedError(
-      `Couldn't ask plex.tv who owns this server: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
-  if (!account?.id) {
-    throw new OwnerUnresolvedError("plex.tv didn't return an account id for the configured Plex token.");
-  }
-
-  setConfig("global_plex_owner_id", account.id);
-  setConfig("global_plex_owner_username", account.username);
-  setConfig("global_plex_owner_token_hash", tokenHash(token));
-  log.info("resolved Plex server owner", { userId: account.id, username: account.username });
-  return { userId: account.id, username: account.username };
+export interface AdminAuthDeps {
+  config: ConfigStore;
+  sessions: Sessions;
 }
 
-/**
- * Whether a signed-in Plex account may use the admin API. The owner always
- * may; anyone else only if the owner explicitly allow-listed them.
- */
-export function isAdminAccount(userId: number): boolean {
-  const owner = cachedOwner();
-  if (owner && owner.userId === userId) return true;
-  return (getConfig("admin_allowed_user_ids") ?? []).includes(userId);
+export function createAdminAuth(deps: AdminAuthDeps) {
+  const { getConfig, setConfig } = deps.config;
+  const { ensurePlexClientId } = deps.sessions;
+
+  /** True when the admin switch is on in config, regardless of the env bypass. */
+  function adminAuthConfigured(): boolean {
+    return getConfig("admin_auth_enabled") === true;
+  }
+
+  /** True when calls must actually carry an admin session. */
+  function adminAuthRequired(): boolean {
+    return adminAuthConfigured() && !authDisabledByEnv();
+  }
+
+  /**
+   * The cached owner, or undefined if it was never resolved or the Plex token
+   * has changed since. Synchronous and offline — this is what the request path
+   * uses.
+   */
+  function cachedOwner(): OwnerAccount | undefined {
+    const userId = getConfig("global_plex_owner_id");
+    const username = getConfig("global_plex_owner_username");
+    if (userId === undefined) return undefined;
+    const token = getConfig("global_plex_token");
+    const storedHash = getConfig("global_plex_owner_token_hash");
+    // A token change invalidates the cache: the new token may belong to a
+    // different account, and admitting the previous owner on the strength of a
+    // stale lookup is precisely the failure this guards against.
+    //
+    // A *missing* hash fails closed too. `resolveOwner` always writes the id and
+    // the hash together, so an id standing on its own didn't come from there —
+    // it was written directly, and an unbound owner id is a standing admin grant
+    // for whoever chose it.
+    if (!token || !storedHash || tokenHash(token) !== storedHash) return undefined;
+    return { userId, username: username ?? "owner" };
+  }
+
+  /**
+   * Resolve (and cache) the Plex account behind the configured server token.
+   * The server token is the owner's own account token, so plex.tv's account
+   * endpoint answers this directly.
+   */
+  async function resolveOwner(opts: { force?: boolean } = {}): Promise<OwnerAccount> {
+    if (!opts.force) {
+      const cached = cachedOwner();
+      if (cached) return cached;
+    }
+
+    const token = getConfig("global_plex_token");
+    if (!token) {
+      throw new OwnerUnresolvedError(
+        "No Plex token is configured, so Tinkerbell can't tell who owns this server. Add one in Settings → Plex first.",
+      );
+    }
+
+    let account;
+    try {
+      account = await getPlexAccount(token, ensurePlexClientId());
+    } catch (err) {
+      throw new OwnerUnresolvedError(
+        `Couldn't ask plex.tv who owns this server: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    if (!account?.id) {
+      throw new OwnerUnresolvedError("plex.tv didn't return an account id for the configured Plex token.");
+    }
+
+    setConfig("global_plex_owner_id", account.id);
+    setConfig("global_plex_owner_username", account.username);
+    setConfig("global_plex_owner_token_hash", tokenHash(token));
+    log.info("resolved Plex server owner", { userId: account.id, username: account.username });
+    return { userId: account.id, username: account.username };
+  }
+
+  /**
+   * Whether a signed-in Plex account may use the admin API. The owner always
+   * may; anyone else only if the owner explicitly allow-listed them.
+   */
+  function isAdminAccount(userId: number): boolean {
+    const owner = cachedOwner();
+    if (owner && owner.userId === userId) return true;
+    return (getConfig("admin_allowed_user_ids") ?? []).includes(userId);
+  }
+
+  return { adminAuthConfigured, adminAuthRequired, cachedOwner, resolveOwner, isAdminAccount };
 }
+
+export type AdminAuth = ReturnType<typeof createAdminAuth>;
+
+export const AdminAuthToken = containerToken<AdminAuth>("adminAuth");

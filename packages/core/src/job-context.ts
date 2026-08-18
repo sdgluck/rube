@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Scope } from "@tinkerbell/container";
 import { RULE_CONCURRENCY_MAX } from "@tinkerbell/contracts";
 
 /**
@@ -20,6 +21,16 @@ export interface JobCheckpoint {
 }
 
 export interface JobContext {
+  /**
+   * The run's own container scope.
+   *
+   * A job run is a natural scope boundary: it has a start, an end, and its own
+   * abort signal, so anything scoped to it is released when the run finishes
+   * however it finished. Commands resolve their dependencies from here — which
+   * is also what gives a Sidequest worker thread, with its own module graph, a
+   * properly wired application instead of the no-op hooks it used to get.
+   */
+  scope: Scope;
   log: (...args: unknown[]) => void;
   progress: (current: number, total: number, message: string) => void;
   signal: AbortSignal;
@@ -45,6 +56,29 @@ export const noopCheckpoint: JobCheckpoint = {
   write: () => {},
   clear: () => {},
 };
+
+/**
+ * A `JobContext` for work that has no `job_runs` row of its own: an ad-hoc rule
+ * run, a queue drain, the stress harness.
+ *
+ * The scope is passed rather than created. Work like this is a leaf of whatever
+ * started it, so it shares that lifetime — giving it a child scope would claim
+ * a disposal boundary it does not have, and nothing here registers anything
+ * scoped anyway. Everything else defaults to the inert option, so a caller
+ * states only the parts it actually implements.
+ */
+export function deriveJobContext(
+  scope: Scope,
+  parts: Pick<JobContext, "log"> & Partial<Omit<JobContext, "scope" | "log">>,
+): JobContext {
+  return {
+    scope,
+    progress: () => {},
+    signal: new AbortController().signal,
+    checkpoint: noopCheckpoint,
+    ...parts,
+  };
+}
 
 export const commonJobConfigSchema = z.object({
   sections: z.array(z.string()).optional(),

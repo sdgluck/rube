@@ -3,34 +3,26 @@
  * each other, expiry is enforced on read, sliding refresh keeps a live admin
  * session alive, and the raw cookie token never reaches the database.
  *
- * These need a real schema, so the suite migrates a throwaway SQLite file and
- * points `@tinkerbell/db` at it before importing anything that opens it.
+ * These need a real schema, which `createTestDb` applies to a throwaway file
+ * in-process. It used to take a hand-written `mkdtempSync` + `DATA_DIR` +
+ * `execFileSync(migrate.ts)` preamble and a `before` hook full of dynamic
+ * imports, purely because the connection opened the moment anything imported
+ * `@tinkerbell/db`.
  */
-import { describe, test, before } from "node:test";
+import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { eq } from "drizzle-orm";
+import { plexSessions } from "@tinkerbell/db";
+import { createTestDb } from "@tinkerbell/db/test-db";
+import { createConfigStore } from "./config.ts";
+import { createSessions, sessionMaxAgeSeconds } from "./sessions.ts";
 
-process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-sessions-test-"));
+const testDb = createTestDb("tinkerbell-sessions-test-");
+after(testDb.dispose);
 
-let sessions: typeof import("./sessions.ts");
-let dbModule: typeof import("@tinkerbell/db");
-
-before(async () => {
-  // The migrator is the project's single source of schema truth — running it
-  // here rather than hand-rolling CREATE TABLEs means this test also proves
-  // the new `scope` column actually ships in a migration.
-  execFileSync(process.execPath, [join(import.meta.dirname, "..", "..", "db", "src", "migrate.ts")], {
-    env: { ...process.env, DATA_DIR: process.env.DATA_DIR },
-    stdio: "ignore",
-  });
-  sessions = await import("./sessions.ts");
-  dbModule = await import("@tinkerbell/db");
-});
+const db = testDb.db;
+const sessions = createSessions({ db, config: createConfigStore({ db }) });
 
 describe("session scopes", () => {
   test("an admin session is invisible to a portal read, and the reverse", () => {
@@ -46,7 +38,7 @@ describe("session scopes", () => {
 
   test("only the SHA-256 of the token is stored", () => {
     const raw = sessions.createPlexSession(3, "hashed", "admin");
-    const rows = dbModule.db.select().from(dbModule.plexSessions).all();
+    const rows = db.select().from(plexSessions).all();
     const stored = rows.find((r) => r.userId === 3);
 
     assert.ok(stored);
@@ -58,14 +50,13 @@ describe("session scopes", () => {
   test("an expired session is rejected and pruned", () => {
     const raw = sessions.createPlexSession(4, "stale", "admin");
     const id = createHash("sha256").update(raw).digest("hex");
-    dbModule.db
-      .update(dbModule.plexSessions)
+    db.update(plexSessions)
       .set({ expiresAt: Date.now() - 1000 })
-      .where(eq(dbModule.plexSessions.id, id))
+      .where(eq(plexSessions.id, id))
       .run();
 
     assert.equal(sessions.getPlexSession(raw, "admin"), undefined);
-    const still = dbModule.db.select().from(dbModule.plexSessions).where(eq(dbModule.plexSessions.id, id)).get();
+    const still = db.select().from(plexSessions).where(eq(plexSessions.id, id)).get();
     assert.equal(still, undefined, "an expired session should be deleted on the read that rejected it");
   });
 
@@ -78,19 +69,15 @@ describe("session scopes", () => {
 
     // Two days in, the expiry has drifted far enough to be worth moving.
     const twoDaysOn = Date.now() + 5 * 24 * 60 * 60 * 1000;
-    dbModule.db
-      .update(dbModule.plexSessions)
-      .set({ expiresAt: twoDaysOn })
-      .where(eq(dbModule.plexSessions.id, id))
-      .run();
+    db.update(plexSessions).set({ expiresAt: twoDaysOn }).where(eq(plexSessions.id, id)).run();
 
     assert.equal(sessions.getPlexSession(raw, "admin")?.refreshed, true);
-    const after = dbModule.db.select().from(dbModule.plexSessions).where(eq(dbModule.plexSessions.id, id)).get();
+    const after = db.select().from(plexSessions).where(eq(plexSessions.id, id)).get();
     assert.ok(after && after.expiresAt > twoDaysOn, "expiry should have moved forward");
   });
 
   test("admin sessions are shorter-lived than portal ones", () => {
-    assert.ok(sessions.sessionMaxAgeSeconds("admin") < sessions.sessionMaxAgeSeconds("portal"));
+    assert.ok(sessionMaxAgeSeconds("admin") < sessionMaxAgeSeconds("portal"));
   });
 
   test("deleting a scope leaves the other scope's sessions alone", () => {
