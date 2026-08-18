@@ -1,13 +1,14 @@
 /**
  * Seeds the throwaway capture DB with the synthetic dataset. Run as a child
- * process with DATA_DIR + MOCK_PLEX_URL set, so @tinkerbell/db resolves to the
- * isolated database and the stored Plex config points at the mock origin.
+ * process with DATA_DIR + MOCK_PLEX_URL set, so the database it opens is the
+ * isolated one and the stored Plex config points at the mock origin.
  *
  * Invoked by capture.ts; not meant to touch a real tinkerbell.db.
  */
 
 import {
-  db,
+  createDb,
+  defaultDataDir,
   plexSections,
   plexUsers,
   collections,
@@ -22,7 +23,7 @@ import {
   bandwidthTests,
   userPreferences,
 } from "@tinkerbell/db";
-import { setConfig } from "@tinkerbell/core";
+import { createConfigStore } from "@tinkerbell/core";
 import {
   SECTIONS,
   ITEMS,
@@ -41,6 +42,11 @@ import { FIXED_NOW, DAY, MINUTE, fnv1a } from "./clock.ts";
 
 const mockUrl = process.env.MOCK_PLEX_URL;
 if (!mockUrl) throw new Error("MOCK_PLEX_URL is required");
+
+// A harness, not an app: it opens the one database `DATA_DIR` names and writes
+// to it directly. No container, because there is no application here to wire.
+const db = createDb({ dataDir: defaultDataDir() });
+const { setConfig } = createConfigStore({ db });
 
 // Every timestamp hangs off the one frozen instant, so a re-run writes the
 // same bytes. See clock.ts.

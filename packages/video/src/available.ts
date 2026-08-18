@@ -10,6 +10,8 @@ const VERSION_TIMEOUT_MS = 10_000;
  * both the health check (every minute) and the Prerolls page ask for it.
  * `undefined` means "not looked up yet"; `null` means "looked up, absent".
  */
+// Process-level: the answer is a property of the host's ffmpeg install, not
+// of any container.
 let cached: string | null | undefined;
 
 /** First line of `ffmpeg -version` is `ffmpeg version 7.1 Copyright …`. */

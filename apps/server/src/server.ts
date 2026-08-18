@@ -4,36 +4,36 @@ import { pipeline } from "node:stream/promises";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter, portalRouter, createPortalContext, createAdminContext } from "@tinkerbell/trpc";
-import { initJobs, registerCoreHooks, stopSidequest } from "@tinkerbell/jobs";
-import {
-  adminAuthRequired,
-  authDisabledByEnv,
-  createLogger,
-  errorMessage,
-  getConfig,
-  portalShouldRun,
-  startAuthDisabledWarning,
-} from "@tinkerbell/core";
-import { ensureBuiltInPresets } from "@tinkerbell/domain.overlays";
+import { createTrpc } from "@tinkerbell/trpc";
+import { buildContainer, ServicesToken } from "@tinkerbell/composition";
+import { JobsToken, registerJobs, stopSidequest } from "@tinkerbell/jobs";
+import { authDisabledByEnv, createLogger, errorMessage, startAuthDisabledWarning } from "@tinkerbell/core";
 import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
-import { clientIp, rejectIfNotAdmin } from "./auth.ts";
-import { handleCollectionRoute } from "./collections.ts";
-import { handlePrerollRoute } from "./prerolls.ts";
+import { clientIp, createAuth } from "./auth.ts";
+import { createCollectionRoutes } from "./collections.ts";
+import { createPrerollRoutes } from "./prerolls.ts";
 import { guarded, sendFetchResponse, toFetchRequest } from "./http.ts";
 
 const log = createLogger("server");
 const portalLog = createLogger("portal");
 
-// The hooks that let a lower-level module reach a higher-level one without an
-// import cycle: health reporting, the notification→events trace, the migration
-// rescan after a collections sync, and the per-user collection-label reader.
-//
-// Shared with the Sidequest worker entrypoint rather than written out here,
-// because a worker thread runs none of this file and every one of these hooks
-// defaults to a no-op — so the jobs, which is where they are mostly used, were
-// quietly getting nothing.
-registerCoreHooks();
+// The application graph. One call, and the same call the Sidequest worker
+// makes — which is the point. This used to be `registerCoreHooks()`, four
+// assignments to mutable module-level slots that each defaulted to a no-op, so
+// an entrypoint that forgot it (the worker did, for as long as jobs existed)
+// got a server that started cleanly and silently did nothing for health
+// reports, notification traces, migration rescans and collection counts.
+const container = buildContainer({}, [registerJobs]);
+const services = container.resolve(ServicesToken);
+const jobs = container.resolve(JobsToken);
+const { initJobs } = jobs;
+
+const { appRouter, portalRouter, createAdminContext, createPortalContext } = createTrpc({ ...services, jobs });
+const { rejectIfNotAdmin } = createAuth(services);
+const { handleCollectionRoute } = createCollectionRoutes(services);
+const { handlePrerollRoute } = createPrerollRoutes({ ...services, jobs });
+const { getConfig, portalShouldRun } = services.config;
+const { adminAuthRequired } = services.adminAuth;
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 // Bind to loopback by default. Admin auth exists now (Settings → Security) but
@@ -194,13 +194,24 @@ const server = createServer(
     // tRPC API routes
     if (path.startsWith("/api/trpc")) {
       const fetchReq = toFetchRequest(req);
-      const fetchRes = await fetchRequestHandler({
-        endpoint: "/api/trpc",
-        req: fetchReq,
-        router: appRouter,
-        createContext: ({ req: r, resHeaders }) => createAdminContext({ req: r, resHeaders, ip: clientIp(req) }),
-      });
-      await sendFetchResponse(fetchRes, res);
+      // The context opens a request scope; dispose it once the response is
+      // written, whichever way the request ended.
+      let scope: { dispose(): Promise<void> } | undefined;
+      try {
+        const fetchRes = await fetchRequestHandler({
+          endpoint: "/api/trpc",
+          req: fetchReq,
+          router: appRouter,
+          createContext: ({ req: r, resHeaders }) => {
+            const ctx = createAdminContext({ req: r, resHeaders, ip: clientIp(req) });
+            scope = ctx.scope;
+            return ctx;
+          },
+        });
+        await sendFetchResponse(fetchRes, res);
+      } finally {
+        await scope?.dispose();
+      }
       return;
     }
 
@@ -282,7 +293,7 @@ async function main() {
   // "connection refused" rather than half-initialised tRPC handlers, and a
   // crash should happen before the port opens.
   try {
-    ensureBuiltInPresets();
+    services.overlays.ensureBuiltInPresets();
   } catch (err) {
     log.error("failed to seed built-in overlay presets", { err: errorMessage(err) });
   }
@@ -342,6 +353,11 @@ async function shutdown() {
   await Promise.race([closed, timeout]);
   server.closeAllConnections();
   portalServer.closeAllConnections();
+
+  // Closes the SQLite handle and anything else the graph registered a disposer
+  // for. Previously nothing closed the connection at all — the process simply
+  // exited and left it to the OS.
+  await container.dispose();
 
   process.exit(0);
 }

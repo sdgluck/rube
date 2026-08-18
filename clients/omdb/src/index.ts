@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db, omdbCache } from "@tinkerbell/db";
+import { omdbCache, type Db } from "@tinkerbell/db";
 import { httpRequest, HttpError } from "@tinkerbell/http";
 
 export type OmdbHealthCallback = (status: "ok" | "error", message: string) => void;
@@ -7,6 +7,8 @@ export type OmdbHealthCallback = (status: "ok" | "error", message: string) => vo
 export interface OmdbClientOptions {
   apiKey: string | null;
   onHealth?: OmdbHealthCallback;
+  /** Lookups are cached in `omdb_cache`; this is the connection they land in. */
+  db: Db;
 }
 
 export function extractImdbId(guids: string[]): string | null {
@@ -24,7 +26,7 @@ function errorMessage(err: unknown): string {
 }
 
 export function createOmdbClient(opts: OmdbClientOptions) {
-  const { apiKey, onHealth } = opts;
+  const { apiKey, onHealth, db } = opts;
 
   async function getRatings(
     imdbId: string,

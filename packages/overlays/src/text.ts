@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import opentype from "opentype.js";
 
+// Process-level: a font file parsed once, immutable thereafter.
 let cachedFont: opentype.Font | null = null;
 
 export function loadBundledFont(): opentype.Font {

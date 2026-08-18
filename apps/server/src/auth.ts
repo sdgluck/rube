@@ -12,33 +12,40 @@
  * without opening the database.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { adminAuthRequired, getPlexSession, isAdminAccount } from "@tinkerbell/core";
+import type { Services } from "@tinkerbell/composition";
 import { parseCookieHeader } from "./security.ts";
 
 const ADMIN_COOKIE = "tb_admin_session";
 
-/** True when the request may proceed: auth is off, or it carries an admin session. */
-export function isAdminRequest(req: IncomingMessage): boolean {
-  if (!adminAuthRequired()) return true;
-  const raw = parseCookieHeader(req.headers.cookie ?? "", ADMIN_COOKIE);
-  const session = getPlexSession(raw, "admin");
-  return !!session && isAdminAccount(session.userId);
+export function createAuth(deps: Services) {
+  const { adminAuthRequired, isAdminAccount } = deps.adminAuth;
+  const { getPlexSession } = deps.sessions;
+
+  /** True when the request may proceed: auth is off, or it carries an admin session. */
+  function isAdminRequest(req: IncomingMessage): boolean {
+    if (!adminAuthRequired()) return true;
+    const raw = parseCookieHeader(req.headers.cookie ?? "", ADMIN_COOKIE);
+    const session = getPlexSession(raw, "admin");
+    return !!session && isAdminAccount(session.userId);
+  }
+
+  /** Gate a non-tRPC route. Returns true when it answered 401 and the caller should stop. */
+  function rejectIfNotAdmin(req: IncomingMessage, res: ServerResponse): boolean {
+    if (isAdminRequest(req)) return false;
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Sign in to continue." }));
+    return true;
+  }
+
+  /**
+   * Best-effort client address for rate-limiting the auth handshake. Behind a
+   * reverse proxy every socket address is the proxy's, so the forwarded header
+   * is the only thing that distinguishes callers — it's spoofable, but the
+   * limiter is a courtesy to plex.tv rather than a security boundary.
+   */
+  return { isAdminRequest, rejectIfNotAdmin };
 }
 
-/** Gate a non-tRPC route. Returns true when it answered 401 and the caller should stop. */
-export function rejectIfNotAdmin(req: IncomingMessage, res: ServerResponse): boolean {
-  if (isAdminRequest(req)) return false;
-  res.writeHead(401, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "Sign in to continue." }));
-  return true;
-}
-
-/**
- * Best-effort client address for rate-limiting the auth handshake. Behind a
- * reverse proxy every socket address is the proxy's, so the forwarded header
- * is the only thing that distinguishes callers — it's spoofable, but the
- * limiter is a courtesy to plex.tv rather than a security boundary.
- */
 export function clientIp(req: IncomingMessage): string {
   const forwarded = req.headers["x-forwarded-for"];
   const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;

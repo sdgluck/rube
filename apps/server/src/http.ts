@@ -1,9 +1,10 @@
 /**
  * Request plumbing shared by the admin and portal servers.
  *
- * Split out of server.ts so it can be tested: that module opens ports and
- * initialises the job engine at import time, so nothing in it is reachable
- * from a unit test.
+ * Split out of server.ts so it can be tested: that module is the composition
+ * root — it builds the container, opens ports and starts the job engine as
+ * soon as it is imported — so nothing inside it is reachable from a unit
+ * test.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";

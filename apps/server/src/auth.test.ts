@@ -4,20 +4,22 @@
  * writes files, so both have to refuse anonymous callers exactly as the tRPC
  * middleware does.
  */
-import { describe, test, before, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { clientIp, createAuth } from "./auth.ts";
 
-process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-server-auth-test-"));
 delete process.env.TINKERBELL_DISABLE_AUTH;
 
-let auth: typeof import("./auth.ts");
-let core: typeof import("@tinkerbell/core");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const auth = createAuth(services);
+const core = { ...services.config, ...services.sessions, ...services.adminAuth };
 
 /** The parts of an IncomingMessage the gate actually reads. */
 function request(cookie?: string): IncomingMessage {
@@ -26,15 +28,6 @@ function request(cookie?: string): IncomingMessage {
     socket: { remoteAddress: "10.0.0.1" },
   } as unknown as IncomingMessage;
 }
-
-before(async () => {
-  execFileSync(process.execPath, [join(import.meta.dirname, "..", "..", "..", "packages", "db", "src", "migrate.ts")], {
-    env: { ...process.env },
-    stdio: "ignore",
-  });
-  auth = await import("./auth.ts");
-  core = await import("@tinkerbell/core");
-});
 
 const OWNER_TOKEN = "plex-token-for-tests";
 
@@ -118,10 +111,10 @@ describe("clientIp", () => {
       headers: { "x-forwarded-for": "203.0.113.7, 10.0.0.2" },
       socket: { remoteAddress: "10.0.0.1" },
     } as unknown as IncomingMessage;
-    assert.equal(auth.clientIp(req), "203.0.113.7");
+    assert.equal(clientIp(req), "203.0.113.7");
   });
 
   test("falls back to the socket address", () => {
-    assert.equal(auth.clientIp(request()), "10.0.0.1");
+    assert.equal(clientIp(request()), "10.0.0.1");
   });
 });

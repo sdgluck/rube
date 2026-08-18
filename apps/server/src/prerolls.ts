@@ -11,13 +11,12 @@ import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
 import { createLogger, errorMessage } from "@tinkerbell/core";
-import { startJob } from "@tinkerbell/jobs";
+import type { Services } from "@tinkerbell/composition";
+import type { Jobs } from "@tinkerbell/jobs";
 import {
   UnsupportedFormatError,
   UploadTooLargeError,
   assertSupportedFilename,
-  createPreroll,
-  deletePreroll,
   ensurePrerollDirs,
   processedPath,
   thumbPath,
@@ -96,94 +95,101 @@ async function serveFile(
 }
 
 /**
- * `POST /api/prerolls/upload?filename=…&name=…`
- *
- * The body is the raw file — no multipart. The browser sends a `File`
- * directly, which keeps this a plain stream-to-disk with no parser in the
- * middle, and lets `XMLHttpRequest` report upload progress.
- */
-async function handleUpload(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
-  if (req.method !== "POST") {
-    json(res, 405, { error: "Use POST" });
-    return;
-  }
-
-  const originalFilename = (url.searchParams.get("filename") ?? "").trim();
-  if (!originalFilename) {
-    json(res, 400, { error: "A filename query parameter is required" });
-    return;
-  }
-
-  let ext: string;
-  try {
-    ext = assertSupportedFilename(originalFilename);
-  } catch (err) {
-    if (err instanceof UnsupportedFormatError) {
-      json(res, 415, { error: err.message });
-      return;
-    }
-    throw err;
-  }
-
-  await ensurePrerollDirs();
-
-  // The row exists before the bytes do, so a half-finished upload is visible
-  // in the UI as a failed preroll rather than vanishing without trace.
-  const row = createPreroll({ name: url.searchParams.get("name") ?? originalFilename, originalFilename });
-
-  try {
-    const bytes = await writeIncoming(row.id, ext, req);
-    if (bytes === 0) throw new Error("The upload was empty");
-  } catch (err) {
-    await deletePreroll(row.id);
-    if (err instanceof UploadTooLargeError) {
-      json(res, 413, { error: err.message });
-      return;
-    }
-    json(res, 400, { error: `Upload failed: ${errorMessage(err)}` });
-    return;
-  }
-
-  // Fire-and-forget: the client polls `prerolls.list` for status, and a job
-  // that's already running will pick this row up on its own. We don't wait,
-  // but we do say something when it doesn't start — the old `.catch(() => {})`
-  // meant a broken queue looked identical to a working one.
-  startJob("preroll-process")
-    .then((result) => {
-      if (!result.ok && result.reason === "not-found") {
-        log.error("preroll-process job is missing — the upload will stay pending", { prerollId: row.id });
-      }
-    })
-    .catch((err) => log.error("failed to start preroll processing", { err: errorMessage(err) }));
-
-  json(res, 200, { id: row.id });
-}
-
-/**
  * Route a request if it belongs to the prerolls API. Returns false when it
  * doesn't, so the caller can fall through to the rest of the server.
  */
-export async function handlePrerollRoute(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
-  const path = url.pathname;
+export function createPrerollRoutes(deps: Services & { jobs: Jobs }) {
+  const { startJob } = deps.jobs;
+  /**
+   * `POST /api/prerolls/upload?filename=…&name=…`
+   *
+   * The body is the raw file — no multipart. The browser sends a `File`
+   * directly, which keeps this a plain stream-to-disk with no parser in the
+   * middle, and lets `XMLHttpRequest` report upload progress.
+   */
+  async function handleUpload(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+    if (req.method !== "POST") {
+      json(res, 405, { error: "Use POST" });
+      return;
+    }
 
-  if (path === UPLOAD_PATH) {
-    await handleUpload(req, res, url);
+    const originalFilename = (url.searchParams.get("filename") ?? "").trim();
+    if (!originalFilename) {
+      json(res, 400, { error: "A filename query parameter is required" });
+      return;
+    }
+
+    let ext: string;
+    try {
+      ext = assertSupportedFilename(originalFilename);
+    } catch (err) {
+      if (err instanceof UnsupportedFormatError) {
+        json(res, 415, { error: err.message });
+        return;
+      }
+      throw err;
+    }
+
+    await ensurePrerollDirs();
+
+    // The row exists before the bytes do, so a half-finished upload is visible
+    // in the UI as a failed preroll rather than vanishing without trace.
+    const row = createPreroll({ name: url.searchParams.get("name") ?? originalFilename, originalFilename });
+
+    try {
+      const bytes = await writeIncoming(row.id, ext, req);
+      if (bytes === 0) throw new Error("The upload was empty");
+    } catch (err) {
+      await deletePreroll(row.id);
+      if (err instanceof UploadTooLargeError) {
+        json(res, 413, { error: err.message });
+        return;
+      }
+      json(res, 400, { error: `Upload failed: ${errorMessage(err)}` });
+      return;
+    }
+
+    // Fire-and-forget: the client polls `prerolls.list` for status, and a job
+    // that's already running will pick this row up on its own. We don't wait,
+    // but we do say something when it doesn't start — the old `.catch(() => {})`
+    // meant a broken queue looked identical to a working one.
+    startJob("preroll-process")
+      .then((result) => {
+        if (!result.ok && result.reason === "not-found") {
+          log.error("preroll-process job is missing — the upload will stay pending", { prerollId: row.id });
+        }
+      })
+      .catch((err) => log.error("failed to start preroll processing", { err: errorMessage(err) }));
+
+    json(res, 200, { id: row.id });
+  }
+
+  const { createPreroll, deletePreroll } = deps.prerolls;
+
+  async function handlePrerollRoute(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
+    const path = url.pathname;
+
+    if (path === UPLOAD_PATH) {
+      await handleUpload(req, res, url);
+      return true;
+    }
+
+    const match = path.match(PREROLL_ROUTE_RE);
+    if (!match) return false;
+
+    const id = resolvePrerollId(match[1]);
+    if (!id) {
+      json(res, 400, { error: "Invalid preroll id" });
+      return true;
+    }
+
+    if (match[2] === "thumb") {
+      await serveFile(req, res, thumbPath(id), "image/jpeg");
+    } else {
+      await serveFile(req, res, processedPath(id), "video/mp4");
+    }
     return true;
   }
 
-  const match = path.match(PREROLL_ROUTE_RE);
-  if (!match) return false;
-
-  const id = resolvePrerollId(match[1]);
-  if (!id) {
-    json(res, 400, { error: "Invalid preroll id" });
-    return true;
-  }
-
-  if (match[2] === "thumb") {
-    await serveFile(req, res, thumbPath(id), "image/jpeg");
-  } else {
-    await serveFile(req, res, processedPath(id), "video/mp4");
-  }
-  return true;
+  return { handlePrerollRoute };
 }
