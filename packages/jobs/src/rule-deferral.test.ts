@@ -1,3 +1,4 @@
+import { isDeferrable } from "@tinkerbell/jobs";
 /**
  * Rule work started by the server used to ignore the two settings that exist to
  * keep heavy work away from a stream.
@@ -13,15 +14,23 @@
  * These cover the gate itself. The hold-and-retry bookkeeping around it lives
  * in `runDueRules`.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { playbackSessions } from "@tinkerbell/db";
+import { createDeferral } from "./deferral.ts";
 
-const { db, playbackSessions } = await import("@tinkerbell/db");
-const { setConfig } = await import("@tinkerbell/core");
-const { deferralFor, deferralForRuleWork, isDeferrable } = await import("./deferral.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { deferralFor, deferralForRuleWork } = createDeferral(services);
 
 /** An open session — `endedAt` null is what "someone is watching" means here. */
 function seedStream(decision: "directplay" | "transcode" = "directplay"): void {

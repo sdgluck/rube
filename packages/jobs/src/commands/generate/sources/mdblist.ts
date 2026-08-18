@@ -1,4 +1,5 @@
-import { getConfig } from "@tinkerbell/core";
+import { type Services } from "@tinkerbell/composition";
+
 import { httpRequestJson } from "@tinkerbell/http";
 
 /**
@@ -41,42 +42,49 @@ function listPath(idOrSlug: string): string {
   return `/lists/${encoded}`;
 }
 
-async function mdblistFetch(path: string, signal?: AbortSignal): Promise<MdbListResponse> {
-  const apiKey = getConfig("global_mdblist_api_key");
-  if (!apiKey) throw new Error("MDBList API key is not configured (Settings → Databases).");
-  const sep = path.includes("?") ? "&" : "?";
-  const url = `https://api.mdblist.com${path}${sep}apikey=${encodeURIComponent(apiKey)}`;
-  const data = await httpRequestJson<MdbListResponse>({
-    url,
-    init: { signal },
-    timeoutMs: MDBLIST_TIMEOUT_MS,
-    // Idempotent GET — retrying a transient 502 beats failing the nightly run.
-    retries: 2,
-  });
-  if (data.error) throw new Error(`MDBList: ${data.error}`);
-  return data;
-}
+export function createMdblistCommand(deps: Pick<Services, "config">) {
+  const { config } = deps;
+  const { getConfig } = config;
 
-/**
- * Fetch list metadata (name) and items (IMDb + TMDb ids). Items are
- * returned as a flat array — MDBList separates `movies` and `shows` server
- * side, but downstream we just match against the section's library so the
- * split is unimportant here.
- */
-export async function fetchMdbList(
-  idOrSlug: string,
-  signal?: AbortSignal,
-): Promise<{ name: string; imdbIds: string[]; tmdbIds: number[] }> {
-  const base = listPath(idOrSlug);
-  const [meta, items] = await Promise.all([mdblistFetch(base, signal), mdblistFetch(`${base}/items`, signal)]);
-
-  const all = [...(items.movies ?? []), ...(items.shows ?? [])];
-  const imdbIds: string[] = [];
-  const tmdbIds: number[] = [];
-  for (const item of all) {
-    if (item.imdb_id) imdbIds.push(item.imdb_id);
-    if (typeof item.tmdb_id === "number") tmdbIds.push(item.tmdb_id);
+  async function mdblistFetch(path: string, signal?: AbortSignal): Promise<MdbListResponse> {
+    const apiKey = getConfig("global_mdblist_api_key");
+    if (!apiKey) throw new Error("MDBList API key is not configured (Settings → Databases).");
+    const sep = path.includes("?") ? "&" : "?";
+    const url = `https://api.mdblist.com${path}${sep}apikey=${encodeURIComponent(apiKey)}`;
+    const data = await httpRequestJson<MdbListResponse>({
+      url,
+      init: { signal },
+      timeoutMs: MDBLIST_TIMEOUT_MS,
+      // Idempotent GET — retrying a transient 502 beats failing the nightly run.
+      retries: 2,
+    });
+    if (data.error) throw new Error(`MDBList: ${data.error}`);
+    return data;
   }
 
-  return { name: meta.name?.trim() || idOrSlug, imdbIds, tmdbIds };
+  /**
+   * Fetch list metadata (name) and items (IMDb + TMDb ids). Items are
+   * returned as a flat array — MDBList separates `movies` and `shows` server
+   * side, but downstream we just match against the section's library so the
+   * split is unimportant here.
+   */
+  async function fetchMdbList(
+    idOrSlug: string,
+    signal?: AbortSignal,
+  ): Promise<{ name: string; imdbIds: string[]; tmdbIds: number[] }> {
+    const base = listPath(idOrSlug);
+    const [meta, items] = await Promise.all([mdblistFetch(base, signal), mdblistFetch(`${base}/items`, signal)]);
+
+    const all = [...(items.movies ?? []), ...(items.shows ?? [])];
+    const imdbIds: string[] = [];
+    const tmdbIds: number[] = [];
+    for (const item of all) {
+      if (item.imdb_id) imdbIds.push(item.imdb_id);
+      if (typeof item.tmdb_id === "number") tmdbIds.push(item.tmdb_id);
+    }
+
+    return { name: meta.name?.trim() || idOrSlug, imdbIds, tmdbIds };
+  }
+
+  return { fetchMdbList };
 }

@@ -12,15 +12,23 @@
  * the same rule seconds apart. The queue guards it instead, by folding a second
  * ask into the run already pending — a stronger claim, and the one tested here.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-rule-chains-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ruleRuns, rules } from "@tinkerbell/db";
+import { createRuleQueue } from "./rule-queue.ts";
+import { RuleRunsToken } from "@tinkerbell/domain.rule-runs";
 
-const { db, rules, ruleRuns } = await import("@tinkerbell/db");
-const { rulesChainedAfter, enqueueRuleWork } = await import("./rule-queue.ts");
-const { getQueuedRuleRuns } = await import("@tinkerbell/domain.rule-runs");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { rulesChainedAfter, enqueueRuleWork } = createRuleQueue(services);
+const { getQueuedRuleRuns } = c.resolve(RuleRunsToken);
 
 const T0 = 1_700_000_000_000;
 

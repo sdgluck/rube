@@ -1,24 +1,28 @@
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
+import { createStressTest } from "./stress-test/index.ts";
+import { createInternalJobs } from "./internal-jobs.ts";
+import { createSchedule } from "./schedule.ts";
+import { createRuleQueue } from "./rule-queue.ts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { eq, and, desc, inArray, notInArray, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
-import { seedDefaultRules } from "@tinkerbell/domain.rules";
-import { markStaleRuleRunsAsFailed, sweepStuckRuleRuns } from "@tinkerbell/domain.rule-runs";
-import { db, jobs, jobRuns } from "@tinkerbell/db";
-import { emitEvent } from "@tinkerbell/domain.events";
+
+import { jobs, jobRuns } from "@tinkerbell/db";
+
 import {
   createLogger,
+  deriveJobContext,
   errorMessage,
   formatDuration,
   logLevel,
-  migrateCleanupBudgetKey,
-  noopCheckpoint,
   type JobContext,
 } from "@tinkerbell/core";
-import { markStaleStressTestsAsFailed } from "./stress-test/index.ts";
-import { internalJobs, isInternalJobName, type InternalJobDescriptor, type InternalJobName } from "./internal-jobs.ts";
-import { initSchedule, scheduleCron, startCronSchedules } from "./schedule.ts";
-import { hasQueuedRuleWork, scheduleRuleDrain } from "./rule-queue.ts";
+
+import { type InternalJobDescriptor, type InternalJobName } from "./internal-jobs.ts";
+import {} from "./schedule.ts";
+
 import { COMMANDS, isCommandName, type CommandName } from "./commands/catalog.ts";
 import { ACTIVE_RUN_STATUSES, isTerminalStatus } from "./statuses.ts";
 import {
@@ -191,62 +195,6 @@ const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
 // scheduler would keep firing a command that no longer exists.
 const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa", "sync-most-watched"];
 
-function seedDefaultJobs(): void {
-  const existing = new Map(
-    db
-      .select({ id: jobs.id, name: jobs.name, command: jobs.command })
-      .from(jobs)
-      .all()
-      .map((r) => [r.id, r]),
-  );
-
-  let inserted = 0;
-  let updated = 0;
-  for (const job of DEFAULT_JOBS) {
-    const current = existing.get(job.id);
-    if (!current) {
-      db.insert(jobs)
-        .values({ ...job, config: DEFAULT_CONFIGS[job.id] ?? {} })
-        .run();
-      inserted++;
-      continue;
-    }
-    // Split ownership, deliberately: `name` and `command` are ours and must
-    // reach existing installs when we rename or re-point a default job (the
-    // old `onConflictDoNothing` meant they never did). `schedule`, `enabled`
-    // and `config` belong to the user and are only ever set on first insert.
-    if (current.name !== job.name || current.command !== job.command) {
-      db.update(jobs).set({ name: job.name, command: job.command }).where(eq(jobs.id, job.id)).run();
-      updated++;
-    }
-  }
-  if (inserted > 0) log.info("seeded default jobs", { count: inserted });
-  if (updated > 0) log.info("refreshed default job name/command", { count: updated });
-
-  // Clean up removed default jobs (delete runs first due to FK constraint)
-  for (const id of REMOVED_JOBS) {
-    db.delete(jobRuns).where(eq(jobRuns.jobId, id)).run();
-    db.delete(jobs).where(eq(jobs.id, id)).run();
-  }
-}
-
-/**
- * Nothing survives a restart mid-run: worker threads die with the process and
- * `cancelling` is an in-memory handshake. Both are failures from the UI's
- * point of view, and the orphan guard in `CommandJob` stops anything that
- * Sidequest still has queued from writing to these rows afterwards.
- */
-function markStaleRunsAsFailed(): void {
-  const result = db
-    .update(jobRuns)
-    .set({ status: "failed", finishedAt: Date.now() })
-    .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
-    .run();
-  if (result.changes > 0) {
-    log.info("marked stale runs as failed", { count: result.changes });
-  }
-}
-
 /**
  * Sidequest engine configuration. Extracted so it can be asserted in a unit
  * test without booting the engine — two of these settings are load-bearing
@@ -293,6 +241,10 @@ async function startSidequest(): Promise<void> {
   log.info("Sidequest engine started");
 }
 
+// Module level on purpose, unlike the application state that moved into the
+// factory. This guards the Sidequest engine, which is one per process (and one
+// per worker thread) rather than one per container — a container-scoped latch
+// would claim a lifetime the engine does not have.
 let shuttingDown = false;
 
 /**
@@ -316,20 +268,6 @@ export async function stopSidequest(): Promise<void> {
   }
 }
 
-/**
- * In-flight internal jobs, so `cancelRun` can abort them. Command jobs run in
- * a worker thread and are cancelled via the `job_runs.status` poll instead.
- */
-const internalControllers = new Map<string, AbortController>();
-
-/**
- * When each `cancelling` run was asked to stop, so the watchdog can force-fail
- * one that never unwinds. In memory rather than a column because a restart
- * fails every in-flight run anyway (`markStaleRunsAsFailed`), which makes the
- * durable version pure cost.
- */
-const cancelRequestedAt = new Map<string, number>();
-
 export type StartResult =
   | { ok: true; runId: string }
   /**
@@ -340,402 +278,480 @@ export type StartResult =
    */
   | { ok: false; reason: "not-found" | "already-running" | "unknown-command"; runId?: string };
 
-export async function startJob(jobId: string): Promise<StartResult> {
-  const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
-  if (!job) return { ok: false, reason: "not-found" };
+// ── Watchdog ────────────────────────────────────────────────────────────────
 
-  const runId = randomUUID();
-  const now = Date.now();
+// Process-level with the engine it watches; see `shuttingDown`.
+let watchdogTimer: NodeJS.Timeout | null = null;
 
-  // Atomic insert — prevents a race where two concurrent requests both see no
-  // running job and both insert. `cancelling` counts as occupying the job:
-  // the command is still executing until it unwinds, so letting a second run
-  // start would put two live executions on the same job.
-  const result = db.run(sql`
+export const createRunner = perDeps(function createRunner(deps: Services) {
+  /**
+   * In-flight internal jobs, so `cancelRun` can abort them. Command jobs run in
+   * a worker thread and are cancelled via the `job_runs.status` poll instead.
+   */
+  const internalControllers = new Map<string, AbortController>();
+  /**
+   * When each `cancelling` run was asked to stop, so the watchdog can force-fail
+   * one that never unwinds. In memory rather than a column because a restart
+   * fails every in-flight run anyway (`markStaleRunsAsFailed`), which makes the
+   * durable version pure cost.
+   */
+  const cancelRequestedAt = new Map<string, number>();
+
+  const { config, db, events, ruleRuns, rules } = deps;
+  const { seedDefaultRules } = rules;
+  const { markStaleRuleRunsAsFailed, sweepStuckRuleRuns } = ruleRuns;
+  const { emitEvent } = events;
+  const { migrateCleanupBudgetKey } = config;
+  const { markStaleStressTestsAsFailed } = createStressTest(deps);
+  const { internalJobs, isInternalJobName } = createInternalJobs(deps);
+  const { scheduleCron, startCronSchedules } = createSchedule(deps);
+  const { hasQueuedRuleWork, scheduleRuleDrain } = createRuleQueue(deps);
+
+  function seedDefaultJobs(): void {
+    const existing = new Map(
+      db
+        .select({ id: jobs.id, name: jobs.name, command: jobs.command })
+        .from(jobs)
+        .all()
+        .map((r) => [r.id, r]),
+    );
+
+    let inserted = 0;
+    let updated = 0;
+    for (const job of DEFAULT_JOBS) {
+      const current = existing.get(job.id);
+      if (!current) {
+        db.insert(jobs)
+          .values({ ...job, config: DEFAULT_CONFIGS[job.id] ?? {} })
+          .run();
+        inserted++;
+        continue;
+      }
+      // Split ownership, deliberately: `name` and `command` are ours and must
+      // reach existing installs when we rename or re-point a default job (the
+      // old `onConflictDoNothing` meant they never did). `schedule`, `enabled`
+      // and `config` belong to the user and are only ever set on first insert.
+      if (current.name !== job.name || current.command !== job.command) {
+        db.update(jobs).set({ name: job.name, command: job.command }).where(eq(jobs.id, job.id)).run();
+        updated++;
+      }
+    }
+    if (inserted > 0) log.info("seeded default jobs", { count: inserted });
+    if (updated > 0) log.info("refreshed default job name/command", { count: updated });
+
+    // Clean up removed default jobs (delete runs first due to FK constraint)
+    for (const id of REMOVED_JOBS) {
+      db.delete(jobRuns).where(eq(jobRuns.jobId, id)).run();
+      db.delete(jobs).where(eq(jobs.id, id)).run();
+    }
+  }
+
+  /**
+   * Nothing survives a restart mid-run: worker threads die with the process and
+   * `cancelling` is an in-memory handshake. Both are failures from the UI's
+   * point of view, and the orphan guard in `CommandJob` stops anything that
+   * Sidequest still has queued from writing to these rows afterwards.
+   */
+  function markStaleRunsAsFailed(): void {
+    const result = db
+      .update(jobRuns)
+      .set({ status: "failed", finishedAt: Date.now() })
+      .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
+      .run();
+    if (result.changes > 0) {
+      log.info("marked stale runs as failed", { count: result.changes });
+    }
+  }
+
+  async function startJob(jobId: string): Promise<StartResult> {
+    const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
+    if (!job) return { ok: false, reason: "not-found" };
+
+    const runId = randomUUID();
+    const now = Date.now();
+
+    // Atomic insert — prevents a race where two concurrent requests both see no
+    // running job and both insert. `cancelling` counts as occupying the job:
+    // the command is still executing until it unwinds, so letting a second run
+    // start would put two live executions on the same job.
+    const result = db.run(sql`
     INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at)
     SELECT ${runId}, ${jobId}, 'running', '', 0, '', ${now}
     WHERE NOT EXISTS (
       SELECT 1 FROM job_runs WHERE job_id = ${jobId} AND status IN ('running', 'cancelling')
     )
   `);
-  if (result.changes === 0) return { ok: false, reason: "already-running" };
+    if (result.changes === 0) return { ok: false, reason: "already-running" };
 
-  // Clean up old runs (keep last JOB_RUN_KEEP_PER_JOB). SELECT + DELETE
-  // are wrapped in a transaction so a concurrent insert between them
-  // can't be deleted by our cleanup (off-by-one retention).
-  db.transaction((tx) => {
-    const keepIds = tx
-      .select({ id: jobRuns.id })
-      .from(jobRuns)
-      .where(eq(jobRuns.jobId, jobId))
-      .orderBy(desc(jobRuns.startedAt))
-      .limit(JOB_RUN_KEEP_PER_JOB)
-      .all()
-      .map((r) => r.id);
+    // Clean up old runs (keep last JOB_RUN_KEEP_PER_JOB). SELECT + DELETE
+    // are wrapped in a transaction so a concurrent insert between them
+    // can't be deleted by our cleanup (off-by-one retention).
+    db.transaction((tx) => {
+      const keepIds = tx
+        .select({ id: jobRuns.id })
+        .from(jobRuns)
+        .where(eq(jobRuns.jobId, jobId))
+        .orderBy(desc(jobRuns.startedAt))
+        .limit(JOB_RUN_KEEP_PER_JOB)
+        .all()
+        .map((r) => r.id);
 
-    if (keepIds.length >= JOB_RUN_KEEP_PER_JOB) {
-      tx.delete(jobRuns)
-        .where(and(eq(jobRuns.jobId, jobId), notInArray(jobRuns.id, keepIds)))
-        .run();
+      if (keepIds.length >= JOB_RUN_KEEP_PER_JOB) {
+        tx.delete(jobRuns)
+          .where(and(eq(jobRuns.jobId, jobId), notInArray(jobRuns.id, keepIds)))
+          .run();
+      }
+    });
+
+    // Internal jobs run in-process without the command pattern.
+    if (isInternalJobName(job.command)) {
+      await runInternalJob(job, runId, now);
+      return { ok: true, runId };
     }
-  });
 
-  // Internal jobs run in-process without the command pattern.
-  if (isInternalJobName(job.command)) {
-    await runInternalJob(job, runId, now);
+    if (!isCommandName(job.command)) {
+      // Only reachable if a user (or an old install) has a job row pointing at a
+      // command that no longer exists. Fail the run rather than leaving it stuck.
+      const msg = `Unknown command "${job.command}"`;
+      db.update(jobRuns)
+        .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
+        .where(eq(jobRuns.id, runId))
+        .run();
+      emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id, runId });
+      log.error("job points at an unknown command", { jobId: job.id, command: job.command });
+      return { ok: false, reason: "unknown-command", runId };
+    }
+
+    const descriptor = COMMANDS[job.command];
+    log.info("enqueueing command", { job: job.name, command: job.command, lane: descriptor.lane });
+    const { Sidequest } = await import("sidequest");
+    const { CommandJob } = await import("./sidequest/job.ts");
+    await Sidequest.build(CommandJob)
+      .queue(descriptor.lane)
+      .enqueue(job.command, runId, JSON.stringify(job.config ?? {}), job.name, job.id);
+
     return { ok: true, runId };
   }
 
-  if (!isCommandName(job.command)) {
-    // Only reachable if a user (or an old install) has a job row pointing at a
-    // command that no longer exists. Fail the run rather than leaving it stuck.
-    const msg = `Unknown command "${job.command}"`;
-    db.update(jobRuns)
-      .set({ status: "failed", log: msg, message: msg, finishedAt: Date.now() })
-      .where(eq(jobRuns.id, runId))
-      .run();
-    emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id, runId });
-    log.error("job points at an unknown command", { jobId: job.id, command: job.command });
-    return { ok: false, reason: "unknown-command", runId };
-  }
+  /**
+   * Run an internal job inline with a real `JobContext`, so it logs, reports
+   * progress, and cancels like every other job instead of being a special case
+   * that silently ignored all three.
+   */
+  async function runInternalJob(job: Job, runId: string, startedAt: number): Promise<void> {
+    // Widened to the interface: `as const satisfies` narrows each entry to its
+    // literal shape, which loses the optional `quiet` on the ones that omit it.
+    const descriptor: InternalJobDescriptor = internalJobs[job.command as InternalJobName];
+    const jobLog = log.child({ job: job.name, command: job.command, runId });
+    const controller = new AbortController();
+    internalControllers.set(runId, controller);
 
-  const descriptor = COMMANDS[job.command];
-  log.info("enqueueing command", { job: job.name, command: job.command, lane: descriptor.lane });
-  const { Sidequest } = await import("sidequest");
-  const { CommandJob } = await import("./sidequest/job.ts");
-  await Sidequest.build(CommandJob)
-    .queue(descriptor.lane)
-    .enqueue(job.command, runId, JSON.stringify(job.config ?? {}), job.name, job.id);
+    // Log is buffered and written once at the end, unlike `CommandJob`'s 500ms
+    // streaming flush. Deliberate: internal jobs are sub-second, so streaming
+    // would cost a write per job for output nobody can read that fast. Progress
+    // *does* write through, because `purge-runs` has a visible second phase.
+    let buffer = "";
+    const ctx: JobContext = deriveJobContext(deps.scope, {
+      log: (...args: unknown[]) => {
+        buffer += args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
+      },
+      progress: (current: number, total: number, message: string) => {
+        db.update(jobRuns)
+          .set({ progress: total > 0 ? Math.min(current / total, 1) : 0, message })
+          .where(eq(jobRuns.id, runId))
+          .run();
+      },
+      signal: controller.signal,
+    });
 
-  return { ok: true, runId };
-}
+    jobLog.debug("running internal job");
+    try {
+      const output = await descriptor.run(ctx);
+      const text = buffer + output;
 
-/**
- * Run an internal job inline with a real `JobContext`, so it logs, reports
- * progress, and cancels like every other job instead of being a special case
- * that silently ignored all three.
- */
-async function runInternalJob(job: Job, runId: string, startedAt: number): Promise<void> {
-  // Widened to the interface: `as const satisfies` narrows each entry to its
-  // literal shape, which loses the optional `quiet` on the ones that omit it.
-  const descriptor: InternalJobDescriptor = internalJobs[job.command as InternalJobName];
-  const jobLog = log.child({ job: job.name, command: job.command, runId });
-  const controller = new AbortController();
-  internalControllers.set(runId, controller);
+      // Re-read before the terminal write: `cancelRun` may have moved us to
+      // `cancelling` while the handler was running, and clobbering that with
+      // `completed` is what made cancellation meaningless for internal jobs.
+      if (isCancelling(runId)) {
+        finishInternalCancelled(runId, text);
+        jobLog.info("cancelled");
+        return;
+      }
+      // Same supersede guard `CommandJob` has: the watchdog may have force-failed
+      // this run while we were awaiting, and turning that reported failure back
+      // into a success would leave a `job.failed` event contradicting the row.
+      if (isRunTerminal(runId)) {
+        jobLog.warn("finished after the run was already ended elsewhere; leaving its status alone");
+        return;
+      }
 
-  // Log is buffered and written once at the end, unlike `CommandJob`'s 500ms
-  // streaming flush. Deliberate: internal jobs are sub-second, so streaming
-  // would cost a write per job for output nobody can read that fast. Progress
-  // *does* write through, because `purge-runs` has a visible second phase.
-  let buffer = "";
-  const ctx: JobContext = {
-    log: (...args: unknown[]) => {
-      buffer += args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
-    },
-    progress: (current: number, total: number, message: string) => {
       db.update(jobRuns)
-        .set({ progress: total > 0 ? Math.min(current / total, 1) : 0, message })
+        .set({ status: "completed", log: text, progress: 1, message: output, finishedAt: Date.now() })
         .where(eq(jobRuns.id, runId))
         .run();
-    },
-    signal: controller.signal,
-    // No checkpointing for internal jobs: every one of them is sub-second, so
-    // there is no partial progress worth resuming. A real checkpoint here would
-    // be worse than none — the command path clears it on cancel, and nothing on
-    // this path does, so any state written would outlive the run that wrote it.
-    checkpoint: noopCheckpoint,
-  };
 
-  jobLog.debug("running internal job");
-  try {
-    const output = await descriptor.run(ctx);
-    const text = buffer + output;
-
-    // Re-read before the terminal write: `cancelRun` may have moved us to
-    // `cancelling` while the handler was running, and clobbering that with
-    // `completed` is what made cancellation meaningless for internal jobs.
-    if (isCancelling(runId)) {
-      finishInternalCancelled(runId, text);
-      jobLog.info("cancelled");
-      return;
-    }
-    // Same supersede guard `CommandJob` has: the watchdog may have force-failed
-    // this run while we were awaiting, and turning that reported failure back
-    // into a success would leave a `job.failed` event contradicting the row.
-    if (isRunTerminal(runId)) {
-      jobLog.warn("finished after the run was already ended elsewhere; leaving its status alone");
-      return;
-    }
-
-    db.update(jobRuns)
-      .set({ status: "completed", log: text, progress: 1, message: output, finishedAt: Date.now() })
-      .where(eq(jobRuns.id, runId))
-      .run();
-
-    // Quiet jobs (healthcheck, every 60s) only announce themselves when the
-    // outcome text actually changes. The health domain still emits its own
-    // `health.*` events for the transitions that matter.
-    if (!descriptor.quiet || outcomeChanged(job.id, runId, output)) {
-      emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - startedAt)}`, {
-        jobId: job.id,
-        runId,
-      });
-    }
-    jobLog.debug("completed", { output });
-  } catch (err) {
-    const msg = errorMessage(err);
-    if (isCancelling(runId)) {
-      finishInternalCancelled(runId, buffer + msg);
-      jobLog.info("cancelled");
-      return;
-    }
-    if (isRunTerminal(runId)) {
-      jobLog.warn("failed after the run was already ended elsewhere; leaving its status alone");
-      return;
-    }
-    db.update(jobRuns)
-      .set({ status: "failed", log: buffer + msg, message: msg, finishedAt: Date.now() })
-      .where(eq(jobRuns.id, runId))
-      .run();
-    // Failures always emit, quiet or not.
-    emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id, runId });
-    jobLog.error("failed", { err: msg });
-  } finally {
-    internalControllers.delete(runId);
-    cancelRequestedAt.delete(runId);
-  }
-}
-
-function isCancelling(runId: string): boolean {
-  const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
-  return row?.status === "cancelling" || row?.status === "cancelled";
-}
-
-/** Has something else (the watchdog) already ended this run? */
-function isRunTerminal(runId: string): boolean {
-  const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
-  return !!row && isTerminalStatus(row.status);
-}
-
-function finishInternalCancelled(runId: string, text: string): void {
-  // Guarded like every other terminal write on this path. Not reachable today
-  // — callers only get here when the status is already `cancelling` — but the
-  // watchdog can force-fail a `cancelling` run out from under us, and being
-  // the one write that could clobber that is not a property worth keeping.
-  if (isRunTerminal(runId)) return;
-  db.update(jobRuns)
-    .set({ status: "cancelled", log: text, message: "Cancelled", finishedAt: Date.now() })
-    .where(eq(jobRuns.id, runId))
-    .run();
-}
-
-/** Did this quiet job produce a different outcome than its previous run? */
-function outcomeChanged(jobId: string, runId: string, output: string): boolean {
-  const previous = db
-    .select({ id: jobRuns.id, message: jobRuns.message })
-    .from(jobRuns)
-    .where(eq(jobRuns.jobId, jobId))
-    .orderBy(desc(jobRuns.startedAt))
-    .limit(2)
-    .all()
-    .find((r) => r.id !== runId);
-  return previous?.message !== output;
-}
-
-/**
- * Request cancellation. This is only the *request* — the run stays in
- * `cancelling` (with `finishedAt` still null) until the command actually
- * unwinds and writes the terminal `cancelled`, so the displayed duration is
- * the time really spent rather than the time-to-cancel, and no second run can
- * start behind a still-executing one.
- */
-export function cancelRun(runId: string): boolean {
-  const run = db.select({ id: jobRuns.id, status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
-  if (!run || run.status !== "running") return false;
-
-  db.update(jobRuns).set({ status: "cancelling" }).where(eq(jobRuns.id, runId)).run();
-  cancelRequestedAt.set(runId, Date.now());
-  // Command jobs notice via their status poll; internal jobs run in this
-  // process and are aborted directly.
-  internalControllers.get(runId)?.abort();
-  log.info("cancellation requested", { runId });
-
-  return true;
-}
-
-// ── Watchdog ────────────────────────────────────────────────────────────────
-
-let watchdogTimer: NodeJS.Timeout | null = null;
-
-/**
- * Force-fail runs that have outlived their budget, or that have sat in
- * `cancelling` past the grace period.
- *
- * This is the layer that recovers the UI (and unblocks the queue) when a
- * worker thread is genuinely wedged — the in-run deadline in `CommandJob`
- * cannot help there, because aborting a signal doesn't interrupt a thread
- * stuck in a syscall.
- */
-/**
- * The wall-clock budget for whatever this job runs, or null if the command
- * isn't one we know about (in which case there is nothing to enforce — the
- * run will already have been failed at start).
- */
-function runBudgetMs(command: string): number | null {
-  if (isCommandName(command)) return COMMANDS[command].timeoutMs;
-  if (isInternalJobName(command)) return (internalJobs[command] as InternalJobDescriptor).timeoutMs;
-  return null;
-}
-
-export function sweepStuckRuns(now = Date.now()): number {
-  const active = db
-    .select({
-      id: jobRuns.id,
-      jobId: jobRuns.jobId,
-      status: jobRuns.status,
-      startedAt: jobRuns.startedAt,
-      command: jobs.command,
-      name: jobs.name,
-    })
-    .from(jobRuns)
-    .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
-    .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
-    .all();
-
-  let failed = 0;
-  for (const run of active) {
-    let reason: string | null = null;
-
-    if (run.status === "cancelling") {
-      const requestedAt = cancelRequestedAt.get(run.id) ?? run.startedAt;
-      if (now - requestedAt > JOB_CANCELLING_GRACE_MS) {
-        reason = `Cancellation did not complete within ${formatDuration(JOB_CANCELLING_GRACE_MS)}`;
+      // Quiet jobs (healthcheck, every 60s) only announce themselves when the
+      // outcome text actually changes. The health domain still emits its own
+      // `health.*` events for the transitions that matter.
+      if (!descriptor.quiet || outcomeChanged(job.id, runId, output)) {
+        emitEvent("job.completed", `${job.name} completed in ${formatDuration(Date.now() - startedAt)}`, {
+          jobId: job.id,
+          runId,
+        });
       }
-    } else {
-      // Internal jobs are swept too. They never pass through `CommandJob`, so
-      // they have no in-run deadline at all — this is their only backstop, and
-      // without it a wedged `healthcheck` would occupy its job forever and
-      // healthcheck would silently never run again.
-      //
-      // Be honest about the reach, in the same register as `CommandJob`'s
-      // deadline comment: internal jobs run on the main event loop and so does
-      // this timer, so a wedge inside *synchronous* work blocks the sweep too.
-      // (`better-sqlite3` is entirely synchronous, which is most of what
-      // `purge-runs` does.) This covers async stalls — a fetch that never
-      // settles, a promise that never resolves — which is the common case.
-      const budgetMs = runBudgetMs(run.command);
-      if (budgetMs !== null && now > run.startedAt + budgetMs + JOB_TIMEOUT_GRACE_MS * 2) {
-        reason = `Exceeded its ${formatDuration(budgetMs)} budget and did not unwind`;
-      }
-    }
-    if (!reason) continue;
-
-    // Actually try to stop it before declaring it dead. For an internal job the
-    // AbortController is right here in this process — unlike a command job's
-    // worker thread, which we genuinely cannot interrupt. Skipping this would
-    // free the "already running" guard while the handler kept going, so the
-    // next cron tick would start a second concurrent execution on top of the
-    // first one that never stopped.
-    const controller = internalControllers.get(run.id);
-    if (controller) {
-      controller.abort();
-      internalControllers.delete(run.id);
-      log.warn("aborted a wedged internal job", { runId: run.id, job: run.name });
-    }
-
-    db.update(jobRuns)
-      .set({
-        status: "failed",
-        log: sql`${jobRuns.log} || ${`\n[watchdog] ${reason}. Marking the run as failed.\n`}`,
-        message: reason,
-        // Recorded structurally as well as in the log: "Tinkerbell gave up on
-        // this run" and "this run threw" want to read differently in the UI,
-        // and grepping a multi-megabyte log for `[watchdog]` is not a way to
-        // tell them apart.
-        failureKind: run.status === "cancelling" ? "cancel-timeout" : "watchdog",
-        finishedAt: now,
-      })
-      .where(eq(jobRuns.id, run.id))
-      .run();
-    cancelRequestedAt.delete(run.id);
-    emitEvent("job.failed", `${run.name} failed: ${reason}`, { jobId: run.jobId, runId: run.id });
-    log.error("watchdog force-failed a stuck run", { runId: run.id, job: run.name, reason });
-    failed++;
-  }
-  return failed;
-}
-
-function startWatchdog(): void {
-  if (watchdogTimer) clearInterval(watchdogTimer);
-  watchdogTimer = setInterval(() => {
-    try {
-      sweepStuckRuns();
-      // Rule runs have no deadline of their own — a rule may legitimately take
-      // an hour. What they do have is a heartbeat, so the question here is
-      // "did the executor stop existing?", not "is this taking too long?".
-      const abandoned = sweepStuckRuleRuns();
-      if (abandoned > 0) log.warn("failed abandoned rule runs", { count: abandoned });
+      jobLog.debug("completed", { output });
     } catch (err) {
-      log.error("watchdog sweep failed", { err: errorMessage(err) });
+      const msg = errorMessage(err);
+      if (isCancelling(runId)) {
+        finishInternalCancelled(runId, buffer + msg);
+        jobLog.info("cancelled");
+        return;
+      }
+      if (isRunTerminal(runId)) {
+        jobLog.warn("failed after the run was already ended elsewhere; leaving its status alone");
+        return;
+      }
+      db.update(jobRuns)
+        .set({ status: "failed", log: buffer + msg, message: msg, finishedAt: Date.now() })
+        .where(eq(jobRuns.id, runId))
+        .run();
+      // Failures always emit, quiet or not.
+      emitEvent("job.failed", `${job.name} failed: ${msg}`, { jobId: job.id, runId });
+      jobLog.error("failed", { err: msg });
+    } finally {
+      internalControllers.delete(runId);
+      cancelRequestedAt.delete(runId);
     }
-  }, JOB_WATCHDOG_INTERVAL_MS);
-  // Never hold the process open on the watchdog alone.
-  watchdogTimer.unref();
-}
+  }
 
-export function updateJob(
-  jobId: string,
-  updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
-): void {
-  const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
-  if (!job) throw new Error(`Job "${jobId}" not found`);
+  function isCancelling(runId: string): boolean {
+    const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+    return row?.status === "cancelling" || row?.status === "cancelled";
+  }
 
-  if (updates.schedule !== undefined) {
-    // Validate cron expression (throws if invalid)
-    if (updates.schedule) {
-      new Cron(updates.schedule);
+  /** Has something else (the watchdog) already ended this run? */
+  function isRunTerminal(runId: string): boolean {
+    const row = db.select({ status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+    return !!row && isTerminalStatus(row.status);
+  }
+
+  function finishInternalCancelled(runId: string, text: string): void {
+    // Guarded like every other terminal write on this path. Not reachable today
+    // — callers only get here when the status is already `cancelling` — but the
+    // watchdog can force-fail a `cancelling` run out from under us, and being
+    // the one write that could clobber that is not a property worth keeping.
+    if (isRunTerminal(runId)) return;
+    db.update(jobRuns)
+      .set({ status: "cancelled", log: text, message: "Cancelled", finishedAt: Date.now() })
+      .where(eq(jobRuns.id, runId))
+      .run();
+  }
+
+  /** Did this quiet job produce a different outcome than its previous run? */
+  function outcomeChanged(jobId: string, runId: string, output: string): boolean {
+    const previous = db
+      .select({ id: jobRuns.id, message: jobRuns.message })
+      .from(jobRuns)
+      .where(eq(jobRuns.jobId, jobId))
+      .orderBy(desc(jobRuns.startedAt))
+      .limit(2)
+      .all()
+      .find((r) => r.id !== runId);
+    return previous?.message !== output;
+  }
+
+  /**
+   * Request cancellation. This is only the *request* — the run stays in
+   * `cancelling` (with `finishedAt` still null) until the command actually
+   * unwinds and writes the terminal `cancelled`, so the displayed duration is
+   * the time really spent rather than the time-to-cancel, and no second run can
+   * start behind a still-executing one.
+   */
+  function cancelRun(runId: string): boolean {
+    const run = db.select({ id: jobRuns.id, status: jobRuns.status }).from(jobRuns).where(eq(jobRuns.id, runId)).get();
+    if (!run || run.status !== "running") return false;
+
+    db.update(jobRuns).set({ status: "cancelling" }).where(eq(jobRuns.id, runId)).run();
+    cancelRequestedAt.set(runId, Date.now());
+    // Command jobs notice via their status poll; internal jobs run in this
+    // process and are aborted directly.
+    internalControllers.get(runId)?.abort();
+    log.info("cancellation requested", { runId });
+
+    return true;
+  }
+
+  /**
+   * Force-fail runs that have outlived their budget, or that have sat in
+   * `cancelling` past the grace period.
+   *
+   * This is the layer that recovers the UI (and unblocks the queue) when a
+   * worker thread is genuinely wedged — the in-run deadline in `CommandJob`
+   * cannot help there, because aborting a signal doesn't interrupt a thread
+   * stuck in a syscall.
+   */
+  /**
+   * The wall-clock budget for whatever this job runs, or null if the command
+   * isn't one we know about (in which case there is nothing to enforce — the
+   * run will already have been failed at start).
+   */
+  function runBudgetMs(command: string): number | null {
+    if (isCommandName(command)) return COMMANDS[command].timeoutMs;
+    if (isInternalJobName(command)) return (internalJobs[command] as InternalJobDescriptor).timeoutMs;
+    return null;
+  }
+
+  function sweepStuckRuns(now = Date.now()): number {
+    const active = db
+      .select({
+        id: jobRuns.id,
+        jobId: jobRuns.jobId,
+        status: jobRuns.status,
+        startedAt: jobRuns.startedAt,
+        command: jobs.command,
+        name: jobs.name,
+      })
+      .from(jobRuns)
+      .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
+      .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
+      .all();
+
+    let failed = 0;
+    for (const run of active) {
+      let reason: string | null = null;
+
+      if (run.status === "cancelling") {
+        const requestedAt = cancelRequestedAt.get(run.id) ?? run.startedAt;
+        if (now - requestedAt > JOB_CANCELLING_GRACE_MS) {
+          reason = `Cancellation did not complete within ${formatDuration(JOB_CANCELLING_GRACE_MS)}`;
+        }
+      } else {
+        // Internal jobs are swept too. They never pass through `CommandJob`, so
+        // they have no in-run deadline at all — this is their only backstop, and
+        // without it a wedged `healthcheck` would occupy its job forever and
+        // healthcheck would silently never run again.
+        //
+        // Be honest about the reach, in the same register as `CommandJob`'s
+        // deadline comment: internal jobs run on the main event loop and so does
+        // this timer, so a wedge inside *synchronous* work blocks the sweep too.
+        // (`better-sqlite3` is entirely synchronous, which is most of what
+        // `purge-runs` does.) This covers async stalls — a fetch that never
+        // settles, a promise that never resolves — which is the common case.
+        const budgetMs = runBudgetMs(run.command);
+        if (budgetMs !== null && now > run.startedAt + budgetMs + JOB_TIMEOUT_GRACE_MS * 2) {
+          reason = `Exceeded its ${formatDuration(budgetMs)} budget and did not unwind`;
+        }
+      }
+      if (!reason) continue;
+
+      // Actually try to stop it before declaring it dead. For an internal job the
+      // AbortController is right here in this process — unlike a command job's
+      // worker thread, which we genuinely cannot interrupt. Skipping this would
+      // free the "already running" guard while the handler kept going, so the
+      // next cron tick would start a second concurrent execution on top of the
+      // first one that never stopped.
+      const controller = internalControllers.get(run.id);
+      if (controller) {
+        controller.abort();
+        internalControllers.delete(run.id);
+        log.warn("aborted a wedged internal job", { runId: run.id, job: run.name });
+      }
+
+      db.update(jobRuns)
+        .set({
+          status: "failed",
+          log: sql`${jobRuns.log} || ${`\n[watchdog] ${reason}. Marking the run as failed.\n`}`,
+          message: reason,
+          // Recorded structurally as well as in the log: "Tinkerbell gave up on
+          // this run" and "this run threw" want to read differently in the UI,
+          // and grepping a multi-megabyte log for `[watchdog]` is not a way to
+          // tell them apart.
+          failureKind: run.status === "cancelling" ? "cancel-timeout" : "watchdog",
+          finishedAt: now,
+        })
+        .where(eq(jobRuns.id, run.id))
+        .run();
+      cancelRequestedAt.delete(run.id);
+      emitEvent("job.failed", `${run.name} failed: ${reason}`, { jobId: run.jobId, runId: run.id });
+      log.error("watchdog force-failed a stuck run", { runId: run.id, job: run.name, reason });
+      failed++;
     }
-    db.update(jobs).set({ schedule: updates.schedule }).where(eq(jobs.id, jobId)).run();
-    job.schedule = updates.schedule;
+    return failed;
   }
 
-  if (updates.enabled !== undefined) {
-    const val = updates.enabled ? 1 : 0;
-    db.update(jobs).set({ enabled: val }).where(eq(jobs.id, jobId)).run();
-    job.enabled = val;
+  function startWatchdog(): void {
+    if (watchdogTimer) clearInterval(watchdogTimer);
+    watchdogTimer = setInterval(() => {
+      try {
+        sweepStuckRuns();
+        // Rule runs have no deadline of their own — a rule may legitimately take
+        // an hour. What they do have is a heartbeat, so the question here is
+        // "did the executor stop existing?", not "is this taking too long?".
+        const abandoned = sweepStuckRuleRuns();
+        if (abandoned > 0) log.warn("failed abandoned rule runs", { count: abandoned });
+      } catch (err) {
+        log.error("watchdog sweep failed", { err: errorMessage(err) });
+      }
+    }, JOB_WATCHDOG_INTERVAL_MS);
+    // Never hold the process open on the watchdog alone.
+    watchdogTimer.unref();
   }
 
-  if (updates.config !== undefined) {
-    db.update(jobs).set({ config: updates.config }).where(eq(jobs.id, jobId)).run();
+  function updateJob(
+    jobId: string,
+    updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
+  ): void {
+    const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
+    if (!job) throw new Error(`Job "${jobId}" not found`);
+
+    if (updates.schedule !== undefined) {
+      // Validate cron expression (throws if invalid)
+      if (updates.schedule) {
+        new Cron(updates.schedule);
+      }
+      db.update(jobs).set({ schedule: updates.schedule }).where(eq(jobs.id, jobId)).run();
+      job.schedule = updates.schedule;
+    }
+
+    if (updates.enabled !== undefined) {
+      const val = updates.enabled ? 1 : 0;
+      db.update(jobs).set({ enabled: val }).where(eq(jobs.id, jobId)).run();
+      job.enabled = val;
+    }
+
+    if (updates.config !== undefined) {
+      db.update(jobs).set({ config: updates.config }).where(eq(jobs.id, jobId)).run();
+    }
+
+    // Reschedule cron
+    scheduleCron(job);
   }
 
-  // Reschedule cron
-  scheduleCron(job);
-}
+  async function initJobs(): Promise<void> {
+    // Wire startJob into the cron-trigger callback before any schedule
+    // can fire. See schedule.ts for the dependency-inversion shape.
+    migrateCleanupBudgetKey();
+    seedDefaultJobs();
+    seedDefaultRules();
+    markStaleRunsAsFailed();
+    markStaleStressTestsAsFailed();
+    // Rule runs die with their process for the same reasons job runs do —
+    // whether they were started from the Rules page or by a Generate job.
+    const staleRuleRuns = markStaleRuleRunsAsFailed();
+    if (staleRuleRuns > 0) log.info("marked stale rule runs as failed", { count: staleRuleRuns });
+    await startSidequest();
+    startCronSchedules({ catchUp: true });
+    startWatchdog();
 
-export async function initJobs(): Promise<void> {
-  // Wire startJob into the cron-trigger callback before any schedule
-  // can fire. See schedule.ts for the dependency-inversion shape.
-  initSchedule(startJob);
-  migrateCleanupBudgetKey();
-  seedDefaultJobs();
-  seedDefaultRules();
-  markStaleRunsAsFailed();
-  markStaleStressTestsAsFailed();
-  // Rule runs die with their process for the same reasons job runs do —
-  // whether they were started from the Rules page or by a Generate job.
-  const staleRuleRuns = markStaleRuleRunsAsFailed();
-  if (staleRuleRuns > 0) log.info("marked stale rule runs as failed", { count: staleRuleRuns });
-  await startSidequest();
-  startCronSchedules({ catchUp: true });
-  startWatchdog();
-
-  // Pick up anything the last process queued and didn't get to. Rule runs that
-  // were *executing* were just failed above; these were only ever waiting, and
-  // nothing else will ask for them again — the cron spends its occurrence when
-  // it queues, not when the rule runs.
-  if (hasQueuedRuleWork()) {
-    log.info("draining rule work left over from the last run");
-    scheduleRuleDrain();
+    // Pick up anything the last process queued and didn't get to. Rule runs that
+    // were *executing* were just failed above; these were only ever waiting, and
+    // nothing else will ask for them again — the cron spends its occurrence when
+    // it queues, not when the rule runs.
+    if (hasQueuedRuleWork()) {
+      log.info("draining rule work left over from the last run");
+      scheduleRuleDrain();
+    }
   }
-}
+
+  return { startJob, cancelRun, sweepStuckRuns, updateJob, initJobs };
+});

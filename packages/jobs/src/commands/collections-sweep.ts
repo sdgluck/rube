@@ -1,126 +1,12 @@
+import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
-import { plexHealthCallback, errorMessage, getConfig } from "@tinkerbell/core";
-import { deleteCollection } from "@tinkerbell/domain.collections";
-import { getRules } from "@tinkerbell/domain.rules";
+import { errorMessage } from "@tinkerbell/core";
+
 import type { JobContext, CollectionsSweepJobConfig } from "@tinkerbell/core";
 import { chunked, mapConcurrent } from "#jobs/concurrency.ts";
 
 /** Collection detail fetches in flight while taking inventory. */
 const INSPECT_CONCURRENCY = 8;
-
-/**
- * Remove rule-generated collections that no run will ever clean up on its own.
- *
- * A run only ever touches what its `Rule:<id>` label reaches — that is how it
- * finds what it already owns, and how it sweeps what it no longer produces —
- * so anything the label no longer reaches is invisible to every future run and
- * stays in Plex forever. Two ways that happens:
- *
- *   • Duplicates. Two overlapping runs of one rule both deleted before either
- *     created, so the section holds several same-title collections from the
- *     same rule. (The rule lock now prevents new ones — this clears the ones
- *     already on the server.)
- *   • Orphans. The rule behind the label was deleted, so nothing runs its
- *     cleanup pass again.
- *
- * Deliberately narrow, because this deletes real things off a Plex server:
- *
- *   • Only collections carrying a `Rule:<id>` label are considered at all.
- *     Hand-made collections, Kometa's, and anything Tinkerbell made outside a
- *     rule (Because You Watched, migrations) are never touched.
- *   • A rule that merely exists but is *disabled* still owns its collections.
- *     Turning a rule off is not a request to delete its output.
- *   • Within a duplicate group the newest survives — that's the one the most
- *     recent run produced, and the one the Collections page links the rule to.
- */
-export default async function run(ctx: JobContext, config: CollectionsSweepJobConfig): Promise<void> {
-  const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
-  const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-
-  if (!PLEX_TOKEN) {
-    throw new Error("Plex token is required. Configure it in Settings.");
-  }
-
-  const client = createPlexClient({
-    url: PLEX_URL,
-    token: PLEX_TOKEN,
-    signal: ctx.signal,
-    onHealth: plexHealthCallback,
-  });
-
-  const dryRun = config.dryRun ?? false;
-
-  ctx.log(`tinkerbell collections-sweep`);
-  ctx.log(`Server: ${PLEX_URL}`);
-  if (dryRun) ctx.log(`DRY RUN — nothing will be deleted.`);
-
-  const identity = await client.getIdentity();
-  ctx.log(`Server name: ${identity.friendlyName}`);
-
-  const sections = await resolveSections(client, config);
-  ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
-
-  const knownRuleIds = new Set(getRules().map((r) => r.id));
-
-  const inventory = await takeInventory(ctx, client, sections);
-  ctx.log(
-    `Inspected ${inventory.inspected} collection(s); ${inventory.candidates.length} carry a rule label.` +
-      (inventory.unattributed > 0
-        ? ` ${inventory.unattributed} Tinkerbell collection(s) carry no rule label and were left alone.`
-        : ""),
-  );
-
-  const { orphans, duplicates } = classify(inventory.candidates, knownRuleIds);
-  const doomed = [...orphans, ...duplicates];
-
-  if (doomed.length === 0) {
-    ctx.log(`Nothing to clean up — no orphaned or duplicate rule collections found.`);
-    return;
-  }
-
-  if (orphans.length > 0) {
-    ctx.log(`\n${orphans.length} orphan(s) — the rule that made them no longer exists:`);
-    for (const c of orphans) ctx.log(`  - "${c.title}" in ${c.sectionTitle} (${c.itemCount} items, rule ${c.ruleId})`);
-  }
-  if (duplicates.length > 0) {
-    ctx.log(`\n${duplicates.length} duplicate(s) — an older copy of a collection the same rule still makes:`);
-    for (const c of duplicates) {
-      ctx.log(`  - "${c.title}" in ${c.sectionTitle} (${c.itemCount} items, added ${formatAdded(c.addedAt)})`);
-    }
-  }
-
-  if (dryRun) {
-    ctx.log(`\nDry run — would have deleted ${doomed.length} collection(s). Nothing was changed.`);
-    return;
-  }
-
-  ctx.log(`\nDeleting ${doomed.length} collection(s)...`);
-  let deleted = 0;
-  const failed: string[] = [];
-  for (let i = 0; i < doomed.length; i++) {
-    const c = doomed[i];
-    ctx.progress(i, doomed.length, `Deleting "${c.title}" (${i + 1}/${doomed.length})...`);
-    try {
-      // Also drops the local row + membership, so the Collections page is
-      // right without waiting for the next sync.
-      await deleteCollection(client, c.ratingKey);
-      deleted++;
-    } catch (err) {
-      // A 403 is the server-wide "Allow media deletion" setting being off —
-      // every subsequent delete would fail the same way, so stop and say so
-      // rather than emitting one identical line per collection.
-      if (errorMessage(err).includes("403")) throw err;
-      failed.push(`"${c.title}" in ${c.sectionTitle}: ${errorMessage(err)}`);
-    }
-  }
-
-  if (failed.length > 0) {
-    ctx.log(`\n${failed.length} deletion(s) failed:`);
-    for (const line of failed) ctx.log(`  - ${line}`);
-  }
-  ctx.progress(doomed.length, doomed.length, `Deleted ${deleted} collection(s)`);
-  ctx.log(`\nDone — deleted ${deleted} of ${doomed.length} collection(s).`);
-}
 
 /** A Plex collection that carries a `Rule:<id>` label, with what we need to judge it. */
 export interface Candidate {
@@ -131,24 +17,6 @@ export interface Candidate {
   ruleId: string;
   addedAt: number;
   itemCount: number;
-}
-
-async function resolveSections(client: PlexClient, config: CollectionsSweepJobConfig): Promise<PlexSection[]> {
-  let allSections = await client.getSections();
-
-  const configuredLibraries = getConfig("global_plex_libraries");
-  if (configuredLibraries) {
-    allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
-  }
-
-  if (!config.sections || config.sections.length === 0) return allSections;
-
-  const names = config.sections.map((s) => s.trim().toLowerCase());
-  const sections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
-  if (sections.length === 0) {
-    throw new Error(`No matching sections found for "${config.sections.join(", ")}".`);
-  }
-  return sections;
 }
 
 /**
@@ -261,4 +129,160 @@ export function classify(
 function formatAdded(addedAt: number): string {
   if (!addedAt) return "unknown";
   return new Date(addedAt * 1000).toISOString().slice(0, 10);
+}
+
+export function createCollectionsSweepCommand(deps: Pick<Services, "clients" | "collections" | "config" | "rules">) {
+  const { clients, collections, config, rules } = deps;
+  const { plexHealthCallback } = clients;
+  const { getConfig } = config;
+  const { deleteCollection } = collections;
+  const { getRules } = rules;
+
+  /**
+   * Remove rule-generated collections that no run will ever clean up on its own.
+   *
+   * A run only ever touches what its `Rule:<id>` label reaches — that is how it
+   * finds what it already owns, and how it sweeps what it no longer produces —
+   * so anything the label no longer reaches is invisible to every future run and
+   * stays in Plex forever. Two ways that happens:
+   *
+   *   • Duplicates. Two overlapping runs of one rule both deleted before either
+   *     created, so the section holds several same-title collections from the
+   *     same rule. (The rule lock now prevents new ones — this clears the ones
+   *     already on the server.)
+   *   • Orphans. The rule behind the label was deleted, so nothing runs its
+   *     cleanup pass again.
+   *
+   * Deliberately narrow, because this deletes real things off a Plex server:
+   *
+   *   • Only collections carrying a `Rule:<id>` label are considered at all.
+   *     Hand-made collections, Kometa's, and anything Tinkerbell made outside a
+   *     rule (Because You Watched, migrations) are never touched.
+   *   • A rule that merely exists but is *disabled* still owns its collections.
+   *     Turning a rule off is not a request to delete its output.
+   *   • Within a duplicate group the newest survives — that's the one the most
+   *     recent run produced, and the one the Collections page links the rule to.
+   */
+  async function run(ctx: JobContext, config: CollectionsSweepJobConfig): Promise<void> {
+    const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+    const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+
+    if (!PLEX_TOKEN) {
+      throw new Error("Plex token is required. Configure it in Settings.");
+    }
+
+    const client = createPlexClient({
+      url: PLEX_URL,
+      token: PLEX_TOKEN,
+      signal: ctx.signal,
+      onHealth: plexHealthCallback,
+    });
+
+    const dryRun = config.dryRun ?? false;
+
+    ctx.log(`tinkerbell collections-sweep`);
+    ctx.log(`Server: ${PLEX_URL}`);
+    if (dryRun) ctx.log(`DRY RUN — nothing will be deleted.`);
+
+    const identity = await client.getIdentity();
+    ctx.log(`Server name: ${identity.friendlyName}`);
+
+    const sections = await resolveSections(client, config);
+    ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
+
+    const knownRuleIds = new Set(getRules().map((r) => r.id));
+
+    const inventory = await takeInventory(ctx, client, sections);
+    ctx.log(
+      `Inspected ${inventory.inspected} collection(s); ${inventory.candidates.length} carry a rule label.` +
+        (inventory.unattributed > 0
+          ? ` ${inventory.unattributed} Tinkerbell collection(s) carry no rule label and were left alone.`
+          : ""),
+    );
+
+    const { orphans, duplicates } = classify(inventory.candidates, knownRuleIds);
+    const doomed = [...orphans, ...duplicates];
+
+    if (doomed.length === 0) {
+      ctx.log(`Nothing to clean up — no orphaned or duplicate rule collections found.`);
+      return;
+    }
+
+    if (orphans.length > 0) {
+      ctx.log(`\n${orphans.length} orphan(s) — the rule that made them no longer exists:`);
+      for (const c of orphans)
+        ctx.log(`  - "${c.title}" in ${c.sectionTitle} (${c.itemCount} items, rule ${c.ruleId})`);
+    }
+    if (duplicates.length > 0) {
+      ctx.log(`\n${duplicates.length} duplicate(s) — an older copy of a collection the same rule still makes:`);
+      for (const c of duplicates) {
+        ctx.log(`  - "${c.title}" in ${c.sectionTitle} (${c.itemCount} items, added ${formatAdded(c.addedAt)})`);
+      }
+    }
+
+    if (dryRun) {
+      ctx.log(`\nDry run — would have deleted ${doomed.length} collection(s). Nothing was changed.`);
+      return;
+    }
+
+    ctx.log(`\nDeleting ${doomed.length} collection(s)...`);
+    let deleted = 0;
+    const failed: string[] = [];
+    for (let i = 0; i < doomed.length; i++) {
+      const c = doomed[i];
+      ctx.progress(i, doomed.length, `Deleting "${c.title}" (${i + 1}/${doomed.length})...`);
+      try {
+        // Also drops the local row + membership, so the Collections page is
+        // right without waiting for the next sync.
+        await deleteCollection(client, c.ratingKey);
+        deleted++;
+      } catch (err) {
+        // A 403 is the server-wide "Allow media deletion" setting being off —
+        // every subsequent delete would fail the same way, so stop and say so
+        // rather than emitting one identical line per collection.
+        if (errorMessage(err).includes("403")) throw err;
+        failed.push(`"${c.title}" in ${c.sectionTitle}: ${errorMessage(err)}`);
+      }
+    }
+
+    if (failed.length > 0) {
+      ctx.log(`\n${failed.length} deletion(s) failed:`);
+      for (const line of failed) ctx.log(`  - ${line}`);
+    }
+    ctx.progress(doomed.length, doomed.length, `Deleted ${deleted} collection(s)`);
+    ctx.log(`\nDone — deleted ${deleted} of ${doomed.length} collection(s).`);
+  }
+
+  async function resolveSections(client: PlexClient, config: CollectionsSweepJobConfig): Promise<PlexSection[]> {
+    let allSections = await client.getSections();
+
+    const configuredLibraries = getConfig("global_plex_libraries");
+    if (configuredLibraries) {
+      allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
+    }
+
+    if (!config.sections || config.sections.length === 0) return allSections;
+
+    const names = config.sections.map((s) => s.trim().toLowerCase());
+    const sections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
+    if (sections.length === 0) {
+      throw new Error(`No matching sections found for "${config.sections.join(", ")}".`);
+    }
+    return sections;
+  }
+
+  return { run };
+}
+
+/**
+ * The command entrypoint, unchanged in shape: the runner and the Sidequest
+ * worker both still call `default(ctx, config)`. What changed is where the
+ * work gets its dependencies — the run's own container scope, rather than
+ * whatever the module graph happened to have initialised.
+ */
+export default function run(
+  ctx: JobContext,
+  config: Parameters<ReturnType<typeof createCollectionsSweepCommand>["run"]>[1],
+): Promise<void> {
+  return createCollectionsSweepCommand(ctx.scope.resolve(ServicesToken)).run(ctx, config);
 }

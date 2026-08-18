@@ -1,11 +1,12 @@
+import { type Services } from "@tinkerbell/composition";
+import { createStressTest } from "./index.ts";
 import { eq } from "drizzle-orm";
-import { errorMessage } from "@tinkerbell/core";
-import { db, stressTestRuns } from "@tinkerbell/db";
+import { deriveJobContext, errorMessage } from "@tinkerbell/core";
+import { stressTestRuns } from "@tinkerbell/db";
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "@tinkerbell/core";
-import { getConfig } from "@tinkerbell/core";
-import { runStressTest, type StressTestConfig } from "./index.ts";
-import { noopCheckpoint, type JobContext } from "@tinkerbell/core";
+
+import { type StressTestConfig } from "./index.ts";
+import { type JobContext } from "@tinkerbell/core";
 import { JOB_CANCEL_POLL_INTERVAL_MS, JOB_LOG_FLUSH_INTERVAL_MS } from "../limits.ts";
 
 interface WorkerMessage {
@@ -13,129 +14,135 @@ interface WorkerMessage {
   config: StressTestConfig;
 }
 
-process.on("message", (msg: WorkerMessage) => {
-  void run(msg.id, msg.config);
-});
+export function createWorker(deps: Services) {
+  const { clients, config, db } = deps;
+  const { plexHealthCallback } = clients;
+  const { getConfig } = config;
+  const { runStressTest } = createStressTest(deps);
 
-async function run(id: string, config: StressTestConfig): Promise<void> {
-  const controller = new AbortController();
+  process.on("message", (msg: WorkerMessage) => {
+    void run(msg.id, msg.config);
+  });
 
-  let logBuffer = "";
-  let currentProgress = 0;
-  let currentMessage = "";
+  async function run(id: string, config: StressTestConfig): Promise<void> {
+    const controller = new AbortController();
 
-  function flushToDb(): void {
-    if (!logBuffer && currentProgress === 0) return;
-    try {
-      const currentRow = db
-        .select({ log: stressTestRuns.log })
-        .from(stressTestRuns)
-        .where(eq(stressTestRuns.id, id))
-        .get();
-      const existingLog = currentRow?.log ?? "";
-      db.update(stressTestRuns)
-        .set({
-          log: existingLog + logBuffer,
-          progress: currentProgress,
-          message: currentMessage,
-        })
-        .where(eq(stressTestRuns.id, id))
-        .run();
-      logBuffer = "";
-    } catch {
-      // DB may be closed during shutdown
+    let logBuffer = "";
+    let currentProgress = 0;
+    let currentMessage = "";
+
+    function flushToDb(): void {
+      if (!logBuffer && currentProgress === 0) return;
+      try {
+        const currentRow = db
+          .select({ log: stressTestRuns.log })
+          .from(stressTestRuns)
+          .where(eq(stressTestRuns.id, id))
+          .get();
+        const existingLog = currentRow?.log ?? "";
+        db.update(stressTestRuns)
+          .set({
+            log: existingLog + logBuffer,
+            progress: currentProgress,
+            message: currentMessage,
+          })
+          .where(eq(stressTestRuns.id, id))
+          .run();
+        logBuffer = "";
+      } catch {
+        // DB may be closed during shutdown
+      }
     }
-  }
 
-  const flushTimer = setInterval(flushToDb, JOB_LOG_FLUSH_INTERVAL_MS);
+    const flushTimer = setInterval(flushToDb, JOB_LOG_FLUSH_INTERVAL_MS);
 
-  // Poll for cancellation by checking DB status
-  const cancelTimer = setInterval(() => {
+    // Poll for cancellation by checking DB status
+    const cancelTimer = setInterval(() => {
+      try {
+        const row = db
+          .select({ status: stressTestRuns.status })
+          .from(stressTestRuns)
+          .where(eq(stressTestRuns.id, id))
+          .get();
+        if (row?.status === "cancelled") {
+          controller.abort();
+        }
+      } catch {
+        // DB may be closed
+      }
+    }, JOB_CANCEL_POLL_INTERVAL_MS);
+
+    const ctx: JobContext = deriveJobContext(deps.scope, {
+      log: (...args: unknown[]) => {
+        const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
+        logBuffer += text;
+        const trimmed = text.trim();
+        if (trimmed) currentMessage = trimmed;
+      },
+      progress: (current: number, total: number, msg: string) => {
+        currentProgress = total > 0 ? Math.min(current / total, 1) : 0;
+        currentMessage = msg;
+      },
+      signal: controller.signal,
+    });
+
     try {
-      const row = db
+      const plexUrl = getConfig("global_plex_url");
+      const plexToken = getConfig("global_plex_token");
+      if (!plexUrl || !plexToken) {
+        throw new Error("Plex URL and token are not configured");
+      }
+
+      const client = createPlexClient({
+        url: plexUrl,
+        token: plexToken,
+        signal: controller.signal,
+        onHealth: plexHealthCallback,
+      });
+
+      await runStressTest(client, config, ctx, id);
+
+      clearInterval(flushTimer);
+      clearInterval(cancelTimer);
+      flushToDb();
+
+      // Check if cancelled during execution
+      const finalRow = db
         .select({ status: stressTestRuns.status })
         .from(stressTestRuns)
         .where(eq(stressTestRuns.id, id))
         .get();
-      if (row?.status === "cancelled") {
-        controller.abort();
+      if (finalRow?.status !== "cancelled") {
+        db.update(stressTestRuns)
+          .set({ status: "completed", progress: 1, finishedAt: Date.now() })
+          .where(eq(stressTestRuns.id, id))
+          .run();
       }
-    } catch {
-      // DB may be closed
-    }
-  }, JOB_CANCEL_POLL_INTERVAL_MS);
+    } catch (err) {
+      clearInterval(flushTimer);
+      clearInterval(cancelTimer);
 
-  const ctx: JobContext = {
-    log: (...args: unknown[]) => {
-      const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
-      logBuffer += text;
-      const trimmed = text.trim();
-      if (trimmed) currentMessage = trimmed;
-    },
-    progress: (current: number, total: number, msg: string) => {
-      currentProgress = total > 0 ? Math.min(current / total, 1) : 0;
-      currentMessage = msg;
-    },
-    signal: controller.signal,
-    // The stress harness has its own run table and no notion of resuming a
-    // previous attempt — there is nothing to checkpoint.
-    checkpoint: noopCheckpoint,
-  };
+      logBuffer += `\nError: ${errorMessage(err)}\n`;
+      flushToDb();
 
-  try {
-    const plexUrl = getConfig("global_plex_url");
-    const plexToken = getConfig("global_plex_token");
-    if (!plexUrl || !plexToken) {
-      throw new Error("Plex URL and token are not configured");
-    }
-
-    const client = createPlexClient({
-      url: plexUrl,
-      token: plexToken,
-      signal: controller.signal,
-      onHealth: plexHealthCallback,
-    });
-
-    await runStressTest(client, config, ctx, id);
-
-    clearInterval(flushTimer);
-    clearInterval(cancelTimer);
-    flushToDb();
-
-    // Check if cancelled during execution
-    const finalRow = db
-      .select({ status: stressTestRuns.status })
-      .from(stressTestRuns)
-      .where(eq(stressTestRuns.id, id))
-      .get();
-    if (finalRow?.status !== "cancelled") {
-      db.update(stressTestRuns)
-        .set({ status: "completed", progress: 1, finishedAt: Date.now() })
+      // Check if cancelled
+      const finalRow = db
+        .select({ status: stressTestRuns.status })
+        .from(stressTestRuns)
         .where(eq(stressTestRuns.id, id))
-        .run();
+        .get();
+      if (finalRow?.status !== "cancelled") {
+        db.update(stressTestRuns)
+          .set({ status: "failed", message: errorMessage(err), finishedAt: Date.now() })
+          .where(eq(stressTestRuns.id, id))
+          .run();
+      }
+    } finally {
+      clearInterval(flushTimer);
+      clearInterval(cancelTimer);
+      process.exit(0);
     }
-  } catch (err) {
-    clearInterval(flushTimer);
-    clearInterval(cancelTimer);
-
-    logBuffer += `\nError: ${errorMessage(err)}\n`;
-    flushToDb();
-
-    // Check if cancelled
-    const finalRow = db
-      .select({ status: stressTestRuns.status })
-      .from(stressTestRuns)
-      .where(eq(stressTestRuns.id, id))
-      .get();
-    if (finalRow?.status !== "cancelled") {
-      db.update(stressTestRuns)
-        .set({ status: "failed", message: errorMessage(err), finishedAt: Date.now() })
-        .where(eq(stressTestRuns.id, id))
-        .run();
-    }
-  } finally {
-    clearInterval(flushTimer);
-    clearInterval(cancelTimer);
-    process.exit(0);
   }
+
+  return {};
 }

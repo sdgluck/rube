@@ -1,20 +1,30 @@
+import { DEFAULT_JOBS, buildEngineConfig } from "./runner.ts";
+import { FEATURE_TEMPLATES } from "@tinkerbell/jobs";
 /**
  * The concurrency-sensitive parts of the runner: the start guard, retention,
  * cancellation, the watchdog, and the engine config. These are precisely the
  * places where a bug stays invisible until production.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { jobRuns, jobs } from "@tinkerbell/db";
+import { createRunner } from "./runner.ts";
+import { createInternalJobs } from "./internal-jobs.ts";
 
-const { db, jobs, jobRuns } = await import("@tinkerbell/db");
-const { startJob, cancelRun, sweepStuckRuns, buildEngineConfig, DEFAULT_JOBS } = await import("./runner.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { startJob, cancelRun, sweepStuckRuns } = createRunner(services);
+const { internalJobs, isInternalJobName } = createInternalJobs(services);
+
 const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS } = await import("./limits.ts");
 const { COMMANDS, isCommandName } = await import("./commands/catalog.ts");
-const { internalJobs, isInternalJobName } = await import("./internal-jobs.ts");
-const { FEATURE_TEMPLATES } = await import("./features.ts");
 
 /**
  * A command job with no schedule. `preroll-process` is the safest choice:

@@ -10,18 +10,29 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 
-setupTempDb("tinkerbell-finalize-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { collectionArtwork, rules } from "@tinkerbell/db";
+import { noopCheckpoint } from "@tinkerbell/core";
+import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { createFinalizeCommand } from "./finalize.ts";
 
-const { db, collectionArtwork, rules } = await import("@tinkerbell/db");
-const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
-const { getCollectionArtwork, recordCollectionArtwork } = await import("@tinkerbell/domain.collections");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { getCollectionArtwork, recordCollectionArtwork } = c.resolve(CollectionsToken);
+const { commitCollection } = createFinalizeCommand(services);
+
 const { createPlexClient } = await import("@tinkerbell/plex");
 const { startMockPlex, MACHINE_ID } = await import("../../test-support/mock-plex-server.ts");
-const { commitCollection } = await import("./finalize.ts");
 
 const RULE_ID = "finalize-rule";
 const SECTION = { key: "1", title: "Films", type: "movie" };
@@ -37,6 +48,7 @@ function testContext(): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: new AbortController().signal,

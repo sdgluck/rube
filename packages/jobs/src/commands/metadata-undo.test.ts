@@ -4,16 +4,24 @@
  * values *and* lock states, a run that failed halfway is still fully
  * revertible, and undoing twice is a no-op rather than a double-revert.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 
-setupTempDb("tinkerbell-metadata-undo-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { config, metadataOriginals } from "@tinkerbell/db";
+import { noopCheckpoint } from "@tinkerbell/core";
+import { MetadataToken } from "@tinkerbell/domain.metadata";
 
-const { db, config, metadataOriginals } = await import("@tinkerbell/db");
-const { setConfig, getConfig, noopCheckpoint } = await import("@tinkerbell/core");
-const { snapshotWrites, batchRows, listBatches } = await import("@tinkerbell/domain.metadata");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { setConfig, getConfig } = c.resolve(ConfigStoreToken);
+const { snapshotWrites, batchRows, listBatches } = c.resolve(MetadataToken);
+
 const undo = (await import("./metadata-undo.ts")).default;
 
 const BATCH = "batch-1";
@@ -57,6 +65,7 @@ function testContext(): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: new AbortController().signal,

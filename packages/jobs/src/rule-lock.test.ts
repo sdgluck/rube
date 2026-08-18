@@ -1,3 +1,4 @@
+import { RULE_LOCK_LEASE_MS, RuleLockedError } from "@tinkerbell/domain.rules";
 /**
  * The rule lock exists for one failure: two runs of the same rule overlapping,
  * both passing the delete-old-collections step before either creates, and both
@@ -6,22 +7,19 @@
  * care about the parts an in-process Map couldn't give us — mutual exclusion
  * through the database, and a lease that outlives a holder that never released.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { ruleLocks } from "@tinkerbell/db";
+import { RulesToken } from "@tinkerbell/domain.rules";
 
-const { db, ruleLocks } = await import("@tinkerbell/db");
-const {
-  acquireRuleLock,
-  renewRuleLock,
-  releaseRuleLock,
-  getRuleLock,
-  withRuleLock,
-  RuleLockedError,
-  RULE_LOCK_LEASE_MS,
-} = await import("@tinkerbell/domain.rules");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { acquireRuleLock, renewRuleLock, releaseRuleLock, getRuleLock, withRuleLock } = c.resolve(RulesToken);
 
 const RULE = "rule-1";
 

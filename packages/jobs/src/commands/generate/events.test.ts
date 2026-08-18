@@ -6,14 +6,21 @@
  * committed would fire for all of them every night — a run touches every
  * collection it owns whether or not anything about it changed.
  */
-import { describe, test, beforeEach } from "node:test";
+import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 
-setupTempDb("tinkerbell-generate-events-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { events } from "@tinkerbell/db";
+import { createEventsCommand } from "./events.ts";
 
-const { db, events } = await import("@tinkerbell/db");
-const { announceEmptyRule, announceNewCollections } = await import("./events.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { announceEmptyRule, announceNewCollections } = createEventsCommand(services);
 
 const RULE = "rule-1";
 const NAME = "Best of the 80s";

@@ -11,20 +11,29 @@
  * that lets a delete slip through a gate fails loudly rather than quietly
  * passing.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 
-setupTempDb("tinkerbell-cleanup-job-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { cleanupCandidates, cleanupProtections, config, events, jobRuns, jobs, rules } from "@tinkerbell/db";
+import { noopCheckpoint } from "@tinkerbell/core";
+import { CleanupToken } from "@tinkerbell/domain.cleanup";
+import { createCleanupCommand } from "./cleanup.ts";
 
-const { db, rules, config, jobs, jobRuns, cleanupCandidates, cleanupProtections, events } =
-  await import("@tinkerbell/db");
-const { setConfig } = await import("@tinkerbell/core");
-const { noopCheckpoint } = await import("@tinkerbell/core");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
 const { recordMatches, listCandidates, holdCandidate, markActioned, setCandidateApproval, addProtection } =
-  await import("@tinkerbell/domain.cleanup");
-const { runHandlerWithCleanup, createCleanupBudget } = await import("./cleanup.ts");
+  c.resolve(CleanupToken);
+const { runHandlerWithCleanup, createCleanupBudget } = createCleanupCommand(services);
+
 const { createPlexClient } = await import("@tinkerbell/plex");
 
 const RULE_ID = "cleanup-rule";
@@ -123,6 +132,7 @@ function testContext(): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: new AbortController().signal,

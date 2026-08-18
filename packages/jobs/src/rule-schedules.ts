@@ -1,3 +1,8 @@
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
+import { createDeferral } from "./deferral.ts";
+import { createRuleQueue } from "./rule-queue.ts";
+import { createSchedule } from "./schedule.ts";
 /**
  * The half of scheduling that belongs to rules rather than jobs.
  *
@@ -16,48 +21,10 @@
 
 import { Cron } from "croner";
 import { createLogger, errorMessage, type JobContext } from "@tinkerbell/core";
-import { getEnabledRules, setRuleLastScheduled, type Rule } from "@tinkerbell/domain.rules";
+import { type Rule } from "@tinkerbell/domain.rules";
 import { isRuleActiveOn, ruleConfigSchema, type RuleSchedule } from "@tinkerbell/contracts";
-import { deferralForRuleWork, maxDeferralMs } from "./deferral.ts";
-import { enqueueRuleWork, scheduleRuleDrain } from "./rule-queue.ts";
-import { schedulerTimezone } from "./schedule.ts";
 
 const log = createLogger("rule-schedules");
-
-/**
- * Rules whose cron came due while the server was busy, and when we first held
- * them.
- *
- * Measured from the *first* occurrence held rather than the most recent one,
- * exactly as `schedule.ts` measures a deferred job start — otherwise an hourly
- * rule on a busy evening renews its own deadline every hour and never reaches
- * the ceiling at all.
- *
- * In memory for the same reason the job-side map is: a deferral is worth as
- * long as the process that owes it, and a restart should run what it is due.
- */
-const heldRules = new Map<string, { name: string; heldSince: number }>();
-
-/** Snapshot of rules waiting for the server to go quiet, for the Jobs page. */
-export function deferredRuleStarts(): Array<{
-  ruleId: string;
-  ruleName: string;
-  waitingSince: number;
-  deadline: number;
-}> {
-  const ceiling = maxDeferralMs();
-  return [...heldRules.entries()].map(([ruleId, entry]) => ({
-    ruleId,
-    ruleName: entry.name,
-    waitingSince: entry.heldSince,
-    deadline: entry.heldSince + ceiling,
-  }));
-}
-
-/** Drop every pending rule hold. For tests and shutdown. */
-export function clearHeldRules(): void {
-  heldRules.clear();
-}
 
 export interface DueRule {
   rule: Rule;
@@ -143,141 +110,186 @@ export function isDue(
   return occurrence;
 }
 
-/** Every enabled rule whose own cron has come due. */
-export function findDueRules(now: Date = new Date()): DueRule[] {
-  const timezone = schedulerTimezone();
-  const due: DueRule[] = [];
-  for (const rule of getEnabledRules()) {
-    const occurrence = isDue(scheduleOf(rule), rule.lastScheduledAt, now, timezone);
-    if (occurrence != null) due.push({ rule, occurrence });
+export const createRuleSchedules = perDeps(function createRuleSchedules(deps: Services) {
+  /** Drop every pending rule hold. For tests and shutdown. */
+  function clearHeldRules(): void {
+    heldRules.clear();
   }
-  return due;
-}
 
-/**
- * Adopt the current occurrence for any scheduled rule that has never fired.
- *
- * Called on the same tick as the sweep so a newly-saved schedule starts
- * counting from now. Without it `isDue` would never return anything, because
- * it refuses to fire on a null `lastScheduledAt`.
- */
-export function adoptNewSchedules(now: Date = new Date()): number {
-  const timezone = schedulerTimezone();
-  let adopted = 0;
-  for (const rule of getEnabledRules()) {
-    if (rule.lastScheduledAt != null) continue;
-    const schedule = scheduleOf(rule);
-    if (!schedule?.cron) continue;
-    try {
-      // Validate the expression before stamping anything, so a typo doesn't
-      // silently look like an adopted schedule that never fires.
-      new Cron(schedule.cron, { timezone });
-      // Stamped at `now`, which means the first fire is the next occurrence
-      // after the rule was saved rather than an immediate catch-up run.
-      setRuleLastScheduled(rule.id, now.getTime());
-      adopted++;
-    } catch {
-      // Invalid expression — already reported by `isDue`, nothing to adopt.
+  /**
+   * Rules whose cron came due while the server was busy, and when we first held
+   * them.
+   *
+   * Measured from the *first* occurrence held rather than the most recent one,
+   * exactly as `schedule.ts` measures a deferred job start — otherwise an hourly
+   * rule on a busy evening renews its own deadline every hour and never reaches
+   * the ceiling at all.
+   *
+   * In memory for the same reason the job-side map is: a deferral is worth as
+   * long as the process that owes it, and a restart should run what it is due.
+   */
+  const heldRules = new Map<string, { name: string; heldSince: number }>();
+
+  const { rules } = deps;
+  const { getEnabledRules, setRuleLastScheduled } = rules;
+  const { deferralForRuleWork, maxDeferralMs } = createDeferral(deps);
+  const { enqueueRuleWork, scheduleRuleDrain } = createRuleQueue(deps);
+  const { schedulerTimezone } = createSchedule(deps);
+
+  /** Snapshot of rules waiting for the server to go quiet, for the Jobs page. */
+  function deferredRuleStarts(): Array<{
+    ruleId: string;
+    ruleName: string;
+    waitingSince: number;
+    deadline: number;
+  }> {
+    const ceiling = maxDeferralMs();
+    return [...heldRules.entries()].map(([ruleId, entry]) => ({
+      ruleId,
+      ruleName: entry.name,
+      waitingSince: entry.heldSince,
+      deadline: entry.heldSince + ceiling,
+    }));
+  }
+
+  /** Every enabled rule whose own cron has come due. */
+  function findDueRules(now: Date = new Date()): DueRule[] {
+    const timezone = schedulerTimezone();
+    const due: DueRule[] = [];
+    for (const rule of getEnabledRules()) {
+      const occurrence = isDue(scheduleOf(rule), rule.lastScheduledAt, now, timezone);
+      if (occurrence != null) due.push({ rule, occurrence });
     }
-  }
-  return adopted;
-}
-
-/**
- * One tick of the per-rule scheduler.
- *
- * Decides what is due and queues it; `rule-queue.ts` decides when it runs and
- * in what order. Keeping those apart is what lets this stay a job that fires
- * every minute and finishes in milliseconds, while the work it asks for takes
- * as long as it takes.
- */
-export async function runDueRules(ctx: JobContext): Promise<string> {
-  const adopted = adoptNewSchedules();
-  const due = findDueRules();
-
-  // Forget holds for rules that are no longer due — disabled, deleted, or their
-  // schedule edited out from under the hold. Otherwise the map is a slow leak,
-  // and the Jobs page lists rules as waiting that nothing intends to run.
-  const dueIds = new Set(due.map((entry) => entry.rule.id));
-  for (const id of heldRules.keys()) {
-    if (!dueIds.has(id)) heldRules.delete(id);
+    return due;
   }
 
-  if (due.length === 0) {
-    // Stable text: this is a quiet job, and the event is only emitted when the
-    // message changes from the previous run.
-    return adopted > 0 ? `Adopted ${adopted} new rule schedule(s).` : "No rule schedules due.";
-  }
-
-  // Asked once per tick, not once per rule: it reads the config and counts open
-  // streams, and the answer cannot meaningfully change between two rules in the
-  // same loop.
-  const busy = deferralForRuleWork();
-  const ceiling = maxDeferralMs();
-
-  const queued: string[] = [];
-  const joined: string[] = [];
-  const held: string[] = [];
-  for (const { rule, occurrence } of due) {
-    ctx.signal?.throwIfAborted();
-
-    // Somebody is watching, or we're outside the maintenance window. Hold the
-    // rule *without* stamping `lastScheduledAt`, so `isDue` offers the same
-    // occurrence again next minute and the tick retries by itself — the same
-    // self-correcting property a missed tick already has.
-    if (busy) {
-      const existing = heldRules.get(rule.id);
-      if (!existing) {
-        heldRules.set(rule.id, { name: rule.name, heldSince: Date.now() });
-        log.info("holding a scheduled rule back", { rule: rule.name, reason: busy.reason });
-        held.push(rule.name);
-        continue;
+  /**
+   * Adopt the current occurrence for any scheduled rule that has never fired.
+   *
+   * Called on the same tick as the sweep so a newly-saved schedule starts
+   * counting from now. Without it `isDue` would never return anything, because
+   * it refuses to fire on a null `lastScheduledAt`.
+   */
+  function adoptNewSchedules(now: Date = new Date()): number {
+    const timezone = schedulerTimezone();
+    let adopted = 0;
+    for (const rule of getEnabledRules()) {
+      if (rule.lastScheduledAt != null) continue;
+      const schedule = scheduleOf(rule);
+      if (!schedule?.cron) continue;
+      try {
+        // Validate the expression before stamping anything, so a typo doesn't
+        // silently look like an adopted schedule that never fires.
+        new Cron(schedule.cron, { timezone });
+        // Stamped at `now`, which means the first fire is the next occurrence
+        // after the rule was saved rather than an immediate catch-up run.
+        setRuleLastScheduled(rule.id, now.getTime());
+        adopted++;
+      } catch {
+        // Invalid expression — already reported by `isDue`, nothing to adopt.
       }
-      if (Date.now() - existing.heldSince < ceiling) {
-        held.push(rule.name);
-        continue;
-      }
-      // Out of patience. Said out loud rather than silently, exactly as the job
-      // side says it: running anyway is right, but it is the opposite of what
-      // the setting asked for, and somebody seeing this nightly has learned
-      // their window is too tight.
-      log.warn("running a held rule anyway — waited long enough", {
-        rule: rule.name,
-        reason: busy.reason,
-        waitedMs: Date.now() - existing.heldSince,
-      });
     }
-    heldRules.delete(rule.id);
-
-    // Recorded before the run, not after: a rule that fails must not re-fire
-    // every minute until it succeeds, and the next occurrence is the right time
-    // to try again. Recorded before *queueing*, for the same reason — the
-    // occurrence has been acted on once the request exists.
-    setRuleLastScheduled(rule.id, occurrence);
-
-    // Queued rather than run here. This tick used to execute whole rules inside
-    // a job that fires every minute: ten rules due at 03:00 at five minutes each
-    // blew the job's 30-minute budget, the watchdog force-failed the tick, and
-    // the rules that hadn't run yet waited for their next occurrence. The queue
-    // has no such deadline, runs them one at a time under one Plex connection,
-    // and folds a rule already running into the run in flight.
-    if (enqueueRuleWork(rule.id, "cron")) queued.push(rule.name);
-    else joined.push(rule.name);
+    return adopted;
   }
 
-  if (queued.length > 0) scheduleRuleDrain();
+  /**
+   * One tick of the per-rule scheduler.
+   *
+   * Decides what is due and queues it; `rule-queue.ts` decides when it runs and
+   * in what order. Keeping those apart is what lets this stay a job that fires
+   * every minute and finishes in milliseconds, while the work it asks for takes
+   * as long as it takes.
+   */
+  async function runDueRules(ctx: JobContext): Promise<string> {
+    const adopted = adoptNewSchedules();
+    const due = findDueRules();
 
-  const parts = [];
-  if (queued.length) parts.push(`queued ${queued.length} scheduled rule(s): ${queued.join(", ")}`);
-  // Worth saying: "nothing happened" and "it was already happening" look the
-  // same from the outside and have very different causes.
-  if (joined.length) parts.push(`${joined.length} already queued or running`);
-  // Stable text while nothing but holding is happening, so a quiet evening
-  // doesn't emit an event every minute — the same reason the empty case has one
-  // fixed phrasing rather than a count.
-  if (held.length && parts.length === 0) {
-    return `Holding ${held.length} due rule(s) — ${busy?.reason ?? "server busy"}.`;
+    // Forget holds for rules that are no longer due — disabled, deleted, or their
+    // schedule edited out from under the hold. Otherwise the map is a slow leak,
+    // and the Jobs page lists rules as waiting that nothing intends to run.
+    const dueIds = new Set(due.map((entry) => entry.rule.id));
+    for (const id of heldRules.keys()) {
+      if (!dueIds.has(id)) heldRules.delete(id);
+    }
+
+    if (due.length === 0) {
+      // Stable text: this is a quiet job, and the event is only emitted when the
+      // message changes from the previous run.
+      return adopted > 0 ? `Adopted ${adopted} new rule schedule(s).` : "No rule schedules due.";
+    }
+
+    // Asked once per tick, not once per rule: it reads the config and counts open
+    // streams, and the answer cannot meaningfully change between two rules in the
+    // same loop.
+    const busy = deferralForRuleWork();
+    const ceiling = maxDeferralMs();
+
+    const queued: string[] = [];
+    const joined: string[] = [];
+    const held: string[] = [];
+    for (const { rule, occurrence } of due) {
+      ctx.signal?.throwIfAborted();
+
+      // Somebody is watching, or we're outside the maintenance window. Hold the
+      // rule *without* stamping `lastScheduledAt`, so `isDue` offers the same
+      // occurrence again next minute and the tick retries by itself — the same
+      // self-correcting property a missed tick already has.
+      if (busy) {
+        const existing = heldRules.get(rule.id);
+        if (!existing) {
+          heldRules.set(rule.id, { name: rule.name, heldSince: Date.now() });
+          log.info("holding a scheduled rule back", { rule: rule.name, reason: busy.reason });
+          held.push(rule.name);
+          continue;
+        }
+        if (Date.now() - existing.heldSince < ceiling) {
+          held.push(rule.name);
+          continue;
+        }
+        // Out of patience. Said out loud rather than silently, exactly as the job
+        // side says it: running anyway is right, but it is the opposite of what
+        // the setting asked for, and somebody seeing this nightly has learned
+        // their window is too tight.
+        log.warn("running a held rule anyway — waited long enough", {
+          rule: rule.name,
+          reason: busy.reason,
+          waitedMs: Date.now() - existing.heldSince,
+        });
+      }
+      heldRules.delete(rule.id);
+
+      // Recorded before the run, not after: a rule that fails must not re-fire
+      // every minute until it succeeds, and the next occurrence is the right time
+      // to try again. Recorded before *queueing*, for the same reason — the
+      // occurrence has been acted on once the request exists.
+      setRuleLastScheduled(rule.id, occurrence);
+
+      // Queued rather than run here. This tick used to execute whole rules inside
+      // a job that fires every minute: ten rules due at 03:00 at five minutes each
+      // blew the job's 30-minute budget, the watchdog force-failed the tick, and
+      // the rules that hadn't run yet waited for their next occurrence. The queue
+      // has no such deadline, runs them one at a time under one Plex connection,
+      // and folds a rule already running into the run in flight.
+      if (enqueueRuleWork(rule.id, "cron")) queued.push(rule.name);
+      else joined.push(rule.name);
+    }
+
+    if (queued.length > 0) scheduleRuleDrain();
+
+    const parts = [];
+    if (queued.length) parts.push(`queued ${queued.length} scheduled rule(s): ${queued.join(", ")}`);
+    // Worth saying: "nothing happened" and "it was already happening" look the
+    // same from the outside and have very different causes.
+    if (joined.length) parts.push(`${joined.length} already queued or running`);
+    // Stable text while nothing but holding is happening, so a quiet evening
+    // doesn't emit an event every minute — the same reason the empty case has one
+    // fixed phrasing rather than a count.
+    if (held.length && parts.length === 0) {
+      return `Holding ${held.length} due rule(s) — ${busy?.reason ?? "server busy"}.`;
+    }
+    if (held.length) parts.push(`${held.length} held`);
+    return parts.join("; ") || "No rule schedules due.";
   }
-  if (held.length) parts.push(`${held.length} held`);
-  return parts.join("; ") || "No rule schedules due.";
-}
+
+  return { deferredRuleStarts, clearHeldRules, findDueRules, adoptNewSchedules, runDueRules };
+});

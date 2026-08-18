@@ -1,26 +1,49 @@
+import { cronJobs } from "./schedule.ts";
 /**
  * Catch-up is the riskiest scheduling behaviour: get it wrong in one direction
  * and a missed nightly job never runs, get it wrong in the other and boot
  * stampedes every job in the system.
  */
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { config, jobRuns, jobs } from "@tinkerbell/db";
+import { createSchedule } from "./schedule.ts";
+import { JobStarterToken, registerJobs } from "@tinkerbell/jobs";
+import { DAY_MS, HOUR_MS } from "@tinkerbell/core";
 
-const { db, config, jobs, jobRuns } = await import("@tinkerbell/db");
-const {
-  catchUpMissedRuns,
-  clearDeferredStarts,
-  cronJobs,
-  deferredStarts,
-  initSchedule,
-  scheduleCron,
-  schedulerTimezone,
-  startCronSchedules,
-} = await import("./schedule.ts");
-const { setConfig, deleteConfig, DAY_MS, HOUR_MS } = await import("@tinkerbell/core");
+/**
+ * Which job ids the scheduler actually asked to start.
+ *
+ * Registered over `JobStarterToken` — the same edge the runner binds in
+ * production — rather than assigned to a module-level slot, which is what
+ * `initSchedule` used to do and why an unwired process failed silently.
+ *
+ * Asserted by membership rather than by count: catch-up starts are staggered
+ * timeouts, so an earlier test's timer can still land in here.
+ */
+const startedJobIds: string[] = [];
+
+const c = createTestContainer({
+  overrides: (r) => {
+    registerJobs(r);
+    r.replace(JobStarterToken, () => async (jobId: string) => {
+      startedJobIds.push(jobId);
+      return { ok: true as const, runId: "x" };
+    });
+  },
+});
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { catchUpMissedRuns, clearDeferredStarts, deferredStarts, scheduleCron, schedulerTimezone, startCronSchedules } =
+  createSchedule(services);
+const { setConfig, deleteConfig } = c.resolve(ConfigStoreToken);
 
 /** 2026-08-04T12:00:00Z — a fixed "now" so the assertions don't drift. */
 const NOW = Date.parse("2026-08-04T12:00:00Z");
@@ -35,15 +58,6 @@ function seedRun(jobId: string, startedAt: number): void {
     .run();
 }
 
-/**
- * Which job ids a run actually started. Asserted by id rather than by call
- * count: catch-up starts are staggered timeouts, so an earlier test's timer can
- * still land on the current mock.
- */
-function startedIds(started: { mock: { calls: Array<{ arguments: unknown[] }> } }): string[] {
-  return started.mock.calls.map((call) => call.arguments[0] as string);
-}
-
 beforeEach(() => {
   db.delete(jobRuns).run();
   db.delete(jobs).run();
@@ -56,8 +70,7 @@ beforeEach(() => {
 
 describe("catchUpMissedRuns", () => {
   it("fires for a daily job that was missed", () => {
-    const started = mock.fn(async () => ({ ok: true as const, runId: "x" }));
-    initSchedule(started);
+    startedJobIds.length = 0;
     seedJob("nightly", "0 3 * * *");
     // Last ran the morning before the missed 03:00 occurrence.
     seedRun("nightly", NOW - 2 * DAY_MS);
@@ -66,13 +79,11 @@ describe("catchUpMissedRuns", () => {
   });
 
   it("fires for a job that has never run", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("nightly", "0 3 * * *");
     assert.deepEqual(catchUpMissedRuns(NOW), ["nightly"]);
   });
 
   it("does not fire when a run already happened after the occurrence", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("nightly", "0 3 * * *");
     // Ran at 04:00, an hour after the 03:00 occurrence — nothing was missed.
     seedRun("nightly", NOW - 8 * HOUR_MS);
@@ -85,7 +96,6 @@ describe("catchUpMissedRuns", () => {
     // and doing it for every such job at boot is a stampede. The cutoff is
     // exactly an hour: hourly schedules are still eligible (below), anything
     // more frequent is not.
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("frequent", "*/15 * * * *");
     seedJob("half-hourly", "*/30 * * * *");
 
@@ -93,7 +103,6 @@ describe("catchUpMissedRuns", () => {
   });
 
   it("still catches up an hourly schedule", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("hourly", "0 * * * *");
     seedRun("hourly", NOW - 5 * HOUR_MS);
 
@@ -101,7 +110,6 @@ describe("catchUpMissedRuns", () => {
   });
 
   it("ignores disabled and unscheduled jobs", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("disabled", "0 3 * * *", 0);
     seedJob("manual", "");
 
@@ -109,7 +117,6 @@ describe("catchUpMissedRuns", () => {
   });
 
   it("does not resurrect an occurrence older than a day", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     // Runs on the 1st of January only — the last occurrence is months back.
     seedJob("annual", "0 3 1 1 *");
 
@@ -120,8 +127,7 @@ describe("catchUpMissedRuns", () => {
     // Catch-up used to call `startJob` directly, so a restart in the evening
     // stampeded every heavy job past the gate that exists to keep them out of
     // it. It is the scheduler deciding to work, so the window applies.
-    const started = mock.fn(async () => ({ ok: true as const, runId: "x" }));
-    initSchedule(started);
+    startedJobIds.length = 0;
     // `generate` is on the deferrable list; the window is the small hours.
     seedJob("generate", "0 3 * * *");
     setConfig("jobs_maintenance_window", { enabled: true, from: "01:00", to: "06:00" });
@@ -130,7 +136,7 @@ describe("catchUpMissedRuns", () => {
     assert.deepEqual(catchUpMissedRuns(NOW), ["generate"]);
     // …but held rather than started. The stagger is a timeout, so let it fire.
     await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.ok(!startedIds(started).includes("generate"), "the held job should not have started");
+    assert.ok(!startedJobIds.includes("generate"), "the held job should not have started");
     assert.deepEqual(
       deferredStarts().map((d) => d.jobId),
       ["generate"],
@@ -138,18 +144,16 @@ describe("catchUpMissedRuns", () => {
   });
 
   it("starts a caught-up job when nothing is holding it back", async () => {
-    const started = mock.fn(async () => ({ ok: true as const, runId: "x" }));
-    initSchedule(started);
+    startedJobIds.length = 0;
     seedJob("generate", "0 3 * * *");
 
     assert.deepEqual(catchUpMissedRuns(NOW), ["generate"]);
     await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.ok(startedIds(started).includes("generate"));
+    assert.ok(startedJobIds.includes("generate"));
     assert.deepEqual(deferredStarts(), []);
   });
 
   it("survives an unparseable schedule without taking the boot down", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("broken", "not a cron expression");
     seedJob("nightly", "0 3 * * *");
 
@@ -162,13 +166,11 @@ describe("scheduleCron", () => {
   it("does not throw when a stored schedule is unparseable", () => {
     // One bad row must not take out the schedules that follow it in
     // `startCronSchedules`'s loop — that loop runs during `initJobs`.
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     assert.doesNotThrow(() => scheduleCron({ id: "broken", name: "Broken", enabled: 1, schedule: "nope" }));
     assert.equal(cronJobs.has("broken"), false);
   });
 
   it("schedules the good jobs even when a bad one is present", () => {
-    initSchedule(async () => ({ ok: true as const, runId: "x" }));
     seedJob("broken", "not a cron expression");
     seedJob("fine", "0 3 * * *");
 

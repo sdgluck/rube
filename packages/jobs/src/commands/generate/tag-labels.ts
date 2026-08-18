@@ -1,3 +1,5 @@
+import type { Services } from "@tinkerbell/composition";
+import { perDeps } from "@tinkerbell/container";
 /**
  * Per-server tag keys as titles, for the summaries written during a run.
  *
@@ -29,29 +31,6 @@ interface Entry {
   map: Promise<Map<string, string>>;
 }
 
-const cache = new Map<string, Entry>();
-
-/** Exported for tests, which would otherwise inherit each other's fixtures. */
-export function clearTagLabelCache(): void {
-  cache.clear();
-}
-
-function fetchField(client: PlexClient, sectionId: string, field: string): Promise<Map<string, string>> {
-  const cacheKey = `${sectionId}\u0000${field}`;
-  const hit = cache.get(cacheKey);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.map;
-
-  const map = client
-    .getFilterFieldValues(sectionId, field)
-    .then((values) => new Map(values.map((v) => [v.key, v.title])))
-    // A facet Plex doesn't expose for this section type 404s. The summary
-    // falls back to the raw key, which is what it did before this existed.
-    .catch(() => new Map<string, string>());
-
-  cache.set(cacheKey, { at: Date.now(), map });
-  return map;
-}
-
 /** Every tag field in the tree whose value is a key we'd have to look up. */
 function unresolvedTagFields(node: SmartFilterNode, out = new Set<string>()): Set<string> {
   if (node.kind === "leaf") {
@@ -62,26 +41,53 @@ function unresolvedTagFields(node: SmartFilterNode, out = new Set<string>()): Se
   return out;
 }
 
-/**
- * A resolver for this filter's tag keys, or undefined when it has none to
- * resolve — which is every rule authored in Tinkerbell, since those store
- * titles. Anything the lookup can't translate is returned untouched.
- */
-export async function tagResolverFor(
-  client: PlexClient,
-  sectionId: string,
-  filter: SmartFilterNode | undefined,
-): Promise<TagResolver | undefined> {
-  if (!filter) return undefined;
-  const fields = [...unresolvedTagFields(filter)];
-  if (fields.length === 0) return undefined;
+export const createTagLabels = perDeps(function createTagLabels(_deps: Services) {
+  const cache = new Map<string, Entry>();
 
-  const maps = new Map<string, Map<string, string>>();
-  await Promise.all(
-    fields.map(async (field) => {
-      maps.set(field, await fetchField(client, sectionId, field));
-    }),
-  );
+  /** Exported for tests, which would otherwise inherit each other's fixtures. */
+  function clearTagLabelCache(): void {
+    cache.clear();
+  }
 
-  return (field, value) => maps.get(fieldDef(field)?.field ?? field)?.get(value.trim()) ?? value;
-}
+  function fetchField(client: PlexClient, sectionId: string, field: string): Promise<Map<string, string>> {
+    const cacheKey = `${sectionId}\u0000${field}`;
+    const hit = cache.get(cacheKey);
+    if (hit && Date.now() - hit.at < TTL_MS) return hit.map;
+
+    const map = client
+      .getFilterFieldValues(sectionId, field)
+      .then((values) => new Map(values.map((v) => [v.key, v.title])))
+      // A facet Plex doesn't expose for this section type 404s. The summary
+      // falls back to the raw key, which is what it did before this existed.
+      .catch(() => new Map<string, string>());
+
+    cache.set(cacheKey, { at: Date.now(), map });
+    return map;
+  }
+
+  /**
+   * A resolver for this filter's tag keys, or undefined when it has none to
+   * resolve — which is every rule authored in Tinkerbell, since those store
+   * titles. Anything the lookup can't translate is returned untouched.
+   */
+  async function tagResolverFor(
+    client: PlexClient,
+    sectionId: string,
+    filter: SmartFilterNode | undefined,
+  ): Promise<TagResolver | undefined> {
+    if (!filter) return undefined;
+    const fields = [...unresolvedTagFields(filter)];
+    if (fields.length === 0) return undefined;
+
+    const maps = new Map<string, Map<string, string>>();
+    await Promise.all(
+      fields.map(async (field) => {
+        maps.set(field, await fetchField(client, sectionId, field));
+      }),
+    );
+
+    return (field, value) => maps.get(fieldDef(field)?.field ?? field)?.get(value.trim()) ?? value;
+  }
+
+  return { clearTagLabelCache, tagResolverFor };
+});

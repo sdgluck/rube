@@ -1,3 +1,5 @@
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
 /**
  * Where a smart filter's items went.
  *
@@ -24,7 +26,7 @@ import {
   type SmartFilterOp,
 } from "@tinkerbell/plex-smart-filter";
 import { describeCondition } from "@tinkerbell/contracts";
-import { completionThreshold, evaluateLocal, watchStateFor, watchStateUserScope } from "@tinkerbell/domain.playback";
+import { evaluateLocal } from "@tinkerbell/domain.playback";
 import type { JobContext } from "@tinkerbell/core";
 
 export interface FunnelStep {
@@ -93,93 +95,100 @@ export interface BuildFunnelOptions {
   filter: SmartFilterGroup;
 }
 
-/**
- * Build one funnel per section.
- *
- * Never throws: a funnel is an explanation of a result the caller already has,
- * and failing to explain it must not fail the test that produced it. A section
- * whose counts couldn't be fetched is simply left out.
- */
-export async function buildFilterFunnel(opts: BuildFunnelOptions): Promise<SectionFunnel[]> {
-  const { ctx, client, sections, filter } = opts;
-  const { plexTree, localLeaves, error } = splitLocalLeaves(filter);
-  // The OR-with-local-leaves case has no valid split, so it has no valid
-  // funnel either — the handler already fails loudly for it.
-  if (error) return [];
+export const createFunnelCommand = perDeps(function createFunnelCommand(deps: Pick<Services, "playback">) {
+  const { playback } = deps;
+  const { completionThreshold, watchStateFor, watchStateUserScope } = playback;
 
-  const mode = plexTree.combinator === "any" ? "contributing" : "narrowing";
-  const branches = topLevelBranches(plexTree);
-  const funnels: SectionFunnel[] = [];
+  /**
+   * Build one funnel per section.
+   *
+   * Never throws: a funnel is an explanation of a result the caller already has,
+   * and failing to explain it must not fail the test that produced it. A section
+   * whose counts couldn't be fetched is simply left out.
+   */
+  async function buildFilterFunnel(opts: BuildFunnelOptions): Promise<SectionFunnel[]> {
+    const { ctx, client, sections, filter } = opts;
+    const { plexTree, localLeaves, error } = splitLocalLeaves(filter);
+    // The OR-with-local-leaves case has no valid split, so it has no valid
+    // funnel either — the handler already fails loudly for it.
+    if (error) return [];
 
-  for (const section of sections) {
-    ctx.signal?.throwIfAborted();
-    try {
-      funnels.push(await funnelForSection({ ctx, client, section, plexTree, branches, localLeaves, mode }));
-    } catch (err) {
-      ctx.log(`[Funnel] Couldn't measure "${section.title}":`, err);
+    const mode = plexTree.combinator === "any" ? "contributing" : "narrowing";
+    const branches = topLevelBranches(plexTree);
+    const funnels: SectionFunnel[] = [];
+
+    for (const section of sections) {
+      ctx.signal?.throwIfAborted();
+      try {
+        funnels.push(await funnelForSection({ ctx, client, section, plexTree, branches, localLeaves, mode }));
+      } catch (err) {
+        ctx.log(`[Funnel] Couldn't measure "${section.title}":`, err);
+      }
     }
-  }
-  return funnels;
-}
-
-async function funnelForSection(args: {
-  ctx: JobContext;
-  client: PlexClient;
-  section: PlexSection;
-  plexTree: SmartFilterGroup;
-  branches: SmartFilterNode[];
-  localLeaves: SmartFilterLeaf[];
-  mode: "narrowing" | "contributing";
-}): Promise<SectionFunnel> {
-  const { ctx, client, section, plexTree, branches, localLeaves, mode } = args;
-
-  const start = await client.countItemsByFilter(pathFor(section, plexTree.combinator, []));
-  const steps: FunnelStep[] = [];
-  let running = start;
-
-  for (let i = 0; i < branches.length; i++) {
-    ctx.signal?.throwIfAborted();
-    // Narrowing asks "how many survive the first i+1 clauses"; contributing
-    // asks "how many does this one branch match at all", because under OR the
-    // set grows rather than shrinks and a cumulative count would mislead.
-    const applied = mode === "narrowing" ? branches.slice(0, i + 1) : [branches[i]!];
-    const remaining = await client.countItemsByFilter(pathFor(section, plexTree.combinator, applied));
-    steps.push({
-      label: describeBranch(branches[i]!),
-      remaining,
-      removed: mode === "narrowing" ? Math.max(0, running - remaining) : 0,
-      source: "plex",
-    });
-    if (mode === "narrowing") running = remaining;
+    return funnels;
   }
 
-  // Under OR the union is the whole query, which is one more count rather than
-  // anything the per-branch numbers can be added up to.
-  if (mode === "contributing") {
-    running = await client.countItemsByFilter(pathFor(section, plexTree.combinator, branches));
-  }
+  async function funnelForSection(args: {
+    ctx: JobContext;
+    client: PlexClient;
+    section: PlexSection;
+    plexTree: SmartFilterGroup;
+    branches: SmartFilterNode[];
+    localLeaves: SmartFilterLeaf[];
+    mode: "narrowing" | "contributing";
+  }): Promise<SectionFunnel> {
+    const { ctx, client, section, plexTree, branches, localLeaves, mode } = args;
 
-  // The local half can only be measured by fetching the rows — there is no
-  // count endpoint for something Plex doesn't evaluate. Only paid when the
-  // rule actually has watch-state clauses.
-  if (localLeaves.length > 0) {
-    const items = await client.fetchItemsByFilter(pathFor(section, plexTree.combinator, branches));
-    const scope = watchStateUserScope();
-    const localCtx = { userIds: scope.userIds, now: Date.now(), completionThreshold: completionThreshold() };
-    let surviving = items;
-    for (const leaf of localLeaves) {
-      const state = watchStateFor(surviving.map((m) => m.ratingKey));
-      const next = surviving.filter((item) => evaluateLocal(leaf, state.get(item.ratingKey), localCtx));
+    const start = await client.countItemsByFilter(pathFor(section, plexTree.combinator, []));
+    const steps: FunnelStep[] = [];
+    let running = start;
+
+    for (let i = 0; i < branches.length; i++) {
+      ctx.signal?.throwIfAborted();
+      // Narrowing asks "how many survive the first i+1 clauses"; contributing
+      // asks "how many does this one branch match at all", because under OR the
+      // set grows rather than shrinks and a cumulative count would mislead.
+      const applied = mode === "narrowing" ? branches.slice(0, i + 1) : [branches[i]!];
+      const remaining = await client.countItemsByFilter(pathFor(section, plexTree.combinator, applied));
       steps.push({
-        label: describeCondition(leaf.field, leaf.op as SmartFilterOp, [leaf.value]),
-        remaining: next.length,
-        removed: surviving.length - next.length,
-        source: "local",
+        label: describeBranch(branches[i]!),
+        remaining,
+        removed: mode === "narrowing" ? Math.max(0, running - remaining) : 0,
+        source: "plex",
       });
-      surviving = next;
+      if (mode === "narrowing") running = remaining;
     }
-    running = surviving.length;
+
+    // Under OR the union is the whole query, which is one more count rather than
+    // anything the per-branch numbers can be added up to.
+    if (mode === "contributing") {
+      running = await client.countItemsByFilter(pathFor(section, plexTree.combinator, branches));
+    }
+
+    // The local half can only be measured by fetching the rows — there is no
+    // count endpoint for something Plex doesn't evaluate. Only paid when the
+    // rule actually has watch-state clauses.
+    if (localLeaves.length > 0) {
+      const items = await client.fetchItemsByFilter(pathFor(section, plexTree.combinator, branches));
+      const scope = watchStateUserScope();
+      const localCtx = { userIds: scope.userIds, now: Date.now(), completionThreshold: completionThreshold() };
+      let surviving = items;
+      for (const leaf of localLeaves) {
+        const state = watchStateFor(surviving.map((m) => m.ratingKey));
+        const next = surviving.filter((item) => evaluateLocal(leaf, state.get(item.ratingKey), localCtx));
+        steps.push({
+          label: describeCondition(leaf.field, leaf.op as SmartFilterOp, [leaf.value]),
+          remaining: next.length,
+          removed: surviving.length - next.length,
+          source: "local",
+        });
+        surviving = next;
+      }
+      running = surviving.length;
+    }
+
+    return { sectionTitle: section.title, start, steps, final: running, mode };
   }
 
-  return { sectionTitle: section.title, start, steps, final: running, mode };
-}
+  return { buildFilterFunnel };
+});

@@ -11,16 +11,26 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 
-setupTempDb("tinkerbell-reconcile-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { rules } from "@tinkerbell/db";
+import { noopCheckpoint } from "@tinkerbell/core";
+import { createGenerateCommand } from "./index.ts";
 
-const { db, rules } = await import("@tinkerbell/db");
-const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { run: runGenerate } = createGenerateCommand(services);
+
 const { startMockPlex } = await import("../../test-support/mock-plex-server.ts");
-const { default: runGenerate } = await import("./index.ts");
 
 const RULE_ID = "reconcile-rule";
 const SECTIONS = [{ key: "1", title: "Films", type: "movie" }];
@@ -52,6 +62,7 @@ function testContext(): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: new AbortController().signal,

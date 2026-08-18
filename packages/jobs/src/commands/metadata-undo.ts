@@ -1,3 +1,4 @@
+import { ServicesToken, type Services } from "@tinkerbell/composition";
 /**
  * Hand one batch of metadata writes back.
  *
@@ -19,9 +20,9 @@
  * says so.
  */
 import { createPlexClient } from "@tinkerbell/plex";
-import { deleteConfig, errorMessage, getConfig, plexHealthCallback } from "@tinkerbell/core";
+import { errorMessage } from "@tinkerbell/core";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
-import { batchRows, decodeTags, markReverted, type MetadataOriginal } from "@tinkerbell/domain.metadata";
+import { decodeTags, type MetadataOriginal } from "@tinkerbell/domain.metadata";
 
 /** One PUT's worth of restoration: same item, same intended lock state. */
 interface RevertGroup {
@@ -38,69 +39,6 @@ interface RevertGroup {
    * describe the same field and are just as reverted.
    */
   superseded: MetadataOriginal[];
-}
-
-export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-  ctx.log("tinkerbell metadata-undo");
-
-  const batchId = getConfig("metadata_undo_pending_batch");
-  if (!batchId) {
-    ctx.log("No batch selected for undo — nothing to do.");
-    return;
-  }
-
-  const rows = batchRows(batchId);
-  if (rows.length === 0) {
-    // Either it was never written, or it has already been handed back.
-    // Undoing twice is a no-op, not a double-revert.
-    ctx.log(`Batch ${batchId} has nothing left to revert.`);
-    deleteConfig("metadata_undo_pending_batch");
-    return;
-  }
-
-  const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
-  const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-  if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
-
-  const client = createPlexClient({
-    url: PLEX_URL,
-    token: PLEX_TOKEN,
-    signal: ctx.signal,
-    onHealth: plexHealthCallback,
-  });
-
-  ctx.log(`Reverting ${rows.length} field write(s) across ${new Set(rows.map((r) => r.ratingKey)).size} item(s).`);
-
-  const groups = groupForRevert(rows);
-  const reverted: number[] = [];
-  let failed = 0;
-  let done = 0;
-
-  for (const group of groups) {
-    ctx.signal?.throwIfAborted();
-    try {
-      await revertGroup(ctx, client, group);
-      reverted.push(...groupRowIds(group));
-    } catch (err) {
-      // One item failing must not abandon the rest — and its rows stay
-      // un-reverted, so running undo again picks them up.
-      failed += groupRowIds(group).length;
-      ctx.log(`Failed to revert "${group.itemTitle}" — ${errorMessage(err)}`);
-    }
-    done++;
-    ctx.progress(done, groups.length, `Reverted ${done}/${groups.length}`);
-  }
-
-  // Stamped only for what actually landed. A row marked reverted that wasn't
-  // is a write nobody can undo any more.
-  markReverted(reverted);
-
-  deleteConfig("metadata_undo_pending_batch");
-  ctx.log(
-    failed > 0
-      ? `Reverted ${reverted.length} field write(s); ${failed} could not be reverted and remain undoable.`
-      : `Reverted ${reverted.length} field write(s).`,
-  );
 }
 
 /**
@@ -206,4 +144,89 @@ async function revertGroup(
     );
     ctx.log(`  "${group.itemTitle}" ${row.field}: restored ${decodeTags(row.previousValue).join(", ") || "(none)"}`);
   }
+}
+
+export function createMetadataUndoCommand(deps: Pick<Services, "clients" | "config" | "metadata">) {
+  const { clients, config, metadata } = deps;
+  const { deleteConfig, getConfig } = config;
+  const { plexHealthCallback } = clients;
+  const { batchRows, markReverted } = metadata;
+
+  async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
+    ctx.log("tinkerbell metadata-undo");
+
+    const batchId = getConfig("metadata_undo_pending_batch");
+    if (!batchId) {
+      ctx.log("No batch selected for undo — nothing to do.");
+      return;
+    }
+
+    const rows = batchRows(batchId);
+    if (rows.length === 0) {
+      // Either it was never written, or it has already been handed back.
+      // Undoing twice is a no-op, not a double-revert.
+      ctx.log(`Batch ${batchId} has nothing left to revert.`);
+      deleteConfig("metadata_undo_pending_batch");
+      return;
+    }
+
+    const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+    const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+    if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
+
+    const client = createPlexClient({
+      url: PLEX_URL,
+      token: PLEX_TOKEN,
+      signal: ctx.signal,
+      onHealth: plexHealthCallback,
+    });
+
+    ctx.log(`Reverting ${rows.length} field write(s) across ${new Set(rows.map((r) => r.ratingKey)).size} item(s).`);
+
+    const groups = groupForRevert(rows);
+    const reverted: number[] = [];
+    let failed = 0;
+    let done = 0;
+
+    for (const group of groups) {
+      ctx.signal?.throwIfAborted();
+      try {
+        await revertGroup(ctx, client, group);
+        reverted.push(...groupRowIds(group));
+      } catch (err) {
+        // One item failing must not abandon the rest — and its rows stay
+        // un-reverted, so running undo again picks them up.
+        failed += groupRowIds(group).length;
+        ctx.log(`Failed to revert "${group.itemTitle}" — ${errorMessage(err)}`);
+      }
+      done++;
+      ctx.progress(done, groups.length, `Reverted ${done}/${groups.length}`);
+    }
+
+    // Stamped only for what actually landed. A row marked reverted that wasn't
+    // is a write nobody can undo any more.
+    markReverted(reverted);
+
+    deleteConfig("metadata_undo_pending_batch");
+    ctx.log(
+      failed > 0
+        ? `Reverted ${reverted.length} field write(s); ${failed} could not be reverted and remain undoable.`
+        : `Reverted ${reverted.length} field write(s).`,
+    );
+  }
+
+  return { run };
+}
+
+/**
+ * The command entrypoint, unchanged in shape: the runner and the Sidequest
+ * worker both still call `default(ctx, config)`. What changed is where the
+ * work gets its dependencies — the run's own container scope, rather than
+ * whatever the module graph happened to have initialised.
+ */
+export default function run(
+  ctx: JobContext,
+  config: Parameters<ReturnType<typeof createMetadataUndoCommand>["run"]>[1],
+): Promise<void> {
+  return createMetadataUndoCommand(ctx.scope.resolve(ServicesToken)).run(ctx, config);
 }

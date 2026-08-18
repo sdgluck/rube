@@ -1,7 +1,9 @@
+import { type Services } from "@tinkerbell/composition";
+import { createTmdbMetadataCommand } from "../tmdb-metadata.ts";
 import type { TmdbCachedDetails } from "@tinkerbell/db";
-import { getConfig } from "@tinkerbell/core";
+
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
-import { hydrateTmdbDetails } from "#commands/generate/tmdb-metadata.ts";
+
 import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
@@ -64,76 +66,84 @@ const EXTRACTORS: Record<TmdbGroupedField, Extractor> = {
   directors: (d) => (d.directors ?? []).map((p) => ({ key: `d${p.id}`, label: p.name })),
 };
 
-/**
- * Generic "build one collection per X" handler driven entirely by TMDB
- * metadata. Replaces the Plex tag-based grouped handler — TMDB normalizes
- * names and IDs so groups don't fragment ("Universal" vs "Universal Pictures"
- * vs "Universal Studios International").
- */
-export function tmdbGroupedHandler(field: TmdbGroupedField) {
-  return async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
-    const { ctx, client, sections, ruleConfig } = deps;
-    const apiKey = getConfig("global_tmdb_api_key");
-    if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
-    const region = getConfig("global_tmdb_region") || "US";
+export function createTmdbGroupedCommand(deps: Services) {
+  const { config } = deps;
+  const { getConfig } = config;
+  const { hydrateTmdbDetails } = createTmdbMetadataCommand(deps);
 
-    const maxCollections = collectionLimit(ruleConfig);
-    const minItems = minItemsPerGroup(ruleConfig);
+  /**
+   * Generic "build one collection per X" handler driven entirely by TMDB
+   * metadata. Replaces the Plex tag-based grouped handler — TMDB normalizes
+   * names and IDs so groups don't fragment ("Universal" vs "Universal Pictures"
+   * vs "Universal Studios International").
+   */
+  function tmdbGroupedHandler(field: TmdbGroupedField) {
+    return async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
+      const { ctx, client, sections, ruleConfig } = deps;
+      const apiKey = getConfig("global_tmdb_api_key");
+      if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
+      const region = getConfig("global_tmdb_region") || "US";
 
-    for (const section of sections) {
-      ctx.signal?.throwIfAborted();
+      const maxCollections = collectionLimit(ruleConfig);
+      const minItems = minItemsPerGroup(ruleConfig);
 
-      // Networks rules only make sense for TV; streaming applies to both
-      // (Netflix originals are movies + shows). Everything else accepts both.
-      if (field === "networks" && section.type !== "show") {
-        ctx.log(`[${field}] Skipping "${section.title}" — networks are TV-only.`);
-        continue;
-      }
+      for (const section of sections) {
+        ctx.signal?.throwIfAborted();
 
-      ctx.log(`[${field}] "${section.title}" — indexing by TMDb ID...`);
-      const { items, tmdbToItem } = await indexItemsByTmdb(client, section.key);
-      ctx.log(`[${field}] ${tmdbToItem.size}/${items.length} items have TMDb IDs.`);
-      if (tmdbToItem.size === 0) continue;
+        // Networks rules only make sense for TV; streaming applies to both
+        // (Netflix originals are movies + shows). Everything else accepts both.
+        if (field === "networks" && section.type !== "show") {
+          ctx.log(`[${field}] Skipping "${section.title}" — networks are TV-only.`);
+          continue;
+        }
 
-      const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
-      const pairs = Array.from(tmdbToItem.keys()).map((tmdbId) => ({ tmdbId, mediaType: sectionMediaType }));
-      const cache = await hydrateTmdbDetails(ctx, { apiKey }, pairs);
+        ctx.log(`[${field}] "${section.title}" — indexing by TMDb ID...`);
+        const { items, tmdbToItem } = await indexItemsByTmdb(client, section.key);
+        ctx.log(`[${field}] ${tmdbToItem.size}/${items.length} items have TMDb IDs.`);
+        if (tmdbToItem.size === 0) continue;
 
-      // Build groupKey -> { label, items[] }
-      type Group = { label: string; items: Array<{ ratingKey: string; title: string; year?: number }> };
-      const groups = new Map<string, Group>();
+        const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
+        const pairs = Array.from(tmdbToItem.keys()).map((tmdbId) => ({ tmdbId, mediaType: sectionMediaType }));
+        const cache = await hydrateTmdbDetails(ctx, { apiKey }, pairs);
 
-      for (const [tmdbId, item] of tmdbToItem) {
-        const id = `${sectionMediaType}:${tmdbId}`;
-        const details = cache.get(id);
-        if (!details) continue;
-        for (const { key, label } of EXTRACTORS[field](details, region)) {
-          const bucket = groups.get(key);
-          if (bucket) {
-            bucket.items.push(item);
-          } else {
-            groups.set(key, { label, items: [item] });
+        // Build groupKey -> { label, items[] }
+        type Group = { label: string; items: Array<{ ratingKey: string; title: string; year?: number }> };
+        const groups = new Map<string, Group>();
+
+        for (const [tmdbId, item] of tmdbToItem) {
+          const id = `${sectionMediaType}:${tmdbId}`;
+          const details = cache.get(id);
+          if (!details) continue;
+          for (const { key, label } of EXTRACTORS[field](details, region)) {
+            const bucket = groups.get(key);
+            if (bucket) {
+              bucket.items.push(item);
+            } else {
+              groups.set(key, { label, items: [item] });
+            }
           }
         }
+
+        // Filter, sort by item count desc, take top N.
+        const ranked = Array.from(groups.values())
+          .filter((g) => g.items.length >= minItems)
+          .sort((a, b) => b.items.length - a.items.length);
+
+        ctx.log(
+          `[${field}] "${section.title}" — ${groups.size} group(s), ${ranked.length} to build (${describeLimits(ruleConfig)}).`,
+        );
+
+        for (const group of ranked.slice(0, maxCollections)) {
+          ctx.signal?.throwIfAborted();
+          yield {
+            name: group.label,
+            section,
+            matched: group.items,
+          };
+        }
       }
+    };
+  }
 
-      // Filter, sort by item count desc, take top N.
-      const ranked = Array.from(groups.values())
-        .filter((g) => g.items.length >= minItems)
-        .sort((a, b) => b.items.length - a.items.length);
-
-      ctx.log(
-        `[${field}] "${section.title}" — ${groups.size} group(s), ${ranked.length} to build (${describeLimits(ruleConfig)}).`,
-      );
-
-      for (const group of ranked.slice(0, maxCollections)) {
-        ctx.signal?.throwIfAborted();
-        yield {
-          name: group.label,
-          section,
-          matched: group.items,
-        };
-      }
-    }
-  };
+  return { tmdbGroupedHandler };
 }

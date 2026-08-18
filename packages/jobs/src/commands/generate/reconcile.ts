@@ -1,3 +1,4 @@
+import { type Services } from "@tinkerbell/composition";
 /**
  * Bringing a rule's collections into line with what it selected, instead of
  * deleting them and building them again.
@@ -31,7 +32,7 @@
 
 import PQueue from "p-queue";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { forgetCollections } from "@tinkerbell/domain.collections";
+
 import type { JobContext } from "@tinkerbell/core";
 
 /** How many Plex calls this module may have in flight. Mirrors `COMMIT_CONCURRENCY`. */
@@ -161,49 +162,6 @@ export async function reconcileMembership(
   return { ratingKey: existing.ratingKey, added: toAdd.length, removed };
 }
 
-/**
- * Delete the collections this rule owned but no longer produces.
- *
- * The counterpart to not deleting everything up front: a rule that stops
- * selecting a director must still take that director's shelf down. Runs once at
- * the end, when the produced set is finally known.
- */
-export async function removeUnproduced(
-  ctx: JobContext,
-  client: PlexClient,
-  existing: ExistingBySection,
-  produced: Set<string>,
-): Promise<number> {
-  const stale: string[] = [];
-  for (const [sectionKey, owned] of existing) {
-    for (const [name, collection] of owned) {
-      if (!produced.has(producedKey(sectionKey, name))) stale.push(collection.ratingKey);
-    }
-  }
-  if (stale.length === 0) return 0;
-
-  const deletes = new PQueue({ concurrency: RECONCILE_CONCURRENCY });
-  const deleted: string[] = [];
-  await Promise.all(
-    stale.map((ratingKey) =>
-      deletes.add(async () => {
-        try {
-          await client.deleteItem(ratingKey);
-          deleted.push(ratingKey);
-        } catch (err) {
-          ctx.log(`Failed to remove a collection this rule no longer produces:`, err);
-        }
-      }),
-    ),
-  );
-
-  // Evict the local rows in the same breath, or the Collections page shows them
-  // alongside the ones that survived until the next sync notices they're gone.
-  forgetCollections(deleted);
-  if (deleted.length > 0) ctx.log(`Removed ${deleted.length} collection(s) this rule no longer produces.`);
-  return deleted.length;
-}
-
 /** The key `produced` is tracked under - section plus lowercased title. */
 export function producedKey(sectionKey: string, name: string): string {
   return `${sectionKey} ${name.toLowerCase()}`;
@@ -285,4 +243,54 @@ export async function reconcilePins(
     ctx.log(`[pin] Pinned ${pinned} and unpinned ${unpinned} collection(s).`);
   }
   return { pinned, unpinned };
+}
+
+export function createReconcileCommand(deps: Pick<Services, "collections">) {
+  const { collections } = deps;
+  const { forgetCollections } = collections;
+
+  /**
+   * Delete the collections this rule owned but no longer produces.
+   *
+   * The counterpart to not deleting everything up front: a rule that stops
+   * selecting a director must still take that director's shelf down. Runs once at
+   * the end, when the produced set is finally known.
+   */
+  async function removeUnproduced(
+    ctx: JobContext,
+    client: PlexClient,
+    existing: ExistingBySection,
+    produced: Set<string>,
+  ): Promise<number> {
+    const stale: string[] = [];
+    for (const [sectionKey, owned] of existing) {
+      for (const [name, collection] of owned) {
+        if (!produced.has(producedKey(sectionKey, name))) stale.push(collection.ratingKey);
+      }
+    }
+    if (stale.length === 0) return 0;
+
+    const deletes = new PQueue({ concurrency: RECONCILE_CONCURRENCY });
+    const deleted: string[] = [];
+    await Promise.all(
+      stale.map((ratingKey) =>
+        deletes.add(async () => {
+          try {
+            await client.deleteItem(ratingKey);
+            deleted.push(ratingKey);
+          } catch (err) {
+            ctx.log(`Failed to remove a collection this rule no longer produces:`, err);
+          }
+        }),
+      ),
+    );
+
+    // Evict the local rows in the same breath, or the Collections page shows them
+    // alongside the ones that survived until the next sync notices they're gone.
+    forgetCollections(deleted);
+    if (deleted.length > 0) ctx.log(`Removed ${deleted.length} collection(s) this rule no longer produces.`);
+    return deleted.length;
+  }
+
+  return { removeUnproduced };
 }

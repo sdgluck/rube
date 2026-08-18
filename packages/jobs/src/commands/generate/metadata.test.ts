@@ -1,3 +1,5 @@
+import { planWrites } from "./metadata.ts";
+import { decodeTags } from "@tinkerbell/domain.metadata";
 /**
  * The metadata gates.
  *
@@ -11,17 +13,28 @@
  * regression that slips a write past a gate fails on the request rather than
  * on a count that could be satisfied for the wrong reason.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 
-setupTempDb("tinkerbell-metadata-job-test-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { config, events, metadataOriginals, rules } from "@tinkerbell/db";
+import { noopCheckpoint } from "@tinkerbell/core";
+import { MetadataToken } from "@tinkerbell/domain.metadata";
+import { createMetadataCommand } from "./metadata.ts";
 
-const { db, rules, config, metadataOriginals, events } = await import("@tinkerbell/db");
-const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
-const { batchRows, listBatches, snapshotWrites, decodeTags } = await import("@tinkerbell/domain.metadata");
-const { runHandlerWithMetadata, createMetadataBudget, planWrites } = await import("./metadata.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { batchRows, listBatches, snapshotWrites } = c.resolve(MetadataToken);
+const { runHandlerWithMetadata, createMetadataBudget } = createMetadataCommand(services);
+
 const { createPlexClient } = await import("@tinkerbell/plex");
 type ItemFields = import("@tinkerbell/plex").ItemFields;
 
@@ -104,6 +117,7 @@ function testContext(): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: new AbortController().signal,

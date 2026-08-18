@@ -7,19 +7,34 @@
  * booting the Sidequest engine — `complete()` is the only base-class method it
  * uses, and standing up a worker pool would test the engine, not us.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "../test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { EventBusToken } from "@tinkerbell/ports";
+import { DbToken } from "@tinkerbell/db";
+import { events, jobRuns, jobs } from "@tinkerbell/db";
+import { createRunner } from "../runner.ts";
+import { createCheckpoint } from "../checkpoint.ts";
+
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { cancelRun } = createRunner(services);
+const { createCheckpoint: makeCheckpoint } = createCheckpoint(services);
 
 const { eq } = await import("drizzle-orm");
-const { db, jobs, jobRuns } = await import("@tinkerbell/db");
-const { CommandJob } = await import("./job.ts");
+// The factory, not the module-level export: that one binds to the worker's
+// own container, which by design opens the real database rather than this
+// test's. What is worth testing is the behaviour, and that takes its services
+// as an argument.
+const { createCommandJob } = await import("./job.ts");
+const CommandJob = createCommandJob(services, (name) => c.createScope(name));
 const { COMMANDS } = await import("../commands/catalog.ts");
 const { JOB_LOG_MAX_BYTES } = await import("../limits.ts");
-const { cancelRun } = await import("../runner.ts");
-const { createCheckpoint } = await import("../checkpoint.ts");
 
 const JOB_ID = "test-job";
 const RUN_ID = "test-run";
@@ -244,7 +259,7 @@ describe("cancellation", () => {
 
     await runCommandJob();
 
-    assert.equal(createCheckpoint(JOB_ID).read(), null);
+    assert.equal(makeCheckpoint(JOB_ID).read(), null);
   });
 
   it("does not overwrite a run the watchdog already failed", async () => {
@@ -261,23 +276,37 @@ describe("cancellation", () => {
   });
 });
 
-describe("core hooks in the worker", () => {
-  it("are wired by importing the worker entrypoint", async () => {
-    // A worker thread runs none of `apps/server`, and every one of these hooks
-    // defaults to a no-op — so before this was registered here, a job's
-    // notification suppression traces, health reports, post-sync provider
-    // rescans and per-user collection counts all silently did nothing.
-    //
-    // Asserted through the observable end of one of them: emitting an event via
-    // the hook has to reach the events table.
-    const { emitEventViaHook } = await import("@tinkerbell/core");
-    const { events } = await import("@tinkerbell/db");
+describe("the cross-domain edges inside a worker", () => {
+  /**
+   * The bug this whole seam exists to prevent.
+   *
+   * A Sidequest worker thread runs none of `apps/server`, and these four edges
+   * used to be module-level `let`s in `@tinkerbell/core` that each defaulted to
+   * a no-op. Nothing in the worker assigned them, so a job's notification
+   * suppression traces, health reports, post-sync provider rescans and per-user
+   * collection counts all silently did nothing — no error, no log line.
+   *
+   * They are container registrations now. Asserted through the observable end
+   * of one: emitting through the port has to land in the events table.
+   */
+  it("reach a real implementation, not a no-op default", () => {
     db.delete(events).run();
 
-    emitEventViaHook("notification.suppressed", "quiet hours", { service: "discord" });
+    const emitEvent = c.resolve(EventBusToken);
+    emitEvent("notification.suppressed", "quiet hours", { service: "discord" });
 
     const rows = db.select().from(events).all();
-    assert.equal(rows.length, 1, "the hook must not be a no-op inside a worker");
+    assert.equal(rows.length, 1, "the event port must not be a no-op inside a worker");
     assert.equal(rows[0].type, "notification.suppressed");
+  });
+
+  it("cannot be silently absent — an unregistered port fails to resolve", async () => {
+    // The property that replaces "remember to call registerCoreHooks()": a
+    // container built without the health domain does not quietly report health
+    // to nobody, it refuses to hand out a reporter at all.
+    const { createContainer } = await import("@tinkerbell/container");
+    const bare = createContainer(() => {});
+    assert.throws(() => bare.resolve(EventBusToken), /No registration for "events.bus"/);
+    await bare.dispose();
   });
 });

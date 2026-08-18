@@ -5,9 +5,16 @@
  * notices for a week.
  */
 
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { isDeferrable, isWithinWindow, parseClock } from "./deferral.ts";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { createDeferral, isDeferrable, parseClock } from "./deferral.ts";
+
+const c = createTestContainer();
+after(() => c.dispose());
+
+const { isWithinWindow } = createDeferral(c.resolve(ServicesToken));
 
 const at = (hours: number, minutes = 0) => new Date(2026, 0, 15, hours, minutes);
 

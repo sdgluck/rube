@@ -1,7 +1,9 @@
+import { type Services } from "@tinkerbell/composition";
+import { createTmdbMetadataCommand } from "../tmdb-metadata.ts";
 import type { TmdbCachedDetails } from "@tinkerbell/db";
-import { getConfig } from "@tinkerbell/core";
+
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
-import { hydrateTmdbDetails } from "#commands/generate/tmdb-metadata.ts";
+
 import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
@@ -66,75 +68,6 @@ const BUCKETS: Record<KeywordGroupedField, KeywordBucket[]> = {
   awards: AWARDS,
 };
 
-/**
- * Generic "build one collection per keyword bucket" handler. Bucket
- * definitions are static so the same TMDb cache row drives all three
- * rule types — no extra round-trips beyond what the existing grouped
- * rules already pay.
- */
-export function keywordGroupedHandler(field: KeywordGroupedField) {
-  return async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
-    const { ctx, client, sections, ruleConfig } = deps;
-    const apiKey = getConfig("global_tmdb_api_key");
-    if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
-
-    const buckets = BUCKETS[field];
-    const maxCollections = collectionLimit(ruleConfig);
-    const minItems = minItemsPerGroup(ruleConfig);
-
-    for (const section of sections) {
-      ctx.signal?.throwIfAborted();
-
-      ctx.log(`[${field}] "${section.title}" — indexing by TMDb ID...`);
-      const { items, tmdbToItem } = await indexItemsByTmdb(client, section.key);
-      ctx.log(`[${field}] ${tmdbToItem.size}/${items.length} items have TMDb IDs.`);
-      if (tmdbToItem.size === 0) continue;
-
-      const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
-      const pairs = [...tmdbToItem.keys()].map((tmdbId) => ({ tmdbId, mediaType: sectionMediaType }));
-      const cache = await hydrateTmdbDetails(ctx, { apiKey }, pairs);
-
-      type Group = { bucket: KeywordBucket; items: Array<{ ratingKey: string; title: string; year?: number }> };
-      const groups = new Map<string, Group>();
-      let withSignal = 0;
-
-      for (const [tmdbId, item] of tmdbToItem) {
-        const id = `${sectionMediaType}:${tmdbId}`;
-        const details = cache.get(id);
-        if (!details) continue;
-
-        let matched = false;
-        for (const bucket of buckets) {
-          if (matchesBucket(bucket, details)) {
-            matched = true;
-            const group = groups.get(bucket.key);
-            if (group) group.items.push(item);
-            else groups.set(bucket.key, { bucket, items: [item] });
-          }
-        }
-        if (matched) withSignal++;
-      }
-
-      const ranked = [...groups.values()]
-        .filter((g) => g.items.length >= minItems)
-        .sort((a, b) => b.items.length - a.items.length);
-
-      ctx.log(
-        `[${field}] "${section.title}" — ${withSignal}/${tmdbToItem.size} items matched a bucket; ${ranked.length} bucket(s) to build (${describeLimits(ruleConfig)}).`,
-      );
-
-      for (const group of ranked.slice(0, maxCollections)) {
-        ctx.signal?.throwIfAborted();
-        yield {
-          name: group.bucket.label,
-          section,
-          matched: group.items,
-        };
-      }
-    }
-  };
-}
-
 function matchesBucket(bucket: KeywordBucket, details: TmdbCachedDetails): boolean {
   const keywordHit = (details.keywords ?? []).some((id) => bucket.keywordIds.includes(id));
   if (keywordHit) return true;
@@ -145,4 +78,81 @@ function matchesBucket(bucket: KeywordBucket, details: TmdbCachedDetails): boole
     return true;
   }
   return false;
+}
+
+export function createKeywordGroupedCommand(deps: Services) {
+  const { config } = deps;
+  const { getConfig } = config;
+  const { hydrateTmdbDetails } = createTmdbMetadataCommand(deps);
+
+  /**
+   * Generic "build one collection per keyword bucket" handler. Bucket
+   * definitions are static so the same TMDb cache row drives all three
+   * rule types — no extra round-trips beyond what the existing grouped
+   * rules already pay.
+   */
+  function keywordGroupedHandler(field: KeywordGroupedField) {
+    return async function* (deps: HandlerDeps): AsyncGenerator<PendingCollection> {
+      const { ctx, client, sections, ruleConfig } = deps;
+      const apiKey = getConfig("global_tmdb_api_key");
+      if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
+
+      const buckets = BUCKETS[field];
+      const maxCollections = collectionLimit(ruleConfig);
+      const minItems = minItemsPerGroup(ruleConfig);
+
+      for (const section of sections) {
+        ctx.signal?.throwIfAborted();
+
+        ctx.log(`[${field}] "${section.title}" — indexing by TMDb ID...`);
+        const { items, tmdbToItem } = await indexItemsByTmdb(client, section.key);
+        ctx.log(`[${field}] ${tmdbToItem.size}/${items.length} items have TMDb IDs.`);
+        if (tmdbToItem.size === 0) continue;
+
+        const sectionMediaType: "movie" | "tv" = section.type === "show" ? "tv" : "movie";
+        const pairs = [...tmdbToItem.keys()].map((tmdbId) => ({ tmdbId, mediaType: sectionMediaType }));
+        const cache = await hydrateTmdbDetails(ctx, { apiKey }, pairs);
+
+        type Group = { bucket: KeywordBucket; items: Array<{ ratingKey: string; title: string; year?: number }> };
+        const groups = new Map<string, Group>();
+        let withSignal = 0;
+
+        for (const [tmdbId, item] of tmdbToItem) {
+          const id = `${sectionMediaType}:${tmdbId}`;
+          const details = cache.get(id);
+          if (!details) continue;
+
+          let matched = false;
+          for (const bucket of buckets) {
+            if (matchesBucket(bucket, details)) {
+              matched = true;
+              const group = groups.get(bucket.key);
+              if (group) group.items.push(item);
+              else groups.set(bucket.key, { bucket, items: [item] });
+            }
+          }
+          if (matched) withSignal++;
+        }
+
+        const ranked = [...groups.values()]
+          .filter((g) => g.items.length >= minItems)
+          .sort((a, b) => b.items.length - a.items.length);
+
+        ctx.log(
+          `[${field}] "${section.title}" — ${withSignal}/${tmdbToItem.size} items matched a bucket; ${ranked.length} bucket(s) to build (${describeLimits(ruleConfig)}).`,
+        );
+
+        for (const group of ranked.slice(0, maxCollections)) {
+          ctx.signal?.throwIfAborted();
+          yield {
+            name: group.bucket.label,
+            section,
+            matched: group.items,
+          };
+        }
+      }
+    };
+  }
+
+  return { keywordGroupedHandler };
 }

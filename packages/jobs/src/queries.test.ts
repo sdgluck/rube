@@ -1,11 +1,18 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { jobRuns, jobs } from "@tinkerbell/db";
+import { createQueries } from "./queries.ts";
 
-const { db, jobs, jobRuns } = await import("@tinkerbell/db");
-const { getJobRun, getJobRunLog, getJobRunFullLog, getActiveRuns, getRecentRuns } = await import("./queries.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { getJobRun, getJobRunLog, getJobRunFullLog, getActiveRuns, getRecentRuns } = createQueries(services);
 
 const JOB_ID = "test-job";
 

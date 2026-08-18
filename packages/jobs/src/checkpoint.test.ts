@@ -1,12 +1,20 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createCheckpoint } from "./checkpoint.ts";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { jobCheckpoints, jobs } from "@tinkerbell/db";
+
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { createCheckpoint: makeCheckpoint } = createCheckpoint(services);
 
 const { eq } = await import("drizzle-orm");
-const { db, jobs, jobCheckpoints } = await import("@tinkerbell/db");
-const { createCheckpoint } = await import("./checkpoint.ts");
 const { CHECKPOINT_TTL_MS } = await import("./limits.ts");
 
 const JOB_ID = "generate";
@@ -21,7 +29,7 @@ beforeEach(() => {
 
 describe("checkpoint", () => {
   it("round-trips arbitrary JSON state", () => {
-    const cp = createCheckpoint(JOB_ID);
+    const cp = makeCheckpoint(JOB_ID);
     assert.equal(cp.read(), null);
 
     cp.write({ startedAt: 1, completedRuleIds: ["a", "b"] });
@@ -32,7 +40,7 @@ describe("checkpoint", () => {
   });
 
   it("clears on demand", () => {
-    const cp = createCheckpoint(JOB_ID);
+    const cp = makeCheckpoint(JOB_ID);
     cp.write({ any: "thing" });
     cp.clear();
     assert.equal(cp.read(), null);
@@ -41,7 +49,7 @@ describe("checkpoint", () => {
   it("discards a checkpoint past its TTL", () => {
     // A stale checkpoint that still read as valid would let a run skip work it
     // never actually did — the one failure mode checkpointing must not have.
-    const cp = createCheckpoint(JOB_ID);
+    const cp = makeCheckpoint(JOB_ID);
     cp.write({ completedRuleIds: ["a"] });
     db.update(jobCheckpoints)
       .set({ updatedAt: Date.now() - CHECKPOINT_TTL_MS - 1000 })
@@ -54,7 +62,7 @@ describe("checkpoint", () => {
   });
 
   it("keeps a checkpoint just inside its TTL", () => {
-    const cp = createCheckpoint(JOB_ID);
+    const cp = makeCheckpoint(JOB_ID);
     cp.write({ completedRuleIds: ["a"] });
     db.update(jobCheckpoints)
       .set({ updatedAt: Date.now() - CHECKPOINT_TTL_MS + 60_000 })
@@ -69,17 +77,17 @@ describe("checkpoint", () => {
       .values({ id: "sync-media", name: "Sync", command: "sync-media", schedule: "", enabled: 1, config: {} })
       .run();
 
-    createCheckpoint(JOB_ID).write({ which: "generate" });
-    createCheckpoint("sync-media").write({ which: "sync-media" });
+    makeCheckpoint(JOB_ID).write({ which: "generate" });
+    makeCheckpoint("sync-media").write({ which: "sync-media" });
 
-    assert.deepEqual(createCheckpoint(JOB_ID).read(), { which: "generate" });
-    assert.deepEqual(createCheckpoint("sync-media").read(), { which: "sync-media" });
+    assert.deepEqual(makeCheckpoint(JOB_ID).read(), { which: "generate" });
+    assert.deepEqual(makeCheckpoint("sync-media").read(), { which: "sync-media" });
   });
 
   it("never throws a run down when the write fails", () => {
     // A checkpoint is an optimisation. `no-such-job` violates the FK, which
     // must surface as a no-op rather than an exception out of ctx.checkpoint.
-    const cp = createCheckpoint("no-such-job");
+    const cp = makeCheckpoint("no-such-job");
     assert.doesNotThrow(() => cp.write({ a: 1 }));
     assert.equal(cp.read(), null);
   });

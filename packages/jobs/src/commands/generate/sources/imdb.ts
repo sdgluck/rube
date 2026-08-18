@@ -1,10 +1,18 @@
-import { getImdbClient } from "@tinkerbell/core";
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
 
-export async function fetchImdbChart(id: string): Promise<{ name: string; imdbIds: string[] }> {
-  return getImdbClient().fetchChart(id);
-}
+export const createImdbCommand = perDeps(function createImdbCommand(deps: Pick<Services, "clients">) {
+  const { clients } = deps;
+  const { getImdbClient } = clients;
 
-export async function fetchImdbList(id: string): Promise<{ name: string; imdbIds: string[] }> {
-  const result = await getImdbClient().fetchList(id);
-  return { name: result.title, imdbIds: result.imdbIds };
-}
+  async function fetchImdbChart(id: string): Promise<{ name: string; imdbIds: string[] }> {
+    return getImdbClient().fetchChart(id);
+  }
+
+  async function fetchImdbList(id: string): Promise<{ name: string; imdbIds: string[] }> {
+    const result = await getImdbClient().fetchList(id);
+    return { name: result.title, imdbIds: result.imdbIds };
+  }
+
+  return { fetchImdbChart, fetchImdbList };
+});

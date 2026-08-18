@@ -4,17 +4,14 @@
  * turning it into a test failure.
  *
  * No database is needed — the catalog is pure data, and each `load()` thunk is
- * a static import.
+ * a static import. It used to need one anyway: loading a command module opened
+ * a SQLite connection as an import side effect, so the test had to point
+ * `DATA_DIR` at a scratch directory first. Commands are factories now, and
+ * importing one does nothing.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "../test-support/temp-db.ts";
 import { COMMANDS, isCommandName, type CommandName } from "./catalog.ts";
-
-// The catalog itself needs no database, but `load()` pulls in command modules
-// that import `@tinkerbell/db` — which connects at import time. Point that at
-// a throwaway directory so running the tests can't touch a real install.
-setupTempDb();
 
 describe("command catalog", () => {
   it("resolves every load() to a module with a default export", async () => {

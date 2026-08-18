@@ -21,23 +21,36 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
 import type { JobContext } from "@tinkerbell/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 import type { MockArr } from "../../test-support/mock-arr-server.ts";
 import { sql } from "drizzle-orm";
 
-setupTempDb("tinkerbell-cleanup-e2e-");
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { cleanupCandidates, config, events, jobRuns, jobs, rules } from "@tinkerbell/db";
+import { DAY_MS, noopCheckpoint } from "@tinkerbell/core";
+import { CleanupToken } from "@tinkerbell/domain.cleanup";
+import { createGenerateCommand } from "./index.ts";
 
-const { db, rules, config, jobs, jobRuns, cleanupCandidates, events } = await import("@tinkerbell/db");
-const { setConfig, noopCheckpoint, DAY_MS } = await import("@tinkerbell/core");
-const { listCandidates } = await import("@tinkerbell/domain.cleanup");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { listCandidates } = c.resolve(CleanupToken);
+// `runCleanup` is the cleanup pass; the module's default export — the
+// collections pass — is `run`.
+const { run: runGenerateJob, runCleanup } = createGenerateCommand(services);
+
 const { startMockPlex } = await import("../../test-support/mock-plex-server.ts");
 const { startMockRadarr } = await import("../../test-support/mock-arr-server.ts");
 // The batch jobs are split by ending, so there are two entry points: the
 // `cleanup` job owns these rules, and `generate` owns the collection rule the
 // back-compat test at the bottom uses as its control.
-const { runCleanup, default: runGenerateJob } = await import("./index.ts");
 
 const RULE_ID = "e2e-cleanup";
 const SECTIONS = [{ key: "1", title: "Films", type: "movie" }];
@@ -67,6 +80,7 @@ function testContext(): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: new AbortController().signal,

@@ -1,16 +1,19 @@
+import { classify } from "./collections-sweep.ts";
 /**
  * `classify` decides what gets deleted off a real Plex server, so these tests
  * are as much about what it must NOT touch as what it collects.
  */
-import { describe, it } from "node:test";
+import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "../test-support/temp-db.ts";
+
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+
+const c = createTestContainer();
+after(() => c.dispose());
 
 // The module reaches @tinkerbell/db transitively (via domain.collections),
 // which opens its connection at import time.
-setupTempDb();
 
-const { classify } = await import("./collections-sweep.ts");
 type Candidate = Parameters<typeof classify>[0][number];
 
 let nextKey = 100;

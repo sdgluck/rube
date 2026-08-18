@@ -1,3 +1,7 @@
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
+import { createDeferral } from "./deferral.ts";
+import { createRuleQueue } from "./rule-queue.ts";
 /**
  * Rules that run because something happened, rather than because a clock said
  * so.
@@ -26,67 +30,71 @@
  * open inside its own tick.
  */
 
-import { configuredTimezone, createLogger, type JobContext } from "@tinkerbell/core";
-import { getEnabledRules } from "@tinkerbell/domain.rules";
+import { createLogger, type JobContext } from "@tinkerbell/core";
+
 import { isRuleActiveOn, ruleConfigSchema, type RuleTrigger } from "@tinkerbell/contracts";
-import { deferralForRuleWork } from "./deferral.ts";
-import { enqueueRuleWork, scheduleRuleDrain } from "./rule-queue.ts";
 
 const log = createLogger("rule-triggers");
 
-/**
- * Queue every enabled rule listening for `trigger`, if anything actually
- * happened. Returns a summary line, or null when there was nothing to do — the
- * caller folds it into its own message.
- */
-export async function runTriggeredRules(
-  ctx: JobContext,
-  trigger: RuleTrigger,
-  eventCount: number,
-): Promise<string | null> {
-  if (eventCount <= 0) return null;
+export const createRuleTriggers = perDeps(function createRuleTriggers(deps: Services) {
+  const { config, rules } = deps;
+  const { configuredTimezone } = config;
+  const { getEnabledRules } = rules;
+  const { deferralForRuleWork } = createDeferral(deps);
+  const { enqueueRuleWork, scheduleRuleDrain } = createRuleQueue(deps);
 
-  const now = new Date();
-  const listening = getEnabledRules().filter((rule) => {
-    const parsed = ruleConfigSchema.safeParse(rule.config);
-    const schedule = parsed.success ? parsed.data.schedule : undefined;
-    if (!schedule?.triggers?.includes(trigger)) return false;
-    // A seasonal rule stays out of season however it was started, and its
-    // season is read where the server lives — not where the container does.
-    return isRuleActiveOn(schedule, now, configuredTimezone());
-  });
-  if (listening.length === 0) return null;
+  /**
+   * Queue every enabled rule listening for `trigger`, if anything actually
+   * happened. Returns a summary line, or null when there was nothing to do — the
+   * caller folds it into its own message.
+   */
+  async function runTriggeredRules(ctx: JobContext, trigger: RuleTrigger, eventCount: number): Promise<string | null> {
+    if (eventCount <= 0) return null;
 
-  // Somebody is watching, or we're outside the maintenance window.
-  //
-  // Dropped rather than held, unlike a due cron: a trigger never replaces the
-  // nightly batch (`runsInNightlyBatch`), so the rule still runs tonight, and
-  // queueing events would mean deciding what a backlog of "something was added"
-  // even means an hour later. `item-watched` is the case this matters most for
-  // — it fires from the playback poller, which is to say at the one moment a
-  // stream is provably open.
-  const busy = deferralForRuleWork();
-  if (busy) {
-    ctx.log(`${eventCount} ${trigger} event(s) — not running ${listening.length} rule(s): ${busy.reason}.`);
-    return null;
+    const now = new Date();
+    const listening = getEnabledRules().filter((rule) => {
+      const parsed = ruleConfigSchema.safeParse(rule.config);
+      const schedule = parsed.success ? parsed.data.schedule : undefined;
+      if (!schedule?.triggers?.includes(trigger)) return false;
+      // A seasonal rule stays out of season however it was started, and its
+      // season is read where the server lives — not where the container does.
+      return isRuleActiveOn(schedule, now, configuredTimezone());
+    });
+    if (listening.length === 0) return null;
+
+    // Somebody is watching, or we're outside the maintenance window.
+    //
+    // Dropped rather than held, unlike a due cron: a trigger never replaces the
+    // nightly batch (`runsInNightlyBatch`), so the rule still runs tonight, and
+    // queueing events would mean deciding what a backlog of "something was added"
+    // even means an hour later. `item-watched` is the case this matters most for
+    // — it fires from the playback poller, which is to say at the one moment a
+    // stream is provably open.
+    const busy = deferralForRuleWork();
+    if (busy) {
+      ctx.log(`${eventCount} ${trigger} event(s) — not running ${listening.length} rule(s): ${busy.reason}.`);
+      return null;
+    }
+
+    const queued: string[] = [];
+    let joined = 0;
+    for (const rule of listening) {
+      if (enqueueRuleWork(rule.id, trigger)) queued.push(rule.name);
+      else joined++;
+    }
+    if (queued.length > 0) scheduleRuleDrain();
+
+    const parts = [];
+    if (queued.length) parts.push(`Queued ${queued.length} rule(s) on ${trigger}: ${queued.join(", ")}`);
+    // A rule woken by two events in one poll, or already running from its cron.
+    // Silence here read as "the trigger didn't fire", which is the opposite of
+    // what happened.
+    if (joined > 0) parts.push(`${joined} already queued or running`);
+    if (parts.length === 0) return null;
+
+    log.info("trigger queued rules", { trigger, eventCount, queued: queued.length, joined });
+    return parts.join("; ");
   }
 
-  const queued: string[] = [];
-  let joined = 0;
-  for (const rule of listening) {
-    if (enqueueRuleWork(rule.id, trigger)) queued.push(rule.name);
-    else joined++;
-  }
-  if (queued.length > 0) scheduleRuleDrain();
-
-  const parts = [];
-  if (queued.length) parts.push(`Queued ${queued.length} rule(s) on ${trigger}: ${queued.join(", ")}`);
-  // A rule woken by two events in one poll, or already running from its cron.
-  // Silence here read as "the trigger didn't fire", which is the opposite of
-  // what happened.
-  if (joined > 0) parts.push(`${joined} already queued or running`);
-  if (parts.length === 0) return null;
-
-  log.info("trigger queued rules", { trigger, eventCount, queued: queued.length, joined });
-  return parts.join("; ");
-}
+  return { runTriggeredRules };
+});

@@ -1,9 +1,6 @@
+import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createPlexClient } from "@tinkerbell/plex";
-import { plexHealthCallback } from "@tinkerbell/core";
-import { deleteConfig, getConfig } from "@tinkerbell/core";
-import { createRule, getRules } from "@tinkerbell/domain.rules";
-import { forgetCollections } from "@tinkerbell/domain.collections";
-import { markProviderCompleted, scanProviderState } from "@tinkerbell/domain.migration";
+
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
 
 function dedupeName(name: string, taken: Set<string>): string {
@@ -14,89 +11,115 @@ function dedupeName(name: string, taken: Set<string>): string {
   }
 }
 
-export default async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-  ctx.log("tinkerbell migrate-collections");
+export function createMigrateCollectionsCommand(
+  deps: Pick<Services, "clients" | "collections" | "config" | "migration" | "rules">,
+) {
+  const { clients, collections, config, migration, rules } = deps;
+  const { plexHealthCallback } = clients;
+  const { deleteConfig, getConfig } = config;
+  const { createRule, getRules } = rules;
+  const { forgetCollections } = collections;
+  const { markProviderCompleted, scanProviderState } = migration;
 
-  const pending = getConfig("migration_pending_plan");
-  if (!pending) {
-    ctx.log("No pending migration plan found — aborting.");
-    return;
-  }
+  async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
+    ctx.log("tinkerbell migrate-collections");
 
-  const { providerId, items, deleteOriginals } = pending;
-  ctx.log(`Plan: provider=${providerId}, ${items.length} rule(s), deleteOriginals=${deleteOriginals}`);
+    const pending = getConfig("migration_pending_plan");
+    if (!pending) {
+      ctx.log("No pending migration plan found — aborting.");
+      return;
+    }
 
-  const totalSteps = items.length + (deleteOriginals ? items.length : 0);
-  let step = 0;
+    const { providerId, items, deleteOriginals } = pending;
+    ctx.log(`Plan: provider=${providerId}, ${items.length} rule(s), deleteOriginals=${deleteOriginals}`);
 
-  // 1. Create rules (disabled by default per the migration design)
-  //
-  // Names are suffixed on collision, the way registry import and the Rules
-  // page's own duplicate action do it. A migrated rule landing under a name
-  // that already exists is otherwise invisible: two rows reading identically,
-  // distinguishable only by one of them being switched off.
-  const taken = new Set(getRules().map((r) => r.name));
-  for (const item of items) {
-    ctx.signal?.throwIfAborted();
-    step++;
-    ctx.progress(step, totalSteps, `Creating rule "${item.ruleName}"...`);
-    const name = dedupeName(item.ruleName, taken);
-    taken.add(name);
-    const rule = createRule({
-      name,
-      type: item.ruleType,
-      config: item.ruleConfig,
-      enabled: false,
-    });
-    if (name !== item.ruleName) ctx.log(`"${item.ruleName}" already exists — migrated rule named "${name}".`);
-    ctx.log(`Created rule "${rule.name}" (${rule.type}, id=${rule.id}, disabled).`);
-  }
+    const totalSteps = items.length + (deleteOriginals ? items.length : 0);
+    let step = 0;
 
-  // 2. Optionally delete the original Plex collections this migration is
-  // replacing. We delete the *specific* rating keys the plan pinned, not a
-  // blanket label sweep, so untouched collections (e.g. unmappable ones the
-  // user kept) survive.
-  if (deleteOriginals) {
-    const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
-    const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
-    if (!PLEX_TOKEN) {
-      ctx.log("Plex token missing — skipping originals delete.");
-    } else {
-      const client = createPlexClient({
-        url: PLEX_URL,
-        token: PLEX_TOKEN,
-        signal: ctx.signal,
-        onHealth: plexHealthCallback,
+    // 1. Create rules (disabled by default per the migration design)
+    //
+    // Names are suffixed on collision, the way registry import and the Rules
+    // page's own duplicate action do it. A migrated rule landing under a name
+    // that already exists is otherwise invisible: two rows reading identically,
+    // distinguishable only by one of them being switched off.
+    const taken = new Set(getRules().map((r) => r.name));
+    for (const item of items) {
+      ctx.signal?.throwIfAborted();
+      step++;
+      ctx.progress(step, totalSteps, `Creating rule "${item.ruleName}"...`);
+      const name = dedupeName(item.ruleName, taken);
+      taken.add(name);
+      const rule = createRule({
+        name,
+        type: item.ruleType,
+        config: item.ruleConfig,
+        enabled: false,
       });
+      if (name !== item.ruleName) ctx.log(`"${item.ruleName}" already exists — migrated rule named "${name}".`);
+      ctx.log(`Created rule "${rule.name}" (${rule.type}, id=${rule.id}, disabled).`);
+    }
 
-      let deleted = 0;
-      let failed = 0;
-      for (const item of items) {
-        ctx.signal?.throwIfAborted();
-        step++;
-        ctx.progress(step, totalSteps, `Deleting originals for "${item.ruleName}"...`);
-        for (const ratingKey of item.replacesRatingKeys) {
-          try {
-            await client.deleteItem(ratingKey);
-            forgetCollections([ratingKey]);
-            deleted++;
-          } catch (err) {
-            failed++;
-            ctx.log(`Failed to delete collection ratingKey=${ratingKey}: ${(err as Error).message ?? err}`);
+    // 2. Optionally delete the original Plex collections this migration is
+    // replacing. We delete the *specific* rating keys the plan pinned, not a
+    // blanket label sweep, so untouched collections (e.g. unmappable ones the
+    // user kept) survive.
+    if (deleteOriginals) {
+      const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+      const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+      if (!PLEX_TOKEN) {
+        ctx.log("Plex token missing — skipping originals delete.");
+      } else {
+        const client = createPlexClient({
+          url: PLEX_URL,
+          token: PLEX_TOKEN,
+          signal: ctx.signal,
+          onHealth: plexHealthCallback,
+        });
+
+        let deleted = 0;
+        let failed = 0;
+        for (const item of items) {
+          ctx.signal?.throwIfAborted();
+          step++;
+          ctx.progress(step, totalSteps, `Deleting originals for "${item.ruleName}"...`);
+          for (const ratingKey of item.replacesRatingKeys) {
+            try {
+              await client.deleteItem(ratingKey);
+              forgetCollections([ratingKey]);
+              deleted++;
+            } catch (err) {
+              failed++;
+              ctx.log(`Failed to delete collection ratingKey=${ratingKey}: ${(err as Error).message ?? err}`);
+            }
           }
         }
+        ctx.log(`Deleted ${deleted} original collection(s)${failed ? `, ${failed} failed` : ""}.`);
       }
-      ctx.log(`Deleted ${deleted} original collection(s)${failed ? `, ${failed} failed` : ""}.`);
     }
+
+    // 3. Refresh scan state and mark migration complete so the banner stays
+    // dismissed even after future syncs reveal additional collections.
+    // The banner formula short-circuits on `completedAt != null`, so no
+    // further dismissed_at touch is needed.
+    await scanProviderState(providerId);
+    markProviderCompleted(providerId);
+    deleteConfig("migration_pending_plan");
+
+    ctx.log("Migration complete.");
   }
 
-  // 3. Refresh scan state and mark migration complete so the banner stays
-  // dismissed even after future syncs reveal additional collections.
-  // The banner formula short-circuits on `completedAt != null`, so no
-  // further dismissed_at touch is needed.
-  await scanProviderState(providerId);
-  markProviderCompleted(providerId);
-  deleteConfig("migration_pending_plan");
+  return { run };
+}
 
-  ctx.log("Migration complete.");
+/**
+ * The command entrypoint, unchanged in shape: the runner and the Sidequest
+ * worker both still call `default(ctx, config)`. What changed is where the
+ * work gets its dependencies — the run's own container scope, rather than
+ * whatever the module graph happened to have initialised.
+ */
+export default function run(
+  ctx: JobContext,
+  config: Parameters<ReturnType<typeof createMigrateCollectionsCommand>["run"]>[1],
+): Promise<void> {
+  return createMigrateCollectionsCommand(ctx.scope.resolve(ServicesToken)).run(ctx, config);
 }

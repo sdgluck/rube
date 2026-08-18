@@ -8,19 +8,30 @@
  * sections, and an empty collection list per section to get as far as the
  * per-rule handlers, which is where the interesting behaviour lives.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
-import { setupTempDb } from "../../test-support/temp-db.ts";
 import type { JobContext } from "@tinkerbell/core";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { config, rules } from "@tinkerbell/db";
+import { noopCheckpoint } from "@tinkerbell/core";
+import { createLlmCommand } from "./ai/llm.ts";
+import { createGenerateCommand } from "./index.ts";
 
-const { db, rules, config } = await import("@tinkerbell/db");
-const { setConfig, noopCheckpoint } = await import("@tinkerbell/core");
-const { llmUnavailableReason } = await import("./ai/llm.ts");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { setConfig } = c.resolve(ConfigStoreToken);
+const { llmUnavailableReason } = createLlmCommand(services);
+const { run, runCleanup } = createGenerateCommand(services);
+
 const { withItemCache } = await import("./item-cache.ts");
-const { default: run, runCleanup } = await import("./index.ts");
 
 const SECTIONS = [
   { key: "1", title: "Films", type: "movie" },
@@ -95,6 +106,7 @@ function testContext(signal?: AbortSignal): { ctx: JobContext; log: string[] } {
   return {
     log: lines,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: signal ?? new AbortController().signal,

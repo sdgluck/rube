@@ -6,14 +6,19 @@
  * like a duplicate for every collection the rule makes — until the nightly
  * sync happens to notice they're gone from Plex.
  */
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { DbToken } from "@tinkerbell/db";
+import { collectionItems, collections } from "@tinkerbell/db";
+import { CollectionsToken } from "@tinkerbell/domain.collections";
 
-const { db, collections, collectionItems } = await import("@tinkerbell/db");
-const { forgetCollections } = await import("@tinkerbell/domain.collections");
+const c = createTestContainer();
+after(() => c.dispose());
+
+const db = c.resolve(DbToken);
+const { forgetCollections } = c.resolve(CollectionsToken);
 
 function seed(ratingKey: string, title: string): void {
   db.insert(collections)

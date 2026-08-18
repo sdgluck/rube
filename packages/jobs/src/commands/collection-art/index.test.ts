@@ -11,17 +11,23 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "@tinkerbell/db/test-support";
-import type { JobContext } from "@tinkerbell/core";
-import type { MockPlex } from "../../test-support/mock-plex-server.ts";
+import { noopCheckpoint, type JobContext } from "@tinkerbell/core";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { ConfigStoreToken } from "@tinkerbell/core";
+import { DbToken, collectionArtwork, rules } from "@tinkerbell/db";
+import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { startMockPlex, type MockPlex } from "../../test-support/mock-plex-server.ts";
+import { createCollectionArtCommand } from "./index.ts";
 
-setupTempDb("tinkerbell-collection-art-");
+const c = createTestContainer();
+after(() => c.dispose());
 
-const { db, rules, collectionArtwork } = await import("@tinkerbell/db");
-const { deleteConfig, setConfig, noopCheckpoint } = await import("@tinkerbell/core");
-const { getCollectionArtwork, recordCollectionArtwork } = await import("@tinkerbell/domain.collections");
-const { startMockPlex } = await import("../../test-support/mock-plex-server.ts");
-const run = (await import("./index.ts")).default;
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { deleteConfig, setConfig } = c.resolve(ConfigStoreToken);
+const { getCollectionArtwork, recordCollectionArtwork } = c.resolve(CollectionsToken);
+const { run } = createCollectionArtCommand(services);
 
 const RULE_ID = "art-rule";
 const SECTIONS = [{ key: "1", title: "Films", type: "movie" }];
@@ -50,6 +56,7 @@ function testContext(): TestCtx {
     log: lines,
     controller,
     ctx: {
+      scope: c.createScope("test"),
       log: (...args: unknown[]) => lines.push(args.map(String).join(" ")),
       progress: () => {},
       signal: controller.signal,
@@ -281,7 +288,6 @@ describe("collection-art", () => {
       seedRule({ poster: "mosaic" });
       seedCollections(["1980s"]);
       // Stand in for the commit-time write: the ledger says what we last wrote.
-      const { recordCollectionArtwork } = await import("@tinkerbell/domain.collections");
       recordCollectionArtwork(RULE_ID, "1980s", {
         summary: "Films released between 1980 and 1989.",
         summarySource: "template",
@@ -301,7 +307,6 @@ describe("collection-art", () => {
     it("does not mistake its own summary for an edit", async () => {
       seedRule({ poster: "mosaic" });
       seedCollections(["1980s"]);
-      const { recordCollectionArtwork } = await import("@tinkerbell/domain.collections");
       recordCollectionArtwork(RULE_ID, "1980s", { summary: "Ours.", summarySource: "template" });
       plex.collections.get("9000")!.summary = "Ours.";
 

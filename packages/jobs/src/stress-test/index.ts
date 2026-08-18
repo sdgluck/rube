@@ -1,12 +1,14 @@
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
 import { randomUUID } from "node:crypto";
 import { errorMessage } from "@tinkerbell/core";
 import { fork, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
-import { db, stressTestRuns } from "@tinkerbell/db";
+import { stressTestRuns } from "@tinkerbell/db";
 import type { PlexClient } from "@tinkerbell/plex";
-import { getConfig } from "@tinkerbell/core";
+
 import type { JobContext } from "@tinkerbell/core";
 
 export const stressTestConfigSchema = z.object({
@@ -273,436 +275,457 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-export async function runStressTest(
-  client: PlexClient,
-  config: StressTestConfig,
-  ctx: JobContext,
-  resultId?: string,
-): Promise<StressTestResult> {
-  const maxSessions = config.maxSessions ?? 20;
-  const transcodePct = config.mode === "mixed" ? (config.transcodePct ?? 50) : config.mode === "transcode" ? 100 : 0;
+// --- Child process runner ---
 
-  const startedAt = Date.now();
-  const steps: StressTestStep[] = [];
-  const clients: SimulatedClient[] = [];
+// Process-level: this is a handle on a child process, and there is one of
+// those per process however many containers exist.
+let activeStressTest: { id: string; child: ChildProcess } | null = null;
 
-  // Gather media items — movies can be used directly; shows need episode resolution
-  ctx.log("Fetching library sections...");
-  const sections = await client.getSections();
-  const movieSections = sections.filter((s) => s.type === "movie");
-  const showSections = sections.filter((s) => s.type === "show");
+export const createStressTest = perDeps(function createStressTest(deps: Pick<Services, "config" | "db">) {
+  const { config, db } = deps;
+  const { getConfig } = config;
 
-  if (movieSections.length === 0 && showSections.length === 0) {
-    throw new Error("No movie or show sections found in Plex library");
-  }
+  async function runStressTest(
+    client: PlexClient,
+    config: StressTestConfig,
+    ctx: JobContext,
+    resultId?: string,
+  ): Promise<StressTestResult> {
+    const maxSessions = config.maxSessions ?? 20;
+    const transcodePct = config.mode === "mixed" ? (config.transcodePct ?? 50) : config.mode === "transcode" ? 100 : 0;
 
-  // Collect a pool of ratingKeys (must be directly playable items: movies or episodes)
-  // Skip items with existing watch progress to avoid polluting "Continue Watching"
-  ctx.log("Gathering unwatched media items for test...");
-  const ratingKeys: string[] = [];
-  let skippedInProgress = 0;
+    const startedAt = Date.now();
+    const steps: StressTestStep[] = [];
+    const clients: SimulatedClient[] = [];
 
-  async function addIfUnwatched(ratingKey: string): Promise<boolean> {
-    if (ratingKeys.length >= maxSessions * 2) return false;
-    try {
-      const detail = await client.getItemDetail(ratingKey);
-      if (detail.viewOffset && detail.viewOffset > 0) {
-        skippedInProgress++;
+    // Gather media items — movies can be used directly; shows need episode resolution
+    ctx.log("Fetching library sections...");
+    const sections = await client.getSections();
+    const movieSections = sections.filter((s) => s.type === "movie");
+    const showSections = sections.filter((s) => s.type === "show");
+
+    if (movieSections.length === 0 && showSections.length === 0) {
+      throw new Error("No movie or show sections found in Plex library");
+    }
+
+    // Collect a pool of ratingKeys (must be directly playable items: movies or episodes)
+    // Skip items with existing watch progress to avoid polluting "Continue Watching"
+    ctx.log("Gathering unwatched media items for test...");
+    const ratingKeys: string[] = [];
+    let skippedInProgress = 0;
+
+    async function addIfUnwatched(ratingKey: string): Promise<boolean> {
+      if (ratingKeys.length >= maxSessions * 2) return false;
+      try {
+        const detail = await client.getItemDetail(ratingKey);
+        if (detail.viewOffset && detail.viewOffset > 0) {
+          skippedInProgress++;
+          return false;
+        }
+        ratingKeys.push(ratingKey);
+        return true;
+      } catch {
         return false;
       }
-      ratingKeys.push(ratingKey);
-      return true;
-    } catch {
-      return false;
     }
-  }
 
-  // Movies are directly playable
-  for (const section of movieSections) {
-    const result = await client.getItems(section.key, { offset: 0, size: 100 });
-    for (const item of result.items) {
-      await addIfUnwatched(item.ratingKey);
-      if (ratingKeys.length >= maxSessions * 2) break;
-    }
-    if (ratingKeys.length >= maxSessions * 2) break;
-  }
-
-  // For shows, resolve to individual episodes
-  if (ratingKeys.length < maxSessions * 2) {
-    for (const section of showSections) {
-      const result = await client.getItems(section.key, { offset: 0, size: 10 });
-      for (const show of result.items) {
+    // Movies are directly playable
+    for (const section of movieSections) {
+      const result = await client.getItems(section.key, { offset: 0, size: 100 });
+      for (const item of result.items) {
+        await addIfUnwatched(item.ratingKey);
         if (ratingKeys.length >= maxSessions * 2) break;
-        try {
-          const seasons = await client.getMetadataChildren(show.ratingKey);
-          if (seasons.length > 0) {
-            const episodes = await client.getMetadataChildren(seasons[0].ratingKey);
-            for (const ep of episodes.slice(0, 5)) {
-              await addIfUnwatched(ep.ratingKey);
-              if (ratingKeys.length >= maxSessions * 2) break;
-            }
-          }
-        } catch {
-          // Skip shows that fail metadata fetch
-        }
       }
       if (ratingKeys.length >= maxSessions * 2) break;
     }
-  }
 
-  if (ratingKeys.length === 0) {
-    throw new Error("No unwatched playable media items found in video sections");
-  }
-
-  if (skippedInProgress > 0) {
-    ctx.log(`Skipped ${skippedInProgress} item(s) with existing watch progress`);
-  }
-
-  // Shuffle the pool
-  for (let i = ratingKeys.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [ratingKeys[i], ratingKeys[j]] = [ratingKeys[j], ratingKeys[i]];
-  }
-
-  ctx.log(`Found ${ratingKeys.length} media items for testing`);
-  ctx.log(`Mode: ${config.mode}, Max sessions: ${maxSessions}`);
-  if (config.mode === "mixed") {
-    ctx.log(`Transcode/DirectPlay ratio: ${transcodePct}/${100 - transcodePct}`);
-  }
-
-  let maxHealthySessions = 0;
-  const usedRatingKeys = new Set<string>();
-
-  try {
-    for (let step = 1; step <= maxSessions; step++) {
-      if (ctx.signal.aborted) break;
-
-      // Determine mode for this client
-      const useTranscode = Math.random() * 100 < transcodePct;
-      const clientMode = useTranscode ? "transcode" : "directplay";
-
-      const ratingKey = ratingKeys[(step - 1) % ratingKeys.length];
-      const simClient = new SimulatedClient();
-      // Wire up debug logging for first step
-      if (step <= 2) {
-        simClient.log = (msg) => ctx.log(msg);
+    // For shows, resolve to individual episodes
+    if (ratingKeys.length < maxSessions * 2) {
+      for (const section of showSections) {
+        const result = await client.getItems(section.key, { offset: 0, size: 10 });
+        for (const show of result.items) {
+          if (ratingKeys.length >= maxSessions * 2) break;
+          try {
+            const seasons = await client.getMetadataChildren(show.ratingKey);
+            if (seasons.length > 0) {
+              const episodes = await client.getMetadataChildren(seasons[0].ratingKey);
+              for (const ep of episodes.slice(0, 5)) {
+                await addIfUnwatched(ep.ratingKey);
+                if (ratingKeys.length >= maxSessions * 2) break;
+              }
+            }
+          } catch {
+            // Skip shows that fail metadata fetch
+          }
+        }
+        if (ratingKeys.length >= maxSessions * 2) break;
       }
+    }
 
-      ctx.log(`Step ${step}: Starting ${clientMode} session (${simClient.clientId})`);
-      ctx.progress(step, maxSessions + 1, `Starting session ${step}/${maxSessions}`);
+    if (ratingKeys.length === 0) {
+      throw new Error("No unwatched playable media items found in video sections");
+    }
 
-      try {
-        await simClient.start(ratingKey, clientMode as "transcode" | "directplay", client);
-        clients.push(simClient);
-        usedRatingKeys.add(ratingKey);
-      } catch (err) {
-        ctx.log(`Step ${step}: Failed to start session: ${errorMessage(err)}`);
-        steps.push({
+    if (skippedInProgress > 0) {
+      ctx.log(`Skipped ${skippedInProgress} item(s) with existing watch progress`);
+    }
+
+    // Shuffle the pool
+    for (let i = ratingKeys.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ratingKeys[i], ratingKeys[j]] = [ratingKeys[j], ratingKeys[i]];
+    }
+
+    ctx.log(`Found ${ratingKeys.length} media items for testing`);
+    ctx.log(`Mode: ${config.mode}, Max sessions: ${maxSessions}`);
+    if (config.mode === "mixed") {
+      ctx.log(`Transcode/DirectPlay ratio: ${transcodePct}/${100 - transcodePct}`);
+    }
+
+    let maxHealthySessions = 0;
+    const usedRatingKeys = new Set<string>();
+
+    try {
+      for (let step = 1; step <= maxSessions; step++) {
+        if (ctx.signal.aborted) break;
+
+        // Determine mode for this client
+        const useTranscode = Math.random() * 100 < transcodePct;
+        const clientMode = useTranscode ? "transcode" : "directplay";
+
+        const ratingKey = ratingKeys[(step - 1) % ratingKeys.length];
+        const simClient = new SimulatedClient();
+        // Wire up debug logging for first step
+        if (step <= 2) {
+          simClient.log = (msg) => ctx.log(msg);
+        }
+
+        ctx.log(`Step ${step}: Starting ${clientMode} session (${simClient.clientId})`);
+        ctx.progress(step, maxSessions + 1, `Starting session ${step}/${maxSessions}`);
+
+        try {
+          await simClient.start(ratingKey, clientMode as "transcode" | "directplay", client);
+          clients.push(simClient);
+          usedRatingKeys.add(ratingKey);
+        } catch (err) {
+          ctx.log(`Step ${step}: Failed to start session: ${errorMessage(err)}`);
+          steps.push({
+            step,
+            sessions: clients.length,
+            avgTranscodeSpeed: null,
+            avgBandwidth: 0,
+            errors: 1,
+            timestamp: Date.now(),
+          });
+          break;
+        }
+
+        // Wait for stabilization
+        ctx.log(`Step ${step}: Waiting 15s for stabilization...`);
+        await sleep(15000, ctx.signal);
+        if (ctx.signal.aborted) break;
+
+        // Sample sessions 3 times over 6 seconds
+        let totalSpeed = 0;
+        let speedCount = 0;
+        let totalBandwidth = 0;
+        let bandwidthCount = 0;
+        let errors = 0;
+
+        for (let sample = 0; sample < 3; sample++) {
+          if (ctx.signal.aborted) break;
+          try {
+            const sessions = await client.getActiveSessions();
+
+            // Log session details on first sample of first step for debugging
+            if (sample === 0 && step === 1) {
+              ctx.log(`  Active sessions (${sessions.length} total):`);
+              for (const s of sessions) {
+                ctx.log(
+                  `    player="${s.player}" machineId="${s.playerMachineId}" product="${s.product}" speed=${s.transcodeSpeed} bw=${s.bandwidth}`,
+                );
+              }
+            }
+
+            // Filter to only our stress test clients by machineIdentifier
+            const ourSessions = sessions.filter((s) => s.playerMachineId?.startsWith(CLIENT_PREFIX));
+
+            if (sample === 0 && ourSessions.length === 0 && sessions.length > 0) {
+              ctx.log(`  Warning: ${sessions.length} sessions found but none matched prefix "${CLIENT_PREFIX}"`);
+            }
+
+            for (const session of ourSessions) {
+              // Only count non-zero speeds (0 means transcoder is still starting)
+              if (session.transcodeSpeed != null && session.transcodeSpeed > 0) {
+                totalSpeed += session.transcodeSpeed;
+                speedCount++;
+              }
+              if (session.bandwidth != null) {
+                totalBandwidth += session.bandwidth;
+                bandwidthCount++;
+              }
+            }
+          } catch {
+            errors++;
+          }
+
+          if (sample < 2) await sleep(2000, ctx.signal);
+        }
+
+        const avgSpeed = speedCount > 0 ? totalSpeed / speedCount : null;
+        const avgBandwidth = bandwidthCount > 0 ? totalBandwidth / bandwidthCount : 0;
+
+        const stepResult: StressTestStep = {
           step,
           sessions: clients.length,
-          avgTranscodeSpeed: null,
-          avgBandwidth: 0,
-          errors: 1,
+          avgTranscodeSpeed: avgSpeed != null ? Math.round(avgSpeed * 100) / 100 : null,
+          avgBandwidth: Math.round(avgBandwidth),
+          errors,
           timestamp: Date.now(),
-        });
-        break;
-      }
+        };
+        steps.push(stepResult);
 
-      // Wait for stabilization
-      ctx.log(`Step ${step}: Waiting 15s for stabilization...`);
-      await sleep(15000, ctx.signal);
-      if (ctx.signal.aborted) break;
+        ctx.log(
+          `Step ${step}: ${clients.length} sessions, ` +
+            `speed=${avgSpeed != null ? avgSpeed.toFixed(2) + "x" : "n/a"}, ` +
+            `bandwidth=${avgBandwidth}kbps, errors=${errors}`,
+        );
 
-      // Sample sessions 3 times over 6 seconds
-      let totalSpeed = 0;
-      let speedCount = 0;
-      let totalBandwidth = 0;
-      let bandwidthCount = 0;
-      let errors = 0;
-
-      for (let sample = 0; sample < 3; sample++) {
-        if (ctx.signal.aborted) break;
-        try {
-          const sessions = await client.getActiveSessions();
-
-          // Log session details on first sample of first step for debugging
-          if (sample === 0 && step === 1) {
-            ctx.log(`  Active sessions (${sessions.length} total):`);
-            for (const s of sessions) {
-              ctx.log(
-                `    player="${s.player}" machineId="${s.playerMachineId}" product="${s.product}" speed=${s.transcodeSpeed} bw=${s.bandwidth}`,
-              );
-            }
-          }
-
-          // Filter to only our stress test clients by machineIdentifier
-          const ourSessions = sessions.filter((s) => s.playerMachineId?.startsWith(CLIENT_PREFIX));
-
-          if (sample === 0 && ourSessions.length === 0 && sessions.length > 0) {
-            ctx.log(`  Warning: ${sessions.length} sessions found but none matched prefix "${CLIENT_PREFIX}"`);
-          }
-
-          for (const session of ourSessions) {
-            // Only count non-zero speeds (0 means transcoder is still starting)
-            if (session.transcodeSpeed != null && session.transcodeSpeed > 0) {
-              totalSpeed += session.transcodeSpeed;
-              speedCount++;
-            }
-            if (session.bandwidth != null) {
-              totalBandwidth += session.bandwidth;
-              bandwidthCount++;
-            }
-          }
-        } catch {
-          errors++;
+        // Check for degradation — only flag speed if we have actual readings (not null/startup)
+        const speedDegraded = avgSpeed != null && avgSpeed < 1.0;
+        const degraded = speedDegraded || errors > 0;
+        if (degraded) {
+          ctx.log(`Step ${step}: Degradation detected — stopping ramp-up`);
+          // The previous step was the last healthy one
+          break;
         }
 
-        if (sample < 2) await sleep(2000, ctx.signal);
+        maxHealthySessions = clients.length;
       }
+    } finally {
+      // Cleanup all clients
+      ctx.log(`Cleaning up ${clients.length} session(s)...`);
+      ctx.progress(maxSessions, maxSessions + 1, "Cleaning up sessions...");
+      await Promise.allSettled(clients.map((c) => c.stop(client)));
 
-      const avgSpeed = speedCount > 0 ? totalSpeed / speedCount : null;
-      const avgBandwidth = bandwidthCount > 0 ? totalBandwidth / bandwidthCount : 0;
-
-      const stepResult: StressTestStep = {
-        step,
-        sessions: clients.length,
-        avgTranscodeSpeed: avgSpeed != null ? Math.round(avgSpeed * 100) / 100 : null,
-        avgBandwidth: Math.round(avgBandwidth),
-        errors,
-        timestamp: Date.now(),
-      };
-      steps.push(stepResult);
-
-      ctx.log(
-        `Step ${step}: ${clients.length} sessions, ` +
-          `speed=${avgSpeed != null ? avgSpeed.toFixed(2) + "x" : "n/a"}, ` +
-          `bandwidth=${avgBandwidth}kbps, errors=${errors}`,
-      );
-
-      // Check for degradation — only flag speed if we have actual readings (not null/startup)
-      const speedDegraded = avgSpeed != null && avgSpeed < 1.0;
-      const degraded = speedDegraded || errors > 0;
-      if (degraded) {
-        ctx.log(`Step ${step}: Degradation detected — stopping ramp-up`);
-        // The previous step was the last healthy one
-        break;
-      }
-
-      maxHealthySessions = clients.length;
-    }
-  } finally {
-    // Cleanup all clients
-    ctx.log(`Cleaning up ${clients.length} session(s)...`);
-    ctx.progress(maxSessions, maxSessions + 1, "Cleaning up sessions...");
-    await Promise.allSettled(clients.map((c) => c.stop(client)));
-
-    // Mark all used media items as unwatched to clean up watch history
-    if (usedRatingKeys.size > 0) {
-      ctx.log(`Marking ${usedRatingKeys.size} item(s) as unwatched...`);
-      for (const key of usedRatingKeys) {
-        try {
-          await client.markUnwatched(key);
-        } catch {
-          // Best-effort cleanup
+      // Mark all used media items as unwatched to clean up watch history
+      if (usedRatingKeys.size > 0) {
+        ctx.log(`Marking ${usedRatingKeys.size} item(s) as unwatched...`);
+        for (const key of usedRatingKeys) {
+          try {
+            await client.markUnwatched(key);
+          } catch {
+            // Best-effort cleanup
+          }
         }
       }
     }
+
+    const finishedAt = Date.now();
+    const result: StressTestResult = {
+      config,
+      maxSessions: maxHealthySessions,
+      steps,
+      startedAt,
+      finishedAt,
+    };
+
+    // Save to database
+    const id = resultId || randomUUID();
+    saveStressTestResult(id, result);
+
+    ctx.log(`Stress test complete: max supported sessions = ${maxHealthySessions}`);
+    ctx.progress(1, 1, `Complete: ${maxHealthySessions} sessions supported`);
+
+    return result;
   }
 
-  const finishedAt = Date.now();
-  const result: StressTestResult = {
-    config,
-    maxSessions: maxHealthySessions,
-    steps,
-    startedAt,
-    finishedAt,
-  };
-
-  // Save to database
-  const id = resultId || randomUUID();
-  saveStressTestResult(id, result);
-
-  ctx.log(`Stress test complete: max supported sessions = ${maxHealthySessions}`);
-  ctx.progress(1, 1, `Complete: ${maxHealthySessions} sessions supported`);
-
-  return result;
-}
-
-export function saveStressTestResult(id: string, result: StressTestResult): void {
-  db.insert(stressTestRuns)
-    .values({
-      id,
-      config: result.config,
-      maxSessions: result.maxSessions,
-      steps: result.steps,
-      status: "completed",
-      startedAt: result.startedAt,
-      finishedAt: result.finishedAt,
-    })
-    .onConflictDoUpdate({
-      target: stressTestRuns.id,
-      set: {
+  function saveStressTestResult(id: string, result: StressTestResult): void {
+    db.insert(stressTestRuns)
+      .values({
+        id,
         config: result.config,
         maxSessions: result.maxSessions,
         steps: result.steps,
         status: "completed",
+        startedAt: result.startedAt,
         finishedAt: result.finishedAt,
-      },
-    })
-    .run();
-}
+      })
+      .onConflictDoUpdate({
+        target: stressTestRuns.id,
+        set: {
+          config: result.config,
+          maxSessions: result.maxSessions,
+          steps: result.steps,
+          status: "completed",
+          finishedAt: result.finishedAt,
+        },
+      })
+      .run();
+  }
 
-export function getStressTestRuns(): Array<{
-  id: string;
-  config: StressTestConfig;
-  maxSessions: number | null;
-  status: string;
-  startedAt: number;
-  finishedAt: number | null;
-}> {
-  const rows = db
-    .select({
-      id: stressTestRuns.id,
-      config: stressTestRuns.config,
-      maxSessions: stressTestRuns.maxSessions,
-      status: stressTestRuns.status,
-      startedAt: stressTestRuns.startedAt,
-      finishedAt: stressTestRuns.finishedAt,
-    })
-    .from(stressTestRuns)
-    .orderBy(desc(stressTestRuns.startedAt))
-    .all();
+  function getStressTestRuns(): Array<{
+    id: string;
+    config: StressTestConfig;
+    maxSessions: number | null;
+    status: string;
+    startedAt: number;
+    finishedAt: number | null;
+  }> {
+    const rows = db
+      .select({
+        id: stressTestRuns.id,
+        config: stressTestRuns.config,
+        maxSessions: stressTestRuns.maxSessions,
+        status: stressTestRuns.status,
+        startedAt: stressTestRuns.startedAt,
+        finishedAt: stressTestRuns.finishedAt,
+      })
+      .from(stressTestRuns)
+      .orderBy(desc(stressTestRuns.startedAt))
+      .all();
 
-  return rows.map((r) => ({
-    ...r,
-    config: stressTestConfigSchema.parse(r.config),
-  }));
-}
+    return rows.map((r) => ({
+      ...r,
+      config: stressTestConfigSchema.parse(r.config),
+    }));
+  }
 
-export function getStressTestRun(id: string): {
-  id: string;
-  config: StressTestConfig;
-  maxSessions: number | null;
-  steps: StressTestStep[];
-  startedAt: number;
-  finishedAt: number | null;
-} | null {
-  const row = db.select().from(stressTestRuns).where(eq(stressTestRuns.id, id)).get();
-  if (!row) return null;
+  function getStressTestRun(id: string): {
+    id: string;
+    config: StressTestConfig;
+    maxSessions: number | null;
+    steps: StressTestStep[];
+    startedAt: number;
+    finishedAt: number | null;
+  } | null {
+    const row = db.select().from(stressTestRuns).where(eq(stressTestRuns.id, id)).get();
+    if (!row) return null;
+
+    return {
+      ...row,
+      config: stressTestConfigSchema.parse(row.config),
+      steps: z.array(stressTestStepSchema).parse(row.steps),
+    };
+  }
+
+  function startStressTest(config: StressTestConfig): { id: string } {
+    if (activeStressTest) {
+      throw new Error("A stress test is already running");
+    }
+
+    const id = randomUUID();
+    const now = Date.now();
+
+    const plexUrl = getConfig("global_plex_url");
+    const plexToken = getConfig("global_plex_token");
+    if (!plexUrl || !plexToken) {
+      throw new Error("Plex URL and token are not configured");
+    }
+
+    db.insert(stressTestRuns)
+      .values({
+        id,
+        config,
+        maxSessions: null,
+        steps: [],
+        status: "running",
+        progress: 0,
+        message: "",
+        log: "",
+        startedAt: now,
+      })
+      .run();
+
+    const child = fork(join(import.meta.dirname, "worker.ts"));
+    child.send({ id, config });
+
+    child.on("exit", () => {
+      // If the process exits while status is still "running", mark as failed
+      try {
+        const row = db
+          .select({ status: stressTestRuns.status })
+          .from(stressTestRuns)
+          .where(eq(stressTestRuns.id, id))
+          .get();
+        if (row?.status === "running") {
+          db.update(stressTestRuns)
+            .set({ status: "failed", message: "Worker process exited unexpectedly", finishedAt: Date.now() })
+            .where(eq(stressTestRuns.id, id))
+            .run();
+        }
+      } catch {
+        // DB may be closed during shutdown
+      }
+      activeStressTest = null;
+    });
+
+    activeStressTest = { id, child };
+
+    return { id };
+  }
+
+  function cancelStressTest(): void {
+    if (!activeStressTest) return;
+    const { id, child } = activeStressTest;
+
+    // Update DB status — the worker polls this and self-aborts
+    db.update(stressTestRuns)
+      .set({ status: "cancelled", finishedAt: Date.now() })
+      .where(eq(stressTestRuns.id, id))
+      .run();
+
+    // Backup: kill child after a short delay if still alive
+    setTimeout(() => {
+      if (child.exitCode === null) {
+        child.kill();
+      }
+    }, 5000);
+
+    activeStressTest = null;
+  }
+
+  function getActiveStressTest(): {
+    id: string;
+    progress: number;
+    message: string;
+    log: string;
+    startedAt: number;
+  } | null {
+    if (!activeStressTest) return null;
+    const row = db
+      .select({
+        id: stressTestRuns.id,
+        progress: stressTestRuns.progress,
+        message: stressTestRuns.message,
+        log: stressTestRuns.log,
+        startedAt: stressTestRuns.startedAt,
+      })
+      .from(stressTestRuns)
+      .where(eq(stressTestRuns.id, activeStressTest.id))
+      .get();
+    return row ?? null;
+  }
+
+  function markStaleStressTestsAsFailed(): void {
+    const result = db
+      .update(stressTestRuns)
+      .set({ status: "failed", finishedAt: Date.now() })
+      .where(eq(stressTestRuns.status, "running"))
+      .run();
+    if (result.changes > 0) {
+      console.log(`[stress-test] Marked ${result.changes} stale running stress test(s) as failed`);
+    }
+  }
 
   return {
-    ...row,
-    config: stressTestConfigSchema.parse(row.config),
-    steps: z.array(stressTestStepSchema).parse(row.steps),
+    runStressTest,
+    saveStressTestResult,
+    getStressTestRuns,
+    getStressTestRun,
+    startStressTest,
+    cancelStressTest,
+    getActiveStressTest,
+    markStaleStressTestsAsFailed,
   };
-}
-
-// --- Child process runner ---
-
-let activeStressTest: { id: string; child: ChildProcess } | null = null;
-
-export function startStressTest(config: StressTestConfig): { id: string } {
-  if (activeStressTest) {
-    throw new Error("A stress test is already running");
-  }
-
-  const id = randomUUID();
-  const now = Date.now();
-
-  const plexUrl = getConfig("global_plex_url");
-  const plexToken = getConfig("global_plex_token");
-  if (!plexUrl || !plexToken) {
-    throw new Error("Plex URL and token are not configured");
-  }
-
-  db.insert(stressTestRuns)
-    .values({
-      id,
-      config,
-      maxSessions: null,
-      steps: [],
-      status: "running",
-      progress: 0,
-      message: "",
-      log: "",
-      startedAt: now,
-    })
-    .run();
-
-  const child = fork(join(import.meta.dirname, "worker.ts"));
-  child.send({ id, config });
-
-  child.on("exit", () => {
-    // If the process exits while status is still "running", mark as failed
-    try {
-      const row = db
-        .select({ status: stressTestRuns.status })
-        .from(stressTestRuns)
-        .where(eq(stressTestRuns.id, id))
-        .get();
-      if (row?.status === "running") {
-        db.update(stressTestRuns)
-          .set({ status: "failed", message: "Worker process exited unexpectedly", finishedAt: Date.now() })
-          .where(eq(stressTestRuns.id, id))
-          .run();
-      }
-    } catch {
-      // DB may be closed during shutdown
-    }
-    activeStressTest = null;
-  });
-
-  activeStressTest = { id, child };
-
-  return { id };
-}
-
-export function cancelStressTest(): void {
-  if (!activeStressTest) return;
-  const { id, child } = activeStressTest;
-
-  // Update DB status — the worker polls this and self-aborts
-  db.update(stressTestRuns).set({ status: "cancelled", finishedAt: Date.now() }).where(eq(stressTestRuns.id, id)).run();
-
-  // Backup: kill child after a short delay if still alive
-  setTimeout(() => {
-    if (child.exitCode === null) {
-      child.kill();
-    }
-  }, 5000);
-
-  activeStressTest = null;
-}
-
-export function getActiveStressTest(): {
-  id: string;
-  progress: number;
-  message: string;
-  log: string;
-  startedAt: number;
-} | null {
-  if (!activeStressTest) return null;
-  const row = db
-    .select({
-      id: stressTestRuns.id,
-      progress: stressTestRuns.progress,
-      message: stressTestRuns.message,
-      log: stressTestRuns.log,
-      startedAt: stressTestRuns.startedAt,
-    })
-    .from(stressTestRuns)
-    .where(eq(stressTestRuns.id, activeStressTest.id))
-    .get();
-  return row ?? null;
-}
-
-export function markStaleStressTestsAsFailed(): void {
-  const result = db
-    .update(stressTestRuns)
-    .set({ status: "failed", finishedAt: Date.now() })
-    .where(eq(stressTestRuns.status, "running"))
-    .run();
-  if (result.changes > 0) {
-    console.log(`[stress-test] Marked ${result.changes} stale running stress test(s) as failed`);
-  }
-}
+});

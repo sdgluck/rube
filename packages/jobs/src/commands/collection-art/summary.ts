@@ -1,3 +1,4 @@
+import { type Services } from "@tinkerbell/composition";
 /**
  * LLM-written collection summaries, for the rules where a template can't say
  * anything useful.
@@ -11,8 +12,8 @@
  * regenerated on every nightly run.
  */
 import { createLlmClient } from "@tinkerbell/llm";
-import { errorMessage, getLlmConfig } from "@tinkerbell/core";
-import { reportHealth } from "@tinkerbell/domain.health";
+import { errorMessage } from "@tinkerbell/core";
+
 import { describeSmartFilter, type RuleConfig, type TagResolver } from "@tinkerbell/contracts";
 
 /** Titles handed to the model. Ten is enough to characterise a collection. */
@@ -98,31 +99,39 @@ export function cleanSummary(raw: string): string {
   return text.slice(0, MAX_SUMMARY_CHARS).trim();
 }
 
-/** Why the LLM summary path can't run right now, or null. */
-export function llmSummaryUnavailable(): string | null {
-  const cfg = getLlmConfig();
-  if (!cfg) return "no LLM provider is configured (Settings → AI)";
-  try {
-    createLlmClient(cfg);
-    return null;
-  } catch (err) {
-    return errorMessage(err);
-  }
-}
+export function createSummaryCommand(deps: Pick<Services, "config" | "health">) {
+  const { config, health } = deps;
+  const { getLlmConfig } = config;
+  const { reportHealth } = health;
 
-/** Ask the configured provider for a summary. Throws on a provider failure. */
-export async function writeLlmSummary(req: LlmSummaryRequest): Promise<string> {
-  const cfg = getLlmConfig();
-  if (!cfg) throw new Error("LLM provider is not configured. Set one in Settings → AI.");
-
-  req.signal?.throwIfAborted();
-  const client = createLlmClient(cfg);
-  try {
-    const res = await client.complete({ prompt: buildPrompt(req), maxTokens: 200, signal: req.signal });
-    reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
-    return cleanSummary(res.text);
-  } catch (err) {
-    reportHealth("LLM", "error", errorMessage(err));
-    throw err;
+  /** Why the LLM summary path can't run right now, or null. */
+  function llmSummaryUnavailable(): string | null {
+    const cfg = getLlmConfig();
+    if (!cfg) return "no LLM provider is configured (Settings → AI)";
+    try {
+      createLlmClient(cfg);
+      return null;
+    } catch (err) {
+      return errorMessage(err);
+    }
   }
+
+  /** Ask the configured provider for a summary. Throws on a provider failure. */
+  async function writeLlmSummary(req: LlmSummaryRequest): Promise<string> {
+    const cfg = getLlmConfig();
+    if (!cfg) throw new Error("LLM provider is not configured. Set one in Settings → AI.");
+
+    req.signal?.throwIfAborted();
+    const client = createLlmClient(cfg);
+    try {
+      const res = await client.complete({ prompt: buildPrompt(req), maxTokens: 200, signal: req.signal });
+      reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
+      return cleanSummary(res.text);
+    } catch (err) {
+      reportHealth("LLM", "error", errorMessage(err));
+      throw err;
+    }
+  }
+
+  return { llmSummaryUnavailable, writeLlmSummary };
 }

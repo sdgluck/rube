@@ -1,3 +1,5 @@
+import { perDeps } from "@tinkerbell/container";
+import { type Services } from "@tinkerbell/composition";
 /**
  * The metadata action: what happens when a rule's ending is "fix these fields"
  * rather than "make a collection".
@@ -22,7 +24,7 @@
  * match what the run then does.
  */
 import { randomUUID } from "node:crypto";
-import { DAY_MS, errorMessage, getConfig, type JobContext } from "@tinkerbell/core";
+import { DAY_MS, errorMessage, type JobContext } from "@tinkerbell/core";
 import {
   expandTemplate,
   IMPLAUSIBLE_METADATA_FRACTION,
@@ -30,8 +32,8 @@ import {
   metadataActionIsEmpty,
   type MetadataActionConfig,
 } from "@tinkerbell/contracts";
-import { snapshotWrites, writesSince, type MetadataSnapshot } from "@tinkerbell/domain.metadata";
-import { emitEvent } from "@tinkerbell/domain.events";
+import { type MetadataSnapshot } from "@tinkerbell/domain.metadata";
+
 import type { ItemFields, MetadataField, PlexClient, PlexSection } from "@tinkerbell/plex";
 import type { HandlerDeps } from "./types.ts";
 
@@ -167,23 +169,6 @@ export interface MetadataBudget {
   remaining: () => number;
 }
 
-export function createMetadataBudget(now: number = Date.now()): MetadataBudget {
-  const ceiling = getConfig("metadata_max_writes_per_day") ?? DEFAULT_MAX_WRITES_PER_DAY;
-  const alreadySpent = writesSince(now - BUDGET_WINDOW_MS);
-  let reserved = 0;
-  return {
-    reserve: (n) => {
-      if (alreadySpent + reserved + n > ceiling) return false;
-      reserved += n;
-      return true;
-    },
-    release: (n) => {
-      reserved -= n;
-    },
-    remaining: () => Math.max(0, ceiling - alreadySpent - reserved),
-  };
-}
-
 export interface MetadataOutcome {
   matched: number;
   /** Field writes that would change something. */
@@ -193,243 +178,6 @@ export interface MetadataOutcome {
   blocked: number;
   batchId: string | null;
   refusal?: string;
-}
-
-/**
- * Drain the handler, work out every change, and apply whatever survives the
- * guard rails.
- */
-export async function runHandlerWithMetadata(
-  deps: HandlerDeps,
-  action: MetadataActionConfig,
-  budget: MetadataBudget,
-  handler: (
-    deps: HandlerDeps,
-  ) => AsyncGenerator<{ name: string; section: PlexSection; matched: Array<{ ratingKey: string; title: string }> }>,
-): Promise<MetadataOutcome> {
-  const { ctx, client, rule, sections } = deps;
-
-  if (metadataActionIsEmpty(action)) {
-    ctx.log(`[metadata] "${rule.name}" sets no fields — nothing to do.`);
-    return { matched: 0, planned: 0, written: 0, blocked: 0, batchId: null };
-  }
-
-  // 1. Selection, unchanged. De-duplicated by rating key: a grouped rule
-  //    yields one group per director and an item belongs to as many as it has
-  //    credits, so without this a film is planned, written and *snapshotted*
-  //    three times — and the second snapshot records the value the first write
-  //    just made, which makes the batch unrevertible.
-  const byKey = new Map<string, MatchedItem>();
-  for await (const pending of handler(deps)) {
-    for (const match of pending.matched) {
-      if (byKey.has(match.ratingKey)) continue;
-      byKey.set(match.ratingKey, {
-        ratingKey: match.ratingKey,
-        sectionId: pending.section.key,
-        sectionType: pending.section.type,
-        title: match.title,
-        collection: pending.name,
-      });
-    }
-  }
-  const matches = [...byKey.values()];
-  ctx.log(`[metadata] "${rule.name}" matched ${matches.length} item(s).`);
-  if (matches.length === 0) return { matched: 0, planned: 0, written: 0, blocked: 0, batchId: null };
-
-  // 2. Refusals, cheapest and most categorical first.
-  const refusal = await refusalReason(ctx, client, sections, matches.length);
-  if (refusal) {
-    ctx.log(`[metadata] REFUSING to write: ${refusal}`);
-    return { matched: matches.length, planned: 0, written: 0, blocked: 0, batchId: null, refusal };
-  }
-
-  // 3. Plan. One read per item, and the reads are what make the plan honest —
-  //    everything downstream compares against what is really on the server.
-  const planned: PlannedWrite[] = [];
-  for (const item of matches) {
-    ctx.signal?.throwIfAborted();
-    try {
-      const current = await client.getItemFields(item.ratingKey);
-      planned.push(...planWrites(action, item, current));
-    } catch (err) {
-      ctx.log(`[metadata] Could not read "${item.title}" — ${errorMessage(err)}`);
-    }
-    // Counted against the budget: only writes that will actually happen. A
-    // locked field is a refusal, not a write, and stopping the walk once fifty
-    // of them had piled up meant a rule whose first fifty matches were locked
-    // planned nothing and reported "nothing to change" — the opposite of what
-    // happened.
-    if (planned.filter((p) => !p.blocked).length >= action.maxWritesPerRun) break;
-  }
-
-  const blocked = planned.filter((p) => p.blocked);
-  for (const p of blocked) {
-    ctx.log(
-      `[metadata] SKIP "${p.itemTitle}" ${p.field}: locked to ${describe(p.currentValue)}` +
-        ` and the rule does not overwrite locked fields.`,
-    );
-  }
-
-  const writable = planned.filter((p) => !p.blocked).slice(0, action.maxWritesPerRun);
-  if (writable.length === 0) {
-    ctx.log(
-      blocked.length > 0
-        ? `[metadata] Nothing to write — all ${blocked.length} planned change(s) are on locked fields.`
-        : `[metadata] Nothing to change — every matched field already holds the right value.`,
-    );
-    return { matched: matches.length, planned: 0, written: 0, blocked: blocked.length, batchId: null };
-  }
-
-  if (action.dryRun) {
-    ctx.log(`[metadata] DRY RUN — ${writable.length} field write(s) across ${countItems(writable)} item(s):`);
-    for (const p of writable.slice(0, 50)) {
-      ctx.log(
-        `[metadata]   would set "${p.itemTitle}" ${p.field}: ${describe(p.currentValue)} → ${describe(p.newValue)}`,
-      );
-    }
-    if (writable.length > 50) ctx.log(`[metadata]   …and ${writable.length - 50} more.`);
-    return { matched: matches.length, planned: writable.length, written: 0, blocked: blocked.length, batchId: null };
-  }
-
-  // 4. Write.
-  const batchId = randomUUID();
-  const written = await applyWrites(deps, action, writable, budget, batchId);
-
-  if (written > 0) {
-    emitEvent("metadata.written", `"${rule.name}" changed ${written} field(s) on ${countItems(writable)} item(s)`, {
-      ruleId: rule.id,
-      ruleName: rule.name,
-      batchId,
-      count: written,
-    });
-  }
-
-  return {
-    matched: matches.length,
-    planned: writable.length,
-    written,
-    blocked: blocked.length,
-    batchId: written > 0 ? batchId : null,
-  };
-}
-
-/**
- * Snapshot, then write, one item at a time.
- *
- * The ordering is the whole safety property: the ledger row is committed
- * before the PUT goes out, so a batch that dies halfway — or a container that
- * restarts mid-run — is still fully revertible. Doing it the other way round
- * loses exactly the batch someone needs to undo.
- */
-async function applyWrites(
-  deps: HandlerDeps,
-  action: MetadataActionConfig,
-  writes: PlannedWrite[],
-  budget: MetadataBudget,
-  batchId: string,
-): Promise<number> {
-  const { ctx, client, rule } = deps;
-
-  // Grouped by item so one PUT carries every scalar field that changed on it.
-  const byItem = new Map<string, PlannedWrite[]>();
-  for (const write of writes) {
-    const bucket = byItem.get(write.ratingKey) ?? [];
-    bucket.push(write);
-    byItem.set(write.ratingKey, bucket);
-  }
-
-  let done = 0;
-  for (const bucket of byItem.values()) {
-    ctx.signal?.throwIfAborted();
-
-    // Reserved before the await, not after success: rules run concurrently
-    // and counting only on completion lets every one of them pass the same
-    // check with the same remaining budget.
-    if (!budget.reserve(bucket.length)) {
-      ctx.log(`[metadata] Daily write limit reached — stopping. The rest go on the next run.`);
-      break;
-    }
-
-    const snapshots: MetadataSnapshot[] = bucket.map((w) => ({
-      ratingKey: w.ratingKey,
-      sectionId: w.sectionId,
-      sectionType: w.sectionType,
-      itemTitle: w.itemTitle,
-      field: w.field,
-      fieldKind: w.kind,
-      previousValue: w.currentValue,
-      previousLocked: w.locked,
-      newValue: w.newValue,
-    }));
-
-    try {
-      snapshotWrites(batchId, rule.id, snapshots);
-
-      const scalars = bucket.filter((w) => w.kind === "scalar");
-      const first = bucket[0];
-      if (scalars.length > 0) {
-        const fields = Object.fromEntries(scalars.map((w) => [w.field, w.newValue as string]));
-        await client.updateItemFields(first.sectionId, first.sectionType, first.ratingKey, fields, {
-          lock: action.lock,
-        });
-      }
-      for (const write of bucket.filter((w) => w.kind === "tag")) {
-        await client.setItemTags(
-          write.sectionId,
-          write.sectionType,
-          write.ratingKey,
-          write.field as "genre" | "label",
-          write.newValue as string[],
-          { lock: action.lock },
-        );
-      }
-
-      done += bucket.length;
-      // Every write is one line. This log is the audit trail people read when
-      // something looks wrong, so it is deliberately per-field rather than a
-      // per-item summary.
-      for (const write of bucket) {
-        ctx.log(
-          `[metadata] SET "${write.itemTitle}" ${write.field}: ${describe(write.currentValue)} → ${describe(write.newValue)}`,
-        );
-      }
-    } catch (err) {
-      budget.release(bucket.length);
-      // The snapshot rows stay. They record an attempt whose outcome is
-      // unknown — Plex may have applied some of it — and a revert that
-      // restores a value already equal to the current one is harmless, while
-      // a missing row is not.
-      ctx.log(`[metadata] FAILED on "${bucket[0].itemTitle}" — ${errorMessage(err)}`);
-    }
-  }
-
-  return done;
-}
-
-/**
- * Why this run must not write, or null if it may.
- *
- * No staleness check on the local index, unlike cleanup: nothing here reasons
- * about watch state, and a metadata rule's selection is answered by Plex at
- * run time.
- */
-async function refusalReason(
-  ctx: JobContext,
-  client: PlexClient,
-  sections: PlexSection[],
-  matchCount: number,
-): Promise<string | null> {
-  if (!(getConfig("metadata_writes_enabled") ?? false)) return KILL_SWITCH_REFUSAL;
-
-  const total = await sectionItemTotal(ctx, client, sections);
-  if (total == null) {
-    return "Plex could not be asked how large the library is, so the sanity check on how much this rule matched cannot run.";
-  }
-  if (total > 0 && matchCount / total > IMPLAUSIBLE_METADATA_FRACTION) {
-    const pct = Math.round((matchCount / total) * 100);
-    return `it matched ${matchCount} of ${total} items (${pct}%), which reads as a filter mistake rather than an instruction. Nothing was touched.`;
-  }
-  return null;
 }
 
 /**
@@ -464,3 +212,268 @@ export function describe(value: string | string[] | null): string {
   if (Array.isArray(value)) return value.length === 0 ? "(none)" : value.join(", ");
   return value === "" ? "(empty)" : `"${value}"`;
 }
+
+export const createMetadataCommand = perDeps(function createMetadataCommand(
+  deps: Pick<Services, "config" | "events" | "metadata">,
+) {
+  const { config, events, metadata } = deps;
+  const { getConfig } = config;
+  const { snapshotWrites, writesSince } = metadata;
+  const { emitEvent } = events;
+
+  function createMetadataBudget(now: number = Date.now()): MetadataBudget {
+    const ceiling = getConfig("metadata_max_writes_per_day") ?? DEFAULT_MAX_WRITES_PER_DAY;
+    const alreadySpent = writesSince(now - BUDGET_WINDOW_MS);
+    let reserved = 0;
+    return {
+      reserve: (n) => {
+        if (alreadySpent + reserved + n > ceiling) return false;
+        reserved += n;
+        return true;
+      },
+      release: (n) => {
+        reserved -= n;
+      },
+      remaining: () => Math.max(0, ceiling - alreadySpent - reserved),
+    };
+  }
+
+  /**
+   * Drain the handler, work out every change, and apply whatever survives the
+   * guard rails.
+   */
+  async function runHandlerWithMetadata(
+    deps: HandlerDeps,
+    action: MetadataActionConfig,
+    budget: MetadataBudget,
+    handler: (
+      deps: HandlerDeps,
+    ) => AsyncGenerator<{ name: string; section: PlexSection; matched: Array<{ ratingKey: string; title: string }> }>,
+  ): Promise<MetadataOutcome> {
+    const { ctx, client, rule, sections } = deps;
+
+    if (metadataActionIsEmpty(action)) {
+      ctx.log(`[metadata] "${rule.name}" sets no fields — nothing to do.`);
+      return { matched: 0, planned: 0, written: 0, blocked: 0, batchId: null };
+    }
+
+    // 1. Selection, unchanged. De-duplicated by rating key: a grouped rule
+    //    yields one group per director and an item belongs to as many as it has
+    //    credits, so without this a film is planned, written and *snapshotted*
+    //    three times — and the second snapshot records the value the first write
+    //    just made, which makes the batch unrevertible.
+    const byKey = new Map<string, MatchedItem>();
+    for await (const pending of handler(deps)) {
+      for (const match of pending.matched) {
+        if (byKey.has(match.ratingKey)) continue;
+        byKey.set(match.ratingKey, {
+          ratingKey: match.ratingKey,
+          sectionId: pending.section.key,
+          sectionType: pending.section.type,
+          title: match.title,
+          collection: pending.name,
+        });
+      }
+    }
+    const matches = [...byKey.values()];
+    ctx.log(`[metadata] "${rule.name}" matched ${matches.length} item(s).`);
+    if (matches.length === 0) return { matched: 0, planned: 0, written: 0, blocked: 0, batchId: null };
+
+    // 2. Refusals, cheapest and most categorical first.
+    const refusal = await refusalReason(ctx, client, sections, matches.length);
+    if (refusal) {
+      ctx.log(`[metadata] REFUSING to write: ${refusal}`);
+      return { matched: matches.length, planned: 0, written: 0, blocked: 0, batchId: null, refusal };
+    }
+
+    // 3. Plan. One read per item, and the reads are what make the plan honest —
+    //    everything downstream compares against what is really on the server.
+    const planned: PlannedWrite[] = [];
+    for (const item of matches) {
+      ctx.signal?.throwIfAborted();
+      try {
+        const current = await client.getItemFields(item.ratingKey);
+        planned.push(...planWrites(action, item, current));
+      } catch (err) {
+        ctx.log(`[metadata] Could not read "${item.title}" — ${errorMessage(err)}`);
+      }
+      // Counted against the budget: only writes that will actually happen. A
+      // locked field is a refusal, not a write, and stopping the walk once fifty
+      // of them had piled up meant a rule whose first fifty matches were locked
+      // planned nothing and reported "nothing to change" — the opposite of what
+      // happened.
+      if (planned.filter((p) => !p.blocked).length >= action.maxWritesPerRun) break;
+    }
+
+    const blocked = planned.filter((p) => p.blocked);
+    for (const p of blocked) {
+      ctx.log(
+        `[metadata] SKIP "${p.itemTitle}" ${p.field}: locked to ${describe(p.currentValue)}` +
+          ` and the rule does not overwrite locked fields.`,
+      );
+    }
+
+    const writable = planned.filter((p) => !p.blocked).slice(0, action.maxWritesPerRun);
+    if (writable.length === 0) {
+      ctx.log(
+        blocked.length > 0
+          ? `[metadata] Nothing to write — all ${blocked.length} planned change(s) are on locked fields.`
+          : `[metadata] Nothing to change — every matched field already holds the right value.`,
+      );
+      return { matched: matches.length, planned: 0, written: 0, blocked: blocked.length, batchId: null };
+    }
+
+    if (action.dryRun) {
+      ctx.log(`[metadata] DRY RUN — ${writable.length} field write(s) across ${countItems(writable)} item(s):`);
+      for (const p of writable.slice(0, 50)) {
+        ctx.log(
+          `[metadata]   would set "${p.itemTitle}" ${p.field}: ${describe(p.currentValue)} → ${describe(p.newValue)}`,
+        );
+      }
+      if (writable.length > 50) ctx.log(`[metadata]   …and ${writable.length - 50} more.`);
+      return { matched: matches.length, planned: writable.length, written: 0, blocked: blocked.length, batchId: null };
+    }
+
+    // 4. Write.
+    const batchId = randomUUID();
+    const written = await applyWrites(deps, action, writable, budget, batchId);
+
+    if (written > 0) {
+      emitEvent("metadata.written", `"${rule.name}" changed ${written} field(s) on ${countItems(writable)} item(s)`, {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        batchId,
+        count: written,
+      });
+    }
+
+    return {
+      matched: matches.length,
+      planned: writable.length,
+      written,
+      blocked: blocked.length,
+      batchId: written > 0 ? batchId : null,
+    };
+  }
+
+  /**
+   * Snapshot, then write, one item at a time.
+   *
+   * The ordering is the whole safety property: the ledger row is committed
+   * before the PUT goes out, so a batch that dies halfway — or a container that
+   * restarts mid-run — is still fully revertible. Doing it the other way round
+   * loses exactly the batch someone needs to undo.
+   */
+  async function applyWrites(
+    deps: HandlerDeps,
+    action: MetadataActionConfig,
+    writes: PlannedWrite[],
+    budget: MetadataBudget,
+    batchId: string,
+  ): Promise<number> {
+    const { ctx, client, rule } = deps;
+
+    // Grouped by item so one PUT carries every scalar field that changed on it.
+    const byItem = new Map<string, PlannedWrite[]>();
+    for (const write of writes) {
+      const bucket = byItem.get(write.ratingKey) ?? [];
+      bucket.push(write);
+      byItem.set(write.ratingKey, bucket);
+    }
+
+    let done = 0;
+    for (const bucket of byItem.values()) {
+      ctx.signal?.throwIfAborted();
+
+      // Reserved before the await, not after success: rules run concurrently
+      // and counting only on completion lets every one of them pass the same
+      // check with the same remaining budget.
+      if (!budget.reserve(bucket.length)) {
+        ctx.log(`[metadata] Daily write limit reached — stopping. The rest go on the next run.`);
+        break;
+      }
+
+      const snapshots: MetadataSnapshot[] = bucket.map((w) => ({
+        ratingKey: w.ratingKey,
+        sectionId: w.sectionId,
+        sectionType: w.sectionType,
+        itemTitle: w.itemTitle,
+        field: w.field,
+        fieldKind: w.kind,
+        previousValue: w.currentValue,
+        previousLocked: w.locked,
+        newValue: w.newValue,
+      }));
+
+      try {
+        snapshotWrites(batchId, rule.id, snapshots);
+
+        const scalars = bucket.filter((w) => w.kind === "scalar");
+        const first = bucket[0];
+        if (scalars.length > 0) {
+          const fields = Object.fromEntries(scalars.map((w) => [w.field, w.newValue as string]));
+          await client.updateItemFields(first.sectionId, first.sectionType, first.ratingKey, fields, {
+            lock: action.lock,
+          });
+        }
+        for (const write of bucket.filter((w) => w.kind === "tag")) {
+          await client.setItemTags(
+            write.sectionId,
+            write.sectionType,
+            write.ratingKey,
+            write.field as "genre" | "label",
+            write.newValue as string[],
+            { lock: action.lock },
+          );
+        }
+
+        done += bucket.length;
+        // Every write is one line. This log is the audit trail people read when
+        // something looks wrong, so it is deliberately per-field rather than a
+        // per-item summary.
+        for (const write of bucket) {
+          ctx.log(
+            `[metadata] SET "${write.itemTitle}" ${write.field}: ${describe(write.currentValue)} → ${describe(write.newValue)}`,
+          );
+        }
+      } catch (err) {
+        budget.release(bucket.length);
+        // The snapshot rows stay. They record an attempt whose outcome is
+        // unknown — Plex may have applied some of it — and a revert that
+        // restores a value already equal to the current one is harmless, while
+        // a missing row is not.
+        ctx.log(`[metadata] FAILED on "${bucket[0].itemTitle}" — ${errorMessage(err)}`);
+      }
+    }
+
+    return done;
+  }
+
+  /**
+   * Why this run must not write, or null if it may.
+   *
+   * No staleness check on the local index, unlike cleanup: nothing here reasons
+   * about watch state, and a metadata rule's selection is answered by Plex at
+   * run time.
+   */
+  async function refusalReason(
+    ctx: JobContext,
+    client: PlexClient,
+    sections: PlexSection[],
+    matchCount: number,
+  ): Promise<string | null> {
+    if (!(getConfig("metadata_writes_enabled") ?? false)) return KILL_SWITCH_REFUSAL;
+
+    const total = await sectionItemTotal(ctx, client, sections);
+    if (total == null) {
+      return "Plex could not be asked how large the library is, so the sanity check on how much this rule matched cannot run.";
+    }
+    if (total > 0 && matchCount / total > IMPLAUSIBLE_METADATA_FRACTION) {
+      const pct = Math.round((matchCount / total) * 100);
+      return `it matched ${matchCount} of ${total} items (${pct}%), which reads as a filter mistake rather than an instruction. Nothing was touched.`;
+    }
+    return null;
+  }
+
+  return { createMetadataBudget, runHandlerWithMetadata };
+});

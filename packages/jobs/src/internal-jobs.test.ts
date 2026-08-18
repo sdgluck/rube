@@ -3,16 +3,25 @@
  * cancellation that "worked" only until the handler returned and overwrote the
  * row with `completed`. These pin the parity.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { setupTempDb } from "./test-support/temp-db.ts";
 
-setupTempDb();
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { DbToken } from "@tinkerbell/db";
+import { jobRuns, jobs } from "@tinkerbell/db";
+import { createRunner } from "./runner.ts";
+import { createInternalJobs } from "./internal-jobs.ts";
+
+const c = createTestContainer();
+after(() => c.dispose());
+
+const services = c.resolve(ServicesToken);
+const db = c.resolve(DbToken);
+const { startJob, cancelRun, sweepStuckRuns } = createRunner(services);
+const { internalJobs } = createInternalJobs(services);
 
 const { and, eq } = await import("drizzle-orm");
-const { db, jobs, jobRuns } = await import("@tinkerbell/db");
-const { startJob, cancelRun, sweepStuckRuns } = await import("./runner.ts");
-const { internalJobs } = await import("./internal-jobs.ts");
 
 const JOB_ID = "purge-runs";
 const descriptor = internalJobs[JOB_ID] as { run: unknown; quiet?: boolean };

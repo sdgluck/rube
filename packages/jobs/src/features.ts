@@ -1,3 +1,6 @@
+import { type Services } from "@tinkerbell/composition";
+import { createRunner } from "./runner.ts";
+import { createSchedule } from "./schedule.ts";
 /**
  * User-installable feature templates. Plugs into the lifecycle in
  * runner.ts via `scheduleCron`, `startJob`, and `cancelRun` (which live
@@ -5,13 +8,13 @@
  * (GET-122).
  */
 import { and, inArray, eq } from "drizzle-orm";
-import { db, jobs, jobRuns } from "@tinkerbell/db";
-import { createLogger, getPersonalizedSharingStatus } from "@tinkerbell/core";
+import { jobs, jobRuns } from "@tinkerbell/db";
+import { createLogger } from "@tinkerbell/core";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
-import { cancelRun, startJob } from "./runner.ts";
+
 import type { CommandName } from "./commands/catalog.ts";
-import { cronJobs, scheduleCron } from "./schedule.ts";
+import { cronJobs } from "./schedule.ts";
 
 const log = createLogger("jobs");
 
@@ -87,96 +90,104 @@ export interface FeatureCatalogEntry {
   locked: boolean;
 }
 
-export function listFeatureCatalog(): FeatureCatalogEntry[] {
-  const installedIds = new Set(
-    db
-      .select({ id: jobs.id })
-      .from(jobs)
-      .all()
-      .map((r) => r.id),
-  );
-  const sharingEnabled = getPersonalizedSharingStatus() === "enabled";
-  return FEATURE_TEMPLATES.map((t) => ({
-    id: t.id,
-    name: t.name,
-    installed: installedIds.has(t.id),
-    requiresPersonalizedSharing: t.requiresPersonalizedSharing ?? false,
-    locked: (t.requiresPersonalizedSharing ?? false) && !sharingEnabled,
-  }));
-}
+export function createFeatures(deps: Services) {
+  const { config, db } = deps;
+  const { getPersonalizedSharingStatus } = config;
+  const { cancelRun, startJob } = createRunner(deps);
+  const { scheduleCron } = createSchedule(deps);
 
-export function installFeature(
-  featureId: string,
-  opts: { schedule?: string; config?: Record<string, unknown> } = {},
-): void {
-  const template = getFeatureTemplate(featureId);
-  if (!template) throw new Error(`Unknown feature "${featureId}"`);
-
-  if (template.requiresPersonalizedSharing && getPersonalizedSharingStatus() !== "enabled") {
-    throw new Error(
-      `"${template.name}" requires Personalized Home Screens to be enabled first (Settings → Personalization).`,
+  function listFeatureCatalog(): FeatureCatalogEntry[] {
+    const installedIds = new Set(
+      db
+        .select({ id: jobs.id })
+        .from(jobs)
+        .all()
+        .map((r) => r.id),
     );
+    const sharingEnabled = getPersonalizedSharingStatus() === "enabled";
+    return FEATURE_TEMPLATES.map((t) => ({
+      id: t.id,
+      name: t.name,
+      installed: installedIds.has(t.id),
+      requiresPersonalizedSharing: t.requiresPersonalizedSharing ?? false,
+      locked: (t.requiresPersonalizedSharing ?? false) && !sharingEnabled,
+    }));
   }
 
-  const schedule = opts.schedule ?? template.defaultSchedule;
-  if (schedule) new Cron(schedule); // validate
-  const config = opts.config ?? template.defaultConfig;
+  function installFeature(featureId: string, opts: { schedule?: string; config?: Record<string, unknown> } = {}): void {
+    const template = getFeatureTemplate(featureId);
+    if (!template) throw new Error(`Unknown feature "${featureId}"`);
 
-  const existing = db.select().from(jobs).where(eq(jobs.id, featureId)).get();
-  if (existing) {
-    db.update(jobs).set({ schedule, enabled: 1, config }).where(eq(jobs.id, featureId)).run();
-  } else {
-    db.insert(jobs)
-      .values({
-        id: template.id,
-        name: template.name,
-        command: template.command,
-        schedule,
-        enabled: 1,
-        config,
-      })
-      .run();
-  }
-
-  scheduleCron({ id: template.id, name: template.name, enabled: 1, schedule });
-}
-
-export async function uninstallFeature(featureId: string): Promise<void> {
-  const template = getFeatureTemplate(featureId);
-  if (!template) throw new Error(`Unknown feature "${featureId}"`);
-
-  // Stop any cron schedule first.
-  const cron = cronJobs.get(featureId);
-  if (cron) {
-    cron.stop();
-    cronJobs.delete(featureId);
-  }
-
-  // Delete run history then the row itself (FK constraint).
-  db.delete(jobRuns).where(eq(jobRuns.jobId, featureId)).run();
-  db.delete(jobs).where(eq(jobs.id, featureId)).run();
-
-  // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
-  // collections on the Plex server — fire byw-remove so removing the feature
-  // actually undoes those side-effects. Item-level Tinkerbell labels are NOT
-  // touched here; users can clean those up via Settings → Maintenance.
-  if (featureId === "because-you-watched") {
-    // Cancel any in-flight BYW run first so we don't race with the cleanup.
-    const active = db
-      .select({ id: jobRuns.id })
-      .from(jobRuns)
-      .where(and(eq(jobRuns.jobId, "because-you-watched"), inArray(jobRuns.status, ["running", "cancelling"])))
-      .all();
-    for (const run of active) {
-      cancelRun(run.id);
+    if (template.requiresPersonalizedSharing && getPersonalizedSharingStatus() !== "enabled") {
+      throw new Error(
+        `"${template.name}" requires Personalized Home Screens to be enabled first (Settings → Personalization).`,
+      );
     }
-    try {
-      const result = await startJob("byw-remove");
-      if (!result.ok) {
-        log.warn("BYW uninstall: byw-remove did not start", { reason: result.reason });
+
+    const schedule = opts.schedule ?? template.defaultSchedule;
+    if (schedule) new Cron(schedule); // validate
+    const config = opts.config ?? template.defaultConfig;
+
+    const existing = db.select().from(jobs).where(eq(jobs.id, featureId)).get();
+    if (existing) {
+      db.update(jobs).set({ schedule, enabled: 1, config }).where(eq(jobs.id, featureId)).run();
+    } else {
+      db.insert(jobs)
+        .values({
+          id: template.id,
+          name: template.name,
+          command: template.command,
+          schedule,
+          enabled: 1,
+          config,
+        })
+        .run();
+    }
+
+    scheduleCron({ id: template.id, name: template.name, enabled: 1, schedule });
+  }
+
+  async function uninstallFeature(featureId: string): Promise<void> {
+    const template = getFeatureTemplate(featureId);
+    if (!template) throw new Error(`Unknown feature "${featureId}"`);
+
+    // Stop any cron schedule first.
+    const cron = cronJobs.get(featureId);
+    if (cron) {
+      cron.stop();
+      cronJobs.delete(featureId);
+    }
+
+    // Delete run history then the row itself (FK constraint).
+    db.delete(jobRuns).where(eq(jobRuns.jobId, featureId)).run();
+    db.delete(jobs).where(eq(jobs.id, featureId)).run();
+
+    // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
+    // collections on the Plex server — fire byw-remove so removing the feature
+    // actually undoes those side-effects. Item-level Tinkerbell labels are NOT
+    // touched here; users can clean those up via Settings → Maintenance.
+    if (featureId === "because-you-watched") {
+      // Cancel any in-flight BYW run first so we don't race with the cleanup.
+      const active = db
+        .select({ id: jobRuns.id })
+        .from(jobRuns)
+        .where(and(eq(jobRuns.jobId, "because-you-watched"), inArray(jobRuns.status, ["running", "cancelling"])))
+        .all();
+      for (const run of active) {
+        cancelRun(run.id);
       }
-    } catch (err) {
-      log.error("BYW uninstall: failed to start byw-remove", { err: err instanceof Error ? err.message : String(err) });
+      try {
+        const result = await startJob("byw-remove");
+        if (!result.ok) {
+          log.warn("BYW uninstall: byw-remove did not start", { reason: result.reason });
+        }
+      } catch (err) {
+        log.error("BYW uninstall: failed to start byw-remove", {
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
+
+  return { listFeatureCatalog, installFeature, uninstallFeature };
 }
