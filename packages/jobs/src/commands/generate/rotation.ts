@@ -5,9 +5,11 @@
  * of them buries the Plex home. Instead the rule can pin a fixed number per
  * library and rotate a fresh set in on every run.
  *
- * Rotation is keyed by collection NAME, not rating key: every run deletes and
- * recreates the rule's collections, so rating keys are new each time while
- * names ("Steven Spielberg") are stable.
+ * Rotation is keyed by collection NAME, not rating key. That was once forced —
+ * every run deleted and recreated the rule's collections, so keys were new each
+ * time — and is now merely right: a name ("Steven Spielberg") is what the
+ * rotation is actually about, and survives a collection being rebuilt when its
+ * membership churns past the reconcile threshold.
  */
 
 export interface RotationCandidate {

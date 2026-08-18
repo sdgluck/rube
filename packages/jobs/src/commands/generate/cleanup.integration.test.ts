@@ -591,16 +591,28 @@ describe("the mocks", () => {
     assert.deepEqual(arr.journal.unhandled, []);
   });
 
-  it("the rule's own collections are cleared by a server-side label filter", async () => {
+  it("a cleanup rule never lists collections at all", async () => {
+    // It owns none. Every run used to open by deleting whatever carried the
+    // rule's label, which for a rule whose ending is "remove this" meant a Plex
+    // round trip per section per run to find nothing. Reconciling put that read
+    // where the collections are — inside the collection commit path — so a
+    // cleanup rule stopped paying for it.
     seedRule({ kind: "cleanup", mode: "collection_only", consecutiveRuns: 3, maxActionsPerRun: 25, dryRun: false });
     await runGenerate();
     await runGenerate();
 
-    // The sweep that clears the previous run narrows the listing with `label=`
-    // rather than fetching every collection's labels one at a time. If that
-    // ever regresses to an unfiltered listing it stays correct — the client
-    // re-checks — but silently costs a request per collection, which on a
-    // large library was the whole point of the change.
+    assert.deepEqual(plex.journal.labelFilteredListings, []);
+  });
+
+  it("a collection rule reads what it owns with a server-side label filter", async () => {
+    // Reconciling has to know what the rule already has, and narrows the
+    // listing with `label=` rather than fetching every collection's labels one
+    // at a time. If that regresses to an unfiltered listing it stays correct —
+    // the client re-checks — but silently costs a request per collection, which
+    // on a large library was the whole point of the filter.
+    seedRule({ kind: "collection" });
+    await runCollections();
+
     assert.ok(
       plex.journal.labelFilteredListings.some((l) => l.startsWith("Rule:")),
       `expected a label-filtered listing, saw ${JSON.stringify(plex.journal.labelFilteredListings)}`,

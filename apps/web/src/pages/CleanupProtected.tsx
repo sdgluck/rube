@@ -19,10 +19,11 @@ import styles from "./Cleanup.module.css";
  * facts about a library, and expressing one of them by renewing a 90-day hold
  * four times a year is not expressing it at all.
  *
- * Protecting a collection is matched on its *title*, not its rating key,
- * because Tinkerbell's own rules delete and recreate their collections on
- * every run — a protection that held onto the key would come loose the first
- * night the rule ran.
+ * Protecting a collection is matched on its *title*, not its rating key.
+ * Tinkerbell's own rules used to delete and recreate their collections every
+ * run; they reconcile now and mostly keep their keys, but one rebuilt after
+ * heavy churn still gets a fresh key — and a protection holding onto the old
+ * one would come loose the night that happened.
  */
 export default function CleanupProtected() {
   const [collectionTitle, setCollectionTitle] = useState("");

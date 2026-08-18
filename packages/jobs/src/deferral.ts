@@ -115,7 +115,35 @@ export interface DeferralVerdict {
  */
 export function deferralFor(jobId: string, now: Date = new Date()): DeferralVerdict | null {
   if (!isDeferrable(jobId)) return null;
+  return busyVerdict(now);
+}
 
+/**
+ * Should rule work the *server* decided to do wait?
+ *
+ * `deferralFor` is keyed on a job id, which answers the question for the nightly
+ * batch — `generate`, `cleanup` and `metadata` are all deferrable. It has no
+ * answer for a rule started by its own cron or by an event trigger, because
+ * that work has no job id of its own: it runs inside `rule-schedules`,
+ * `playback-poll`, `sync-recently-added` or `seerr-poll`, none of which are in
+ * the list. So per-rule crons and every trigger have ignored the maintenance
+ * window and the defer-while-streaming setting entirely.
+ *
+ * That is the wrong answer to the same question, and the way a user hits it is
+ * one checkbox: ticking "run this rule on its own schedule" moved it from a
+ * gated path to an ungated one. They asked for hourly, not for hourly *and*
+ * while somebody is watching something — and `item-watched` is worse still,
+ * since it starts work at the one moment a stream is provably open.
+ *
+ * Same two gates, same ceiling, decided by the kind of work rather than by
+ * which job happens to host it.
+ */
+export function deferralForRuleWork(now: Date = new Date()): DeferralVerdict | null {
+  return busyVerdict(now);
+}
+
+/** The window and streaming gates, without the "is this job deferrable" question. */
+function busyVerdict(now: Date): DeferralVerdict | null {
   const window = getConfig("jobs_maintenance_window");
   if (window?.enabled && !isWithinWindow(window.from, window.to, now)) {
     return { kind: "window", reason: `outside the maintenance window (${window.from}–${window.to})` };

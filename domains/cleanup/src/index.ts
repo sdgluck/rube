@@ -349,9 +349,10 @@ export function protectedRatingKeys(): Set<string> {
   }
 
   if (collectionTitles.length > 0) {
-    // Matched on lower-cased title: a Tinkerbell rule rebuilds its collections
-    // by deleting and recreating them, so the rating key of "Favourites"
-    // changes underneath a protection that tried to hold onto it.
+    // Matched on lower-cased title: a rule's collections keep their rating keys
+    // now that runs reconcile, but one rebuilt after heavy churn still gets a
+    // fresh key — and a protection that held onto the key would come loose the
+    // first night that happened.
     const matching = db
       .select({ key: collections.plexRatingKey })
       .from(collections)

@@ -6,6 +6,13 @@ import { appendHistory, type HistoricalCollection } from "@tinkerbell/domain.rul
 import { recordCollectionChanges } from "@tinkerbell/domain.rule-runs";
 import { setRuleLastPinnedCollections } from "@tinkerbell/domain.rules";
 import { commitCollection, COMMIT_CONCURRENCY } from "./finalize.ts";
+import {
+  producedKey,
+  readExistingCollections,
+  reconcilePins,
+  removeUnproduced,
+  type PinnableCollection,
+} from "./reconcile.ts";
 import { drainConcurrently } from "#jobs/concurrency.ts";
 import { meetsPinFloor, selectRotation, rotationState, type RotationCandidate } from "./rotation.ts";
 import type { Handler, HandlerDeps, PendingCollection } from "./types.ts";
@@ -176,6 +183,20 @@ export async function runHandlerWithCommits(
   // section's history and the next run retreads the same themes.
   const aiHistoryBySection = new Map<string, { section: PlexSection; entries: HistoricalCollection[] }>();
 
+  // What this rule already owns, read once before anything is written. The run
+  // used to open by deleting all of it; now each pending collection is matched
+  // against it by name and reconciled, and whatever is never matched is removed
+  // at the end. Read up front rather than per collection so a grouped rule
+  // producing hundreds still costs one listing per section.
+  const existing = await readExistingCollections(client, deps.sections, rule.id);
+  const produced = new Set<string>();
+  // Every collection this run committed, so the homepage can be reconciled once
+  // at the end against the full set rather than guessed at per collection.
+  const committed: PinnableCollection[] = [];
+  // Those substantial enough to earn a row, when the rule pins at all. For a
+  // rotating rule this is the candidate pool rather than the answer.
+  const wantsPin = new Set<string>();
+
   // A grouped rule yields hundreds of collections and each commit is several
   // Plex round-trips, so the handler's output is drained by a pool rather than
   // one collection at a time. The real ceiling on Plex writes is the shared
@@ -189,17 +210,21 @@ export async function runHandlerWithCommits(
         const ratingKeys = pending.matched.map((m) => m.ratingKey);
         const pinnable = meetsPinFloor(ratingKeys.length, pinMinItems);
         if (!pinnable) belowPinFloor++;
+        // Claimed before the commit, not after: the leftover sweep runs on this
+        // set, and a collection whose commit failed still exists in Plex and
+        // must not be swept away as though the rule had stopped producing it.
+        produced.add(producedKey(pending.section.key, pending.name));
         const collectionKey = await commitCollection(ctx, client, {
           section: pending.section,
           machineId,
           name: pending.name,
           ratingKeys,
           labels,
-          pinToHomepage: rotating ? false : pinToHomepage && pinnable,
           ruleType: rule.type,
           ruleId: rule.id,
           ruleConfig,
           sourceSummary: pending.sourceSummary,
+          existing: existing.get(pending.section.key)?.get(pending.name.toLowerCase()),
         });
         if (!collectionKey) return;
 
@@ -210,6 +235,8 @@ export async function runHandlerWithCommits(
         lastCollectionKey = collectionKey;
         collectionCount++;
         itemCount += ratingKeys.length;
+        committed.push({ sectionKey: pending.section.key, ratingKey: collectionKey, name: pending.name });
+        if (pinToHomepage && pinnable) wantsPin.add(collectionKey);
 
         if (rotating && pinnable) {
           rotationCandidates.push({
@@ -248,9 +275,19 @@ export async function runHandlerWithCommits(
     );
   }
 
-  if (rotating) {
-    await applyPinRotation(deps, rotationCandidates, rotationCount);
+  // Only after a clean handler run. A rule that threw halfway has an incomplete
+  // `produced` set, and sweeping against it would delete collections the rule
+  // still makes — the run simply never got as far as saying so.
+  if (!ctx.signal?.aborted) {
+    await removeUnproduced(ctx, client, existing, produced);
   }
+
+  // What *should* be on the homepage when this run is done. A rotating rule
+  // promotes a subset of its candidates; everything else promotes whatever
+  // cleared the floor. Either way the answer is only knowable now, with the
+  // whole set in hand — which is why pinning is no longer done per commit.
+  const desired = rotating ? await selectPinRotation(deps, rotationCandidates, rotationCount) : wantsPin;
+  await reconcilePins(ctx, client, committed, desired);
 
   return { lastCollectionKey, collectionCount, itemCount };
 }
@@ -286,36 +323,34 @@ function recordChanges(deps: HandlerDeps, pending: PendingCollection, collection
 }
 
 /**
- * Pin a rotating subset of this run's collections. Only reached on a clean
- * handler run — a rule that threw halfway has an incomplete candidate set,
- * and rotating over it would both under-pin the home and burn a rotation
- * slot on collections the next run will pick from again anyway.
+ * Choose the rotating subset of this run's collections to promote.
+ *
+ * Only reached on a clean handler run — a rule that threw halfway has an
+ * incomplete candidate set, and rotating over it would both under-pin the home
+ * and burn a rotation slot on collections the next run will pick from again
+ * anyway.
+ *
+ * Chooses but does not pin: `reconcilePins` applies the answer, because it also
+ * has to *unpin* last rotation's picks. Under delete-and-recreate that came
+ * free — the old collections were gone — and it is the one thing reconciling
+ * them instead would otherwise get quietly wrong, a few stale rows at a time.
  */
-async function applyPinRotation(deps: HandlerDeps, candidates: RotationCandidate[], count: number): Promise<void> {
-  const { ctx, client, rule } = deps;
-  if (candidates.length === 0) return;
+async function selectPinRotation(
+  deps: HandlerDeps,
+  candidates: RotationCandidate[],
+  count: number,
+): Promise<Set<string>> {
+  const { ctx, rule } = deps;
+  if (candidates.length === 0) return new Set();
 
   const previous = rule.lastPinnedCollections ?? {};
   const selected = selectRotation(candidates, count, previous);
 
-  const pinned: RotationCandidate[] = [];
-  for (const candidate of selected) {
-    try {
-      await client.pinToHomepage(candidate.sectionKey, candidate.ratingKey, {
-        promotedToOwnHome: 1,
-        promotedToRecommendedHome: 1,
-        promotedToSharedHome: 1,
-      });
-      pinned.push(candidate);
-    } catch (err) {
-      // One bad pin shouldn't cost the whole rotation — the rest of the set
-      // is still worth putting on the home.
-      ctx.log(`Failed to pin "${candidate.name}":`, err);
-    }
-  }
-
-  // Persist what actually landed, so a collection that failed to pin isn't
-  // treated as "shown recently" and skipped by the next rotation.
-  setRuleLastPinnedCollections(rule.id, rotationState(pinned));
-  ctx.log(`Pinned ${pinned.length} of ${candidates.length} collection(s) to the homepage (rotating ${count}/library).`);
+  // Persisted from the selection rather than from what landed. The two used to
+  // differ because pinning happened here and could fail per collection; now a
+  // failure is reported by `reconcilePins` and the homepage is re-diffed from
+  // scratch next run, so recording the intent is both simpler and self-healing.
+  setRuleLastPinnedCollections(rule.id, rotationState(selected));
+  ctx.log(`Rotating ${selected.length} of ${candidates.length} collection(s) onto the homepage (${count}/library).`);
+  return new Set(selected.map((candidate) => candidate.ratingKey));
 }

@@ -81,8 +81,9 @@ function assertValidRuleConfig(config: Record<string, unknown>): Record<string, 
  * client polls it.
  *
  * Pressing Run on a rule that is already running attaches to that run rather
- * than starting a second one. A rule run is delete-then-recreate, and Plex
- * happily keeps two collections with the same title.
+ * than starting a second one: two runs of a rule interleave their writes to
+ * the same collections, and Plex happily keeps two collections with the same
+ * title if both get as far as creating one.
  */
 function startOrAttachRuleRun(ruleId: string, phase: RuleRunPhase): { runId: string; attached: boolean } {
   const existing = findActiveRuleRun(ruleId, phase);

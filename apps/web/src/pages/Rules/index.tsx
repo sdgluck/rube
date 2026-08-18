@@ -573,12 +573,11 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   /**
    * "Revert artwork", and honest about what that means.
    *
-   * There is no image to put back: every run deletes and recreates the rule's
-   * collections, so the artwork that was there before is a Plex-generated
-   * mosaic Plex will regenerate on its own. What reverting actually does is
-   * turn the rule's poster setting off and forget the ledger, so nothing is
-   * uploaded again — and the confirmation says exactly that rather than
-   * promising a restore.
+   * There is usually no image to put back: whatever was there before is a
+   * Plex-generated mosaic Plex will regenerate on its own. What reverting
+   * actually does is turn the rule's poster setting off and forget the ledger,
+   * so nothing is uploaded again — and the confirmation says exactly that
+   * rather than promising a restore.
    */
   function handleRevertArtwork(rule: RuleRow) {
     setPendingConfirm({

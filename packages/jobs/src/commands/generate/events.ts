@@ -22,10 +22,10 @@ function sampleList(names: string[]): string {
  * Announce the collections a run created that weren't there before it.
  *
  * `before` and `after` are the rule's collection titles from the local mirror,
- * read either side of the run. A rule run is delete-then-recreate, so every
- * collection is technically "created" every night — the diff against last
- * night's names is what makes this mean "the engine found something new"
- * rather than "the engine ran".
+ * read either side of the run. The diff is what makes this mean "the engine
+ * found something new" rather than "the engine ran" — which mattered acutely
+ * when a run deleted and recreated everything it owned, and still holds now
+ * that a run reconciles instead.
  */
 export function announceNewCollections(ruleId: string, ruleName: string, before: string[], after: string[]): void {
   const known = new Set(before);

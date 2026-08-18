@@ -143,16 +143,22 @@ describe("the log", () => {
 });
 
 describe("sweeps", () => {
-  test("a restart fails everything that was in flight", () => {
+  test("a restart fails what was executing and keeps what was only queued", () => {
+    // Execution never survives a restart, so a `running` row is a lie the
+    // moment the process dies. A `queued` row is not: it is a request nobody
+    // has started, and the rule queue drains it once boot finishes. Sweeping
+    // those up too — which this did while a queued row lived for microseconds —
+    // silently drops a night's work every time the container restarts, because
+    // the cron spends its occurrence when it queues, not when the rule runs.
     const ruleId = makeRule();
-    const queued = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
+    const queued = runs.createRuleRun({ ruleId, phase: "run", trigger: "cron" });
     const running = runs.startRuleRun({ ruleId, phase: "test", trigger: "manual" });
 
     const swept = runs.markStaleRuleRunsAsFailed();
-    assert.ok(swept >= 2);
-    assert.equal(runs.getRuleRun(queued)?.status, "error");
+    assert.equal(swept, 1);
     assert.equal(runs.getRuleRun(running.runId)?.status, "error");
-    assert.match(runs.getRuleRun(queued)?.error ?? "", /restarted/);
+    assert.match(runs.getRuleRun(running.runId)?.error ?? "", /restarted/);
+    assert.equal(runs.getRuleRun(queued)?.status, "queued");
   });
 
   test("the watchdog fails a run that stopped heartbeating, but leaves queued ones alone", () => {

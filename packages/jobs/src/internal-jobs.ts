@@ -122,18 +122,20 @@ export const internalJobs = {
   },
   "rule-schedules": {
     run: (ctx: JobContext) => runDueRules(ctx),
-    // Ticks every minute, but a tick that finds work runs whole rules inside
-    // it — the same budget the Generate job gives one rule.
-    timeoutMs: 30 * MINUTE_MS,
+    // Ticks every minute and finishes in milliseconds: it decides what is due
+    // and queues it, and the rule queue runs it. It used to execute whole rules
+    // inside the tick and so needed half an hour, which meant the watchdog
+    // could not tell a wedged tick from a busy one until long after it mattered.
+    timeoutMs: 5 * MINUTE_MS,
     // Most minutes there is nothing due, and "No rule schedules due." is the
     // stable text that keeps those minutes out of the activity feed.
     quiet: true,
   },
   "seerr-poll": {
     run: (ctx: JobContext) => pollSeerrRequests(ctx),
-    // One paged GET against Overseerr, and then possibly whole rules — same
-    // budget as the other trigger hosts.
-    timeoutMs: 30 * MINUTE_MS,
+    // One paged GET against Overseerr, and then at most a few queue inserts.
+    // The rules it wakes are the queue's problem, not this job's.
+    timeoutMs: 10 * MINUTE_MS,
     // Most polls find nothing new, and "No newly available requests." said
     // ninety-six times a day is not information.
     quiet: true,
@@ -156,11 +158,12 @@ export const internalJobs = {
       // one phrasing for "no change" rather than counts that are always zero.
       return parts.length ? `Playback: ${parts.join(", ")}.` : "Playback poll: no change.";
     },
-    // Runs every 30 seconds normally, but a tick that finds a completed play
-    // may run whole rules inside it — the same budget the trigger's other
-    // hosts allow. The poller's in-flight latch drops overlapping ticks, so a
-    // long one delays the next poll rather than doubling it.
-    timeoutMs: 30 * MINUTE_MS,
+    // Runs every 30 seconds. A tick that finds a completed play queues the
+    // rules listening for it rather than running them here — half an hour of
+    // budget for a poll that should take milliseconds meant a wedged poller
+    // went unnoticed for half an hour. The in-flight latch drops overlapping
+    // ticks, so a slow one delays the next poll rather than doubling it.
+    timeoutMs: 5 * MINUTE_MS,
     quiet: true,
   },
 } as const satisfies Record<string, InternalJobDescriptor>;

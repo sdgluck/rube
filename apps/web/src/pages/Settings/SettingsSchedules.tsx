@@ -98,7 +98,12 @@ export default function SettingsSchedules() {
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const effective = effectiveQuery.data;
-  const waiting = deferredQuery.data ?? [];
+  // Jobs and rules are held by different machinery but answer the same question
+  // for whoever is reading this — "what is waiting?" — so they are listed as one.
+  const waiting = [
+    ...(deferredQuery.data?.jobs ?? []).map((w) => w.jobName),
+    ...(deferredQuery.data?.rules ?? []).map((w) => w.ruleName),
+  ];
 
   return (
     <div className={styles.form}>
@@ -134,8 +139,9 @@ export default function SettingsSchedules() {
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Staying out of the way">
         <p className={styles.hint}>
           Poster rendering, overlay burn-in and preroll transcodes compete for the same CPU and disk that serve a stream
-          — and they are scheduled for the hours somebody is most likely to be watching. These hold that work back.
-          Neither applies to a job you start yourself: pressing <strong>Run now</strong> always runs now.
+          — and they are scheduled for the hours somebody is most likely to be watching. These hold that work back,
+          along with rules running on a schedule of their own or in response to something happening. Neither applies to
+          anything you start yourself: pressing <strong>Run now</strong> always runs now.
         </p>
 
         <label className={styles.checkRow}>
@@ -218,8 +224,8 @@ export default function SettingsSchedules() {
 
         {waiting.length > 0 && (
           <p className={styles.hint}>
-            Waiting right now: {waiting.map((w) => w.jobName).join(", ")}. Each starts as soon as the server is quiet,
-            or when its wait runs out.
+            Waiting right now: {waiting.join(", ")}. Each starts as soon as the server is quiet, or when its wait runs
+            out.
           </p>
         )}
 

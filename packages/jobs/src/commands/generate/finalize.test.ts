@@ -65,7 +65,6 @@ async function commit(
     name: opts.name ?? "Christopher Nolan",
     ratingKeys: ITEMS.map((i) => i.ratingKey),
     labels: ["Tinkerbell", `Rule:${RULE_ID}`],
-    pinToHomepage: false,
     ruleType: opts.ruleType ?? "directors",
     ruleId: "ruleId" in opts ? opts.ruleId : RULE_ID,
     ruleConfig: opts.ruleConfig,
@@ -177,7 +176,6 @@ describe("commitCollection — summaries", () => {
         name: "Christopher Nolan",
         ratingKeys: ITEMS.map((i) => i.ratingKey),
         labels: ["Tinkerbell", `Rule:${RULE_ID}`],
-        pinToHomepage: false,
         ruleType: "directors",
         ruleId: RULE_ID,
       });

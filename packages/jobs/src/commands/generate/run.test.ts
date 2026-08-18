@@ -234,7 +234,11 @@ describe("generate: rule actions", () => {
 
 describe("generate: rule concurrency", () => {
   it("overlaps rules by default and still runs every one", async () => {
-    const ids = [1, 2, 3].map((n) => seedRule(`Rule ${n}`, "no_such_type", {}, n));
+    // A type with a real handler, so each rule actually talks to Plex. Overlap
+    // is measured from section requests, and a rule whose type has no handler
+    // now makes none at all — it used to make one anyway, because every run
+    // opened by deleting the rule's collections whether it had any or not.
+    const ids = [1, 2, 3].map((n) => seedRule(`Rule ${n}`, "top_rated", { limit: 5 }, n));
     const stub = stubPlex({ delayMs: 20 });
 
     const { ctx } = testContext();

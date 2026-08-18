@@ -2,9 +2,9 @@
  * Both of these events are transitions, and the value of a transition event is
  * entirely in *not* firing the rest of the time. A `rule.empty` that fired
  * every night for a rule that has been dead for a month is indistinguishable
- * from noise, and a `collection.created` that fired for every collection on
- * every run would fire for all of them every night — a rule run is
- * delete-then-recreate, so "created" is true of everything, always.
+ * from noise, and a `collection.created` that fired for every collection a run
+ * committed would fire for all of them every night — a run touches every
+ * collection it owns whether or not anything about it changed.
  */
 import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -78,7 +78,7 @@ describe("collection.created", () => {
 
   test("stays silent when a run recreates exactly what was there", () => {
     announceNewCollections(RULE, NAME, ["A", "B"], ["B", "A"]);
-    assert.equal(emitted("collection.created").length, 0, "delete-then-recreate is not creation");
+    assert.equal(emitted("collection.created").length, 0, "committing a collection again is not creation");
   });
 
   test("stays silent when a run produces nothing", () => {

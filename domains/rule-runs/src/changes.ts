@@ -3,7 +3,7 @@
  *
  * A run's counts say "40 collections, 900 items". They cannot say that
  * "Sci-Fi Gems" lost fourteen titles overnight because an OMDb rating moved,
- * and since every run deletes and recreates its collections, Plex can't say it
+ * and since a run may rebuild a collection outright, Plex can't reliably say it
  * either — the collection that knew is gone. So the membership is snapshotted
  * at the end of each commit and diffed against at the start of the next one.
  *

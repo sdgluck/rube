@@ -50,6 +50,26 @@ export const RULE_TRIGGER_NOTES: Record<RuleTrigger, string> = {
     "Fires when Overseerr reports a request as available. Needs Overseerr configured; polled on its own schedule.",
 };
 
+/**
+ * How a run came to happen, in the words the run detail shows.
+ *
+ * Wider than `RULE_TRIGGERS` because a run has causes an event doesn't: a
+ * person pressed Run, the nightly batch owned it, its own cron came due, or it
+ * was standing behind another rule. Before the rule queue every non-manual run
+ * was recorded as "job" and displayed as "Generate job", so a rule that rebuilt
+ * itself at 14:20 on an hourly cron claimed the nightly batch had done it.
+ */
+export const RULE_RUN_TRIGGER_LABELS: Record<string, string> = {
+  manual: "Manual",
+  job: "Generate job",
+  cron: "Its own schedule",
+  chain: "After another rule",
+  "item-added": "Something was added",
+  "item-watched": "Somebody finished watching",
+  "item-removed": "Something was removed",
+  "request-fulfilled": "An Overseerr request landed",
+};
+
 /** `MM-DD`. Year-less on purpose: a season recurs, a date doesn't. */
 const MONTH_DAY = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 

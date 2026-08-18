@@ -11,9 +11,10 @@ const INSPECT_CONCURRENCY = 8;
 /**
  * Remove rule-generated collections that no run will ever clean up on its own.
  *
- * Rule runs are delete-then-recreate, and the delete is keyed on the
- * `Rule:<id>` label — so anything the label no longer reaches is invisible to
- * every future run and stays in Plex forever. Two ways that happens:
+ * A run only ever touches what its `Rule:<id>` label reaches — that is how it
+ * finds what it already owns, and how it sweeps what it no longer produces —
+ * so anything the label no longer reaches is invisible to every future run and
+ * stays in Plex forever. Two ways that happens:
  *
  *   • Duplicates. Two overlapping runs of one rule both deleted before either
  *     created, so the section holds several same-title collections from the

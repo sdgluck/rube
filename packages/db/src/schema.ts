@@ -161,8 +161,10 @@ export const rules = sqliteTable("rules", {
   /**
    * Pin-rotation bookkeeping: the collection names this rule pinned on its
    * last run, keyed by section. Keyed by NAME rather than rating key on
-   * purpose — every run deletes and recreates the rule's collections, so
-   * rating keys don't survive between runs but names do.
+   * purpose — a run once deleted and recreated the rule's collections, so keys
+   * did not survive between runs while names did. Reconciling keeps most keys
+   * stable now, but a collection rebuilt after heavy churn still gets a new
+   * one, and the name is what the rotation is about either way.
    */
   lastPinnedCollections: text("last_pinned_collections", { mode: "json" })
     .$type<Record<string, string[]>>()
@@ -202,13 +204,15 @@ export const rules = sqliteTable("rules", {
 /**
  * Cross-context mutex for "this rule is generating collections right now".
  *
- * A rule run is delete-then-recreate: it removes every collection labelled
- * `Rule:<id>` and then creates fresh ones. Two overlapping runs of the same
- * rule therefore both delete before either creates, and both creations
- * survive as duplicate same-title collections in Plex. The runs that overlap
- * live in different execution contexts — the `generate` command runs in a
- * Sidequest worker thread, ad-hoc single-rule runs execute in the API process
- * — so an in-process Map cannot see both. SQLite can.
+ * Two overlapping runs of one rule interleave their writes to the same
+ * collections: each reads the membership, computes a diff against it, and
+ * applies it, so the second one's diff is stale by the time it lands. When a
+ * run was delete-then-recreate the damage was starker still — both deleted
+ * before either created, and both creations survived as duplicate same-title
+ * collections. The runs that overlap live in different execution contexts —
+ * the `generate` command runs in a Sidequest worker thread, ad-hoc single-rule
+ * runs execute in the API process — so an in-process Map cannot see both.
+ * SQLite can.
  *
  * The lock is a *lease*: `expiresAt` is pushed forward periodically while the
  * holder is alive, and a lock whose lease has run out is free for the taking.
@@ -324,9 +328,10 @@ export const deletedRules = sqliteTable(
 /**
  * The membership a rule's collection had at the end of its last run.
  *
- * Every run deletes and recreates a rule's collections, so Plex itself cannot
- * answer "what changed" — the old collection is gone and the new one has no
- * memory of it. This is that memory: one row per collection a rule owns,
+ * Plex itself cannot answer "what changed": it holds the membership a run left
+ * behind and no record of what preceded it, and a collection rebuilt after
+ * heavy churn is a new object entirely. This is that memory: one row per
+ * collection a rule owns,
  * overwritten at the end of each commit, and read at the start of the next one
  * to produce `ruleRunChanges` below.
  *
@@ -550,8 +555,9 @@ export const overlayOriginals = sqliteTable(
  * its summary and its poster — and what it found there first.
  *
  * Keyed by `(ruleId, collectionName)` rather than by rating key, for the same
- * reason as `rules.lastPinnedCollections`: every run deletes and recreates the
- * rule's collections, so rating keys don't survive between runs but names do.
+ * reason as `rules.lastPinnedCollections`: rating keys did not survive a run
+ * when a run meant delete-and-recreate, and a rebuilt collection still gets a
+ * fresh one today. Names survive both.
  *
  * Two jobs it does that the Plex server can't:
  *
@@ -590,9 +596,10 @@ export const collectionArtwork = sqliteTable(
     posterLockedAt: integer("poster_locked_at"),
     /**
      * Whether the collection already had artwork before Tinkerbell first
-     * uploaded to it, and where. Collections are recreated each run, so
-     * "revert" mostly means "stop uploading" — but the affordance has to be
-     * honest about what it can restore, and that requires having looked.
+     * uploaded to it, and where. A collection used to be recreated every run,
+     * which made "revert" mostly mean "stop uploading"; now that one usually
+     * survives, there is genuinely something to put back — and the affordance
+     * has to be honest about what it can restore, which requires having looked.
      */
     priorThumb: text("prior_thumb").notNull().default(""),
     updatedAt: integer("updated_at").notNull(),
