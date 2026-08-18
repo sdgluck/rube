@@ -1,19 +1,15 @@
+import type { TrpcDeps } from "./deps.ts";
 import { TRPCError } from "@trpc/server";
 import {
-  getAllConfigForClient,
-  getConfig,
   isValidTimezone,
-  setConfig,
   configSchema,
   SECRET_KEYS,
   NESTED_SECRET_KEYS,
   REDACTED_SECRET,
-  restoreNestedSecrets,
   type ConfigKey,
   type ConfigValue,
 } from "@tinkerbell/core";
-import { restartSchedules, schedulerTimezone } from "@tinkerbell/jobs";
-import { renameArrHealthServices } from "@tinkerbell/domain.health";
+
 import { t, procedure } from "./_base.ts";
 
 /**
@@ -38,60 +34,69 @@ const AUTH_KEYS = {
 
 type SavableKey = Exclude<ConfigKey, keyof typeof AUTH_KEYS>;
 
-export const configRouter = t.router({
-  get: procedure.query(() => getAllConfigForClient()),
+export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "jobs">) {
+  const { restartSchedules, schedulerTimezone } = deps.jobs;
+  const { config, health } = deps;
+  const { getAllConfigForClient, getConfig, setConfig, restoreNestedSecrets } = config;
+  const { renameArrHealthServices } = health;
 
-  /** The zone every cron schedule is evaluated in, resolved (config → TZ → system). */
-  effectiveTimezone: procedure.query(() => ({
-    timezone: schedulerTimezone() ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-    explicit: schedulerTimezone() !== undefined,
-  })),
+  const configRouter = t.router({
+    get: procedure.query(() => getAllConfigForClient()),
 
-  save: procedure.input(configSchema.partial().omit(AUTH_KEYS)).mutation(({ input }) => {
-    // Validated here rather than in `configSchema`, which is also used on read
-    // — see the note on `global_timezone`. croner throws when it builds a
-    // schedule against an unknown zone, and that throw would happen inside
-    // `initJobs` at next boot: a crash-loop with no UI left to fix it from.
-    if (input.global_timezone !== undefined && !isValidTimezone(input.global_timezone)) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `"${input.global_timezone}" is not a known timezone. Use an IANA name such as "Europe/London" or "UTC".`,
-      });
-    }
+    /** The zone every cron schedule is evaluated in, resolved (config → TZ → system). */
+    effectiveTimezone: procedure.query(() => ({
+      timezone: schedulerTimezone() ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      explicit: schedulerTimezone() !== undefined,
+    })),
 
-    const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");
-
-    // Snapshotted before the write: an extra *Arr instance's health identity is
-    // derived from its display name, so a rename has to carry its check history,
-    // its mute and any notification routing that named it. See
-    // `renameArrHealthServices`.
-    const arrInstancesBefore = "global_arr_instances" in input ? (getConfig("global_arr_instances") ?? []) : null;
-
-    // Narrower than `ConfigKey` now that the auth keys are omitted from the
-    // input — indexing `input` with a key it can't hold no longer typechecks.
-    for (const key of Object.keys(input) as SavableKey[]) {
-      const value = input[key];
-      if (value === undefined) continue;
-      // The form may echo back the redaction sentinel for secrets the user
-      // didn't change. Treat that as "keep the stored value".
-      if (SECRET_KEYS.has(key) && value === REDACTED_SECRET) continue;
-      // Nested secrets round-trip the same way, but the sentinel is a field of
-      // a structured value rather than the value itself. One table in core
-      // covers all of them, so a new one can't be missed here — which is how
-      // the extra *Arr instances' keys came to be sent to the browser in full.
-      if (NESTED_SECRET_KEYS.has(key)) {
-        setConfig(key, restoreNestedSecrets(key, value as ConfigValue<typeof key>));
-        continue;
+    save: procedure.input(configSchema.partial().omit(AUTH_KEYS)).mutation(({ input }) => {
+      // Validated here rather than in `configSchema`, which is also used on read
+      // — see the note on `global_timezone`. croner throws when it builds a
+      // schedule against an unknown zone, and that throw would happen inside
+      // `initJobs` at next boot: a crash-loop with no UI left to fix it from.
+      if (input.global_timezone !== undefined && !isValidTimezone(input.global_timezone)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `"${input.global_timezone}" is not a known timezone. Use an IANA name such as "Europe/London" or "UTC".`,
+        });
       }
-      setConfig(key, value);
-    }
 
-    if (arrInstancesBefore) renameArrHealthServices(arrInstancesBefore);
+      const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");
 
-    // croner bakes the timezone in at construction, so the live Cron objects
-    // would keep evaluating against the old zone until the next restart.
-    if (timezoneChanged) restartSchedules();
+      // Snapshotted before the write: an extra *Arr instance's health identity is
+      // derived from its display name, so a rename has to carry its check history,
+      // its mute and any notification routing that named it. See
+      // `renameArrHealthServices`.
+      const arrInstancesBefore = "global_arr_instances" in input ? (getConfig("global_arr_instances") ?? []) : null;
 
-    return { ok: true };
-  }),
-});
+      // Narrower than `ConfigKey` now that the auth keys are omitted from the
+      // input — indexing `input` with a key it can't hold no longer typechecks.
+      for (const key of Object.keys(input) as SavableKey[]) {
+        const value = input[key];
+        if (value === undefined) continue;
+        // The form may echo back the redaction sentinel for secrets the user
+        // didn't change. Treat that as "keep the stored value".
+        if (SECRET_KEYS.has(key) && value === REDACTED_SECRET) continue;
+        // Nested secrets round-trip the same way, but the sentinel is a field of
+        // a structured value rather than the value itself. One table in core
+        // covers all of them, so a new one can't be missed here — which is how
+        // the extra *Arr instances' keys came to be sent to the browser in full.
+        if (NESTED_SECRET_KEYS.has(key)) {
+          setConfig(key, restoreNestedSecrets(key, value as ConfigValue<typeof key>));
+          continue;
+        }
+        setConfig(key, value);
+      }
+
+      if (arrInstancesBefore) renameArrHealthServices(arrInstancesBefore);
+
+      // croner bakes the timezone in at construction, so the live Cron objects
+      // would keep evaluating against the old zone until the next restart.
+      if (timezoneChanged) restartSchedules();
+
+      return { ok: true };
+    }),
+  });
+
+  return configRouter;
+}

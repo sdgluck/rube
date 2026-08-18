@@ -8,16 +8,23 @@
  * hole — `auth.poll` used to take the plex.tv PIN id as an input, and plex.tv
  * hands a PIN's token to anyone who asks with the client id that minted it.
  */
-import { describe, test, before } from "node:test";
+import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTrpc } from "./index.ts";
+import { createHandshakes } from "./handshake.ts";
+
+const c = createTestContainer({ overrides: registerJobs });
+after(() => c.dispose());
+
+const trpcDeps = { ...c.resolve(ServicesToken), jobs: c.resolve(JobsToken) };
+const { portalRouter } = createTrpc(trpcDeps);
+const { createHandshake } = createHandshakes(trpcDeps);
 
 // As in `router-surface.test.ts`: `@tinkerbell/db` opens its SQLite file at
 // import time, so point it somewhere disposable first.
-process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-portal-test-"));
 
 /**
  * The complete public surface of the portal API. `personalizationStatus` and
@@ -28,18 +35,6 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-portal-test-"));
 const PUBLIC_PATHS = new Set(["personalizationStatus", "branding", "auth.start", "auth.poll", "auth.logout"]);
 
 type PortalContext = import("./portal.router.ts").PortalContext;
-
-let portalRouter: typeof import("./portal.router.ts").portalRouter;
-let createHandshake: typeof import("./handshake.ts").createHandshake;
-
-before(async () => {
-  execFileSync(process.execPath, [join(import.meta.dirname, "..", "..", "db", "src", "migrate.ts")], {
-    env: { ...process.env },
-    stdio: "ignore",
-  });
-  ({ portalRouter } = await import("./portal.router.ts"));
-  ({ createHandshake } = await import("./handshake.ts"));
-});
 
 function anonymousContext(): PortalContext {
   return {

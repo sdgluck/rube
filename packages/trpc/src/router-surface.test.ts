@@ -8,18 +8,23 @@
  * fails until they add the path to `PUBLIC_PATHS` — which is a deliberate,
  * reviewable act rather than an oversight.
  */
-import { describe, test, before } from "node:test";
+import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { ServicesToken } from "@tinkerbell/composition";
+import { ConfigStoreToken, REDACTED_SECRET } from "@tinkerbell/core";
+import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTrpc } from "./index.ts";
+import { t } from "./_base.ts";
 
-// `@tinkerbell/db` opens its SQLite file at import time, so point it at a
-// scratch directory before anything pulls it in. Nothing here runs a query —
-// every call under test is refused by the gate long before the database —
-// but the file would otherwise land in the repo root.
-process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-trpc-test-"));
+// The router is built from a container now, so the test builds one. It used to
+// have to set `DATA_DIR` before anything imported `@tinkerbell/db`, because
+// that import opened a SQLite file wherever the environment pointed.
+const c = createTestContainer({ overrides: registerJobs });
+after(() => c.dispose());
+
+const { appRouter } = createTrpc({ ...c.resolve(ServicesToken), jobs: c.resolve(JobsToken) });
+const { getConfig } = c.resolve(ConfigStoreToken);
 
 /**
  * The complete public surface of the admin API.
@@ -33,23 +38,9 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "tinkerbell-trpc-test-"));
  */
 const PUBLIC_PATHS = new Set(["auth.status", "auth.start", "auth.poll", "auth.logout", "auth.enable"]);
 
-let appRouter: typeof import("./index.ts").appRouter;
-let t: typeof import("./_base.ts").t;
-
-before(async () => {
-  // Most of this suite is refused by the gate long before the database, but
-  // the `config.save` case below asserts on what was actually written, so the
-  // scratch DB needs a real schema.
-  execFileSync(process.execPath, [join(import.meta.dirname, "..", "..", "db", "src", "migrate.ts")], {
-    env: { ...process.env },
-    stdio: "ignore",
-  });
-  ({ appRouter } = await import("./index.ts"));
-  ({ t } = await import("./_base.ts"));
-});
-
 function anonymousContext() {
   return {
+    scope: c.createScope("test-request"),
     session: undefined,
     rawToken: undefined,
     resHeaders: new Headers(),
@@ -127,14 +118,12 @@ describe("admin router surface", () => {
     // Omitted from the input schema, so zod strips them and the loop never
     // sees them — the only writers are the `auth` mutations that check.
     await caller.config.save({ admin_allowed_user_ids: [999], admin_auth_enabled: true } as never);
-    const { getConfig } = await import("@tinkerbell/core");
     assert.deepEqual(getConfig("admin_allowed_user_ids"), undefined);
     assert.equal(getConfig("admin_auth_enabled"), undefined);
   });
 
   test("saving an *Arr instance whose key came back redacted keeps the stored key", async () => {
     const caller = t.createCallerFactory(appRouter)({ ...anonymousContext(), authRequired: false });
-    const { getConfig, REDACTED_SECRET } = await import("@tinkerbell/core");
 
     await caller.config.save({
       global_arr_instances: [

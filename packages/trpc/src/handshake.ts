@@ -1,3 +1,5 @@
+import type { TrpcDeps } from "./deps.ts";
+import { perDeps } from "@tinkerbell/container";
 /**
  * The Sign-in-with-Plex handshake store, and the rate limit that guards it.
  *
@@ -27,41 +29,8 @@ import { HANDSHAKE_MAX_AGE } from "./cookies.ts";
 
 const HANDSHAKE_TTL_MS = HANDSHAKE_MAX_AGE * 1000;
 
-const handshakes = new Map<string, { pinId: number; expiresAt: number }>();
-
 function keyFor(scope: SessionScope, nonce: string): string {
   return `${scope}:${nonce}`;
-}
-
-export function createHandshake(scope: SessionScope, pinId: number): string {
-  const now = Date.now();
-  for (const [key, value] of handshakes) if (value.expiresAt < now) handshakes.delete(key);
-  const nonce = randomBytes(32).toString("hex");
-  handshakes.set(keyFor(scope, nonce), { pinId, expiresAt: now + HANDSHAKE_TTL_MS });
-  return nonce;
-}
-
-/** Resolve a nonce to its PIN id, or undefined if unknown, expired or foreign. */
-export function readHandshake(scope: SessionScope, nonce: string | undefined): number | undefined {
-  if (!nonce) return undefined;
-  const key = keyFor(scope, nonce);
-  const entry = handshakes.get(key);
-  if (!entry) return undefined;
-  if (entry.expiresAt < Date.now()) {
-    handshakes.delete(key);
-    return undefined;
-  }
-  return entry.pinId;
-}
-
-/** Redeemed, refused or abandoned — either way the handshake is spent. */
-export function spendHandshake(scope: SessionScope, nonce: string | undefined): void {
-  if (nonce) handshakes.delete(keyFor(scope, nonce));
-}
-
-/** Test seam: drop everything, so one test's nonces can't answer another's. */
-export function resetHandshakes(): void {
-  handshakes.clear();
 }
 
 // ─── Rate limiting ────────────────────────────────────────────────────────
@@ -72,27 +41,64 @@ export function resetHandshakes(): void {
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 60;
-const attempts = new Map<string, { count: number; resetAt: number }>();
 
-export function rateLimit(ip: string): void {
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    // Opportunistic sweep — without it a rotating source address grows the
-    // map without bound.
-    if (attempts.size > 1000) {
-      for (const [key, value] of attempts) if (value.resetAt < now) attempts.delete(key);
+export const createHandshakes = perDeps(function createHandshakes(_deps: TrpcDeps) {
+  const handshakes = new Map<string, { pinId: number; expiresAt: number }>();
+  const attempts = new Map<string, { count: number; resetAt: number }>();
+
+  function createHandshake(scope: SessionScope, pinId: number): string {
+    const now = Date.now();
+    for (const [key, value] of handshakes) if (value.expiresAt < now) handshakes.delete(key);
+    const nonce = randomBytes(32).toString("hex");
+    handshakes.set(keyFor(scope, nonce), { pinId, expiresAt: now + HANDSHAKE_TTL_MS });
+    return nonce;
+  }
+
+  /** Resolve a nonce to its PIN id, or undefined if unknown, expired or foreign. */
+  function readHandshake(scope: SessionScope, nonce: string | undefined): number | undefined {
+    if (!nonce) return undefined;
+    const key = keyFor(scope, nonce);
+    const entry = handshakes.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt < Date.now()) {
+      handshakes.delete(key);
+      return undefined;
     }
-    return;
+    return entry.pinId;
   }
-  entry.count++;
-  if (entry.count > RATE_MAX) {
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many sign-in attempts. Wait a minute." });
-  }
-}
 
-/** Test seam, as above. */
-export function resetRateLimits(): void {
-  attempts.clear();
-}
+  /** Redeemed, refused or abandoned — either way the handshake is spent. */
+  function spendHandshake(scope: SessionScope, nonce: string | undefined): void {
+    if (nonce) handshakes.delete(keyFor(scope, nonce));
+  }
+
+  /** Test seam: drop everything, so one test's nonces can't answer another's. */
+  function resetHandshakes(): void {
+    handshakes.clear();
+  }
+
+  function rateLimit(ip: string): void {
+    const now = Date.now();
+    const entry = attempts.get(ip);
+    if (!entry || entry.resetAt < now) {
+      attempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+      // Opportunistic sweep — without it a rotating source address grows the
+      // map without bound.
+      if (attempts.size > 1000) {
+        for (const [key, value] of attempts) if (value.resetAt < now) attempts.delete(key);
+      }
+      return;
+    }
+    entry.count++;
+    if (entry.count > RATE_MAX) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many sign-in attempts. Wait a minute." });
+    }
+  }
+
+  /** Test seam, as above. */
+  function resetRateLimits(): void {
+    attempts.clear();
+  }
+
+  return { createHandshake, readHandshake, spendHandshake, resetHandshakes, rateLimit, resetRateLimits };
+});

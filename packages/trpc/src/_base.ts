@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { getPlexClient as getPlexClientUnmapped, NotConfiguredError } from "@tinkerbell/core";
+import type { Scope } from "@tinkerbell/container";
+import { NotConfiguredError, type Clients } from "@tinkerbell/core";
 
 /**
  * What every admin procedure can see about its caller. Populated by
@@ -24,6 +25,15 @@ export interface AdminContext {
   ip: string;
   /** False when auth is switched off in config or bypassed by the env var. */
   authRequired: boolean;
+  /**
+   * The request's own container scope, disposed once the response is sent.
+   *
+   * Procedures take their domains from the router factory rather than from
+   * here — a router is built once, exactly as the router object always was —
+   * so this exists for anything genuinely per-request. Disposing it either way
+   * means a scoped registration added later cannot leak.
+   */
+  scope: Scope;
 }
 
 export const t = initTRPC.context<AdminContext>().create();
@@ -35,18 +45,20 @@ export const t = initTRPC.context<AdminContext>().create();
  * happens here, at the transport boundary, matching the `PRECONDITION_FAILED`
  * that arr.router already uses for exactly this case.
  *
- * Every router imports `getPlexClient` from this module rather than from core,
- * so wrapping the re-export covers all of them at once.
+ * Every router binds its Plex client through this wrapper rather than calling
+ * the injected factory directly, so the mapping covers all of them at once.
  */
-export function getPlexClient(...args: Parameters<typeof getPlexClientUnmapped>) {
-  try {
-    return getPlexClientUnmapped(...args);
-  } catch (err) {
-    if (err instanceof NotConfiguredError) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+export function mapNotConfiguredClient(clients: Clients): Clients["getPlexClient"] {
+  return (...args) => {
+    try {
+      return clients.getPlexClient(...args);
+    } catch (err) {
+      if (err instanceof NotConfiguredError) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+      }
+      throw err;
     }
-    throw err;
-  }
+  };
 }
 
 const logDuration = t.middleware(async ({ path, type, next }) => {

@@ -1,14 +1,6 @@
+import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { startJob } from "@tinkerbell/jobs";
-import {
-  buildProviderPlan,
-  dismissProvider,
-  getMigrationStatus,
-  getProvider,
-  listProviders,
-  scanProviderState,
-} from "@tinkerbell/domain.migration";
-import { getConfig, setConfig } from "@tinkerbell/core";
+
 import { procedure, t } from "./_base.ts";
 
 const providerInput = z.object({ providerId: z.string().min(1) });
@@ -20,64 +12,74 @@ const runInputSchema = z.object({
   deleteOriginals: z.boolean().default(false),
 });
 
-export const migrationRouter = t.router({
-  /** Aggregate status across every registered provider. */
-  status: procedure.query(() => getMigrationStatus()),
+export function createMigrationRouter(deps: Pick<TrpcDeps, "config" | "jobs" | "migration">) {
+  const { startJob } = deps.jobs;
+  const { config, migration } = deps;
+  const { buildProviderPlan, dismissProvider, getMigrationStatus, getProvider, listProviders, scanProviderState } =
+    migration;
+  const { getConfig, setConfig } = config;
 
-  /** Static list of registered providers (id + label). For UI tabs. */
-  providers: procedure.query(() => listProviders().map((p) => ({ id: p.id, label: p.label }))),
+  const migrationRouter = t.router({
+    /** Aggregate status across every registered provider. */
+    status: procedure.query(() => getMigrationStatus()),
 
-  scan: procedure.input(providerInput).mutation(({ input }) => scanProviderState(input.providerId)),
+    /** Static list of registered providers (id + label). For UI tabs. */
+    providers: procedure.query(() => listProviders().map((p) => ({ id: p.id, label: p.label }))),
 
-  dismiss: procedure.input(providerInput).mutation(({ input }) => {
-    dismissProvider(input.providerId);
-    return { ok: true as const };
-  }),
+    scan: procedure.input(providerInput).mutation(({ input }) => scanProviderState(input.providerId)),
 
-  previewPlan: procedure.input(providerInput).query(({ input }) => buildProviderPlan(input.providerId)),
+    dismiss: procedure.input(providerInput).mutation(({ input }) => {
+      dismissProvider(input.providerId);
+      return { ok: true as const };
+    }),
 
-  run: procedure.input(runInputSchema).mutation(async ({ input }) => {
-    // Validate provider id before doing anything stateful.
-    getProvider(input.providerId);
+    previewPlan: procedure.input(providerInput).query(({ input }) => buildProviderPlan(input.providerId)),
 
-    const plan = await buildProviderPlan(input.providerId);
-    const selected = new Set(input.selectedKeys);
-    const items = plan.proposed
-      .filter((p) => selected.has(p.key))
-      .map((p) => ({
-        ruleType: p.ruleType,
-        ruleName: p.ruleName,
-        sectionId: p.sectionId,
-        ruleConfig: p.ruleConfig,
-        replacesRatingKeys: p.replacesRatingKeys,
-      }));
+    run: procedure.input(runInputSchema).mutation(async ({ input }) => {
+      // Validate provider id before doing anything stateful.
+      getProvider(input.providerId);
 
-    if (items.length === 0) {
-      throw new Error("No proposed rules selected for migration.");
-    }
+      const plan = await buildProviderPlan(input.providerId);
+      const selected = new Set(input.selectedKeys);
+      const items = plan.proposed
+        .filter((p) => selected.has(p.key))
+        .map((p) => ({
+          ruleType: p.ruleType,
+          ruleName: p.ruleName,
+          sectionId: p.sectionId,
+          ruleConfig: p.ruleConfig,
+          replacesRatingKeys: p.replacesRatingKeys,
+        }));
 
-    // Guard against concurrent run() calls: the pending-plan slot is a
-    // single-writer handoff to the migrate-collections job. Two near-
-    // simultaneous mutations would clobber each other; the winning job
-    // would then run the loser's selection. Refusing here is safer than
-    // letting the second call silently overwrite.
-    if (getConfig("migration_pending_plan")) {
-      throw new Error("Another migration is already pending. Wait for it to finish before starting a new one.");
-    }
+      if (items.length === 0) {
+        throw new Error("No proposed rules selected for migration.");
+      }
 
-    setConfig("migration_pending_plan", {
-      providerId: input.providerId,
-      items,
-      deleteOriginals: input.deleteOriginals,
-      submittedAt: Date.now(),
-    });
+      // Guard against concurrent run() calls: the pending-plan slot is a
+      // single-writer handoff to the migrate-collections job. Two near-
+      // simultaneous mutations would clobber each other; the winning job
+      // would then run the loser's selection. Refusing here is safer than
+      // letting the second call silently overwrite.
+      if (getConfig("migration_pending_plan")) {
+        throw new Error("Another migration is already pending. Wait for it to finish before starting a new one.");
+      }
 
-    const result = await startJob("migrate-collections");
-    if (!result.ok) {
-      throw result.reason === "already-running"
-        ? new Error("A collection migration is already running. Wait for it to finish, then try again.")
-        : new Error("The migrate-collections job is missing. Restart Tinkerbell to re-seed it.");
-    }
-    return { runId: result.runId };
-  }),
-});
+      setConfig("migration_pending_plan", {
+        providerId: input.providerId,
+        items,
+        deleteOriginals: input.deleteOriginals,
+        submittedAt: Date.now(),
+      });
+
+      const result = await startJob("migrate-collections");
+      if (!result.ok) {
+        throw result.reason === "already-running"
+          ? new Error("A collection migration is already running. Wait for it to finish, then try again.")
+          : new Error("The migrate-collections job is missing. Restart Tinkerbell to re-seed it.");
+      }
+      return { runId: result.runId };
+    }),
+  });
+
+  return migrationRouter;
+}

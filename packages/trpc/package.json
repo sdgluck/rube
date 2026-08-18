@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@tinkerbell/arr": "workspace:*",
+    "@tinkerbell/composition": "workspace:*",
+    "@tinkerbell/container": "workspace:*",
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
@@ -47,6 +49,7 @@
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/posters": "workspace:*",
     "@tinkerbell/seerr": "workspace:*",
     "@tinkerbell/tmdb": "workspace:*",

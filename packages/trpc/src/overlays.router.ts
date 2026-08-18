@@ -1,15 +1,7 @@
+import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { type PlexClient } from "@tinkerbell/plex";
 import {
-  getOverlayConfigs,
-  addOverlayConfig,
-  updateOverlayConfig,
-  removeOverlayConfigById,
-  moveOverlayConfig,
-  reorderOverlayConfigs,
-  clearOverlayConfigs,
-  replaceOverlayConfigs,
-  getOverlaidItemCount,
   resolveOverlayValue,
   evaluateRule,
   compositeOverlays,
@@ -17,15 +9,12 @@ import {
   overlayTypeSchema,
   badgeStyleSchema,
   conditionalRuleSchema,
-  listPresets,
-  savePreset,
-  deletePreset,
   presetDataSchema,
   type Badge,
 } from "@tinkerbell/domain.overlays";
 import { extractImdbId } from "@tinkerbell/omdb";
-import { getOmdbClient } from "@tinkerbell/core";
-import { t, procedure, getPlexClient } from "./_base.ts";
+
+import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 
 async function getMediaInfoForItem(
   client: PlexClient,
@@ -66,21 +55,8 @@ async function getMediaInfoForItem(
 }
 
 // In-memory render cache: key = sectionId:ratingKey:configHash → base64 jpeg
-const renderCache = new Map<string, { image: string; ts: number }>();
 const RENDER_CACHE_LIMIT = 50;
 const RENDER_CACHE_TTL_MS = 10 * 60 * 1000;
-
-function pruneRenderCache() {
-  const now = Date.now();
-  for (const [k, v] of renderCache) {
-    if (now - v.ts > RENDER_CACHE_TTL_MS) renderCache.delete(k);
-  }
-  while (renderCache.size > RENDER_CACHE_LIMIT) {
-    const oldest = renderCache.keys().next().value;
-    if (!oldest) break;
-    renderCache.delete(oldest);
-  }
-}
 
 function configHash(
   configs: Array<{ id: number; position: string; overlayType: string; order: number; style: unknown; rule: unknown }>,
@@ -92,396 +68,432 @@ function configHash(
   );
 }
 
-export const overlaysRouter = t.router({
-  configs: procedure
-    .input(z.object({ sectionId: z.string() }))
-    .query(({ input }) => getOverlayConfigs(input.sectionId)),
+export function createOverlaysRouter(deps: TrpcDeps) {
+  function pruneRenderCache() {
+    const now = Date.now();
+    for (const [k, v] of renderCache) {
+      if (now - v.ts > RENDER_CACHE_TTL_MS) renderCache.delete(k);
+    }
+    while (renderCache.size > RENDER_CACHE_LIMIT) {
+      const oldest = renderCache.keys().next().value;
+      if (!oldest) break;
+      renderCache.delete(oldest);
+    }
+  }
 
-  addConfig: procedure
-    .input(
-      z.object({
-        sectionId: z.string(),
-        position: overlayPositionSchema,
-        overlayType: overlayTypeSchema,
-        style: badgeStyleSchema.nullable().optional(),
-        rule: conditionalRuleSchema.nullable().optional(),
-      }),
-    )
-    .mutation(({ input }) => {
-      const row = addOverlayConfig({
-        sectionId: input.sectionId,
-        position: input.position,
-        overlayType: input.overlayType,
-        style: input.style ?? null,
-        rule: input.rule ?? null,
-      });
-      return row;
-    }),
+  const renderCache = new Map<string, { image: string; ts: number }>();
 
-  updateConfig: procedure
-    .input(
-      z.object({
-        id: z.number(),
-        style: badgeStyleSchema.nullable().optional(),
-        rule: conditionalRuleSchema.nullable().optional(),
-        overlayType: overlayTypeSchema.optional(),
-      }),
-    )
-    .mutation(({ input }) => {
-      updateOverlayConfig(input.id, {
-        style: input.style,
-        rule: input.rule,
-        overlayType: input.overlayType,
-      });
-      return { ok: true };
-    }),
+  const { clients, overlays } = deps;
+  const getPlexClient = mapNotConfiguredClient(clients);
+  const {
+    getOverlayConfigs,
+    addOverlayConfig,
+    updateOverlayConfig,
+    removeOverlayConfigById,
+    moveOverlayConfig,
+    reorderOverlayConfigs,
+    clearOverlayConfigs,
+    replaceOverlayConfigs,
+    getOverlaidItemCount,
+    listPresets,
+    savePreset,
+    deletePreset,
+  } = overlays;
+  const { getOmdbClient } = clients;
 
-  removeConfig: procedure.input(z.object({ id: z.number() })).mutation(({ input }) => {
-    removeOverlayConfigById(input.id);
-    return { ok: true };
-  }),
+  const overlaysRouter = t.router({
+    configs: procedure
+      .input(z.object({ sectionId: z.string() }))
+      .query(({ input }) => getOverlayConfigs(input.sectionId)),
 
-  moveConfig: procedure
-    .input(z.object({ id: z.number(), position: overlayPositionSchema, order: z.number() }))
-    .mutation(({ input }) => {
-      moveOverlayConfig(input.id, input.position, input.order);
-      return { ok: true };
-    }),
-
-  reorderConfigs: procedure
-    .input(z.object({ sectionId: z.string(), position: overlayPositionSchema, ids: z.array(z.number()) }))
-    .mutation(({ input }) => {
-      reorderOverlayConfigs(input.sectionId, input.position, input.ids);
-      return { ok: true };
-    }),
-
-  clearConfigs: procedure.input(z.object({ sectionId: z.string() })).mutation(({ input }) => {
-    clearOverlayConfigs(input.sectionId);
-    return { ok: true };
-  }),
-
-  status: procedure
-    .input(z.object({ sectionId: z.string() }))
-    .query(({ input }) => ({ count: getOverlaidItemCount(input.sectionId) })),
-
-  sampleItem: procedure.input(z.object({ sectionId: z.string() })).query(async ({ input }) => {
-    const client = getPlexClient();
-    const result = await client.getItems(input.sectionId, { offset: 0, size: 1 });
-    if (result.items.length === 0) return null;
-    const randomOffset = Math.floor(Math.random() * result.total);
-    const randomResult = await client.getItems(input.sectionId, { offset: randomOffset, size: 1 });
-    const item = randomResult.items[0] || result.items[0];
-    const detail = await client.getItemFullDetail(item.ratingKey);
-    return detail;
-  }),
-
-  previewValues: procedure
-    .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
-    .query(async ({ input }) => {
-      const configs = getOverlayConfigs(input.sectionId);
-      if (configs.length === 0) return {} as Record<number, string | null>;
-
-      const client = getPlexClient();
-      const detail = await client.getItemFullDetail(input.ratingKey);
-      const mediaInfo = await getMediaInfoForItem(client, detail);
-
-      const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
-      let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
-      if (needsOmdb) {
-        const imdbId = extractImdbId(detail.guids);
-        if (imdbId) {
-          const omdb = await getOmdbClient().getRatings(imdbId);
-          if (omdb) ratings = omdb;
-        }
-      }
-
-      const values: Record<number, string | null> = {};
-      for (const cfg of configs) {
-        const v = resolveOverlayValue(
-          cfg.overlayType,
-          {
-            videoResolution: mediaInfo.videoResolution,
-            videoCodec: mediaInfo.videoCodec,
-            audioCodec: mediaInfo.audioCodec,
-            audioChannels: mediaInfo.audioChannels,
-            bitDepth: mediaInfo.bitDepth,
-            colorSpace: mediaInfo.colorSpace,
-            videoDisplayTitle: mediaInfo.videoDisplayTitle,
-            contentRating: detail.contentRating,
-            duration: detail.duration,
-            studio: detail.studio,
-            editionTitle: detail.editionTitle,
-            showStatus: detail.status,
-          },
-          ratings,
-        );
-        // Apply rule (rules can hide values).
-        const allowed = evaluateRule(cfg.rule, cfg.overlayType, v, ratings);
-        values[cfg.id] = allowed ? v : null;
-      }
-      return values;
-    }),
-
-  renderPreview: procedure
-    .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
-    .mutation(async ({ input }) => {
-      const configs = getOverlayConfigs(input.sectionId);
-      if (configs.length === 0) throw new Error("No overlays configured");
-
-      const cacheKey = `${input.sectionId}:${input.ratingKey}:${configHash(configs as never)}`;
-      const cached = renderCache.get(cacheKey);
-      if (cached) return { image: cached.image, cached: true };
-
-      const client = getPlexClient();
-      const detail = await client.getItemFullDetail(input.ratingKey);
-      if (!detail.thumb) throw new Error("Item has no poster");
-
-      const mediaInfo = await getMediaInfoForItem(client, detail);
-      const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
-      let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
-      if (needsOmdb) {
-        const imdbId = extractImdbId(detail.guids);
-        if (imdbId) {
-          const omdb = await getOmdbClient().getRatings(imdbId);
-          if (omdb) ratings = omdb;
-        }
-      }
-
-      const badges: Badge[] = [];
-      for (const cfg of configs) {
-        const value = resolveOverlayValue(
-          cfg.overlayType,
-          {
-            videoResolution: mediaInfo.videoResolution,
-            videoCodec: mediaInfo.videoCodec,
-            audioCodec: mediaInfo.audioCodec,
-            audioChannels: mediaInfo.audioChannels,
-            bitDepth: mediaInfo.bitDepth,
-            colorSpace: mediaInfo.colorSpace,
-            videoDisplayTitle: mediaInfo.videoDisplayTitle,
-            contentRating: detail.contentRating,
-            duration: detail.duration,
-            studio: detail.studio,
-            editionTitle: detail.editionTitle,
-            showStatus: detail.status,
-          },
-          ratings,
-        );
-        if (!evaluateRule(cfg.rule, cfg.overlayType, value, ratings)) continue;
-        if (value) {
-          badges.push({
-            position: cfg.position,
-            type: cfg.overlayType,
-            value,
-            style: cfg.style ?? null,
-            order: cfg.order,
-          });
-        }
-      }
-
-      if (badges.length === 0) throw new Error("No overlay values resolved for this item");
-
-      const posterBuf = await client.downloadPoster(detail.thumb);
-      const composited = await compositeOverlays(posterBuf, badges);
-      const image = composited.toString("base64");
-      renderCache.set(cacheKey, { image, ts: Date.now() });
-      pruneRenderCache();
-      return { image, cached: false };
-    }),
-
-  // Bulk preview across multiple random items.
-  bulkPreview: procedure
-    .input(z.object({ sectionId: z.string(), count: z.number().min(1).max(12).default(6) }))
-    .mutation(async ({ input }) => {
-      const configs = getOverlayConfigs(input.sectionId);
-      if (configs.length === 0) throw new Error("No overlays configured");
-
-      const client = getPlexClient();
-      const sample = await client.getItems(input.sectionId, { offset: 0, size: 1 });
-      if (sample.items.length === 0) return { items: [] };
-      const total = sample.total;
-
-      const offsets = new Set<number>();
-      while (offsets.size < Math.min(input.count, total)) {
-        offsets.add(Math.floor(Math.random() * total));
-      }
-
-      const results: Array<{ title: string; ratingKey: string; image: string }> = [];
-      for (const off of offsets) {
-        try {
-          const r = await client.getItems(input.sectionId, { offset: off, size: 1 });
-          const item = r.items[0];
-          if (!item) continue;
-          const detail = await client.getItemFullDetail(item.ratingKey);
-          if (!detail.thumb) continue;
-          const mediaInfo = await getMediaInfoForItem(client, detail);
-          const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
-          let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
-          if (needsOmdb) {
-            const imdbId = extractImdbId(detail.guids);
-            if (imdbId) {
-              const omdb = await getOmdbClient().getRatings(imdbId);
-              if (omdb) ratings = omdb;
-            }
-          }
-          const badges: Badge[] = [];
-          for (const cfg of configs) {
-            const value = resolveOverlayValue(
-              cfg.overlayType,
-              {
-                videoResolution: mediaInfo.videoResolution,
-                videoCodec: mediaInfo.videoCodec,
-                audioCodec: mediaInfo.audioCodec,
-                audioChannels: mediaInfo.audioChannels,
-                bitDepth: mediaInfo.bitDepth,
-                colorSpace: mediaInfo.colorSpace,
-                videoDisplayTitle: mediaInfo.videoDisplayTitle,
-                contentRating: detail.contentRating,
-                duration: detail.duration,
-                studio: detail.studio,
-                editionTitle: detail.editionTitle,
-              },
-              ratings,
-            );
-            if (!evaluateRule(cfg.rule, cfg.overlayType, value, ratings)) continue;
-            if (value) {
-              badges.push({
-                position: cfg.position,
-                type: cfg.overlayType,
-                value,
-                style: cfg.style ?? null,
-                order: cfg.order,
-              });
-            }
-          }
-          const posterBuf = await client.downloadPoster(detail.thumb);
-          const composited = badges.length > 0 ? await compositeOverlays(posterBuf, badges) : posterBuf;
-          results.push({
-            title: detail.title || "",
-            ratingKey: detail.ratingKey,
-            image: composited.toString("base64"),
-          });
-        } catch (err) {
-          // skip individual failures
-          console.warn("[overlays.bulkPreview] item failed:", err);
-        }
-      }
-      return { items: results };
-    }),
-
-  /* ─── Presets ──────────────────────────────────────────────────────────── */
-
-  listPresets: procedure.query(() => listPresets()),
-
-  applyPreset: procedure.input(z.object({ sectionId: z.string(), presetId: z.string() })).mutation(({ input }) => {
-    const all = listPresets();
-    const preset = all.find((p) => p.id === input.presetId);
-    if (!preset) throw new Error("Preset not found");
-    replaceOverlayConfigs(
-      input.sectionId,
-      preset.data.configs.map((c) => ({
-        position: c.position,
-        overlayType: c.overlayType,
-        style: c.style ?? null,
-        rule: c.rule ?? null,
-        order: c.order,
-      })),
-    );
-    return { ok: true };
-  }),
-
-  savePreset: procedure
-    .input(
-      z.object({
-        id: z.string().optional(),
-        name: z.string().min(1).max(60),
-        description: z.string().max(200).optional(),
-        data: presetDataSchema,
-      }),
-    )
-    .mutation(({ input }) => {
-      const id = savePreset(input);
-      return { id };
-    }),
-
-  savePresetFromSection: procedure
-    .input(z.object({ sectionId: z.string(), name: z.string().min(1).max(60), description: z.string().optional() }))
-    .mutation(({ input }) => {
-      const configs = getOverlayConfigs(input.sectionId);
-      const id = savePreset({
-        name: input.name,
-        description: input.description,
-        data: {
-          configs: configs.map((c) => ({
-            position: c.position,
-            overlayType: c.overlayType,
-            style: c.style ?? null,
-            rule: c.rule ?? null,
-            order: c.order,
-          })),
-        },
-      });
-      return { id };
-    }),
-
-  deletePreset: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
-    deletePreset(input.id);
-    return { ok: true };
-  }),
-
-  /* ─── Import / Export ──────────────────────────────────────────────────── */
-
-  exportSection: procedure.input(z.object({ sectionId: z.string() })).query(({ input }) => {
-    const configs = getOverlayConfigs(input.sectionId);
-    return {
-      version: 1 as const,
-      exportedAt: new Date().toISOString(),
-      configs: configs.map((c) => ({
-        position: c.position,
-        overlayType: c.overlayType,
-        style: c.style ?? null,
-        rule: c.rule ?? null,
-        order: c.order,
-      })),
-    };
-  }),
-
-  importSection: procedure
-    .input(
-      z.object({
-        sectionId: z.string(),
-        mode: z.enum(["replace", "append"]),
-        // Validate the incoming payload here so a bad import never reaches the
-        // DB. Reuses the preset config shape; we accept (and require) `version`
-        // so we can reject unknown formats up front.
-        data: z.object({
-          version: z.literal(1),
-          exportedAt: z.string().optional(),
-          configs: presetDataSchema.shape.configs,
+    addConfig: procedure
+      .input(
+        z.object({
+          sectionId: z.string(),
+          position: overlayPositionSchema,
+          overlayType: overlayTypeSchema,
+          style: badgeStyleSchema.nullable().optional(),
+          rule: conditionalRuleSchema.nullable().optional(),
         }),
+      )
+      .mutation(({ input }) => {
+        const row = addOverlayConfig({
+          sectionId: input.sectionId,
+          position: input.position,
+          overlayType: input.overlayType,
+          style: input.style ?? null,
+          rule: input.rule ?? null,
+        });
+        return row;
       }),
-    )
-    .mutation(({ input }) => {
-      const incoming = input.data.configs.map((c) => ({
-        position: c.position,
-        overlayType: c.overlayType,
-        style: c.style ?? null,
-        rule: c.rule ?? null,
-        order: c.order,
-      }));
-      if (input.mode === "replace") {
-        replaceOverlayConfigs(input.sectionId, incoming);
-      } else {
-        for (const c of incoming) {
-          addOverlayConfig({
-            sectionId: input.sectionId,
-            position: c.position,
-            overlayType: c.overlayType,
-            style: c.style,
-            rule: c.rule,
-          });
-        }
-      }
-      return { ok: true, count: incoming.length };
+
+    updateConfig: procedure
+      .input(
+        z.object({
+          id: z.number(),
+          style: badgeStyleSchema.nullable().optional(),
+          rule: conditionalRuleSchema.nullable().optional(),
+          overlayType: overlayTypeSchema.optional(),
+        }),
+      )
+      .mutation(({ input }) => {
+        updateOverlayConfig(input.id, {
+          style: input.style,
+          rule: input.rule,
+          overlayType: input.overlayType,
+        });
+        return { ok: true };
+      }),
+
+    removeConfig: procedure.input(z.object({ id: z.number() })).mutation(({ input }) => {
+      removeOverlayConfigById(input.id);
+      return { ok: true };
     }),
-});
+
+    moveConfig: procedure
+      .input(z.object({ id: z.number(), position: overlayPositionSchema, order: z.number() }))
+      .mutation(({ input }) => {
+        moveOverlayConfig(input.id, input.position, input.order);
+        return { ok: true };
+      }),
+
+    reorderConfigs: procedure
+      .input(z.object({ sectionId: z.string(), position: overlayPositionSchema, ids: z.array(z.number()) }))
+      .mutation(({ input }) => {
+        reorderOverlayConfigs(input.sectionId, input.position, input.ids);
+        return { ok: true };
+      }),
+
+    clearConfigs: procedure.input(z.object({ sectionId: z.string() })).mutation(({ input }) => {
+      clearOverlayConfigs(input.sectionId);
+      return { ok: true };
+    }),
+
+    status: procedure
+      .input(z.object({ sectionId: z.string() }))
+      .query(({ input }) => ({ count: getOverlaidItemCount(input.sectionId) })),
+
+    sampleItem: procedure.input(z.object({ sectionId: z.string() })).query(async ({ input }) => {
+      const client = getPlexClient();
+      const result = await client.getItems(input.sectionId, { offset: 0, size: 1 });
+      if (result.items.length === 0) return null;
+      const randomOffset = Math.floor(Math.random() * result.total);
+      const randomResult = await client.getItems(input.sectionId, { offset: randomOffset, size: 1 });
+      const item = randomResult.items[0] || result.items[0];
+      const detail = await client.getItemFullDetail(item.ratingKey);
+      return detail;
+    }),
+
+    previewValues: procedure
+      .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
+      .query(async ({ input }) => {
+        const configs = getOverlayConfigs(input.sectionId);
+        if (configs.length === 0) return {} as Record<number, string | null>;
+
+        const client = getPlexClient();
+        const detail = await client.getItemFullDetail(input.ratingKey);
+        const mediaInfo = await getMediaInfoForItem(client, detail);
+
+        const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
+        let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
+        if (needsOmdb) {
+          const imdbId = extractImdbId(detail.guids);
+          if (imdbId) {
+            const omdb = await getOmdbClient().getRatings(imdbId);
+            if (omdb) ratings = omdb;
+          }
+        }
+
+        const values: Record<number, string | null> = {};
+        for (const cfg of configs) {
+          const v = resolveOverlayValue(
+            cfg.overlayType,
+            {
+              videoResolution: mediaInfo.videoResolution,
+              videoCodec: mediaInfo.videoCodec,
+              audioCodec: mediaInfo.audioCodec,
+              audioChannels: mediaInfo.audioChannels,
+              bitDepth: mediaInfo.bitDepth,
+              colorSpace: mediaInfo.colorSpace,
+              videoDisplayTitle: mediaInfo.videoDisplayTitle,
+              contentRating: detail.contentRating,
+              duration: detail.duration,
+              studio: detail.studio,
+              editionTitle: detail.editionTitle,
+              showStatus: detail.status,
+            },
+            ratings,
+          );
+          // Apply rule (rules can hide values).
+          const allowed = evaluateRule(cfg.rule, cfg.overlayType, v, ratings);
+          values[cfg.id] = allowed ? v : null;
+        }
+        return values;
+      }),
+
+    renderPreview: procedure
+      .input(z.object({ sectionId: z.string(), ratingKey: z.string() }))
+      .mutation(async ({ input }) => {
+        const configs = getOverlayConfigs(input.sectionId);
+        if (configs.length === 0) throw new Error("No overlays configured");
+
+        const cacheKey = `${input.sectionId}:${input.ratingKey}:${configHash(configs as never)}`;
+        const cached = renderCache.get(cacheKey);
+        if (cached) return { image: cached.image, cached: true };
+
+        const client = getPlexClient();
+        const detail = await client.getItemFullDetail(input.ratingKey);
+        if (!detail.thumb) throw new Error("Item has no poster");
+
+        const mediaInfo = await getMediaInfoForItem(client, detail);
+        const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
+        let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
+        if (needsOmdb) {
+          const imdbId = extractImdbId(detail.guids);
+          if (imdbId) {
+            const omdb = await getOmdbClient().getRatings(imdbId);
+            if (omdb) ratings = omdb;
+          }
+        }
+
+        const badges: Badge[] = [];
+        for (const cfg of configs) {
+          const value = resolveOverlayValue(
+            cfg.overlayType,
+            {
+              videoResolution: mediaInfo.videoResolution,
+              videoCodec: mediaInfo.videoCodec,
+              audioCodec: mediaInfo.audioCodec,
+              audioChannels: mediaInfo.audioChannels,
+              bitDepth: mediaInfo.bitDepth,
+              colorSpace: mediaInfo.colorSpace,
+              videoDisplayTitle: mediaInfo.videoDisplayTitle,
+              contentRating: detail.contentRating,
+              duration: detail.duration,
+              studio: detail.studio,
+              editionTitle: detail.editionTitle,
+              showStatus: detail.status,
+            },
+            ratings,
+          );
+          if (!evaluateRule(cfg.rule, cfg.overlayType, value, ratings)) continue;
+          if (value) {
+            badges.push({
+              position: cfg.position,
+              type: cfg.overlayType,
+              value,
+              style: cfg.style ?? null,
+              order: cfg.order,
+            });
+          }
+        }
+
+        if (badges.length === 0) throw new Error("No overlay values resolved for this item");
+
+        const posterBuf = await client.downloadPoster(detail.thumb);
+        const composited = await compositeOverlays(posterBuf, badges);
+        const image = composited.toString("base64");
+        renderCache.set(cacheKey, { image, ts: Date.now() });
+        pruneRenderCache();
+        return { image, cached: false };
+      }),
+
+    // Bulk preview across multiple random items.
+    bulkPreview: procedure
+      .input(z.object({ sectionId: z.string(), count: z.number().min(1).max(12).default(6) }))
+      .mutation(async ({ input }) => {
+        const configs = getOverlayConfigs(input.sectionId);
+        if (configs.length === 0) throw new Error("No overlays configured");
+
+        const client = getPlexClient();
+        const sample = await client.getItems(input.sectionId, { offset: 0, size: 1 });
+        if (sample.items.length === 0) return { items: [] };
+        const total = sample.total;
+
+        const offsets = new Set<number>();
+        while (offsets.size < Math.min(input.count, total)) {
+          offsets.add(Math.floor(Math.random() * total));
+        }
+
+        const results: Array<{ title: string; ratingKey: string; image: string }> = [];
+        for (const off of offsets) {
+          try {
+            const r = await client.getItems(input.sectionId, { offset: off, size: 1 });
+            const item = r.items[0];
+            if (!item) continue;
+            const detail = await client.getItemFullDetail(item.ratingKey);
+            if (!detail.thumb) continue;
+            const mediaInfo = await getMediaInfoForItem(client, detail);
+            const needsOmdb = configs.some((c) => c.overlayType === "imdb_rating" || c.overlayType === "rt_rating");
+            let ratings: { imdbRating?: string | null; rtRating?: string | null } = {};
+            if (needsOmdb) {
+              const imdbId = extractImdbId(detail.guids);
+              if (imdbId) {
+                const omdb = await getOmdbClient().getRatings(imdbId);
+                if (omdb) ratings = omdb;
+              }
+            }
+            const badges: Badge[] = [];
+            for (const cfg of configs) {
+              const value = resolveOverlayValue(
+                cfg.overlayType,
+                {
+                  videoResolution: mediaInfo.videoResolution,
+                  videoCodec: mediaInfo.videoCodec,
+                  audioCodec: mediaInfo.audioCodec,
+                  audioChannels: mediaInfo.audioChannels,
+                  bitDepth: mediaInfo.bitDepth,
+                  colorSpace: mediaInfo.colorSpace,
+                  videoDisplayTitle: mediaInfo.videoDisplayTitle,
+                  contentRating: detail.contentRating,
+                  duration: detail.duration,
+                  studio: detail.studio,
+                  editionTitle: detail.editionTitle,
+                },
+                ratings,
+              );
+              if (!evaluateRule(cfg.rule, cfg.overlayType, value, ratings)) continue;
+              if (value) {
+                badges.push({
+                  position: cfg.position,
+                  type: cfg.overlayType,
+                  value,
+                  style: cfg.style ?? null,
+                  order: cfg.order,
+                });
+              }
+            }
+            const posterBuf = await client.downloadPoster(detail.thumb);
+            const composited = badges.length > 0 ? await compositeOverlays(posterBuf, badges) : posterBuf;
+            results.push({
+              title: detail.title || "",
+              ratingKey: detail.ratingKey,
+              image: composited.toString("base64"),
+            });
+          } catch (err) {
+            // skip individual failures
+            console.warn("[overlays.bulkPreview] item failed:", err);
+          }
+        }
+        return { items: results };
+      }),
+
+    /* ─── Presets ──────────────────────────────────────────────────────────── */
+
+    listPresets: procedure.query(() => listPresets()),
+
+    applyPreset: procedure.input(z.object({ sectionId: z.string(), presetId: z.string() })).mutation(({ input }) => {
+      const all = listPresets();
+      const preset = all.find((p) => p.id === input.presetId);
+      if (!preset) throw new Error("Preset not found");
+      replaceOverlayConfigs(
+        input.sectionId,
+        preset.data.configs.map((c) => ({
+          position: c.position,
+          overlayType: c.overlayType,
+          style: c.style ?? null,
+          rule: c.rule ?? null,
+          order: c.order,
+        })),
+      );
+      return { ok: true };
+    }),
+
+    savePreset: procedure
+      .input(
+        z.object({
+          id: z.string().optional(),
+          name: z.string().min(1).max(60),
+          description: z.string().max(200).optional(),
+          data: presetDataSchema,
+        }),
+      )
+      .mutation(({ input }) => {
+        const id = savePreset(input);
+        return { id };
+      }),
+
+    savePresetFromSection: procedure
+      .input(z.object({ sectionId: z.string(), name: z.string().min(1).max(60), description: z.string().optional() }))
+      .mutation(({ input }) => {
+        const configs = getOverlayConfigs(input.sectionId);
+        const id = savePreset({
+          name: input.name,
+          description: input.description,
+          data: {
+            configs: configs.map((c) => ({
+              position: c.position,
+              overlayType: c.overlayType,
+              style: c.style ?? null,
+              rule: c.rule ?? null,
+              order: c.order,
+            })),
+          },
+        });
+        return { id };
+      }),
+
+    deletePreset: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
+      deletePreset(input.id);
+      return { ok: true };
+    }),
+
+    /* ─── Import / Export ──────────────────────────────────────────────────── */
+
+    exportSection: procedure.input(z.object({ sectionId: z.string() })).query(({ input }) => {
+      const configs = getOverlayConfigs(input.sectionId);
+      return {
+        version: 1 as const,
+        exportedAt: new Date().toISOString(),
+        configs: configs.map((c) => ({
+          position: c.position,
+          overlayType: c.overlayType,
+          style: c.style ?? null,
+          rule: c.rule ?? null,
+          order: c.order,
+        })),
+      };
+    }),
+
+    importSection: procedure
+      .input(
+        z.object({
+          sectionId: z.string(),
+          mode: z.enum(["replace", "append"]),
+          // Validate the incoming payload here so a bad import never reaches the
+          // DB. Reuses the preset config shape; we accept (and require) `version`
+          // so we can reject unknown formats up front.
+          data: z.object({
+            version: z.literal(1),
+            exportedAt: z.string().optional(),
+            configs: presetDataSchema.shape.configs,
+          }),
+        }),
+      )
+      .mutation(({ input }) => {
+        const incoming = input.data.configs.map((c) => ({
+          position: c.position,
+          overlayType: c.overlayType,
+          style: c.style ?? null,
+          rule: c.rule ?? null,
+          order: c.order,
+        }));
+        if (input.mode === "replace") {
+          replaceOverlayConfigs(input.sectionId, incoming);
+        } else {
+          for (const c of incoming) {
+            addOverlayConfig({
+              sectionId: input.sectionId,
+              position: c.position,
+              overlayType: c.overlayType,
+              style: c.style,
+              rule: c.rule,
+            });
+          }
+        }
+        return { ok: true, count: incoming.length };
+      }),
+  });
+
+  return overlaysRouter;
+}
