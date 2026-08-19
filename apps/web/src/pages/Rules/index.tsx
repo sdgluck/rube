@@ -537,6 +537,16 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
         dryRun: o.dryRun,
       };
     }
+    if (next.outcome.kind === "playlist") {
+      const o = next.outcome;
+      config.action = {
+        kind: "playlist",
+        ...(o.playlistName.trim() ? { playlistName: o.playlistName.trim() } : {}),
+        order: o.playlistOrder,
+        combineSections: o.playlistCombineSections,
+        ...(o.playlistLimit > 0 ? { limit: o.playlistLimit } : {}),
+      };
+    }
     const schedule = scheduleToConfig(next.schedule);
     if (schedule) config.schedule = schedule;
 

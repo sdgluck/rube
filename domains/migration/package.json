@@ -15,9 +15,11 @@
   },
   "dependencies": {
     "@tinkerbell/container": "workspace:*",
+    "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/migrate": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {

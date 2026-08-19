@@ -62,6 +62,20 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
         collectionName: c.title,
         pinToHomepage: false,
       },
+      // Every clause round-tripped (the `unsupported` branch above bailed
+      // otherwise), so the selection is faithful. What changes is the kind of
+      // collection: Tinkerbell's smart_filter handler materialises members on
+      // each run rather than handing Plex a live filter, so the collection
+      // stops updating by itself between runs.
+      confidence: "close",
+      warnings: [
+        {
+          code: "smart-becomes-static",
+          message:
+            "Tinkerbell rebuilds this collection on each run instead of leaving Plex a live smart filter, so membership updates on the rule's schedule rather than instantly.",
+        },
+      ],
+      origin: { kind: "title-scan", definition: c.title },
       sampleNames: [c.title],
       replacesCount: 1,
       replacesRatingKeys: [c.ratingKey],
@@ -75,6 +89,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
     proposed,
     future: [],
     unmappable,
+    diagnostics: [],
     totalSourceItems: collections.length,
   };
 }

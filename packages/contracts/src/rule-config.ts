@@ -77,6 +77,39 @@ const cleanupActionSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("collection") }),
     z.object({
+      /**
+       * Build a playlist instead of a collection.
+       *
+       * The selection is identical — every handler already yields an *ordered*
+       * list, which `commitCollection` throws away because a collection is a
+       * set. A playlist keeps it, which is the whole reason somebody wants one.
+       *
+       * Playlists are server-level rather than library-scoped, and Tinkerbell
+       * authenticates as the server owner, so a playlist it builds is the
+       * owner's. There is no per-user equivalent of the label-and-restrict
+       * trick that makes personalised collections work.
+       */
+      kind: z.literal("playlist"),
+      /** Defaults to the rule's own name. */
+      playlistName: z.string().max(255).optional(),
+      /**
+       * How to order the items.
+       *
+       * `handler` keeps whatever order the selection produced, which for a
+       * list source is the list's own order — the thing a playlist is usually
+       * for. The rest re-sort it.
+       */
+      order: z.enum(["handler", "release_date", "added_date", "title", "random"]).default("handler"),
+      /**
+       * Pool every library the rule covers into one playlist. On by default:
+       * playlists aren't library-scoped, and one playlist per library would be
+       * a surprising thing to get from a rule that names two.
+       */
+      combineSections: z.boolean().default(true),
+      /** Cap the playlist's length, applied after ordering. */
+      limit: z.number().int().positive().optional(),
+    }),
+    z.object({
       kind: z.literal("metadata"),
       /**
        * Applied to every item the rule's selection matched. Values may use
@@ -159,6 +192,7 @@ const cleanupActionSchema = z
 export type RuleAction = NonNullable<z.infer<typeof cleanupActionSchema>>;
 export type CleanupActionConfig = Extract<RuleAction, { kind: "cleanup" }>;
 export type MetadataActionConfig = Extract<RuleAction, { kind: "metadata" }>;
+export type PlaylistActionConfig = Extract<RuleAction, { kind: "playlist" }>;
 
 /** Normalised action for a rule config. Absent means the collection path. */
 export function ruleAction(config: { action?: RuleAction }): RuleAction {
@@ -172,6 +206,30 @@ export function isCleanupRule(config: { action?: RuleAction }): boolean {
 export function isMetadataRule(config: { action?: RuleAction }): boolean {
   return config.action?.kind === "metadata";
 }
+
+export function isPlaylistRule(config: { action?: RuleAction }): boolean {
+  return config.action?.kind === "playlist";
+}
+
+/**
+ * Rule types that can build a playlist.
+ *
+ * The gate isn't arbitrary: a playlist is one ordered sequence, so a rule that
+ * produces *many* collections — one per genre, one per decade — has no sensible
+ * playlist reading. Only the single-output selections qualify.
+ */
+export const PLAYLIST_CAPABLE_RULE_TYPES: readonly string[] = [
+  "smart_filter",
+  "list_source",
+  "imdb_chart",
+  "imdb_list",
+  "ai_prompt",
+  "top_rated",
+  "lowest_rated",
+  "rt_top_rated",
+  "seerr_requests",
+  "static_list",
+];
 
 /**
  * Whether this action would write anything at all.
@@ -219,6 +277,23 @@ const baseRuleConfigSchema = z.object({
    */
   minItems: z.number().optional(),
   /**
+   * Restrict a grouped rule to these groups, by name. Absent means every group
+   * the library yields, which is the behaviour every rule had before this
+   * existed.
+   *
+   * Matching is case-insensitive and trimmed — see `groupAllowed`. These are
+   * the group's *display* names ("Documentary", "Netflix", "1990s"), because
+   * that is what a person reading the rule expects to type and what the
+   * source of the list is keyed on anyway.
+   */
+  includeValues: z.array(z.string()).optional(),
+  /**
+   * Skip these groups. Applied after `includeValues`, so listing a value in
+   * both excludes it — "everything in this list except that one" is the
+   * likelier intent than a contradiction worth erroring over.
+   */
+  excludeValues: z.array(z.string()).optional(),
+  /**
    * Libraries this rule covers. Empty or absent means every library.
    *
    * Entries may be section *titles* or section *keys* — the wizard writes
@@ -232,8 +307,30 @@ const baseRuleConfigSchema = z.object({
   listId: z.string().optional(),
   /** list_source: which external list provider supplies the items. */
   listProvider: z.enum(["mdblist", "trakt", "imdb"]).optional(),
-  /** list_source / smart_filter: optional override for the generated collection name. */
+  /** list_source / smart_filter / static_list: override for the collection name. */
   collectionName: z.string().optional(),
+  /**
+   * static_list: the collection's members, written down.
+   *
+   * Addressed by external id rather than Plex rating key because rating keys
+   * are per-server and don't survive a library rebuild — a frozen collection
+   * keyed on them would empty itself exactly when somebody needed it most.
+   * Order is meaningful: for an adopted hand-ordered collection it is the only
+   * surviving trace of the curation, and `presentation.collectionSort: custom`
+   * is what makes Plex honour it.
+   */
+  items: z
+    .array(
+      z.object({
+        /** `tt0111161`. */
+        imdb: z.string().optional(),
+        tmdb: z.number().int().positive().optional(),
+        /** What it was called when recorded, for the rule's own UI. */
+        title: z.string().optional(),
+      }),
+    )
+    .max(10_000)
+    .optional(),
   /**
    * smart_filter: recursive boolean tree of clauses translated to a Plex
    * query string at run time. AND/OR groups can nest arbitrarily so any
@@ -404,6 +501,12 @@ export const RULE_TYPE_VALUES = [
   "based_on",
   "seasonal",
   "awards",
+  /**
+   * A collection whose members are recorded rather than derived. Exists for
+   * migration: it lets a Kometa collection Tinkerbell has no builder for be
+   * adopted and kept alive instead of lost.
+   */
+  "static_list",
 ] as const;
 
 export type RuleTypeValue = (typeof RULE_TYPE_VALUES)[number];

@@ -4,7 +4,7 @@ import type { TmdbCachedDetails } from "@tinkerbell/db";
 
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 
-import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
+import { collectionLimit, describeLimits, filterGroups, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 /**
@@ -125,7 +125,7 @@ export function createTmdbGroupedCommand(deps: Services) {
         }
 
         // Filter, sort by item count desc, take top N.
-        const ranked = Array.from(groups.values())
+        const ranked = filterGroups(Array.from(groups.values()), ruleConfig, (g) => g.label)
           .filter((g) => g.items.length >= minItems)
           .sort((a, b) => b.items.length - a.items.length);
 

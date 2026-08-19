@@ -114,6 +114,20 @@ export function buildPlan(classified: ClassifiedCollection[], opts: PlanOptions)
         sectionId: group.sectionId,
         sectionTitle: group.sectionTitle,
         ruleConfig: { sections: [group.sectionTitle], pinToHomepage: false },
+        // Title-scan is never better than `partial` and saying otherwise would
+        // be a lie the review screen repeats a hundred times: we inferred a
+        // category from a collection's *name*, so the source's filters, limit
+        // and ordering are not lost — they were never visible in the first
+        // place. The YAML path is where `exact` is earned.
+        confidence: "partial",
+        warnings: [
+          {
+            code: "title-scan-inferred",
+            message:
+              "Inferred from the collection name — Kometa's own filters, limit, sort and schedule for these collections weren't visible. Import your Kometa config for a faithful migration.",
+          },
+        ],
+        origin: { kind: "title-scan" },
         sampleNames,
         replacesCount: group.members.length,
         replacesRatingKeys: group.members.map((m) => m.collection.ratingKey),
@@ -130,8 +144,12 @@ export function buildPlan(classified: ClassifiedCollection[], opts: PlanOptions)
     }
   }
 
-  // Sort for stable UI ordering: section, then bucket.
-  proposed.sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle) || a.bucket.localeCompare(b.bucket));
+  // Sort for stable UI ordering: section, then bucket. Every item this
+  // function produces has a bucket — it groups by one — but `PlanItem.bucket`
+  // is optional for the YAML provider's sake, so fall back rather than assert.
+  proposed.sort(
+    (a, b) => a.sectionTitle.localeCompare(b.sectionTitle) || (a.bucket ?? "").localeCompare(b.bucket ?? ""),
+  );
   future.sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle) || a.bucket.localeCompare(b.bucket));
   unmappable.sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle) || a.title.localeCompare(b.title));
 
@@ -139,6 +157,9 @@ export function buildPlan(classified: ClassifiedCollection[], opts: PlanOptions)
     proposed,
     future,
     unmappable,
+    // Title-scan reads already-synced rows; there is no source to fail to
+    // parse, so there is nothing to report here.
+    diagnostics: [],
     totalSourceItems: classified.length,
   };
 }

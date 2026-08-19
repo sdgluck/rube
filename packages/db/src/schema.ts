@@ -1386,3 +1386,143 @@ export const metadataOriginals = sqliteTable(
     index("idx_metadata_originals_applied").on(table.appliedAt),
   ],
 );
+
+/**
+ * An uploaded (or server-read) Kometa config bundle, held between the moment
+ * the user hands it over and the moment they finish reviewing the plan it
+ * produced.
+ *
+ * Deliberately a table rather than another `config` key. The migration state
+ * slots next door are small scalars, and `config` is read wholesale on boot —
+ * a real Kometa `config/` directory is a `config.yml` plus a dozen collection
+ * files and runs to hundreds of kilobytes, which is not something to drag
+ * into memory on every process start for the sake of one settings page.
+ *
+ * `planCache` exists because mapping is not cheap: template expansion runs
+ * over every definition, and the review screen re-queries the plan on every
+ * checkbox render. The cache is keyed by nothing — a row *is* one import, and
+ * an import's files never change, so a cached plan can't go stale against its
+ * own bundle. It can go stale against the *library mapping*, which is why the
+ * runtime clears it when the section mapping changes.
+ *
+ * Rows are disposable. Nothing downstream reads them once `migration_pending_plan`
+ * is written, so the sweep that purges old job runs can drop these too.
+ */
+export const migrationImports = sqliteTable(
+  "migration_imports",
+  {
+    id: text("id").primaryKey(),
+    /** Provider that owns this bundle, e.g. "kometa-yaml". */
+    providerId: text("provider_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    /**
+     * The bundle, as `{ path, text }` pairs. `path` is whatever the user's
+     * directory picker reported, kept verbatim so include resolution can match
+     * on it the way Kometa's own `file:`/`folder:` references expect.
+     */
+    files: text("files", { mode: "json" }).$type<Array<{ path: string; text: string }>>().notNull().default([]),
+    /** Parse/resolve findings, surfaced by the Resolve step before any mapping. */
+    diagnostics: text("diagnostics", { mode: "json" })
+      .$type<Array<{ severity: "error" | "warn" | "info"; file?: string; line?: number; message: string }>>()
+      .notNull()
+      .default([]),
+    /**
+     * Kometa library name → Plex section id, as confirmed by the user. Empty
+     * until they get through the Resolve step; mapping can't be inferred
+     * reliably because Kometa keys libraries by Plex section *title*, which
+     * drifts.
+     */
+    sectionMap: text("section_map", { mode: "json" }).$type<Record<string, string>>().notNull().default({}),
+    /** Last built plan for this bundle. Null until the first preview. */
+    planCache: text("plan_cache", { mode: "json" }).$type<unknown>(),
+  },
+  (table) => [
+    // The Migrate page asks for "the newest import for this provider".
+    index("idx_migration_imports_provider").on(table.providerId, table.createdAt),
+  ],
+);
+
+/**
+ * A metadata edit somebody made by hand, kept so it can be re-applied.
+ *
+ * This exists because of migration, but it isn't only for migration. Kometa's
+ * `metadata_files` are the least reproducible thing in a config — a collection
+ * can be rebuilt from a rule, but nobody is retyping four hundred summaries —
+ * and the only honest way to migrate them was to give Tinkerbell somewhere to
+ * put them.
+ *
+ * Two decisions worth stating:
+ *
+ *  - **Matched, not resolved.** An override stores what its author wrote — a
+ *    title, maybe a year, maybe an IMDb id — and `ratingKey` is filled in once
+ *    something matched. Storing only the rating key would mean an override
+ *    silently detaching whenever a library is rebuilt, which is exactly when
+ *    somebody most wants their hand-written summaries back.
+ *  - **Applied, not merged.** Tag fields replace the whole set, because that
+ *    is what Kometa's metadata files mean by them. The undo ledger
+ *    (`metadata_originals`) records what was there first, so this is
+ *    reversible in the same way every other metadata write is.
+ */
+export const metadataOverrides = sqliteTable(
+  "metadata_overrides",
+  {
+    id: text("id").primaryKey(),
+    /** Plex section this override belongs to. */
+    sectionId: text("section_id").notNull(),
+    /** Title as written by whoever made the override. */
+    matchTitle: text("match_title").notNull(),
+    matchYear: integer("match_year"),
+    matchImdb: text("match_imdb"),
+    matchTmdb: integer("match_tmdb"),
+    /** Filled in once the override has been matched to a real item. */
+    ratingKey: text("rating_key"),
+    /** Scalar fields, `{ titleSort: "Star Wars 01" }`. */
+    fields: text("fields", { mode: "json" }).$type<Record<string, string>>().notNull().default({}),
+    /** Tag sets, replaced wholesale on apply. */
+    tags: text("tags", { mode: "json" }).$type<Record<string, string[]>>().notNull().default({}),
+    /** Where it came from, for the UI: "kometa" or "manual". */
+    source: text("source").notNull().default("manual"),
+    /** Null until applied; set to the run that wrote it. */
+    appliedAt: integer("applied_at"),
+    /** Why the last apply didn't happen — "no match", a Plex error. */
+    lastError: text("last_error"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    index("idx_metadata_overrides_section").on(table.sectionId),
+    // The apply job walks unapplied overrides first.
+    index("idx_metadata_overrides_applied").on(table.appliedAt),
+    // Re-importing the same config must update rather than duplicate.
+    uniqueIndex("idx_metadata_overrides_match").on(table.sectionId, table.matchTitle, table.matchYear),
+  ],
+);
+
+/**
+ * Playlists Tinkerbell built, and which rule owns each one.
+ *
+ * Collections carry a `Rule:<id>` label, which is how every other part of this
+ * app knows what it owns. **Playlists cannot be labelled** — Plex has no such
+ * field on them — so ownership has to live here instead.
+ *
+ * That makes this table load-bearing in a way the collections mirror isn't: if
+ * it were lost, a rule would create a second playlist beside the one it already
+ * owns rather than updating it. Two mitigations: the rule id is also written
+ * into the playlist's summary as a marker, so ownership can be recovered by
+ * scanning; and the update path clears and refills in place rather than
+ * deleting, so the worst case is a duplicate rather than a destroyed playlist.
+ */
+export const managedPlaylists = sqliteTable(
+  "managed_playlists",
+  {
+    /** Plex's own key. Stable across updates — see the note above. */
+    ratingKey: text("rating_key").primaryKey(),
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => rules.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    itemCount: integer("item_count").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("idx_managed_playlists_rule").on(table.ruleId)],
+);

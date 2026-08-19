@@ -10,6 +10,7 @@ export default function SettingsDatabasesService() {
   const testOmdbMutation = trpc.testOmdb.useMutation();
   const testTmdbMutation = trpc.testTmdb.useMutation();
   const testMdblistMutation = trpc.testMdblist.useMutation();
+  const testTraktMutation = trpc.testTrakt.useMutation();
 
   if (!cfg) return <Navigate to="/settings/databases/omdb" replace />;
 
@@ -21,6 +22,10 @@ export default function SettingsDatabasesService() {
     if (cfg.service === "tmdb") {
       const r = await testTmdbMutation.mutateAsync(input);
       return `Connected — found "${r.sample}"`;
+    }
+    if (cfg.service === "trakt") {
+      await testTraktMutation.mutateAsync(input);
+      return "Connected — the client ID is valid for public lists";
     }
     const r = await testMdblistMutation.mutateAsync(input);
     return `Connected — ${r.name}`;

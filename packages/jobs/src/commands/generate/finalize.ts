@@ -5,8 +5,10 @@ import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import type { JobContext } from "@tinkerbell/core";
 
 import {
+  resolveCollectionPrefs,
   resolveCollectionSummary,
   resolvePresentation,
+  resolveSortTitle,
   type PresentationConfig,
   type RuleConfig,
 } from "@tinkerbell/contracts";
@@ -98,6 +100,7 @@ export function createFinalizeCommand(deps: Services) {
           const reconciled = await reconcileMembership(ctx, client, opts.existing, opts.machineId, ratingKeys);
           if (reconciled) {
             await applySummary(ctx, client, reconciled.ratingKey, opts);
+            await applyCollectionPrefs(ctx, client, reconciled.ratingKey, opts);
             await upsertCollectionByKey(client, section, reconciled.ratingKey);
             return reconciled.ratingKey;
           }
@@ -120,6 +123,7 @@ export function createFinalizeCommand(deps: Services) {
         if (!collectionKey) return null;
 
         await applySummary(ctx, client, collectionKey, opts);
+        await applyCollectionPrefs(ctx, client, collectionKey, opts);
         await applyAutoPoster(ctx, client, opts, collectionKey);
         await upsertCollectionByKey(client, section, collectionKey);
         return collectionKey;
@@ -180,6 +184,35 @@ export function createFinalizeCommand(deps: Services) {
     } catch (err) {
       // A description is a nicety; failing to set one must not fail the commit.
       ctx.log(`Summary update failed for "${opts.name}":`, err);
+    }
+  }
+
+  /**
+   * Apply the rule's Plex prefs — how the collection shows in the library, how
+   * its contents are ordered, and where it sorts.
+   *
+   * Absent config means "leave it alone" rather than "reset to default", so a
+   * rule never quietly overwrites a choice somebody made by hand in Plex. Like
+   * the summary, a failure here is logged and swallowed: these are presentation
+   * details, and losing a whole run's worth of collections over a rejected
+   * prefs write would be a much worse outcome than a collection sorting wrong.
+   */
+  async function applyCollectionPrefs(
+    ctx: JobContext,
+    client: PlexClient,
+    ratingKey: string,
+    opts: CommitCollectionOptions,
+  ): Promise<void> {
+    const presentation = resolvePresentation(opts.ruleConfig);
+    const prefs = resolveCollectionPrefs(presentation);
+    const sortTitle = resolveSortTitle(presentation, opts.name);
+    if (!prefs && !sortTitle) return;
+
+    try {
+      if (prefs) await client.setCollectionPrefs(ratingKey, prefs);
+      if (sortTitle) await client.updateCollection(ratingKey, { titleSort: sortTitle });
+    } catch (err) {
+      ctx.log(`Collection prefs failed for "${opts.name}":`, err);
     }
   }
 

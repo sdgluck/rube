@@ -22,6 +22,7 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   { service: "Sonarr", configuredFn: (c) => !!(c.global_sonarr_url && c.global_sonarr_api_key) },
   { service: "Seerr", configuredFn: (c) => !!(c.global_seerr_url && c.global_seerr_api_key) },
   { service: "MDBList", configuredFn: (c) => !!c.global_mdblist_api_key },
+  { service: "Trakt", configuredFn: (c) => !!c.global_trakt_client_id },
   { service: "TMDb", configuredFn: (c) => !!c.global_tmdb_api_key },
   { service: "Pushover", configuredFn: (c) => !!(c.global_pushover_api_key && c.global_pushover_user_key) },
   { service: "Discord", configuredFn: (c) => !!c.global_discord_webhook_url },
@@ -290,6 +291,21 @@ export function createHealth(deps: HealthDeps) {
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         reportHealth("MDBList", "ok", `Connected — ${data.name || data.username || "OK"}`);
+        break;
+      }
+      case "Trakt": {
+        if (!cfg.global_trakt_client_id) throw new Error("Not configured");
+        // Any public endpoint proves the key: this one is cheap and stable.
+        const res = await fetch("https://api.trakt.tv/lists/trending?limit=1", {
+          signal: AbortSignal.timeout(10000),
+          headers: {
+            "Content-Type": "application/json",
+            "trakt-api-version": "2",
+            "trakt-api-key": cfg.global_trakt_client_id,
+          },
+        });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        reportHealth("Trakt", "ok", "Connected");
         break;
       }
       case "Pushover": {

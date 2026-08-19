@@ -1,0 +1,5 @@
+libraries:
+  Movies:
+    collection_files:
+      - file: config/broken.yml
+      - file: config/fine.yml

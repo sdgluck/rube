@@ -26,6 +26,8 @@ import { createEvents, EventsToken } from "@tinkerbell/domain.events";
 import { createHealth, HealthToken } from "@tinkerbell/domain.health";
 import { createMedia, MediaToken } from "@tinkerbell/domain.media";
 import { createMetadata, MetadataToken } from "@tinkerbell/domain.metadata";
+import { createMetadataOverrides, MetadataOverridesToken } from "@tinkerbell/domain.metadata-overrides";
+import { createPlaylists, PlaylistsToken } from "@tinkerbell/domain.playlists";
 import { createMigration, MigrationToken } from "@tinkerbell/domain.migration";
 import { createNotifications, NotificationsToken } from "@tinkerbell/domain.notifications";
 import { createOnboarding, OnboardingToken } from "@tinkerbell/domain.onboarding";
@@ -103,12 +105,18 @@ export function registerDomains(r: Registry): void {
   );
   r.register(MediaToken, (c) => createMedia({ db: c.resolve(DbToken), emitEvent: c.resolve(EventBusToken) }));
   r.register(MetadataToken, (c) => createMetadata({ db: c.resolve(DbToken) }));
+  r.register(MetadataOverridesToken, (c) => createMetadataOverrides({ db: c.resolve(DbToken) }));
+  r.register(PlaylistsToken, (c) => createPlaylists({ db: c.resolve(DbToken) }));
   r.register(MigrationToken, (c) => createMigration({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }));
   r.register(NotificationsToken, (c) =>
     createNotifications({ config: c.resolve(ConfigStoreToken), emitEvent: c.resolve(EventBusToken) }),
   );
   r.register(OnboardingToken, (c) =>
-    createOnboarding({ config: c.resolve(ConfigStoreToken), rules: c.resolve(RulesToken) }),
+    createOnboarding({
+      config: c.resolve(ConfigStoreToken),
+      rules: c.resolve(RulesToken),
+      migration: c.resolve(MigrationToken),
+    }),
   );
   r.register(OverlaysToken, (c) => createOverlays({ db: c.resolve(DbToken) }));
   r.register(PlaybackToken, (c) =>

@@ -113,7 +113,23 @@ export const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(
   SEERR_FILTERS.map((f) => [f.value, f.label]),
 );
 
-export const TYPE_LABELS: Record<string, string> = Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label]));
+/**
+ * Rule types that exist and run, but which the wizard doesn't offer.
+ *
+ * `static_list` is the only one: it's created by the Kometa migration to adopt
+ * a collection Tinkerbell has no builder for, and there's nothing useful a
+ * person could do with it from a blank wizard — you'd be typing out a list of
+ * films by hand. It still needs a label, because it appears in the rules table
+ * like any other rule and "static_list" is not a name.
+ */
+const UNLISTED_TYPE_LABELS: Record<string, string> = {
+  static_list: "Fixed list",
+};
+
+export const TYPE_LABELS: Record<string, string> = {
+  ...Object.fromEntries(RULE_TYPES.map((t) => [t.value, t.label])),
+  ...UNLISTED_TYPE_LABELS,
+};
 
 export const CONFIG_SUMMARY: Record<string, (c: Record<string, unknown>) => string> = {
   ai_prompt: (c) => {
@@ -217,6 +233,22 @@ export function outcomeFromConfig(action: unknown): OutcomeFormState {
       maxWritesPerRun: stored.maxWritesPerRun ?? DEFAULT_OUTCOME_FORM.maxWritesPerRun,
       sortLanguages: stored.sortLanguages ?? ["en"],
       dryRun: (a as { dryRun?: boolean }).dryRun ?? true,
+    };
+  }
+  if (a?.kind === "playlist") {
+    const stored = a as {
+      playlistName?: string;
+      order?: OutcomeFormState["playlistOrder"];
+      combineSections?: boolean;
+      limit?: number;
+    };
+    return {
+      ...DEFAULT_OUTCOME_FORM,
+      kind: "playlist",
+      playlistName: stored.playlistName ?? "",
+      playlistOrder: stored.order ?? DEFAULT_OUTCOME_FORM.playlistOrder,
+      playlistCombineSections: stored.combineSections ?? true,
+      playlistLimit: stored.limit ?? 0,
     };
   }
   return { ...DEFAULT_OUTCOME_FORM };

@@ -1,4 +1,4 @@
-import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
+import { collectionLimit, describeLimits, filterGroups, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 export type MediaGroupedField = "resolutions" | "audio_languages" | "subtitle_languages" | "video_formats";
@@ -81,7 +81,7 @@ export function mediaGroupedHandler(field: MediaGroupedField) {
         }
       }
 
-      const ranked = [...groups.values()]
+      const ranked = filterGroups([...groups.values()], ruleConfig, (g) => g.label)
         .filter((g) => g.items.length >= minItems)
         .sort((a, b) => b.items.length - a.items.length);
 

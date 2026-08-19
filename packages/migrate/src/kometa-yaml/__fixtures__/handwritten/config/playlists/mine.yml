@@ -1,0 +1,9 @@
+playlists:
+  Marathon Night:
+    imdb_list: https://www.imdb.com/list/ls055555555/
+    sync_to_users: all
+
+  # Maps to a grouped rule (one collection per studio), which has no single
+  # ordered-sequence reading — so it must be reported rather than mangled.
+  Studio Tour:
+    tmdb_company: 10342

@@ -27,7 +27,12 @@ export type CollectionPosterTemplateId = (typeof COLLECTION_POSTER_TEMPLATES)[nu
 export const COLLECTION_POSTER_WIDTH = 1000;
 export const COLLECTION_POSTER_HEIGHT = 1500;
 
-export const POSTER_SOURCES = ["none", "url", "gradient", "mosaic", "spotlight"] as const;
+/**
+ * `asset` reads an image out of the configured Kometa-style asset directory,
+ * matched to the collection by name. It's the one source whose availability
+ * depends on server configuration rather than on the rule.
+ */
+export const POSTER_SOURCES = ["none", "url", "asset", "gradient", "mosaic", "spotlight"] as const;
 export type PosterSource = (typeof POSTER_SOURCES)[number];
 
 export const SUMMARY_SOURCES = ["none", "template", "llm", "custom"] as const;
@@ -104,6 +109,38 @@ export const POSTER_MAX_BYTES = 8 * 1024 * 1024;
 
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
+/**
+ * How a collection shows up in the library grid.
+ *
+ * Named rather than carrying Plex's `-1 | 0 | 1 | 2` because a rule config is
+ * read by people — in the wizard, in an exported pack, in a migration review
+ * screen — and `collectionMode: 1` tells nobody anything. The numbers stay an
+ * implementation detail of the Plex write, in `COLLECTION_MODE_VALUES`.
+ *
+ * `default` is a real third state, not "unset": a collection can be explicitly
+ * told to show its items while the library hides them.
+ */
+export const COLLECTION_MODES = ["default", "hide", "hide_items", "show_items"] as const;
+export type CollectionModeChoice = (typeof COLLECTION_MODES)[number];
+
+/** Plex's `collectionMode` pref values, keyed by our names. */
+export const COLLECTION_MODE_VALUES: Record<CollectionModeChoice, -1 | 0 | 1 | 2> = {
+  default: -1,
+  hide: 0,
+  hide_items: 1,
+  show_items: 2,
+};
+
+/** How Plex orders the collection's own contents. */
+export const COLLECTION_SORTS = ["release", "alpha", "custom"] as const;
+export type CollectionSortChoice = (typeof COLLECTION_SORTS)[number];
+
+export const COLLECTION_SORT_VALUES: Record<CollectionSortChoice, 0 | 1 | 2> = {
+  release: 0,
+  alpha: 1,
+  custom: 2,
+};
+
 export const presentationConfigSchema = z
   .object({
     summary: z.enum(SUMMARY_SOURCES).default("template"),
@@ -117,6 +154,22 @@ export const presentationConfigSchema = z
     posterUrl: z.string().optional(),
     /** Overrides the palette derived from member art. */
     accentColor: z.string().regex(HEX_COLOR, "Use a hex colour like #E5A00D").optional(),
+    /**
+     * Plex prefs applied to every collection the rule builds. All optional and
+     * absent means "don't touch it", so a rule never quietly overwrites a
+     * choice somebody made by hand in Plex.
+     */
+    collectionMode: z.enum(COLLECTION_MODES).optional(),
+    collectionSort: z.enum(COLLECTION_SORTS).optional(),
+    /**
+     * Sort title, which decides where the collection lands in an alphabetical
+     * library view. Kometa's configs lean on this heavily — a leading `!` or
+     * `01_` is how people pin favourites to the top — so it carries across.
+     *
+     * `{name}` is substituted with the collection's own title, which is what
+     * makes one value usable by a grouped rule building fifty collections.
+     */
+    sortTitle: z.string().max(255).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.summary === "custom" && !value.customSummary?.trim()) {
@@ -132,6 +185,35 @@ export const presentationConfigSchema = z
   });
 
 export type PresentationConfig = z.infer<typeof presentationConfigSchema>;
+
+/**
+ * The Plex-shaped prefs for a rule's presentation, or null when the rule
+ * doesn't set either. Returning null rather than `{}` lets the caller skip the
+ * write entirely instead of issuing a no-op request per collection per run.
+ */
+export function resolveCollectionPrefs(
+  presentation: PresentationConfig | undefined,
+): { collectionMode?: -1 | 0 | 1 | 2; collectionSort?: 0 | 1 | 2 } | null {
+  if (!presentation) return null;
+  const prefs: { collectionMode?: -1 | 0 | 1 | 2; collectionSort?: 0 | 1 | 2 } = {};
+  if (presentation.collectionMode) prefs.collectionMode = COLLECTION_MODE_VALUES[presentation.collectionMode];
+  if (presentation.collectionSort) prefs.collectionSort = COLLECTION_SORT_VALUES[presentation.collectionSort];
+  return Object.keys(prefs).length > 0 ? prefs : null;
+}
+
+/**
+ * The sort title for one collection, with `{name}` filled in.
+ *
+ * Trimmed and length-capped because it is written to Plex: an empty string
+ * would clear a sort title rather than leave it alone, which is not what an
+ * unset template means.
+ */
+export function resolveSortTitle(presentation: PresentationConfig | undefined, collectionName: string): string | null {
+  const template = presentation?.sortTitle?.trim();
+  if (!template) return null;
+  const resolved = template.replaceAll("{name}", collectionName).trim();
+  return resolved ? resolved.slice(0, 255) : null;
+}
 
 /** What a rule with no `presentation` block behaves as. */
 export const DEFAULT_PRESENTATION: PresentationConfig = {

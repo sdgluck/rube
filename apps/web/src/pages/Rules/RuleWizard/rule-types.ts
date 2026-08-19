@@ -4,6 +4,7 @@ import {
   isDestructiveMode,
   isGroupedRuleType,
   minItemsOnByDefault,
+  PLAYLIST_CAPABLE_RULE_TYPES,
   posterUrlError,
   producesManyCollections,
   templateError,
@@ -444,13 +445,18 @@ export const ITEM_SELECTION_RULE_TYPES: readonly RuleTypeValue[] = [
 ];
 
 const ITEM_SELECTION = new Set<string>(ITEM_SELECTION_RULE_TYPES);
+const PLAYLIST_CAPABLE = new Set<string>(PLAYLIST_CAPABLE_RULE_TYPES);
 
 /**
  * The types offered on the Type step, for the outcome the wizard was opened
  * with. Collections keep the full catalogue; the other two get the list above.
  */
-export function ruleTypesFor(outcomeKind: "collection" | "cleanup" | "metadata"): RuleType[] {
+export function ruleTypesFor(outcomeKind: "collection" | "cleanup" | "metadata" | "playlist"): RuleType[] {
   if (outcomeKind === "collection") return RULE_TYPES;
+  // A playlist is one ordered sequence, so only the selections that produce a
+  // single list qualify — a rule building one collection per genre has no
+  // playlist reading at all.
+  if (outcomeKind === "playlist") return RULE_TYPES.filter((t) => PLAYLIST_CAPABLE.has(t.value));
   return RULE_TYPES.filter((t) => ITEM_SELECTION.has(t.value));
 }
 
@@ -461,7 +467,7 @@ export type StepId = "type" | "source" | "scope" | "outcome" | "presentation" | 
 export function stepsFor(
   type: string,
   mode: "create" | "edit",
-  outcomeKind: "collection" | "cleanup" | "metadata" = "collection",
+  outcomeKind: "collection" | "cleanup" | "metadata" | "playlist" = "collection",
 ): { id: StepId; label: string }[] {
   const steps: { id: StepId; label: string }[] = [];
   if (mode === "create") steps.push({ id: "type", label: "Type" });
@@ -479,6 +485,10 @@ export function stepsFor(
   // later ones: it builds no collection, so it pins nothing and there is no
   // shelf to describe or illustrate.
   if (outcomeKind === "metadata") steps.push({ id: "outcome", label: "Fields" });
+  // A playlist keeps the step for its name, ordering and cap, and drops the
+  // later ones for the same reason cleanup does: it builds no collection, so
+  // there is nothing to pin, describe or illustrate.
+  if (outcomeKind === "playlist") steps.push({ id: "outcome", label: "Playlist" });
   steps.push({ id: "scope", label: "Scope" });
   // A cleanup rule's shelf is deliberately plain: the job gives it neither a
   // summary nor a poster, so asking would be asking about something nothing

@@ -1,0 +1,30 @@
+# A hand-written config: the case title-scan can't touch at all.
+libraries:
+  Films:
+    library_name: Films
+    template_variables:
+      poster_base: https://raw.githubusercontent.com/example/art/main
+    collection_files:
+      - file: config/collections/movies.yml
+      - folder: config/collections/extra
+      - url: https://example.com/remote.yml
+      - file: config/collections/missing.yml
+    overlay_files:
+      - default: resolution
+      - default: ratings
+        template_variables:
+          rating1: imdb
+          rating2: rt
+      - default: ribbon
+      - file: config/overlays/custom.yml
+    metadata_files:
+      - file: config/metadata/movies.yml
+    operations:
+      mass_genre_update: tmdb
+      split_duplicates: true
+
+playlist_files:
+  - file: config/playlists/mine.yml
+
+settings:
+  custom_repo: https://github.com/example/configs

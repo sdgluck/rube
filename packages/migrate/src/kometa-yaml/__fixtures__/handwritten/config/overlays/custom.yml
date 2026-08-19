@@ -1,0 +1,15 @@
+# A hand-written overlay file: one badge we can draw, one image we can't.
+overlays:
+  Resolution Badge:
+    overlay:
+      name: resolution
+      horizontal_align: right
+      vertical_align: bottom
+    plex_all: true
+
+  Award Ribbon:
+    overlay:
+      name: ribbon_oscars
+      horizontal_align: right
+      vertical_align: bottom
+    imdb_award: oscars

@@ -2,22 +2,35 @@ import type { MigrationPlan } from "@tinkerbell/migrate";
 import { createProviderRegistry } from "./registry.ts";
 import { createLegacyConfig } from "./legacy-config.ts";
 import type { Db } from "@tinkerbell/db";
-import type { MigrationStatus, ProviderRuntime, ProviderScanResult, ProviderStatus } from "./runtime.ts";
+import type {
+  BuildPlanInput,
+  MigrationStatus,
+  ProviderRuntime,
+  ProviderScanResult,
+  ProviderStatus,
+} from "./runtime.ts";
 import { type ConfigStore } from "@tinkerbell/core";
 import { token } from "@tinkerbell/container";
 
-export type { ProviderRuntime, ProviderScanResult, ProviderStatus, MigrationStatus } from "./runtime.ts";
+export type {
+  BuildPlanInput,
+  MigrationStatus,
+  ProviderIngest,
+  ProviderRuntime,
+  ProviderScanResult,
+  ProviderStatus,
+} from "./runtime.ts";
 
 export interface MigrationDeps {
   db: Db;
   config: ConfigStore;
 }
 export function createMigration(deps: MigrationDeps) {
-  const { getProvider, listProviders } = createProviderRegistry(deps);
+  const { getProvider, listProviders, kometaYaml } = createProviderRegistry(deps);
   const { migrateLegacyKometaConfig } = createLegacyConfig(deps);
 
-  async function buildProviderPlan(providerId: string): Promise<MigrationPlan> {
-    return getProvider(providerId).buildPlan();
+  async function buildProviderPlan(providerId: string, input?: BuildPlanInput): Promise<MigrationPlan> {
+    return getProvider(providerId).buildPlan(input);
   }
   const { getConfig, setConfig } = deps.config;
 
@@ -96,6 +109,17 @@ export function createMigration(deps: MigrationDeps) {
     setConfig("migration_completed_at", { ...all, [providerId]: Date.now() });
   }
 
+  /**
+   * Take a Kometa config bundle and stash it for review.
+   *
+   * The id is minted by the caller rather than here so the router can hand it
+   * straight back to the UI, which needs it to address every subsequent step
+   * of the wizard.
+   */
+  function createKometaImport(importId: string, files: Array<{ path: string; text: string }>): void {
+    kometaYaml.saveImport(importId, files);
+  }
+
   return {
     buildProviderPlan,
     listProviders,
@@ -107,6 +131,18 @@ export function createMigration(deps: MigrationDeps) {
     getMigrationStatus,
     dismissProvider,
     markProviderCompleted,
+    // Ingest-side surface for the Kometa YAML provider. Not part of
+    // `ProviderRuntime`: that describes scanning and planning, which is all
+    // the collection-scanning providers do.
+    createKometaImport,
+    readKometaServerPath: kometaYaml.readServerPath,
+    kometaOverlaysFor: kometaYaml.overlaysFor,
+    kometaMetadataOverridesFor: kometaYaml.metadataOverridesFor,
+    loadKometaImport: kometaYaml.loadImport,
+    latestKometaImportId: kometaYaml.latestImportId,
+    setKometaSectionMap: kometaYaml.setSectionMap,
+    resolveKometaSections: kometaYaml.resolveSections,
+    KOMETA_IMPORT_LIMITS: { maxFiles: kometaYaml.MAX_FILES, maxBytes: kometaYaml.MAX_TOTAL_BYTES },
   };
 }
 

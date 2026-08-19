@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import { RULE_TYPE_VALUES } from "./rule-config.ts";
 import {
   DEFAULT_PRESENTATION,
+  resolveCollectionPrefs,
+  resolveSortTitle,
   POSTER_URL_ALLOWED_HOSTS,
   posterUrlRejection,
   presentationConfigSchema,
@@ -231,5 +233,52 @@ describe("presentationConfigSchema", () => {
   it("refuses an accent that isn't a hex colour", () => {
     assert.equal(presentationConfigSchema.safeParse({ accentColor: "goldish" }).success, false);
     assert.equal(presentationConfigSchema.safeParse({ accentColor: "#E5A00D" }).success, true);
+  });
+});
+
+/**
+ * The prefs are written to Plex on every run of every rule, so the property
+ * that matters is the negative one again: a rule that says nothing about mode,
+ * sort or sort title must produce *no write*, not a write of defaults. A rule
+ * quietly resetting a pref somebody set by hand in Plex is indistinguishable
+ * from Plex losing it.
+ */
+describe("collection prefs", () => {
+  it("says nothing when the rule says nothing", () => {
+    assert.equal(resolveCollectionPrefs(undefined), null);
+    assert.equal(resolveCollectionPrefs(DEFAULT_PRESENTATION), null);
+    assert.equal(resolveSortTitle(DEFAULT_PRESENTATION, "Anything"), null);
+  });
+
+  it("translates named modes and sorts to Plex's numbers", () => {
+    assert.deepEqual(resolveCollectionPrefs({ ...DEFAULT_PRESENTATION, collectionMode: "hide" }), {
+      collectionMode: 0,
+    });
+    assert.deepEqual(resolveCollectionPrefs({ ...DEFAULT_PRESENTATION, collectionSort: "custom" }), {
+      collectionSort: 2,
+    });
+    // "default" is a real instruction — tell Plex to use the library default —
+    // not an absence, so it must still produce a write.
+    assert.deepEqual(resolveCollectionPrefs({ ...DEFAULT_PRESENTATION, collectionMode: "default" }), {
+      collectionMode: -1,
+    });
+  });
+
+  it("substitutes the collection name into a sort title", () => {
+    // One template has to serve a grouped rule building fifty collections.
+    assert.equal(resolveSortTitle({ ...DEFAULT_PRESENTATION, sortTitle: "!01_{name}" }, "Horror"), "!01_Horror");
+  });
+
+  it("treats a blank sort title as unset rather than as 'clear it'", () => {
+    assert.equal(resolveSortTitle({ ...DEFAULT_PRESENTATION, sortTitle: "   " }, "Horror"), null);
+    // A template that resolves to nothing is the same situation.
+    assert.equal(resolveSortTitle({ ...DEFAULT_PRESENTATION, sortTitle: "{name}" }, "  "), null);
+  });
+
+  it("accepts the named values and refuses invented ones", () => {
+    assert.equal(presentationConfigSchema.safeParse({ collectionMode: "hide_items" }).success, true);
+    assert.equal(presentationConfigSchema.safeParse({ collectionSort: "alpha" }).success, true);
+    assert.equal(presentationConfigSchema.safeParse({ collectionSort: "random" }).success, false);
+    assert.equal(presentationConfigSchema.safeParse({ collectionMode: 1 }).success, false);
   });
 });

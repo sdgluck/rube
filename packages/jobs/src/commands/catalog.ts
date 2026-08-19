@@ -83,6 +83,13 @@ export const COMMANDS = {
   // Someone clicked Undo and is watching. A batch can be thousands of writes,
   // hence the wider budget than its interactive neighbours.
   "metadata-undo": { load: () => import("./metadata-undo.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
+  // Per-item overrides. Indexes a library per section before writing, so it
+  // gets the same budget as the other metadata work rather than the default.
+  "metadata-overrides": {
+    load: () => import("./metadata-overrides.ts"),
+    lane: "default",
+    timeoutMs: 4 * HOUR_MS,
+  },
   overlays: { load: () => import("./overlays.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
   "byw-remove": { load: () => import("./byw-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "personalize-enable": {

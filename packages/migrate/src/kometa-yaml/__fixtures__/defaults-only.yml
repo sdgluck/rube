@@ -1,0 +1,46 @@
+# A defaults-only Kometa config — the shape most users actually have.
+# Two libraries, a handful of `default:` entries, light customisation via
+# template_variables. Nothing here is hand-written YAML beyond this file.
+libraries:
+  Movies:
+    collection_files:
+      - default: genre
+        template_variables:
+          exclude:
+            - Documentary
+            - Talk Show
+          limit: 100
+      - default: decade
+      - default: country
+      - default: separator_chart
+      - default: award/oscars
+      - default: award/emmy
+      - default: chart/imdb
+      - default: collectionless
+    overlay_files:
+      - default: resolution
+      - default: ratings
+  TV Shows:
+    library_name: TV Shows
+    template_variables:
+      minimum: 5
+    collection_files:
+      - default: network
+      - default: seasonal
+      - default: subgenre
+
+playlist_files:
+  - default: playlist
+
+settings:
+  cache: true
+  asset_directory: config/assets
+  run_order:
+    - operations
+    - metadata
+    - collections
+
+tmdb:
+  apikey: REDACTED
+trakt:
+  client_id: REDACTED

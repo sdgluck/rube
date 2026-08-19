@@ -14,6 +14,8 @@ import { createTmdbFranchisesCommand } from "./handlers/tmdb-franchises.ts";
 import { createKeywordGroupedCommand } from "./handlers/keyword-grouped.ts";
 import { createListSourceCommand } from "./handlers/list-source.ts";
 import { createSmartFilterCommand } from "./handlers/smart-filter.ts";
+import { createPlaylistCommand } from "./playlist.ts";
+import { createStaticListCommand } from "./handlers/static-list.ts";
 import type { PlexSection } from "@tinkerbell/plex";
 import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@tinkerbell/contracts";
 import { type CleanupBudget } from "./cleanup.ts";
@@ -56,6 +58,8 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
   const { keywordGroupedHandler } = createKeywordGroupedCommand(deps);
   const { listSourceHandler } = createListSourceCommand(deps);
   const { smartFilterHandler } = createSmartFilterCommand(deps);
+  const { staticListHandler } = createStaticListCommand();
+  const { runHandlerWithPlaylist } = createPlaylistCommand(deps);
 
   /**
    * Pick the handler for a given rule type. Returning null is a real case —
@@ -109,6 +113,8 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
         return listSourceHandler;
       case "smart_filter":
         return smartFilterHandler;
+      case "static_list":
+        return staticListHandler;
       default:
         return null;
     }
@@ -142,6 +148,13 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
 
     const handler = handlerForRule(deps.rule.type);
     if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
+
+    if (action.kind === "playlist") {
+      const result = await runHandlerWithPlaylist(deps, action, machineId, handler);
+      // A playlist isn't a collection — the Rules table shows the item count,
+      // and there's no "last collection" to link to.
+      return { lastCollectionKey: null, collectionCount: result.playlistCount, itemCount: result.itemCount };
+    }
 
     if (action.kind === "metadata") {
       const result = await runHandlerWithMetadata(deps, action, metadataBudget, handler);

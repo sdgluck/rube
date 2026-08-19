@@ -1,0 +1,20 @@
+# Reached via `folder:` rather than `file:`. Uses YAML anchors and a merge
+# key, which PyYAML-authored configs do freely and the parser must honour.
+base: &base
+  sync_mode: sync
+  minimum_items: 3
+
+collections:
+  MDBList Picks:
+    <<: *base
+    mdblist_list: https://mdblist.com/lists/someone/picks
+    limit: 50
+
+  Studio Ghibli:
+    <<: *base
+    tmdb_company: 10342
+
+  Four Ks:
+    plex_search:
+      resolution: 4k
+    collection_order: alpha

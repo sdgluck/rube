@@ -8,7 +8,16 @@ import {
   type OnboardingContext,
 } from "./steps.ts";
 
-const EMPTY: OnboardingContext = { config: {}, ruleCount: 0, testedRuleCount: 0 };
+const EMPTY: OnboardingContext = {
+  config: {},
+  ruleCount: 0,
+  testedRuleCount: 0,
+  migrationCompleted: false,
+  // A server with something to migrate, so `EMPTY` means "nothing done yet"
+  // for every step. With nothing to migrate the migrate step is satisfied on
+  // arrival — correctly, but it would make "nothing is complete" untestable.
+  migratableCount: 1,
+};
 
 function ctx(patch: Partial<OnboardingContext>): OnboardingContext {
   return { ...EMPTY, ...patch, config: { ...EMPTY.config, ...patch.config } };
@@ -19,6 +28,24 @@ function byId(steps: ReturnType<typeof resolveSteps>, id: string) {
   assert.ok(step, `no step ${id}`);
   return step;
 }
+
+test("the migrate step is satisfied when there is nothing to migrate", () => {
+  // Most installs are not coming from anywhere. A step that sits permanently
+  // incomplete for them turns the progress count into a lie.
+  const steps = resolveSteps(ctx({ migratableCount: 0 }), []);
+  assert.equal(byId(steps, "migrate").complete, true);
+  assert.equal(byId(steps, "migrate").derived, true);
+});
+
+test("the migrate step stays open while collections are waiting to be migrated", () => {
+  const steps = resolveSteps(ctx({ migratableCount: 40 }), []);
+  assert.equal(byId(steps, "migrate").complete, false);
+});
+
+test("the migrate step closes once a migration has run", () => {
+  const steps = resolveSteps(ctx({ migratableCount: 40, migrationCompleted: true }), []);
+  assert.equal(byId(steps, "migrate").complete, true);
+});
 
 test("a fresh install has nothing complete", () => {
   const steps = resolveSteps(EMPTY, []);

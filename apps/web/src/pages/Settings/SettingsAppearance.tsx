@@ -36,6 +36,7 @@ export default function SettingsAppearance() {
   const [enabled, setEnabled] = useState(true);
   const [template, setTemplate] = useState<DefaultTemplate>("gradient");
   const [accent, setAccent] = useState("");
+  const [assetDir, setAssetDir] = useState("");
   const [saving, setSaving] = useState(false);
 
   const { addToast } = useToast();
@@ -49,6 +50,7 @@ export default function SettingsAppearance() {
     setEnabled(configQuery.data.collection_art_enabled ?? true);
     setTemplate((configQuery.data.collection_art_default_template as DefaultTemplate) ?? "gradient");
     setAccent(configQuery.data.collection_art_default_accent ?? "");
+    setAssetDir(configQuery.data.global_asset_directory ?? "");
   }, [configQuery.data]);
 
   const isDirty = useMemo(() => {
@@ -56,17 +58,25 @@ export default function SettingsAppearance() {
     return (
       enabled !== (configQuery.data.collection_art_enabled ?? true) ||
       template !== ((configQuery.data.collection_art_default_template as DefaultTemplate) ?? "gradient") ||
-      accent !== (configQuery.data.collection_art_default_accent ?? "")
+      accent !== (configQuery.data.collection_art_default_accent ?? "") ||
+      assetDir !== (configQuery.data.global_asset_directory ?? "")
     );
-  }, [enabled, template, accent, configQuery.data]);
+  }, [enabled, template, accent, assetDir, configQuery.data]);
 
   useUnsavedChanges(isDirty);
 
   const accentValid = accent === "" || /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(accent);
+  // Blank is fine (the feature is off); anything else has to be absolute,
+  // because the server resolves it with no working directory worth speaking of.
+  const assetDirValid = assetDir.trim() === "" || assetDir.trim().startsWith("/");
 
   const handleSave = async () => {
     if (!accentValid) {
       addToast("Accent must be a hex colour like #E5A00D", "error");
+      return;
+    }
+    if (!assetDirValid) {
+      addToast("The asset directory must be an absolute path", "error");
       return;
     }
     setSaving(true);
@@ -75,6 +85,7 @@ export default function SettingsAppearance() {
         collection_art_enabled: enabled,
         collection_art_default_template: template,
         collection_art_default_accent: accent,
+        global_asset_directory: assetDir.trim(),
       });
       addToast("Appearance settings saved", "success");
       await utils.config.get.invalidate();
@@ -173,6 +184,23 @@ export default function SettingsAppearance() {
           {accentValid
             ? "Blank is usually the better answer: each poster takes its colour from the films in it, which is what makes a generated set look like it belongs to the library rather than to a theme."
             : "Use a hex colour like #E5A00D, or leave it blank."}
+        </p>
+
+        <label className={styles.field}>
+          <span className={styles.label}>Asset directory</span>
+          <input
+            className={styles.input}
+            value={assetDir}
+            onChange={(e) => setAssetDir(e.target.value)}
+            placeholder="/config/assets — leave blank if you don't have one"
+            spellCheck={false}
+            aria-invalid={!assetDirValid}
+          />
+        </label>
+        <p className={styles.hint}>
+          {assetDirValid
+            ? "A folder of artwork on this server, laid out the way Kometa's assets are — either “<Name>/poster.jpg” or “<Name>.jpg”. Rules whose poster source is “Asset” look their collection up in here by name. Nothing is read until a rule asks for it."
+            : "Use an absolute path, like /config/assets."}
         </p>
 
         <div className={styles.field}>

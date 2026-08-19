@@ -11,6 +11,7 @@ import {
   type OnboardingStepStatus,
 } from "./steps.ts";
 import { type Rules } from "@tinkerbell/domain.rules";
+import { type Migration } from "@tinkerbell/domain.migration";
 import { token } from "@tinkerbell/container";
 
 export {
@@ -56,10 +57,12 @@ function firstIncompleteStep(steps: OnboardingStepStatus[]): OnboardingStepId {
 export interface OnboardingDeps {
   config: ConfigStore;
   rules: Rules;
+  migration: Migration;
 }
 export function createOnboarding(deps: OnboardingDeps) {
   const { getConfig, setConfig, getAllConfig } = deps.config;
   const { getRules } = deps.rules;
+  const { getMigrationStatus } = deps.migration;
 
   function readState() {
     const state = getConfig("onboarding_state");
@@ -80,6 +83,7 @@ export function createOnboarding(deps: OnboardingDeps) {
 
   function buildContext(): OnboardingContext {
     const rules = getRules();
+    const migration = getMigrationStatus();
     // The install seeds one rule at first boot. Counting it would mean the Rules
     // step reports itself done before the user has opened the app.
     const chosen = rules.filter((r) => !isSeededRule(r));
@@ -89,6 +93,8 @@ export function createOnboarding(deps: OnboardingDeps) {
       // Dry-running the seeded rule is a real thing to have done, though, so
       // this counts every rule — including it.
       testedRuleCount: rules.filter((r) => r.lastTestAt != null).length,
+      migrationCompleted: migration.providers.some((p) => p.completedAt != null),
+      migratableCount: migration.totalCount,
     };
   }
 

@@ -28,6 +28,8 @@ import {
 } from "@tinkerbell/contracts";
 import { parseRuleConfig } from "../generate/config.ts";
 import { createTagLabels } from "../generate/tag-labels.ts";
+import { stat } from "node:fs/promises";
+import { findAsset, indexAssetDirectory, readAsset } from "@tinkerbell/posters";
 import { buildCollectionPoster, fetchMemberPosters, posterAlreadyUploaded } from "./poster.ts";
 import { describeRuleFilter, SAMPLE_TITLES } from "./summary.ts";
 
@@ -51,7 +53,12 @@ interface CollectionWork {
   force: boolean;
   llmUnavailable: string | null;
   totals: Totals;
+  /** Resolves a collection name to a local asset file. Undefined when unconfigured. */
+  assetLookup?: AssetLookup;
 }
+
+/** Reads one collection's artwork off the server's own disk. */
+type AssetLookup = (name: string) => Promise<{ path: string; buffer: Buffer; mtimeMs: number } | null>;
 
 /** "42 films" / "8 series" — the one fact a poster can state that a title can't. */
 function subtitleFor(count: number, sectionType: string): string | undefined {
@@ -69,6 +76,41 @@ export function createCollectionArtCommand(deps: Services) {
   const { getEnabledRules } = rules;
   const { getCollectionArtwork, recordCollectionArtwork } = collections;
   const { llmSummaryUnavailable, writeLlmSummary } = createSummaryCommand(deps);
+
+  /**
+   * Resolve collection names to files in the configured asset directory.
+   *
+   * Returns undefined when no rule wants assets or none is configured, which is
+   * what makes `buildCollectionPoster` throw for an `asset` rule on a server
+   * with no directory — a rule silently producing nothing would look like a
+   * broken asset folder rather than a missing setting.
+   */
+  async function buildAssetLookup(ctx: JobContext, rules: Rule[]): Promise<AssetLookup | undefined> {
+    const wanted = rules.some((r) => resolvePresentation(parseRuleConfig(r)).poster === "asset");
+    if (!wanted) return undefined;
+
+    const root = (getConfig("global_asset_directory") ?? "").trim();
+    if (!root) {
+      ctx.log("A rule asks for asset artwork but no asset directory is set (Settings → Appearance).");
+      return undefined;
+    }
+
+    let index;
+    try {
+      index = await indexAssetDirectory(root);
+    } catch (err) {
+      ctx.log(`Couldn't read the asset directory: ${errorMessage(err)}`);
+      return undefined;
+    }
+    ctx.log(`Asset directory: ${index.size} entr(ies) indexed from ${root}.`);
+
+    return async (name: string) => {
+      const path = await findAsset(index, name, "poster");
+      if (!path) return null;
+      const [buffer, info] = await Promise.all([readAsset(path), stat(path)]);
+      return { path, buffer, mtimeMs: info.mtimeMs };
+    };
+  }
 
   async function run(ctx: JobContext, config: CollectionArtJobConfig): Promise<void> {
     // Checked at the moment of work rather than at save time, so someone who
@@ -93,6 +135,11 @@ export function createCollectionArtCommand(deps: Services) {
     // Checked once, up front: without a provider every LLM-summary rule fails
     // identically, and saying so once beats saying it per collection.
     const llmUnavailable = llmSummaryUnavailable();
+
+    // The asset directory is indexed once per run and only when some rule
+    // actually asks for it — walking a few thousand files to serve zero
+    // lookups is a cost nobody opted into.
+    const assetLookup = await buildAssetLookup(ctx, rules);
 
     ctx.log(`tinkerbell collection-art`);
     ctx.log(`${rules.length} rule(s), ${sections.length} section(s).`);
@@ -138,6 +185,7 @@ export function createCollectionArtCommand(deps: Services) {
           totals.considered++;
           try {
             await processCollection(ctx, client, {
+              assetLookup,
               rule,
               ruleConfig,
               presentation,
@@ -212,13 +260,19 @@ export function createCollectionArtCommand(deps: Services) {
       return;
     }
 
-    const { buffers, keys } = await fetchMemberPosters(client, members, ctx.signal);
+    // Asset-sourced posters need no member art, and fetching six thumbnails to
+    // then ignore them is six requests per collection per night.
+    const { buffers, keys } =
+      presentation.poster === "asset"
+        ? { buffers: [], keys: [] }
+        : await fetchMemberPosters(client, members, ctx.signal);
     const built = await buildCollectionPoster({
       presentation,
       title: name,
       subtitle: subtitleFor(members.length, work.section.type),
       memberPosters: buffers,
       memberPosterKeys: keys,
+      findAsset: work.assetLookup,
     });
     if (!built) return;
 

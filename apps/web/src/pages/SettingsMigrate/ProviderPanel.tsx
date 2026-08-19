@@ -7,6 +7,7 @@ import RelativeTime from "#components/RelativeTime";
 import styles from "#pages/Settings/Settings.module.css";
 import local from "./SettingsMigrate.module.css";
 import CardSection from "#components/CardSection";
+import Modal from "#components/Modal";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
 
@@ -37,6 +38,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
   const [deleteOriginals, setDeleteOriginals] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [running, setRunning] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Default-select every proposed item so the common case is one click.
   useEffect(() => {
@@ -83,14 +85,6 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
       return;
     }
     const willDelete = planCanDeleteOriginals && deleteOriginals;
-    if (
-      willDelete &&
-      !confirm(
-        `Delete ${totalSelectedReplaces} ${providerLabel} collection(s) from Plex after creating the rules? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
 
     setRunning(true);
     try {
@@ -105,7 +99,19 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
       addToast(`Failed to start migration: ${(err as Error).message ?? err}`, "error");
     } finally {
       setRunning(false);
+      setConfirmOpen(false);
     }
+  };
+
+  /**
+   * Deleting originals goes through a real dialog rather than `confirm()`.
+   * This is an irreversible delete of up to several hundred collections from
+   * somebody's Plex server, and a browser confirm can't show the count in a
+   * way that survives being skim-read.
+   */
+  const requestRun = () => {
+    if (planCanDeleteOriginals && deleteOriginals && totalSelectedReplaces > 0) setConfirmOpen(true);
+    else void handleRun();
   };
 
   // Above the early returns — the loading and error branches below bail out
@@ -300,11 +306,43 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           </>
         )}
         <div className={styles.buttons}>
-          <button type="button" className={styles.button} onClick={handleRun} disabled={running || selected.size === 0}>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={requestRun}
+            disabled={running || selected.size === 0}
+          >
             {running ? "Starting…" : `Migrate ${selected.size} rule(s)`}
           </button>
         </div>
       </CardSection>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Delete the original collections?"
+        size="sm"
+        dismissOnBackdrop={false}
+        footer={
+          <>
+            <button type="button" className={styles.buttonSecondary} onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className={styles.button} onClick={() => void handleRun()} disabled={running}>
+              {running ? "Starting…" : `Delete ${totalSelectedReplaces} and migrate`}
+            </button>
+          </>
+        }
+      >
+        <p>
+          <strong>{totalSelectedReplaces}</strong> {providerLabel} collection
+          {totalSelectedReplaces === 1 ? "" : "s"} will be removed from Plex as soon as the rules are created.
+        </p>
+        <p className={styles.hint}>
+          The rules haven't run yet at that point, so the collections will be missing from Plex until the first run
+          rebuilds them. This can't be undone.
+        </p>
+      </Modal>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
+import { collectionLimit, describeLimits, filterGroups, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 export type YearGroupedField = "decades" | "years";
@@ -45,7 +45,7 @@ export function yearGroupedHandler(field: YearGroupedField) {
         else groups.set(key, { label, sortKey: key, items: [entry] });
       }
 
-      const ranked = [...groups.values()]
+      const ranked = filterGroups([...groups.values()], ruleConfig, (g) => g.label)
         .filter((g) => g.items.length >= minItems)
         // Newest first — most users care about recent decades / years before
         // 1920s historicals.

@@ -1,6 +1,6 @@
 import shared from "#/styles/shared.module.css";
 import styles from "#pages/Rules/RuleWizard/RuleWizard.module.css";
-import { LIST_PROVIDERS } from "#pages/Rules/RuleWizard/constants.ts";
+import { LIST_ID_PLACEHOLDERS, LIST_PROVIDERS } from "#pages/Rules/RuleWizard/constants.ts";
 import type { SourceStepProps } from "#pages/Rules/RuleWizard/types.ts";
 
 export default function ListSource({ form, setForm }: SourceStepProps) {
@@ -40,7 +40,7 @@ export default function ListSource({ form, setForm }: SourceStepProps) {
           className={shared.input}
           value={form.listId}
           onChange={(e) => setForm({ ...form, listId: e.target.value })}
-          placeholder={form.listProvider === "mdblist" ? "12345 or username/listname" : "List identifier"}
+          placeholder={LIST_ID_PLACEHOLDERS[form.listProvider] ?? "List identifier"}
           autoFocus
         />
       </div>

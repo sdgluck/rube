@@ -38,14 +38,25 @@ export const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(
 /**
  * Available `list_source` providers. Marked `disabled` until their backing
  * source has shipped so the picker reflects what's actually wired up.
- * Trakt arrives in a follow-up phase, IMDb stays on its dedicated rule
- * type for the moment to avoid migration churn for existing rules.
+ * IMDb stays on its dedicated rule type for the moment to avoid migration
+ * churn for existing rules.
+ *
+ * Trakt reads *public* lists, on a client id alone. A personal watchlist or
+ * collection needs the OAuth device flow, which isn't built — so the field
+ * hint asks for a list URL rather than implying any list will do.
  */
 export const LIST_PROVIDERS: { value: "mdblist" | "trakt" | "imdb"; label: string; disabled?: boolean }[] = [
   { value: "mdblist", label: "MDBList" },
-  { value: "trakt", label: "Trakt", disabled: true },
+  { value: "trakt", label: "Trakt" },
   { value: "imdb", label: "IMDb", disabled: true },
 ];
+
+/** What a valid list reference looks like, per provider. */
+export const LIST_ID_PLACEHOLDERS: Record<"mdblist" | "trakt" | "imdb", string> = {
+  mdblist: "12345 or username/listname",
+  trakt: "https://trakt.tv/users/…/lists/… or user/list-slug",
+  imdb: "ls012345678",
+};
 
 export const LIST_PROVIDER_LABELS: Record<"mdblist" | "trakt" | "imdb", string> = Object.fromEntries(
   LIST_PROVIDERS.map((p) => [p.value, p.label]),

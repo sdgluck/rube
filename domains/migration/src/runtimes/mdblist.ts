@@ -78,11 +78,16 @@ export function createMdblist(deps: MdblistDeps) {
           listProvider: "mdblist",
           listId: listIdFor(list),
         },
+        // A user list read straight from the MDBList API: the list id and its
+        // name are the whole definition, and both survive intact.
+        confidence: "exact",
+        warnings: [],
+        origin: { kind: "title-scan", definition: list.name },
         sampleNames: [list.name],
         replacesCount: 0,
         replacesRatingKeys: [],
       }));
-      return { proposed, future: [], unmappable: [], totalSourceItems: lists.length };
+      return { proposed, future: [], unmappable: [], diagnostics: [], totalSourceItems: lists.length };
     },
     // External-list provider: nothing to claim row-wise. MDBList lists live
     // outside Plex, so they can't conflict with another provider over a

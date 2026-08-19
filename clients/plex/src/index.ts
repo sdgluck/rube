@@ -18,6 +18,7 @@ import { createSessionsModule } from "./sessions.ts";
 import { createPostersModule } from "./posters.ts";
 import { createStreamingModule } from "./streaming.ts";
 import { createPrefsModule } from "./prefs.ts";
+import { createPlaylistsModule } from "./playlists.ts";
 import type { PlexClientOptions } from "./types.ts";
 
 export { PREROLL_PREF_ID } from "./prefs.ts";
@@ -96,6 +97,7 @@ export function createPlexClient(opts: PlexClientOptions) {
     ...createPostersModule(http),
     ...createStreamingModule(http),
     ...createPrefsModule(http),
+    ...createPlaylistsModule(http),
   };
 }
 

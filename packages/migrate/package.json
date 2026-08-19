@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./kometa": "./src/kometa/index.ts"
+    "./kometa": "./src/kometa/index.ts",
+    "./kometa-yaml": "./src/kometa-yaml/index.ts"
   },
   "files": [
     "src"
@@ -15,7 +16,9 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/plex-smart-filter": "workspace:*",
+    "yaml": "^2.9.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

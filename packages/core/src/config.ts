@@ -163,6 +163,12 @@ export const configSchema = z.object({
   global_seerr_api_key: z.string(),
   global_omdb_api_key: z.string(),
   global_mdblist_api_key: z.string(),
+  /**
+   * Trakt client id. Enough on its own to read public lists, which is what
+   * the `list_source` rule uses it for — a personal watchlist or collection
+   * would need the OAuth device flow, which isn't implemented.
+   */
+  global_trakt_client_id: z.string(),
   global_tmdb_api_key: z.string(),
   global_tmdb_region: z.string(),
   global_pushover_api_key: z.string(),
@@ -505,6 +511,12 @@ export const configSchema = z.object({
   collection_art_default_template: z.enum(["gradient", "mosaic", "spotlight"]),
   /** Accent applied when a rule doesn't set one. Empty means derive per collection. */
   collection_art_default_accent: z.string(),
+  /**
+   * A Kometa-style asset directory on the server's filesystem, read for
+   * collection artwork when a rule's poster source is `asset`. Empty disables
+   * the source entirely — nothing reads the disk until an admin points at it.
+   */
+  global_asset_directory: z.string(),
   posters_kometa_enabled: z.boolean(),
   posters_kometa_person_style: z.enum(["bw", "rainier", "signature", "diiivoy", "diiivoycolor"]),
   /**
@@ -523,6 +535,29 @@ export const configSchema = z.object({
   migration_dismissed_at: z.record(z.string(), z.number()),
   migration_completed_at: z.record(z.string(), z.number()),
   /**
+   * What the last migration actually created, and what each rule was meant to
+   * replace.
+   *
+   * Written by the migrate-collections job, and the only thing that makes
+   * verification possible: the plan knows a rule replaces collection 77001,
+   * but once the job has run that link exists nowhere — the rule doesn't
+   * record where it came from, and the collection doesn't record what took it
+   * over. Without this, "did the migration actually reproduce my collections?"
+   * can only be answered by eye.
+   */
+  migration_last_result: z.object({
+    providerId: z.string(),
+    completedAt: z.number(),
+    entries: z.array(
+      z.object({
+        ruleId: z.string(),
+        ruleName: z.string(),
+        /** Plex collections this rule was migrated from. Often empty. */
+        replacesRatingKeys: z.array(z.string()),
+      }),
+    ),
+  }),
+  /**
    * Transient slot the Settings → Migrate page writes into right before
    * kicking off the migrate-collections command. The command reads it at run
    * start and clears it on success. Held in config so the Sidequest worker
@@ -538,10 +573,62 @@ export const configSchema = z.object({
         ruleName: z.string(),
         sectionId: z.string(),
         ruleConfig: z.record(z.string(), z.unknown()),
+        /**
+         * Omitted means disabled — the behaviour every migration had before
+         * the YAML importer, and still the right default for anything the
+         * mapping wasn't fully confident about.
+         */
+        enabled: z.boolean().optional(),
         replacesRatingKeys: z.array(z.string()),
       }),
     ),
     deleteOriginals: z.boolean(),
+    /**
+     * Overlay badge layouts to apply, per Plex section.
+     *
+     * Rides on the plan rather than being applied by the router because
+     * applying them is a write to somebody's library and belongs in the job
+     * that owns every other write this migration makes — so it succeeds or
+     * fails alongside the rules, and shows up in the same run log.
+     */
+    overlays: z
+      .array(
+        z.object({
+          sectionId: z.string(),
+          sectionTitle: z.string(),
+          configs: z.array(
+            z.object({
+              position: z.string(),
+              overlayType: z.string(),
+              order: z.number().optional(),
+              style: z.record(z.string(), z.unknown()).nullish(),
+              rule: z.record(z.string(), z.unknown()).nullish(),
+            }),
+          ),
+        }),
+      )
+      .optional(),
+    /** Per-item metadata edits to store, per Plex section. */
+    metadataOverrides: z
+      .array(
+        z.object({
+          sectionId: z.string(),
+          sectionTitle: z.string(),
+          overrides: z.array(
+            z.object({
+              match: z.object({
+                title: z.string(),
+                year: z.number().optional(),
+                imdb: z.string().optional(),
+                tmdb: z.number().optional(),
+              }),
+              fields: z.record(z.string(), z.string()),
+              tags: z.record(z.string(), z.array(z.string())),
+            }),
+          ),
+        }),
+      )
+      .optional(),
     submittedAt: z.number(),
   }),
   /**
@@ -626,6 +713,7 @@ export const SECRET_KEYS = new Set<ConfigKey>([
   "global_seerr_api_key",
   "global_omdb_api_key",
   "global_mdblist_api_key",
+  "global_trakt_client_id",
   "global_tmdb_api_key",
   "global_pushover_api_key",
   "global_pushover_user_key",

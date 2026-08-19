@@ -9,6 +9,7 @@ import styles from "./Onboarding.module.css";
 import WelcomeStep from "./WelcomeStep";
 import ConnectStep from "./ConnectStep";
 import RulesStep from "./RulesStep";
+import MigrateStep from "./MigrateStep";
 import ScheduleStep from "./ScheduleStep";
 import NotifyStep from "./NotifyStep";
 import DryRunStep from "./DryRunStep";
@@ -132,6 +133,8 @@ export default function Onboarding() {
         return <WelcomeStep />;
       case "connect":
         return <ConnectStep cfg={cfg} plexConnected={plexConnected} />;
+      case "migrate":
+        return <MigrateStep />;
       case "rules":
         return <RulesStep />;
       case "schedule":

@@ -631,11 +631,33 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/metadata-overrides:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/migration:
     dependencies:
       '@tinkerbell/container':
         specifier: workspace:*
         version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -645,6 +667,9 @@ importers:
       '@tinkerbell/migrate':
         specifier: workspace:*
         version: link:../../packages/migrate
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
         specifier: ^4.3.6
         version: 4.4.3
@@ -704,6 +729,9 @@ importers:
       '@tinkerbell/domain.health':
         specifier: workspace:*
         version: link:../health
+      '@tinkerbell/domain.migration':
+        specifier: workspace:*
+        version: link:../migration
       '@tinkerbell/domain.rules':
         specifier: workspace:*
         version: link:../rules
@@ -776,6 +804,25 @@ importers:
       '@tinkerbell/composition':
         specifier: workspace:*
         version: link:../../packages/composition
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  domains/playlists:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1093,6 +1140,9 @@ importers:
       '@tinkerbell/domain.metadata':
         specifier: workspace:*
         version: link:../../domains/metadata
+      '@tinkerbell/domain.metadata-overrides':
+        specifier: workspace:*
+        version: link:../../domains/metadata-overrides
       '@tinkerbell/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration
@@ -1108,6 +1158,9 @@ importers:
       '@tinkerbell/domain.playback':
         specifier: workspace:*
         version: link:../../domains/playback
+      '@tinkerbell/domain.playlists':
+        specifier: workspace:*
+        version: link:../../domains/playlists
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
@@ -1307,6 +1360,9 @@ importers:
       '@tinkerbell/domain.metadata':
         specifier: workspace:*
         version: link:../../domains/metadata
+      '@tinkerbell/domain.metadata-overrides':
+        specifier: workspace:*
+        version: link:../../domains/metadata-overrides
       '@tinkerbell/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration
@@ -1319,6 +1375,9 @@ importers:
       '@tinkerbell/domain.playback':
         specifier: workspace:*
         version: link:../../domains/playback
+      '@tinkerbell/domain.playlists':
+        specifier: workspace:*
+        version: link:../../domains/playlists
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
@@ -1352,6 +1411,9 @@ importers:
       '@tinkerbell/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb
+      '@tinkerbell/overlays':
+        specifier: workspace:*
+        version: link:../overlays
       '@tinkerbell/plex':
         specifier: workspace:*
         version: link:../../clients/plex
@@ -1414,9 +1476,15 @@ importers:
 
   packages/migrate:
     dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@tinkerbell/plex-smart-filter':
         specifier: workspace:*
         version: link:../plex-smart-filter
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
       zod:
         specifier: ^4.3.6
         version: 4.4.3
@@ -1599,6 +1667,9 @@ importers:
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../llm
+      '@tinkerbell/migrate':
+        specifier: workspace:*
+        version: link:../migrate
       '@tinkerbell/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb

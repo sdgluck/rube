@@ -36,3 +36,5 @@ export type {
   RefreshProgress,
   RefreshSummary,
 } from "./cache.ts";
+export { indexAssetDirectory, findAsset, readAsset, normaliseAssetName } from "./assets.ts";
+export type { AssetIndex, AssetKind } from "./assets.ts";

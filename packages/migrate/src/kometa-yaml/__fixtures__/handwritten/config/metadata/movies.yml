@@ -1,0 +1,25 @@
+# Hand-written per-item edits — the least reproducible part of a config.
+metadata:
+  Star Wars (1977):
+    title: Star Wars — A New Hope
+    sort_title: Star Wars 01
+    summary: The one that started it all.
+    genre:
+      - Science Fiction
+      - Adventure
+
+  The Thing (1982):
+    imdb_id: tt0084787
+    content_rating: R
+    tagline: Man is the warmest place to hide.
+
+  # Season/episode blocks are recognised and reported, not silently dropped.
+  Some Series:
+    summary: A show.
+    seasons:
+      1:
+        title: The First One
+
+  # Nothing settable — must not produce an empty override.
+  Ignored Entry:
+    unknown_field: whatever

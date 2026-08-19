@@ -31,7 +31,7 @@ export type AiNameStyle = "short_punchy" | "descriptive";
  * entered — same reason the rest of this form is one shape.
  */
 export interface OutcomeFormState {
-  kind: "collection" | "cleanup" | "metadata";
+  kind: "collection" | "cleanup" | "metadata" | "playlist";
   mode: CleanupMode;
   consecutiveRuns: number;
   maxActionsPerRun: number;
@@ -54,6 +54,15 @@ export interface OutcomeFormState {
   overwriteLocked: boolean;
   maxWritesPerRun: number;
   sortLanguages: string[];
+  /**
+   * Playlist: what to call it, how to order it, and how long to let it get.
+   * Held here rather than in the config so switching outcome and back doesn't
+   * discard what was typed — the same reason every other field lives here.
+   */
+  playlistName: string;
+  playlistOrder: "handler" | "release_date" | "added_date" | "title" | "random";
+  playlistCombineSections: boolean;
+  playlistLimit: number;
 }
 
 /**
@@ -202,6 +211,12 @@ export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
   overwriteLocked: false,
   maxWritesPerRun: DEFAULT_MAX_WRITES_PER_RUN,
   sortLanguages: ["en"],
+  playlistName: "",
+  // The selection's own order is the interesting one — a list source's order
+  // is the whole reason somebody wants it as a playlist.
+  playlistOrder: "handler",
+  playlistCombineSections: true,
+  playlistLimit: 0,
 };
 
 export const DEFAULT_ARR_FORM: ArrFormState = {

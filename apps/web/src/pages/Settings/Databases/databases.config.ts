@@ -36,6 +36,15 @@ export const DATABASE_SERVICES: Record<string, DatabaseServiceConfig> = {
     apiKeyConfigKey: "global_mdblist_api_key",
     hint: "Get a key at mdblist.com/preferences",
   },
+  trakt: {
+    service: "trakt",
+    title: "Trakt",
+    serviceName: "Trakt",
+    apiKeyLabel: "Trakt Client ID",
+    apiKeyPlaceholder: "Enter Trakt client ID",
+    apiKeyConfigKey: "global_trakt_client_id",
+    hint: "Reads public Trakt lists. Create an API app at trakt.tv/oauth/applications and paste its Client ID. Private lists and watchlists need a Trakt sign-in, which isn't supported yet.",
+  },
 };
 
-export const DATABASE_TAB_ORDER = ["omdb", "tmdb", "mdblist"] as const;
+export const DATABASE_TAB_ORDER = ["omdb", "tmdb", "mdblist", "trakt"] as const;

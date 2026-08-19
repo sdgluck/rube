@@ -263,6 +263,29 @@ const appRouterFor = (deps: TrpcDeps) => {
       }
     }),
 
+    testTrakt: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
+      const api_key = unredact(input.api_key, "global_trakt_client_id");
+      try {
+        // A public endpoint, so this proves the client id without needing the
+        // OAuth flow the key alone can't complete.
+        const res = await fetch("https://api.trakt.tv/lists/trending?limit=1", {
+          signal: AbortSignal.timeout(10000),
+          headers: {
+            "Content-Type": "application/json",
+            "trakt-api-version": "2",
+            "trakt-api-key": api_key,
+          },
+        });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        reportHealth("Trakt", "ok", "Connected");
+        return { name: "Trakt" };
+      } catch (err) {
+        const message = errorMessage(err);
+        reportHealth("Trakt", "error", message);
+        throw new TRPCError({ code: "BAD_GATEWAY", message });
+      }
+    }),
+
     testNotification: procedure
       .input(z.object({ service: z.enum(NOTIFICATION_SERVICES) }))
       .mutation(async ({ input }) => {

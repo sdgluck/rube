@@ -1,6 +1,7 @@
 import { type Services } from "@tinkerbell/composition";
 import { createMdblistCommand } from "../sources/mdblist.ts";
 import { createImdbCommand } from "../sources/imdb.ts";
+import { createTraktCommand } from "../sources/trakt.ts";
 import { indexItemsByImdb, indexItemsByTmdb, type IndexedItem } from "#commands/generate/plex-index.ts";
 
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
@@ -14,6 +15,7 @@ interface ListResult {
 export function createListSourceCommand(deps: Services) {
   const { fetchMdbList } = createMdblistCommand(deps);
   const { fetchImdbList } = createImdbCommand(deps);
+  const { fetchTraktList } = createTraktCommand(deps);
 
   /**
    * Fetch the source list. Each branch returns IMDb ids when it can; TMDb ids
@@ -25,9 +27,7 @@ export function createListSourceCommand(deps: Services) {
       const result = await fetchImdbList(listId);
       return { ...result, tmdbIds: [] };
     }
-    if (provider === "trakt") {
-      throw new Error("Trakt list provider is not yet supported.");
-    }
+    if (provider === "trakt") return fetchTraktList(listId, signal);
     throw new Error(`Unknown list provider: ${provider}`);
   }
 

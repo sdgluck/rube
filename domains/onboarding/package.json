@@ -18,6 +18,7 @@
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",
+    "@tinkerbell/domain.migration": "workspace:*",
     "@tinkerbell/domain.rules": "workspace:*",
     "zod": "^4.3.6"
   },

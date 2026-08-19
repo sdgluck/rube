@@ -148,6 +148,26 @@ export function createCollections(deps: CollectionsDeps) {
     });
   }
 
+  /**
+   * Every distinct item ratingKey across the given collections.
+   *
+   * Reads the local mirror rather than Plex: the point of the caller (migration
+   * verification) is to compare what Kometa built against what a Tinkerbell
+   * rule *would* build, and a Plex round-trip per collection would make that a
+   * slow question to ask about a hundred rules. The mirror is refreshed by the
+   * collections sync, so it is as current as the last sync — which is the same
+   * data the migration planned from.
+   */
+  function getCollectionMemberKeys(collectionRatingKeys: string[]): string[] {
+    if (collectionRatingKeys.length === 0) return [];
+    const rows = db
+      .selectDistinct({ itemRatingKey: collectionItems.itemRatingKey })
+      .from(collectionItems)
+      .where(inArray(collectionItems.collectionRatingKey, collectionRatingKeys))
+      .all();
+    return rows.map((r) => r.itemRatingKey);
+  }
+
   /** Returns the collections (local rows) that contain the given media item. */
   function getCollectionsForItem(itemRatingKey: string): CollectionRow[] {
     const memberships = db
@@ -538,6 +558,7 @@ export function createCollections(deps: CollectionsDeps) {
     ...artwork,
     ...stats,
     upsertCollectionByKey,
+    getCollectionMemberKeys,
     getCollectionsForItem,
     syncCollections,
     getLocalCollections,

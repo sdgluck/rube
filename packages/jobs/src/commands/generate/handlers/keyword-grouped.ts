@@ -4,7 +4,7 @@ import type { TmdbCachedDetails } from "@tinkerbell/db";
 
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 
-import { collectionLimit, describeLimits, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
+import { collectionLimit, describeLimits, filterGroups, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 export type KeywordGroupedField = "based_on" | "seasonal" | "awards";
@@ -134,7 +134,7 @@ export function createKeywordGroupedCommand(deps: Services) {
           if (matched) withSignal++;
         }
 
-        const ranked = [...groups.values()]
+        const ranked = filterGroups([...groups.values()], ruleConfig, (g) => g.bucket.label)
           .filter((g) => g.items.length >= minItems)
           .sort((a, b) => b.items.length - a.items.length);
 

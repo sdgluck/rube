@@ -6,7 +6,7 @@ import { type PersistedTestResult, type RuleRunPhase } from "@tinkerbell/domain.
 import { TRPCError } from "@trpc/server";
 
 import { errorMessage } from "@tinkerbell/core";
-import { ruleConfigSchema } from "@tinkerbell/contracts";
+import { PLAYLIST_CAPABLE_RULE_TYPES, ruleConfigSchema } from "@tinkerbell/contracts";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 
 /**
@@ -18,12 +18,23 @@ import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
  * version of Tinkerbell that a rolled-back instance is now editing. Callers
  * keep storing exactly what they sent; they just can't store nonsense.
  */
-function assertValidRuleConfig(config: Record<string, unknown>): Record<string, unknown> {
+function assertValidRuleConfig(config: Record<string, unknown>, ruleType?: string): Record<string, unknown> {
   const parsed = ruleConfigSchema.safeParse(config);
   if (!parsed.success) {
     const detail = parsed.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`).join("; ");
     throw new Error(`Invalid rule config: ${detail}`);
   }
+
+  // The playlist gate needs the rule *type*, which the config schema never
+  // sees. A playlist is one ordered sequence, so a rule that builds one
+  // collection per genre has no playlist reading — and a rule saved that way
+  // would run nightly and quietly produce nothing.
+  if (parsed.data.action?.kind === "playlist" && ruleType && !PLAYLIST_CAPABLE_RULE_TYPES.includes(ruleType)) {
+    throw new Error(
+      `A "${ruleType}" rule builds one collection per group, so it can't build a single playlist. Playlists work with: ${PLAYLIST_CAPABLE_RULE_TYPES.join(", ")}.`,
+    );
+  }
+
   return config;
 }
 
@@ -249,7 +260,7 @@ export function createRulesRouter(
     create: procedure
       .input(z.object({ name: z.string(), type: z.string(), config: z.record(z.string(), z.unknown()) }))
       .mutation(({ input }) => {
-        return createRule({ ...input, config: assertValidRuleConfig(input.config) });
+        return createRule({ ...input, config: assertValidRuleConfig(input.config, input.type) });
       }),
 
     update: procedure
@@ -265,7 +276,7 @@ export function createRulesRouter(
         const { id, ...updates } = input;
         updateRule(id, {
           ...updates,
-          config: updates.config !== undefined ? assertValidRuleConfig(updates.config) : undefined,
+          config: updates.config !== undefined ? assertValidRuleConfig(updates.config, getRule(id)?.type) : undefined,
           enabled: updates.enabled !== undefined ? (updates.enabled ? 1 : 0) : undefined,
         });
         return { ok: true };

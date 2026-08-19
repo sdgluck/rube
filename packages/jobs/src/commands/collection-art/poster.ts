@@ -9,7 +9,13 @@
 import type { PlexClient } from "@tinkerbell/plex";
 import { artworkHash, type CollectionArtworkRow } from "@tinkerbell/domain.collections";
 import { resolvePosterTemplate, type CollectionPosterTemplateId, type PresentationConfig } from "@tinkerbell/contracts";
-import { derivePalette, fetchPosterUrl, renderCollectionPoster, type Palette } from "@tinkerbell/posters";
+import {
+  derivePalette,
+  fetchPosterUrl,
+  normalizePosterUpload,
+  renderCollectionPoster,
+  type Palette,
+} from "@tinkerbell/posters";
 import { mapConcurrent } from "#jobs/concurrency.ts";
 
 /**
@@ -34,7 +40,7 @@ export interface BuiltPoster {
   buffer: Buffer;
   /** Covers template, title, palette and member art — see the ledger table. */
   inputHash: string;
-  template: CollectionPosterTemplateId | "url";
+  template: CollectionPosterTemplateId | "url" | "asset";
   palette: Palette;
   memberPostersUsed: number;
 }
@@ -70,6 +76,12 @@ export interface BuildPosterInput {
   memberPosters: Buffer[];
   /** Plex thumb paths of the posters above — the stable half of the hash. */
   memberPosterKeys: string[];
+  /**
+   * Finds a local asset file for a collection name, when the server has an
+   * asset directory configured. Injected rather than read here so this module
+   * stays free of the filesystem and testable on buffers alone.
+   */
+  findAsset?: (name: string) => Promise<{ path: string; buffer: Buffer; mtimeMs: number } | null>;
 }
 
 /**
@@ -95,6 +107,29 @@ export async function buildCollectionPoster(input: BuildPosterInput): Promise<Bu
       // a curated URL that changes is a poster the user chose to change.
       inputHash: artworkHash(["url", url]),
       template: "url",
+      palette: await derivePalette([], presentation.accentColor),
+      memberPostersUsed: 0,
+    };
+  }
+
+  if (presentation.poster === "asset") {
+    if (!input.findAsset) throw new Error("no asset directory is configured");
+    const found = await input.findAsset(input.title);
+    // A missing asset is the normal case, not a fault: an asset directory
+    // covers the collections somebody made art for, and the rest are meant to
+    // keep whatever poster they already have rather than get a generated one.
+    if (!found) return null;
+
+    const normalised = await normalizePosterUpload(found.buffer);
+    if (normalised.status === "rejected") throw new Error(`asset ${found.path} rejected — ${normalised.reason}`);
+
+    return {
+      buffer: normalised.buffer,
+      // Path plus mtime rather than the bytes: it identifies the same image at
+      // the same cost as a stat, and a user who replaces the file gets a new
+      // hash and therefore a re-upload, which is the whole point of editing it.
+      inputHash: artworkHash(["asset", found.path, found.mtimeMs]),
+      template: "asset",
       palette: await derivePalette([], presentation.accentColor),
       memberPostersUsed: 0,
     };

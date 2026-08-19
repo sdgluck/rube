@@ -1,0 +1,79 @@
+# Templates, anchors, optional variables, filters — the machinery a real
+# hand-written Kometa collection file leans on.
+templates:
+  imdb_list_base:
+    default:
+      limit: 0
+      collection_order: custom
+    optional:
+      - poster
+    imdb_list: <<url>>
+    collection_order: <<collection_order>>
+    sort_title: "!01_<<collection_name>>"
+    url_poster: <<poster>>
+    sync_mode: sync
+
+  plex_genre:
+    default:
+      min_year: 1900
+    plex_search:
+      all:
+        genre: <<genre>>
+        year.gte: <<min_year>>
+    summary: The best of <<genre>>.
+
+collections:
+  IMDb Top 250:
+    template:
+      name: imdb_list_base
+      url: https://www.imdb.com/list/ls024149810/
+      poster: https://raw.githubusercontent.com/example/art/main/top250.jpg
+    minimum_items: 10
+
+  # Same template, but `poster` is left unset — `optional:` should drop the
+  # url_poster attribute rather than leaving it as the literal "<<poster>>".
+  IMDb Lowest Rated:
+    template:
+      name: imdb_list_base
+      url: https://www.imdb.com/list/ls099999999/
+
+  Modern Horror:
+    template:
+      name: plex_genre
+      genre: Horror
+      min_year: 2000
+    filters:
+      tmdb_vote_count.gte: 100
+      content_rating.not:
+        - NR
+        - Unrated
+
+  Christmas:
+    plex_search:
+      any:
+        genre: Holiday
+        label: christmas
+    schedule: range(12/01-12/31)
+    collection_mode: hide
+
+  Parked For Now:
+    imdb_list: https://www.imdb.com/list/ls012345678/
+    schedule: never
+
+  Work In Progress:
+    plex_search:
+      genre: Drama
+    test: true
+
+  From Trakt:
+    trakt_list: https://trakt.tv/users/someone/lists/watchlist
+
+  # Account-scoped, so it needs a Trakt sign-in Tinkerbell doesn't do.
+  My Trakt Watchlist:
+    trakt_watchlist: movies
+
+  Letterboxd Favourites:
+    letterboxd_list: https://letterboxd.com/someone/list/favourites/
+
+  Nothing To Build:
+    summary: A collection with no builder at all.

@@ -7,6 +7,23 @@ import type { CollectionInput, MigrationPlan } from "@tinkerbell/migrate";
  * with sources whose data lives in an external API (MDBList, Trakt)
  * without forcing one shape on the other.
  */
+/**
+ * Declares that a provider can't plan anything until the user hands it
+ * something. Providers that derive their plan from server-side state omit
+ * this; the UI reads its presence as "show an upload step first".
+ */
+export interface ProviderIngest {
+  kind: "files";
+  /** File extensions for the picker's `accept`, e.g. [".yml", ".yaml"]. */
+  accept: string[];
+}
+
+/** What `buildPlan` needs beyond server state. Empty for scan-based providers. */
+export interface BuildPlanInput {
+  /** Row id in `migration_imports` holding the uploaded bundle. */
+  importId?: string;
+}
+
 export interface ProviderRuntime {
   id: string;
   /** Display label for UI (banner, settings page tab). */
@@ -17,10 +34,21 @@ export interface ProviderRuntime {
    * to external services on every run.
    */
   autoScan: boolean;
+  /**
+   * Set when the provider plans from user-supplied files rather than from
+   * anything already on the server. Absent means `buildPlan()` can be called
+   * with no input, which is what every scan-based provider does.
+   */
+  ingest?: ProviderIngest;
   /** Cheap re-scan: re-counts source items. May be sync or async. */
   scan(): Promise<ProviderScanResult> | ProviderScanResult;
-  /** Build a fresh migration plan. May be expensive for API providers. */
-  buildPlan(): Promise<MigrationPlan> | MigrationPlan;
+  /**
+   * Build a fresh migration plan. May be expensive for API providers.
+   *
+   * `input` is optional so the scan-based providers keep their zero-argument
+   * implementations — they have nothing to read from it.
+   */
+  buildPlan(input?: BuildPlanInput): Promise<MigrationPlan> | MigrationPlan;
   /**
    * True if this provider considers `input` its own. Used by less-specific
    * providers (e.g. Plex Smart) to avoid double-claiming collections that

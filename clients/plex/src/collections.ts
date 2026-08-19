@@ -13,6 +13,7 @@ import {
   type PlexCollectionDetail,
   type PlexLabel,
 } from "./types.ts";
+import { libraryUri } from "./uri.ts";
 
 /**
  * Bounds for the label sweep that precedes a rule's regeneration. Both are
@@ -25,16 +26,6 @@ const DELETE_CONCURRENCY = 4;
 /** True for the 404 Plex returns once a ratingKey no longer exists. */
 function isGone(err: unknown): boolean {
   return err instanceof PlexApiError && err.status === 404;
-}
-
-/**
- * The `server://…` URI Plex wants whenever items are named as the *content* of
- * something — creating a collection, or adding to one. Not a URL: the machine
- * identifier addresses the server to itself, and the rating keys are a single
- * comma-joined path segment rather than a list parameter.
- */
-function libraryUri(machineId: string, ratingKeys: string[]): string {
-  return `server://${machineId}/com.plexapp.plugins.library/library/metadata/${ratingKeys.join(",")}`;
 }
 
 /**
@@ -150,10 +141,20 @@ export function createCollectionsModule(http: PlexHttp) {
     }));
   }
 
-  async function updateCollection(ratingKey: string, updates: { title?: string; summary?: string }): Promise<void> {
+  async function updateCollection(
+    ratingKey: string,
+    updates: { title?: string; summary?: string; titleSort?: string },
+  ): Promise<void> {
     const params: Record<string, string> = {};
     if (updates.title !== undefined) params.title = updates.title;
     if (updates.summary !== undefined) params.summary = updates.summary;
+    if (updates.titleSort !== undefined) {
+      params["titleSort.value"] = updates.titleSort;
+      // Without the lock Plex recomputes the sort title from the title on its
+      // next refresh, silently undoing the write — which reads as "Tinkerbell
+      // didn't apply my sort title" rather than "Plex overwrote it".
+      params["titleSort.locked"] = "1";
+    }
     await http.request(`/library/metadata/${ratingKey}`, { method: "PUT", params });
   }
 

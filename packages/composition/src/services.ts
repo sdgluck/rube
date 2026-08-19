@@ -45,6 +45,8 @@ import { EventsToken, type Events } from "@tinkerbell/domain.events";
 import { HealthToken, type Health } from "@tinkerbell/domain.health";
 import { MediaToken, type Media } from "@tinkerbell/domain.media";
 import { MetadataToken, type Metadata } from "@tinkerbell/domain.metadata";
+import { MetadataOverridesToken, type MetadataOverrides } from "@tinkerbell/domain.metadata-overrides";
+import { PlaylistsToken, type Playlists } from "@tinkerbell/domain.playlists";
 import { MigrationToken, type Migration } from "@tinkerbell/domain.migration";
 import { NotificationsToken, type Notifications } from "@tinkerbell/domain.notifications";
 import { OnboardingToken, type Onboarding } from "@tinkerbell/domain.onboarding";
@@ -91,6 +93,8 @@ export interface Services {
   health: Health;
   media: Media;
   metadata: Metadata;
+  metadataOverrides: MetadataOverrides;
+  playlists: Playlists;
   migration: Migration;
   notifications: Notifications;
   onboarding: Onboarding;
@@ -133,6 +137,8 @@ export function registerServices(r: Registry): void {
     health: c.resolve(HealthToken),
     media: c.resolve(MediaToken),
     metadata: c.resolve(MetadataToken),
+    metadataOverrides: c.resolve(MetadataOverridesToken),
+    playlists: c.resolve(PlaylistsToken),
     migration: c.resolve(MigrationToken),
     notifications: c.resolve(NotificationsToken),
     onboarding: c.resolve(OnboardingToken),

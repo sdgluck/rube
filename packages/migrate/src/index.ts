@@ -5,8 +5,12 @@ export type {
   FuturePlanItem,
   MigrationPlan,
   MigrationProvider,
+  PlanConfidence,
+  PlanDiagnostic,
   PlanItem,
   PlanOptions,
+  PlanOrigin,
+  PlanWarning,
   UnmappableEntry,
 } from "./types.ts";
 export { kometaProvider, isKometaClaimed } from "./kometa/index.ts";

@@ -1225,12 +1225,89 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     );
   }
 
+  function renderPlaylistStep() {
+    const o = form.outcome;
+    const setOutcome = (patch: Partial<OutcomeFormState>) => setForm({ ...form, outcome: { ...o, ...patch } });
+
+    return (
+      <>
+        <h3 className={styles.stepHeading}>How should the playlist look?</h3>
+        <p className={styles.stepSub}>
+          A playlist is an ordered list rather than a set, which is the whole reason to want one. It belongs to the Plex
+          account Tinkerbell signs in as — the server owner — so everyone sharing this server sees the same one.
+        </p>
+
+        <div className={styles.field}>
+          <label htmlFor="playlist-name">Name</label>
+          <input
+            id="playlist-name"
+            className={shared.input}
+            value={o.playlistName}
+            onChange={(e) => setOutcome({ playlistName: e.target.value })}
+            placeholder={form.name || "Defaults to the rule's name"}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="playlist-order">Order</label>
+          <select
+            id="playlist-order"
+            className={shared.input}
+            value={o.playlistOrder}
+            onChange={(e) => setOutcome({ playlistOrder: e.target.value as OutcomeFormState["playlistOrder"] })}
+          >
+            <option value="handler">However the source lists them</option>
+            <option value="release_date">Oldest first</option>
+            <option value="added_date">Recently added first</option>
+            <option value="title">Alphabetical</option>
+            <option value="random">Shuffled</option>
+          </select>
+          <span className={styles.hint}>
+            {o.playlistOrder === "handler"
+              ? "Keeps the source's own order — for a list, that's the order it was written in, which is usually the point."
+              : "Re-sorts whatever the source produced."}
+          </span>
+        </div>
+
+        <div className={styles.field}>
+          <label>
+            <input
+              type="checkbox"
+              checked={o.playlistCombineSections}
+              onChange={(e) => setOutcome({ playlistCombineSections: e.target.checked })}
+            />{" "}
+            One playlist across every library
+          </label>
+          <span className={styles.hint}>
+            Playlists aren't tied to a library, so this is usually what you want. Turn it off to get one playlist per
+            library instead.
+          </span>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="playlist-limit">Most items</label>
+          <input
+            id="playlist-limit"
+            type="number"
+            min={0}
+            className={shared.input}
+            value={o.playlistLimit || ""}
+            onChange={(e) => setOutcome({ playlistLimit: Number(e.target.value) || 0 })}
+            placeholder="No limit"
+          />
+          <span className={styles.hint}>Applied after ordering, so a cap keeps the front of the list.</span>
+        </div>
+      </>
+    );
+  }
+
   function renderOutcomeStep() {
     const o = form.outcome;
     const setOutcome = (patch: Partial<OutcomeFormState>) => setForm({ ...form, outcome: { ...o, ...patch } });
     const destructive = isDestructiveMode(o.mode);
 
     if (o.kind === "metadata") return renderMetadataStep();
+    if (o.kind === "playlist") return renderPlaylistStep();
 
     return (
       <>
@@ -1495,7 +1572,14 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               <option value="mosaic">Mosaic — a grid of the collection's own posters</option>
               <option value="spotlight">Spotlight — one member's poster, framed</option>
               <option value="url">A specific image</option>
+              <option value="asset">A file from the asset directory</option>
             </select>
+            {p.poster === "asset" && (
+              <span className={styles.hint}>
+                Looks each collection up by name in the asset directory set in Settings → Appearance, the way Kometa
+                does. Collections with no matching file keep the poster they already have.
+              </span>
+            )}
             {p.poster === "url" && (
               <span className={styles.hint}>
                 Fetched by the server on a schedule, so it has to be HTTPS on a known image host.

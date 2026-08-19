@@ -47,6 +47,7 @@
     "@tinkerbell/http": "workspace:*",
     "@tinkerbell/jobs": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
+    "@tinkerbell/migrate": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/ports": "workspace:*",

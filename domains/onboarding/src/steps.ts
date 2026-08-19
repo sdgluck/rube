@@ -4,7 +4,7 @@ import type { z } from "zod";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
 
-export type OnboardingStepId = "welcome" | "connect" | "rules" | "schedule" | "notify" | "dryrun" | "done";
+export type OnboardingStepId = "welcome" | "connect" | "migrate" | "rules" | "schedule" | "notify" | "dryrun" | "done";
 
 /**
  * What a step's `satisfiedFn` gets to look at. Deliberately a plain value
@@ -30,6 +30,20 @@ export interface OnboardingContext {
    * finish a step that has already told them what they needed to know.
    */
   testedRuleCount: number;
+  /**
+   * Whether a migration has been completed for any provider.
+   *
+   * The `migrate` step needs a completion signal that isn't "has rules" —
+   * somebody who imported a Kometa config *and* somebody who wrote a rule by
+   * hand both have rules, and only one of them has migrated.
+   */
+  migrationCompleted: boolean;
+  /**
+   * Collections on the server that look like another tool's output. Non-zero
+   * is what makes the migrate step worth showing at all: on a fresh server
+   * with an empty library there is nothing to migrate and the step is noise.
+   */
+  migratableCount: number;
 }
 
 /**
@@ -92,6 +106,20 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     required: true,
     acknowledgeable: false,
     satisfiedFn: (ctx) => healthConfigured(ctx.config, "Plex"),
+  },
+  {
+    id: "migrate",
+    label: "Migrate",
+    required: false,
+    acknowledgeable: true,
+    /**
+     * Satisfied by having migrated, or by there being nothing to migrate.
+     *
+     * The second half matters more than the first: most installs are not
+     * coming from anywhere, and a step that sits permanently incomplete for
+     * them turns the progress count into a lie.
+     */
+    satisfiedFn: (ctx) => ctx.migrationCompleted || ctx.migratableCount === 0,
   },
   {
     id: "rules",
