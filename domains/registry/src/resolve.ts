@@ -6,8 +6,9 @@
  *  1. **Tag values.** Plex stores smart-filter values for tag fields as
  *     numeric keys unique to the server — `genre = "5840"`. Registry packs
  *     publish display names instead, and this module swaps them for local
- *     keys via `/library/sections/:id/:field`. Without this step an imported
- *     smart filter runs cleanly and matches nothing.
+ *     keys. The walk itself lives in `@tinkerbell/contracts`
+ *     (`translateSmartFilterTags`), shared with the bundle exporter, which
+ *     needs exactly the same traversal in the opposite direction.
  *  2. **Section scope.** Packs never ship `config.sections`; the importing
  *     user picks target libraries and they're written in here.
  *  3. **arr settings.** Packs never ship `config.arr` (quality-profile ids
@@ -16,11 +17,10 @@
  * Deliberately free of DB and Plex-client imports — the tag lookup arrives as
  * a callback, so this is testable without either.
  */
-import { isTagField, type RegistryRule, type ResolutionWarning } from "@tinkerbell/contracts";
-import { smartFilterGroupSchema, type SmartFilterGroup, type SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import { translateSmartFilterTags, type RegistryRule, type ResolutionWarning } from "@tinkerbell/contracts";
 
-/** `(sectionId, field) -> [{key, title}]`, i.e. `getFilterFieldValues`. */
-export type TagLookup = (sectionId: string, field: string) => Promise<{ key: string; title: string }[]>;
+export type { TagLookup } from "@tinkerbell/contracts";
+import type { TagLookup } from "@tinkerbell/contracts";
 
 export interface ResolveTarget {
   sectionId: string;
@@ -30,66 +30,6 @@ export interface ResolveTarget {
 export interface ResolvedRule {
   config: Record<string, unknown>;
   warnings: ResolutionWarning[];
-}
-
-/**
- * Memoises per `(sectionId, field)` so a filter with six director clauses
- * makes one Plex call, not six. Scoped to a single import so a library
- * retagged between imports isn't served a stale map.
- */
-function createTagResolver(lookup: TagLookup) {
-  const cache = new Map<string, Promise<Map<string, string>>>();
-
-  return async function keyFor(sectionId: string, field: string, value: string): Promise<string | null> {
-    const cacheKey = `${sectionId}\u0000${field}`;
-    let entry = cache.get(cacheKey);
-    if (!entry) {
-      entry = lookup(sectionId, field)
-        .then((values) => new Map(values.map((v) => [v.title.trim().toLowerCase(), v.key])))
-        // A field Plex doesn't expose for this section type (or a transient
-        // failure) shouldn't abort the whole import — it degrades to a
-        // warning on the clauses that needed it.
-        .catch(() => new Map<string, string>());
-      cache.set(cacheKey, entry);
-    }
-    const byTitle = await entry;
-    return byTitle.get(value.trim().toLowerCase()) ?? null;
-  };
-}
-
-async function resolveNode(
-  node: SmartFilterNode,
-  target: ResolveTarget,
-  ruleSlug: string,
-  keyFor: (sectionId: string, field: string, value: string) => Promise<string | null>,
-  warnings: ResolutionWarning[],
-): Promise<SmartFilterNode> {
-  if (node.kind === "group") {
-    const children = [];
-    for (const child of node.children) {
-      children.push(await resolveNode(child, target, ruleSlug, keyFor, warnings));
-    }
-    return { ...node, children };
-  }
-
-  if (!isTagField(node.field)) return node;
-
-  // Already a tag key — either the author pasted one (the registry test
-  // rejects that) or we're re-resolving a config that's been through here
-  // before. Either way there's nothing to look up.
-  if (/^\d+$/.test(node.value.trim())) return node;
-
-  const key = await keyFor(target.sectionId, node.field, node.value);
-  if (key == null) {
-    warnings.push({
-      ruleSlug,
-      field: node.field,
-      value: node.value,
-      sectionTitle: target.sectionTitle,
-    });
-    return node;
-  }
-  return { ...node, value: key };
 }
 
 /**
@@ -119,20 +59,23 @@ export async function resolveRuleForImport(
   delete config.arr;
 
   if (rule.type === "smart_filter" && config.smartFilter) {
-    const parsed = smartFilterGroupSchema.safeParse(config.smartFilter);
-    if (!parsed.success) {
-      throw new Error(`Registry rule "${rule.slug}" has an invalid smart filter: ${parsed.error.message}`);
-    }
-    const keyFor = createTagResolver(lookup);
-
     const primary = targets[0];
     if (primary) {
-      config.smartFilter = (await resolveNode(parsed.data, primary, rule.slug, keyFor, warnings)) as SmartFilterGroup;
-    }
-
-    // Warn about the remaining sections too, without rewriting against them.
-    for (const target of targets.slice(1)) {
-      await resolveNode(parsed.data, target, rule.slug, keyFor, warnings);
+      let translated;
+      try {
+        translated = await translateSmartFilterTags(config.smartFilter, {
+          target: primary,
+          alsoWarnAgainst: targets.slice(1),
+          direction: "toKeys",
+          lookup,
+        });
+      } catch (err) {
+        throw new Error(
+          `Registry rule "${rule.slug}" has an invalid smart filter: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+      config.smartFilter = translated.smartFilter;
+      warnings.push(...translated.warnings.map((w) => ({ ruleSlug: rule.slug, ...w })));
     }
   }
 
