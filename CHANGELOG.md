@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-08-20
+
+### Security
+
+- Closed two gaps in the guard on outbound requests to addresses Tinkerbell should never fetch. An IPv4-mapped IPv6 literal (`[::ffff:127.0.0.1]`) and a hostname with a trailing dot (`127.0.0.1.`) both reach loopback but neither was recognised, so a notification webhook or preroll URL pointing at one was allowed through.
+
+### Fixed
+
+- Saving a configuration value now rejects an invalid one instead of storing it. Previously a value outside its allowed range was written without complaint and then threw on every subsequent read — and because saving reads the old value first, the setting could not be corrected either. A single bad write made that setting unusable until the database was edited by hand.
+- The "suggest a name" step of the rule wizard now produces a name for every rule type. Ten of the twenty-nine — Decades, Years, Resolutions, Awards and others — suggested nothing at all, which left the name blank, the Save button disabled, and no explanation of why.
+- An AI provider replying with only whitespace is now treated as a failure rather than as an empty answer. A rule using it would otherwise build nothing, every night, and report the run as successful.
+- Backup and history source files no longer contain a literal NUL byte, which made search and file-type tools treat them as binary and skip them silently.
+- `pnpm lint` no longer hangs when a development worktree is present on disk. It scanned every file beneath it, `node_modules` included.
+
+### Changed
+
+- Tinkerbell now runs its full test suite, type checks and linting on every change, and no image is published until they pass. None of that was automated before, so the checks only ran when someone remembered — and one of the fixes above is a defect that had been sitting on the main branch as a result.
+- Test coverage was extended across the code that changes things you cannot easily get back: deleting media through Radarr and Sonarr, changing what a shared user can see, applying database migrations on upgrade, reordering poster overlays, and pruning old backups. This does not change behaviour on its own; it is what stops the behaviour changing by accident later.
+
 ## [0.23.0] - 2026-08-20
 
 ### Added
