@@ -6,6 +6,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-20
+
+### Added
+
+- **Kometa migration now reads your actual `config.yml`**, not just the collections it left in Plex — templates, includes, filters, limits, schedules, posters, sort titles, overlays (mapped to badges), metadata files (mapped to per-item overrides), playlists, and asset-directory artwork are all carried across. Each migrated rule is scored for confidence, lists anything it couldn't take, and is created switched off with a dry-run diff against the collection it replaces so you can check it before turning Kometa off.
+- New rule capabilities added to support that migration: include/exclude on grouped rules, collection mode/sort/sort-title, a `static_list` rule type for adopting unmappable definitions, and Trakt public list rules.
+- Metadata rules: a new rule type that writes fields (title, sort title, content rating, studio, genres, etc.) on a schedule, with templating tokens, field locking, a daily write ceiling, and full undo. Build one in the wizard at `/metadata`, or edit a single item's metadata directly from its detail page — both go through the same undoable snapshot ledger, with a Settings → Metadata page for the master switch, write ceiling, and history.
+- Rules can now run on their own schedule, a seasonal on/off window, or a trigger (item added, item watched, item removed, Overseerr request fulfilled) instead of only inside the nightly batch — and one rule can chain to run after another finishes.
+- Rules now have a position with drag-to-reorder, and the app detects when two rules are about to conflict (same collection name, same metadata field, or a cleanup rule racing a collection rule).
+- Rule test/funnel tooling: the Test button shows a clause-by-clause funnel explaining why a smart filter returned what it did; a real nightly run that comes back empty now stores the same funnel so you can read it the next morning; and you can ask "why is this item (not) in this rule's results?" for a single item.
+- Rule runs are now tracked as server-side rows: progress, log and status survive a page reload, a closed tab, or a lost connection, and a run in progress can be reattached to instead of started twice.
+- Every rule run now diffs the collections it touched against last time and stores the changeset, with a Revert to undo just that run's Plex changes.
+- Deleted rules can be restored (Undo) within a day of deletion.
+- Cleanup queue overhaul: search, filters by rule/action, a due/waiting/held view, sortable columns, batch Keep/Release with its own Undo, and a configurable hold duration.
+- Cleanup: standing (never-expiring) protections by item or by collection, on top of the existing time-limited holds.
+- Cleanup: an optional approval gate — when turned on for a rule, matched items still queue but nothing is deleted until a human approves that specific item.
+- Portal: shared users can now see what's queued for removal from their libraries and vote to keep something (a request to the admin, not an override); a "Not for me" button on their own collections now actually excludes that title from future recommendations; and search, leaving-soon and digest are scoped to each user's actually-shared libraries instead of the whole server.
+- Multi-instance \*Arr support: configure more than one Radarr/Sonarr (e.g. a split HD/4K setup), point auto-add and cleanup rules at a specific instance, and get a separate health check per instance.
+- Notifications: Settings → Notifications now shows a routing table (event × service grid) with a test-send per cell, instead of nine separate forms; a failure threshold, quiet hours and a per-service mute (all off by default) stop a flapping service from paging you all night; and suppressed notifications are now logged so you can tell "quiet hours" from "webhook is broken."
+- Onboarding: a skippable, resumable setup wizard at `/onboarding` for fresh installs, with a progress banner elsewhere in the app.
+- Media page: file-size tracking per item (shown in Cleanup and Media), a duplicate finder for both Plex's own multi-version items and separately-matched duplicate items, bulk selection with bulk labelling, and item-detail actions for refreshing metadata, editing tags/genres/labels, and viewing edit history.
+- Media detail page now names which rule produced each collection an item is in (in plain English) and adds "Open in Plex" / "Edit the rule behind this" links.
+- New `/changes` page: a single read-only feed of everything the app changed (collections, metadata writes, deletions, deleted rules), pulled from existing records rather than a new log.
+- New `/users/:userId` page for managing Plex users without leaving Tinkerbell: invite, library access, downloads, Live TV, rating ceiling, and session termination.
+- Stats dashboard: panels can now be hidden and collapsed individually; five new panels (Top Users, Playback Activity, Stream Quality, Devices & Apps, Bandwidth); TV libraries are now included in storage totals; byte sizes now scale to TB/PB instead of wrapping; and Most Watched can count each person once instead of ranking by total plays.
+- Jobs page: a 24-hour timeline of job-lane activity, watchdog failures now shown distinctly from command errors, and a banner when a run resumes from a checkpoint after a restart.
+- Web/UI: a light/dark theme toggle independent of your OS setting; a skip link and route announcements for screen readers; command palette scoping (`rule:`, `job:` prefixes), recent destinations, and running/testing rules or jobs directly from it; saved list views with shareable URLs; "create rule from this view" on the Media page; a searchable settings sidebar; and a cron field that previews its next three fire times in your schedule's timezone.
+- Heavy jobs (rendering, overlay burn-in, preroll transcodes) can now wait while someone is streaming and/or be confined to a time window — both off by default.
+- Cleanup rule wizard now leads with four common presets (not watched in a while, never watched, watched by everyone, started and abandoned) instead of the full 29-type list.
+
+### Changed
+
+- **Cleanup rules no longer build a preview collection in Plex.** The "on the chopping block" shelf is gone — existing ones are automatically removed on a rule's next run — in favour of the in-app Cleanup queue, which shows the same information with more context and a way to object.
+- **Rule execution order is now actually enforced.** Where two rules write the same field or build the same collection, the one earlier in the (now reorderable) rule list wins consistently, rather than whichever finished last in a race between concurrent workers.
+- Rule runs from crons, triggers and chains now go through a single shared queue with coalescing, rather than four separate execution paths with weaker guarantees than the nightly batch; a second identical run now writes nothing to Plex instead of deleting and rebuilding collections that didn't change.
+- Scheduled jobs held back during a maintenance window or "defer while streaming" now apply to a wider set of triggers (per-rule crons, playback polling, recently-added sync, Overseerr polling), and a missed run caught up after a restart is now deferred like any other scheduled start instead of firing immediately.
+- Maintenance windows, seasonal rule windows, and Stats' "today" boundaries now use your configured timezone instead of the container's clock — installs running outside UTC will see these fire at different, correct times after upgrading.
+- A cleanup rule's "three runs in a row" streak now advances at most once per calendar day, closing a loophole where frequent triggers or repeated "Run now" clicks could reach the deletion threshold in under an hour.
+
+### Fixed
+
+- **A stale/incorrect API key exposure**: every additional Radarr/Sonarr instance's API key was being sent to the browser in full on every admin page load. Now redacted like all other secrets.
+- **A portal sign-in weakness** where a crafted request could redeem another user's Plex sign-in PIN and obtain their session. The portal's handshake is now scoped and namespaced like the admin app's.
+- **A partial sync of one library could delete data for your other libraries**, and could also wipe cleanup protections tied to collections that weren't part of that sync — potentially letting a rule delete a protected item. Syncs now only touch the sections they actually walked.
+- **The consent default on `user_preferences.opted_in` flips from "consented" to "not consented"** for existing rows (migration included) — a genuine default-behavior fix, not just new installs.
+- A paged Plex library listing that omits its total size was silently treated as "only one page" — could under-report the media index, storage totals, and duplicate detection until this release.
+- Cleanup only deleted from the first \*Arr instance holding a record, so a split HD/4K setup could see a "deleted" film reappear overnight; it now checks every instance.
+- Renaming an extra \*Arr instance used to silently detach its health history and mute settings from it.
+- The failure-threshold/streak logic for health checks could get stuck out of sync with its own recovery condition when the threshold was changed mid-outage; a service's very first failing check after setup was previously swallowed entirely.
+- The notification routing table now shows an "unconfigured" state for services with no credentials, instead of showing them as actively delivering.
+- Several Stats numbers were wrong by construction rather than stale: TV libraries reported ~0 episodes, storage totals for partially-measured shows silently under-counted with no caveat, unidentified viewers were miscounted as a single viewer, "transcoding" was defined two different ways on the same page, and Most Watched could drop its #1 item after sorting.
+- Duplicate detection ignored a resolution above 4K (e.g. a reported `2160`), tying it with unknown-resolution copies.
+- Boot-time job catch-up bypassed the "defer while streaming"/maintenance-window checks entirely, firing missed jobs immediately into an open stream.
+- Job-runner side-effect hooks (notification logging, health reporting, migration rescans, per-user collection counts) were silent no-ops for every job run in the background worker thread — they now actually fire.
+- Rule-run bugs: undo of a deleted rule lost its position and jumped to the front of the run order; a chained rule could run twice in one tick; contention (a rule already running) was reported as a failure instead of a skip; "why did this rule skip my item" used a different scope check than the engine; and metadata rules could report "nothing to change" when matches were only blocked by locked fields, not actually empty.
+- Portal: "Not for me" previously wrote to the wrong list and did nothing; saving portal preferences wiped fields the portal form doesn't render (people, eras, runtime, languages, vibe, rating ceiling); a shared user could vote to keep items from libraries they don't have access to; and a per-user data query was vulnerable to `LIKE`-pattern injection via username.
+- Onboarding's setup wizard could hijack an already-configured, upgraded install into first-run mode.
+- Various smaller reporting/label bugs: the Runs column could link to the wrong run when two runs started in the same millisecond; drag-reorder on the Rules page could silently misplace rules outside the currently filtered view; an unimplemented portal API path served the SPA with a 200 instead of an error; and a failed hub shuffle could leave home-screen pins missing instead of restoring them.
+
+### Removed
+
+- The "on the chopping block" Plex collection that cleanup rules used to build as a preview of pending deletions (superseded by the in-app Cleanup queue — see Changed).
+
 ### Added
 
 - Five new Stats panels: **Top Users** (who watches most, and for how long), **Playback Activity** (plays by day, or by hour of a typical day, with the busiest and quietest stretches called out), **Stream Quality** (transcode vs. direct play, local vs. remote, over a period rather than this instant), **Devices & Apps** (which apps and devices playback actually comes from), and **Bandwidth** (24 hours of streaming demand against your measured upload capacity).
