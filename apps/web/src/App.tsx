@@ -58,6 +58,10 @@ const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
 const Duplicates = lazy(() => import("#pages/Duplicates"));
+const ArrLibrary = lazy(() => import("#pages/Arr/ArrLibrary"));
+const ArrInstances = lazy(() => import("#pages/Arr/ArrInstances"));
+const ArrHealth = lazy(() => import("#pages/Arr/ArrHealth"));
+const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
 const Jobs = lazy(() => import("#pages/Jobs"));
 const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
 const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
@@ -237,6 +241,49 @@ export default function App() {
                   element={
                     <LazyPage>
                       <Duplicates />
+                    </LazyPage>
+                  }
+                />
+                {/* Managers. `/movies` and `/tv` are the same component with a
+                    different service — the divergence between Radarr and Sonarr
+                    is real, but it lives below this, in what the columns mean. */}
+                <Route
+                  path="/movies"
+                  element={
+                    <LazyPage>
+                      <ArrLibrary service="radarr" />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/tv"
+                  element={
+                    <LazyPage>
+                      <ArrLibrary service="sonarr" />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/downloads"
+                  element={
+                    <LazyPage>
+                      <ArrDownloads />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/arrs"
+                  element={
+                    <LazyPage>
+                      <ArrInstances />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/arrs/health"
+                  element={
+                    <LazyPage>
+                      <ArrHealth />
                     </LazyPage>
                   }
                 />

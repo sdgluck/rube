@@ -4,6 +4,7 @@ import { createRegistryUpdates } from "./registry-updates.ts";
 import { createRuleSchedules } from "./rule-schedules.ts";
 import { createRuleTriggers } from "./rule-triggers.ts";
 import { createSeerrPoll } from "./seerr-poll.ts";
+import { pollArrQueues } from "./arr-poll.ts";
 /**
  * Internal jobs run in-process rather than through the Sidequest command
  * pattern — they are short, purely local, and not worth a worker thread.
@@ -222,6 +223,21 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
       timeoutMs: 30 * MINUTE_MS,
       // Ninety-six runs a day, and the interesting outcome is the request it
       // makes, which is its own event. "Nothing new" said all day is not.
+      quiet: true,
+    },
+    /**
+     * The *Arr queue count, for the nav badge.
+     *
+     * An internal job for the same reason `seerr-poll` is one: it is a single
+     * tiny GET per instance, and queueing that behind `generate` on a lane
+     * would make a one-minute poll a four-hour one.
+     */
+    "arr-poll": {
+      run: (ctx: JobContext) => pollArrQueues(ctx),
+      // One `/queue/status` per instance and nothing else.
+      timeoutMs: 2 * MINUTE_MS,
+      // Runs constantly, and "Nothing downloading." said all day is not
+      // information. The stable text is what lets `quiet` suppress it.
       quiet: true,
     },
     "playback-poll": {

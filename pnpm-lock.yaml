@@ -329,11 +329,50 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  clients/radarr:
+    dependencies:
+      '@tinkerbell/servarr-http':
+        specifier: workspace:*
+        version: link:../servarr-http
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   clients/seerr:
     dependencies:
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../../packages/http
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  clients/servarr-http:
+    dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  clients/sonarr:
+    dependencies:
+      '@tinkerbell/servarr-http':
+        specifier: workspace:*
+        version: link:../servarr-http
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -354,6 +393,80 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  domains/arr-activity:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      '@tinkerbell/radarr':
+        specifier: workspace:*
+        version: link:../../clients/radarr
+      '@tinkerbell/sonarr':
+        specifier: workspace:*
+        version: link:../../clients/sonarr
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  domains/arr-library:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      '@tinkerbell/radarr':
+        specifier: workspace:*
+        version: link:../../clients/radarr
+      '@tinkerbell/sonarr':
+        specifier: workspace:*
+        version: link:../../clients/sonarr
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -654,6 +767,9 @@ importers:
       '@tinkerbell/container':
         specifier: workspace:*
         version: link:../../packages/container
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -1282,6 +1398,12 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../db
+      '@tinkerbell/domain.arr-activity':
+        specifier: workspace:*
+        version: link:../../domains/arr-activity
+      '@tinkerbell/domain.arr-library':
+        specifier: workspace:*
+        version: link:../../domains/arr-library
       '@tinkerbell/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
@@ -1616,9 +1738,15 @@ importers:
       '@tinkerbell/posters':
         specifier: workspace:*
         version: link:../posters
+      '@tinkerbell/radarr':
+        specifier: workspace:*
+        version: link:../../clients/radarr
       '@tinkerbell/seerr':
         specifier: workspace:*
         version: link:../../clients/seerr
+      '@tinkerbell/sonarr':
+        specifier: workspace:*
+        version: link:../../clients/sonarr
       '@tinkerbell/tmdb':
         specifier: workspace:*
         version: link:../../clients/tmdb
@@ -1776,6 +1904,12 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../db
+      '@tinkerbell/domain.arr-activity':
+        specifier: workspace:*
+        version: link:../../domains/arr-activity
+      '@tinkerbell/domain.arr-library':
+        specifier: workspace:*
+        version: link:../../domains/arr-library
       '@tinkerbell/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
@@ -1881,9 +2015,15 @@ importers:
       '@tinkerbell/posters':
         specifier: workspace:*
         version: link:../posters
+      '@tinkerbell/radarr':
+        specifier: workspace:*
+        version: link:../../clients/radarr
       '@tinkerbell/seerr':
         specifier: workspace:*
         version: link:../../clients/seerr
+      '@tinkerbell/sonarr':
+        specifier: workspace:*
+        version: link:../../clients/sonarr
       '@tinkerbell/tmdb':
         specifier: workspace:*
         version: link:../../clients/tmdb

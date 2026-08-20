@@ -1,0 +1,15 @@
+/* The instance strip reuses the page-tab segmented control wholesale: it is
+   the same interaction (pick one of a few named things) and it should not
+   look like a second, slightly different one. */
+
+.picker {
+  composes: pageTabs from "../styles/shared.module.css";
+}
+
+.option {
+  composes: pageTab from "../styles/shared.module.css";
+}
+
+.active {
+  composes: pageTab pageTabActive from "../styles/shared.module.css";
+}

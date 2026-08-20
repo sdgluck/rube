@@ -39,6 +39,8 @@ import type { PosterCache } from "@tinkerbell/posters";
 import { BackupsToken, type Backups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, type Bandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, type Changes } from "@tinkerbell/domain.changes";
+import { ArrActivityToken, type ArrActivity } from "@tinkerbell/domain.arr-activity";
+import { ArrLibraryToken, type ArrLibrary } from "@tinkerbell/domain.arr-library";
 import { ConfigHistoryToken, type ConfigHistory } from "@tinkerbell/domain.config-history";
 import { CleanupToken, type Cleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, type Collections } from "@tinkerbell/domain.collections";
@@ -91,6 +93,8 @@ export interface Services {
   backups: Backups;
   bandwidth: Bandwidth;
   changes: Changes;
+  arrLibrary: ArrLibrary;
+  arrActivity: ArrActivity;
   configHistory: ConfigHistory;
   cleanup: Cleanup;
   collections: Collections;
@@ -139,6 +143,8 @@ export function registerServices(r: Registry): void {
     backups: c.resolve(BackupsToken),
     bandwidth: c.resolve(BandwidthToken),
     changes: c.resolve(ChangesToken),
+    arrLibrary: c.resolve(ArrLibraryToken),
+    arrActivity: c.resolve(ArrActivityToken),
     configHistory: c.resolve(ConfigHistoryToken),
     cleanup: c.resolve(CleanupToken),
     collections: c.resolve(CollectionsToken),

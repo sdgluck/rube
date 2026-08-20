@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FTS5 coupling
@@ -46,6 +46,15 @@ export const FTS_TABLES = [
   { base: "plex_users", fts: "plex_users_fts" },
   { base: "plex_sections", fts: "plex_sections_fts" },
 ] as const;
+
+/** One season of a Sonarr series, denormalised onto `arr_series.seasons`. */
+interface ArrSeasonShape {
+  seasonNumber: number;
+  monitored: boolean;
+  episodeCount: number;
+  episodeFileCount: number;
+  sizeOnDisk: number;
+}
 
 interface StressTestConfigShape {
   mode: "transcode" | "directplay" | "mixed";
@@ -728,6 +737,30 @@ export const mediaItems = sqliteTable(
      * of the same film look like one tidy 4K row.
      */
     versionCount: integer("version_count").notNull().default(1),
+    /**
+     * Provider ids, verbatim as Plex serves them: `["tmdb://603", "imdb://tt0133093"]`.
+     *
+     * Kept alongside the three parsed columns below rather than instead of them.
+     * The parsed columns are what joins index on; this is the provenance, and
+     * the only thing that still answers the question when a fourth provider
+     * turns up that no column exists for yet.
+     */
+    guids: text("guids", { mode: "json" }).$type<string[]>(),
+    /**
+     * The parsed provider ids — the join key to `arr_movies` / `arr_series`.
+     *
+     * Three columns rather than one canonical `external_id`, because there is
+     * no single canonical answer: Radarr indexes on TMDb and Sonarr on TVDb, so
+     * a movie matched by `tmdb_id` and a show matched by `tvdb_id` are both the
+     * normal case. Collapsing them to one preferred id would silently fail to
+     * link exactly the half of the library whose preference went the other way.
+     *
+     * Nullable throughout: an unmatched Plex item carries no provider id at all,
+     * and null means "unknown", never "no match".
+     */
+    tmdbId: integer("tmdb_id"),
+    imdbId: text("imdb_id"),
+    tvdbId: integer("tvdb_id"),
     syncedAt: integer("synced_at").notNull(),
   },
   (table) => [
@@ -741,6 +774,11 @@ export const mediaItems = sqliteTable(
     index("idx_media_items_container").on(table.container),
     // "What is taking up the room" is a sort over the whole library.
     index("idx_media_items_file_size").on(table.fileSize),
+    // The *Arr join. Every reconciliation query and every "is this in Plex?"
+    // lookup goes through one of these three.
+    index("idx_media_items_tmdb_id").on(table.tmdbId),
+    index("idx_media_items_imdb_id").on(table.imdbId),
+    index("idx_media_items_tvdb_id").on(table.tvdbId),
   ],
 );
 
@@ -1650,3 +1688,297 @@ export const watchlistItems = sqliteTable(
     index("idx_watchlist_items_first_seen").on(table.firstSeenAt),
   ],
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The *Arr mirror
+//
+// Radarr and Sonarr have no paged library endpoint: `GET /api/v3/movie`
+// returns the entire library in one response, tens of megabytes on a large
+// install. That single fact is why these tables exist. A unified page across
+// four instances cannot be built by proxying — it needs a sort, a filter and a
+// page, which means SQL.
+//
+// What is mirrored is what is durable and queryable. What is volatile —
+// the queue, release searches, commands, the *Arr's own health — is proxied
+// live on every read, because a stored copy of it is worse than no copy: it
+// looks authoritative and is wrong within seconds.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A Radarr movie, as of the last sync.
+ *
+ * Keyed on `(instanceId, arrId)`. The same film in Radarr-1080p and Radarr-4K
+ * is genuinely two rows and must stay that way — collapsing them on `tmdbId`
+ * would destroy the comparison that a split-instance setup exists to make, and
+ * "which of my two Radarrs has this, and at what quality" is the question the
+ * unified page is for.
+ */
+export const arrMovies = sqliteTable(
+  "arr_movies",
+  {
+    /** Matches `ArrInstance.id` — "radarr" for the default instance. */
+    instanceId: text("instance_id").notNull(),
+    /** Radarr's own record id. What every mutation endpoint takes. */
+    arrId: integer("arr_id").notNull(),
+    title: text("title").notNull(),
+    sortTitle: text("sort_title").notNull().default(""),
+    year: integer("year"),
+    /**
+     * The join key to `media_items`. Radarr indexes on TMDb, so `tmdbId` is
+     * the one that is reliably present; `imdbId` is the fallback for the
+     * occasional record TMDb has not matched.
+     */
+    tmdbId: integer("tmdb_id"),
+    imdbId: text("imdb_id"),
+    /**
+     * The Plex row this resolved to, materialised at sync time.
+     *
+     * Null is meaningful and is not an error: a movie Radarr has but Plex has
+     * never scanned is the single most useful thing reconciliation finds.
+     */
+    plexRatingKey: text("plex_rating_key"),
+    monitored: integer("monitored", { mode: "boolean" }).notNull().default(false),
+    hasFile: integer("has_file", { mode: "boolean" }).notNull().default(false),
+    /** tba | announced | inCinemas | released | deleted */
+    status: text("status").notNull().default(""),
+    minimumAvailability: text("minimum_availability").notNull().default(""),
+    qualityProfileId: integer("quality_profile_id"),
+    rootFolderPath: text("root_folder_path").notNull().default(""),
+    path: text("path").notNull().default(""),
+    sizeOnDisk: integer("size_on_disk"),
+    runtime: integer("runtime"),
+    certification: text("certification").notNull().default(""),
+    studio: text("studio").notNull().default(""),
+    genres: text("genres", { mode: "json" }).$type<string[]>(),
+    tags: text("tags", { mode: "json" }).$type<number[]>(),
+    /** Quality of the file on disk, where there is one. */
+    fileQuality: text("file_quality").notNull().default(""),
+    fileCustomFormatScore: integer("file_custom_format_score"),
+    /**
+     * A poster URL safe to hand the browser.
+     *
+     * Only ever a provider CDN URL (TMDb/Fanart). Radarr's own
+     * `/MediaCover/...` paths need the API key to fetch and must never reach
+     * the client — see the image proxy in the server app for those.
+     */
+    posterUrl: text("poster_url").notNull().default(""),
+    addedAt: integer("added_at"),
+    inCinemas: integer("in_cinemas"),
+    digitalRelease: integer("digital_release"),
+    physicalRelease: integer("physical_release"),
+    /** The run watermark this row was last seen by. Drives tombstoning. */
+    syncedAt: integer("synced_at").notNull(),
+    /**
+     * Set when a sync completed without seeing this record. Never hard-deleted.
+     *
+     * Three reasons. A sync that failed halfway must not be able to empty the
+     * mirror; `arr_activity` refers to records that may since have gone; and a
+     * record that comes back — re-added after a delete — should resurrect its
+     * history rather than start over with a new identity.
+     */
+    deletedAt: integer("deleted_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.instanceId, table.arrId] }),
+    // The default listing: one instance, still present.
+    index("idx_arr_movies_instance_live").on(table.instanceId, table.deletedAt),
+    // The Plex join, and cross-instance grouping on the unified page.
+    index("idx_arr_movies_tmdb_id").on(table.tmdbId),
+    index("idx_arr_movies_imdb_id").on(table.imdbId),
+    index("idx_arr_movies_plex_rating_key").on(table.plexRatingKey),
+    // "Monitored, no file" — the missing list, per instance.
+    index("idx_arr_movies_instance_missing").on(table.instanceId, table.monitored, table.hasFile),
+    index("idx_arr_movies_title").on(table.title),
+  ],
+);
+
+/**
+ * A Sonarr series, as of the last sync.
+ *
+ * Seasons are denormalised onto the row rather than given a table of their
+ * own, because a Sonarr season **has no id** — it is a position in an array on
+ * the series — and every query that wants seasons wants its series anyway.
+ *
+ * Episodes are deliberately not mirrored at all. Five hundred shows is fifty
+ * thousand episodes, the mirror would need its own incremental strategy, and
+ * nothing in the unified pages asks a question at episode granularity. Series
+ * detail proxies them live.
+ */
+export const arrSeries = sqliteTable(
+  "arr_series",
+  {
+    instanceId: text("instance_id").notNull(),
+    arrId: integer("arr_id").notNull(),
+    title: text("title").notNull(),
+    sortTitle: text("sort_title").notNull().default(""),
+    year: integer("year"),
+    /** Sonarr indexes on TVDb. `tmdbId` exists on newer versions but is not dependable. */
+    tvdbId: integer("tvdb_id"),
+    imdbId: text("imdb_id"),
+    tmdbId: integer("tmdb_id"),
+    plexRatingKey: text("plex_rating_key"),
+    monitored: integer("monitored", { mode: "boolean" }).notNull().default(false),
+    /** continuing | ended | upcoming | deleted */
+    status: text("status").notNull().default(""),
+    /** standard | daily | anime */
+    seriesType: text("series_type").notNull().default(""),
+    network: text("network").notNull().default(""),
+    seasonFolder: integer("season_folder", { mode: "boolean" }).notNull().default(true),
+    qualityProfileId: integer("quality_profile_id"),
+    rootFolderPath: text("root_folder_path").notNull().default(""),
+    path: text("path").notNull().default(""),
+    sizeOnDisk: integer("size_on_disk"),
+    runtime: integer("runtime"),
+    certification: text("certification").notNull().default(""),
+    genres: text("genres", { mode: "json" }).$type<string[]>(),
+    tags: text("tags", { mode: "json" }).$type<number[]>(),
+    /**
+     * Sonarr has no `hasFile`. Presence is "any episode on disk", which these
+     * two counts answer — and they also drive the progress bar the library
+     * grid shows for a part-complete show.
+     */
+    episodeCount: integer("episode_count").notNull().default(0),
+    episodeFileCount: integer("episode_file_count").notNull().default(0),
+    /** `[{ seasonNumber, monitored, episodeCount, episodeFileCount, sizeOnDisk }]` */
+    seasons: text("seasons", { mode: "json" }).$type<ArrSeasonShape[]>(),
+    posterUrl: text("poster_url").notNull().default(""),
+    addedAt: integer("added_at"),
+    nextAiringAt: integer("next_airing_at"),
+    previousAiringAt: integer("previous_airing_at"),
+    syncedAt: integer("synced_at").notNull(),
+    deletedAt: integer("deleted_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.instanceId, table.arrId] }),
+    index("idx_arr_series_instance_live").on(table.instanceId, table.deletedAt),
+    index("idx_arr_series_tvdb_id").on(table.tvdbId),
+    index("idx_arr_series_imdb_id").on(table.imdbId),
+    index("idx_arr_series_plex_rating_key").on(table.plexRatingKey),
+    index("idx_arr_series_instance_missing").on(table.instanceId, table.monitored, table.episodeFileCount),
+    index("idx_arr_series_title").on(table.title),
+  ],
+);
+
+/**
+ * What happened to an item, as the *Arr recorded it.
+ *
+ * Ingested incrementally from `GET /history/since`, append-only, and the one
+ * table that makes end-to-end traceability cheap. `downloadId` is the reason
+ * it is worth having: it is SABnzbd's `nzo_id` and qBittorrent's torrent hash,
+ * so the row that says "grabbed" and the download client's queue entry join
+ * without any heuristic at all.
+ */
+export const arrActivity = sqliteTable(
+  "arr_activity",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    instanceId: text("instance_id").notNull(),
+    /** radarr | sonarr */
+    service: text("service").notNull(),
+    /** The *Arr's own history record id. Unique per instance. */
+    arrHistoryId: integer("arr_history_id").notNull(),
+    /** grabbed | downloadFolderImported | downloadFailed | movieFileDeleted | … */
+    eventType: text("event_type").notNull(),
+    /** The movie or episode id. */
+    arrId: integer("arr_id").notNull().default(0),
+    /** The series id for an episode event; 0 for movies. */
+    parentArrId: integer("parent_arr_id").notNull().default(0),
+    title: text("title").notNull().default(""),
+    sourceTitle: text("source_title").notNull().default(""),
+    quality: text("quality").notNull().default(""),
+    indexer: text("indexer").notNull().default(""),
+    /**
+     * The download client's own id for this grab — SABnzbd `nzo_id`, or a
+     * BitTorrent info hash. **Radarr stores hashes uppercase and qBittorrent
+     * reports them lowercase**, so anything joining on this must normalise.
+     */
+    downloadId: text("download_id").notNull().default(""),
+    /** Trimmed: reason, releaseGroup, customFormatScore, importedPath. */
+    data: text("data", { mode: "json" }).$type<Record<string, string>>(),
+    /** The *Arr's timestamp for the event, in ms. */
+    date: integer("date").notNull(),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [
+    // Re-ingesting an overlapping `since` window must not duplicate rows.
+    uniqueIndex("idx_arr_activity_record").on(table.instanceId, table.arrHistoryId),
+    // The per-item timeline, newest first.
+    index("idx_arr_activity_item").on(table.instanceId, table.arrId, table.date),
+    // The download-client join.
+    index("idx_arr_activity_download_id").on(table.downloadId),
+    // The global feed and the retention sweep.
+    index("idx_arr_activity_date").on(table.date),
+  ],
+);
+
+/**
+ * Quality profiles, mirrored.
+ *
+ * One of only three configuration mirrors, and they are here for the same
+ * reason: an add-routing decision, a library filter and a bulk edit all need
+ * to name a profile without a network round-trip. Nothing else from the
+ * settings areas is mirrored — the rest is read live and snapshotted.
+ */
+export const arrQualityProfiles = sqliteTable(
+  "arr_quality_profiles",
+  {
+    instanceId: text("instance_id").notNull(),
+    arrId: integer("arr_id").notNull(),
+    name: text("name").notNull(),
+    upgradeAllowed: integer("upgrade_allowed", { mode: "boolean" }).notNull().default(false),
+    cutoff: integer("cutoff"),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.instanceId, table.arrId] })],
+);
+
+export const arrRootFolders = sqliteTable(
+  "arr_root_folders",
+  {
+    instanceId: text("instance_id").notNull(),
+    arrId: integer("arr_id").notNull(),
+    path: text("path").notNull(),
+    accessible: integer("accessible", { mode: "boolean" }).notNull().default(true),
+    freeSpace: integer("free_space"),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.instanceId, table.arrId] })],
+);
+
+export const arrTags = sqliteTable(
+  "arr_tags",
+  {
+    instanceId: text("instance_id").notNull(),
+    arrId: integer("arr_id").notNull(),
+    label: text("label").notNull(),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.instanceId, table.arrId] })],
+);
+
+/**
+ * Per-instance sync bookkeeping, and the cheap answers.
+ *
+ * The counts here are what the nav badge and the instance cards read. They are
+ * stored rather than computed on demand because the alternative is fanning out
+ * to every configured *Arr on every page load, which is exactly the behaviour
+ * that makes a dashboard feel broken when one instance is down.
+ */
+export const arrSyncState = sqliteTable("arr_sync_state", {
+  instanceId: text("instance_id").primaryKey(),
+  service: text("service").notNull(),
+  /** As reported by `/system/status`. Gates which settings areas are offered. */
+  arrVersion: text("arr_version").notNull().default(""),
+  /** Derived from the version once per sync. Branch on this, never on service. */
+  capabilities: text("capabilities", { mode: "json" }).$type<string[]>(),
+  lastFullSyncAt: integer("last_full_sync_at"),
+  lastIncrementalAt: integer("last_incremental_at"),
+  /** Newest `arr_activity.date` consumed, so `/history/since` can resume. */
+  historyWatermark: integer("history_watermark").notNull().default(0),
+  itemCount: integer("item_count").notNull().default(0),
+  queueCount: integer("queue_count").notNull().default(0),
+  diskFree: integer("disk_free"),
+  /** Empty when the last run succeeded, never null. */
+  lastError: text("last_error").notNull().default(""),
+  lastErrorAt: integer("last_error_at"),
+});

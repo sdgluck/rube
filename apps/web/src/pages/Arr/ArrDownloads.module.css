@@ -1,0 +1,44 @@
+.group {
+  margin-bottom: 20px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 4px;
+}
+
+.groupTitle {
+  margin: 0;
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
+}
+
+.groupCount {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progressBar {
+  display: inline-block;
+  width: 80px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--fill-quiet);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}

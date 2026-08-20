@@ -49,6 +49,10 @@ export const COMMANDS = {
   // Likewise: same engine, and one Plex read per matched item on top of it.
   metadata: { load: () => import("./metadata.ts"), lane: "default", timeoutMs: 4 * HOUR_MS },
   "sync-media": { load: () => import("./sync-media.ts"), lane: "default", timeoutMs: 2 * HOUR_MS },
+  // One unpaged whole-library GET per instance, plus an incremental history
+  // walk. Slow on a 10k library times four instances, but nowhere near
+  // `sync-media`, which reads Plex twice for TV.
+  "sync-arr": { load: () => import("./sync-arr.ts"), lane: "default", timeoutMs: HOUR_MS },
   "sync-collections": { load: () => import("./sync-collections.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "sync-users": { load: () => import("./sync-users.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   // Interactive: a human enables it from Settings and watches it fill in. A

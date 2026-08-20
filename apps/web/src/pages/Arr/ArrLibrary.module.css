@@ -1,0 +1,23 @@
+/* A poster column narrow enough to read as a thumbnail rather than a hero.
+   The grid view is a separate concern; this is the scannable list. */
+
+.posterCol {
+  width: 34px;
+  padding-right: 0;
+}
+
+.poster {
+  display: block;
+  width: 30px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  background: var(--surface-poster);
+}
+
+.posterPlaceholder {
+  width: 30px;
+  height: 45px;
+  border-radius: var(--r-sm);
+  background: var(--surface-poster);
+}
