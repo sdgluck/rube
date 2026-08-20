@@ -109,3 +109,44 @@ describe("allItems", () => {
     }
   });
 });
+
+/**
+ * The facet endpoint takes a bare field name.
+ *
+ * Smart filters name fields the way Plex's filter syntax does — `show.studio`
+ * — and that qualified name 404s here. The symptom is not an error anybody
+ * sees: the lookup returns an empty list, so the wizard's value picker is empty
+ * and every importer reports the clause as unresolvable.
+ */
+describe("tag facet lookups", () => {
+  it("strips the type qualifier before asking Plex", async () => {
+    const asked: string[] = [];
+    const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+      const url = new URL(req.url!, "http://localhost");
+      if (url.pathname === "/identity") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ MediaContainer: { machineIdentifier: "m", friendlyName: "Test" } }));
+        return;
+      }
+      asked.push(url.pathname);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ MediaContainer: { Directory: [{ key: "7", title: "HBO" }] } }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const port = (server.address() as { port: number }).port;
+
+    try {
+      const client = createPlexClient({ url: `http://127.0.0.1:${port}`, token: "t" });
+
+      const qualified = await client.getFilterFieldValues("2", "show.studio");
+      assert.deepEqual(qualified, [{ key: "7", title: "HBO" }]);
+      assert.equal(asked.at(-1), "/library/sections/2/studio");
+
+      // An unqualified field is unaffected.
+      await client.getFilterFieldValues("1", "genre");
+      assert.equal(asked.at(-1), "/library/sections/1/genre");
+    } finally {
+      server.close();
+    }
+  });
+});

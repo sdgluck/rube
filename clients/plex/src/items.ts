@@ -349,8 +349,22 @@ export function createItemsModule(http: PlexHttp) {
     return updated;
   }
 
+  /**
+   * The values a tag field can take in one library — `genre`, `studio`,
+   * `director` — as `{ key, title }` pairs.
+   *
+   * The type qualifier is stripped. A smart filter names fields the way Plex's
+   * *filter* syntax does, where `show.studio` means "the studio field of the
+   * show type"; the *facet* endpoint underneath takes the bare field name and
+   * answers `404` to the qualified one. Before this, every `show.`- or
+   * `episode.`-prefixed clause got an empty list back — so the tag picker in the
+   * rule wizard offered no values for them, and both the registry importer and
+   * the bundle importer reported every one of those clauses as an unresolvable
+   * tag while leaving it (correctly) untouched.
+   */
   async function getFilterFieldValues(sectionId: string, field: string): Promise<{ key: string; title: string }[]> {
-    const data = await http.request(`/library/sections/${sectionId}/${field}`);
+    const facet = field.includes(".") ? field.slice(field.indexOf(".") + 1) : field;
+    const data = await http.request(`/library/sections/${sectionId}/${facet}`);
     const dirs = data?.MediaContainer?.Directory || [];
     return dirs.map((d: Record<string, unknown>) => ({
       key: String(d.key ?? d.ratingKey ?? ""),
