@@ -9,7 +9,30 @@
       "outputs": ["dist/**"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      /* Without explicit `inputs`, turbo hashes every file in the package —
+         including `dist/`, which `^build` has just written, so a rebuilt
+         dependency invalidated tests that could not have been affected. With
+         them a test run is cached on the sources it actually reads.
+
+         `$TURBO_DEFAULT$` keeps turbo's own defaults (package.json, lockfile,
+         tsconfig) and adds the fixtures and migrations that tests load from
+         disk: `createTestDb` applies `packages/db/drizzle/**` at run time, and
+         the overlay/poster golden images are read rather than imported, so
+         neither is visible to turbo as a source without being named. */
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "drizzle/**", "!dist/**"],
+      /* Nothing is written. Declared rather than left implicit so a future
+         reporter that does write a file has to say so. */
+      "outputs": [],
+      /* `NODE_ENV` changes behaviour under test — `assertSafeOutboundUrl` is a
+         no-op outside production — so it has to be part of the cache key. */
+      "env": ["NODE_ENV", "TINKERBELL_ALLOW_PRIVATE_OUTBOUND"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "drizzle/**", "!dist/**"],
+      "outputs": [],
+      "cache": false
     }
   }
 }

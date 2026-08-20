@@ -51,7 +51,7 @@ export interface PreviewResult {
  * (OR within); an item matches if it satisfies ALL clauses (AND across).
  * Empty/missing filter → returns []  (no restriction).
  */
-function parseLabelFilter(expr: string): string[][] {
+export function parseLabelFilter(expr: string): string[][] {
   if (!expr) return [];
   return expr
     .split(",")
@@ -69,7 +69,7 @@ function parseLabelFilter(expr: string): string[][] {
     .filter((clause) => clause.length > 0);
 }
 
-function itemPassesLabelFilter(item: PlexHubItem, clauses: string[][]): boolean {
+export function itemPassesLabelFilter(item: PlexHubItem, clauses: string[][]): boolean {
   if (clauses.length === 0) return true;
   const itemLabels = new Set(item.labels.map((l) => l.toLowerCase()));
   for (const clause of clauses) {
@@ -124,7 +124,7 @@ function filterItemsBySection(items: PlexHubItem[], sectionId: number | null): P
   return items.filter((i) => i.librarySectionID === sectionId);
 }
 
-function isPersonalProgressHub(hub: PlexHomeHub): boolean {
+export function isPersonalProgressHub(hub: PlexHomeHub): boolean {
   // Continue Watching / On Deck reflect the admin's per-user watch progress,
   // which can't be reproduced for a shared user without their token.
   const ctx = (hub.context || "").toLowerCase();

@@ -13,6 +13,7 @@
     "build": "turbo run build",
     "typecheck": "node scripts/typecheck.mjs",
     "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
     "screenshots": "node scripts/capture-docker.mjs",
     "screenshots:local": "pnpm format && pnpm --filter @tinkerbell/tinkerbell.dev capture",
     "db:generate": "pnpm --filter @tinkerbell/db run generate",

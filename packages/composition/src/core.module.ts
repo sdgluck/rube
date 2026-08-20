@@ -12,7 +12,7 @@
  */
 import type { Registry } from "@tinkerbell/container";
 import { closeDb, createDb, defaultDataDir, DbToken } from "@tinkerbell/db";
-import { ChangeRecorderToken, HealthReporterToken } from "@tinkerbell/ports";
+import { ChangeRecorderToken, ClockToken, HealthReporterToken } from "@tinkerbell/ports";
 import {
   AdminAuthToken,
   ArrInstancesToken,
@@ -43,6 +43,10 @@ export interface CoreEnv {
 
 export function registerCore(r: Registry, env: CoreEnv = {}): void {
   const dataDir = env.dataDir ?? defaultDataDir();
+
+  // The real clock. A test replaces this token rather than the system one, so
+  // moving time in one container cannot leak into another running beside it.
+  r.register(ClockToken, () => () => Date.now());
 
   // The connection, and the disposer that closes it. This is the registration
   // that replaces the import-time `new Database(...)` in `@tinkerbell/db` —

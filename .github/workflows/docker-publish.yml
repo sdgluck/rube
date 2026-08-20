@@ -14,11 +14,22 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # The gate. Until this existed, `edge` shipped on every master commit and a
+  # release image shipped on every tag with the test suite never having run —
+  # the Dockerfile's two smoke checks were the only thing standing between a
+  # broken commit and a published image.
+  #
+  # `workflow_call` into the same file the PRs use, so the release gate and the
+  # PR gate cannot drift apart.
+  check:
+    uses: ./.github/workflows/ci.yml
+
   # amd64 and arm64 are built on their own native runners rather than one
   # runner under QEMU: better-sqlite3 compiles from source, and emulated
   # compilation of it takes tens of minutes. Each leg pushes a digest-only
   # image; the merge job below stitches them into one multi-arch tag.
   build:
+    needs: [check]
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

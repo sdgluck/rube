@@ -238,6 +238,37 @@ const STEP_TIMEOUT = 45_000;
  */
 const failedRequests = new WeakMap<Page, string[]>();
 
+/**
+ * Uncaught exceptions and console errors, per page.
+ *
+ * This harness already drives ~60 admin routes through a real server against a
+ * real (mock) Plex — which makes it the closest thing the repo has to an
+ * end-to-end suite. It just wasn't *asserting* anything: a page that threw
+ * during render still screenshotted, and as long as the resulting PNG matched
+ * the committed one, the run went green. An error boundary rendering its
+ * fallback is a perfectly stable image.
+ *
+ * So a thrown error now fails the shot it happened on. Console *errors* are
+ * collected too but only reported alongside another failure, because third
+ * parties and the browser itself log there for reasons that are not ours.
+ */
+const pageErrors = new WeakMap<Page, string[]>();
+
+function watchErrors(page: Page): void {
+  const errors: string[] = [];
+  pageErrors.set(page, errors);
+  page.on("pageerror", (err) => {
+    if (errors.length < 20) errors.push(err.message.split("\n")[0] ?? String(err));
+  });
+}
+
+/** Throws when the page raised an uncaught exception. */
+function assertNoPageErrors(page: Page, shotName: string): void {
+  const errors = pageErrors.get(page);
+  if (!errors?.length) return;
+  throw new Error(`${shotName} raised ${errors.length} uncaught error(s): ${errors.slice(0, 3).join("; ")}`);
+}
+
 function watchNetwork(page: Page): (quietMs?: number) => Promise<void> {
   let inflight = 0;
   let lastChange = Date.now();
@@ -291,9 +322,12 @@ async function why(page: Page): Promise<string> {
       return null;
     });
     const failed = failedRequests.get(page);
-    const clauses = [state, failed?.length ? `failed requests: ${failed.slice(0, 3).join(", ")}` : null].filter(
-      Boolean,
-    );
+    const thrown = pageErrors.get(page);
+    const clauses = [
+      state,
+      thrown?.length ? `uncaught errors: ${thrown.slice(0, 3).join("; ")}` : null,
+      failed?.length ? `failed requests: ${failed.slice(0, 3).join(", ")}` : null,
+    ].filter(Boolean);
     return clauses.length > 0 ? ` — ${clauses.join("; ")}` : "";
   } catch {
     return "";
@@ -478,10 +512,16 @@ async function capture(context: BrowserContext, shot: Shot, base: string): Promi
     );
 
     const quiet = watchNetwork(page);
+    watchErrors(page);
     await page.goto(`${base}${shot.path}`, { waitUntil: "load", timeout: 45_000 });
     await quiet();
     if (shot.steps) await applySteps(page, shot.steps);
     await settle(page, shot, quiet);
+
+    // After the page has settled, before the screenshot: a route that threw
+    // during render is a bug whether or not its fallback happens to be
+    // pixel-identical to what is committed.
+    assertNoPageErrors(page, shot.name);
 
     const raw = await page.screenshot({
       fullPage: false,

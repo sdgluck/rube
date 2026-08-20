@@ -62,14 +62,56 @@ pnpm db:migrate    # apply migrations (also runs as part of `pnpm dev`)
 ## Checks
 
 ```sh
-pnpm test        # all workspaces with a test script
+pnpm test           # all workspaces with a test script
+pnpm test:coverage  # the same, with Node's coverage reporter
 pnpm typecheck
-pnpm lint        # oxlint + source guards
-pnpm format      # oxfmt
+pnpm lint           # oxlint + source guards
+pnpm format         # oxfmt
 ```
 
-Tests use Node's built-in test runner. Currently covered: `packages/overlays`,
-`clients/plex`, `packages/core`, `packages/jobs`.
+All four run in CI on every pull request and before every image is published
+(`.github/workflows/ci.yml`, called by `docker-publish.yml`). Nothing used to,
+which is how a lint failure sat on `master` for three commits.
+
+### Writing tests
+
+Node's built-in runner throughout — `node --test --experimental-strip-types`,
+`node:test` plus `node:assert/strict`, files named `*.test.ts` beside the code
+they cover. There is no vitest, no jest, and no DOM: `apps/web`'s glob is
+deliberately `*.test.ts` rather than `*.test.tsx`, so client-side tests cover
+extractable logic and leave rendering to the screenshot harness.
+
+Three pieces of scaffolding do most of the work:
+
+- **`createTestDb()`** (`@tinkerbell/db/test-db`) — a throwaway, fully migrated
+  database in a temp directory. On disk rather than `:memory:`, because WAL and
+  the mmap pragmas are no-ops in memory and a test that passes against a
+  different storage mode than production is worth less than the milliseconds it
+  saves.
+- **`createTestContainer({ overrides, now })`**
+  (`@tinkerbell/composition/test-support`) — the **real** DI graph on that
+  database. `overrides` uses `registry.replace`, so a test exercises the wiring
+  that ships with named edges swapped rather than a parallel graph assembled by
+  hand. Passing `now` replaces `ClockToken` with a fixed clock and gives the
+  container `setNow`/`advance`, which is how a retention or grace-period test
+  moves time instead of writing rows into the past.
+- **`@tinkerbell/test-support`** — stateful Plex and \*Arr servers speaking real
+  HTTP on port 0, each with a `journal` of what it was asked to do, plus
+  `failNext` for asserting that a mutation is _not_ retried. Point the code at
+  one by writing its origin into config: `setConfig("global_plex_url",
+plex.origin)`.
+
+Prefer a mock server to a `fetch` stub. A stub agrees with you about URL
+construction, parameter encoding, which endpoint a mutation was addressed to
+and how the response was parsed — two real bugs in this repo lived in exactly
+those places. `packages/jobs/src/commands/generate/cleanup.integration.test.ts`
+is the worked example.
+
+Two constraints to know about: every `fetch` you write in a test under
+`clients/`, `packages/`, `domains/` or `apps/server/` needs an
+`AbortSignal.timeout(...)` or `check-fetch.mjs` fails the lint; and
+`assertSafeOutboundUrl` is a no-op unless `NODE_ENV=production`, so a test of it
+has to set that itself.
 
 `pnpm lint` also runs two source guards:
 

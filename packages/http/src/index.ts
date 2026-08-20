@@ -31,6 +31,18 @@ export interface HttpRequestOptions {
   retryOn?: ReadonlySet<number>;
   /** Truncate error response bodies to this many chars (default 200). */
   errorBodyMaxLen?: number;
+  /**
+   * Override the backoff. Exists for tests.
+   *
+   * The real schedule starts at a second and climbs to ten, which is right for
+   * a rate-limited *Arr and hopeless for a test — asserting that two retries
+   * happen would cost three seconds of wall clock, so in practice nobody
+   * asserted it and the retry logic went unexercised. A test passes `() => 0`
+   * and checks the behaviour instead of the timing.
+   *
+   * Production callers should leave this alone; the defaults are the point.
+   */
+  retryDelayMs?: (attempt: number) => number;
 }
 
 export class HttpError extends Error {
@@ -94,6 +106,7 @@ export async function httpRequest(opts: HttpRequestOptions): Promise<Response> {
     retries = 0,
     retryOn = DEFAULT_RETRYABLE_STATUS,
     errorBodyMaxLen = 200,
+    retryDelayMs = retryDelay,
   } = opts;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -105,7 +118,7 @@ export async function httpRequest(opts: HttpRequestOptions): Promise<Response> {
       res = await fetch(url, { ...init, signal });
     } catch (err) {
       if (attempt < retries) {
-        await sleep(retryDelay(attempt), init.signal ?? undefined);
+        await sleep(retryDelayMs(attempt), init.signal ?? undefined);
         continue;
       }
       throw err;
@@ -115,7 +128,7 @@ export async function httpRequest(opts: HttpRequestOptions): Promise<Response> {
       const serverDelay = retryAfterMs(res);
       // Drain the body so the connection can be reused.
       await res.text().catch(() => "");
-      await sleep(serverDelay ?? retryDelay(attempt), init.signal ?? undefined);
+      await sleep(serverDelay ?? retryDelayMs(attempt), init.signal ?? undefined);
       continue;
     }
 

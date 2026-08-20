@@ -1,0 +1,75 @@
+name: CI
+
+# Nothing ran the test suite. Not on a PR — there was no `pull_request`
+# workflow at all — and not before publishing: `docker-publish.yml` pushed
+# `edge` on every commit to master and the release image on every tag with the
+# suite never having executed. The only automated check in the repo was
+# `site-deploy.yml` running one package's tests to validate the rule registry.
+#
+# The consequence was already visible when this file was written: `pnpm lint`
+# failed on master, because `scripts/check-nul.mjs` had caught raw NUL bytes
+# that were reintroduced three commits after being fixed. Nothing ran the guard
+# afterwards, so it came back.
+#
+# The pre-commit hook (oxlint, oxfmt, typecheck via lint-staged) stays useful
+# but is not a gate: it only sees staged files, it skips tests entirely, and it
+# is trivially bypassed with `--no-verify`.
+on:
+  pull_request:
+  workflow_dispatch:
+  # Called by `docker-publish.yml`, which runs on every master push and every
+  # `v*` tag. That is where the master-branch gate lives: reused rather than
+  # duplicated so the release gate cannot drift from the PR gate, and a call
+  # rather than a cross-workflow `needs:` because a tag push would not trigger
+  # this workflow on its own. Deliberately no `push:` trigger here — it would
+  # mean every master commit ran the whole suite twice.
+  workflow_call:
+
+# A superseded PR push has nothing left to prove. A called run is not cancelled:
+# `docker-publish.yml` gates on it, so cancelling would block the publish rather
+# than skip it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the same pnpm as mise.toml / packageManager, for the reason
+      # given in site-deploy.yml: a bare `pnpm` from elsewhere is how this repo
+      # once ended up with a pnpm 8 lockfile.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.2.0
+          cache: pnpm
+
+      # `better-sqlite3` compiles a native addon and `sharp` resolves its
+      # prebuilt libvips; both are named in pnpm-workspace.yaml's `allowBuilds`,
+      # without which pnpm 11 fails the install outright.
+      - run: pnpm install --frozen-lockfile
+
+      # Ordered cheapest-first so a formatting slip doesn't cost a full test
+      # run to discover, and each step is `if: always()` so one failure reports
+      # every other problem in the same run rather than one per push.
+      - name: Format
+        if: always()
+        run: pnpm format:check
+
+      - name: Lint
+        if: always()
+        run: pnpm lint
+
+      - name: Typecheck
+        if: always()
+        run: pnpm typecheck
+
+      - name: Test
+        if: always()
+        run: pnpm test

@@ -18,7 +18,8 @@
     "test": "node --test --experimental-strip-types 'src/registry/**/*.test.ts'",
     "typecheck": "tsc",
     "capture": "node --experimental-strip-types harness/capture.ts",
-    "serve": "node --experimental-strip-types harness/serve.ts"
+    "serve": "node --experimental-strip-types harness/serve.ts",
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/registry/**/*.test.ts'"
   },
   "dependencies": {
     "@tinkerbell/contracts": "workspace:*",

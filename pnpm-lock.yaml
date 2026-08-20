@@ -265,6 +265,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -300,6 +303,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -441,6 +447,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -844,6 +853,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -900,6 +912,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -990,6 +1005,9 @@ importers:
         specifier: workspace:*
         version: link:../../clients/plex
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1043,6 +1061,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1127,6 +1148,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1149,6 +1173,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1224,6 +1251,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1410,6 +1440,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1598,6 +1631,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../test-support
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1702,6 +1738,15 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  packages/test-support:
     devDependencies:
       '@types/node':
         specifier: ^25.2.3

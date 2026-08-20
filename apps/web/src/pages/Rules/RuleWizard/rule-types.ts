@@ -337,30 +337,31 @@ export function limitFieldLabel(type: string): string {
 }
 
 /** Noun for the thing a grouped rule builds one collection per. */
+const GROUPED_NOUNS: Record<string, string> = {
+  actors: "actor",
+  directors: "director",
+  studios: "studio",
+  networks: "network",
+  genres: "genre",
+  countries: "country",
+  content_ratings: "content rating",
+  streaming: "streaming service",
+  decades: "decade",
+  years: "year",
+  resolutions: "resolution",
+  audio_languages: "audio language",
+  subtitle_languages: "subtitle language",
+  video_formats: "video format",
+  based_on: "source type",
+  seasonal: "season",
+  awards: "award",
+  tmdb_popular_actors: "actor",
+  tmdb_popular_directors: "director",
+  tmdb_franchises: "franchise",
+};
+
 export function groupNounForType(type: string): string {
-  const nouns: Record<string, string> = {
-    actors: "actor",
-    directors: "director",
-    studios: "studio",
-    networks: "network",
-    genres: "genre",
-    countries: "country",
-    content_ratings: "content rating",
-    streaming: "streaming service",
-    decades: "decade",
-    years: "year",
-    resolutions: "resolution",
-    audio_languages: "audio language",
-    subtitle_languages: "subtitle language",
-    video_formats: "video format",
-    based_on: "source type",
-    seasonal: "season",
-    awards: "award",
-    tmdb_popular_actors: "actor",
-    tmdb_popular_directors: "director",
-    tmdb_franchises: "franchise",
-  };
-  return nouns[type] ?? "group";
+  return GROUPED_NOUNS[type] ?? "group";
 }
 
 // ─── Wizard-level helpers ───────────────────────────────────────────────
@@ -407,17 +408,26 @@ export function suggestName(form: RuleFormState, _sections: { title: string }[])
   if (form.type === "rt_top_rated") return "Rotten Tomatoes Top Rated";
   if (form.type === "top_rated") return "Top Rated";
   if (form.type === "lowest_rated") return "Lowest Rated";
-  if (form.type === "actors") return "By Actor";
-  if (form.type === "directors") return "By Director";
-  if (form.type === "studios") return "By Studio";
-  if (form.type === "networks") return "By Network";
-  if (form.type === "genres") return "By Genre";
-  if (form.type === "countries") return "By Country";
-  if (form.type === "content_ratings") return "By Content Rating";
   if (form.type === "tmdb_popular_actors") return "Popular Actors";
   if (form.type === "tmdb_popular_directors") return "Popular Directors";
   if (form.type === "tmdb_franchises") return "Franchises";
+
+  // Every grouped type, from the noun it groups by: `decades` → "By Decade".
+  //
+  // This used to be seven hand-written cases — `actors` through
+  // `content_ratings` — and the other ten grouped types fell through to `""`.
+  // An empty suggestion is not neutral: the name field is what it fills, an
+  // empty name fails `isFormValid`, and the user is left with Save disabled and
+  // nothing saying why. Deriving it means a rule type added later is named the
+  // day it is added rather than the day somebody notices.
+  if (typeIsGrouped(form.type) || form.type in GROUPED_NOUNS) {
+    return `By ${titleCase(groupNounForType(form.type))}`;
+  }
   return "";
+}
+
+function titleCase(noun: string): string {
+  return noun.replace(/\b[a-z]/g, (ch) => ch.toUpperCase());
 }
 
 /**

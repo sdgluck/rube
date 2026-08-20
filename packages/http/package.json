@@ -10,7 +10,10 @@
   "files": [
     "src"
   ],
-  "scripts": {},
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
+  },
   "devDependencies": {
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"

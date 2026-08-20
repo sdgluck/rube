@@ -75,12 +75,21 @@ export function createOpenAiCompatibleClient(config: LlmConfig, options: Options
       throw new LlmRequestError(options.provider, res.status, message);
     }
 
-    const text = data?.choices?.[0]?.message?.content;
-    if (typeof text !== "string" || text.length === 0) {
+    // Trim *before* the emptiness check, not after.
+    //
+    // The check used to be `text.length === 0`, which a whitespace-only
+    // response passes — and it was then trimmed to `""` on the way out. An
+    // empty string is not an error anywhere downstream: the prompt parser finds
+    // no collections in it, the rule builds none, and the run goes green. A
+    // model that answers with a blank line has to fail here or not at all.
+    // `gemini.ts` already checked the trimmed value; these now agree.
+    const raw = data?.choices?.[0]?.message?.content;
+    const text = typeof raw === "string" ? raw.trim() : undefined;
+    if (!text) {
       throw new LlmRequestError(options.provider, res.status, "Response contained no message content");
     }
     return {
-      text: text.trim(),
+      text,
       tokensIn: data?.usage?.prompt_tokens ?? 0,
       tokensOut: data?.usage?.completion_tokens ?? 0,
       model: data?.model ?? model,

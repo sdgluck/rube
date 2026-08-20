@@ -19,7 +19,7 @@
 import { createContainer, type Registry, type RootContainer } from "@tinkerbell/container";
 import { DbToken } from "@tinkerbell/db";
 import { createTestDb } from "@tinkerbell/db/test-db";
-import { HealthReporterToken, type HealthStatus } from "@tinkerbell/ports";
+import { ClockToken, HealthReporterToken, type HealthStatus } from "@tinkerbell/ports";
 import { registerCore } from "./core.module.ts";
 import { registerDomains } from "./domains.module.ts";
 import { registerServices } from "./services.ts";
@@ -34,12 +34,20 @@ export interface TestContainerOptions {
 export interface TestContainer extends RootContainer {
   /** Everything the fake health reporter was told, in order. */
   healthEvents: { service: string; status: HealthStatus; message: string }[];
+  /**
+   * Move the fixed clock. Only meaningful when `now` was passed — without it
+   * the container holds the real clock and these throw, rather than silently
+   * doing nothing to a test that thought it had control of time.
+   */
+  setNow(ms: number): void;
+  advance(ms: number): void;
   dispose(): Promise<void>;
 }
 
 export function createTestContainer(opts: TestContainerOptions = {}): TestContainer {
   const testDb = createTestDb();
   const healthEvents: TestContainer["healthEvents"] = [];
+  let clock = opts.now ?? 0;
 
   const root = createContainer(
     (r) => {
@@ -58,7 +66,11 @@ export function createTestContainer(opts: TestContainerOptions = {}): TestContai
         healthEvents.push({ service, status, message });
       });
 
+      // A fixed clock, and a handle to move it. `now` seeds it; `setNow` and
+      // `advance` on the returned container are what a retention or grace-period
+      // test uses instead of writing rows into the past.
       if (opts.now !== undefined) {
+        r.replace(ClockToken, () => () => clock);
       }
 
       opts.overrides?.(r);
@@ -67,8 +79,21 @@ export function createTestContainer(opts: TestContainerOptions = {}): TestContai
   );
 
   const dispose = root.dispose.bind(root);
+  const requireFixedClock = () => {
+    if (opts.now === undefined) {
+      throw new Error("createTestContainer: pass `now` to control the clock.");
+    }
+  };
   return Object.assign(root, {
     healthEvents,
+    setNow(ms: number) {
+      requireFixedClock();
+      clock = ms;
+    },
+    advance(ms: number) {
+      requireFixedClock();
+      clock += ms;
+    },
     async dispose() {
       await dispose();
       testDb.dispose();

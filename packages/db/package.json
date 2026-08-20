@@ -15,7 +15,8 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "node src/migrate.ts",
-    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@tinkerbell/container": "workspace:*",

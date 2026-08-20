@@ -34,10 +34,17 @@ export interface SearchHit {
   href: string;
 }
 
-// Convert free-text input into a safe FTS5 MATCH expression: tokenize on
-// non-word chars, drop empties, append `*` for prefix matching, AND-join.
-// Returns null when there's nothing to search.
-function buildMatch(query: string): string | null {
+/**
+ * Convert free-text input into a safe FTS5 MATCH expression: tokenize on
+ * non-word chars, drop empties, append `*` for prefix matching, AND-join.
+ * Returns null when there's nothing to search.
+ *
+ * Exported for its tests. It is the only place user input becomes FTS5 syntax,
+ * and FTS5's `MATCH` is a query language of its own — quotes, `NEAR`, `^`, `-`
+ * and `*` all mean something — so the tokenizer dropping a character is the
+ * difference between a search and a syntax error the user cannot decipher.
+ */
+export function buildMatch(query: string): string | null {
   const tokens = query
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)

@@ -14,7 +14,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc",
-    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",

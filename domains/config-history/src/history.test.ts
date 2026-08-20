@@ -125,7 +125,7 @@ describe("what does not get recorded", () => {
   });
 
   test("keys in UNLOGGED_CONFIG_KEYS produce no rows at all", () => {
-    setConfig("registry_cache", { fetchedAt: 1, packs: [] } as never);
+    setConfig("registry_cache", { fetchedAt: 1, url: "https://tinkerbell.dev/registry/index.json", index: {} });
     setConfig("stats_panel_order", ["a", "b"]);
     setConfig("global_plex_owner_token_hash", "a-hash");
 

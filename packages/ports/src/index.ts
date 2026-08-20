@@ -172,3 +172,26 @@ export type JobConfigWriter = (
 ) => void;
 
 export const JobConfigWriterToken = token<JobConfigWriter>("jobs.configWriter");
+
+// ─── Clock ────────────────────────────────────────────────────────────────────
+
+/**
+ * Now, in epoch milliseconds.
+ *
+ * Not an inverted edge like the rest of this file — nothing above provides it —
+ * but it belongs here for the same reason they do: it has no natural owner, and
+ * every layer needs it. Putting it in `@tinkerbell/core` would mean the wave-0
+ * packages could no longer read the clock without depending on core.
+ *
+ * The point is testability. Retention windows, cleanup grace periods, quiet
+ * hours and schedule catch-up are all "has enough time passed" decisions, and
+ * the only way to test one against a direct `Date.now()` is to write rows into
+ * the past with SQL — which reaches the query but never the branch that decides.
+ * A test replaces this token and moves time instead.
+ *
+ * Milliseconds rather than a `Date`, because that is what every call site
+ * already compares: the columns are integers and the arithmetic is subtraction.
+ */
+export type Clock = () => number;
+
+export const ClockToken = token<Clock>("core.clock");

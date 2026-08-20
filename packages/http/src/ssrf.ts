@@ -20,14 +20,46 @@ const PRIVATE_HOST_PATTERNS: RegExp[] = [
   /^172\.(?:1[6-9]|2\d|3[01])(?:\.\d+){2}$/,
   /^169\.254(?:\.\d+){2}$/, // link-local incl. cloud metadata
   /^::1$/,
+  /^::$/, // IPv6 unspecified, the twin of 0.0.0.0
   /^fe80:/i, // IPv6 link-local
   /^fc00:/i, // IPv6 unique-local /7
   /^fd[0-9a-f]{2}:/i,
 ];
 
+/**
+ * An IPv4-mapped IPv6 address, as the dotted-quad it stands for.
+ *
+ * `http://[::ffff:127.0.0.1]/` reaches loopback, but `URL` rewrites the host to
+ * `[::ffff:7f00:1]` — which matches none of the patterns above, so the guard
+ * waved it through. Unmapping first means one set of IPv4 rules covers both
+ * spellings instead of needing a hex twin for every range.
+ *
+ * Both forms are handled because `URL` only compresses the ones it parses from
+ * dotted-quad; a caller passing a pre-built `URL` can still carry either.
+ */
+function unmapIpv4(host: string): string | null {
+  const dotted = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(host);
+  if (dotted) return dotted[1]!;
+
+  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(host);
+  if (!hex) return null;
+  const high = Number.parseInt(hex[1]!, 16);
+  const low = Number.parseInt(hex[2]!, 16);
+  return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(".");
+}
+
 function isPrivateHost(hostname: string): boolean {
   // URL parsing leaves IPv6 hosts wrapped in brackets — strip them.
-  const h = hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+  let h = hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+
+  // A single trailing dot makes an absolute name: `127.0.0.1.` resolves to
+  // loopback. `URL` strips it from a dotted-quad but keeps it on a name, and
+  // the patterns below are anchored, so it has to come off here.
+  if (h.endsWith(".") && !h.endsWith("..")) h = h.slice(0, -1);
+
+  const mapped = unmapIpv4(h.toLowerCase());
+  if (mapped) h = mapped;
+
   return PRIVATE_HOST_PATTERNS.some((re) => re.test(h));
 }
 

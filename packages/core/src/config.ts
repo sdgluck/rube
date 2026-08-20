@@ -963,6 +963,19 @@ export function createConfigStore(deps: ConfigStoreDeps) {
   }
 
   function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
+    // Validate on the way in, not just on the way out.
+    //
+    // `getConfig` parses, `setConfig` used not to — so a value the schema
+    // rejects was written happily and then threw on every subsequent *read*.
+    // Worse, `setConfig` itself reads (below, for the change log), so one bad
+    // write poisoned the key permanently: every later attempt to correct it
+    // threw before it could store anything, and the only way out was editing
+    // the database by hand.
+    //
+    // Failing here instead points at the caller that passed the bad value,
+    // while the stored configuration is still good.
+    configSchema.shape[key].parse(value);
+
     // Read before write, and only when the key is actually logged — an
     // unconditional read would double every settings write's query count to
     // populate a column that `UNLOGGED_CONFIG_KEYS` then throws away.
