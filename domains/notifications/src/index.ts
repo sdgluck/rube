@@ -107,6 +107,8 @@ export function sampleMessageFor(type: string): RichMessage {
     "collection.created": "Created “Directed by Christopher Nolan” with 12 items.",
     "rule.empty": "“Oscar Winners” matched nothing this run — it matched 34 last run.",
     "registry.update_available": "3 registry rules have updates available.",
+    "watchlist.requested": 'Requested "Sinners" from radarr.',
+    "watchlist.failed": 'Couldn\'t request "Sinners" — sonarr returned 401 Unauthorized.',
     "digest.sent": "Your weekly digest — 12 added, 3 leaving soon.",
   };
   return plainMessage(label, `${samples[type] ?? "Test notification from Tinkerbell."} (test)`);

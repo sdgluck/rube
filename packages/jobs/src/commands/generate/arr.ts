@@ -2,11 +2,10 @@ import { type Services } from "@tinkerbell/composition";
 import { createImdbCommand } from "./sources/imdb.ts";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage, imdbId, tmdbId } from "@tinkerbell/core";
 import type { JobContext } from "@tinkerbell/core";
 import type { Rule } from "@tinkerbell/domain.rules";
 import type { RuleConfig } from "./config.ts";
-import { imdbId, tmdbId } from "./guids.ts";
 
 import { lookupBelongsToCollection } from "./sources/tmdb.ts";
 import { chunked, mapConcurrent } from "#jobs/concurrency.ts";

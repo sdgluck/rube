@@ -1,0 +1,70 @@
+/* The page's own lead paragraph. `shared.module.css` has no `.intro`; each
+   page that needs one defines it, as Duplicates does. */
+.intro {
+  margin: 0 0 16px;
+  max-width: 70ch;
+  font: var(--t-body);
+  color: var(--ink-2);
+}
+
+.instanceCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.instanceCard {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.instanceCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.instanceCardTitle {
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.instanceCardTitle:hover {
+  text-decoration: underline;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.stats dt {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.stats dd {
+  margin: 2px 0 0;
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+.error {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+  font: var(--t-body-sm);
+  overflow-wrap: anywhere;
+}

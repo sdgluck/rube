@@ -23,6 +23,9 @@ drive collections, overlays, labels, and notifications on a schedule.
   [See below](#prerolls).
 - **Labels** — bulk apply and undo Plex labels from rules, with a preview of
   what will change.
+- **Watchlist sync** — anything you add to your Plex watchlist that isn't
+  already in your library is sent to Radarr or Sonarr, with a per-run cap, a
+  dry-run mode, and a ledger so a request is never made twice.
 - **Notifications** — Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
   LunaSea, and generic webhooks.
 - **Backup, export and change history** — nightly copies of the database, a

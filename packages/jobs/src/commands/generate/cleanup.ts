@@ -32,12 +32,11 @@ import { type Services } from "@tinkerbell/composition";
  * The one thing cleanup still writes to Plex is an item label, in `label` mode,
  * on the items themselves — see `applyAction`.
  */
-import { errorMessage, type JobContext } from "@tinkerbell/core";
+import { arrExternalId, errorMessage, type JobContext } from "@tinkerbell/core";
 import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
 import { KILL_SWITCH_REFUSAL, type CleanupCandidate } from "@tinkerbell/domain.cleanup";
 
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { arrExternalId } from "./guids.ts";
 import type { HandlerDeps } from "./types.ts";
 
 /** Applied to the items themselves in `label` mode, so they're findable in Plex. */

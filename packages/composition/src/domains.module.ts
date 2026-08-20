@@ -22,6 +22,8 @@ import {
 import { BackupsToken, createBackups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, createBandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, createChanges } from "@tinkerbell/domain.changes";
+import { ArrActivityToken, createArrActivity } from "@tinkerbell/domain.arr-activity";
+import { ArrLibraryToken, createArrLibrary } from "@tinkerbell/domain.arr-library";
 import { ConfigHistoryToken, createConfigHistory } from "@tinkerbell/domain.config-history";
 import { CleanupToken, createCleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, createCollections } from "@tinkerbell/domain.collections";
@@ -47,6 +49,7 @@ import { createSearch, SearchToken } from "@tinkerbell/domain.search";
 import { createSections, SectionsToken } from "@tinkerbell/domain.sections";
 import { createStats, StatsToken } from "@tinkerbell/domain.stats";
 import { createUsers, UsersToken } from "@tinkerbell/domain.users";
+import { createWatchlist, WatchlistToken } from "@tinkerbell/domain.watchlist";
 
 export function registerDomains(r: Registry): void {
   // ── The inverted edges ────────────────────────────────────────────────────
@@ -94,6 +97,8 @@ export function registerDomains(r: Registry): void {
       emitEvent: c.resolve(EventBusToken),
     }),
   );
+  r.register(ArrLibraryToken, (c) => createArrLibrary({ db: c.resolve(DbToken) }));
+  r.register(ArrActivityToken, (c) => createArrActivity({ db: c.resolve(DbToken) }));
   r.register(ChangesToken, (c) => createChanges({ db: c.resolve(DbToken) }));
   r.register(ConfigHistoryToken, (c) => createConfigHistory({ db: c.resolve(DbToken) }));
   r.register(CleanupToken, (c) => createCleanup({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }));
@@ -203,6 +208,15 @@ export function registerDomains(r: Registry): void {
       db: c.resolve(DbToken),
       config: c.resolve(ConfigStoreToken),
       readLocalCollections: c.resolve(CollectionsReaderToken),
+    }),
+  );
+  r.register(WatchlistToken, (c) =>
+    createWatchlist({
+      db: c.resolve(DbToken),
+      config: c.resolve(ConfigStoreToken),
+      clients: c.resolve(ClientsToken),
+      arr: c.resolve(ArrInstancesToken),
+      emitEvent: c.resolve(EventBusToken),
     }),
   );
 }

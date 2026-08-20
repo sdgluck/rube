@@ -3,9 +3,9 @@ import { SETTINGS_LINKS } from "#pages/Settings/sections";
 export type NavMetric =
   | {
       kind: "count";
-      key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" | "prerolls" | "cleanupDueSoon";
+      key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" | "prerolls" | "cleanupDueSoon" | "arrQueue";
     }
-  | { kind: "status"; key: "overlaysStatus" | "jobsStatus" }
+  | { kind: "status"; key: "overlaysStatus" | "jobsStatus" | "arrsStatus" }
   | { kind: "streams" };
 
 export type NavItem = {
@@ -40,6 +40,18 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: "/duplicates", label: "Duplicates" },
       { to: "/overlays", label: "Overlays", metric: { kind: "status", key: "overlaysStatus" } },
       { to: "/prerolls", label: "Prerolls", metric: { kind: "count", key: "prerolls" } },
+    ],
+  },
+  // Between Library (what Plex holds) and Automation (what Tinkerbell does
+  // about it), because that is where acquiring things belongs: after you know
+  // what you have, before you decide what to do with it.
+  {
+    label: "Managers",
+    items: [
+      { to: "/movies", label: "Movies" },
+      { to: "/tv", label: "TV" },
+      { to: "/downloads", label: "Downloads", metric: { kind: "count", key: "arrQueue" } },
+      { to: "/arrs", label: "Instances", metric: { kind: "status", key: "arrsStatus" } },
     ],
   },
   {

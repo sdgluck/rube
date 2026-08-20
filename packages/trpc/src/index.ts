@@ -37,6 +37,7 @@ import { createViewsRouter } from "./views.router.ts";
 import { createCleanupRouter } from "./cleanup.router.ts";
 import { createMetadataRouter } from "./metadata.router.ts";
 import { createDigestRouter } from "./digest.router.ts";
+import { createWatchlistRouter } from "./watchlist.router.ts";
 import { createPersonalizationRouter } from "./personalization.router.ts";
 
 const appRouterFor = (deps: TrpcDeps) => {
@@ -68,6 +69,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     cleanup: createCleanupRouter(deps),
     metadata: createMetadataRouter(deps),
     digest: createDigestRouter(deps),
+    watchlist: createWatchlistRouter(deps),
     events: createEventsRouter(deps),
     health: createHealthRouter(deps),
     bandwidth: createBandwidthRouter(deps),

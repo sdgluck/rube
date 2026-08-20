@@ -65,6 +65,14 @@ export const EVENT_TYPES = [
   // channel.
   { id: "backup.completed", label: "Backup Completed" },
   { id: "backup.failed", label: "Backup Failed" },
+  // "The thing you watchlisted is downloading" is the most immediately
+  // gratifying message this app can send, and it is per item on purpose — one
+  // watchlist add is one deliberate human action, so there is no digest-shaped
+  // version of it worth having.
+  { id: "watchlist.requested", label: "Watchlist Item Requested" },
+  // The failure is separate because it needs a different destination. A
+  // request that didn't land is the one thing here somebody has to act on.
+  { id: "watchlist.failed", label: "Watchlist Request Failed" },
   // Not an emitted event, unlike everything above it: nothing ever calls
   // `emitEvent("digest.sent")`. It appears here because per-service event
   // selection is already the UI for "route this to that channel", and a

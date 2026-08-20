@@ -5,6 +5,7 @@
 import { eq, and, asc, desc, inArray, lt, notInArray, or, sql, type InferSelectModel } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { mediaItems, likeContains, type Db } from "@tinkerbell/db";
+import { imdbId, tmdbId, tvdbId } from "@tinkerbell/core";
 
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import { type EventBus } from "@tinkerbell/ports";
@@ -260,12 +261,13 @@ export function createMedia(deps: MediaDeps) {
       // Reset per section, because the progress bar is per section — see below.
       let sectionSynced = 0;
 
-      for await (const { item, totalSize } of client.allItems(section.key)) {
+      for await (const { item, totalSize } of client.allItems(section.key, { includeGuids: true })) {
         const ratingKey = item.ratingKey;
         if (!ratingKey) continue;
 
         const media = item.Media?.[0];
         const genres = item.Genre?.map((g) => g.tag).filter((tag) => tag.length > 0) ?? [];
+        const guids = item.Guid?.map((g) => g.id).filter((id) => id.length > 0) ?? [];
         // The item's own parts where it has them, else what its episodes came to.
         // A show has no parts, so the second term is the only answer for TV; the
         // fallback order matters for the rare item that has both.
@@ -303,6 +305,15 @@ export function createMedia(deps: MediaDeps) {
           sizeUnknownParts: episodeEntry ? episodeEntry.unsized : null,
           bitrate: media?.bitrate ?? null,
           versionCount: item.Media?.length ?? 1,
+          // `includeGuids` rides the listing this loop is already paging
+          // through, so the provider ids cost no extra request. They are what
+          // links a Plex row to a Radarr/Sonarr record; without them the two
+          // libraries can only be compared by title and year, which is not
+          // something you delete a file on.
+          guids: guids.length > 0 ? guids : null,
+          tmdbId: tmdbId({ guids }),
+          imdbId: imdbId({ guids }),
+          tvdbId: tvdbId({ guids }),
           syncedAt: now,
         };
 

@@ -46,7 +46,17 @@ describe("the container", () => {
     // A domain added without a registration would resolve fine — because
     // nothing would ask for it — so the count is asserted separately.
     const names = container.tokens().map((t) => t.description);
-    for (const expected of ["config", "clients", "events", "health", "collections", "migration", "users"]) {
+    for (const expected of [
+      "config",
+      "clients",
+      "events",
+      "health",
+      "collections",
+      "migration",
+      "users",
+      "arrLibrary",
+      "arrActivity",
+    ]) {
       assert.ok(names.includes(expected), `no registration for "${expected}"`);
     }
   });

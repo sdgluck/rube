@@ -92,6 +92,8 @@ type NavMetrics = {
   cleanupDueSoon: number;
   overlaysStatus: "ok" | "error" | null;
   jobsStatus: "ok" | "error" | null;
+  arrQueue: number;
+  arrsStatus: "ok" | "error" | null;
 };
 
 function NavMetricSlot({ metric, metrics }: { metric: NavMetric; metrics: NavMetrics | undefined }) {

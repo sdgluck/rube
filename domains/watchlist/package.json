@@ -1,0 +1,32 @@
+{
+  "name": "@tinkerbell/domain.watchlist",
+  "version": "0.23.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@tinkerbell/arr": "workspace:*",
+    "@tinkerbell/container": "workspace:*",
+    "@tinkerbell/core": "workspace:*",
+    "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/plex": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
+    "drizzle-orm": "^0.45.1"
+  },
+  "devDependencies": {
+    "@tinkerbell/composition": "workspace:*",
+    "better-sqlite3": "^12.6.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.2.3",
+    "typescript": "^7.0.2"
+  }
+}

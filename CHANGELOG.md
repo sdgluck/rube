@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-08-20
+
+### Added
+
+- **Tinkerbell can now browse and manage your Radarr and Sonarr libraries.** A new "Managers" section in the sidebar adds Movies, TV, Downloads and Instances pages, so the everyday questions — what's monitored, what's missing, what's downloading — no longer mean opening three tabs.
+- Movies and TV list every configured instance together in one sortable, filterable table, and you can monitor, unmonitor, search for and remove items without leaving Tinkerbell. If you run a split setup (a 1080p Radarr and a 4K one, say), both appear side by side with an instance column and a picker to narrow to one.
+- **A new health page finds the things neither Radarr nor Plex can see on their own** — titles that are on disk according to Radarr but that Plex has never scanned, releases that were grabbed but never imported, films held by more than one instance, and items in Plex that nothing is managing. Each finding explains what it means and whether it is a fault or just worth knowing.
+- The Downloads page shows every instance's queue together with live progress, and surfaces the actual error when an import is blocked rather than just the word "blocked". An Activity tab lists recent grabs, imports and failures across all instances.
+- The Instances page shows each Radarr and Sonarr with its version, item count, queue, free space on the volume the library actually lives on, and when it last synced — with the full error text if it is unreachable.
+- Multiple instances of each service are supported throughout, and one being down no longer affects the others: a failed sync is recorded against that instance alone and retried on the next run, leaving its existing data untouched.
+- A nightly "Sync Radarr & Sonarr" job mirrors your libraries locally so these pages load instantly instead of waiting on each server, and a lightweight poll keeps the Downloads count current. Both appear in Jobs and can be run on demand.
+- Tinkerbell now records the provider IDs (TMDb, IMDb, TVDb) of items in your Plex library during the regular media sync, which is what lets a Plex item and a Radarr record be matched reliably rather than guessed at from titles and years.
+- This release covers browsing, monitoring and searching. Editing an instance's own settings — quality profiles, custom formats, indexers, download clients — is not included yet; keep using Radarr's and Sonarr's own settings pages for those.
+
+## [0.22.0] - 2026-08-20
+
+### Added
+
+- Plex watchlist syncing: items you add to your Plex watchlist are now automatically searched for and requested via Radarr/Sonarr, without needing any new credentials or third-party service. This runs as a background job roughly every fifteen minutes, only considers the server owner's watchlist, and defaults to dry-run so nothing is added until you turn it on.
+- A "Try again" button for watchlist items that were skipped (for example because Sonarr had no root folder configured at the time) — you no longer have to remove and re-add the item in the Plex app to retry it.
+- An optional setting to automatically remove an item from the watchlist once it becomes available in your library (off by default).
+- A safety cap on how many requests the watchlist sync can make in a single run, shared across Radarr and Sonarr and counted even during dry runs, to avoid large bursts of requests when a watchlist is first synced.
+
 ## [0.21.0] - 2026-08-20
 
 ### Added

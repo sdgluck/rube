@@ -4,6 +4,7 @@ import { createRegistryUpdates } from "./registry-updates.ts";
 import { createRuleSchedules } from "./rule-schedules.ts";
 import { createRuleTriggers } from "./rule-triggers.ts";
 import { createSeerrPoll } from "./seerr-poll.ts";
+import { pollArrQueues } from "./arr-poll.ts";
 /**
  * Internal jobs run in-process rather than through the Sidequest command
  * pattern — they are short, purely local, and not worth a worker thread.
@@ -53,7 +54,20 @@ export type InternalJobs = ReturnType<typeof createInternalJobs>["internalJobs"]
 export type InternalJobName = keyof InternalJobs;
 
 export const createInternalJobs = perDeps(function createInternalJobs(deps: Services) {
-  const { backups, bandwidth, config, configHistory, db, health, metadata, playback, ruleRuns, rules, stats } = deps;
+  const {
+    backups,
+    bandwidth,
+    config,
+    configHistory,
+    db,
+    health,
+    metadata,
+    playback,
+    ruleRuns,
+    rules,
+    stats,
+    watchlist,
+  } = deps;
   const { getConfig } = config;
   const { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } = bandwidth;
   const { pruneOlderThan } = metadata;
@@ -63,6 +77,7 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
   const { pruneRuleRuns, pruneRunChanges } = ruleRuns;
   const { pollPlaybackOnce } = playback;
   const { pruneDeletedRules } = rules;
+  const { syncWatchlist } = watchlist;
   const { getCachedRecentlyAdded, syncRecentlyAdded } = stats;
   const { announceRegistryUpdates } = createRegistryUpdates(deps);
   const { runDueRules } = createRuleSchedules(deps);
@@ -187,6 +202,42 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
       timeoutMs: 10 * MINUTE_MS,
       // Most polls find nothing new, and "No newly available requests." said
       // ninety-six times a day is not information.
+      quiet: true,
+    },
+    /**
+     * Plex Watchlist → Radarr/Sonarr.
+     *
+     * An internal job rather than a Sidequest command, which is a departure
+     * from the plan, and for the same reason `backup` is one: a command queues
+     * on a lane, and a fifteen-minute poll that can wait four hours behind
+     * `generate` is not a fifteen-minute poll. It is also cheap enough not to
+     * want a worker thread — most runs are one paged GET against plex.tv and
+     * nothing else, because the expensive half only happens when the list has
+     * something on it we have never acted on.
+     */
+    "watchlist-sync": {
+      run: (ctx: JobContext) => syncWatchlist(ctx),
+      // The library index it may have to build is the slow part, and that is
+      // one paged walk per movie/show section — the same shape of work
+      // `sync-media` gets two hours for, over far fewer items.
+      timeoutMs: 30 * MINUTE_MS,
+      // Ninety-six runs a day, and the interesting outcome is the request it
+      // makes, which is its own event. "Nothing new" said all day is not.
+      quiet: true,
+    },
+    /**
+     * The *Arr queue count, for the nav badge.
+     *
+     * An internal job for the same reason `seerr-poll` is one: it is a single
+     * tiny GET per instance, and queueing that behind `generate` on a lane
+     * would make a one-minute poll a four-hour one.
+     */
+    "arr-poll": {
+      run: (ctx: JobContext) => pollArrQueues(ctx),
+      // One `/queue/status` per instance and nothing else.
+      timeoutMs: 2 * MINUTE_MS,
+      // Runs constantly, and "Nothing downloading." said all day is not
+      // information. The stable text is what lets `quiet` suppress it.
       quiet: true,
     },
     "playback-poll": {

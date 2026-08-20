@@ -48,6 +48,12 @@ const fields: Record<string, JobFieldsConfig> = {
   // gated on that.
   "seerr-poll": { kind: "system" },
   "playback-backfill": { kind: "system", enabled: "required", schedule: "hidden" },
+  // Settings → Watchlist owns the switch; this row exists so the schedule —
+  // which is the delay between tapping the watchlist button in the Plex app
+  // and the download starting — can be edited, and so there is a Run button.
+  // Not gated on being configured, for the same reason as `seerr-poll`: it
+  // returns without touching the network when it is switched off.
+  "watchlist-sync": { kind: "system" },
 
   // ── Features (opt-in) ────────────────────────────────────────────────────
   "because-you-watched": { kind: "feature", sections: true },

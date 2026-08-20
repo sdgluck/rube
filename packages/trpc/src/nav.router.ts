@@ -1,7 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { desc, eq, sql } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
-import { collections, mediaItems, rules, plexUsers, jobRuns, events, prerolls } from "@tinkerbell/db";
+import { collections, mediaItems, rules, plexUsers, jobRuns, events, prerolls, arrSyncState } from "@tinkerbell/db";
 import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
 
 import { t, procedure } from "./_base.ts";
@@ -72,6 +72,34 @@ export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db">) {
     }
   }
 
+  /** Everything downloading, summed across instances. */
+  function arrQueueCount(): number {
+    try {
+      const row = db
+        .select({ c: sql<number>`coalesce(sum(queue_count), 0)` })
+        .from(arrSyncState)
+        .get();
+      return row?.c ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * "error" when any configured instance last failed, "ok" when they all
+   * succeeded, null when none is configured — which is what keeps the dot off
+   * the sidebar entirely on an install that does not use *Arrs.
+   */
+  function arrHealth(): "ok" | "error" | null {
+    try {
+      const rows = db.select({ lastError: arrSyncState.lastError }).from(arrSyncState).all();
+      if (rows.length === 0) return null;
+      return rows.some((r) => r.lastError) ? "error" : "ok";
+    } catch {
+      return null;
+    }
+  }
+
   const navRouter = t.router({
     /**
      * Single batched query for the sidebar's per-item metrics. Counts use
@@ -91,6 +119,12 @@ export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db">) {
         cleanupDueSoon: safeDueSoonCount(),
         overlaysStatus: lastJobStatus("overlays"),
         jobsStatus: lastJobStatus("healthcheck"),
+        // Read from `arr_sync_state`, which the sync and the poller keep
+        // current. Deliberately *not* a fan-out to every configured *Arr:
+        // the nav renders on every page load, and one unreachable instance
+        // must not be able to make the whole app feel broken.
+        arrQueue: arrQueueCount(),
+        arrsStatus: arrHealth(),
       };
     }),
   });

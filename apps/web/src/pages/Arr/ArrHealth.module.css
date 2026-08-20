@@ -1,0 +1,29 @@
+.group {
+  margin-bottom: 24px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.groupTitle {
+  margin: 0;
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
+}
+
+.groupCount {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.explanation {
+  margin: 0 0 10px;
+  max-width: 72ch;
+  font: var(--t-body-sm);
+  color: var(--ink-3);
+}

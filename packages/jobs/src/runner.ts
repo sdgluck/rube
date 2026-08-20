@@ -49,6 +49,10 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // ── System (infrastructure) ─────────────────────────────────────────────
   { id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "0 0 * * *", enabled: 1 },
   { id: "sync-collections", name: "Sync Collections", command: "sync-collections", schedule: "0 0 * * *", enabled: 1 },
+  // 00:30: after sync-media has written the provider ids that `sync-arr`
+  // links against, so a title that arrived in Plex overnight is matched to
+  // its *Arr record on the same pass rather than a day later.
+  { id: "sync-arr", name: "Sync Radarr & Sonarr", command: "sync-arr", schedule: "30 0 * * *", enabled: 1 },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
   // 4am: after sync-media (midnight) so the library index the cleanup guards
   // read is fresh, after generate (1am) so a rule's shelf reflects the night's
@@ -76,6 +80,22 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // the source of a rule trigger, so its period is the trigger's latency. It
   // no-ops in a few microseconds when Overseerr isn't configured.
   { id: "seerr-poll", name: "Poll Overseerr Requests", command: "seerr-poll", schedule: "*/15 * * * *", enabled: 1 },
+  // Every two minutes: frequent enough that the Downloads badge tracks a
+  // grab within a couple of minutes, rare enough that a box with four
+  // instances is not answering a status call every few seconds all day.
+  { id: "arr-poll", name: "Poll Download Queues", command: "arr-poll", schedule: "*/2 * * * *", enabled: 1 },
+  // Same cadence and the same reasoning as the Overseerr poll: the period is
+  // the latency between someone tapping the watchlist button in the Plex app
+  // and the download starting, and that is the whole experience of the
+  // feature. It returns in milliseconds without touching the network when
+  // watchlist sync is switched off, which it is until somebody configures it.
+  {
+    id: "watchlist-sync",
+    name: "Sync Plex Watchlist",
+    command: "watchlist-sync",
+    schedule: "*/15 * * * *",
+    enabled: 1,
+  },
   // Every minute, because it is a poll for "has any rule's own cron come due"
   // rather than work in itself — see rule-schedules.ts for why a poll and not
   // a live Cron per rule. Most ticks read the rules table and stop.
