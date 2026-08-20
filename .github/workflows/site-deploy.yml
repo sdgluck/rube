@@ -21,16 +21,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Pinned to the same pnpm as mise.toml / packageManager. A bare `pnpm`
       # from some other source is how this repo previously ended up with a
       # pnpm 8 lockfile.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/setup@v2
         with:
           version: 11.21.0
+          # This repo installs with `--frozen-lockfile` in its own step below;
+          # the action's bare `pnpm install` default would pre-empt it.
+          install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 26.2.0
           cache: pnpm
@@ -45,7 +48,7 @@ jobs:
       # `prebuild` regenerates public/registry/ before vite copies it to dist/.
       - run: pnpm --filter @tinkerbell/tinkerbell.dev build
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/tinkerbell.dev/dist
 
@@ -60,4 +63,4 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
