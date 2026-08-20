@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-08-20
+
+### Added
+
+- Plex watchlist syncing: items you add to your Plex watchlist are now automatically searched for and requested via Radarr/Sonarr, without needing any new credentials or third-party service. This runs as a background job roughly every fifteen minutes, only considers the server owner's watchlist, and defaults to dry-run so nothing is added until you turn it on.
+- A "Try again" button for watchlist items that were skipped (for example because Sonarr had no root folder configured at the time) — you no longer have to remove and re-add the item in the Plex app to retry it.
+- An optional setting to automatically remove an item from the watchlist once it becomes available in your library (off by default).
+- A safety cap on how many requests the watchlist sync can make in a single run, shared across Radarr and Sonarr and counted even during dry runs, to avoid large bursts of requests when a watchlist is first synced.
+
 ## [0.21.0] - 2026-08-20
 
 ### Added
