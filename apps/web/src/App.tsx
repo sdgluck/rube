@@ -35,6 +35,7 @@ const SettingsHealth = lazy(() => import("#pages/Settings/SettingsHealth"));
 const SettingsCleanup = lazy(() => import("#pages/Settings/SettingsCleanup"));
 const SettingsMetadata = lazy(() => import("#pages/Settings/SettingsMetadata"));
 const SettingsDigest = lazy(() => import("#pages/Settings/SettingsDigest"));
+const SettingsWatchlist = lazy(() => import("#pages/Settings/SettingsWatchlist"));
 const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenance"));
 const SettingsBackup = lazy(() => import("#pages/Settings/SettingsBackup"));
 const SettingsHistory = lazy(() => import("#pages/Settings/SettingsHistory"));
@@ -458,6 +459,14 @@ export default function App() {
                     element={
                       <LazyPage>
                         <SettingsDigest />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="watchlist"
+                    element={
+                      <LazyPage>
+                        <SettingsWatchlist />
                       </LazyPage>
                     }
                   />

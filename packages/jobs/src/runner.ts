@@ -76,6 +76,18 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // the source of a rule trigger, so its period is the trigger's latency. It
   // no-ops in a few microseconds when Overseerr isn't configured.
   { id: "seerr-poll", name: "Poll Overseerr Requests", command: "seerr-poll", schedule: "*/15 * * * *", enabled: 1 },
+  // Same cadence and the same reasoning as the Overseerr poll: the period is
+  // the latency between someone tapping the watchlist button in the Plex app
+  // and the download starting, and that is the whole experience of the
+  // feature. It returns in milliseconds without touching the network when
+  // watchlist sync is switched off, which it is until somebody configures it.
+  {
+    id: "watchlist-sync",
+    name: "Sync Plex Watchlist",
+    command: "watchlist-sync",
+    schedule: "*/15 * * * *",
+    enabled: 1,
+  },
   // Every minute, because it is a poll for "has any rule's own cron come due"
   // rather than work in itself — see rule-schedules.ts for why a poll and not
   // a live Cron per rule. Most ticks read the rules table and stop.

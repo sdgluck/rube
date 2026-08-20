@@ -1584,3 +1584,69 @@ export const changeLog = sqliteTable(
     index("idx_change_log_timestamp").on(table.timestamp),
   ],
 );
+
+/**
+ * What the Plex Watchlist has offered us, and what we did about it.
+ *
+ * The watchlist itself is not a queue and keeps no record of having been
+ * acted on: an item sits there until the user removes it, and the API answers
+ * the same way on the thousandth poll as on the first. Without a ledger, a
+ * sync that runs every half hour would re-request an item whose *Arr add
+ * failed every half hour forever, and an item the user removed and re-added
+ * would be requested twice.
+ *
+ * Keyed on the `plex://` guid rather than the rating key. Both identify the
+ * item, but the guid is the one that survives — plex.tv reissues rating keys,
+ * and a primary key that changes under a row silently duplicates it.
+ *
+ * Rows are never deleted when an item leaves the watchlist. "We have already
+ * dealt with this" is the whole value of the table, and it has to outlive the
+ * entry that prompted it or removing and re-adding becomes a way to request
+ * the same film repeatedly.
+ */
+export const watchlistItems = sqliteTable(
+  "watchlist_items",
+  {
+    /** `plex://movie/5d776b…` */
+    guid: text("guid").primaryKey(),
+    /**
+     * What `removeFromWatchlist` takes. Stored because it is not derivable
+     * from the guid, and refreshed on every sighting because plex.tv is free
+     * to reissue it — a stale one makes the removal a no-op against somebody
+     * else's item at worst and nothing at best.
+     */
+    ratingKey: text("rating_key").notNull().default(""),
+    title: text("title").notNull(),
+    /** Plex's own vocabulary: "movie" | "show". Not "tv". */
+    type: text("type").notNull(),
+    year: integer("year"),
+    /** `tmdb:603` / `imdb:tt0133093` / `tvdb:1234`, or "" when Plex gave none. */
+    externalId: text("external_id").notNull().default(""),
+    /** Plex's `addedAt`, in **seconds** — Plex's unit, as in `media_items`. */
+    addedAt: integer("added_at"),
+    /** When *we* first saw it, in ms. Distinct from when the user added it. */
+    firstSeenAt: integer("first_seen_at").notNull(),
+    /**
+     * When we last saw it on the watchlist, in ms.
+     *
+     * This is what separates "still wanted" from "the user changed their
+     * mind": an item that has gone from the list must stop being polled for
+     * availability, or a request the user withdrew keeps costing an *Arr
+     * lookup on every run for as long as the row exists.
+     */
+    lastSeenAt: integer("last_seen_at").notNull(),
+    /** Set when it was pushed to Radarr/Sonarr. Null while it never has been. */
+    requestedAt: integer("requested_at"),
+    /** new | present | requested | failed | skipped */
+    status: text("status").notNull().default("new"),
+    /** Why the last attempt failed. Empty otherwise, never null. */
+    error: text("error").notNull().default(""),
+  },
+  (table) => [
+    // The two questions the sync asks every run: what still needs acting on,
+    // and what has been requested and might have arrived.
+    index("idx_watchlist_items_status").on(table.status),
+    // The activity table in Settings, newest first.
+    index("idx_watchlist_items_first_seen").on(table.firstSeenAt),
+  ],
+);

@@ -64,6 +64,7 @@ import { SearchToken, type Search } from "@tinkerbell/domain.search";
 import { SectionsToken, type Sections } from "@tinkerbell/domain.sections";
 import { StatsToken, type Stats } from "@tinkerbell/domain.stats";
 import { UsersToken, type Users } from "@tinkerbell/domain.users";
+import { WatchlistToken, type Watchlist } from "@tinkerbell/domain.watchlist";
 
 export interface Services {
   /**
@@ -115,6 +116,7 @@ export interface Services {
   sections: Sections;
   stats: Stats;
   users: Users;
+  watchlist: Watchlist;
 }
 
 export const ServicesToken = token<Services>("services");
@@ -162,5 +164,6 @@ export function registerServices(r: Registry): void {
     sections: c.resolve(SectionsToken),
     stats: c.resolve(StatsToken),
     users: c.resolve(UsersToken),
+    watchlist: c.resolve(WatchlistToken),
   }));
 }

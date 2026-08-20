@@ -49,6 +49,7 @@
     "@tinkerbell/domain.shuffle-hubs": "workspace:*",
     "@tinkerbell/domain.stats": "workspace:*",
     "@tinkerbell/domain.users": "workspace:*",
+    "@tinkerbell/domain.watchlist": "workspace:*",
     "@tinkerbell/http": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",

@@ -8,6 +8,11 @@
  * These three regexes were written out longhand in four places in `arr.ts`
  * before this module existed, which is three chances to fix a bug in one of
  * them and miss the rest.
+ *
+ * It lives in `core` rather than next to the rule engine because the second
+ * caller is not a rule: watchlist sync asks the same question — "which
+ * provider id does this *Arr index on" — about items that never went near a
+ * handler, and a domain cannot import from `packages/jobs`.
  */
 
 const TMDB = /tmdb:\/\/(\d+)/;

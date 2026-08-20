@@ -23,6 +23,8 @@ import type { PlexClientOptions } from "./types.ts";
 
 export { PREROLL_PREF_ID } from "./prefs.ts";
 export { PlexApiError } from "./http.ts";
+// plex.tv account-level, like `auth.ts` — not part of the server client.
+export { fetchWatchlist, removeFromWatchlist, type WatchlistEntry } from "./watchlist.ts";
 export {
   parseShareFilter,
   composeShareFilter,

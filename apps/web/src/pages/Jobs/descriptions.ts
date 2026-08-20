@@ -23,6 +23,8 @@ const descriptions: Record<string, string> = {
   "posters-refresh": "Re-fetches cached poster images and detects when artwork has changed in Plex.",
   "registry-updates":
     "Checks the public rule registry for newer versions of the rules you've imported, and raises an event the first time each one appears. Never applies an update on its own.",
+  "watchlist-sync":
+    "Checks your Plex watchlist and sends anything not already in your library to Radarr or Sonarr. Each item is only ever acted on once, so a failed request is retried rather than repeated. Configured in Settings → Watchlist.",
   digest:
     "Sends a periodic summary of what was added, watched and is about to be removed — to your own notification channels, and by email to portal users who asked for one.",
   "migrate-collections":

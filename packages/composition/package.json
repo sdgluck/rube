@@ -48,6 +48,7 @@
     "@tinkerbell/domain.shuffle-hubs": "workspace:*",
     "@tinkerbell/domain.stats": "workspace:*",
     "@tinkerbell/domain.users": "workspace:*",
+    "@tinkerbell/domain.watchlist": "workspace:*",
     "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/posters": "workspace:*"
   },

@@ -47,6 +47,7 @@ import { createSearch, SearchToken } from "@tinkerbell/domain.search";
 import { createSections, SectionsToken } from "@tinkerbell/domain.sections";
 import { createStats, StatsToken } from "@tinkerbell/domain.stats";
 import { createUsers, UsersToken } from "@tinkerbell/domain.users";
+import { createWatchlist, WatchlistToken } from "@tinkerbell/domain.watchlist";
 
 export function registerDomains(r: Registry): void {
   // ── The inverted edges ────────────────────────────────────────────────────
@@ -203,6 +204,15 @@ export function registerDomains(r: Registry): void {
       db: c.resolve(DbToken),
       config: c.resolve(ConfigStoreToken),
       readLocalCollections: c.resolve(CollectionsReaderToken),
+    }),
+  );
+  r.register(WatchlistToken, (c) =>
+    createWatchlist({
+      db: c.resolve(DbToken),
+      config: c.resolve(ConfigStoreToken),
+      clients: c.resolve(ClientsToken),
+      arr: c.resolve(ArrInstancesToken),
+      emitEvent: c.resolve(EventBusToken),
     }),
   );
 }

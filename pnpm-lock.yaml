@@ -1231,6 +1231,46 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/watchlist:
+    dependencies:
+      '@tinkerbell/arr':
+        specifier: workspace:*
+        version: link:../../clients/arr
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.10.0
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/composition:
     dependencies:
       '@tinkerbell/container':
@@ -1332,6 +1372,9 @@ importers:
       '@tinkerbell/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
+      '@tinkerbell/domain.watchlist':
+        specifier: workspace:*
+        version: link:../../domains/watchlist
       '@tinkerbell/ports':
         specifier: workspace:*
         version: link:../ports
@@ -1546,6 +1589,9 @@ importers:
       '@tinkerbell/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
+      '@tinkerbell/domain.watchlist':
+        specifier: workspace:*
+        version: link:../../domains/watchlist
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../http
@@ -1808,6 +1854,9 @@ importers:
       '@tinkerbell/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
+      '@tinkerbell/domain.watchlist':
+        specifier: workspace:*
+        version: link:../../domains/watchlist
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../http

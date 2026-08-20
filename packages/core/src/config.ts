@@ -46,6 +46,27 @@ export function isValidTimezone(value: string): boolean {
   }
 }
 
+/**
+ * Where one service's watchlist adds land.
+ *
+ * One of these per \*Arr rather than a single shared block, because films and
+ * series do not share a root folder or a quality profile on any real install —
+ * and a rule that pretends they do is one that puts every series in the movies
+ * directory the first time somebody watchlists a show.
+ */
+const watchlistArrTargetSchema = z.object({
+  enabled: z.boolean(),
+  /** Absent means the service's default instance, as in `RuleConfig.arr`. */
+  instanceId: z.string().optional(),
+  /** 0 means "not chosen yet"; the sync refuses to add against it. */
+  qualityProfileId: z.number().int(),
+  rootFolderPath: z.string(),
+  monitor: z.boolean(),
+  searchOnAdd: z.boolean(),
+});
+
+export type WatchlistArrTarget = z.infer<typeof watchlistArrTargetSchema>;
+
 export const configSchema = z.object({
   global_plex_url: z.string(),
   global_plex_token: z.string(),
@@ -160,6 +181,31 @@ export const configSchema = z.object({
       apiKey: z.string(),
     }),
   ),
+  /**
+   * Plex Watchlist → Radarr/Sonarr.
+   *
+   * The *Arr half deliberately reuses the vocabulary of `RuleConfig.arr` —
+   * instance, quality profile, root folder, monitor, search — because it is
+   * the same act with a different trigger, and two spellings of "where do
+   * added films go" is how a server ends up with films in two places.
+   *
+   * The cap and the dry-run switch sit at the top rather than inside each
+   * target, which is where the rule shape puts them. A per-service cap does
+   * not compose: "thirty" on Radarr and "thirty" on Sonarr is a run that can
+   * add sixty, and the number a person means when they set a limit here is
+   * the one for the run. Cleanup learned the same thing one layer down.
+   *
+   * `removeOnAvailable` is the only setting here that writes to the user's own
+   * Plex account, and it defaults off for that reason alone.
+   */
+  watchlist_sync: z.object({
+    enabled: z.boolean(),
+    radarr: watchlistArrTargetSchema,
+    sonarr: watchlistArrTargetSchema,
+    removeOnAvailable: z.boolean(),
+    maxAddsPerRun: z.number().int().min(1).max(500),
+    dryRun: z.boolean(),
+  }),
   global_seerr_url: z.string(),
   global_seerr_api_key: z.string(),
   global_omdb_api_key: z.string(),
