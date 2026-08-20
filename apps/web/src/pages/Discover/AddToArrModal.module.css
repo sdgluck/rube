@@ -1,0 +1,39 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: var(--t-body);
+  color: var(--ink-2);
+}
+
+.hint {
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+/* The two switches read as rows rather than fields: the control is the
+   answer, so the label sits beside it instead of above it. */
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

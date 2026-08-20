@@ -1,0 +1,25 @@
+/* Not `composes: card` — a Discover card is not a link to somewhere, it has an
+   action inside it, so it must not take the shared card's pointer cursor or
+   whole-card hover. */
+.resultCard {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-md);
+}
+
+.cardAction {
+  padding: 6px 2px 0;
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+}
+
+.addBtn {
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
+  width: 100%;
+}
+
+.badgeLink {
+  text-decoration: none;
+  display: inline-flex;
+}

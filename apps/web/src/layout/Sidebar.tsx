@@ -1,8 +1,8 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA, GIT_SHA } from "#/version";
-import { NAV_SECTIONS, visibleSections, type NavMetric } from "#/nav";
+import { NAV_SECTIONS, routeTrail, visibleSections, type NavMetric } from "#/nav";
 import { modChord } from "#components/Kbd";
 import styles from "./Sidebar.module.css";
 
@@ -216,6 +216,8 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
   // read rather than a third request.
   const setupQuery = trpc.onboarding.status.useQuery(undefined, { retry: false });
   const sections = visibleSections(NAV_SECTIONS, setupQuery.data?.complete);
+  const { pathname } = useLocation();
+  const activeTo = routeTrail(pathname)[0]?.to;
 
   return (
     <aside className="sidebar">
@@ -248,7 +250,16 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
           <div key={section.label} className="nav-section">
             <div className="nav-section-title">{section.label}</div>
             {section.items.map((item) => (
-              <NavLink key={item.to} to={item.to} className="nav-link">
+              <NavLink
+                key={item.to}
+                to={item.to}
+                /* `routeTrail` decides, not NavLink's own prefix match. They
+                   agree everywhere except a record page: `/arrs/:id/movies/:id`
+                   shares its prefix with Instances but belongs to Movies, and
+                   a sidebar disagreeing with the breadcrumb above it is worse
+                   than either being wrong on its own. */
+                className={({ isActive }) => `nav-link${(activeTo ? item.to === activeTo : isActive) ? " active" : ""}`}
+              >
                 <span className="nav-link-label">{item.label}</span>
                 {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}
               </NavLink>

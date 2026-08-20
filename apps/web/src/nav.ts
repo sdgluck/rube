@@ -48,6 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Managers",
     items: [
+      { to: "/discover", label: "Discover" },
       { to: "/movies", label: "Movies" },
       { to: "/tv", label: "TV" },
       { to: "/downloads", label: "Downloads", metric: { kind: "count", key: "arrQueue" } },
@@ -121,6 +122,15 @@ export function routeTrail(pathname: string): Crumb[] {
       { label: "Settings", to: "/settings" },
       { label: settings.label, to: settings.to },
     ];
+
+  // A record page lives under the library it belongs to, not under Instances.
+  // `/arrs/:instanceId/movies/:arrId` shares the `/arrs` prefix with the
+  // instance list, but "Instances / The Matrix" describes nothing — the trail
+  // a person wants back is the list they came from.
+  const record = /^\/arrs\/[^/]+\/(movies|series)\/[^/]+$/.exec(pathname);
+  if (record) {
+    return record[1] === "movies" ? [{ label: "Movies", to: "/movies" }] : [{ label: "TV", to: "/tv" }];
+  }
 
   const extras: Crumb[] = [
     { label: "Changelog", to: "/settings/changelog" },

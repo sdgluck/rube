@@ -62,6 +62,8 @@ const ArrLibrary = lazy(() => import("#pages/Arr/ArrLibrary"));
 const ArrInstances = lazy(() => import("#pages/Arr/ArrInstances"));
 const ArrHealth = lazy(() => import("#pages/Arr/ArrHealth"));
 const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
+const ArrItemDetail = lazy(() => import("#pages/Arr/ArrItemDetail"));
+const Discover = lazy(() => import("#pages/Discover/Discover"));
 const Jobs = lazy(() => import("#pages/Jobs"));
 const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
 const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
@@ -248,6 +250,14 @@ export default function App() {
                     different service — the divergence between Radarr and Sonarr
                     is real, but it lives below this, in what the columns mean. */}
                 <Route
+                  path="/discover"
+                  element={
+                    <LazyPage>
+                      <Discover />
+                    </LazyPage>
+                  }
+                />
+                <Route
                   path="/movies"
                   element={
                     <LazyPage>
@@ -284,6 +294,25 @@ export default function App() {
                   element={
                     <LazyPage>
                       <ArrHealth />
+                    </LazyPage>
+                  }
+                />
+                {/* The record pages `/movies` and `/tv` have always linked to.
+                    They are listed after `/arrs/health` so the literal segment
+                    still wins over `:instanceId`. */}
+                <Route
+                  path="/arrs/:instanceId/movies/:arrId"
+                  element={
+                    <LazyPage>
+                      <ArrItemDetail service="radarr" />
+                    </LazyPage>
+                  }
+                />
+                <Route
+                  path="/arrs/:instanceId/series/:arrId"
+                  element={
+                    <LazyPage>
+                      <ArrItemDetail service="sonarr" />
                     </LazyPage>
                   }
                 />

@@ -228,3 +228,5 @@ export {
   type MinimumAvailability,
   type SeriesMonitorMode,
 } from "./arr.ts";
+
+export { TMDB_IMAGE_BASE, tmdbPosterUrl, serviceForMediaType, type TmdbPosterSize } from "./discover.ts";

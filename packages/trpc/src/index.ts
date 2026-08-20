@@ -27,6 +27,7 @@ import { createChangesRouter } from "./changes.router.ts";
 import { createHistoryRouter } from "./history.router.ts";
 import { createBackupsRouter } from "./backups.router.ts";
 import { createArrRouter } from "./arr.router.ts";
+import { createDiscoverRouter } from "./discover.router.ts";
 import { createPostersRouter } from "./posters.router.ts";
 import { createPrerollsRouter } from "./prerolls.router.ts";
 import { createMigrationRouter } from "./migration.router.ts";
@@ -77,6 +78,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     preview: createPreviewRouter(deps),
     search: createSearchRouter(deps),
     arr: createArrRouter(deps),
+    discover: createDiscoverRouter(deps),
     posters: createPostersRouter(deps),
     prerolls: createPrerollsRouter(deps),
     migration: createMigrationRouter(deps),

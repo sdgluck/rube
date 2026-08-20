@@ -207,6 +207,26 @@ function startMockArr(opts: Options): Promise<MockArr> {
     if (byId) {
       const id = Number(byId[1]);
 
+      /**
+       * Single-record read.
+       *
+       * Added when the add path started writing its result through to the
+       * mirror: without it a `GET /movie/7` fell to the unhandled branch and
+       * answered `[]`, which parses into a record with no id at all and
+       * corrupts whatever stores it. A mock that answers the wrong shape is
+       * worse than one that 404s.
+       */
+      if (method === "GET") {
+        const record = records.get(id);
+        if (!record) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end("{}");
+          return;
+        }
+        json(record);
+        return;
+      }
+
       if (method === "DELETE") {
         journal.deletes.push(`${path}${url.search}`);
         records.delete(id);

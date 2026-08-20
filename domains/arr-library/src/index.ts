@@ -22,6 +22,7 @@ import type { Db } from "@tinkerbell/db";
 import { createArrLibrarySync } from "./sync.ts";
 import { createArrQueries } from "./queries.ts";
 import { createArrReconcile } from "./reconcile.ts";
+import { createDiscoverQueries } from "./discover.ts";
 
 export interface ArrLibraryDeps {
   db: Db;
@@ -32,6 +33,7 @@ export function createArrLibrary(deps: ArrLibraryDeps) {
     ...createArrLibrarySync(deps),
     ...createArrQueries(deps),
     ...createArrReconcile(deps),
+    ...createDiscoverQueries(deps),
   };
 }
 
@@ -42,3 +44,5 @@ export const ArrLibraryToken = token<ArrLibrary>("arrLibrary");
 export type { SyncInstanceResult, SyncProgress } from "./sync.ts";
 export type { LibraryQuery, LibraryPage } from "./queries.ts";
 export type { ArrIssue } from "./reconcile.ts";
+export { discoverKey } from "./discover.ts";
+export type { DiscoverKey, DiscoverHolding, DiscoverArrHolding } from "./discover.ts";

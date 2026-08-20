@@ -23,6 +23,10 @@ drive collections, overlays, labels, and notifications on a schedule.
   [See below](#prerolls).
 - **Labels** — bulk apply and undo Plex labels from rules, with a preview of
   what will change.
+- **Discover** — search TMDb for films and shows, see at a glance what your
+  \*Arrs and Plex already hold, and send anything else to Radarr or Sonarr with
+  the profile, root folder and monitoring you choose. Records get a detail page
+  with an interactive release picker for grabbing a specific release yourself.
 - **Watchlist sync** — anything you add to your Plex watchlist that isn't
   already in your library is sent to Radarr or Sonarr, with a per-run cap, a
   dry-run mode, and a ledger so a request is never made twice.
