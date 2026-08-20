@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-08-20
+
+### Added
+
+- New "History" entry in a rule's row menu shows every past edit to that rule, with a restore option that reverts it to the selected version.
+- Tinkerbell now records a change history for rules, config values, job schedules, overlay presets and prerolls, capturing the full state before and after each edit. Secrets are redacted before being stored.
+- Added configuration export and import: export bundles rules, job schedules, overlay presets/layouts and settings into a single JSON file; credentials are excluded by default (with a warning if you choose to include them), and authentication state is never exported.
+- Import previews changes before applying them, classifying each item as new, identical, or differing from your current setup, and lets you choose to keep your existing configuration or take the incoming version for anything that differs.
+- **Tinkerbell now takes a nightly database backup by default at 03:30, gzipped and keeping the last seven copies.** Backups use SQLite's online backup mechanism so they're safe to take while the app is running; restoring from a backup is a manual, documented procedure.
+
+### Fixed
+
+- Fixed rule value pickers and filters for studio (and other tag) fields on `show.`-prefixed and `episode.`-prefixed fields, which previously returned no options at all because the lookup used the wrong field name against Plex.
+- Fixed a bug where exporting rules containing tag fields (like studio) produced values that only matched correctly on the server they were exported from; exported tag values are now translated to portable display names and translated back to the correct local keys on import.
+
 ## [0.20.0] - 2026-08-20
 
 ### Added
