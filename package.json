@@ -18,13 +18,13 @@
     "screenshots:local": "pnpm format && pnpm --filter @tinkerbell/tinkerbell.dev capture",
     "db:generate": "pnpm --filter @tinkerbell/db run generate",
     "db:migrate": "pnpm --filter @tinkerbell/db run migrate",
-    "lint": "git ls-files -z '*.ts' '*.tsx' | xargs -0 oxlint && stylelint '**/*.css' && node scripts/check-fetch.mjs && node scripts/check-nul.mjs",
+    "lint": "git ls-files -z '*.ts' '*.tsx' | xargs -0 oxlint && git ls-files -z '*.css' | xargs -0 stylelint && node scripts/check-fetch.mjs && node scripts/check-nul.mjs",
     "format": "git ls-files -z '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.html' '*.md' ':!:packages/db/drizzle/**' | xargs -0 oxfmt",
     "format:check": "git ls-files -z '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.html' '*.md' ':!:packages/db/drizzle/**' | xargs -0 oxfmt --check",
     "release": "node scripts/release.mjs",
     "prepare": "husky",
-    "lint:css": "stylelint '**/*.css'",
-    "lint:css:report": "stylelint '**/*.css' --report-needless-disables --report-invalid-scope-disables"
+    "lint:css": "git ls-files -z '*.css' | xargs -0 stylelint",
+    "lint:css:report": "git ls-files -z '*.css' | xargs -0 stylelint --report-needless-disables --report-invalid-scope-disables"
   },
   "devDependencies": {
     "husky": "^9.1.7",
