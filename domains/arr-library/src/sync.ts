@@ -12,7 +12,7 @@
  * (queue, releases) are never synced at all.
  */
 
-import { and, eq, getTableColumns, inArray, isNull, lt, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, getTableColumns, inArray, isNotNull, isNull, lt, sql, type SQL } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import {
   arrMovies,
@@ -109,8 +109,16 @@ export function createArrLibrarySync(deps: ArrLibrarySyncDeps) {
    * columns that exist for exactly this. A null result is not a failure; a
    * movie Radarr has and Plex has never scanned is the most useful thing
    * reconciliation finds.
+   *
+   * Returns how many of the instance's records now carry a link. Not the
+   * update's own `changes` — that counts every row the statement touched,
+   * including the ones it set back to null, so it reads as a success on an
+   * install where nothing matched at all. The count is a second indexed query
+   * against `idx_arr_movies_plex_rating_key` and is what lets a caller say
+   * "4231 of 4231 unmatched" out loud instead of leaving it to be discovered
+   * in the UI.
    */
-  function linkToPlex(instanceId: string, service: "radarr" | "sonarr"): void {
+  function linkToPlex(instanceId: string, service: "radarr" | "sonarr"): number {
     if (service === "radarr") {
       db.run(sql`
         update ${arrMovies}
@@ -122,7 +130,15 @@ export function createArrLibrarySync(deps: ArrLibrarySyncDeps) {
         )
         where ${arrMovies.instanceId} = ${instanceId}
       `);
-      return;
+      return (
+        db
+          .select({ n: count() })
+          .from(arrMovies)
+          .where(
+            and(eq(arrMovies.instanceId, instanceId), isNull(arrMovies.deletedAt), isNotNull(arrMovies.plexRatingKey)),
+          )
+          .get()?.n ?? 0
+      );
     }
     db.run(sql`
       update ${arrSeries}
@@ -134,6 +150,15 @@ export function createArrLibrarySync(deps: ArrLibrarySyncDeps) {
       )
       where ${arrSeries.instanceId} = ${instanceId}
     `);
+    return (
+      db
+        .select({ n: count() })
+        .from(arrSeries)
+        .where(
+          and(eq(arrSeries.instanceId, instanceId), isNull(arrSeries.deletedAt), isNotNull(arrSeries.plexRatingKey)),
+        )
+        .get()?.n ?? 0
+    );
   }
 
   function movieRow(instanceId: string, m: RadarrMovie, syncedAt: number) {

@@ -131,6 +131,66 @@ describe("arr library sync", () => {
     assert.equal(t.db.select().from(arrMovies).get()?.plexRatingKey, null);
   });
 
+  it("reports how many records the link matched", async () => {
+    t.db
+      .insert(mediaItems)
+      .values({
+        ratingKey: "1234",
+        sectionId: "1",
+        sectionTitle: "Movies",
+        title: "The Matrix",
+        type: "movie",
+        tmdbId: 603,
+        versionCount: 1,
+        syncedAt: Date.now(),
+      })
+      .run();
+
+    const mock = mockArr({ ...BASE_PAYLOADS, "/api/v3/movie": [MOVIE] });
+    const url = await mock.start();
+    const lib = createArrLibrary({ db: t.db });
+    await lib.syncInstance(instance(url));
+    await mock.stop();
+
+    assert.equal(lib.linkToPlex("radarr", "radarr"), 1);
+    assert.equal(lib.linkToPlex("sonarr", "sonarr"), 0);
+  });
+
+  /**
+   * The bug that made this worth re-running: `media_items` gained its
+   * provider-id columns in a migration, which backfills nothing, so every
+   * mirror row read "Not in Plex" until the Plex sync had walked the library
+   * *and* something re-ran the join. Re-linking is what `sync-media` now does
+   * on the way out, and this is the sequence it has to survive.
+   */
+  it("links rows that were unmatched when the Plex ids were still missing", async () => {
+    // The pre-migration state: a Plex row with no provider ids at all.
+    const plexRow = {
+      ratingKey: "1234",
+      sectionId: "1",
+      sectionTitle: "Movies",
+      title: "The Matrix",
+      type: "movie",
+      versionCount: 1,
+      syncedAt: Date.now(),
+    };
+    t.db.insert(mediaItems).values(plexRow).run();
+
+    const mock = mockArr({ ...BASE_PAYLOADS, "/api/v3/movie": [MOVIE] });
+    const url = await mock.start();
+    const lib = createArrLibrary({ db: t.db });
+    await lib.syncInstance(instance(url));
+    await mock.stop();
+
+    assert.equal(t.db.select().from(arrMovies).get()?.plexRatingKey, null, "nothing to join on yet");
+
+    // What a Plex sync does once it is parsing `Guid`.
+    t.db.update(mediaItems).set({ tmdbId: 603 }).where(eq(mediaItems.ratingKey, "1234")).run();
+
+    assert.equal(lib.linkToPlex("radarr", "radarr"), 1);
+    assert.equal(t.db.select().from(arrMovies).get()?.plexRatingKey, "1234");
+  });
+
   describe("tombstoning", () => {
     it("marks a vanished record deleted rather than removing the row", async () => {
       const first = mockArr({ ...BASE_PAYLOADS, "/api/v3/movie": [MOVIE] });

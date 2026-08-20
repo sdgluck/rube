@@ -19,11 +19,40 @@ function sameSections(saved: string[], current: { key: string }[]): boolean {
 }
 
 export function createSyncMediaCommand(deps: Services) {
-  const { clients, config, media } = deps;
+  const { arr, arrLibrary, clients, config, media } = deps;
   const { plexHealthCallback } = clients;
   const { getConfig } = config;
   const { syncMedia } = media;
   const { runTriggeredRules } = createRuleTriggers(deps);
+
+  /**
+   * Re-join the *Arr mirror to Plex, now that the Plex rows have moved.
+   *
+   * `linkToPlex` matches on `media_items.tmdb_id`/`tvdb_id`/`imdb_id`, and this
+   * job is the only thing that writes those columns — so a link computed before
+   * this run was computed against the previous library. It only ran from the
+   * *Arr sync, which meant the two jobs had to be run in the right order for
+   * the library to be right: on the install that added the provider-id columns,
+   * every mirror row read "Not in Plex" until someone happened to sync an *Arr
+   * next. It is two indexed statements per instance over local tables, so
+   * running it unconditionally costs less than explaining the ordering.
+   *
+   * Scoped-to-one-section runs relink too: the join is over the whole mirror
+   * either way, and a section holding no *Arr-managed titles just matches
+   * nothing.
+   */
+  function relinkArr(ctx: JobContext): void {
+    const instances = arr.arrInstances();
+    if (instances.length === 0) return;
+
+    let linked = 0;
+    let total = 0;
+    for (const instance of instances) {
+      linked += arrLibrary.linkToPlex(instance.id, instance.service);
+      total += arrLibrary.library({ service: instance.service, instanceId: instance.id, pageSize: 1 }).total;
+    }
+    ctx.log(`Relinked ${instances.length} *Arr instance(s) to Plex: ${linked} of ${total} record(s) matched.`);
+  }
 
   async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
@@ -110,6 +139,10 @@ export function createSyncMediaCommand(deps: Services) {
     // The stale sweep has run, so there is nothing left to resume.
     ctx.checkpoint.clear();
     ctx.log(`Done! Synced ${stats.synced} item(s), removed ${stats.removed} stale.`);
+
+    // Before the rule triggers below, so a rule that asks "is this in Plex?"
+    // sees the freshly-computed answer rather than the previous run's.
+    relinkArr(ctx);
 
     // The removed-item trigger rides on this job for the same reason the added
     // one rides on the recently-added sync: this is already the thing that knows
