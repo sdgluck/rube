@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-08-20
+
+### Added
+
+- Added a **/discover** page to search TMDb for films and shows in a single grid, showing which results your \*Arr instances and Plex already have, and send new picks to the instance, quality profile and root folder you choose.
+- Added a record detail page for movies and series in the unified \*Arr library (`/arrs/:instanceId/movies/:arrId` and `/arrs/:instanceId/series/:arrId`), showing seasons and episodes with an interactive release picker for series — previously these links redirected to the stats page instead.
+
+### Fixed
+
+- **Existing installs may have \*Arr library entries incorrectly showing "Not in Plex."** The \*Arr media sync now relinks its library mirror to Plex on every run, instead of only when a Plex library sync happened to run afterward — on some installs this mismatch could persist indefinitely until an unrelated sync corrected it.
+- Fixed a bug where a missing setup step (such as an unconfigured connection) reported by the \*Arr search/add feature could appear as a broken upstream service error rather than a configuration prompt.
+
 ## [0.23.1] - 2026-08-20
 
 ### Security
