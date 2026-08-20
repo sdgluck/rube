@@ -1,0 +1,116 @@
+.filters {
+  composes: filters from "../../styles/shared.module.css";
+  /* Tighter than the shared default: these are one row of pills inside a card,
+     not a page toolbar with a search box in it. */
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.filter {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: var(--t-meta);
+  cursor: pointer;
+}
+
+.filter:hover {
+  border-color: var(--line-hover);
+  color: var(--ink);
+}
+
+.filterActive {
+  composes: filter;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.entry {
+  padding: 9px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  font: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.action {
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.action[data-action="create"] {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.action[data-action="delete"] {
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+}
+
+.action[data-action="restore"],
+.action[data-action="import"] {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.entity {
+  color: var(--ink-faint);
+}
+
+.subject {
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+.actor {
+  color: var(--ink-faint);
+}
+
+.fields {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+
+.fields li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font: var(--t-data);
+  color: var(--ink-2);
+}
+
+.fieldName {
+  color: var(--ink-faint);
+  min-width: 180px;
+}
+
+.fields del {
+  color: var(--status-error-fg);
+}
+
+.fields ins {
+  color: var(--status-ok-fg);
+  text-decoration: none;
+}
+
+.more {
+  color: var(--ink-faint);
+}

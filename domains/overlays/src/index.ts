@@ -1,6 +1,7 @@
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { overlayConfigs, overlayOriginals, overlayPresets, type Db } from "@tinkerbell/db";
+import type { ChangeRecorder } from "@tinkerbell/ports";
 import {
   badgeStyleSchema,
   conditionalRuleSchema,
@@ -224,9 +225,10 @@ const BUILT_IN_PRESETS: Array<{ id: string; name: string; description: string; d
 
 export interface OverlaysDeps {
   db: Db;
+  recordChange: ChangeRecorder;
 }
 export function createOverlays(deps: OverlaysDeps) {
-  const { db } = deps;
+  const { db, recordChange } = deps;
 
   function getOverlayConfigs(sectionId: string): OverlayConfigRow[] {
     const rows = db.select().from(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).all();
@@ -445,6 +447,20 @@ export function createOverlays(deps: OverlaysDeps) {
     return rows.length;
   }
 
+  /**
+   * A preset as the history should show it.
+   *
+   * `data` is stored as a JSON string, so a raw row would diff as one enormous
+   * changed value every time somebody nudged a font size. Parsed here so the
+   * diff lands on the field that moved. An unparseable row falls back to the
+   * raw text rather than being dropped — a preset corrupt enough to fail the
+   * schema is precisely one whose history is worth having.
+   */
+  function presetSnapshot(row: { name: string; description: string; data: string }): unknown {
+    const parsed = presetDataSchema.safeParse(JSON.parse(row.data));
+    return { name: row.name, description: row.description, data: parsed.success ? parsed.data : row.data };
+  }
+
   function listPresets(): OverlayPresetRow[] {
     const rows = db.select().from(overlayPresets).all();
     return rows
@@ -466,6 +482,10 @@ export function createOverlays(deps: OverlaysDeps) {
 
   function savePreset(input: { id?: string; name: string; description?: string; data: PresetData }): string {
     const id = input.id || `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Read first: this is an upsert, so "did it exist" is the only thing that
+    // distinguishes a create from an edit, and after the write it is too late
+    // to ask.
+    const before = db.select().from(overlayPresets).where(eq(overlayPresets.id, id)).get();
     db.insert(overlayPresets)
       .values({
         id,
@@ -480,6 +500,13 @@ export function createOverlays(deps: OverlaysDeps) {
         set: { name: input.name, description: input.description || "", data: JSON.stringify(input.data) },
       })
       .run();
+    recordChange({
+      entity: "overlay_preset",
+      entityId: id,
+      action: before ? "update" : "create",
+      before: before ? presetSnapshot(before) : undefined,
+      after: { name: input.name, description: input.description || "", data: input.data },
+    });
     return id;
   }
 
@@ -488,6 +515,7 @@ export function createOverlays(deps: OverlaysDeps) {
     const row = db.select().from(overlayPresets).where(eq(overlayPresets.id, id)).get();
     if (!row || row.builtIn === 1) return;
     db.delete(overlayPresets).where(eq(overlayPresets.id, id)).run();
+    recordChange({ entity: "overlay_preset", entityId: id, action: "delete", before: presetSnapshot(row) });
   }
 
   function ensureBuiltInPresets(): void {

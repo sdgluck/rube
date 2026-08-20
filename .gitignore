@@ -1,5 +1,11 @@
 node_modules/
 *.db
+# Local database backups. `*.db` above doesn't cover the gzipped ones, and a
+# dev run writes here because DATA_DIR defaults to the repo root.
+#
+# Leading slash, or it matches at any depth — a bare `backups/` also swallows
+# `domains/backups`, which is source.
+/backups/
 *.db-shm
 *.db-wal
 *.db-journal

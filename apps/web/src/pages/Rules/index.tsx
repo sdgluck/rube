@@ -158,6 +158,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
 
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const togglePreviewExpand = (id: string) => {
     setExpandedPreview((prev) => {
       const next = prev === id ? null : id;
@@ -1038,6 +1039,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
                     isExpanded={expandedRow === rule.id}
                     previewExpanded={expandedPreview === rule.id}
                     onTogglePreview={() => togglePreviewExpand(rule.id)}
+                    historyExpanded={expandedHistory === rule.id}
+                    onToggleHistory={() => setExpandedHistory((id) => (id === rule.id ? null : rule.id))}
                     formActive={!!form}
                     activeRunId={active?.id ?? null}
                     runProgress={active?.progress ?? 0}

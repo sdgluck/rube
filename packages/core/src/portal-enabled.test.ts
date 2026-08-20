@@ -16,7 +16,10 @@ import { createConfigStore } from "./config.ts";
 const testDb = createTestDb("tinkerbell-portal-enabled-test-");
 after(testDb.dispose);
 
-const { getConfig, setConfig, deleteConfig, portalShouldRun } = createConfigStore({ db: testDb.db });
+const { getConfig, setConfig, deleteConfig, portalShouldRun } = createConfigStore({
+  db: testDb.db,
+  recordChange: () => {},
+});
 
 beforeEach(() => {
   deleteConfig("global_personalized_sharing");

@@ -24,6 +24,8 @@ import { createPreviewRouter } from "./preview.router.ts";
 import { createSearchRouter } from "./search.router.ts";
 import { createNotificationsRouter } from "./notifications.router.ts";
 import { createChangesRouter } from "./changes.router.ts";
+import { createHistoryRouter } from "./history.router.ts";
+import { createBackupsRouter } from "./backups.router.ts";
 import { createArrRouter } from "./arr.router.ts";
 import { createPostersRouter } from "./posters.router.ts";
 import { createPrerollsRouter } from "./prerolls.router.ts";
@@ -83,6 +85,8 @@ const appRouterFor = (deps: TrpcDeps) => {
     personalization: createPersonalizationRouter(deps),
     notifications: createNotificationsRouter(deps),
     changes: createChangesRouter(deps),
+    history: createHistoryRouter(deps),
+    backups: createBackupsRouter(deps),
 
     /**
      * The server's machine identifier, which is what an `app.plex.tv` deep link

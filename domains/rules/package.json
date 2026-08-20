@@ -18,6 +18,7 @@
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/domain.playback": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/plex-smart-filter": "workspace:*",

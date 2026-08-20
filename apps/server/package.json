@@ -8,6 +8,7 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@tinkerbell/domain.backups": "workspace:*",
     "@tinkerbell/composition": "workspace:*",
     "@tinkerbell/container": "workspace:*",
     "@tinkerbell/contracts": "workspace:*",

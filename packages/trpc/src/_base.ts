@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { Scope } from "@tinkerbell/container";
-import { NotConfiguredError, type Clients } from "@tinkerbell/core";
+import { NotConfiguredError, runAsActor, type Clients } from "@tinkerbell/core";
 
 /**
  * What every admin procedure can see about its caller. Populated by
@@ -104,8 +104,26 @@ const requireAdmin = t.middleware(({ ctx, next }) => {
   return next({ ctx: { ...ctx, session: ctx.session } });
 });
 
+/**
+ * Attribute everything this procedure does to the admin who called it.
+ *
+ * The change log wants a source and a username, and the chokepoints that
+ * record — `setConfig`, `updateRule`, `updateJob` — are three layers below
+ * here with no idea a request exists. Rather than thread an actor argument
+ * through every one of them (and get it wrong at the call sites nobody
+ * remembered), the actor is ambient for the duration of the call. See
+ * `packages/core/src/actor.ts`.
+ *
+ * Applied to both procedure chains, not just the authenticated one: the
+ * handshake mutations that switch admin auth on are exactly the writes whose
+ * history matters most, and they necessarily run before there is a session.
+ */
+const attributeToCaller = t.middleware(({ ctx, next }) =>
+  runAsActor({ source: "ui", username: ctx.session?.username ?? "" }, () => next()),
+);
+
 /** Authenticated. The default for every router. */
-export const procedure = t.procedure.use(logDuration).use(mapNotConfigured).use(requireAdmin);
+export const procedure = t.procedure.use(logDuration).use(mapNotConfigured).use(attributeToCaller).use(requireAdmin);
 
 /**
  * Explicitly unauthenticated. Only the auth handshake and the status query
@@ -113,4 +131,4 @@ export const procedure = t.procedure.use(logDuration).use(mapNotConfigured).use(
  * enumeration test in `router-surface.test.ts`, which fails if the list of
  * public paths grows without someone saying so out loud.
  */
-export const publicProcedure = t.procedure.use(logDuration).use(mapNotConfigured);
+export const publicProcedure = t.procedure.use(logDuration).use(mapNotConfigured).use(attributeToCaller);

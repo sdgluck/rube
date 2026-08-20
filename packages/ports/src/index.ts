@@ -95,3 +95,80 @@ export const CollectionsReaderToken = token<CollectionsReader>("collections.read
 export type PostCollectionSync = () => Promise<void> | void;
 
 export const PostCollectionSyncToken = token<PostCollectionSync>("collections.postSync");
+
+// ─── Change history ───────────────────────────────────────────────────────────
+
+/**
+ * The kinds of thing whose edits are worth keeping.
+ *
+ * Deliberately not "every table". These are the five that a person configures
+ * and can therefore misconfigure; the rest are either derived (`media_items`,
+ * `collections`) or already have a ledger of their own.
+ */
+export type ChangeEntity = "rule" | "config" | "job" | "overlay_preset" | "preroll";
+
+/**
+ * `import` and `restore` are separate from `update` because they answer a
+ * different question. "Who changed this?" is usually answered by the source,
+ * but "was this whole state pulled in from somewhere else?" is the one asked
+ * after a bundle import goes wrong, and it needs to be visible on the row.
+ */
+export type ChangeAction = "create" | "update" | "delete" | "import" | "restore";
+
+export interface ChangeRecord {
+  entity: ChangeEntity;
+  /** The rule id, the config key, the job id. */
+  entityId: string;
+  action: ChangeAction;
+  /** The whole prior state. Omitted for a create. */
+  before?: unknown;
+  /** The whole resulting state. Omitted for a delete. */
+  after?: unknown;
+  /**
+   * Overrides the ambient actor. Set it only where the ambient answer would be
+   * wrong — an import attributing every rule it writes to the request that
+   * uploaded the bundle, say.
+   */
+  source?: string;
+  username?: string;
+}
+
+/**
+ * Where an edit to Tinkerbell's own configuration is recorded.
+ *
+ * Provided by `domains/config-history`, consumed by `@tinkerbell/core`'s config
+ * store and by four domains that sit below it. The direction is the same one
+ * that made `HealthReporter` a port: the recorder needs the database and a
+ * redaction pass, and the things being recorded sit underneath it.
+ *
+ * There is deliberately no no-op default. A container assembled without a
+ * recorder fails to resolve, rather than quietly keeping no history — which is
+ * indistinguishable from having no bug for exactly as long as it takes someone
+ * to need the history.
+ */
+export type ChangeRecorder = (change: ChangeRecord) => void;
+
+export const ChangeRecorderToken = token<ChangeRecorder>("history.recorder");
+
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Change a job's schedule, its enabled flag, or its config.
+ *
+ * Provided by `packages/jobs`, consumed by `domains/portability` when a bundle
+ * carries job schedules. The direction is the familiar one: the job runner sits
+ * above every domain (its commands resolve `ServicesToken`), so a domain
+ * importing it would be a genuine cycle.
+ *
+ * A port rather than a direct table write because `updateJob` does two things
+ * beyond the row — it validates the cron expression, and it rebuilds the live
+ * `Cron` object. An import that wrote the column directly would leave the
+ * running scheduler on the old schedule until the next restart, which is a bug
+ * that only shows up as "the imported schedule didn't take" hours later.
+ */
+export type JobConfigWriter = (
+  jobId: string,
+  updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
+) => void;
+
+export const JobConfigWriterToken = token<JobConfigWriter>("jobs.configWriter");

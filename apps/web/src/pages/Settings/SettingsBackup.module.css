@@ -1,0 +1,167 @@
+.fileList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.fileList li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.fileList li:first-child {
+  border-top: none;
+}
+
+.fileName {
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+.fileMeta {
+  font: var(--t-meta);
+  color: var(--ink-faint);
+}
+
+.downloadLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font: var(--t-meta);
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.downloadLink:hover {
+  text-decoration: underline;
+}
+
+/* The restore instructions live on the page rather than behind a link: the
+   moment somebody needs them is the moment they least want to go looking. */
+.restoreNote {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.restoreNote ol {
+  margin: 8px 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+
+.restoreNote code {
+  font: var(--t-data);
+}
+
+.partGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px 16px;
+}
+
+/* Driven by the button beside it — a native file input can't be styled to
+   match, and hiding it with `display: none` would take it out of the tab
+   order for keyboard users who reach the button. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.preview {
+  display: grid;
+  gap: 10px;
+}
+
+.counts {
+  font: var(--t-meta);
+  color: var(--ink-2);
+  margin: 0;
+}
+
+/* The shared table, sitting inside a settings card rather than in its own
+   panel: no surface of its own, and tighter padding, because the card already
+   provides both. */
+.table {
+  composes: table from "../../styles/shared.module.css";
+  background: none;
+  font: var(--t-body-sm);
+}
+
+.table th {
+  height: auto;
+  padding: 6px 8px 6px 0;
+  background: none;
+  color: var(--ink-faint);
+}
+
+.table td {
+  padding: 7px 8px 7px 0;
+  vertical-align: middle;
+}
+
+.kind {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 6px;
+  border-radius: var(--r-pill);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.changed {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.blocked {
+  margin: 0;
+  padding-left: 18px;
+  font: var(--t-body-sm);
+  color: var(--ink-3);
+}
+
+.warn {
+  padding: 9px 12px;
+  border-radius: var(--r-sunken);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+  font: var(--t-body-sm);
+}
+
+.error {
+  padding: 9px 12px;
+  border-radius: var(--r-sunken);
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+  font: var(--t-body-sm);
+}
+
+.summary {
+  padding: 9px 12px;
+  border-radius: var(--r-sunken);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+  font: var(--t-body-sm);
+}
+
+.summary ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

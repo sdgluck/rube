@@ -12,9 +12,20 @@ import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.t
 import { clientIp, createAuth } from "./auth.ts";
 import { createCollectionRoutes } from "./collections.ts";
 import { createPrerollRoutes } from "./prerolls.ts";
+import { createPortabilityRoutes } from "./portability.ts";
 import { guarded, sendFetchResponse, toFetchRequest } from "./http.ts";
 
 const log = createLogger("server");
+
+/**
+ * This build's version, read from the package the server ships as.
+ *
+ * Stamped into an export so a bundle says which Tinkerbell wrote it — the
+ * first question anybody asks about a file that won't import. The release
+ * script keeps every workspace package's version in step, so this is the
+ * app version rather than one package's.
+ */
+const APP_VERSION: string = JSON.parse(await readFile(join(import.meta.dirname, "..", "package.json"), "utf8")).version;
 const portalLog = createLogger("portal");
 
 // The application graph. One call, and the same call the Sidequest worker
@@ -32,6 +43,7 @@ const { appRouter, portalRouter, createAdminContext, createPortalContext } = cre
 const { rejectIfNotAdmin } = createAuth(services);
 const { handleCollectionRoute } = createCollectionRoutes(services);
 const { handlePrerollRoute } = createPrerollRoutes({ ...services, jobs });
+const { handlePortabilityRoute } = createPortabilityRoutes({ ...services, version: APP_VERSION });
 const { getConfig, portalShouldRun } = services.config;
 const { adminAuthRequired } = services.adminAuth;
 
@@ -174,6 +186,20 @@ const server = createServer(
       } catch (err) {
         if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
+        return;
+      }
+    }
+
+    // Export, import and backup downloads. Gated in full: export hands over
+    // every setting in the app and import replaces them, so these are strictly
+    // more sensitive than the tRPC surface beside them, not less.
+    if (path.startsWith("/api/portability/") || path.startsWith("/api/backups/")) {
+      if (rejectIfNotAdmin(req, res)) return;
+      try {
+        if (await handlePortabilityRoute(req, res, url)) return;
+      } catch (err) {
+        if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: errorMessage(err) }));
         return;
       }
     }

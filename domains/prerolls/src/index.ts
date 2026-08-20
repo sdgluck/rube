@@ -11,6 +11,7 @@ import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { prerolls, type Db } from "@tinkerbell/db";
+import type { ChangeRecorder } from "@tinkerbell/ports";
 import { prerollsDir, prerollsIncomingDir, prerollsThumbsDir, type ConfigStore, type Clients } from "@tinkerbell/core";
 import { ffmpegVersion } from "@tinkerbell/video";
 import { buildPrefValue, prefsMatch, type PrerollMode } from "./pref.ts";
@@ -106,9 +107,10 @@ export interface PrerollsDeps {
   db: Db;
   config: ConfigStore;
   clients: Clients;
+  recordChange: ChangeRecorder;
 }
 export function createPrerolls(deps: PrerollsDeps) {
-  const { db } = deps;
+  const { db, recordChange } = deps;
   const { getConfig } = deps.config;
   const { getPlexClient } = deps.clients;
 
@@ -167,7 +169,20 @@ export function createPrerolls(deps: PrerollsDeps) {
       updatedAt: now,
     };
     db.insert(prerolls).values(row).run();
-    return getPreroll(row.id)!;
+    const created = getPreroll(row.id)!;
+    recordChange({ entity: "preroll", entityId: row.id, action: "create", after: prerollSnapshot(created) });
+    return created;
+  }
+
+  /**
+   * The half of a preroll row a person chose.
+   *
+   * `status`, `error` and the probed metadata are the processing job's, and it
+   * rewrites them several times per upload — a history built from whole rows
+   * would be mostly the encoder talking to itself.
+   */
+  function prerollSnapshot(row: Preroll): unknown {
+    return { name: row.name, enabled: row.enabled, position: row.position, originalFilename: row.originalFilename };
   }
 
   function nextPosition(): number {
@@ -176,10 +191,20 @@ export function createPrerolls(deps: PrerollsDeps) {
   }
 
   function updatePreroll(id: string, patch: { name?: string; enabled?: boolean }): void {
+    const before = getPreroll(id);
     const set: Record<string, unknown> = { updatedAt: Date.now() };
     if (patch.name !== undefined) set.name = patch.name.trim();
     if (patch.enabled !== undefined) set.enabled = patch.enabled ? 1 : 0;
     db.update(prerolls).set(set).where(eq(prerolls.id, id)).run();
+    const after = getPreroll(id);
+    if (!before || !after) return;
+    recordChange({
+      entity: "preroll",
+      entityId: id,
+      action: "update",
+      before: prerollSnapshot(before),
+      after: prerollSnapshot(after),
+    });
   }
 
   function setStatus(id: string, status: PrerollStatus, error = ""): void {
@@ -221,6 +246,7 @@ export function createPrerolls(deps: PrerollsDeps) {
     const row = getPreroll(id);
     if (!row) return false;
     db.delete(prerolls).where(eq(prerolls.id, id)).run();
+    recordChange({ entity: "preroll", entityId: id, action: "delete", before: prerollSnapshot(row) });
     await Promise.all([
       rm(processedPath(id), { force: true }),
       rm(thumbPath(id), { force: true }),

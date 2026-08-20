@@ -12,7 +12,7 @@
  */
 import type { Registry } from "@tinkerbell/container";
 import { closeDb, createDb, defaultDataDir, DbToken } from "@tinkerbell/db";
-import { HealthReporterToken } from "@tinkerbell/ports";
+import { ChangeRecorderToken, HealthReporterToken } from "@tinkerbell/ports";
 import {
   AdminAuthToken,
   ArrInstancesToken,
@@ -49,7 +49,13 @@ export function registerCore(r: Registry, env: CoreEnv = {}): void {
   // and the reason a test can now have two of these at once.
   r.register(DbToken, () => createDb({ dataDir }), { dispose: closeDb });
 
-  r.register(ConfigStoreToken, (c) => createConfigStore({ db: c.resolve(DbToken) }));
+  // `ChangeRecorderToken` is provided by `domains/config-history`, which sits
+  // above core — the same shape as `HealthReporterToken` below, and named here
+  // for the same reason: a container assembled without a recorder fails to
+  // resolve rather than quietly keeping no settings history.
+  r.register(ConfigStoreToken, (c) =>
+    createConfigStore({ db: c.resolve(DbToken), recordChange: c.resolve(ChangeRecorderToken) }),
+  );
   r.register(SharingToken, (c) => createSharing({ db: c.resolve(DbToken) }));
   r.register(PreferencesToken, (c) => createPreferences({ db: c.resolve(DbToken) }));
   r.register(ArrInstancesToken, (c) => createArrInstances({ config: c.resolve(ConfigStoreToken) }));

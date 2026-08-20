@@ -96,6 +96,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@tinkerbell/domain.backups':
+        specifier: workspace:*
+        version: link:../../domains/backups
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
@@ -358,6 +361,40 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/backups:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.10.0
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/bandwidth:
     dependencies:
       '@tinkerbell/container':
@@ -460,6 +497,43 @@ importers:
       '@tinkerbell/composition':
         specifier: workspace:*
         version: link:../../packages/composition
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  domains/config-history:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@tinkerbell/domain.overlays':
+        specifier: workspace:*
+        version: link:../overlays
+      '@tinkerbell/domain.rules':
+        specifier: workspace:*
+        version: link:../rules
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -760,6 +834,9 @@ importers:
       '@tinkerbell/overlays':
         specifier: workspace:*
         version: link:../../packages/overlays
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
@@ -830,6 +907,52 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/portability:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.overlays':
+        specifier: workspace:*
+        version: link:../overlays
+      '@tinkerbell/domain.rules':
+        specifier: workspace:*
+        version: link:../rules
+      '@tinkerbell/domain.sections':
+        specifier: workspace:*
+        version: link:../sections
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@tinkerbell/domain.config-history':
+        specifier: workspace:*
+        version: link:../config-history
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/prerolls:
     dependencies:
       '@tinkerbell/container':
@@ -844,6 +967,9 @@ importers:
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../../packages/http
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
       '@tinkerbell/video':
         specifier: workspace:*
         version: link:../../packages/video
@@ -972,6 +1098,9 @@ importers:
       '@tinkerbell/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
@@ -1113,6 +1242,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../db
+      '@tinkerbell/domain.backups':
+        specifier: workspace:*
+        version: link:../../domains/backups
       '@tinkerbell/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
@@ -1125,6 +1257,9 @@ importers:
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
+      '@tinkerbell/domain.config-history':
+        specifier: workspace:*
+        version: link:../../domains/config-history
       '@tinkerbell/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
@@ -1161,6 +1296,9 @@ importers:
       '@tinkerbell/domain.playlists':
         specifier: workspace:*
         version: link:../../domains/playlists
+      '@tinkerbell/domain.portability':
+        specifier: workspace:*
+        version: link:../../domains/portability
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
@@ -1336,6 +1474,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../db
+      '@tinkerbell/domain.backups':
+        specifier: workspace:*
+        version: link:../../domains/backups
       '@tinkerbell/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
@@ -1345,6 +1486,9 @@ importers:
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
+      '@tinkerbell/domain.config-history':
+        specifier: workspace:*
+        version: link:../../domains/config-history
       '@tinkerbell/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
@@ -1586,6 +1730,9 @@ importers:
       '@tinkerbell/db':
         specifier: workspace:*
         version: link:../db
+      '@tinkerbell/domain.backups':
+        specifier: workspace:*
+        version: link:../../domains/backups
       '@tinkerbell/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
@@ -1598,6 +1745,9 @@ importers:
       '@tinkerbell/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
+      '@tinkerbell/domain.config-history':
+        specifier: workspace:*
+        version: link:../../domains/config-history
       '@tinkerbell/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest

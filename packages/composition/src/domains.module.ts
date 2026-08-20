@@ -11,14 +11,18 @@ import type { Registry } from "@tinkerbell/container";
 import { DbToken } from "@tinkerbell/db";
 import { ArrInstancesToken, ClientsToken, ConfigStoreToken, SharingToken } from "@tinkerbell/core";
 import {
+  ChangeRecorderToken,
   CollectionsReaderToken,
+  JobConfigWriterToken,
   EventBusToken,
   HealthReporterToken,
   NotifierToken,
   PostCollectionSyncToken,
 } from "@tinkerbell/ports";
+import { BackupsToken, createBackups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, createBandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, createChanges } from "@tinkerbell/domain.changes";
+import { ConfigHistoryToken, createConfigHistory } from "@tinkerbell/domain.config-history";
 import { CleanupToken, createCleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, createCollections } from "@tinkerbell/domain.collections";
 import { createDigest, DigestToken } from "@tinkerbell/domain.digest";
@@ -28,6 +32,7 @@ import { createMedia, MediaToken } from "@tinkerbell/domain.media";
 import { createMetadata, MetadataToken } from "@tinkerbell/domain.metadata";
 import { createMetadataOverrides, MetadataOverridesToken } from "@tinkerbell/domain.metadata-overrides";
 import { createPlaylists, PlaylistsToken } from "@tinkerbell/domain.playlists";
+import { createPortability, PortabilityToken } from "@tinkerbell/domain.portability";
 import { createMigration, MigrationToken } from "@tinkerbell/domain.migration";
 import { createNotifications, NotificationsToken } from "@tinkerbell/domain.notifications";
 import { createOnboarding, OnboardingToken } from "@tinkerbell/domain.onboarding";
@@ -67,9 +72,21 @@ export function registerDomains(r: Registry): void {
     (c) => (service, status, message) => c.resolve(HealthToken).reportHealth(service, status, message),
   );
   r.register(CollectionsReaderToken, (c) => () => c.resolve(CollectionsToken).getLocalCollections());
+  // Late-bound like the rest: the config store is built long before the domain
+  // that records its changes, and the config store is itself a dependency of
+  // almost everything, so binding at call time is what keeps this an edge
+  // rather than a cycle.
+  r.register(ChangeRecorderToken, (c) => (change) => c.resolve(ConfigHistoryToken).record(change));
   r.register(PostCollectionSyncToken, (c) => () => c.resolve(MigrationToken).scanAllProviders());
 
   // ── Domains ───────────────────────────────────────────────────────────────
+  r.register(BackupsToken, (c) =>
+    createBackups({
+      db: c.resolve(DbToken),
+      config: c.resolve(ConfigStoreToken),
+      emitEvent: c.resolve(EventBusToken),
+    }),
+  );
   r.register(BandwidthToken, (c) =>
     createBandwidth({
       db: c.resolve(DbToken),
@@ -78,6 +95,7 @@ export function registerDomains(r: Registry): void {
     }),
   );
   r.register(ChangesToken, (c) => createChanges({ db: c.resolve(DbToken) }));
+  r.register(ConfigHistoryToken, (c) => createConfigHistory({ db: c.resolve(DbToken) }));
   r.register(CleanupToken, (c) => createCleanup({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }));
   r.register(CollectionsToken, (c) =>
     createCollections({
@@ -118,7 +136,9 @@ export function registerDomains(r: Registry): void {
       migration: c.resolve(MigrationToken),
     }),
   );
-  r.register(OverlaysToken, (c) => createOverlays({ db: c.resolve(DbToken) }));
+  r.register(OverlaysToken, (c) =>
+    createOverlays({ db: c.resolve(DbToken), recordChange: c.resolve(ChangeRecorderToken) }),
+  );
   r.register(PlaybackToken, (c) =>
     createPlayback({
       db: c.resolve(DbToken),
@@ -127,11 +147,33 @@ export function registerDomains(r: Registry): void {
       bandwidth: c.resolve(BandwidthToken),
     }),
   );
+  r.register(PortabilityToken, (c) =>
+    createPortability({
+      db: c.resolve(DbToken),
+      config: c.resolve(ConfigStoreToken),
+      // Plex is asked for tag names only when a rule actually has tag clauses,
+      // and a failure degrades to a warning rather than an aborted export —
+      // see `portableRuleConfig`. Resolving the client lazily here keeps an
+      // unconfigured Plex from breaking the whole domain's construction.
+      tagLookup: (sectionId, field) => c.resolve(ClientsToken).getPlexClient().getFilterFieldValues(sectionId, field),
+      sections: () => c.resolve(SectionsToken).getLocalSections(),
+      writers: {
+        createRule: (input, origin) => c.resolve(RulesToken).createRule(input, origin),
+        updateRule: (id, updates, origin) => c.resolve(RulesToken).updateRule(id, updates, origin),
+        updateJob: (id, updates) => c.resolve(JobConfigWriterToken)(id, updates),
+        savePreset: (input) => c.resolve(OverlaysToken).savePreset(input),
+        addOverlayConfig: (input) => c.resolve(OverlaysToken).addOverlayConfig(input),
+        updateOverlayConfig: (id, patch) => c.resolve(OverlaysToken).updateOverlayConfig(id, patch),
+        setConfig: (key, value) => c.resolve(ConfigStoreToken).setConfig(key, value),
+      },
+    }),
+  );
   r.register(PrerollsToken, (c) =>
     createPrerolls({
       db: c.resolve(DbToken),
       config: c.resolve(ConfigStoreToken),
       clients: c.resolve(ClientsToken),
+      recordChange: c.resolve(ChangeRecorderToken),
     }),
   );
   r.register(RegistryToken, (c) =>
@@ -139,7 +181,13 @@ export function registerDomains(r: Registry): void {
   );
   r.register(RuleHistoryToken, (c) => createRuleHistory({ db: c.resolve(DbToken) }));
   r.register(RuleRunsToken, (c) => createRuleRuns({ db: c.resolve(DbToken), scope: c.owner }));
-  r.register(RulesToken, (c) => createRules({ db: c.resolve(DbToken), playback: c.resolve(PlaybackToken) }));
+  r.register(RulesToken, (c) =>
+    createRules({
+      db: c.resolve(DbToken),
+      playback: c.resolve(PlaybackToken),
+      recordChange: c.resolve(ChangeRecorderToken),
+    }),
+  );
   r.register(SearchToken, (c) => createSearch({ db: c.resolve(DbToken) }));
   r.register(SectionsToken, (c) => createSections({ db: c.resolve(DbToken) }));
   r.register(StatsToken, (c) =>

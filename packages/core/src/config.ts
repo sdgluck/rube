@@ -22,6 +22,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { token } from "@tinkerbell/container";
 import { config, type Db } from "@tinkerbell/db";
+import type { ChangeRecorder } from "@tinkerbell/ports";
 import { createLogger } from "./logger.ts";
 import { errorMessage } from "./util.ts";
 
@@ -669,6 +670,29 @@ export const configSchema = z.object({
   }),
   migration_kometa_dismissed_at: z.number(),
   migration_kometa_completed_at: z.number(),
+
+  // ─── Backups ─────────────────────────────────────────────────────────────
+  /**
+   * Whether the nightly database backup runs.
+   *
+   * Defaults **on**, which is deliberate and the whole point: a backup nobody
+   * enabled is a backup nobody has. Every install that upgrades into this
+   * feature starts keeping copies without being asked, and the cost is a few
+   * megabytes of gzipped SQLite a night.
+   */
+  backup_enabled: z.boolean(),
+  /**
+   * Where backups are written. Defaults to `<DATA_DIR>/backups`.
+   *
+   * `DATA_DIR` is the volume people already mount for `tinkerbell.db`, so the
+   * default lands on durable storage. A path *outside* it inside a container
+   * is on the ephemeral layer and vanishes with the container — which is
+   * theatre, not a backup — so the Settings page says so next to this field.
+   */
+  backup_dir: z.string(),
+  backup_schedule: z.string(),
+  /** How many to keep. The oldest beyond this are deleted after a good run. */
+  backup_keep_count: z.number().int().min(1).max(365),
   migration_kometa_pending_plan: z.object({
     items: z.array(
       z.object({
@@ -745,6 +769,67 @@ export const NESTED_SECRETS: ReadonlyArray<{ key: ConfigKey; field: string; each
 /** Keys carrying a nested secret, for callers that only need the question answered. */
 export const NESTED_SECRET_KEYS = new Set<ConfigKey>(NESTED_SECRETS.map((n) => n.key));
 
+/**
+ * Config keys the change log ignores.
+ *
+ * `setConfig` is the chokepoint for two quite different things that share one
+ * signature: settings a person chose, and state the app parks in the config
+ * table because it needed somewhere to put it. Logging both would bury the
+ * first under the second — `registry_cache` alone rewrites daily, and
+ * `stats_panel_order` rewrites on every drag of a dashboard tile.
+ *
+ * Three groups, and the reason each is here matters more than the list:
+ *
+ *  - **Job state.** Written by a scheduled job, never by a person. Its history
+ *    is the job's run history, which already exists.
+ *  - **View state.** Column widths, panel order, theme. Real preferences, but
+ *    "restore the version of my dashboard layout from Tuesday" is not a
+ *    question anyone has, and the write rate is per-interaction.
+ *  - **Credential artefacts.** `global_plex_owner_token_hash` is a hash, not a
+ *    secret in `SECRET_KEYS`, so redaction would not catch it — and a history
+ *    of hashes is an offline-attack surface for no benefit. The auth *policy*
+ *    keys (`admin_auth_enabled`, `admin_allowed_user_ids`) are deliberately
+ *    NOT here: who may sign in is exactly the change worth being able to see.
+ *
+ * Typed as `ConfigKey` so a key renamed in `configSchema` fails the build here
+ * rather than silently starting to log, and adding a new transient key is a
+ * deliberate line in this list rather than an accident of where it is written.
+ */
+export const UNLOGGED_CONFIG_KEYS = new Set<ConfigKey>([
+  // Job state
+  "global_personalized_sharing",
+  "metadata_undo_pending_batch",
+  "migration_state",
+  "migration_last_result",
+  "migration_pending_plan",
+  "migration_dismissed_at",
+  "migration_completed_at",
+  "migration_kometa_state",
+  "migration_kometa_pending_plan",
+  "migration_kometa_dismissed_at",
+  "migration_kometa_completed_at",
+  "registry_cache",
+  "registry_announced_updates",
+  "seerr_seen_available",
+  "seerr_polled",
+  "onboarding_state",
+  // View state
+  "media_columns",
+  "collections_columns",
+  "stats_summary_tiles",
+  "stats_panel_order",
+  "stats_panels_hidden",
+  "stats_panels_collapsed",
+  "stats_streams_columns",
+  "jobs_summary_tiles",
+  "jobs_panel_order",
+  "ui_theme",
+  // Credential artefacts
+  "global_plex_owner_token_hash",
+  "global_plex_client_id",
+  "admin_plex_client_id",
+]);
+
 type Unknowns = Record<string, unknown>;
 
 function redactField(entry: unknown, field: string): unknown {
@@ -785,12 +870,46 @@ export function redactSecrets(input: Partial<z.infer<ConfigSchema>>): Partial<z.
   return all as Partial<z.infer<ConfigSchema>>;
 }
 
+/**
+ * Redact one key's value, rather than a whole blob.
+ *
+ * `redactSecrets` above takes the config as a map because that is the shape
+ * `getAllConfigForClient` has. The change log records one key at a time and
+ * would otherwise have to synthesise a one-entry map and unpack the result,
+ * which reads as a trick rather than as "this value is a secret".
+ *
+ * Both routes are covered here — a top-level secret and a secret nested inside
+ * a structured value — because the second is where this has gone wrong before:
+ * `global_arr_instances[].apiKey` matched neither hand-written case and every
+ * extra \*Arr key went to the browser in full.
+ */
+export function redactConfigValue(key: ConfigKey, value: unknown): unknown {
+  if (SECRET_KEYS.has(key)) {
+    return typeof value === "string" && value !== "" ? REDACTED_SECRET : value;
+  }
+  const nested = NESTED_SECRETS.filter((n) => n.key === key);
+  if (nested.length === 0) return value;
+  let out = value;
+  for (const { field, each } of nested) {
+    if (out === undefined || out === null) continue;
+    out = each ? (Array.isArray(out) ? out.map((entry) => redactField(entry, field)) : out) : redactField(out, field);
+  }
+  return out;
+}
+
 export interface ConfigStoreDeps {
   db: Db;
+  /**
+   * Where a settings change is recorded. Required rather than optional: an
+   * omitted recorder means a config store that silently keeps no history, and
+   * this whole package exists downstream of the lesson that a no-op default is
+   * indistinguishable from working wiring.
+   */
+  recordChange: ChangeRecorder;
 }
 
 export function createConfigStore(deps: ConfigStoreDeps) {
-  const { db } = deps;
+  const { db, recordChange } = deps;
 
   /**
    * The timezone this install lives in: `global_timezone`, else `TZ`, else the
@@ -844,11 +963,35 @@ export function createConfigStore(deps: ConfigStoreDeps) {
   }
 
   function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
+    // Read before write, and only when the key is actually logged — an
+    // unconditional read would double every settings write's query count to
+    // populate a column that `UNLOGGED_CONFIG_KEYS` then throws away.
+    const logged = !UNLOGGED_CONFIG_KEYS.has(key);
+    const before = logged ? getConfig(key) : undefined;
+
     db.insert(config).values({ key, value }).onConflictDoUpdate({ target: config.key, set: { value } }).run();
+
+    if (!logged) return;
+    recordChange({
+      entity: "config",
+      entityId: key,
+      action: before === undefined ? "create" : "update",
+      before: before === undefined ? undefined : redactConfigValue(key, before),
+      after: redactConfigValue(key, value),
+    });
   }
 
   function deleteConfig(key: ConfigKey): void {
+    const logged = !UNLOGGED_CONFIG_KEYS.has(key);
+    const before = logged ? getConfig(key) : undefined;
     db.delete(config).where(eq(config.key, key)).run();
+    if (!logged || before === undefined) return;
+    recordChange({
+      entity: "config",
+      entityId: key,
+      action: "delete",
+      before: redactConfigValue(key, before),
+    });
   }
 
   /**

@@ -18,7 +18,7 @@
  * and the server can't import from here. Re-exported so every page keeps
  * importing them from the one module it always has.
  */
-export { EMPTY, formatResolution, formatRuntime } from "@tinkerbell/contracts";
+export { EMPTY, formatFileSize, formatResolution, formatRuntime } from "@tinkerbell/contracts";
 import { EMPTY } from "@tinkerbell/contracts";
 
 // ─── Durations ──────────────────────────────────────────────────────────────
@@ -97,15 +97,6 @@ export function formatNumber(n: number): string {
 }
 
 /** Byte count: `840 KB`, `12.4 MB`, `3.21 GB`, `48.9 TB`. */
-export function formatFileSize(bytes: number | null | undefined): string {
-  if (!bytes) return EMPTY;
-  if (bytes >= 1e15) return `${(bytes / 1e15).toFixed(2)} PB`;
-  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(2)} TB`;
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
-  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
-  return `${(bytes / 1e3).toFixed(0)} KB`;
-}
-
 /** Stream bandwidth, given kbps: `680 kbps`, `24.5 Mbps`. */
 export function formatBandwidth(kbps: number): string {
   if (kbps >= 1000) return `${(kbps / 1000).toFixed(1)} Mbps`;

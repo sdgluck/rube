@@ -1526,3 +1526,61 @@ export const managedPlaylists = sqliteTable(
   },
   (table) => [index("idx_managed_playlists_rule").on(table.ruleId)],
 );
+
+/**
+ * How the things you configured came to be the way they are.
+ *
+ * Every other ledger in this schema records what Tinkerbell did to *Plex* —
+ * collection membership in `rule_run_changes`, metadata writes in
+ * `metadata_originals`, deletions in `cleanup_candidates`, overlay burn-ins in
+ * `overlay_originals`. None of them records what *you* did to Tinkerbell. A
+ * rule edited at 2am that starts producing nonsense had no diff and no previous
+ * version, and a config value nobody remembers changing had no history at all.
+ *
+ * Whole snapshots rather than field-level diffs. Rules are a few kilobytes,
+ * storage is free, and reconstructing a version from a chain of diffs is
+ * exactly the code nobody wants to be debugging when they are already having a
+ * bad night. The diff is computed for display, at read time.
+ *
+ * Nothing here is written directly: `domains/config-history` owns the writes and
+ * is reached through `ChangeRecorderToken`, so a config value that skipped
+ * redaction cannot be introduced by a new call site.
+ */
+export const changeLog = sqliteTable(
+  "change_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** One of `CHANGE_LOG_ENTITIES` — "rule", "config", "job", … */
+    entity: text("entity").notNull(),
+    /** The rule id, the config key, the job id. Free text; entities disagree. */
+    entityId: text("entity_id").notNull(),
+    /** One of `CHANGE_LOG_ACTIONS` — "create", "update", "delete", … */
+    action: text("action").notNull(),
+    /**
+     * The whole row as it stood *before*. Null for a create.
+     *
+     * Secrets are redacted on the way in for both this and `after` — without
+     * that, this table would be a plaintext history of every API key ever
+     * entered, which is strictly worse than the single plaintext copy in
+     * `config` that it would be describing.
+     */
+    before: text("before", { mode: "json" }).$type<unknown>(),
+    /** The whole row as it stands after. Null for a delete. */
+    after: text("after", { mode: "json" }).$type<unknown>(),
+    /** Who or what did it: "ui", "job:<name>", "import", "registry", "restore". */
+    source: text("source").notNull().default("ui"),
+    /**
+     * The admin who did it, when admin auth is on and the change came from a
+     * request. Empty for jobs, for imports, and for every install that has not
+     * enabled auth — which is why it is a defaulted column and not nullable.
+     */
+    username: text("username").notNull().default(""),
+    timestamp: integer("timestamp").notNull(),
+  },
+  (table) => [
+    // The per-entity history view: "this rule, newest first".
+    index("idx_change_log_entity").on(table.entity, table.entityId, table.timestamp),
+    // The global feed, and the retention sweep.
+    index("idx_change_log_timestamp").on(table.timestamp),
+  ],
+);

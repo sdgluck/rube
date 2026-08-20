@@ -17,6 +17,7 @@ import {
   errorMessage,
   formatDuration,
   logLevel,
+  runAsActor,
   type JobContext,
 } from "@tinkerbell/core";
 
@@ -58,6 +59,11 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // collections sort on. Clear of purge-runs (3am) and cleanup (4am).
   { id: "metadata", name: "Apply Metadata", command: "metadata", schedule: "0 2 * * *", enabled: 1 },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
+  // 3:30am: after purge-runs has trimmed the tables it trims, so the copy is
+  // of a database that has already shed a night's worth of expired rows, and
+  // before cleanup (4am) does anything destructive — a backup taken *before*
+  // the job that deletes files is the one you want afterwards.
+  { id: "backup", name: "Back Up Database", command: "backup", schedule: "30 3 * * *", enabled: 1 },
   {
     id: "sync-recently-added",
     name: "Sync Recently Added",
@@ -297,7 +303,8 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
    */
   const cancelRequestedAt = new Map<string, number>();
 
-  const { config, db, events, ruleRuns, rules } = deps;
+  const { config, configHistory, db, events, ruleRuns, rules } = deps;
+  const { record: recordChange } = configHistory;
   const { seedDefaultRules } = rules;
   const { markStaleRuleRunsAsFailed, sweepStuckRuleRuns } = ruleRuns;
   const { emitEvent } = events;
@@ -466,7 +473,10 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
 
     jobLog.debug("running internal job");
     try {
-      const output = await descriptor.run(ctx);
+      // Anything this job writes to config or to a rule is attributed to the
+      // job, not to whoever happened to press Run. `runAsActor` covers the
+      // awaits inside, which a plain assignment would not.
+      const output = await runAsActor({ source: `job:${job.command}`, username: "" }, () => descriptor.run(ctx));
       const text = buffer + output;
 
       // Re-read before the terminal write: `cancelRun` may have moved us to
@@ -703,6 +713,9 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
   ): void {
     const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
     if (!job) throw new Error(`Job "${jobId}" not found`);
+    // Snapshotted before any of the three writes below, because `job` is
+    // mutated in place as they go — `scheduleCron` needs the updated object.
+    const before = { schedule: job.schedule, enabled: job.enabled, config: job.config };
 
     if (updates.schedule !== undefined) {
       // Validate cron expression (throws if invalid)
@@ -722,6 +735,21 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     if (updates.config !== undefined) {
       db.update(jobs).set({ config: updates.config }).where(eq(jobs.id, jobId)).run();
     }
+
+    // One row for the whole call, not one per field: "moved Cleanup to 5am and
+    // turned it on" is a single thing somebody did, and splitting it into three
+    // log entries would make a two-field edit look like an incident.
+    recordChange({
+      entity: "job",
+      entityId: jobId,
+      action: "update",
+      before,
+      after: {
+        schedule: updates.schedule ?? before.schedule,
+        enabled: updates.enabled === undefined ? before.enabled : updates.enabled ? 1 : 0,
+        config: updates.config ?? before.config,
+      },
+    });
 
     // Reschedule cron
     scheduleCron(job);

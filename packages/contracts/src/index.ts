@@ -78,7 +78,7 @@ export type { VolumeEstimateInput, VolumeLevel } from "./collection-volume.ts";
 export { fieldDef, fieldKind, fieldLabel, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 export type { SmartFilterFieldDef, SmartFilterFieldKind } from "./smart-filter-fields.ts";
 
-export { EMPTY, formatResolution, formatRuntime } from "./value-format.ts";
+export { EMPTY, formatFileSize, formatResolution, formatRuntime } from "./value-format.ts";
 export { opLabel, opsFor, withFallbackOp } from "./smart-filter-ops.ts";
 export type { OpOption } from "./smart-filter-ops.ts";
 export {
@@ -95,6 +95,27 @@ export {
 } from "./smart-filter-format.ts";
 export type { RelativeDate, RelativeUnit } from "./smart-filter-format.ts";
 export { narrateSmartFilter, needsTagLookup } from "./smart-filter-narrate.ts";
+export { CHANGE_LOG_ACTIONS, CHANGE_LOG_ENTITIES } from "./change-log.ts";
+export type { ChangeLogAction, ChangeLogEntity } from "./change-log.ts";
+export { translateSmartFilterTags } from "./portable-rule.ts";
+export { BUNDLE_FORMAT_VERSION, BUNDLE_PARTS, bundleSchema, IMPORT_RESOLUTIONS, IMPORT_VERDICTS } from "./bundle.ts";
+export type {
+  Bundle,
+  BundlePart,
+  ExportedJob,
+  ExportedOverlayConfig,
+  ExportedPreset,
+  ExportedRule,
+  ImportResolution,
+  ImportVerdict,
+} from "./bundle.ts";
+export type {
+  TagDirection,
+  TagLookup,
+  TagTranslationTarget,
+  TagTranslationWarning,
+  TranslateResult,
+} from "./portable-rule.ts";
 export type { NarrateOptions, TagResolver } from "./smart-filter-narrate.ts";
 
 export {

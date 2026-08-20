@@ -16,7 +16,7 @@ const testDb = createTestDb("tinkerbell-arr-instances-test-");
 after(testDb.dispose);
 
 const db = testDb.db;
-const configStore = createConfigStore({ db });
+const configStore = createConfigStore({ db, recordChange: () => {} });
 const { setConfig } = configStore;
 const { arrInstances, resolveArrInstance } = createArrInstances({ config: configStore });
 

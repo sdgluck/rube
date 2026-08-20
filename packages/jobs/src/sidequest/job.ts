@@ -9,6 +9,7 @@ import {
   createLogger,
   errorMessage,
   formatDuration,
+  runAsActor,
   type JobContext,
   type CommonJobConfig,
 } from "@tinkerbell/core";
@@ -299,7 +300,11 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
         // inside a Sidequest worker thread, where the process-level handler in
         // `server.ts` doesn't apply. The race result is what we act on; this
         // catch exists only to keep the loser quiet.
-        const running = commandFn(ctx, jobConfig as never);
+        // Attributed to the command, so a rule the nightly generate edits reads
+        // as the job's doing rather than as somebody's 1am hand edit.
+        const running = runAsActor({ source: `job:${commandName}`, username: "" }, () =>
+          commandFn(ctx, jobConfig as never),
+        );
         running.catch(() => {});
         await Promise.race([running, graceDeadline]);
 

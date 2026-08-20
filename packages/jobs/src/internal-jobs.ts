@@ -15,8 +15,11 @@ import { createSeerrPoll } from "./seerr-poll.ts";
 import { and, lt, notInArray } from "drizzle-orm";
 import { DAY_MS, MINUTE_MS, type JobContext } from "@tinkerbell/core";
 import { jobRuns } from "@tinkerbell/db";
+import { formatFileSize } from "@tinkerbell/contracts";
 
 import { DEFAULT_RETENTION_DAYS as METADATA_DEFAULT_RETENTION_DAYS } from "@tinkerbell/domain.metadata";
+
+import { DEFAULT_HISTORY_RETENTION_DAYS } from "@tinkerbell/domain.config-history";
 
 import { RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
 
@@ -50,10 +53,12 @@ export type InternalJobs = ReturnType<typeof createInternalJobs>["internalJobs"]
 export type InternalJobName = keyof InternalJobs;
 
 export const createInternalJobs = perDeps(function createInternalJobs(deps: Services) {
-  const { bandwidth, config, db, health, metadata, playback, ruleRuns, rules, stats } = deps;
+  const { backups, bandwidth, config, configHistory, db, health, metadata, playback, ruleRuns, rules, stats } = deps;
   const { getConfig } = config;
   const { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } = bandwidth;
   const { pruneOlderThan } = metadata;
+  const { runBackup, backupsEnabled } = backups;
+  const { pruneChangeLog } = configHistory;
   const { pruneHealthChecks, checkAllConfiguredServices } = health;
   const { pruneRuleRuns, pruneRunChanges } = ruleRuns;
   const { pollPlaybackOnce } = playback;
@@ -94,14 +99,40 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
         // bad nightly run and somebody noticing a title looks wrong.
         const retentionDays = getConfig("metadata_undo_retention_days") ?? METADATA_DEFAULT_RETENTION_DAYS;
         const metadataPurged = pruneOlderThan(Date.now() - retentionDays * DAY_MS);
+        // The settings history keeps the longest window of anything here. It is
+        // small (a row per edit, not per item) and the question it answers —
+        // "when did this stop working?" — is usually asked months late.
+        const historyPurged = pruneChangeLog(Date.now() - DEFAULT_HISTORY_RETENTION_DAYS * DAY_MS);
         return (
           `Purged ${result.changes} job run(s) and ${ruleRunsPurged} rule run(s) older than 7 days` +
           `${changesPurged > 0 ? `, ${changesPurged} run change(s)` : ""}` +
           `${tombstones > 0 ? `, ${tombstones} deleted-rule record(s)` : ""}` +
-          `${metadataPurged > 0 ? `, ${metadataPurged} metadata snapshot(s) older than ${retentionDays} days` : ""}.`
+          `${metadataPurged > 0 ? `, ${metadataPurged} metadata snapshot(s) older than ${retentionDays} days` : ""}` +
+          `${historyPurged > 0 ? `, ${historyPurged} settings-history entr${historyPurged === 1 ? "y" : "ies"}` : ""}.`
         );
       },
       timeoutMs: 10 * MINUTE_MS,
+    },
+    /**
+     * The nightly copy of the database.
+     *
+     * An internal job rather than a Sidequest command, and the reason is
+     * scheduling rather than size: commands queue behind each other on a lane,
+     * and a backup that waits four hours for a `generate` to finish is a
+     * backup taken at 5am on a database that has just been rewritten. This
+     * runs in-process, in seconds, at the time it was asked to.
+     */
+    backup: {
+      run: async (ctx: JobContext) => {
+        if (!backupsEnabled()) return "Backups are switched off in Settings → Backup & Restore.";
+        ctx.progress(0, 2, "Copying the database");
+        const result = await runBackup((message) => ctx.progress(1, 2, message));
+        return (
+          `Backed up to ${result.name} (${formatFileSize(result.sizeBytes)})` +
+          `${result.pruned > 0 ? `, removed ${result.pruned} older backup${result.pruned === 1 ? "" : "s"}` : ""}.`
+        );
+      },
+      timeoutMs: 15 * MINUTE_MS,
     },
     "sync-recently-added": {
       run: async (ctx: JobContext) => {

@@ -36,8 +36,10 @@ import {
 } from "@tinkerbell/core";
 import type { PosterCache } from "@tinkerbell/posters";
 
+import { BackupsToken, type Backups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, type Bandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, type Changes } from "@tinkerbell/domain.changes";
+import { ConfigHistoryToken, type ConfigHistory } from "@tinkerbell/domain.config-history";
 import { CleanupToken, type Cleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, type Collections } from "@tinkerbell/domain.collections";
 import { DigestToken, type Digests } from "@tinkerbell/domain.digest";
@@ -47,6 +49,7 @@ import { MediaToken, type Media } from "@tinkerbell/domain.media";
 import { MetadataToken, type Metadata } from "@tinkerbell/domain.metadata";
 import { MetadataOverridesToken, type MetadataOverrides } from "@tinkerbell/domain.metadata-overrides";
 import { PlaylistsToken, type Playlists } from "@tinkerbell/domain.playlists";
+import { PortabilityToken, type Portability } from "@tinkerbell/domain.portability";
 import { MigrationToken, type Migration } from "@tinkerbell/domain.migration";
 import { NotificationsToken, type Notifications } from "@tinkerbell/domain.notifications";
 import { OnboardingToken, type Onboarding } from "@tinkerbell/domain.onboarding";
@@ -84,8 +87,10 @@ export interface Services {
   sessions: Sessions;
   adminAuth: AdminAuth;
 
+  backups: Backups;
   bandwidth: Bandwidth;
   changes: Changes;
+  configHistory: ConfigHistory;
   cleanup: Cleanup;
   collections: Collections;
   digest: Digests;
@@ -95,6 +100,7 @@ export interface Services {
   metadata: Metadata;
   metadataOverrides: MetadataOverrides;
   playlists: Playlists;
+  portability: Portability;
   migration: Migration;
   notifications: Notifications;
   onboarding: Onboarding;
@@ -128,8 +134,10 @@ export function registerServices(r: Registry): void {
     sessions: c.resolve(SessionsToken),
     adminAuth: c.resolve(AdminAuthToken),
 
+    backups: c.resolve(BackupsToken),
     bandwidth: c.resolve(BandwidthToken),
     changes: c.resolve(ChangesToken),
+    configHistory: c.resolve(ConfigHistoryToken),
     cleanup: c.resolve(CleanupToken),
     collections: c.resolve(CollectionsToken),
     digest: c.resolve(DigestToken),
@@ -139,6 +147,7 @@ export function registerServices(r: Registry): void {
     metadata: c.resolve(MetadataToken),
     metadataOverrides: c.resolve(MetadataOverridesToken),
     playlists: c.resolve(PlaylistsToken),
+    portability: c.resolve(PortabilityToken),
     migration: c.resolve(MigrationToken),
     notifications: c.resolve(NotificationsToken),
     onboarding: c.resolve(OnboardingToken),

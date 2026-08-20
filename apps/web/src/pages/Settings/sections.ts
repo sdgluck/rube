@@ -41,6 +41,11 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { to: "/settings/security", label: "Security" },
       { to: "/settings/migrate", label: "Migrate" },
       { to: "/settings/maintenance", label: "Maintenance" },
+      // Adjacent on purpose: the two answers to "something is wrong and I want
+      // it back" are the change history and a backup, and somebody in that
+      // state should not have to know which one they need before they look.
+      { to: "/settings/backup", label: "Backup & Restore" },
+      { to: "/settings/history", label: "Change History" },
       { to: "/settings/bandwidth", label: "Bandwidth Test" },
       { to: "/settings/health", label: "Health" },
       // Load-testing tool: useful while developing, noise (and a footgun)

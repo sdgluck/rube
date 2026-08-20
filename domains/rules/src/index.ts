@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { desc, eq, type InferSelectModel } from "drizzle-orm";
 import { rules, type Db } from "@tinkerbell/db";
+import type { ChangeRecorder } from "@tinkerbell/ports";
 import { createConflicts } from "./conflicts.ts";
 import { createExplain } from "./explain.ts";
 import type { Playback } from "@tinkerbell/domain.playback";
@@ -36,12 +37,52 @@ export interface RuleRunOutcome {
   error?: string;
 }
 
+/**
+ * The half of a rule row that a person authored.
+ *
+ * Not the whole row, deliberately. `rules` also carries `lastRunAt`,
+ * `lastRunStatus`, `lastPinnedCollections` and a dozen other columns the engine
+ * rewrites on every run, and a history built from whole rows would show a diff
+ * after every nightly generate — burying the one edit somebody actually made
+ * under a hundred that the app made to itself.
+ *
+ * This is also exactly the set a restore writes back, which is not a
+ * coincidence: a version you can see is a version you can return to, and
+ * restoring last week's run statistics would be meaningless.
+ */
+export interface RuleSnapshot {
+  name: string;
+  type: string;
+  config: Record<string, unknown>;
+  enabled: number;
+  position: number;
+  registryRuleSlug: string | null;
+  registryPackSlug: string | null;
+  registryVersion: number | null;
+  registryConfigHash: string | null;
+}
+
+export function ruleSnapshot(rule: Rule): RuleSnapshot {
+  return {
+    name: rule.name,
+    type: rule.type,
+    config: rule.config,
+    enabled: rule.enabled,
+    position: rule.position,
+    registryRuleSlug: rule.registryRuleSlug,
+    registryPackSlug: rule.registryPackSlug,
+    registryVersion: rule.registryVersion,
+    registryConfigHash: rule.registryConfigHash,
+  };
+}
+
 export interface RulesDeps {
   db: Db;
   playback: Playback;
+  recordChange: ChangeRecorder;
 }
 export function createRules(deps: RulesDeps) {
-  const { db } = deps;
+  const { db, recordChange } = deps;
   const conflicts = createConflicts(deps);
   const lock = createLock(deps);
   const recycle = createRecycle(deps);
@@ -108,6 +149,8 @@ export function createRules(deps: RulesDeps) {
       config: Record<string, unknown>;
       enabled?: boolean;
     } & RuleProvenance,
+    /** Overrides the ambient actor — see `updateRule`. */
+    origin?: { source: string; action?: "create" | "import" | "restore" },
   ): Rule {
     const id = randomUUID();
     const now = Date.now();
@@ -136,7 +179,7 @@ export function createRules(deps: RulesDeps) {
         ...provenance,
       })
       .run();
-    return {
+    const rule: Rule = {
       id,
       name: input.name,
       type: input.type,
@@ -168,11 +211,30 @@ export function createRules(deps: RulesDeps) {
       lastScheduledAt: null,
       windowClearedAt: null,
     };
+
+    // Recorded here rather than by the callers. There is no unlogged variant to
+    // reach for: the default-rule seed and the bundle importer both land here
+    // too, and both are things you would want to see in the history — the seed
+    // attributed to "system" by the ambient actor, the import to "import".
+    recordChange({
+      entity: "rule",
+      entityId: id,
+      action: origin?.action ?? "create",
+      after: ruleSnapshot(rule),
+      source: origin?.source,
+    });
+    return rule;
   }
 
   function updateRule(
     id: string,
     updates: { name?: string; enabled?: number; config?: Record<string, unknown> } & RuleProvenance,
+    /**
+     * Overrides the ambient actor. The registry's update path and the bundle
+     * importer both edit rules on somebody's behalf, and attributing those to
+     * "ui" would make an eight-rule import look like eight hand edits.
+     */
+    origin?: { source: string; action?: "update" | "import" | "restore" },
   ): void {
     const sets: Record<string, unknown> = {};
     if (updates.name !== undefined) sets.name = updates.name;
@@ -181,7 +243,30 @@ export function createRules(deps: RulesDeps) {
     if (updates.registryVersion !== undefined) sets.registryVersion = updates.registryVersion;
     if (updates.registryConfigHash !== undefined) sets.registryConfigHash = updates.registryConfigHash;
     if (Object.keys(sets).length === 0) return;
+
+    const before = db.select().from(rules).where(eq(rules.id, id)).get();
     db.update(rules).set(sets).where(eq(rules.id, id)).run();
+    const after = db.select().from(rules).where(eq(rules.id, id)).get();
+    // A row that wasn't there is not an edit — `updateRule` on a deleted id is
+    // a no-op in SQLite, and logging it would invent a version of a rule that
+    // never existed.
+    if (!before || !after) return;
+
+    const beforeSnapshot = ruleSnapshot(before);
+    const afterSnapshot = ruleSnapshot(after);
+    // The registry's hash refresh writes `registryVersion` on rules the user
+    // has not touched, which is a real change to the row and a meaningless one
+    // to show — so a write that moved nothing in the snapshot records nothing.
+    if (JSON.stringify(beforeSnapshot) === JSON.stringify(afterSnapshot)) return;
+
+    recordChange({
+      entity: "rule",
+      entityId: id,
+      action: origin?.action ?? "update",
+      before: beforeSnapshot,
+      after: afterSnapshot,
+      source: origin?.source,
+    });
   }
 
   function setRuleLastCollection(id: string, ratingKey: string): void {
@@ -262,8 +347,16 @@ export function createRules(deps: RulesDeps) {
    * which is the recoverable half of the two.
    */
   function deleteRule(id: string): void {
+    const before = db.select().from(rules).where(eq(rules.id, id)).get();
     rememberDeletedRule(id);
     db.delete(rules).where(eq(rules.id, id)).run();
+    if (!before) return;
+    // Both a tombstone and a log row, which is not redundant: the tombstone is
+    // the restorable copy and expires with the recycle bin's window, while this
+    // is the record that a rule *existed and was removed*, which outlives it.
+    // A history that forgets the deletion once the bin empties is a history
+    // with a hole exactly where somebody is looking.
+    recordChange({ entity: "rule", entityId: id, action: "delete", before: ruleSnapshot(before) });
   }
 
   function seedDefaultRules(): void {

@@ -30,6 +30,7 @@ import { createGenerateCommand } from "./commands/generate/index.ts";
 import { createDigestCommand } from "./commands/digest.ts";
 import { createReconcile } from "./personalize/reconcile.ts";
 import { JobStarterToken } from "./starter.ts";
+import { JobConfigWriterToken } from "@tinkerbell/ports";
 
 // ─── Pure exports ────────────────────────────────────────────────────────────
 export { CHECKPOINT_TTL_MS } from "./limits.ts";
@@ -95,4 +96,7 @@ export function registerJobs(r: Registry): void {
   // Late-bound: a cron firing is the first time this is called, long after the
   // runner and the scheduler have both been built.
   r.register(JobStarterToken, (c) => (jobId) => c.resolve(JobsToken).startJob(jobId));
+  // Same late binding, for the bundle importer: it needs `updateJob`'s cron
+  // validation and live reschedule, and it sits below this package.
+  r.register(JobConfigWriterToken, (c) => (jobId, updates) => c.resolve(JobsToken).updateJob(jobId, updates));
 }

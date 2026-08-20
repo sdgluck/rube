@@ -1,4 +1,5 @@
 export * from "./util.ts";
+export * from "./actor.ts";
 export * from "./config.ts";
 export * from "./arr-instances.ts";
 export * from "./preferences.ts";

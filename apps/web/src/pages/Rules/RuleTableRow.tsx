@@ -4,6 +4,7 @@ import {
   Copy,
   ExternalLink,
   Eye,
+  FileClock,
   FlaskConical,
   History,
   ImageOff,
@@ -32,6 +33,7 @@ const TRIGGER_BADGES: Record<RuleTrigger, string> = {
 };
 import RuleDetailRow from "./DetailRow";
 import RulePreviewRow from "./RulePreviewRow";
+import RuleHistoryRow from "./RuleHistoryRow";
 import StatusCell from "./StatusCell";
 import styles from "./Rules.module.css";
 import type { RuleRow } from "./types";
@@ -97,6 +99,8 @@ interface RuleTableRowProps {
   isExpanded: boolean;
   previewExpanded: boolean;
   onTogglePreview: () => void;
+  historyExpanded: boolean;
+  onToggleHistory: () => void;
   formActive: boolean;
   /** The in-flight run's id, when this rule has one. Null when idle. */
   activeRunId: string | null;
@@ -155,6 +159,8 @@ export default function RuleTableRow({
   isExpanded,
   previewExpanded,
   onTogglePreview,
+  historyExpanded,
+  onToggleHistory,
   formActive,
   activeRunId,
   runProgress,
@@ -358,6 +364,14 @@ export default function RuleTableRow({
                 ? [{ label: "Revert artwork", icon: ImageOff, danger: true, onSelect: onRevertArtwork }]
                 : []),
               { label: "View runs", icon: History, onSelect: () => navigate(runsHref) },
+              // Distinct from "View runs", which is what the rule *did*. This
+              // is what was done *to* the rule, and the two get confused if
+              // they aren't adjacent and differently worded.
+              {
+                label: historyExpanded ? "Hide change history" : "Change history",
+                icon: FileClock,
+                onSelect: onToggleHistory,
+              },
               { label: "Edit", icon: Pencil, disabled: formActive, onSelect: onEdit },
               { label: "Duplicate", icon: Copy, disabled: createPending, onSelect: onDuplicate },
               { label: "Delete", icon: Trash2, danger: true, onSelect: onDelete },
@@ -378,6 +392,7 @@ export default function RuleTableRow({
       {previewExpanded && hasGeneratedCollection && (
         <RulePreviewRow ruleId={rule.id} fallbackRatingKey={rule.lastCollectionRatingKey!} />
       )}
+      {historyExpanded && <RuleHistoryRow ruleId={rule.id} />}
     </Fragment>
   );
 }

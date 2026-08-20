@@ -46,7 +46,10 @@ if (!mockUrl) throw new Error("MOCK_PLEX_URL is required");
 // A harness, not an app: it opens the one database `DATA_DIR` names and writes
 // to it directly. No container, because there is no application here to wire.
 const db = createDb({ dataDir: defaultDataDir() });
-const { setConfig } = createConfigStore({ db });
+// No history here on purpose: this is the screenshot harness seeding a
+// throwaway database, and a change log of the seed would be noise in the one
+// place nobody will ever read it.
+const { setConfig } = createConfigStore({ db, recordChange: () => {} });
 
 // Every timestamp hangs off the one frozen instant, so a re-run writes the
 // same bytes. See clock.ts.

@@ -25,6 +25,9 @@ drive collections, overlays, labels, and notifications on a schedule.
   what will change.
 - **Notifications** — Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
   LunaSea, and generic webhooks.
+- **Backup, export and change history** — nightly copies of the database, a
+  portable JSON export of your configuration, and a record of every settings
+  change with the previous value. [See below](#backup-export-and-change-history).
 - **Stats & events** — library stats, an activity feed, and playback history.
 - **Multi-user** — per-user settings and integrations (Plex, \*Arrs, Overseerr).
 - **User management** — invite people to the server, choose the libraries each
@@ -193,6 +196,69 @@ Two things worth knowing:
 
 Set `PREROLLS_DIR` to move Tinkerbell's side of the directory; it defaults to
 `$DATA_DIR/prerolls` outside Docker.
+
+## Backup, export and change history
+
+Three separate things, because they answer three separate questions.
+
+### Backups — "the disk had a bad day"
+
+A gzipped copy of the whole database, taken nightly at 03:30 and kept for the
+last 7 runs. **On by default**: a backup nobody enabled is a backup nobody has.
+Settings → Backup & Restore.
+
+The copy is taken with SQLite's online backup API rather than by copying the
+file. That matters — the database runs in WAL mode, and `cp` of a live one
+produces a file that opens cleanly, looks fine, and is missing whatever was in
+the write-ahead log.
+
+**In Docker, put the backup directory on a mounted volume.** The default is
+`<DATA_DIR>/backups`, which is inside the volume you already mount for
+`tinkerbell.db`. A path outside it lives on the container's own filesystem and
+disappears when the container is replaced, which is worse than having no backup
+because it looks like one.
+
+**Restoring is a manual procedure**, and deliberately not a button — a restore
+that runs while the app has the database open produces two corrupt files rather
+than one good one:
+
+1. Stop the container.
+2. `gunzip tinkerbell-20260820T033000.db.gz`
+3. Replace `tinkerbell.db` in your data directory with the result, and delete
+   any `tinkerbell.db-wal` and `tinkerbell.db-shm` sitting beside it.
+4. Start the container.
+
+### Export — "I'm moving hosts", "here's my broken rule"
+
+One JSON file holding rules, job schedules, overlay presets and settings, in a
+form another Tinkerbell can read. Library-specific values are translated on the
+way out: genre and director tag ids become names, section references become
+library titles. Without that a rule imports cleanly on another server and
+matches nothing, silently.
+
+**Credentials are excluded by default.** There is a checkbox to include them,
+which warns first and marks the file — but an export is the kind of thing people
+paste into issues, so the default is the safe one.
+
+Importing always previews first. Every item is classified as new, identical, or
+different from what you already have, and anything different defaults to keeping
+your copy until you say otherwise. Replacements are recorded in the change
+history, so you can see what they were and put them back.
+
+### Change history — "what did I change last Tuesday?"
+
+Every edit to a rule, a setting, a job schedule, an overlay preset or a preroll,
+with the previous value and who made it — a signed-in admin, a job, or an
+import. Rules get a **Change history** entry in their row menu with a
+"restore this version" action; the full log is at Settings → Change History.
+
+Secrets are recorded redacted, so this never becomes a plaintext history of
+every API key you have entered. Transient job state and dashboard layout are not
+recorded at all — they would bury everything else. Entries are kept for 180 days.
+
+This is the counterpart to the **Changes** page, which is what Tinkerbell did to
+_Plex_: collections built, metadata written, files removed. This one is what you
+did to Tinkerbell.
 
 ## Running it unattended
 

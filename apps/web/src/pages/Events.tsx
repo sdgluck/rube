@@ -31,6 +31,8 @@ const BADGE_MAP: Record<string, { label: string; className: string }> = {
   "digest.sent": { label: "Digest Sent", className: styles.badgeLibrary },
   "rule.empty": { label: "Rule Matched Nothing", className: styles.badgeAttention },
   "registry.update_available": { label: "Registry Update", className: styles.badgeAttention },
+  "backup.completed": { label: "Backup Completed", className: styles.badgeJobCompleted },
+  "backup.failed": { label: "Backup Failed", className: styles.badgeJobFailed },
   // What quiet hours (or a mute) stopped. The event it refers to is in the
   // feed either way; this is the record that your phone stayed silent on
   // purpose rather than because a webhook URL had rotted.

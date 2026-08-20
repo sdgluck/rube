@@ -17,6 +17,7 @@
     "@tinkerbell/container": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/http": "workspace:*",
     "@tinkerbell/video": "workspace:*",
     "drizzle-orm": "^0.45.1"

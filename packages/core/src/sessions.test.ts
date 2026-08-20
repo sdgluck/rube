@@ -22,7 +22,7 @@ const testDb = createTestDb("tinkerbell-sessions-test-");
 after(testDb.dispose);
 
 const db = testDb.db;
-const sessions = createSessions({ db, config: createConfigStore({ db }) });
+const sessions = createSessions({ db, config: createConfigStore({ db, recordChange: () => {} }) });
 
 describe("session scopes", () => {
   test("an admin session is invisible to a portal read, and the reverse", () => {

@@ -58,6 +58,13 @@ export const EVENT_TYPES = [
   // rule that used to match something matches nothing.
   { id: "rule.empty", label: "Rule Matched Nothing" },
   { id: "registry.update_available", label: "Registry Update Available" },
+  // Both halves, deliberately. A failed backup is the one people want routed
+  // somewhere they will see it; the successful one is how you find out the
+  // failure notification would have worked, and it is once a night rather than
+  // per item, so it is not the kind of event that trains people to mute a
+  // channel.
+  { id: "backup.completed", label: "Backup Completed" },
+  { id: "backup.failed", label: "Backup Failed" },
   // Not an emitted event, unlike everything above it: nothing ever calls
   // `emitEvent("digest.sent")`. It appears here because per-service event
   // selection is already the UI for "route this to that channel", and a

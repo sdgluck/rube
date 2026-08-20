@@ -18,7 +18,7 @@ import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
  * version of Tinkerbell that a rolled-back instance is now editing. Callers
  * keep storing exactly what they sent; they just can't store nonsense.
  */
-function assertValidRuleConfig(config: Record<string, unknown>, ruleType?: string): Record<string, unknown> {
+export function assertValidRuleConfig(config: Record<string, unknown>, ruleType?: string): Record<string, unknown> {
   const parsed = ruleConfigSchema.safeParse(config);
   if (!parsed.success) {
     const detail = parsed.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`).join("; ");
