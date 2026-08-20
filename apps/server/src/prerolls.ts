@@ -41,7 +41,7 @@ function json(res: ServerResponse, status: number, body: unknown): void {
  * would refetch the whole clip each time, and Safari refuses to play a source
  * that doesn't advertise range support at all.
  */
-async function serveFile(
+export async function serveFile(
   req: IncomingMessage,
   res: ServerResponse,
   filePath: string,
