@@ -356,6 +356,8 @@ export interface PlexStreamInfo {
 }
 
 export interface PlexPartInfo {
+  /** Streamable URL for the part. `file` is the server-side path, not this. */
+  key?: string;
   file?: string;
   size?: number;
   container?: string;

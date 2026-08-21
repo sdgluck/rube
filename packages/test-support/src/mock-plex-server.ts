@@ -62,6 +62,15 @@ export interface MockItem {
    * PNG bytes so `sharp` has something it can genuinely decode.
    */
   thumb?: string;
+  /**
+   * Watch state, as Plex serves it. Both matter to the stress harness, which
+   * refuses to touch anything already watched: a *finished* item has a view
+   * count and no offset, so filtering on `viewOffset` alone silently admits it.
+   */
+  viewCount?: number;
+  viewOffset?: number;
+  /** Runtime in ms, reported on the item and used for timeline reports. */
+  duration?: number;
 }
 
 export interface MockCollection {
@@ -102,6 +111,18 @@ export interface PlexJournal {
   /** Collections promoted to the homepage, and demoted from it. */
   pinned: string[];
   unpinned: string[];
+  /** Sessions registered through `/video/:/transcode/universal/decision`. */
+  transcodeDecisions: string[];
+  /** Transcode sessions started and stopped, by session id. */
+  transcodeStarts: string[];
+  transcodeStops: string[];
+  /** Every `/:/timeline` report, in order. */
+  timelines: Array<{ ratingKey: string; clientId: string; state: string }>;
+  /** Every item the caller marked unwatched. The stress harness undoing its own
+   *  history is only correct if this contains nothing it did not first watch. */
+  unscrobbled: string[];
+  /** Stream/segment fetches, by client. */
+  streamFetches: Array<{ clientId: string; path: string }>;
   /** Paths that arrived at an endpoint this mock does not implement. */
   unhandled: string[];
 }
@@ -111,6 +132,34 @@ export interface MockPlex {
   journal: PlexJournal;
   items: Map<string, MockItem>;
   collections: Map<string, MockCollection>;
+  /**
+   * Playback knobs for the stress harness.
+   *
+   * Both are expressed in terms of *how many sessions are live*, so a test says
+   * "this server falls over at four streams" and gets the same answer every
+   * run. Wall-clock triggers would make these tests a race against the ramp.
+   *
+   * `transcodeSpeed` is what `/status/sessions` reports for each live session.
+   * `capacity` caps how many sessions the listing admits to — a server that has
+   * quietly killed the rest, which is the only signal a direct-play run has.
+   */
+  playback: {
+    transcodeSpeed: number | ((liveSessions: number) => number);
+    bandwidth: number;
+    capacity: number | null;
+    /**
+     * Model the real server's contract: a session that was never registered
+     * through `/video/:/transcode/universal/decision` is a throwaway, and is
+     * discarded as soon as another transcode starts — its playlist then 404s.
+     *
+     * On by default, because it is what a real Plex server does and it is the
+     * only thing that makes a missing `decision` call visible in a test. One
+     * session works fine without it; the bug only appears at two.
+     */
+    requireTranscodeDecision: boolean;
+    /** Sessions currently reporting a timeline, keyed by client id. */
+    sessions: Map<string, { ratingKey: string; clientId: string }>;
+  };
   close: () => Promise<void>;
 }
 
@@ -127,6 +176,12 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
     posterUploads: [],
     collectionItemAdds: [],
     collectionItemRemoves: [],
+    transcodeDecisions: [],
+    transcodeStarts: [],
+    transcodeStops: [],
+    timelines: [],
+    unscrobbled: [],
+    streamFetches: [],
     pinned: [],
     unpinned: [],
     unhandled: [],
@@ -135,6 +190,17 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
   const pinnedBySection = new Map<string, Set<string>>();
   let nextCollectionKey = 9000;
   let nextThumbVersion = 1;
+  const sessions = new Map<string, { ratingKey: string; clientId: string }>();
+  const liveTranscodes = new Set<string>();
+  const deadTranscodes = new Set<string>();
+  const decidedSessions = new Set<string>();
+  const playback: MockPlex["playback"] = {
+    transcodeSpeed: 2.5,
+    bandwidth: 8000,
+    capacity: null,
+    requireTranscodeDecision: true,
+    sessions,
+  };
 
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://mock");
@@ -430,6 +496,109 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
       return;
     }
 
+    // ── Playback, for the stress harness ────────────────────────────────────
+    // These stand in for a real transcoder. They are shaped from what the
+    // harness actually sends, so a change in how it builds a URL shows up here
+    // as a 404 rather than as a plausible-looking success.
+
+    if (path === "/video/:/transcode/universal/start.m3u8") {
+      const session = q.get("session") ?? "";
+      journal.transcodeStarts.push(session);
+      if (playback.requireTranscodeDecision) {
+        // Sessions that never registered a decision are throwaways: the
+        // arrival of a new transcode discards them.
+        for (const prior of liveTranscodes) {
+          if (!decidedSessions.has(prior)) deadTranscodes.add(prior);
+        }
+      }
+      liveTranscodes.add(session);
+      // A master playlist with an *absolute* variant URL, which is what real
+      // Plex emits and what the harness used to mangle into
+      // `/video/:/transcode/universal/http://…`.
+      const origin = `http://${req.headers.host ?? "127.0.0.1"}`;
+      res.writeHead(200, { "Content-Type": "application/vnd.apple.mpegurl" });
+      res.end(
+        "#EXTM3U\n" +
+          "#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=1920x1080\n" +
+          `${origin}/video/:/transcode/universal/session/${session}/base/index.m3u8?session=${session}\n`,
+      );
+      return;
+    }
+
+    // What a client calls before `start.m3u8` to register the playback
+    // decision. Skipping it is what made the harness's sessions evaporate.
+    if (path === "/video/:/transcode/universal/decision") {
+      const session = q.get("session") ?? "";
+      decidedSessions.add(session);
+      journal.transcodeDecisions.push(session);
+      json({ size: 1, generalDecisionText: "Direct play not available; Conversion OK." });
+      return;
+    }
+
+    if (path === "/video/:/transcode/universal/stop") {
+      journal.transcodeStops.push(q.get("session") ?? "");
+      emptyOk();
+      return;
+    }
+
+    // The live media playlist. Segment names are *relative*, so resolving them
+    // has to survive the query string this URL carries.
+    if (path.endsWith("/base/index.m3u8")) {
+      const owner = path.split("/session/")[1]?.split("/")[0] ?? "";
+      if (deadTranscodes.has(owner)) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      journal.streamFetches.push({ clientId: req.headers["x-plex-client-identifier"] as string, path });
+      res.writeHead(200, { "Content-Type": "application/vnd.apple.mpegurl" });
+      res.end("#EXTM3U\n#EXT-X-TARGETDURATION:5\n#EXTINF:5.0,\n00000.ts\n#EXTINF:5.0,\n00001.ts\n");
+      return;
+    }
+
+    if (path.endsWith(".ts") || path.startsWith("/library/parts/")) {
+      journal.streamFetches.push({ clientId: req.headers["x-plex-client-identifier"] as string, path });
+      res.writeHead(200, { "Content-Type": "video/mp2t" });
+      res.end(Buffer.alloc(4096));
+      return;
+    }
+
+    if (path === "/:/timeline") {
+      const clientId = (q.get("X-Plex-Client-Identifier") ?? req.headers["x-plex-client-identifier"]) as string;
+      const ratingKey = q.get("ratingKey") ?? "";
+      const state = q.get("state") ?? "";
+      journal.timelines.push({ ratingKey, clientId, state });
+      if (state === "stopped") sessions.delete(clientId);
+      else sessions.set(clientId, { ratingKey, clientId });
+      emptyOk();
+      return;
+    }
+
+    if (path === "/status/sessions") {
+      const all = [...sessions.values()];
+      const live = playback.capacity == null ? all : all.slice(0, playback.capacity);
+      const speed =
+        typeof playback.transcodeSpeed === "function" ? playback.transcodeSpeed(all.length) : playback.transcodeSpeed;
+      json({
+        size: live.length,
+        Metadata: live.map((s) => ({
+          ratingKey: s.ratingKey,
+          title: items.get(s.ratingKey)?.title ?? "",
+          type: "movie",
+          Player: { title: "Tinkerbell Stress Test", machineIdentifier: s.clientId, product: "tinkerbell-stress" },
+          Session: { id: s.clientId, bandwidth: playback.bandwidth },
+          TranscodeSession: { speed, videoDecision: "transcode" },
+        })),
+      });
+      return;
+    }
+
+    if (path === "/:/unscrobble") {
+      journal.unscrobbled.push(q.get("key") ?? "");
+      emptyOk();
+      return;
+    }
+
     // Anything else is a gap in the mock, and the test should see it rather
     // than a plausible-looking empty container.
     journal.unhandled.push(`${method} ${path}`);
@@ -445,6 +614,7 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
         journal,
         items,
         collections,
+        playback,
         close: () => closeServer(server),
       });
     });
@@ -463,11 +633,27 @@ function metadataFor(item: MockItem) {
     year: item.year,
     type: "movie",
     ...(item.thumb ? { thumb: item.thumb } : {}),
+    ...(item.duration != null ? { duration: item.duration } : {}),
+    ...(item.viewCount != null ? { viewCount: item.viewCount } : {}),
+    ...(item.viewOffset != null ? { viewOffset: item.viewOffset } : {}),
     Guid: item.guids.map((id) => ({ id })),
     Label: item.labels.map((tag) => ({ tag })),
-    ...(streams.length > 0
-      ? { Media: [{ container: "mkv", videoResolution: "1080", Part: [{ Stream: streams }] }] }
-      : {}),
+    // Always a Media/Part, with both `key` (streamable) and `file` (the
+    // server's own path). Anything that plays a part has to pick the right one.
+    Media: [
+      {
+        container: "mkv",
+        videoResolution: "1080",
+        Part: [
+          {
+            key: `/library/parts/${item.ratingKey}/1/file.mkv`,
+            file: `/data/media/${item.ratingKey}.mkv`,
+            container: "mkv",
+            Stream: streams,
+          },
+        ],
+      },
+    ],
   };
 }
 

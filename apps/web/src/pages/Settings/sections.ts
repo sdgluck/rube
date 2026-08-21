@@ -49,9 +49,9 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { to: "/settings/history", label: "Change History" },
       { to: "/settings/bandwidth", label: "Bandwidth Test" },
       { to: "/settings/health", label: "Health" },
-      // Load-testing tool: useful while developing, noise (and a footgun)
-      // for someone running a release build against their real server.
-      ...(import.meta.env.DEV ? [{ to: "/settings/stress-test", label: "Stress Test" }] : []),
+      // Next to the bandwidth test on purpose: both answer "is this server
+      // actually up to it?", one for the link and one for the transcoder.
+      { to: "/settings/stress-test", label: "Stress Test" },
     ],
   },
   {

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTrpc } from "@tinkerbell/trpc";
 import { buildContainer, ServicesToken } from "@tinkerbell/composition";
-import { JobsToken, registerJobs, stopSidequest } from "@tinkerbell/jobs";
+import { JobsToken, registerJobs, stopSidequest, stopStressTest } from "@tinkerbell/jobs";
 import { authDisabledByEnv, createLogger, errorMessage, startAuthDisabledWarning } from "@tinkerbell/core";
 import { createAuth } from "./auth.ts";
 import { createAdminHandler, createPortalHandler } from "./handlers.ts";
@@ -168,6 +168,11 @@ async function shutdown() {
   shuttingDown = true;
 
   await stopSidequest();
+
+  // A forked child is not killed with its parent, so without this a restart
+  // leaves a stress test pulling streams off the user's Plex server with
+  // nothing left running that knows about it.
+  stopStressTest();
 
   // Stop accepting new connections, then wait up to SHUTDOWN_GRACE_MS for
   // in-flight requests (streaming Plex images, large tRPC responses) to

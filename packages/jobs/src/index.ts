@@ -43,8 +43,10 @@ export { COMMANDS, isCommandName, type CommandName, type CommandLane } from "./c
 export { type InternalJobName, type InternalJobs } from "./internal-jobs.ts";
 export { FEATURE_TEMPLATES, type FeatureTemplate, type FeatureCatalogEntry } from "./features.ts";
 export { BASELINE_LABEL } from "./personalize/reconcile.ts";
+export { stopStressTest } from "./stress-test/index.ts";
 export {
   stressTestConfigSchema,
+  stressTestConfigInputSchema,
   stressTestStepSchema,
   type StressTestConfig,
   type StressTestStep,

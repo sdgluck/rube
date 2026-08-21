@@ -1,5 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
+import { stressTestConfigInputSchema } from "@tinkerbell/jobs";
 
 import { t, procedure } from "./_base.ts";
 
@@ -10,15 +11,11 @@ export function createStressTestRouter(deps: TrpcDeps) {
     runs: procedure.query(() => getStressTestRuns()),
     run: procedure.input(z.object({ id: z.string() })).query(({ input }) => getStressTestRun(input.id)),
 
-    start: procedure
-      .input(
-        z.object({
-          mode: z.enum(["transcode", "directplay", "mixed"]),
-          transcodePct: z.number().optional(),
-          maxSessions: z.number().optional(),
-        }),
-      )
-      .mutation(({ input }) => startStressTest(input)),
+    // The input schema is imported rather than restated. It used to be an
+    // inline copy of bare `z.number()`s, so the UI's 1–50 was the only bound
+    // anywhere and an API caller could ask for a hundred thousand real
+    // transcode sessions against their own server.
+    start: procedure.input(stressTestConfigInputSchema).mutation(({ input }) => startStressTest(input)),
 
     cancel: procedure.mutation(() => {
       cancelStressTest();

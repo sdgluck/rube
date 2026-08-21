@@ -82,7 +82,7 @@
               {
                 "name": "@tinkerbell/composition",
                 "importNames": ["buildContainer"],
-                "message": "Building a container is an entrypoint's job (apps/server, the Sidequest worker, test-support). A library that builds its own gets a second object graph, which is the bug this replaced."
+                "message": "Building a container is an entrypoint's job (apps/server, the Sidequest worker, the stress-test worker, test-support). A library that builds its own gets a second object graph, which is the bug this replaced."
               }
             ]
           }
@@ -93,7 +93,8 @@
         "packages/db/**/*.ts",
         "packages/container/**/*.ts",
         "**/*.test.ts",
-        "packages/jobs/src/sidequest/job.ts"
+        "packages/jobs/src/sidequest/job.ts",
+        "packages/jobs/src/stress-test/worker.ts"
       ]
     }
   ]

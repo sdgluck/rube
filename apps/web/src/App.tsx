@@ -609,20 +609,14 @@ export default function App() {
                         }
                       />
                     </Route>
-                    {/* Same gate as the rail entry in Settings/sections.ts. The
-                      rail hid the link and the route stayed registered, so a
-                      release build still served the load generator to anyone
-                      who typed the URL — against their real Plex server. */}
-                    {import.meta.env.DEV && (
-                      <Route
-                        path="stress-test"
-                        element={
-                          <LazyPage>
-                            <StressTest />
-                          </LazyPage>
-                        }
-                      />
-                    )}
+                    <Route
+                      path="stress-test"
+                      element={
+                        <LazyPage>
+                          <StressTest />
+                        </LazyPage>
+                      }
+                    />
                     <Route
                       path="posters"
                       element={

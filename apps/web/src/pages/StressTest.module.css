@@ -220,3 +220,33 @@ tr.stepFailed td {
 .speedNone {
   color: var(--ink-3);
 }
+
+/* The harness is no longer dev-only, so the page has to say plainly what
+   pressing the button does to someone's server before they press it. */
+.caution {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  border-radius: var(--r-md);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cautionTitle {
+  font-weight: 600;
+}
+
+/* Why the ramp stopped. Muted because it only ever has content on the last
+   step, and a column of blanks should not draw the eye. */
+.reason {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.detailLog {
+  margin-top: 8px;
+}

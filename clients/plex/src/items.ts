@@ -485,6 +485,7 @@ export function createItemsModule(http: PlexHttp) {
           languageCode: s.languageCode,
         }));
         return {
+          key: p.key,
           file: p.file,
           size: p.size,
           container: p.container,

@@ -30,6 +30,10 @@ const plexStreamRawSchema = z
 
 const plexPartRawSchema = z
   .object({
+    // The streamable URL for this part (`/library/parts/<id>/<ts>/file.ext`).
+    // Distinct from `file`, which is the path on the server's own filesystem
+    // and is not fetchable over the API.
+    key: z.string().optional(),
     file: z.string().optional(),
     size: z.number().optional(),
     container: z.string().optional(),

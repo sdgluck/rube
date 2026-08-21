@@ -56,10 +56,21 @@ interface ArrSeasonShape {
   sizeOnDisk: number;
 }
 
+/**
+ * The JSON columns of `stress_test_runs`, mirrored from the zod schemas in
+ * `packages/jobs/src/stress-test/index.ts` — which are the authority. They are
+ * duplicated rather than imported because `packages/db` sits below `packages/jobs`
+ * in the layering, and a type-level assertion in `stress-test/schema.test.ts`
+ * fails the build if the two drift.
+ *
+ * Fields marked optional were added after rows already existed, so the readers
+ * treat their absence as "not recorded" rather than reparsing history.
+ */
 interface StressTestConfigShape {
   mode: "transcode" | "directplay" | "mixed";
   transcodePct?: number;
   maxSessions?: number;
+  verbose?: boolean;
 }
 
 interface StressTestStepShape {
@@ -67,8 +78,15 @@ interface StressTestStepShape {
   sessions: number;
   avgTranscodeSpeed: number | null;
   avgBandwidth: number;
+  /** Failed `/status/sessions` samples during this step. */
   errors: number;
   timestamp: number;
+  /** How many of our sessions Plex actually reported. */
+  sessionsSeen?: number;
+  /** Stream fetch failures the simulated clients saw during the sample window. */
+  streamErrors?: number;
+  /** Why the ramp stopped here, if it did. */
+  reason?: string | null;
 }
 
 export const config = sqliteTable("config", {

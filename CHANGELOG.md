@@ -6,6 +6,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- **The stress test never ran.** Every run failed within milliseconds of
+  starting, reporting only "Worker process exited unexpectedly" — the harness's
+  child process had lost its entrypoint in a refactor and did nothing at all.
+  It works again, and a test now forks the real worker so this cannot recur
+  silently.
+- **The stress test could erase watch history.** Items were filtered on playback
+  position alone, so a film you had already finished — which has a view count
+  and no position — could be picked, played and then permanently marked
+  unwatched by the run's own cleanup. Finished items are now skipped.
+- Direct-play stress tests always reported the configured session cap as your
+  server's capacity. With no transcoder to measure, the run had no health signal
+  at all and could never detect degradation; it now watches session dropout and
+  stream throughput instead.
+- **Transcode stress tests never ran more than one stream at a time.** The
+  harness started transcode sessions without first registering a playback
+  decision with Plex, which makes the session a throwaway: the server discarded
+  each one as soon as the next began, so a run that reported "4 sessions" had
+  only ever had one alive. Verified against a real server — 1 of 5 sessions
+  survived before the fix, 5 of 5 after — and the server's own transcode
+  session count now tracks the ramp exactly.
+- The stress test stopped at the first bad reading, so one unlucky measurement
+  permanently understated a server. A degraded step is now re-measured before
+  the ramp stops, and readings that don't reproduce are reported as transient.
+- Stress sessions raced the transcoder, issuing hundreds of requests a second
+  and mostly receiving 404s for segments that did not exist yet; they now
+  consume at playback pace. Segments that aren't ready are no longer counted as
+  failures.
+- A cancelled stress test was recorded as a completed one.
+- A single transient Plex error mid-run was reported as your server's capacity
+  limit; it now takes a majority of failed samples to end a run.
+- Fixed transcode stress sessions failing to stream on servers that return an
+  absolute playlist URL, and segment URLs being resolved incorrectly when the
+  playlist URL carried a query string.
+- Direct-play stress sessions now stream the actual media part and walk through
+  the file, rather than re-reading its opening seconds from the server's cache.
+- A stress test worker that failed to start could crash the whole server
+  process; a run interrupted by a restart is now stopped rather than left
+  orphaned against your Plex server.
+
+### Changed
+
+- The stress test is no longer hidden from release builds — it is available at
+  Settings → Stress Test in every environment, with a caution about what it does
+  to your server. Past runs now show their outcome and keep their logs, and the
+  API enforces the same 1–50 session bound the form does.
+
 ## [0.24.0] - 2026-08-20
 
 ### Added

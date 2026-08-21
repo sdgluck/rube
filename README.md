@@ -36,6 +36,8 @@ drive collections, overlays, labels, and notifications on a schedule.
   portable JSON export of your configuration, and a record of every settings
   change with the previous value. [See below](#backup-export-and-change-history).
 - **Stats & events** — library stats, an activity feed, and playback history.
+- **Stress test** — ramps real playback sessions against your server until it
+  stops keeping up, and reports how many it handled. [See below](#stress-test--how-many-streams-can-this-server-actually-serve).
 - **Multi-user** — per-user settings and integrations (Plex, \*Arrs, Overseerr).
 - **User management** — invite people to the server, choose the libraries each
   one gets, set downloads / Live TV / content-rating limits, watch what they're
@@ -266,6 +268,37 @@ recorded at all — they would bury everything else. Entries are kept for 180 da
 This is the counterpart to the **Changes** page, which is what Tinkerbell did to
 _Plex_: collections built, metadata written, files removed. This one is what you
 did to Tinkerbell.
+
+## Stress test — "how many streams can this server actually serve?"
+
+Settings → Stress Test ramps real playback sessions against your Plex server,
+one at a time, and stops when the server stops keeping up. The number it reports
+is the last session count that was still healthy.
+
+It is a genuine load test, not a simulation: each step starts a real transcode
+(or a real direct-play stream), pulls the segments, and reports a timeline so
+Plex counts the session. Expect real transcoding, disk and network load for the
+duration, and don't run it while other people are watching.
+
+Choose **Transcode**, **Direct Play**, or **Mixed** with a transcode share, and
+a session cap (1–50). What each mode measures differs:
+
+- **Transcode** watches the transcoder's speed. Below 1.0x it is producing less
+  than a second of video per second of wall clock — the point a real viewer
+  starts buffering.
+- **Direct Play** has no transcoder to read, so it watches whether Plex is still
+  reporting the sessions and whether the bytes are still flowing. A server that
+  quietly kills streams under load shows up as sessions disappearing.
+
+Watch-state hygiene is deliberate. Only never-watched items are used, and the
+run marks every one of them unwatched again when it finishes — including when
+you cancel it, or when it fails. Anything already watched or part-watched is
+skipped rather than played, so the cleanup can never erase history you cared
+about.
+
+A step that looks degraded is re-measured before the run stops, so a single
+unlucky reading doesn't understate your server. Runs are kept with their full
+log, so a failed run can be read back afterwards.
 
 ## Running it unattended
 
