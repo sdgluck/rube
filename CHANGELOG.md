@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-08-21
+
+### Added
+
+- Menu items can now be hidden and reordered within their section, sections can be reordered, and any route can be assigned a slot in the mobile tab bar. Edit the menu from an "Edit menu" control on the sidebar, or from the same editor on /more on mobile.
+- Discover has a new Lists tab for searching MDBList and Trakt by name, previewing what a list holds against your own library, and creating a rule from it directly.
+
+### Fixed
+
+- Screenshot capture no longer opens the menu editor instead of the collection edit dialog when regenerating collection screenshots, which had been breaking the whole capture suite.
+- The stress-test harness works again — it had been failing instantly on every run since a prior refactor left its worker process without a message listener.
+- Stress-test transcode sessions are now genuinely concurrent instead of collapsing to a single session, because the harness now makes the transcode decision call Plex expects before starting playback.
+- The stress-test harness no longer risks marking finished, fully-watched items as unwatched during its own cleanup.
+- The stress-test harness's direct-play mode can now detect and report server degradation, which previously had no signal to measure against.
+- The stress-test harness no longer floods the server with requests for video segments that don't exist yet, and no longer counts "not ready" as a failure.
+- The stress-test harness re-measures a degraded reading before reporting it, instead of letting one bad moment permanently understate server capacity.
+- A cancelled stress-test run is no longer recorded as completed.
+- The stress-test page is no longer hidden in release builds.
+
 ### Fixed
 
 - **The stress test never ran.** Every run failed within milliseconds of
