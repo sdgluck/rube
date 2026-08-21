@@ -37,6 +37,10 @@ before(async () => {
       } catch {
         body = raw;
       }
+      // An aborted request can still emit "end" after the test that made it has
+      // finished, which would land in the *next* test's freshly cleared `seen`
+      // and make it assert against the wrong request.
+      if (req.destroyed) return;
       seen.push({ path: req.url ?? "", auth: req.headers.authorization as string | undefined, body });
       respond(res);
     });
@@ -267,12 +271,19 @@ describe("the OpenAI-compatible response", () => {
   });
 
   test("the caller's abort signal cancels the request", async () => {
+    // Abort only once the server has the request in hand: a timer would race
+    // the request's arrival, and an abort that lands first leaves the server
+    // recording it during a later test.
+    let arrived: () => void = () => {};
+    const onServer = new Promise<void>((resolve) => (arrived = resolve));
     respond = () => {
       // Never answers — the abort is the only way out.
+      arrived();
     };
     const controller = new AbortController();
     const pending = compatible().complete({ prompt: "hi", signal: controller.signal });
-    setTimeout(() => controller.abort(), 20);
+    await onServer;
+    controller.abort();
 
     await assert.rejects(() => pending, LlmRequestError);
   });
