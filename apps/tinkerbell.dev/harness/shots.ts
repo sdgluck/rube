@@ -152,19 +152,30 @@ export const SHOTS: Shot[] = [
     viewports: DESKTOP,
     steps: [{ click: "Edit filters" }, { wait: "text=of the following" }],
   },
+  // Both of these address the pencil by its title rather than by the name
+  // "Edit". `click` matches accessible names loosely and takes the first hit,
+  // and the sidebar's menu-arranging control is `aria-label="Edit menu"` —
+  // which contains "Edit" and comes first in the DOM. These shots silently
+  // started opening the nav editor instead of the collection wizard, and the
+  // only symptom was the wizard heading never arriving.
   {
     name: "04-collection-edit",
     description: "Collection detail — the edit wizard, where the name, summary and labels are written",
     path: "/collections/5001",
     viewports: DESKTOP,
-    steps: [{ click: "Edit" }, { wait: "text=Name and summary" }],
+    steps: [{ clickSelector: '[title="Edit name, summary and labels"]' }, { wait: "text=Name and summary" }],
   },
   {
     name: "04-collection-edit-labels",
     description: "Collection detail — the edit wizard's label step",
     path: "/collections/5001",
     viewports: DESKTOP,
-    steps: [{ click: "Edit" }, { wait: "text=Name and summary" }, { click: "Next" }, { wait: "text=Add a label" }],
+    steps: [
+      { clickSelector: '[title="Edit name, summary and labels"]' },
+      { wait: "text=Name and summary" },
+      { click: "Next" },
+      { wait: "text=Add a label" },
+    ],
   },
   {
     // 5003 rather than 5001: the studio renders from the collection's own
