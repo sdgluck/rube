@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { routeTrail } from "#/nav";
+import { routeTrail } from "#lib/routeTrail";
 import ThemeToggle from "#components/ThemeToggle";
 import styles from "./AppBar.module.css";
 

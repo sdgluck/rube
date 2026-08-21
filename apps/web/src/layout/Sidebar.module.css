@@ -80,3 +80,41 @@
 .sidebarCancel:hover {
   color: var(--on-dark-error);
 }
+
+/* The nav region is the positioning context for the edit button, which sits in
+ * its top-right corner rather than in the search row above it — that row is
+ * already carrying a label and a shortcut hint. */
+.nav {
+  position: relative;
+}
+
+.editMenu {
+  position: absolute;
+  top: -22px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--on-dark-4);
+  border-radius: var(--r-tag);
+  /* Revealed on hover so it isn't a permanent control for a thing most people
+   * arrange once — but always there for the keyboard, where a control that
+   * appears on hover is a control that can't be reached. */
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+}
+
+:global(.sidebar):hover .editMenu,
+.editMenu:focus-visible {
+  opacity: 1;
+}
+
+.editMenu:hover {
+  color: var(--on-dark);
+}

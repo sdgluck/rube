@@ -1,8 +1,12 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { SlidersHorizontal } from "lucide-react";
 import Spinner from "#components/Spinner";
 import { trpc } from "#/trpc";
 import { VERSION, IS_BETA, GIT_SHA } from "#/version";
-import { NAV_SECTIONS, routeTrail, visibleSections, type NavMetric } from "#/nav";
+import { type NavMetric } from "#/nav";
+import { routeTrail } from "#lib/routeTrail";
+import { useNavMenu } from "#hooks/useNavMenu";
+import NavEditor from "#layout/NavEditor";
 import { modChord } from "#components/Kbd";
 import styles from "./Sidebar.module.css";
 
@@ -212,10 +216,8 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
     staleTime: 30_000,
   });
   const metrics = metricsQuery.data;
-  // Shared with the setup banner and the Stats setup card, so this is a cache
-  // read rather than a third request.
-  const setupQuery = trpc.onboarding.status.useQuery(undefined, { retry: false });
-  const sections = visibleSections(NAV_SECTIONS, setupQuery.data?.complete);
+  const menu = useNavMenu();
+  const { sections, editing } = menu;
   const { pathname } = useLocation();
   const activeTo = routeTrail(pathname)[0]?.to;
 
@@ -245,27 +247,44 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
         </span>
       </button>
       <hr className="sidebar-search-divider" />
-      <nav aria-label="Main">
-        {sections.map((section) => (
-          <div key={section.label} className="nav-section">
-            <div className="nav-section-title">{section.label}</div>
-            {section.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                /* `routeTrail` decides, not NavLink's own prefix match. They
-                   agree everywhere except a record page: `/arrs/:id/movies/:id`
-                   shares its prefix with Instances but belongs to Movies, and
-                   a sidebar disagreeing with the breadcrumb above it is worse
-                   than either being wrong on its own. */
-                className={({ isActive }) => `nav-link${(activeTo ? item.to === activeTo : isActive) ? " active" : ""}`}
-              >
-                <span className="nav-link-label">{item.label}</span>
-                {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}
-              </NavLink>
+      <nav aria-label="Main" className={styles.nav}>
+        {editing ? (
+          <NavEditor menu={menu} drag />
+        ) : (
+          <>
+            <button
+              type="button"
+              className={styles.editMenu}
+              onClick={() => menu.setEditing(true)}
+              title="Edit menu"
+              aria-label="Edit menu"
+            >
+              <SlidersHorizontal size={14} strokeWidth={2} />
+            </button>
+            {sections.map((section) => (
+              <div key={section.id} className="nav-section">
+                <div className="nav-section-title">{section.label}</div>
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    /* `routeTrail` decides, not NavLink's own prefix match. They
+                       agree everywhere except a record page: `/arrs/:id/movies/:id`
+                       shares its prefix with Instances but belongs to Movies, and
+                       a sidebar disagreeing with the breadcrumb above it is worse
+                       than either being wrong on its own. */
+                    className={({ isActive }) =>
+                      `nav-link${(activeTo ? item.to === activeTo : isActive) ? " active" : ""}`
+                    }
+                  >
+                    <span className="nav-link-label">{item.label}</span>
+                    {item.metric && <NavMetricSlot metric={item.metric} metrics={metrics} />}
+                  </NavLink>
+                ))}
+              </div>
             ))}
-          </div>
-        ))}
+          </>
+        )}
       </nav>
       <SidebarActiveJobs />
       <div className="sidebar-footer">

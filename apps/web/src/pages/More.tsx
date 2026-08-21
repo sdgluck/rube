@@ -1,6 +1,8 @@
 import { NavLink } from "react-router-dom";
 import PageShell from "#components/PageShell";
-import { MORE_SECTIONS, visibleSections, type NavItem } from "#/nav";
+import { type NavItem } from "#/nav";
+import { useNavMenu } from "#hooks/useNavMenu";
+import NavEditor from "#layout/NavEditor";
 import { trpc } from "#/trpc";
 import styles from "./More.module.css";
 
@@ -41,14 +43,36 @@ export default function More() {
     staleTime: 30_000,
   });
   const metrics = metricsQuery.data as NavMetrics | undefined;
-  const setupQuery = trpc.onboarding.status.useQuery(undefined, { retry: false });
-  const sections = visibleSections(MORE_SECTIONS, setupQuery.data?.complete);
+  const menu = useNavMenu();
+
+  /**
+   * The sidebar can't be where a phone edits its menu — it isn't rendered below
+   * the breakpoint. This page is the mobile sidebar, so it carries the same
+   * editor, and the tab bar being arranged is on screen underneath it, updating
+   * as you go. Reordering here is buttons only: mobile Safari doesn't implement
+   * HTML5 drag-and-drop, so a drag handle would be a control that does nothing.
+   */
+  if (menu.editing) {
+    return (
+      <PageShell>
+        <div className={styles.editing}>
+          <NavEditor menu={menu} />
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
-    <PageShell>
+    <PageShell
+      actions={
+        <button type="button" className={styles.editButton} onClick={() => menu.setEditing(true)}>
+          Edit menu
+        </button>
+      }
+    >
       <nav aria-label="More pages" className={styles.sections}>
-        {sections.map((section) => (
-          <section key={section.label}>
+        {menu.moreSections.map((section) => (
+          <section key={section.id}>
             <h2 className={styles.sectionTitle}>{section.label}</h2>
             <div className={styles.list}>
               {section.items.map((item) => {

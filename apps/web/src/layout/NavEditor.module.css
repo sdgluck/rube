@@ -1,0 +1,196 @@
+/* The menu editor, drawn on two very different surfaces: the sidebar, which is
+ * dark in both themes, and the /more page, which is not. Rather than two
+ * stylesheets (or a modifier class threaded through every rule) everything here
+ * is expressed against `currentColor` — the host sets the ink, this sets the
+ * relationships. `color-mix` is how a fill or a line stays correct on both. */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: inherit;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.headerTitle {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.headerCount {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  opacity: 0.5;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.headerButton,
+.headerDone {
+  background: none;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: var(--r-md);
+  color: inherit;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
+}
+
+.headerButton:hover:not(:disabled),
+.headerDone:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.headerButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.headerDone {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: var(--r-md);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 4px;
+}
+
+.sectionTitle {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  opacity: 0.55;
+  flex: 1;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 6px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+
+.row:hover {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+/* A hidden row keeps its place in the list rather than disappearing from it:
+ * the control that switches something back on has to be somewhere, and "where
+ * it used to be" is the only place anyone would look. */
+.rowHidden .label {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.dropTarget {
+  box-shadow: inset 0 2px 0 0 currentColor;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Which slot this route holds in the tab bar. Mono and tabular so four of them
+ * down the list line up rather than dancing by a pixel each. */
+.slot {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.grip {
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  opacity: 0.35;
+}
+
+.grip:active {
+  cursor: grabbing;
+}
+
+.toggle,
+.arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.4;
+  border-radius: var(--r-tag);
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+.toggle:hover:not(:disabled),
+.arrow:hover:not(:disabled) {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.toggle:disabled,
+.arrow:disabled {
+  opacity: 0.15;
+  cursor: default;
+}
+
+.toggleOn {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.pinned {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  opacity: 0.2;
+}
+
+/* Touch targets. The sidebar is a pointer surface and can afford 13px icons in
+ * a tight row; /more is a thumb surface and cannot. */
+@media (max-width: 768px) {
+  .row {
+    padding: 8px 4px 8px 6px;
+    font-size: 14px;
+  }
+
+  .toggle,
+  .arrow {
+    padding: 6px;
+  }
+}

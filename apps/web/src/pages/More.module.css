@@ -88,3 +88,13 @@
   flex-shrink: 0;
   color: var(--ink-faint);
 }
+
+/* The editor takes its ink from here, which is what lets one stylesheet serve
+ * both this page and the dark sidebar — see NavEditor.module.css. */
+.editing {
+  color: var(--ink);
+}
+
+.editButton {
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
+}

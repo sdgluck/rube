@@ -1069,11 +1069,18 @@ p {
     flex-shrink: 0;
   }
 
+  /* Ellipsised because the bar is no longer three labels chosen to fit: any
+     route can be a tab now, so a fifth slot on a 320px phone has to hold
+     "Duplicates" without pushing its neighbours out of shape. */
   .bottom-nav-label {
     line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  /* Stream count badge positioned on the Stats tab icon */
+  /* Stream count badge positioned on the tab that carries the streams metric */
   .bottom-nav-item .stream-badge {
     position: absolute;
     top: 2px;
