@@ -494,6 +494,54 @@ export const configSchema = z.object({
   jobs_summary_tiles: z.array(z.string()).max(6),
   jobs_panel_order: z.array(z.string()).max(20),
   /**
+   * Menu items the admin has switched off.
+   *
+   * The hidden set rather than the visible one, so a page added in a later
+   * release appears on its own — the same reasoning as `stats_panels_hidden`.
+   * A saved "visible" list would freeze every install's menu at the pages that
+   * existed the day they last edited it, and the failure is silent: a feature
+   * ships and nobody who upgraded ever finds it.
+   *
+   * Stored as route paths (`/media`), which is what a nav item is identified by
+   * everywhere else. `/settings` is refused when the menu is resolved rather
+   * than on write, so a hand-edited row can't produce a menu with no way back
+   * to the settings that would fix it — see `applyNavPrefs` in `nav.ts`.
+   *
+   * Global rather than per-admin because this app has no per-admin preference
+   * store: `ui_theme` and every `stats_*` key are global for the same reason.
+   * If `admin_allowed_user_ids` ever grows past one person, these four keys are
+   * the first thing that wants to be per-user.
+   */
+  nav_items_hidden: z.array(z.string()).max(40),
+  /**
+   * Menu items in the order they render, as one flat list across every section.
+   *
+   * Flat because an item's section is fixed by `NAV_SECTIONS` — the menu editor
+   * only reorders within a section, so a per-section map would store the same
+   * information behind a second identifier to keep in sync. A saved position
+   * that would imply a cross-section move is simply inert.
+   */
+  nav_item_order: z.array(z.string()).max(60),
+  /**
+   * Menu sections in the order they render, by section id.
+   *
+   * Ids, not labels: a label is a display string, and renaming "Managers" would
+   * otherwise reset every install's section order without anyone touching it.
+   */
+  nav_section_order: z.array(z.string()).max(20),
+  /**
+   * Routes occupying the mobile tab bar, in order. "More" is not listed — it is
+   * the bar's escape hatch and is always last.
+   *
+   * The one nav key that is a positive pick rather than a difference from the
+   * default: a tab bar has a fixed number of slots, so "a route added later
+   * should appear here" is not something anyone wants of it. Empty means the
+   * defaults, which is also what Reset writes — every one of these four keys
+   * treats `[]` and absent identically, so resetting is one write rather than a
+   * delete path `configRouter` does not have.
+   */
+  nav_bottom_tabs: z.array(z.string()).max(4),
+  /**
    * Which colour scheme the admin UI draws in. `system` follows
    * `prefers-color-scheme`; the other two pin it.
    *
@@ -869,6 +917,10 @@ export const UNLOGGED_CONFIG_KEYS = new Set<ConfigKey>([
   "stats_streams_columns",
   "jobs_summary_tiles",
   "jobs_panel_order",
+  "nav_items_hidden",
+  "nav_item_order",
+  "nav_section_order",
+  "nav_bottom_tabs",
   "ui_theme",
   // Credential artefacts
   "global_plex_owner_token_hash",
