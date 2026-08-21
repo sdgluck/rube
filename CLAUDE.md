@@ -15,8 +15,9 @@ those for _what the product does_. This file is _how the code is put together_.
 
 ```sh
 pnpm dev            # migrate → localias proxy → all apps via turbo
-pnpm test           # every workspace with a test script
-pnpm typecheck      # 4 tsc programs; `pnpm typecheck web` for one
+pnpm verify         # format + lint + typecheck, then the suite (~50s)
+pnpm test           # the whole suite, one node --test process (~45s)
+pnpm typecheck      # 4 tsc programs, incremental; `pnpm typecheck web` for one
 pnpm lint           # oxlint + stylelint + check-fetch + check-nul
 pnpm format         # oxfmt (skips packages/db/drizzle)
 pnpm build          # turbo run build
@@ -26,9 +27,13 @@ pnpm screenshots    # canonical (Docker) capture of screenshots/
 pnpm release <patch|minor|major>
 ```
 
+Some of the suite: `pnpm test rules overlays` — bare arguments filter test
+files by path substring, so `pnpm test domains/` or `pnpm test cleanup` both
+work. A `-`-prefixed argument is forwarded to `node --test`, so
+`pnpm test --test-name-pattern="retention"` selects by test name.
+
 One package's tests: `pnpm --filter @tinkerbell/domain.rules test`.
 One test file: `node --test --experimental-strip-types path/to/x.test.ts`.
-One test by name: add `--test-name-pattern="..."`.
 
 `pnpm` on `PATH` may be v8 in non-interactive shells and will downgrade the
 lockfile — use mise's pnpm 11 binary for installs.
@@ -303,9 +308,32 @@ response was parsed, and two real bugs here lived in exactly those places.
 Worked example:
 `packages/jobs/src/commands/generate/cleanup.integration.test.ts`.
 
-Turbo caches `test` on `["$TURBO_DEFAULT$", "src/**", "drizzle/**", "!dist/**"]`
-with `NODE_ENV` in the cache key — a test that reads a new kind of file from
-disk may need `inputs` updating in `turbo.json`.
+### How the suite runs
+
+`pnpm test` is `scripts/test.mjs`: **one** `node --test` process over every
+`*.test.ts` in `git ls-files`, at `--test-concurrency=20`. It does not go
+through turbo. Per-package turbo tasks meant ~110 concurrent node processes on
+a 12-core machine, each re-stripping its whole TypeScript import graph — 4m16s
+at 126% CPU, against ~45s now. The header comment in that script records the
+two plausible-looking alternatives that measured worse, so they don't get
+retried.
+
+Two consequences worth knowing:
+
+- Every test file runs from the **repo root**, not its package directory. Load
+  fixtures relative to `import.meta.dirname`, never `process.cwd()`.
+- The suite is fast enough that clock-resolution races surface. `syncSections`'
+  `syncedAt < now` sweep needed an explicit tick between two syncs once the
+  file stopped taking 65ms per database — see `domains/sections`.
+
+`createTestDb()` copies a pre-migrated template rather than replaying all 56
+migrations (~65ms → ~5ms). The template is keyed by a hash of the migration
+SQL, so a new migration builds a new one automatically.
+
+`pnpm verify` runs format, lint and typecheck first, then the suite, and skips
+the suite if any of them fail. Those three go through turbo and pnpm as little
+as possible: wrapping each in `pnpm run` cost ~1s of startup apiece, which was
+two thirds of that wave's runtime.
 
 ## Non-negotiable lint guards
 
@@ -317,7 +345,10 @@ disk may need `inputs` updating in `turbo.json`.
   whole file as binary and skip it silently.
 - oxlint `no-restricted-imports` — the app/package layering above.
 - Pre-commit runs `lint-staged`: oxlint + oxfmt + `pnpm typecheck` for
-  `.ts`/`.tsx`, stylelint-then-oxfmt for `.css`.
+  `.ts`/`.tsx`, stylelint-then-oxfmt for `.css`. It stays affordable because
+  every tsconfig sets `incremental` — the four programs are ~1s each on a warm
+  `.tsbuildinfo` against ~25s cold, which is why the hook can typecheck the
+  whole repo on every commit rather than trusting the staged files alone.
 
 ## Conventions
 

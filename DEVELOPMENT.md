@@ -62,12 +62,21 @@ pnpm db:migrate    # apply migrations (also runs as part of `pnpm dev`)
 ## Checks
 
 ```sh
-pnpm test           # all workspaces with a test script
+pnpm verify         # everything below except format, in one go (~50s)
+pnpm test           # the whole suite, one node --test process (~45s)
 pnpm test:coverage  # the same, with Node's coverage reporter
 pnpm typecheck
 pnpm lint           # oxlint + source guards
 pnpm format         # oxfmt
 ```
+
+`pnpm verify` is the one to run before pushing. It does format, lint and
+typecheck first and only starts the suite if they pass, so a stray formatting
+slip comes back in about seven seconds instead of a minute.
+
+`pnpm test` takes bare arguments as path filters (`pnpm test domains/rules`)
+and forwards `-`-prefixed ones to `node --test`
+(`pnpm test --test-name-pattern="retention"`).
 
 All four run in CI on every pull request and before every image is published
 (`.github/workflows/ci.yml`, called by `docker-publish.yml`). Nothing used to,

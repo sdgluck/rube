@@ -32,6 +32,22 @@ function clientReturning(sections: Array<{ key: string; title: string; type: str
   return { getSections: async () => sections } as unknown as PlexClient;
 }
 
+/**
+ * The sweep is `delete where syncedAt < now`, and `now` is `Date.now()` — so
+ * two syncs landing in the same millisecond sweep nothing, because the second
+ * pass's `now` is not greater than the first pass's `syncedAt`.
+ *
+ * Every test below that syncs twice and asserts a removal depends on the clock
+ * having moved between them. It used to, by accident, when the suite was slow.
+ * Waiting for the millisecond to actually tick makes that dependency explicit
+ * and the result deterministic, instead of a test that passes on a loaded
+ * machine and fails on an idle one.
+ */
+async function tick(): Promise<void> {
+  const started = Date.now();
+  while (Date.now() === started) await new Promise((r) => setImmediate(r));
+}
+
 function keys(): string[] {
   return getLocalSections()
     .map((s) => s.key)
@@ -79,6 +95,7 @@ describe("syncSections", () => {
         { key: "2", title: "TV", type: "show" },
       ]),
     );
+    await tick();
 
     const stats = await syncSections(clientReturning([{ key: "1", title: "Movies", type: "movie" }]));
 
@@ -104,6 +121,7 @@ describe("syncSections", () => {
     // that should change, deliberately, rather than a surprise in the field.
     return (async () => {
       await syncSections(clientReturning([{ key: "1", title: "Movies", type: "movie" }]));
+      await tick();
 
       const stats = await syncSections(clientReturning([]));
 

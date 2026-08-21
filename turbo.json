@@ -8,6 +8,16 @@
     "build": {
       "outputs": ["dist/**"]
     },
+    /* `pnpm test` does NOT come through here any more — it runs
+       `scripts/test.mjs`, one `node --test` process over every test file.
+       Fanning the suite out as 63 per-package tasks meant ~110 concurrent node
+       processes on a 12-core machine, each re-stripping its whole TypeScript
+       import graph: 4m16s at 126% CPU, against 43s for the single runner. The
+       turbo cache made repeat runs cheap but the cold run is the one that
+       matters before a commit.
+
+       Left registered so `turbo run test` still works for a per-package run
+       with caching. */
     "test": {
       "dependsOn": ["^build"],
       /* Without explicit `inputs`, turbo hashes every file in the package —

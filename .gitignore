@@ -22,3 +22,8 @@ apps/portal/dist
 /posters/
 .pnpm-store/
 .DS_Store
+
+# tsc's incremental state. `incremental: true` is what takes `pnpm typecheck`
+# from ~25s to ~5s, which is what makes it affordable in the pre-commit hook —
+# but the cache is machine- and version-specific, so it is never committed.
+*.tsbuildinfo

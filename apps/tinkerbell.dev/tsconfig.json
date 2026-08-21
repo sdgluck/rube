@@ -16,7 +16,8 @@
       "#components/*": ["./src/components/*"],
       "#data/*": ["./src/data/*"],
       "#registry/*": ["./src/registry/*"]
-    }
+    },
+    "incremental": true
   },
   "include": ["src", "harness", "scripts"]
 }

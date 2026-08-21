@@ -16,7 +16,8 @@
       "#components/*": ["./src/components/*"],
       "#hooks/*": ["./src/hooks/*"],
       "#layout/*": ["./src/layout/*"]
-    }
+    },
+    "incremental": true
   },
   "include": ["src"]
 }
