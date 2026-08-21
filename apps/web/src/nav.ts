@@ -31,8 +31,9 @@ export type NavSection = { id: string; label: string; items: NavItem[] };
  * Every page the app has a menu entry for — the *catalogue*, not the menu.
  *
  * Four things read this list unfiltered on purpose: `routeTrail` (the app bar's
- * breadcrumb), `useDocumentTitle`, `RouteAnnouncer` and the command palette. The admin's own menu layout — order, hidden items, tab bar — is
- * applied by `resolveNav` and lives only in the three things that render a menu
+ * breadcrumb), `useDocumentTitle`, `RouteAnnouncer` and the command palette. The
+ * admin's own menu layout — order, hidden items, tab bar — is applied by
+ * `resolveNav` and lives only in the three things that render a menu
  * (`Sidebar`, `More`, `BottomNav`). Hiding a page from the menu must never make
  * it unreachable, untitled or unbreadcrumbed, which is exactly what would
  * happen if the filter moved into this constant.
