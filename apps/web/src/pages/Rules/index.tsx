@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import type { RuleSeed } from "#/lib/viewToRule";
+import type { RuleSeed } from "#/lib/ruleSeed";
 import { useListParams } from "#hooks/useListParams";
 import { readEnum } from "#/storage";
 import ConfirmModal from "#components/ConfirmModal";
@@ -359,7 +359,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   }
 
   /**
-   * Open the wizard on a rule the Media page has already half-written.
+   * Open the wizard on a rule another page has already half-written — a Media
+   * view turned into a smart filter, or a list Discover found.
    *
    * Arrives as router state rather than query params: the filter tree is a
    * nested object, and round-tripping it through a URL would mean inventing an
@@ -372,13 +373,25 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     const seed = (location.state as { ruleSeed?: RuleSeed } | null)?.ruleSeed;
     if (!seed) return;
     navigate(location.pathname, { replace: true, state: null });
-    setForm({
-      ...EMPTY_FORM,
-      type: "smart_filter",
-      outcome: { ...EMPTY_FORM.outcome, kind: outcome },
-      sections: seed.sections,
-      smartFilter: seed.smartFilter as RuleFormState["smartFilter"],
-    });
+    setForm(
+      seed.kind === "list_source"
+        ? {
+            ...EMPTY_FORM,
+            type: "list_source",
+            outcome: { ...EMPTY_FORM.outcome, kind: outcome },
+            listProvider: seed.listProvider,
+            listId: seed.listId,
+            collectionName: seed.collectionName,
+            name: seed.collectionName,
+          }
+        : {
+            ...EMPTY_FORM,
+            type: "smart_filter",
+            outcome: { ...EMPTY_FORM.outcome, kind: outcome },
+            sections: seed.sections,
+            smartFilter: seed.smartFilter as RuleFormState["smartFilter"],
+          },
+    );
     setIsEditing(false);
   }, [location.state]);
 

@@ -291,6 +291,22 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  clients/mdblist:
+    dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+    devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   clients/omdb:
     dependencies:
       '@tinkerbell/db':
@@ -399,6 +415,22 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  clients/trakt:
+    dependencies:
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+    devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -1586,6 +1618,9 @@ importers:
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../llm
+      '@tinkerbell/mdblist':
+        specifier: workspace:*
+        version: link:../../clients/mdblist
       '@tinkerbell/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb
@@ -1598,6 +1633,9 @@ importers:
       '@tinkerbell/posters':
         specifier: workspace:*
         version: link:../posters
+      '@tinkerbell/trakt':
+        specifier: workspace:*
+        version: link:../../clients/trakt
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
@@ -2082,9 +2120,15 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@tinkerbell/mdblist':
+        specifier: workspace:*
+        version: link:../../clients/mdblist
       '@tinkerbell/test-support':
         specifier: workspace:*
         version: link:../test-support
+      '@tinkerbell/trakt':
+        specifier: workspace:*
+        version: link:../../clients/trakt
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1

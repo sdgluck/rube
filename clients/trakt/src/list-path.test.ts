@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { traktListPath } from "./trakt.ts";
+import { traktListPath } from "./index.ts";
 
 /**
  * List references arrive from two places that write them differently: a person

@@ -1,0 +1,98 @@
+/* A list result is a row, not a poster card: neither provider returns artwork,
+   and a grid of identical placeholders would say less than the name, the owner
+   and the item count do on one line. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.listCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--e-card);
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.name {
+  font: var(--t-panel);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Which service the list came from. Two providers are searched at once and
+   the results are interleaved by popularity, so without this the ids in a
+   "create rule" would be the only way to tell them apart. */
+.provider {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  background: var(--surface-sunken);
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.description {
+  margin: 0;
+  font: var(--t-caption);
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardActions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.addBtn {
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
+}
+
+.ghostBtn {
+  composes: btn btnGhost btnSm from "../../styles/controls.module.css";
+}
+
+/* A provider that failed or isn't set up. Advisory, above the results, because
+   the alternative is a short list that looks complete. */
+.notice {
+  margin: 0 0 10px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .listCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cardActions {
+    justify-content: flex-end;
+  }
+}

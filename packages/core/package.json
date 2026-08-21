@@ -21,9 +21,11 @@
     "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/imdb": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
+    "@tinkerbell/mdblist": "workspace:*",
     "@tinkerbell/omdb": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/posters": "workspace:*",
+    "@tinkerbell/trakt": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "zod": "^4.3.6"
   },

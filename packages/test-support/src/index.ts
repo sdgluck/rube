@@ -15,4 +15,5 @@
  * `devDependency` everywhere it is used, so it does not reach the image.
  */
 export * from "./mock-arr-server.ts";
+export * from "./mock-list-server.ts";
 export * from "./mock-plex-server.ts";

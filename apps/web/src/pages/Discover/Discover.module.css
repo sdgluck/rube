@@ -1,3 +1,18 @@
+/* The Titles/Lists switch. Composed from the shared segmented control rather
+   than restated, so it matches the Settings sub-tabs it borrows the look from. */
+.tabs {
+  composes: pageTabs from "../../styles/shared.module.css";
+  margin-bottom: 12px;
+}
+
+.tab {
+  composes: pageTab from "../../styles/shared.module.css";
+}
+
+.tabActive {
+  composes: pageTab pageTabActive from "../../styles/shared.module.css";
+}
+
 /* Not `composes: card` — a Discover card is not a link to somewhere, it has an
    action inside it, so it must not take the shared card's pointer cursor or
    whole-card hover. */

@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./arr": "./src/mock-arr-server.ts",
+    "./lists": "./src/mock-list-server.ts",
     "./plex": "./src/mock-plex-server.ts"
   },
   "files": [

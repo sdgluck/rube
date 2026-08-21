@@ -20,7 +20,9 @@ import { ServicesToken } from "@tinkerbell/composition";
 import { ConfigStoreToken } from "@tinkerbell/core";
 import { DbToken, arrMovies } from "@tinkerbell/db";
 import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import { startMockRadarr, type MockArr } from "@tinkerbell/test-support";
+import { startMockRadarr, startMockMdblist, startMockTrakt, type MockArr } from "@tinkerbell/test-support";
+import { createMdblistClient } from "@tinkerbell/mdblist";
+import { createTraktClient } from "@tinkerbell/trakt";
 import { createTrpc } from "./index.ts";
 import type { AdminContext } from "./_base.ts";
 
@@ -28,9 +30,36 @@ const c = createTestContainer({ overrides: registerJobs });
 after(() => c.dispose());
 
 const db = c.resolve(DbToken);
-const { setConfig } = c.resolve(ConfigStoreToken);
+const setConfigStore = c.resolve(ConfigStoreToken);
+const { setConfig } = setConfigStore;
 const services = c.resolve(ServicesToken);
-const { appRouter } = createTrpc({ ...services, jobs: c.resolve(JobsToken) });
+
+/**
+ * The two list providers point at mock servers instead of the internet.
+ *
+ * Swapped on the deps object the routers are built from rather than on
+ * `ClientsToken`, because that is the seam `createTrpc` already takes — and
+ * because the alternative would be a base-url config key that exists only for
+ * tests. The origins are mutable because a server's port isn't known until it
+ * is listening, which is after the router is built.
+ */
+let mdblistOrigin: string | undefined;
+let traktOrigin: string | undefined;
+
+const { appRouter } = createTrpc({
+  ...services,
+  clients: {
+    ...services.clients,
+    getMdblistClient: () =>
+      createMdblistClient({
+        apiKey: setConfigStore.getConfig("global_mdblist_api_key") || null,
+        baseUrl: mdblistOrigin,
+      }),
+    getTraktClient: () =>
+      createTraktClient({ clientId: setConfigStore.getConfig("global_trakt_client_id") || null, baseUrl: traktOrigin }),
+  },
+  jobs: c.resolve(JobsToken),
+});
 
 function caller() {
   const ctx = {
@@ -79,6 +108,8 @@ describe("discover.status", () => {
     setConfig("global_tmdb_api_key", "");
     setConfig("global_radarr_url", "");
     setConfig("global_radarr_api_key", "");
+    setConfig("global_mdblist_api_key", "");
+    setConfig("global_trakt_client_id", "");
   });
 
   /**
@@ -87,10 +118,24 @@ describe("discover.status", () => {
    * wasted request and an error state standing in for a setup step.
    */
   test("reports what is configured without touching the network", async () => {
-    assert.deepEqual(await caller().discover.status(), { tmdb: false, radarr: false, sonarr: false });
+    assert.deepEqual(await caller().discover.status(), {
+      tmdb: false,
+      radarr: false,
+      sonarr: false,
+      mdblist: false,
+      trakt: false,
+    });
     setConfig("global_tmdb_api_key", "k");
+    setConfig("global_mdblist_api_key", "mk");
     await useRadarr();
-    assert.deepEqual(await caller().discover.status(), { tmdb: true, radarr: true, sonarr: false });
+    assert.deepEqual(await caller().discover.status(), {
+      tmdb: true,
+      radarr: true,
+      sonarr: false,
+      // Whether a key exists, never the key — both are in `SECRET_KEYS`.
+      mdblist: true,
+      trakt: false,
+    });
     await radarr.close();
   });
 });
@@ -198,6 +243,145 @@ describe("discover.add", () => {
     await assert.rejects(
       () => caller().discover.add(ADD_INPUT),
       (err: TRPCError) => err.code === "PRECONDITION_FAILED",
+    );
+  });
+});
+
+/**
+ * List search, against two mock providers on real HTTP.
+ *
+ * The interesting behaviour is all in the fan-out: which providers are asked,
+ * what happens when one of them doesn't answer, and whether a list item that
+ * carries only an IMDb id is recognised as something you already hold. A
+ * `fetch` stub would agree with this file about all three.
+ */
+describe("discover.lists", () => {
+  const MDBLIST_LIST = {
+    summary: { id: 2410, name: "Horror Movies", slug: "horror", owner: "hdlists", itemCount: 2, likes: 139 },
+    items: [
+      // No TMDb id at all — the case `annotateTmdbHits` cannot see.
+      { title: "Alien", year: 1979, mediaType: "movie" as const, imdbId: "tt0078748", tmdbId: null },
+      { title: "The Thing", year: 1982, mediaType: "movie" as const, imdbId: "tt0084787", tmdbId: 1091 },
+    ],
+  };
+  const TRAKT_LIST = {
+    summary: { id: 8842, name: "Best of 2024", slug: "best", owner: "someone", itemCount: 0, likes: 900 },
+    items: [],
+  };
+
+  beforeEach(() => {
+    db.delete(arrMovies).run();
+    setConfig("global_mdblist_api_key", "");
+    setConfig("global_trakt_client_id", "");
+    mdblistOrigin = undefined;
+    traktOrigin = undefined;
+  });
+
+  async function useMdblist() {
+    const server = await startMockMdblist([MDBLIST_LIST]);
+    mdblistOrigin = server.origin;
+    setConfig("global_mdblist_api_key", "mk");
+    return server;
+  }
+
+  async function useTrakt() {
+    const server = await startMockTrakt([TRAKT_LIST]);
+    traktOrigin = server.origin;
+    setConfig("global_trakt_client_id", "cid");
+    return server;
+  }
+
+  test("searches only the providers that are configured, and says which aren't", async () => {
+    const mdblist = await useMdblist();
+    const result = await caller().discover.lists.search({ term: "horror" });
+    await mdblist.close();
+
+    assert.deepEqual(
+      result.results.map((r) => [r.provider, r.listId, r.name]),
+      [["mdblist", "2410", "Horror Movies"]],
+    );
+    // An unconfigured provider is a setup step to report, not an error to raise
+    // — the results that did arrive are still worth showing.
+    assert.deepEqual(result.unconfigured, ["trakt"]);
+    assert.deepEqual(result.failed, []);
+  });
+
+  test("merges both providers, most-liked first", async () => {
+    const mdblist = await useMdblist();
+    const trakt = await useTrakt();
+    const result = await caller().discover.lists.search({ term: "best" });
+    await Promise.all([mdblist.close(), trakt.close()]);
+
+    // Trakt's 900 likes outrank MDBList's 139; no other ordering means the
+    // same thing on both sides of the merge.
+    assert.deepEqual(
+      result.results.map((r) => r.provider),
+      ["trakt", "mdblist"],
+    );
+    assert.deepEqual(result.unconfigured, []);
+  });
+
+  test("one provider failing costs its results, not the whole tab", async () => {
+    const mdblist = await useMdblist();
+    const trakt = await useTrakt();
+    // A 500 is not on the retryable list (429/502/503/504), so one is enough
+    // and the test doesn't pay for a backoff.
+    trakt.failNext(1, 500);
+
+    const result = await caller().discover.lists.search({ term: "horror" });
+    await Promise.all([mdblist.close(), trakt.close()]);
+
+    assert.deepEqual(result.failed, ["trakt"]);
+    assert.deepEqual(
+      result.results.map((r) => r.provider),
+      ["mdblist"],
+    );
+  });
+
+  test("the browse state asks for popular lists rather than nothing", async () => {
+    const mdblist = await useMdblist();
+    const result = await caller().discover.lists.top();
+    await mdblist.close();
+
+    assert.equal(result.results.length, 1);
+    assert.ok(mdblist.journal.requests.some((r) => r.startsWith("GET /lists/top")));
+  });
+
+  test("an unconfigured provider is a 412 on preview, not a 500", async () => {
+    await assert.rejects(
+      () => caller().discover.lists.preview({ provider: "mdblist", listId: "2410" }),
+      (err: TRPCError) => err.code === "PRECONDITION_FAILED",
+    );
+  });
+
+  test("a preview marks a title held on its IMDb id alone", async () => {
+    const mdblist = await useMdblist();
+    db.insert(arrMovies)
+      .values({
+        instanceId: "radarr",
+        arrId: 7,
+        // Deliberately no TMDb id: this row is only findable by IMDb, which is
+        // exactly the case the TMDb-keyed annotation misses.
+        tmdbId: null,
+        imdbId: "tt0078748",
+        title: "Alien",
+        monitored: true,
+        hasFile: true,
+        syncedAt: 0,
+      })
+      .run();
+
+    const result = await caller().discover.lists.preview({ provider: "mdblist", listId: "2410" });
+    await mdblist.close();
+
+    assert.equal(result.name, "Horror Movies");
+    assert.equal(result.truncated, false);
+    assert.deepEqual(
+      result.items.map((i) => [i.title, i.inArr.length]),
+      [
+        ["Alien", 1],
+        ["The Thing", 0],
+      ],
     );
   });
 });

@@ -45,4 +45,4 @@ export type { SyncInstanceResult, SyncProgress } from "./sync.ts";
 export type { LibraryQuery, LibraryPage } from "./queries.ts";
 export type { ArrIssue } from "./reconcile.ts";
 export { discoverKey } from "./discover.ts";
-export type { DiscoverKey, DiscoverHolding, DiscoverArrHolding } from "./discover.ts";
+export type { DiscoverKey, ExternalKey, DiscoverHolding, DiscoverArrHolding } from "./discover.ts";

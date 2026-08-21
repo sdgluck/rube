@@ -24,7 +24,8 @@ export interface MediaViewFilters {
   containers: string[];
 }
 
-export interface RuleSeed {
+export interface SmartFilterRuleSeed {
+  kind: "smart_filter";
   /** Section *titles*, which is what a rule config stores. */
   sections: string[];
   smartFilter: { kind: "group"; combinator: "all"; children: unknown[] };
@@ -48,7 +49,10 @@ const DROPPED_LABELS: Record<string, string> = {
  * clauses would produce a rule that matches nothing at all, which is the
  * failure mode most likely to go unnoticed.
  */
-export function ruleSeedFromView(filters: MediaViewFilters, sectionTitleFor: (key: string) => string | null): RuleSeed {
+export function ruleSeedFromView(
+  filters: MediaViewFilters,
+  sectionTitleFor: (key: string) => string | null,
+): SmartFilterRuleSeed {
   const children: unknown[] = [];
 
   if (filters.search.trim()) {
@@ -75,7 +79,7 @@ export function ruleSeedFromView(filters: MediaViewFilters, sectionTitleFor: (ke
   // saying the same thing twice and getting it wrong on a mixed selection.
   const sections = filters.sections.map(sectionTitleFor).filter((title): title is string => !!title);
 
-  return { sections, smartFilter: { kind: "group", combinator: "all", children }, dropped };
+  return { kind: "smart_filter", sections, smartFilter: { kind: "group", combinator: "all", children }, dropped };
 }
 
 /** The sentence shown before the wizard opens, or null when nothing was lost. */

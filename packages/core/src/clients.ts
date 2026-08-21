@@ -15,6 +15,8 @@ import { token } from "@tinkerbell/container";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createOmdbClient } from "@tinkerbell/omdb";
 import { createImdbClient } from "@tinkerbell/imdb";
+import { createMdblistClient } from "@tinkerbell/mdblist";
+import { createTraktClient } from "@tinkerbell/trakt";
 import type { HealthReporter } from "@tinkerbell/ports";
 import type { Db } from "@tinkerbell/db";
 import type { ConfigStore } from "./config.ts";
@@ -76,7 +78,28 @@ export function createClients(deps: ClientsDeps) {
     });
   }
 
-  return { getPlexClient, getOmdbClient, getImdbClient, plexHealthCallback };
+  /**
+   * MDBList and Trakt take their key at construction rather than per call, and
+   * a missing key is not an error here — both throw a message naming the
+   * setting when actually asked for something. `NotConfiguredError` is
+   * deliberately not used: these are reached from inside a job, where the
+   * plain message is what lands in the run log.
+   */
+  function getMdblistClient() {
+    return createMdblistClient({
+      apiKey: getConfig("global_mdblist_api_key") ?? null,
+      onHealth: (status, message) => health("MDBList", status, message),
+    });
+  }
+
+  function getTraktClient() {
+    return createTraktClient({
+      clientId: getConfig("global_trakt_client_id") ?? null,
+      onHealth: (status, message) => health("Trakt", status, message),
+    });
+  }
+
+  return { getPlexClient, getOmdbClient, getImdbClient, getMdblistClient, getTraktClient, plexHealthCallback };
 }
 
 export type Clients = ReturnType<typeof createClients>;

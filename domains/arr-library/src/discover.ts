@@ -47,6 +47,21 @@ export interface DiscoverHolding {
   plexRatingKey: string | null;
 }
 
+/**
+ * What an external list item can be identified by.
+ *
+ * Both ids are optional and at least one is required in practice — a list
+ * entry with neither is unmatchable and the caller should drop it rather than
+ * pass it in.
+ */
+export interface ExternalKey {
+  /** The caller's own handle for this item; the returned map is keyed on it. */
+  key: string;
+  mediaType: "movie" | "tv";
+  tmdbId?: number | null;
+  imdbId?: string | null;
+}
+
 /** `movie:603` / `tv:1396` — the key both sides of the annotation agree on. */
 export function discoverKey(mediaType: "movie" | "tv", tmdbId: number): string {
   return `${mediaType}:${tmdbId}`;
@@ -175,5 +190,129 @@ export function createDiscoverQueries(deps: { db: Db }) {
     return out;
   }
 
-  return { annotateTmdbHits };
+  /**
+   * The same question, asked about an external list.
+   *
+   * MDBList and Trakt hand back an IMDb id for almost everything and a TMDb id
+   * for most of it, and which one is missing varies item by item. Reusing
+   * `annotateTmdbHits` would therefore quietly report "not held" for every
+   * IMDb-only entry, which on a list of a few hundred is enough wrong answers
+   * to make the preview worse than not showing one.
+   *
+   * The caller supplies the map key rather than it being derived, because an
+   * item that carries only one of the two ids has no id pair to derive it from
+   * — the list's own position is the only stable handle it has.
+   */
+  function annotateExternalHits(keys: ExternalKey[]): Map<string, DiscoverHolding> {
+    const out = new Map<string, DiscoverHolding>();
+    if (keys.length === 0) return out;
+
+    const holding = (key: string): DiscoverHolding => {
+      const existing = out.get(key);
+      if (existing) return existing;
+      const created: DiscoverHolding = { arr: [], plexRatingKey: null };
+      out.set(key, created);
+      return created;
+    };
+
+    /** id → the keys wanting it. Two list entries can name the same title. */
+    function lookups(mediaType: "movie" | "tv") {
+      const byTmdb = new Map<number, string[]>();
+      const byImdb = new Map<string, string[]>();
+      for (const k of keys) {
+        if (k.mediaType !== mediaType) continue;
+        if (k.tmdbId != null) byTmdb.set(k.tmdbId, [...(byTmdb.get(k.tmdbId) ?? []), k.key]);
+        if (k.imdbId) byImdb.set(k.imdbId, [...(byImdb.get(k.imdbId) ?? []), k.key]);
+      }
+      return { byTmdb, byImdb };
+    }
+
+    /** Every key a row satisfies, deduped — a row can match on both ids at once. */
+    function keysFor(
+      lookup: { byTmdb: Map<number, string[]>; byImdb: Map<string, string[]> },
+      row: { tmdbId?: number | null; imdbId?: string | null },
+    ): string[] {
+      const matched = new Set<string>();
+      if (row.tmdbId != null) for (const k of lookup.byTmdb.get(row.tmdbId) ?? []) matched.add(k);
+      if (row.imdbId) for (const k of lookup.byImdb.get(row.imdbId) ?? []) matched.add(k);
+      return [...matched];
+    }
+
+    for (const mediaType of ["movie", "tv"] as const) {
+      const lookup = lookups(mediaType);
+      const tmdbIds = [...lookup.byTmdb.keys()];
+      const imdbIds = [...lookup.byImdb.keys()];
+      if (tmdbIds.length === 0 && imdbIds.length === 0) continue;
+
+      const arrTable = mediaType === "movie" ? arrMovies : arrSeries;
+      const match: SQL[] = [];
+      if (tmdbIds.length > 0) match.push(inArray(arrTable.tmdbId, tmdbIds));
+      if (imdbIds.length > 0) match.push(inArray(arrTable.imdbId, imdbIds));
+
+      if (mediaType === "movie") {
+        const rows = db
+          .select({
+            tmdbId: arrMovies.tmdbId,
+            imdbId: arrMovies.imdbId,
+            instanceId: arrMovies.instanceId,
+            arrId: arrMovies.arrId,
+            monitored: arrMovies.monitored,
+            hasFile: arrMovies.hasFile,
+          })
+          .from(arrMovies)
+          // Tombstoned rows are not held, same as the TMDb path.
+          .where(and(isNull(arrMovies.deletedAt), or(...match)))
+          .all();
+        for (const row of rows) {
+          for (const key of keysFor(lookup, row)) {
+            holding(key).arr.push({
+              instanceId: row.instanceId,
+              arrId: row.arrId,
+              monitored: row.monitored,
+              hasFile: row.hasFile,
+            });
+          }
+        }
+      } else {
+        const rows = db
+          .select({
+            tmdbId: arrSeries.tmdbId,
+            imdbId: arrSeries.imdbId,
+            instanceId: arrSeries.instanceId,
+            arrId: arrSeries.arrId,
+            monitored: arrSeries.monitored,
+            episodeFileCount: arrSeries.episodeFileCount,
+          })
+          .from(arrSeries)
+          .where(and(isNull(arrSeries.deletedAt), or(...match)))
+          .all();
+        for (const row of rows) {
+          for (const key of keysFor(lookup, row)) {
+            holding(key).arr.push({
+              instanceId: row.instanceId,
+              arrId: row.arrId,
+              monitored: row.monitored,
+              hasFile: row.episodeFileCount > 0,
+            });
+          }
+        }
+      }
+
+      const plexMatch: SQL[] = [];
+      if (tmdbIds.length > 0) plexMatch.push(inArray(mediaItems.tmdbId, tmdbIds));
+      if (imdbIds.length > 0) plexMatch.push(inArray(mediaItems.imdbId, imdbIds));
+      const plex = db
+        .select({ tmdbId: mediaItems.tmdbId, imdbId: mediaItems.imdbId, ratingKey: mediaItems.ratingKey })
+        .from(mediaItems)
+        .where(or(...plexMatch))
+        .all();
+      for (const row of plex) {
+        for (const key of keysFor(lookup, row)) holding(key).plexRatingKey ??= row.ratingKey;
+      }
+    }
+
+    return out;
+  }
+
+  return { annotateTmdbHits, annotateExternalHits };
 }

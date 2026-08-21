@@ -164,3 +164,93 @@ describe("discover — what you already hold", () => {
     assert.equal(lib().annotateTmdbHits([{ tmdbId: 999, mediaType: "movie" }]).size, 0);
   });
 });
+
+/**
+ * The list-preview path. Its whole reason to exist is the IMDb-only entry:
+ * MDBList and Trakt hand back an IMDb id for almost everything and a TMDb id
+ * for most of it, and reusing the TMDb-keyed annotation would report "not
+ * held" for every item missing the latter.
+ */
+describe("discover — what you hold, asked by external id", () => {
+  let t: TestDb;
+  beforeEach(() => (t = createTestDb()));
+  afterEach(() => t.dispose());
+
+  const lib = () => createArrLibrary({ db: t.db });
+
+  it("matches a movie on its imdb id when the list carried no tmdb id", () => {
+    t.db
+      .insert(arrMovies)
+      .values(movie({ tmdbId: null, imdbId: "tt0133093" }))
+      .run();
+    t.db
+      .insert(mediaItems)
+      .values(plexItem({ tmdbId: null, imdbId: "tt0133093" }))
+      .run();
+
+    const held = lib().annotateExternalHits([{ key: "0", mediaType: "movie", imdbId: "tt0133093" }]);
+    const hit = held.get("0")!;
+
+    assert.deepEqual(hit.arr, [{ instanceId: "radarr", arrId: 7, monitored: true, hasFile: true }]);
+    assert.equal(hit.plexRatingKey, "1234");
+  });
+
+  it("counts a row matching on both ids once, not twice", () => {
+    t.db
+      .insert(arrMovies)
+      .values(movie({ imdbId: "tt0133093" }))
+      .run();
+
+    const held = lib().annotateExternalHits([{ key: "0", mediaType: "movie", tmdbId: 603, imdbId: "tt0133093" }]);
+    assert.equal(held.get("0")!.arr.length, 1);
+  });
+
+  it("matches a series on its imdb id, with episodes on disk standing in for hasFile", () => {
+    t.db
+      .insert(arrSeries)
+      .values(series({ tvdbId: null, imdbId: "tt14688458" }))
+      .run();
+
+    const held = lib().annotateExternalHits([{ key: "x", mediaType: "tv", imdbId: "tt14688458" }]);
+    assert.deepEqual(held.get("x")!.arr, [{ instanceId: "sonarr", arrId: 12, monitored: true, hasFile: true }]);
+  });
+
+  it("a tombstoned row is not held — the list should offer it again", () => {
+    t.db
+      .insert(arrMovies)
+      .values(movie({ imdbId: "tt0133093", deletedAt: NOW }))
+      .run();
+
+    assert.equal(lib().annotateExternalHits([{ key: "0", mediaType: "movie", imdbId: "tt0133093" }]).size, 0);
+  });
+
+  /**
+   * Two entries naming the same title is why the caller supplies the key: an
+   * id-derived one would collapse them and the second row would render blank.
+   */
+  it("annotates every entry that names the same title", () => {
+    t.db.insert(arrMovies).values(movie()).run();
+
+    const held = lib().annotateExternalHits([
+      { key: "0", mediaType: "movie", tmdbId: 603 },
+      { key: "1", mediaType: "movie", tmdbId: 603 },
+    ]);
+    assert.equal(held.get("0")!.arr.length, 1);
+    assert.equal(held.get("1")!.arr.length, 1);
+  });
+
+  it("does not confuse a movie id with a tv id of the same number", () => {
+    t.db.insert(arrMovies).values(movie()).run();
+
+    const held = lib().annotateExternalHits([
+      { key: "movie", mediaType: "movie", tmdbId: 603 },
+      { key: "tv", mediaType: "tv", tmdbId: 603 },
+    ]);
+    assert.equal(held.get("movie")!.arr.length, 1);
+    assert.equal(held.get("tv"), undefined);
+  });
+
+  it("asks nothing at all for an empty list", () => {
+    assert.equal(lib().annotateExternalHits([]).size, 0);
+  });
+});
