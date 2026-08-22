@@ -560,6 +560,9 @@ importers:
       '@tinkerbell/domain.events':
         specifier: workspace:*
         version: link:../events
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
       '@tinkerbell/ports':
         specifier: workspace:*
         version: link:../../packages/ports
@@ -1041,6 +1044,9 @@ importers:
       '@tinkerbell/composition':
         specifier: workspace:*
         version: link:../../packages/composition
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1

@@ -238,14 +238,16 @@ describe("confirming degradation before believing it", () => {
     // result, so one unlucky reading used to understate the server permanently.
     // Here the server dips below realtime for exactly one measurement and then
     // recovers; the ramp must shrug it off and carry on.
-    let windows = 0;
-    plex.playback.transcodeSpeed = () => {
-      windows++;
-      // Sampled three times per window, so this dips for one window only.
-      return windows > 3 && windows <= 6 ? 0.4 : 2.5;
-    };
-
+    // The dip ends the instant the ramp announces it is re-measuring, so the
+    // confirmation window is guaranteed to see a healthy server. Keying off the
+    // ramp's own announcement rather than a count of `/status/sessions` calls
+    // is what makes this independent of the sampling cadence: the harness
+    // samples continuously now, including through the settle, so "the next
+    // three calls" is no longer the same thing as "the next window".
     const { ctx, lines } = testContext();
+    const reMeasuring = () => lines.some((l) => /re-measuring to confirm/.test(l));
+    plex.playback.transcodeSpeed = () => (reMeasuring() ? 2.5 : 0.4);
+
     const result = await runStressTest(client(), { mode: "transcode", maxSessions: 4 }, ctx, { timings: FAST });
 
     assert.equal(result.maxSessions, 4, "a transient dip must not stop the ramp");
@@ -359,11 +361,122 @@ describe("cancellation", () => {
       steps: [],
       startedAt: 1,
       finishedAt: 2,
+      telemetry: [],
     });
 
     const row = getStressTestRun(id)!;
     assert.equal(row.status, "cancelled");
     assert.equal(row.maxSessions, 2, "the measurements it did take are still recorded");
+  });
+});
+
+describe("the telemetry series", () => {
+  it("samples through the settle, not only inside the measurement window", async () => {
+    // The point of the whole series. The settle is most of a real run's wall
+    // clock — fifteen seconds a step against six of measurement — and it used
+    // to query nothing at all, so the run was unobservable for the majority of
+    // its life and the chart had one point per twenty seconds.
+    const { ctx } = testContext();
+    const result = await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST });
+
+    const settling = result.telemetry.filter((s) => s.phase === "settle");
+    assert.ok(settling.length > 0, "expected samples taken while the server was stabilising");
+    assert.ok(
+      result.telemetry.length > result.steps.length,
+      "a series with no more points than there are steps is the old behaviour",
+    );
+  });
+
+  it("labels the phases in the order the ramp goes through them", async () => {
+    const { ctx } = testContext();
+    const result = await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST });
+
+    const phases = result.telemetry.map((s) => s.phase);
+    assert.ok(phases.includes("settle"));
+    assert.ok(phases.includes("measure"));
+    assert.equal(phases.at(-1), "cleanup", "the series must cover the sessions draining away");
+  });
+
+  it("keeps time moving forward and starts from the run's own zero", async () => {
+    const { ctx } = testContext();
+    const result = await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST });
+
+    assert.ok(result.telemetry[0].t >= 0);
+    for (let i = 1; i < result.telemetry.length; i++) {
+      assert.ok(result.telemetry[i].t >= result.telemetry[i - 1].t, "sample times must not go backwards");
+    }
+  });
+
+  it("records the sessions the ramp has running, per session", async () => {
+    const { ctx } = testContext();
+    const result = await runStressTest(client(), { mode: "transcode", maxSessions: 3 }, ctx, { timings: FAST });
+
+    const busiest = result.telemetry.reduce((max, s) => Math.max(max, s.sessions.length), 0);
+    assert.equal(busiest, 3, "every concurrent session must appear as its own lane");
+
+    const withSessions = result.telemetry.find((s) => s.sessions.length > 0)!;
+    assert.ok(
+      withSessions.sessions.every((r) => !r.id.startsWith("tinkerbell-stress-")),
+      "lane labels carry the client id without the prefix every one of them shares",
+    );
+  });
+
+  it("reports summed bandwidth, not the per-session mean", async () => {
+    // The step row's `avgBandwidth` cannot answer "what is this server pushing".
+    // With several identical sessions running, the sum must exceed the mean.
+    const { ctx } = testContext();
+    const result = await runStressTest(client(), { mode: "transcode", maxSessions: 3 }, ctx, { timings: FAST });
+
+    const last = result.steps.at(-1)!;
+    assert.ok(last.totalKbps != null && last.avgBandwidth > 0);
+    assert.ok(
+      last.totalKbps >= last.avgBandwidth,
+      `total ${last.totalKbps} should be at least the per-session mean ${last.avgBandwidth}`,
+    );
+  });
+
+  it("lands on the run row, so a finished run can be replayed", async () => {
+    const id = "telemetry-run";
+    db.insert(stressTestRuns)
+      .values({ id, config: { mode: "transcode" }, steps: [], status: "running", startedAt: 1 })
+      .run();
+
+    const { ctx } = testContext();
+    await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST, resultId: id });
+
+    const row = getStressTestRun(id)!;
+    assert.ok(row.telemetry.length > 0, "the stored run has no series to draw");
+    assert.ok(row.telemetry.some((s) => s.phase === "settle"));
+  });
+
+  it("hands each sample to the caller as it is taken, not in a batch at the end", async () => {
+    // The worker writes these to the row on its flush tick. If they only
+    // arrived at the end, the live cockpit would be a blank page for the whole
+    // run and then a complete chart the moment it stopped mattering.
+    const seen: number[] = [];
+    const { ctx } = testContext();
+    await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, {
+      timings: FAST,
+      onSample: (sample) => seen.push(sample.t),
+    });
+
+    assert.ok(seen.length > 2);
+    assert.deepEqual(
+      [...seen].sort((a, b) => a - b),
+      seen,
+    );
+  });
+
+  it("records a failed session query as a reading rather than ending the run", async () => {
+    const { ctx } = testContext();
+    plex.playback.failSessionsFor = 2;
+    const result = await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST });
+
+    assert.equal(result.steps.length, 2, "a couple of transient failures must not stop the ramp");
+    assert.ok(
+      result.telemetry.some((s) => s.apiError),
+      "the failure must be visible in the series",
+    );
   });
 });
 

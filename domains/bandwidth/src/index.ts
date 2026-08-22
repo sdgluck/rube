@@ -28,6 +28,7 @@ import {
 import { download, ENDPOINT, LATENCY_PROBES, runPhase, STREAMS, upload } from "./transfer.ts";
 import { type EventBus } from "@tinkerbell/ports";
 import { token } from "@tinkerbell/container";
+import { realSessions } from "@tinkerbell/plex";
 
 export type { BandwidthTest } from "./store.ts";
 export { isSlowerThanUsual, summarise, throughputMbps } from "./math.ts";
@@ -86,10 +87,17 @@ export function createBandwidth(deps: BandwidthDeps) {
   const { getPlexClient } = deps.clients;
   const { emitEvent } = deps;
 
-  /** Live session bandwidth in kbps, or 0 if Plex isn't reachable/configured. */
+  /**
+   * Live session bandwidth in kbps, or 0 if Plex isn't reachable/configured.
+   *
+   * Tinkerbell's own simulated playback is excluded. This figure exists to
+   * explain a slow reading — "the link was already carrying 60 Mbps" — and a
+   * stress run's load is not something the bandwidth test was contending with
+   * on the *internet* link at all; it is LAN traffic the harness is generating.
+   */
   async function concurrentStreamKbps(): Promise<number> {
     try {
-      const sessions = await getPlexClient().getActiveSessions();
+      const sessions = realSessions(await getPlexClient().getActiveSessions());
       return sessions.reduce((sum, s) => sum + (s.bandwidth ?? 0), 0);
     } catch {
       // The bandwidth test does not need Plex to be healthy to be useful.

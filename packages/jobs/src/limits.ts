@@ -161,3 +161,15 @@ export const STRESS_CANCEL_GRACE_MS = 5_000;
  * stayed broken for three months behind a generic "exited unexpectedly".
  */
 export const STRESS_WORKER_STARTUP_MS = 2_000;
+
+/**
+ * Samples retained on a run's telemetry series.
+ *
+ * The series is rewritten into a JSON column twice a second for the life of the
+ * run, so its size is a cost paid continuously rather than once. At the 2s
+ * sampling cadence this is a little over forty minutes at full resolution; past
+ * that `decimate` halves the older half rather than dropping the tail, so a
+ * longer run keeps its whole shape at a coarser grain. Roughly 150 bytes a
+ * sample with a handful of sessions attached, so ~180KB at the cap.
+ */
+export const STRESS_TELEMETRY_MAX_SAMPLES = 1200;

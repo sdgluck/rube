@@ -29,12 +29,14 @@ import { createPlexClient } from "@tinkerbell/plex";
 
 import { registerJobs } from "../index.ts";
 import { type StressTestConfig } from "./index.ts";
+import { decimate, type StressTestSample } from "./telemetry.ts";
 import { type JobContext } from "@tinkerbell/core";
 import {
   JOB_CANCEL_POLL_INTERVAL_MS,
   JOB_LOG_FLUSH_INTERVAL_MS,
   JOB_LOG_MAX_BYTES,
   JOB_LOG_TAIL_BYTES,
+  STRESS_TELEMETRY_MAX_SAMPLES,
 } from "../limits.ts";
 
 interface WorkerMessage {
@@ -60,6 +62,15 @@ export function createWorker(deps: Services, onDone: () => void = () => process.
     let currentProgress = 0;
     let currentMessage = "";
     let lastWritten = "";
+    /**
+     * The run's telemetry, accumulated here and written on the same tick as the
+     * log. It rides the existing flush rather than getting a timer of its own
+     * because both are the same problem — a child process with no way to talk to
+     * the API except this row — and two writers to one row twice a second is one
+     * write more than it needs.
+     */
+    let samples: StressTestSample[] = [];
+    let samplesWritten = 0;
 
     /**
      * The stored log is kept in memory and rewritten, rather than read back
@@ -69,7 +80,8 @@ export function createWorker(deps: Services, onDone: () => void = () => process.
      * so a long verbose run rewrote a growing string forever.
      */
     function flushToDb(): void {
-      if (!logBuffer && `${currentProgress}${currentMessage}` === lastWritten) return;
+      const telemetryPending = samples.length !== samplesWritten;
+      if (!logBuffer && !telemetryPending && `${currentProgress}${currentMessage}` === lastWritten) return;
       if (logBuffer) {
         storedLog += logBuffer;
         logBuffer = "";
@@ -77,12 +89,14 @@ export function createWorker(deps: Services, onDone: () => void = () => process.
           storedLog = `…log truncated…\n${storedLog.slice(-JOB_LOG_TAIL_BYTES)}`;
         }
       }
+      if (telemetryPending) samples = decimate(samples, STRESS_TELEMETRY_MAX_SAMPLES);
       try {
         db.update(stressTestRuns)
-          .set({ log: storedLog, progress: currentProgress, message: currentMessage })
+          .set({ log: storedLog, progress: currentProgress, message: currentMessage, telemetry: samples })
           .where(eq(stressTestRuns.id, id))
           .run();
         lastWritten = `${currentProgress}${currentMessage}`;
+        samplesWritten = samples.length;
       } catch {
         // DB may be closed during shutdown.
       }
@@ -148,7 +162,10 @@ export function createWorker(deps: Services, onDone: () => void = () => process.
         onHealth: plexHealthCallback,
       });
 
-      await runStressTest(client, config, ctx, { resultId: id });
+      await runStressTest(client, config, ctx, {
+        resultId: id,
+        onSample: (sample) => samples.push(sample),
+      });
 
       clearInterval(flushTimer);
       clearInterval(cancelTimer);

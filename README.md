@@ -300,6 +300,24 @@ A step that looks degraded is re-measured before the run stops, so a single
 unlucky reading doesn't understate your server. Runs are kept with their full
 log, so a failed run can be read back afterwards.
 
+**Watching it happen.** While a run is in flight the page becomes a live view of
+what your server is doing: bandwidth (what Plex says it is sending against what
+the harness actually receives — the two diverging is what a server failing to
+deliver a stream it still reports looks like), encode speed with the slowest
+single session shaded beneath the average, one lane per simulated session, and a
+strip showing which phase each moment belonged to. When the run ends it keeps the
+whole series, so an old run replays its charts and you can hover any moment to
+read every number at that instant. The capacity curve — sessions against speed
+and throughput — is drawn for every run, including ones recorded before any of
+this existed.
+
+**It stays out of your statistics.** The sessions are real ones as far as Plex is
+concerned, so without care a twenty-session ramp would land in playback history
+as twenty plays and put a spike in the bandwidth chart nobody watching caused.
+Every simulated player carries a reserved client identifier, and the poller,
+Stats, the per-user session lists and the bandwidth test all exclude them. A run
+started while somebody is genuinely watching still records _their_ play.
+
 ## Running it unattended
 
 Scheduled work runs through a background job queue. A few things worth knowing:

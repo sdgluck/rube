@@ -5,6 +5,7 @@ import { HISTORY_SORTS } from "@tinkerbell/domain.playback";
 
 import { DAY_MS } from "@tinkerbell/core";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
+import { realSessions } from "@tinkerbell/plex";
 
 /**
  * Periods offered by the history-backed panels. `0` means all time — the
@@ -42,9 +43,17 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
   const { getStorageBySection } = media;
 
   const statsRouter = t.router({
+    /**
+     * What is playing, minus Tinkerbell's own simulated playback.
+     *
+     * A stress run's sessions are real ones as far as Plex is concerned, so
+     * without the filter the dashboard reports twenty people watching and a
+     * bandwidth figure that is the measurement's own load. The Stress Test page
+     * is where a run in flight is meant to be visible.
+     */
     sessions: procedure.query(async () => {
       const client = getPlexClient();
-      return client.getActiveSessions();
+      return realSessions(await client.getActiveSessions());
     }),
     recentlyAdded: procedure.query(() => getCachedRecentlyAdded()),
     /**

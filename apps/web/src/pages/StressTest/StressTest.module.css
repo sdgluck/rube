@@ -1,0 +1,731 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.heading {
+  font-size: 18px;
+  margin: 0;
+}
+
+.configForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-md);
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formGroup label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Widths only. The look of the control belongs to controls.module.css — this
+   module used to restate padding, border, radius and background for its select
+   and its number inputs, which is exactly the drift the primitives exist to
+   prevent. */
+.numberInput {
+  width: 72px;
+}
+
+.resultCard {
+  text-align: center;
+  padding: 32px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-card);
+  margin-bottom: 24px;
+}
+
+.resultLabel {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.resultNumber {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.resultUnit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-2);
+  margin-left: 4px;
+}
+
+.configBadges {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--r-card);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--fill-quiet);
+  color: var(--ink-2);
+}
+
+/* This page used to carry its own near-copy of the list table — 32px header,
+   44px rows, its own borders — which is exactly the drift the shared table
+   exists to prevent. It composes now; anything it needs on top belongs in
+   shared.module.css so every other table gets it too. */
+.table {
+  composes: table from "../../styles/shared.module.css";
+}
+
+.clickableRow {
+  composes: clickableRow from "../../styles/shared.module.css";
+}
+
+.selectedRow {
+  composes: selectedRow from "../../styles/shared.module.css";
+}
+
+.speedBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speedIndicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.speedGood {
+  background: var(--status-ok-dot);
+}
+
+.speedWarn {
+  background: var(--status-warn-dot);
+}
+
+.speedBad {
+  background: var(--status-error-dot);
+}
+
+/* Painted on the cells, not the row: the shared table hover paints cell
+   backgrounds, and a row-level tint sits underneath them — the step that
+   failed would lose its colour the moment you pointed at it. The element
+   selector outweighs `.table tr:hover td` without needing !important. */
+tr.stepFailed td {
+  background: var(--status-error-bg);
+}
+
+.runsSection {
+  margin-top: 32px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.emptyState {
+  composes: emptyState from "../../styles/shared.module.css";
+}
+
+.duration {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.cancelButton {
+  composes: btn btnDangerOutline btnSm from "../../styles/controls.module.css";
+}
+
+.speedNone {
+  color: var(--ink-3);
+}
+
+/* The harness is no longer dev-only, so the page has to say plainly what
+   pressing the button does to someone's server before they press it. */
+.caution {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  border-radius: var(--r-md);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cautionTitle {
+  font-weight: 600;
+}
+
+/* Why the ramp stopped. Muted because it only ever has content on the last
+   step, and a column of blanks should not draw the eye. */
+.reason {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+/* ─── Cockpit ──────────────────────────────────────────────────────────────
+   The live view. A stress run is the one page in this app where the interesting
+   thing is happening *now* and lasts several minutes, so while one is in flight
+   the page gives itself over to telemetry: the config form and the run history
+   are gone, the Settings rail folds away (see Settings.module.css), and what is
+   left is what the server is doing.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.liveBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line-accent);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.liveTitle {
+  font: var(--t-body-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.liveMessage {
+  flex: 1;
+  min-width: 0;
+  font: var(--t-meta);
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cockpit {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* One chart on its own gets the full width rather than half of it: a direct-play
+   run has no transcoder and therefore no speed chart, and a lone bandwidth chart
+   squeezed into a half-width column with dead space beside it reads as something
+   having failed to load. */
+.charts:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cockpitLower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.cockpitLower:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cockpitLog {
+  max-height: 260px;
+}
+
+/* ─── Tiles ─────────────────────────────────────────────────────────────── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+
+.tile[data-tone="warn"] {
+  border-color: var(--status-warn-dot);
+}
+
+.tile[data-tone="bad"] {
+  border-color: var(--status-error-dot);
+}
+
+.tileLabel {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.tileValue {
+  margin-top: 4px;
+  font: var(--t-metric);
+  color: var(--ink);
+}
+
+.tile[data-tone="bad"] .tileValue {
+  color: var(--status-error-fg);
+}
+
+.tileSub {
+  margin-top: 2px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+/* ─── Charts ────────────────────────────────────────────────────────────── */
+
+.chartCard,
+.lanesCard {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.chartHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.chartTitle {
+  margin: 0;
+  font: var(--t-panel);
+  color: var(--ink);
+}
+
+.chartEmpty {
+  padding: 32px 0;
+  text-align: center;
+  font: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font: var(--t-caption);
+  color: var(--ink-2);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendSwatch {
+  width: 9px;
+  height: 3px;
+  border-radius: var(--r-tag);
+  background: currentcolor;
+}
+
+.legendValue {
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+/* The colour of a series is a class, never a prop.
+   The two charts this app already had take their colours from TypeScript to get
+   around stylelint's `color-no-hex`, and the price is that neither has ever
+   themed — in dark mode they still draw the light palette. Painting `color` here
+   and reaching it with `currentColor` in the SVG keeps that from happening
+   again, and costs nothing. */
+.toneOne {
+  color: var(--series-1);
+}
+
+.toneTwo {
+  color: var(--series-2);
+}
+
+.chartPlot {
+  position: relative;
+  /* Room down the left for the y labels, which are HTML over the SVG rather
+     than inside it — the viewBox is stretched to the container and anything in
+     it stretches too. */
+  padding-left: 46px;
+}
+
+.chartSvg {
+  display: block;
+  width: 100%;
+  height: 180px;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Below this line a viewer buffers. Dashed and in the error colour because it
+   is a verdict, not a gridline: it is the threshold `assess.ts` stops the ramp
+   on, and the run's headline number is the last session count above it. */
+.threshold {
+  stroke: var(--status-error-dot);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.thresholdLabel {
+  position: absolute;
+  right: 4px;
+  transform: translateY(-50%);
+  padding: 0 4px;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--status-error-fg);
+  background: var(--surface);
+}
+
+/* A moment we could not measure, drawn rather than skipped: "the server went
+   quiet" and "we stopped being able to ask" look identical in a gap. */
+.blindSpot {
+  fill: color-mix(in srgb, var(--status-error-dot) 14%, transparent);
+}
+
+.seriesLine {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The spread between the mean encode speed and the slowest single session. */
+.bandFill {
+  fill: color-mix(in srgb, currentcolor 16%, transparent);
+  stroke: none;
+}
+
+.crosshair {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.degradedMark {
+  stroke: var(--status-error-dot);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.yAxis {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42px;
+}
+
+.yTick {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font: var(--t-caption);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.xAxis {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0 0 46px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.readout {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--e-float);
+  font: var(--t-caption);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Flip to the left of the crosshair once it is past the right-hand end of the
+   plot, which is exactly where a live run's newest sample always is. */
+.readout[data-side="right"] {
+  margin-left: 10px;
+}
+
+.readout[data-side="left"] {
+  transform: translateX(-100%);
+  margin-left: -10px;
+}
+
+.readoutTime {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+
+.readoutRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+}
+
+.readoutValue {
+  margin-left: auto;
+  padding-left: 12px;
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+.readoutWarn {
+  margin-top: 4px;
+  color: var(--status-error-fg);
+}
+
+.pointRow {
+  position: absolute;
+  inset: 0 0 0 46px;
+  pointer-events: none;
+}
+
+.point {
+  position: absolute;
+  bottom: 0;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: var(--r-pill);
+  background: var(--ink-3);
+  pointer-events: auto;
+}
+
+.point[data-degraded="true"] {
+  background: var(--status-error-dot);
+}
+
+/* ─── Phase ribbon ──────────────────────────────────────────────────────── */
+
+/* Most of a run is spent settling — fifteen seconds a step against six of
+   measurement — and the charts are correspondingly long flat stretches. Naming
+   the stretch is the difference between "this has hung" and "it is waiting for
+   the transcoder to stop reporting startup numbers". */
+.ribbon {
+  position: relative;
+  height: 14px;
+  margin-left: 46px;
+  border-radius: var(--r-tag);
+  background: var(--fill-track);
+  overflow: hidden;
+}
+
+.ribbonBand {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.ribbonBand[data-phase="start"] {
+  background: var(--ramp-4);
+}
+
+.ribbonBand[data-phase="settle"] {
+  background: var(--ramp-3);
+}
+
+.ribbonBand[data-phase="measure"] {
+  background: var(--ramp-1);
+}
+
+/* The one band worth spotting: it only exists where a step looked degraded and
+   the ramp went back to check, so it marks every reading the run declined to
+   believe first time. */
+.ribbonBand[data-phase="confirm"] {
+  background: var(--status-warn-dot);
+}
+
+.ribbonBand[data-phase="cleanup"] {
+  background: var(--ramp-4);
+}
+
+.ribbonTick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+}
+
+.ribbonTick[data-kind="stream"] {
+  background: var(--status-warn-fg);
+}
+
+.ribbonTick[data-kind="api"] {
+  background: var(--status-error-fg);
+}
+
+/* ─── Session lanes ─────────────────────────────────────────────────────── */
+
+.lanes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lane {
+  display: grid;
+  grid-template-columns: 74px 1fr auto 52px 62px 72px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font: var(--t-caption);
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Sessions that have ended stay, greyed. The ramp's own cleanup ends every one
+   of them, so a panel that dropped them would empty itself at the moment the
+   run finished and there was finally something to read. */
+.lane[data-dead="true"] {
+  color: var(--ink-4);
+}
+
+.laneId {
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+.lane[data-dead="true"] .laneId {
+  color: var(--ink-4);
+}
+
+.laneDecision {
+  color: var(--ink-3);
+}
+
+.laneHw {
+  padding: 1px 5px;
+  border-radius: var(--r-tag);
+  background: var(--fill-quiet);
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.laneSpark {
+  display: flex;
+  justify-content: flex-end;
+  color: var(--ink-faint);
+}
+
+.laneSpeed,
+.laneBw {
+  font: var(--t-data);
+  text-align: right;
+}
+
+.laneSpeed {
+  color: var(--ink);
+}
+
+.lane[data-dead="true"] .laneSpeed,
+.lane[data-dead="true"] .laneBw {
+  color: var(--ink-4);
+}
+
+.laneSpeed[data-slow="true"] {
+  color: var(--status-error-fg);
+}
+
+/* ─── Narrow ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .charts,
+  .cockpitLower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .liveBar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The lanes panel is six columns of small numbers; below this it is six
+     columns of nothing. The aggregate charts still carry the answer. */
+  .lanesCard {
+    display: none;
+  }
+
+  .chartPlot,
+  .ribbon {
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  .yAxis {
+    display: none;
+  }
+
+  .xAxis {
+    margin-left: 0;
+  }
+
+  .pointRow {
+    inset: 0;
+  }
+}

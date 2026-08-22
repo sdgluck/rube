@@ -19,6 +19,7 @@
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
+    "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/ports": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },

@@ -1,13 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "#/trpc";
 import Spinner from "#components/Spinner";
+import RunLog from "#components/RunLog";
 import { useToast } from "#components/Toast";
-import SettingsPageHeader from "./Settings/SettingsPageHeader";
+import SettingsPageHeader from "#pages/Settings/SettingsPageHeader";
 import styles from "./StressTest.module.css";
 import shared from "#/styles/shared.module.css";
-import { EMPTY, formatElapsed, formatTime } from "#/format";
+import controls from "#/styles/controls.module.css";
+import { EMPTY, formatBandwidth, formatElapsed, formatTime } from "#/format";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
+import { useRunLog, fetchStressTestRunLog } from "#pages/Jobs/shared/useRunLog";
+import { useTelemetry } from "./useTelemetry.ts";
+import Cockpit from "./Cockpit.tsx";
+import type { StressStep } from "./types.ts";
 
 function SpeedCell({ speed }: { speed: number | null }) {
   if (speed == null) return <span className={styles.speedNone}>{EMPTY}</span>;
@@ -41,22 +47,17 @@ export default function StressTest() {
   const utils = trpc.useUtils();
   const { addToast } = useToast();
   const runsQuery = trpc.stressTest.runs.useQuery();
-  const activeRunQuery = trpc.stressTest.activeRun.useQuery(undefined, { refetchInterval: 2000 });
+  const { run: activeRun, samples, isRunning } = useTelemetry();
+
   const startMutation = trpc.stressTest.start.useMutation({
-    onSuccess: () => {
-      utils.stressTest.activeRun.invalidate();
-      utils.stressTest.runs.invalidate();
-    },
+    onSuccess: () => utils.stressTest.runs.invalidate(),
     // "A stress test is already running" and "Plex URL and token are not
     // configured" both arrive here. They used to reject unhandled out of the
     // click handler, so pressing Start simply did nothing visible.
     onError: (err) => addToast(err.message, "error"),
   });
   const cancelMutation = trpc.stressTest.cancel.useMutation({
-    onSuccess: () => {
-      utils.stressTest.activeRun.invalidate();
-      utils.stressTest.runs.invalidate();
-    },
+    onSuccess: () => utils.stressTest.runs.invalidate(),
     onError: (err) => addToast(err.message, "error"),
   });
 
@@ -69,30 +70,41 @@ export default function StressTest() {
 
   const selectedRunQuery = trpc.stressTest.run.useQuery(
     { id: selectedRunId! },
-    { enabled: !!selectedRunId, refetchInterval: selectedRunId ? 5000 : false },
+    // A finished run's series never changes, so it is fetched once. Only a
+    // selection that is somehow still live keeps polling.
+    { enabled: !!selectedRunId, refetchInterval: (query) => (query.state.data?.finishedAt ? false : 5000) },
   );
+  const selectedRun = selectedRunQuery.data;
 
-  const stressTestRun = activeRunQuery.data;
-  const isRunning = !!stressTestRun;
-  const logRef = useRef<HTMLPreElement>(null);
+  const liveLog = useRunLog(activeRun?.id, isRunning, fetchStressTestRunLog);
+  const pastLog = useRunLog(isRunning ? null : selectedRunId, false, fetchStressTestRunLog);
 
+  /**
+   * The cockpit wants the whole page, and the Settings rail is its sibling's
+   * ancestor — there is no way up the tree from inside an `<Outlet>`. So the
+   * page marks the document while a run is live and `Settings.module.css` folds
+   * the rail away, rather than the cockpit overlapping something still there.
+   */
   useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [stressTestRun?.log]);
+    if (!isRunning) return;
+    document.body.dataset.stressLive = "true";
+    return () => {
+      delete document.body.dataset.stressLive;
+    };
+  }, [isRunning]);
 
   // A run that finishes on its own only shows up as the active run going away.
   // Without this the banner vanished and Past Runs stayed stale until a manual
   // refresh, which is the moment you most want to see the result.
-  const wasRunning = useRef(false);
+  const [wasRunning, setWasRunning] = useState(false);
   useEffect(() => {
-    if (wasRunning.current && !isRunning) {
+    if (wasRunning && !isRunning) {
       utils.stressTest.runs.invalidate();
+      if (activeRun?.id) setSelectedRunId(activeRun.id);
       if (selectedRunId) utils.stressTest.run.invalidate({ id: selectedRunId });
     }
-    wasRunning.current = isRunning;
-  }, [isRunning, selectedRunId, utils]);
+    if (wasRunning !== isRunning) setWasRunning(isRunning);
+  }, [isRunning, wasRunning, selectedRunId, activeRun?.id, utils]);
 
   function handleStart() {
     const input: { mode: typeof mode; maxSessions: number; transcodePct?: number; verbose?: boolean } = {
@@ -124,7 +136,6 @@ export default function StressTest() {
     defaultDir: "desc",
     descFirst: ["startedAt", "maxSessions", "duration"],
   });
-  const selectedRun = selectedRunQuery.data;
 
   const {
     sortKey: stepSortKey,
@@ -132,45 +143,55 @@ export default function StressTest() {
     toggleSort: toggleStepSort,
     sorted: sortedSteps,
   } = useLocalSort({
-    rows: selectedRun?.steps ?? [],
+    rows: (selectedRun?.steps ?? []) as StressStep[],
     accessors: {
       step: (s) => s.step,
       sessions: (s) => s.sessions,
       avgTranscodeSpeed: (s) => s.avgTranscodeSpeed,
-      avgBandwidth: (s) => s.avgBandwidth,
+      totalKbps: (s) => s.totalKbps ?? s.avgBandwidth,
       errors: (s) => s.errors,
     },
     defaultKey: "step",
-    descFirst: ["sessions", "avgBandwidth", "errors"],
+    descFirst: ["sessions", "totalKbps", "errors"],
   });
   const lastStepNumber = selectedRun?.steps.reduce((max, s) => Math.max(max, s.step), 0) ?? 0;
 
+  const cappedAt = activeRun?.config.maxSessions ?? maxSessions;
+  const liveStep = samples.at(-1)?.step ?? 0;
+
   return (
     <div>
-      <SettingsPageHeader title="Stress Test" />
+      {!isRunning && <SettingsPageHeader title="Stress Test" />}
 
-      <div className={styles.caution}>
-        <div>
-          <div className={styles.cautionTitle}>This puts real load on your Plex server.</div>
-          Each step starts a genuine playback session and pulls the stream, one more at a time, until the server stops
-          keeping up. Expect transcoding, disk and network load for the duration, and don't run it while other people
-          are watching. Only never-watched items are used, and the run marks them unwatched again when it finishes.
+      {!isRunning && (
+        <div className={styles.caution}>
+          <div>
+            <div className={styles.cautionTitle}>This puts real load on your Plex server.</div>
+            Each step starts a genuine playback session and pulls the stream, one more at a time, until the server stops
+            keeping up. Expect transcoding, disk and network load for the duration, and don't run it while other people
+            are watching. Only never-watched items are used, and the run marks them unwatched again when it finishes.
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className={styles.header}>
-        {!isRunning && (
+      {!isRunning && (
+        <div className={styles.header}>
           <button className={shared.button} onClick={() => setShowConfig(!showConfig)}>
             {showConfig ? "Cancel" : "Run Test"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {showConfig && !isRunning && (
         <div className={styles.configForm}>
           <div className={styles.formGroup}>
-            <label>Mode</label>
-            <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+            <label htmlFor="stress-mode">Mode</label>
+            <select
+              id="stress-mode"
+              className={controls.selectSm}
+              value={mode}
+              onChange={(e) => setMode(e.target.value as typeof mode)}
+            >
               <option value="transcode">Transcode</option>
               <option value="directplay">Direct Play</option>
               <option value="mixed">Mixed</option>
@@ -178,31 +199,39 @@ export default function StressTest() {
           </div>
           {mode === "mixed" && (
             <div className={styles.formGroup}>
-              <label>Transcode %</label>
+              <label htmlFor="stress-pct">Transcode %</label>
               <input
+                id="stress-pct"
+                className={`${controls.inputSm} ${styles.numberInput}`}
                 type="number"
                 min={0}
                 max={100}
                 value={transcodePct}
                 onChange={(e) => setTranscodePct(Number(e.target.value))}
-                style={{ width: 70 }}
               />
             </div>
           )}
           <div className={styles.formGroup}>
-            <label>Max Sessions</label>
+            <label htmlFor="stress-max">Max Sessions</label>
             <input
+              id="stress-max"
+              className={`${controls.inputSm} ${styles.numberInput}`}
               type="number"
               min={1}
               max={50}
               value={maxSessions}
               onChange={(e) => setMaxSessions(Number(e.target.value))}
-              style={{ width: 70 }}
             />
           </div>
           <div className={styles.formGroup}>
-            <label>Verbose Log</label>
-            <input type="checkbox" checked={verbose} onChange={(e) => setVerbose(e.target.checked)} />
+            <label htmlFor="stress-verbose">Verbose Log</label>
+            <input
+              id="stress-verbose"
+              className={controls.checkbox}
+              type="checkbox"
+              checked={verbose}
+              onChange={(e) => setVerbose(e.target.checked)}
+            />
           </div>
           <button className={shared.button} onClick={handleStart} disabled={startMutation.isPending}>
             Start
@@ -210,35 +239,33 @@ export default function StressTest() {
         </div>
       )}
 
-      {isRunning && stressTestRun && (
-        <div className={styles.activeBanner}>
-          <Spinner size="sm" />
-          <span className={styles.bannerText}>Stress test in progress</span>
-          {stressTestRun.progress > 0 && (
-            <>
-              <div className={styles.progressBar}>
-                <div
-                  className={styles.progressFill}
-                  style={{ width: `${Math.round(stressTestRun.progress * 100)}%` }}
-                />
-              </div>
-              <span className={styles.bannerProgress}>{Math.round(stressTestRun.progress * 100)}%</span>
-            </>
-          )}
-          {stressTestRun.message && <span className={styles.bannerProgress}>{stressTestRun.message}</span>}
-          <button className={styles.cancelButton} onClick={() => cancelMutation.mutate()}>
-            Cancel
-          </button>
-        </div>
+      {isRunning && activeRun && (
+        <>
+          <div className={styles.liveBar}>
+            <Spinner size="sm" />
+            <span className={styles.liveTitle}>Stress test running</span>
+            <div className={shared.progressBar}>
+              <div className={shared.progressFill} style={{ width: `${Math.round(activeRun.progress * 100)}%` }} />
+            </div>
+            <span className={styles.liveMessage}>{activeRun.message || "Starting…"}</span>
+            <button className={styles.cancelButton} onClick={() => cancelMutation.mutate()}>
+              Cancel
+            </button>
+          </div>
+
+          <Cockpit
+            samples={samples}
+            steps={activeRun.steps}
+            live
+            elapsedMs={Date.now() - activeRun.startedAt}
+            step={liveStep}
+            maxSessions={cappedAt}
+            log={<RunLog log={liveLog} variant="compact" ariaLabel="Stress test log" className={styles.cockpitLog} />}
+          />
+        </>
       )}
 
-      {isRunning && stressTestRun?.log && (
-        <pre ref={logRef} className={styles.logViewer}>
-          {stressTestRun.log}
-        </pre>
-      )}
-
-      {selectedRun && (
+      {!isRunning && selectedRun && (
         <div>
           <div className={styles.resultCard}>
             <div className={styles.resultLabel}>Max Supported</div>
@@ -254,6 +281,18 @@ export default function StressTest() {
               )}
             </div>
           </div>
+
+          {/* Replay. A run recorded before the series existed has no telemetry
+              at all, and the cockpit still draws its capacity curve from the
+              step rows — which is the whole reason that chart reads those. */}
+          <Cockpit
+            samples={selectedRun.telemetry}
+            steps={selectedRun.steps}
+            live={false}
+            elapsedMs={(selectedRun.finishedAt ?? Date.now()) - selectedRun.startedAt}
+            step={lastStepNumber}
+            maxSessions={selectedRun.config.maxSessions ?? lastStepNumber}
+          />
 
           <h4 className={styles.sectionTitle}>Steps</h4>
           <div className="table-scroll">
@@ -280,7 +319,7 @@ export default function StressTest() {
                     Transcode Speed
                   </SortableTh>
                   <SortableTh
-                    sortKey="avgBandwidth"
+                    sortKey="totalKbps"
                     activeKey={stepSortKey}
                     activeDir={stepSortDir}
                     onSort={toggleStepSort}
@@ -312,7 +351,21 @@ export default function StressTest() {
                       <td data-cell="meta">
                         <SpeedCell speed={step.avgTranscodeSpeed} />
                       </td>
-                      <td data-cell="meta">{step.avgBandwidth > 0 ? `${step.avgBandwidth} kbps` : EMPTY}</td>
+                      {/* The total across sessions where it was recorded, not
+                          the per-session mean the column used to show — "what
+                          is my server pushing" is the only question this is
+                          asked, and the mean cannot answer it. */}
+                      <td data-cell="meta">
+                        {step.totalKbps != null ? (
+                          formatBandwidth(step.totalKbps)
+                        ) : step.avgBandwidth > 0 ? (
+                          <span title="Recorded before the total was, so this is the per-session mean">
+                            {formatBandwidth(step.avgBandwidth)} avg
+                          </span>
+                        ) : (
+                          EMPTY
+                        )}
+                      </td>
                       <td data-cell="meta">{step.errors + (step.streamErrors ?? 0)}</td>
                       <td data-cell="meta" className={styles.reason}>
                         {step.reason || EMPTY}
@@ -326,71 +379,78 @@ export default function StressTest() {
 
           {/* The log is where a failed run explains itself, so it has to be
               reachable after the fact — not only while the run is live. */}
-          {selectedRun.log && !isRunning && (
+          {pastLog && (
             <>
               <h4 className={styles.sectionTitle}>Log</h4>
-              <pre className={`${styles.logViewer} ${styles.detailLog}`}>{selectedRun.log}</pre>
+              <RunLog log={pastLog} downloadName={`stress-test-${selectedRun.id}.log`} ariaLabel="Run log" />
             </>
           )}
         </div>
       )}
 
-      <div className={styles.runsSection}>
-        <h4 className={styles.sectionTitle}>Past Runs</h4>
-        {runs.length === 0 ? (
-          <div className={styles.emptyState}>No stress test runs yet. Click "Run Test" to start one.</div>
-        ) : (
-          <div className="table-scroll">
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortableTh sortKey="startedAt" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
-                    Date
-                  </SortableTh>
-                  <SortableTh sortKey="status" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
-                    Status
-                  </SortableTh>
-                  <SortableTh sortKey="mode" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
-                    Mode
-                  </SortableTh>
-                  <SortableTh
-                    sortKey="maxSessions"
-                    activeKey={runSortKey}
-                    activeDir={runSortDir}
-                    onSort={toggleRunSort}
-                  >
-                    Max Sessions
-                  </SortableTh>
-                  <SortableTh sortKey="duration" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
-                    Duration
-                  </SortableTh>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRuns.map((run) => (
-                  <tr
-                    key={run.id}
-                    className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
-                    onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
-                  >
-                    <td data-cell="title">{formatTime(run.startedAt)}</td>
-                    <td data-cell="pill">
-                      <StatusBadge status={run.status} />
-                    </td>
-                    <td data-cell="pill">
-                      <span className={styles.badge}>{run.config.mode}</span>
-                    </td>
-                    <td data-cell="meta">{run.maxSessions ?? "?"}</td>
-                    <td data-cell="meta" className={styles.duration}>
-                      {run.finishedAt ? formatElapsed(run.startedAt, run.finishedAt) : "…"}
-                    </td>
+      {!isRunning && (
+        <div className={styles.runsSection}>
+          <h4 className={styles.sectionTitle}>Past Runs</h4>
+          {runs.length === 0 ? (
+            <div className={styles.emptyState}>No stress test runs yet. Click "Run Test" to start one.</div>
+          ) : (
+            <div className="table-scroll">
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <SortableTh
+                      sortKey="startedAt"
+                      activeKey={runSortKey}
+                      activeDir={runSortDir}
+                      onSort={toggleRunSort}
+                    >
+                      Date
+                    </SortableTh>
+                    <SortableTh sortKey="status" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
+                      Status
+                    </SortableTh>
+                    <SortableTh sortKey="mode" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
+                      Mode
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="maxSessions"
+                      activeKey={runSortKey}
+                      activeDir={runSortDir}
+                      onSort={toggleRunSort}
+                    >
+                      Max Sessions
+                    </SortableTh>
+                    <SortableTh sortKey="duration" activeKey={runSortKey} activeDir={runSortDir} onSort={toggleRunSort}>
+                      Duration
+                    </SortableTh>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {sortedRuns.map((run) => (
+                    <tr
+                      key={run.id}
+                      className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
+                      onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
+                    >
+                      <td data-cell="title">{formatTime(run.startedAt)}</td>
+                      <td data-cell="pill">
+                        <StatusBadge status={run.status} />
+                      </td>
+                      <td data-cell="pill">
+                        <span className={styles.badge}>{run.config.mode}</span>
+                      </td>
+                      <td data-cell="meta">{run.maxSessions ?? "?"}</td>
+                      <td data-cell="meta" className={styles.duration}>
+                        {run.finishedAt ? formatElapsed(run.startedAt, run.finishedAt) : "…"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

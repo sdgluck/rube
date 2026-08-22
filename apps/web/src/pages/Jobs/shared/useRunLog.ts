@@ -18,6 +18,9 @@ export const fetchJobRunLog: RunLogFetcher = (runId, offset) => trpcClient.jobs.
 
 export const fetchRuleRunLog: RunLogFetcher = (runId, offset) => trpcClient.rules.runLog.query({ runId, offset });
 
+export const fetchStressTestRunLog: RunLogFetcher = (runId, offset) =>
+  trpcClient.stressTest.runLog.query({ runId, offset });
+
 /**
  * Accumulate a run's log by fetching only what's been appended since the last
  * poll.

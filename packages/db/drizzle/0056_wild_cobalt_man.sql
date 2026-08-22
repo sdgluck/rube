@@ -1,0 +1,1 @@
+ALTER TABLE `stress_test_runs` ADD `telemetry` text DEFAULT '[]' NOT NULL;

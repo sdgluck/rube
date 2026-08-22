@@ -23,14 +23,24 @@ import { randomUUID } from "node:crypto";
 import { createLogger, errorMessage } from "@tinkerbell/core";
 import { fork, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { stressTestRuns } from "@tinkerbell/db";
-import type { PlexClient, PlexMediaDetail } from "@tinkerbell/plex";
+import type { PlexClient, PlexMediaDetail, PlexSession } from "@tinkerbell/plex";
+import { SYNTHETIC_CLIENT_PREFIX, syntheticSessions } from "@tinkerbell/plex";
 
 import type { JobContext } from "@tinkerbell/core";
 import { isMasterPlaylist, resolveSegmentUrls, resolveVariantUrl } from "./hls.ts";
 import { assessStep } from "./assess.ts";
+import {
+  aggregateWindow,
+  buildSample,
+  decimate,
+  stressTestSampleSchema,
+  type StressCounters,
+  type StressTestPhase,
+  type StressTestSample,
+} from "./telemetry.ts";
 import {
   STRESS_CANCEL_GRACE_MS,
   STRESS_CONFIRM_SETTLE_MS,
@@ -45,6 +55,7 @@ import {
   STRESS_SAMPLE_INTERVAL_MS,
   STRESS_SEGMENTS_PER_POLL,
   STRESS_STABILISE_MS,
+  STRESS_TELEMETRY_MAX_SAMPLES,
   STRESS_TIMELINE_INTERVAL_MS,
   STRESS_WORKER_STARTUP_MS,
 } from "../limits.ts";
@@ -78,6 +89,15 @@ export interface RunStressTestOptions {
   /** Existing row to write the result into, rather than minting a new one. */
   resultId?: string;
   timings?: Partial<StressTimings>;
+  /**
+   * Called for every telemetry sample as it is taken.
+   *
+   * A callback in the options bag rather than a field on `JobContext`: that
+   * context is shared with every other job in the system, and none of them has
+   * a time series. The worker's implementation buffers these and writes them to
+   * the run row on the same tick that flushes the log.
+   */
+  onSample?: (sample: StressTestSample) => void;
 }
 
 /**
@@ -108,6 +128,14 @@ export const stressTestStepSchema = z.object({
   step: z.number(),
   sessions: z.number(),
   avgTranscodeSpeed: z.number().nullable(),
+  /**
+   * Mean bandwidth **per session**, kbps.
+   *
+   * Kept with its original meaning so a step written today is comparable with
+   * one written before the telemetry series existed. It is not the number to
+   * read to learn what the server is pushing — that is `totalKbps`, which this
+   * grew alongside rather than replaced.
+   */
   avgBandwidth: z.number(),
   /** Failed `/status/sessions` samples. */
   errors: z.number(),
@@ -117,6 +145,16 @@ export const stressTestStepSchema = z.object({
   sessionsSeen: z.number().optional(),
   streamErrors: z.number().optional(),
   reason: z.string().nullable().optional(),
+  /** Summed reported bandwidth across our sessions, kbps — the server's load. */
+  totalKbps: z.number().optional(),
+  /** What the clients actually pulled off the wire over the window, kbps. */
+  actualKbps: z.number().optional(),
+  /** Successful media fetches during the window, the counterpart to `streamErrors`. */
+  streamOk: z.number().optional(),
+  /** Segment 404/425s: transcoder backpressure, deliberately not an error. */
+  notReady: z.number().optional(),
+  /** Bytes pulled during the window. */
+  bytesRead: z.number().optional(),
 });
 export type StressTestStep = z.infer<typeof stressTestStepSchema>;
 
@@ -126,9 +164,26 @@ export interface StressTestResult {
   steps: StressTestStep[];
   startedAt: number;
   finishedAt: number;
+  /**
+   * The run's time series, thinned to the cap.
+   *
+   * Written here as well as by the worker's flush tick so that a run driven
+   * directly — an integration test, or anything that calls `runStressTest`
+   * without forking — still lands its telemetry on the row.
+   */
+  telemetry: StressTestSample[];
 }
 
-const CLIENT_PREFIX = "tinkerbell-stress-";
+/**
+ * The prefix stamped on every simulated player, so the run can find its own
+ * sessions among everyone else's.
+ *
+ * Defined in `@tinkerbell/plex` rather than here, because it is now load-bearing
+ * in the other direction too: the poller, the stats router and the bandwidth
+ * test all use it to *exclude* these sessions from what they report, and those
+ * live below this package. See `clients/plex/src/synthetic.ts`.
+ */
+const CLIENT_PREFIX = SYNTHETIC_CLIENT_PREFIX;
 
 /**
  * One fake Plex player: a client identifier Plex will treat as a distinct
@@ -577,6 +632,114 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     let transientSteps = 0;
     const usedRatingKeys = new Set<string>();
 
+    /**
+     * The run's telemetry, sampled continuously from here until cleanup has
+     * finished.
+     *
+     * This used to be three `/status/sessions` calls per step, issued inside
+     * the measurement window and discarded once the window had been judged. The
+     * fifteen-second settle before each of them — most of the run's wall clock —
+     * queried nothing, so the run was not merely unmeasured while it stabilised,
+     * it was unobservable, and the tool that exists to show a server's capacity
+     * curve produced one point every twenty seconds.
+     *
+     * The ticker is now the run's clock. It samples at the same cadence the
+     * measurement window always used, never idles, and the measurement window
+     * reads *its* samples rather than issuing calls of its own. So the number
+     * the verdict is formed from and the number on the chart are the same
+     * reading, which they previously were not.
+     */
+    const counters = (): StressCounters => ({
+      ok: clients.reduce((n, c) => n + c.streamOk, 0),
+      err: clients.reduce((n, c) => n + c.streamErrors, 0),
+      notReady: clients.reduce((n, c) => n + c.notReady, 0),
+      bytes: clients.reduce((n, c) => n + c.bytesRead, 0),
+    });
+
+    const samples: StressTestSample[] = [];
+    let phase: StressTestPhase = "start";
+    let phaseStep = 0;
+    let prevCounters = counters();
+    let prevSampleAt = startedAt;
+    let sampling = false;
+    /** Resolvers waiting on `collect`, notified once per appended sample. */
+    let waiters: Array<() => void> = [];
+
+    async function takeSample(): Promise<void> {
+      // A slow `/status/sessions` must not queue a second call behind itself:
+      // the point of a fixed cadence is that a struggling server produces
+      // *fewer* samples, not a backlog of them arriving at once.
+      if (sampling) return;
+      sampling = true;
+      try {
+        let ours: PlexSession[] | null = null;
+        try {
+          const all = await client.getActiveSessions();
+          ours = syntheticSessions(all);
+          if (ours.length === 0 && all.length > 0 && !sessionsEverMatched && phase !== "start") {
+            ctx.log(`  Warning: ${all.length} session(s) found but none matched prefix "${CLIENT_PREFIX}"`);
+          }
+        } catch {
+          // Recorded as `apiError` on the sample rather than thrown: losing the
+          // ability to measure is itself a reading, and `assessStep` ranks it
+          // above whatever else the window saw.
+          ours = null;
+        }
+
+        const at = Date.now();
+        const current = counters();
+        const sample = buildSample({
+          t: at - startedAt,
+          step: phaseStep,
+          phase,
+          started: clients.length,
+          sessions: ours,
+          counters: current,
+          prevCounters,
+          elapsedMs: at - prevSampleAt,
+          idPrefix: CLIENT_PREFIX,
+        });
+        prevCounters = current;
+        prevSampleAt = at;
+        samples.push(sample);
+        opts.onSample?.(sample);
+      } finally {
+        sampling = false;
+        const woken = waiters;
+        waiters = [];
+        for (const resolve of woken) resolve();
+      }
+    }
+
+    const sampleTimer = setInterval(() => void takeSample(), timings.sampleIntervalMs);
+    // Nothing should be kept alive by the sampler: if the ramp has unwound, the
+    // process is finished with it.
+    sampleTimer.unref?.();
+
+    /** Wait until `n` further samples have landed, or the run is aborted. */
+    function collect(n: number): Promise<void> {
+      let remaining = n;
+      return new Promise<void>((resolve) => {
+        if (ctx.signal.aborted) return resolve();
+        const onAbort = () => resolve();
+        ctx.signal.addEventListener("abort", onAbort, { once: true });
+        const step = () => {
+          if (--remaining <= 0) {
+            ctx.signal.removeEventListener("abort", onAbort);
+            resolve();
+          } else {
+            waiters.push(step);
+          }
+        };
+        waiters.push(step);
+      });
+    }
+
+    function setPhase(next: StressTestPhase, stepNumber: number): void {
+      phase = next;
+      phaseStep = stepNumber;
+    }
+
     try {
       for (let step = 1; step <= maxSessions; step++) {
         if (ctx.signal.aborted) break;
@@ -617,79 +780,65 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
         }
 
         /**
-         * One measurement window: settle, then sample.
+         * One measurement window: settle, then measure.
          *
          * A window is a closure because a degraded step is measured twice
-         * before it is believed. The counters are snapshotted *before* the
-         * settle so the window spans it — measuring only across the sampling
-         * window can miss a whole playlist poll cycle and read the idle gap
-         * between segment fetches as a stall.
+         * before it is believed.
+         *
+         * Two spans, deliberately different, and the difference is load-bearing:
+         *
+         * - The **stream counters** are snapshotted before the settle, so their
+         *   deltas span the whole window. Measuring throughput only across the
+         *   sampling span can miss an entire playlist poll cycle and read the
+         *   idle gap between segment fetches as a stall.
+         * - The **session readings** — speed, bandwidth, how many sessions Plex
+         *   admits to — come only from the measuring span. A Plex transcoder
+         *   reports speed=0 for its first several seconds, and folding the
+         *   settle into the average is reading startup latency as saturation,
+         *   which is the whole reason the settle exists.
+         *
+         * Neither span issues requests any more. The run-long ticker is
+         * sampling throughout regardless, so the window waits for the number of
+         * samples it wants and then reads them.
          */
-        async function measureWindow(settleMs: number) {
+        async function measureWindow(settleMs: number, measurePhase: StressTestPhase) {
           const windowStart = Date.now();
           const okBefore = clients.reduce((n, c) => n + c.streamOk, 0);
           const errBefore = clients.reduce((n, c) => n + c.streamErrors, 0);
           const notReadyBefore = clients.reduce((n, c) => n + c.notReady, 0);
           const bytesBefore = clients.reduce((n, c) => n + c.bytesRead, 0);
 
+          setPhase("settle", step);
           await sleep(settleMs, ctx.signal);
 
-          let totalSpeed = 0;
-          let speedCount = 0;
-          let totalBandwidth = 0;
-          let bandwidthCount = 0;
-          let apiErrors = 0;
-          let sessionsSeen = 0;
+          setPhase(measurePhase, step);
+          const measureFrom = Date.now() - startedAt;
+          await collect(timings.sampleCount);
+          const measureTo = Date.now() - startedAt;
 
-          for (let sample = 0; sample < timings.sampleCount; sample++) {
-            if (ctx.signal.aborted) break;
-            try {
-              const sessions = await client.getActiveSessions();
-              const ourSessions = sessions.filter((s) => s.playerMachineId?.startsWith(CLIENT_PREFIX));
-              sessionsSeen = Math.max(sessionsSeen, ourSessions.length);
+          const agg = aggregateWindow(samples, measureFrom, measureTo);
+          const { apiErrors, sessionsSeen, avgSpeed, avgBandwidth, totalKbps, actualKbps } = agg;
 
-              if (sample === 0 && config.verbose) {
-                ctx.log(`  Active sessions (${sessions.length} total, ${ourSessions.length} ours):`);
-                for (const sess of sessions) {
-                  ctx.log(
-                    `    player="${sess.player}" machineId="${sess.playerMachineId}" product="${sess.product}" speed=${sess.transcodeSpeed} bw=${sess.bandwidth}`,
-                  );
-                }
-              }
-
-              if (sample === 0 && ourSessions.length === 0 && sessions.length > 0) {
-                ctx.log(`  Warning: ${sessions.length} session(s) found but none matched prefix "${CLIENT_PREFIX}"`);
-              }
-
-              for (const session of ourSessions) {
-                // Only count non-zero speeds — 0 means the transcoder is still
-                // starting, and averaging that in reads as saturation.
-                if (session.transcodeSpeed != null && session.transcodeSpeed > 0) {
-                  totalSpeed += session.transcodeSpeed;
-                  speedCount++;
-                }
-                if (session.bandwidth != null) {
-                  totalBandwidth += session.bandwidth;
-                  bandwidthCount++;
-                }
-              }
-            } catch {
-              apiErrors++;
+          if (config.verbose) {
+            const last = samples.at(-1);
+            ctx.log(`  Sampled ${agg.sampleCount} time(s), ${sessionsSeen} of our session(s) visible to Plex`);
+            for (const r of last?.sessions ?? []) {
+              ctx.log(`    ${r.id} decision=${r.decision ?? "?"} speed=${r.speed ?? "n/a"} bw=${r.kbps}kbps`);
             }
-
-            if (sample < timings.sampleCount - 1) await sleep(timings.sampleIntervalMs, ctx.signal);
           }
 
           const streamOk = clients.reduce((n, c) => n + c.streamOk, 0) - okBefore;
           const streamErrors = clients.reduce((n, c) => n + c.streamErrors, 0) - errBefore;
           const notReady = clients.reduce((n, c) => n + c.notReady, 0) - notReadyBefore;
           const bytesRead = clients.reduce((n, c) => n + c.bytesRead, 0) - bytesBefore;
-          const avgSpeed = speedCount > 0 ? totalSpeed / speedCount : null;
-          const avgBandwidth = bandwidthCount > 0 ? totalBandwidth / bandwidthCount : 0;
 
           const assessment = assessStep({
             apiErrors,
-            sampleCount: timings.sampleCount,
+            // The window's real sample count, not the requested one. A server
+            // slow enough that a `/status/sessions` call outlasts the sampling
+            // cadence yields fewer, and "most samples failed" has to be a
+            // majority of what was taken rather than of what was asked for.
+            sampleCount: agg.sampleCount,
             sessionsSeen,
             expectedSessions: clients.length,
             sessionsEverMatched,
@@ -712,12 +861,14 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
             bytesRead,
             avgSpeed,
             avgBandwidth,
+            totalKbps,
+            actualKbps,
             assessment,
           };
         }
 
         ctx.log(`Step ${step}: Waiting ${Math.round(timings.stabiliseMs / 1000)}s for stabilisation...`);
-        let m = await measureWindow(timings.stabiliseMs);
+        let m = await measureWindow(timings.stabiliseMs, "measure");
         if (ctx.signal.aborted) break;
 
         /**
@@ -735,7 +886,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
          */
         if (m.assessment.degraded && !ctx.signal.aborted) {
           ctx.log(`Step ${step}: possible degradation (${m.assessment.reason}) — re-measuring to confirm`);
-          const retry = await measureWindow(timings.confirmSettleMs);
+          const retry = await measureWindow(timings.confirmSettleMs, "confirm");
           if (!ctx.signal.aborted) {
             if (retry.assessment.degraded) {
               m = retry;
@@ -749,6 +900,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
         if (ctx.signal.aborted) break;
 
         const { apiErrors, sessionsSeen, streamOk, streamErrors, notReady, bytesRead, avgSpeed, avgBandwidth } = m;
+        const { totalKbps, actualKbps } = m;
         const { degraded, reason } = m.assessment;
 
         if (streamOk > 0 || bytesRead > 0) streamEverFlowed = true;
@@ -763,12 +915,17 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
           sessionsSeen,
           streamErrors,
           reason,
+          totalKbps: Math.round(totalKbps),
+          actualKbps: Math.round(actualKbps),
+          streamOk,
+          notReady,
+          bytesRead,
         });
 
         ctx.log(
           `Step ${step}: ${clients.length} session(s), seen=${sessionsSeen}, ` +
             `speed=${avgSpeed != null ? avgSpeed.toFixed(2) + "x" : "n/a"}, ` +
-            `bandwidth=${Math.round(avgBandwidth)}kbps, ` +
+            `bandwidth=${Math.round(totalKbps)}kbps total / ${Math.round(actualKbps)}kbps actual, ` +
             `streams=${streamOk} ok / ${streamErrors} failed / ${notReady} not-ready, api errors=${apiErrors}`,
         );
 
@@ -788,6 +945,12 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     } finally {
       // Runs on abort too: a cancelled run must leave the server exactly as it
       // found it, which is the whole reason the cleanup lives in a `finally`.
+      //
+      // The sampler keeps running through it. Sessions draining away is the one
+      // part of the run whose *absence* is the reading, and a series that stops
+      // at the last measurement leaves the chart showing full load at the moment
+      // the run ended.
+      setPhase("cleanup", maxSessions);
       ctx.log(`Cleaning up ${clients.length} session(s)...`);
       ctx.progress(maxSessions, maxSessions + 1, "Cleaning up sessions...");
       await Promise.allSettled(clients.map((c) => c.stop(client)));
@@ -802,6 +965,17 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
           }
         }
       }
+
+      clearInterval(sampleTimer);
+      // One last reading with the sessions gone. Without it the series ends at
+      // whatever the ticker happened to catch, which on a fast cleanup is full
+      // load — the chart's final frame showing a saturated server at the moment
+      // the run stopped.
+      await takeSample().catch(() => {});
+      // Anything still blocked in `collect` would otherwise never be woken.
+      const stranded = waiters;
+      waiters = [];
+      for (const resolve of stranded) resolve();
     }
 
     const finishedAt = Date.now();
@@ -811,6 +985,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
       steps,
       startedAt,
       finishedAt,
+      telemetry: decimate(samples, STRESS_TELEMETRY_MAX_SAMPLES),
     };
 
     saveStressTestResult(resultId || randomUUID(), result);
@@ -840,6 +1015,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
         config: result.config,
         maxSessions: result.maxSessions,
         steps: result.steps,
+        telemetry: result.telemetry,
         status: "completed",
         startedAt: result.startedAt,
         finishedAt: result.finishedAt,
@@ -850,6 +1026,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
           config: result.config,
           maxSessions: result.maxSessions,
           steps: result.steps,
+          telemetry: result.telemetry,
           finishedAt: result.finishedAt,
         },
       })
@@ -895,9 +1072,11 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     config: StressTestConfig;
     maxSessions: number | null;
     steps: StressTestStep[];
+    telemetry: StressTestSample[];
     status: string;
     message: string;
     log: string;
+    progress: number;
     startedAt: number;
     finishedAt: number | null;
   } | null {
@@ -905,10 +1084,14 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     if (!row) return null;
 
     const steps = z.array(stressTestStepSchema).safeParse(row.steps);
+    // Leniently, like the config and the steps: a series written by a build
+    // whose sample shape differed must cost the reader its charts, not the page.
+    const telemetry = z.array(stressTestSampleSchema).safeParse(row.telemetry);
     return {
       ...row,
       config: parseStoredConfig(row.config),
       steps: steps.success ? steps.data : [],
+      telemetry: telemetry.success ? telemetry.data : [],
     };
   }
 
@@ -1015,26 +1198,92 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     // The handle stays until `exit` fires; see `activeStressTest`.
   }
 
-  function getActiveStressTest(): {
+  /**
+   * The live run's state, and only the telemetry the caller has not seen.
+   *
+   * The log used to ride along with this on a two-second poll, and the whole
+   * series would have done the same — a thousand samples re-serialised every
+   * second for the length of a run that exists to load the machine. `sinceT` is
+   * the same incremental contract `getJobRunLog` uses for logs; the log itself
+   * has moved to `getStressTestRunLog` for that reason.
+   *
+   * `steps` rides along in full because there is one per session count — fifty
+   * at the absolute cap — and the cockpit's capacity curve needs all of them.
+   */
+  function getActiveStressTest(sinceT = -1): {
     id: string;
+    config: StressTestConfig;
+    status: string;
     progress: number;
     message: string;
-    log: string;
     startedAt: number;
+    steps: StressTestStep[];
+    samples: StressTestSample[];
+    /** The `t` to pass back next poll. Unchanged when nothing new landed. */
+    nextSinceT: number;
+    /**
+     * Total samples the run has recorded. A count *below* what the caller has
+     * already accumulated means the series was thinned by `decimate` and its
+     * points no longer line up — the caller must start over rather than splice
+     * a coarse history onto a fine one.
+     */
+    total: number;
   } | null {
     if (!activeStressTest) return null;
     const row = db
       .select({
         id: stressTestRuns.id,
+        config: stressTestRuns.config,
+        status: stressTestRuns.status,
         progress: stressTestRuns.progress,
         message: stressTestRuns.message,
-        log: stressTestRuns.log,
         startedAt: stressTestRuns.startedAt,
+        steps: stressTestRuns.steps,
+        telemetry: stressTestRuns.telemetry,
       })
       .from(stressTestRuns)
       .where(eq(stressTestRuns.id, activeStressTest.id))
       .get();
-    return row ?? null;
+    if (!row) return null;
+
+    const steps = z.array(stressTestStepSchema).safeParse(row.steps);
+    const telemetry = z.array(stressTestSampleSchema).safeParse(row.telemetry);
+    const all = telemetry.success ? telemetry.data : [];
+    const samples = all.filter((sample) => sample.t > sinceT);
+
+    return {
+      id: row.id,
+      config: parseStoredConfig(row.config),
+      status: row.status,
+      progress: row.progress,
+      message: row.message,
+      startedAt: row.startedAt,
+      steps: steps.success ? steps.data : [],
+      samples,
+      nextSinceT: samples.at(-1)?.t ?? sinceT,
+      total: all.length,
+    };
+  }
+
+  /**
+   * A slice of a run's log from `offset`, sliced by SQLite rather than shipped
+   * whole. The same contract and the same codepoint caveat as `getJobRunLog`:
+   * SQLite's `substr`/`length` count characters where JS counts UTF-16 code
+   * units, so advancing by `chunk.length` would step past unread output.
+   */
+  function getStressTestRunLog(id: string, offset = 0): { chunk: string; nextOffset: number; size: number } | null {
+    const from = Math.max(0, Math.floor(offset));
+    const row = db
+      .select({
+        chunk: sql<string>`substr(${stressTestRuns.log}, ${from + 1})`,
+        size: sql<number>`length(${stressTestRuns.log})`,
+      })
+      .from(stressTestRuns)
+      .where(eq(stressTestRuns.id, id))
+      .get();
+    if (!row) return null;
+    const chunk = row.chunk ?? "";
+    return { chunk, nextOffset: from + [...chunk].length, size: row.size ?? 0 };
   }
 
   function markStaleStressTestsAsFailed(): void {
@@ -1056,6 +1305,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     startStressTest,
     cancelStressTest,
     getActiveStressTest,
+    getStressTestRunLog,
     markStaleStressTestsAsFailed,
   };
 });

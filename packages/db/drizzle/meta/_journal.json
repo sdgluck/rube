@@ -393,6 +393,13 @@
       "when": 1787211946296,
       "tag": "0055_glamorous_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "6",
+      "when": 1787387011687,
+      "tag": "0056_wild_cobalt_man",
+      "breakpoints": true
     }
   ]
 }

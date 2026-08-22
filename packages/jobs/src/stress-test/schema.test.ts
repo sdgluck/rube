@@ -19,11 +19,13 @@ import {
   type StressTestConfig,
   type StressTestStep,
 } from "./index.ts";
+import { stressTestSampleSchema, type StressTestSample } from "./telemetry.ts";
 
 // `$inferSelect`, not `$inferInsert` — the insert type is widened with drizzle's
 // `SQL` escape hatch, which would make the comparison meaningless.
 type DbConfig = (typeof stressTestRuns.$inferSelect)["config"];
 type DbStep = (typeof stressTestRuns.$inferSelect)["steps"][number];
+type DbSample = (typeof stressTestRuns.$inferSelect)["telemetry"][number];
 
 // Both directions: a value the zod schema produces must be storable, and a
 // value read out of the column must satisfy the schema's type.
@@ -31,10 +33,14 @@ const _configToDb: DbConfig = {} as StressTestConfig;
 const _dbToConfig: StressTestConfig = {} as DbConfig;
 const _stepToDb: DbStep = {} as StressTestStep;
 const _dbToStep: StressTestStep = {} as DbStep;
+const _sampleToDb: DbSample = {} as StressTestSample;
+const _dbToSample: StressTestSample = {} as DbSample;
 void _configToDb;
 void _dbToConfig;
 void _stepToDb;
 void _dbToStep;
+void _sampleToDb;
+void _dbToSample;
 
 describe("stored schemas", () => {
   it("parses a row written before the later fields existed", () => {
@@ -42,6 +48,50 @@ describe("stored schemas", () => {
     // must not throw over columns that did not exist when it was written.
     const legacy = { step: 1, sessions: 1, avgTranscodeSpeed: 2.5, avgBandwidth: 900, errors: 0, timestamp: 1 };
     assert.deepEqual(stressTestStepSchema.parse(legacy), legacy);
+  });
+
+  it("parses a step row written before the telemetry fields existed", () => {
+    // `totalKbps` and friends arrived with the time series. A run recorded
+    // before it must still open, showing what it did record.
+    const legacy = {
+      step: 3,
+      sessions: 3,
+      avgTranscodeSpeed: 1.4,
+      avgBandwidth: 4200,
+      errors: 0,
+      timestamp: 1,
+      sessionsSeen: 3,
+      streamErrors: 0,
+    };
+    assert.deepEqual(stressTestStepSchema.parse(legacy), legacy);
+  });
+
+  it("rejects a sample missing a field the chart draws", () => {
+    // The series is only useful if every point carries every line. A partial
+    // sample would render as a gap that looks like a stall.
+    assert.equal(stressTestSampleSchema.safeParse({ t: 0, step: 1, phase: "measure" }).success, false);
+  });
+
+  it("accepts a sample with no sessions visible", () => {
+    // Zero sessions seen is a reading, not an absence of one — it is what a
+    // server reaping streams under load looks like from outside.
+    const sample = {
+      t: 1200,
+      step: 4,
+      phase: "settle" as const,
+      started: 4,
+      seen: 0,
+      speed: null,
+      speedMin: null,
+      kbps: 0,
+      actualKbps: 0,
+      ok: 0,
+      err: 2,
+      notReady: 0,
+      apiError: false,
+      sessions: [],
+    };
+    assert.deepEqual(stressTestSampleSchema.parse(sample), sample);
   });
 
   it("accepts a stored config without bounds", () => {

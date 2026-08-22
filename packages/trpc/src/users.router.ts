@@ -9,7 +9,7 @@ import {
   UnknownUserError,
   NotSharedError,
 } from "@tinkerbell/domain.users";
-import { PlexApiError } from "@tinkerbell/plex";
+import { PlexApiError, realSessions } from "@tinkerbell/plex";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
@@ -130,10 +130,16 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
       return detail;
     }),
 
-    /** Live sessions for one user, filtered from the single server-wide read. */
+    /**
+     * Live sessions for one user, filtered from the single server-wide read.
+     *
+     * Tinkerbell's own simulated playback is excluded: the stress harness
+     * authenticates with the owner's token, so its sessions would otherwise all
+     * appear on the owner's user page as films they are watching.
+     */
     sessions: procedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
       const client = getPlexClient();
-      const sessions = await client.getActiveSessions();
+      const sessions = realSessions(await client.getActiveSessions());
       return sessions.filter((s) => s.userId === input.userId);
     }),
 

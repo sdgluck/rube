@@ -159,6 +159,19 @@ export interface MockPlex {
     requireTranscodeDecision: boolean;
     /** Sessions currently reporting a timeline, keyed by client id. */
     sessions: Map<string, { ratingKey: string; clientId: string }>;
+    /**
+     * Fail the next N `/status/sessions` calls.
+     *
+     * A 500 rather than a 503: 503 is in the client's retryable set, so it is
+     * transparently retried and never reaches the harness as a failed reading,
+     * which is the thing under test.
+     *
+     * A stress run samples this endpoint continuously and treats a failure as
+     * "we have lost the ability to measure" rather than as an error to abort
+     * on — a distinction with its own branch in `assessStep` and its own colour
+     * on the chart, and one that needs a way to actually occur in a test.
+     */
+    failSessionsFor: number;
   };
   close: () => Promise<void>;
 }
@@ -198,6 +211,7 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
     transcodeSpeed: 2.5,
     bandwidth: 8000,
     capacity: null,
+    failSessionsFor: 0,
     requireTranscodeDecision: true,
     sessions,
   };
@@ -575,6 +589,12 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
     }
 
     if (path === "/status/sessions") {
+      if (playback.failSessionsFor > 0) {
+        playback.failSessionsFor--;
+        res.writeHead(500);
+        res.end();
+        return;
+      }
       const all = [...sessions.values()];
       const live = playback.capacity == null ? all : all.slice(0, playback.capacity);
       const speed =

@@ -113,6 +113,17 @@
   --ramp-3: #9fd8d1;
   --ramp-4: #d3e9e6;
 
+  /* Two series on one chart.
+     The ramp above is one hue stepping down, which is right when the ordering
+     *is* the information — a distribution, a capacity curve — and useless when
+     two lines have to be told apart at a glance. These are for that case only:
+     a pair, not a palette. Anything needing a third category wants a different
+     chart. --series-1 is the ramp's own hue so a chart with one line looks like
+     the rest of the app; --series-2 is far enough round to survive being drawn
+     over it, and both hold their contrast against --surface in either theme. */
+  --series-1: #12867c;
+  --series-2: #b4622a;
+
   /* ─── Typography ────────────────────────────────────────────────────── */
   --font-sans: Archivo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
@@ -395,6 +406,9 @@
   --ramp-2: #148a80;
   --ramp-3: #106a62;
   --ramp-4: #0d4b46;
+
+  --series-1: #1aa79b;
+  --series-2: #e08a4a;
 
   /* No --e-* overrides here any more. The elevation tokens resolve to
      borders in --line-strong, which this block already redefines, so they

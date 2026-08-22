@@ -88,6 +88,20 @@
   min-width: 0;
 }
 
+/* While a stress test is running its page becomes a telemetry cockpit and wants
+   the whole width. The rail folds away rather than the cockpit overlapping it.
+   The attribute is set by the page itself (`pages/StressTest/index.tsx`) because
+   the rail is its sibling's ancestor and there is no way up the tree from inside
+   an <Outlet> — a context would work too, and would exist solely to carry one
+   boolean to one stylesheet. */
+:global(body[data-stress-live]) .layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:global(body[data-stress-live]) .rail {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .layout {
     grid-template-columns: 1fr;

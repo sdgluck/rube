@@ -85,6 +85,14 @@ export type {
   PlexClientOptions,
 } from "./types.ts";
 
+export {
+  SYNTHETIC_CLIENT_PREFIX,
+  isSyntheticSession,
+  realSessions,
+  syntheticSessions,
+  type HasPlayerMachineId,
+} from "./synthetic.ts";
+
 export function createPlexClient(opts: PlexClientOptions) {
   const http = createPlexHttp(opts);
   return {

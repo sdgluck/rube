@@ -77,6 +77,7 @@ interface StressTestStepShape {
   step: number;
   sessions: number;
   avgTranscodeSpeed: number | null;
+  /** Mean bandwidth *per session*. `totalKbps` is what the server is pushing. */
   avgBandwidth: number;
   /** Failed `/status/sessions` samples during this step. */
   errors: number;
@@ -87,6 +88,45 @@ interface StressTestStepShape {
   streamErrors?: number;
   /** Why the ramp stopped here, if it did. */
   reason?: string | null;
+  /** Summed reported bandwidth across our sessions, kbps. */
+  totalKbps?: number;
+  /** What the clients genuinely pulled off the wire, kbps. */
+  actualKbps?: number;
+  streamOk?: number;
+  /** Segment 404/425s — transcoder backpressure, deliberately not an error. */
+  notReady?: number;
+  bytesRead?: number;
+}
+
+/** One reading of one simulated session, inside a telemetry sample. */
+interface StressTestSessionSampleShape {
+  id: string;
+  speed: number | null;
+  kbps: number;
+  decision?: string;
+  hw?: boolean;
+}
+
+/**
+ * One instant of a run. `t` is milliseconds since the run started rather than
+ * an epoch timestamp — a thousand of these are rewritten into the column twice
+ * a second, so the shorter number is worth having.
+ */
+interface StressTestSampleShape {
+  t: number;
+  step: number;
+  phase: "start" | "settle" | "measure" | "confirm" | "cleanup";
+  started: number;
+  seen: number;
+  speed: number | null;
+  speedMin: number | null;
+  kbps: number;
+  actualKbps: number;
+  ok: number;
+  err: number;
+  notReady: number;
+  apiError: boolean;
+  sessions: StressTestSessionSampleShape[];
 }
 
 export const config = sqliteTable("config", {
@@ -953,6 +993,16 @@ export const stressTestRuns = sqliteTable("stress_test_runs", {
   config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),
   maxSessions: integer("max_sessions"),
   steps: text("steps", { mode: "json" }).$type<StressTestStepShape[]>().notNull().default([]),
+  /**
+   * The run's time series, one entry per sampling tick, thinned to a cap.
+   *
+   * Lives on the run row rather than in a table of its own because it is
+   * written the way the log is — rewritten wholesale on a flush tick from a
+   * forked child — and is only ever read as a whole series for one run. A
+   * per-sample table would buy queries nobody makes and cost a write per
+   * sample on the process that is deliberately saturating the machine.
+   */
+  telemetry: text("telemetry", { mode: "json" }).$type<StressTestSampleShape[]>().notNull().default([]),
   status: text("status").notNull().default("running"),
   progress: real("progress").notNull().default(0),
   message: text("message").notNull().default(""),

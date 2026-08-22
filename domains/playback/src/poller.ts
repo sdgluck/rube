@@ -9,7 +9,7 @@
  * else in the process. Every path here either records a play or gives up
  * quietly until the next tick.
  */
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient, realSessions } from "@tinkerbell/plex";
 import { MINUTE_MS, type ConfigStore, type Clients } from "@tinkerbell/core";
 import type { Db } from "@tinkerbell/db";
 import type { Bandwidth } from "@tinkerbell/domain.bandwidth";
@@ -101,7 +101,12 @@ export function createPoller(deps: PollerDeps) {
     try {
       const recovered = bootRecovered ? 0 : recoverOpenSessions(now);
       const client = createPlexClient({ url, token, signal, onHealth: plexHealthCallback });
-      const sessions = await client.getActiveSessions();
+      // Excluding Tinkerbell's own simulated playback. A stress run starts real
+      // Plex sessions on purpose, so without this a twenty-session ramp lands in
+      // playback history as twenty plays by the server owner and puts a spike in
+      // the bandwidth series that nobody caused — the tool that measures the
+      // server would be corrupting the record of what the server did.
+      const sessions = realSessions(await client.getActiveSessions());
       const { opened, closed, completed } = recordPollSnapshot(sessions, now);
       // What the sessions cost, alongside what they were. Written on every tick
       // including the empty ones: a gap in the series would be indistinguishable
