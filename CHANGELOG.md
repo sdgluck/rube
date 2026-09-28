@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-28
+
+### Added
+
+- The stress test page is now a live cockpit while a run is in progress. It charts per-session speed, total bandwidth the server is pushing, bandwidth the clients actually pulled off the wire, and stream successes and failures. It labels the settle period before each step, so the flat stretch reads as waiting for the transcoder rather than a hang.
+- A finished stress test can be replayed from its stored data, with a crosshair readout on the charts. Runs recorded before this release still draw their capacity curve.
+- Stress test results now record total bandwidth across all sessions and the bandwidth the clients actually received. A server under pressure can keep reporting a stream long after it stops delivering it, and the two figures together show that.
+
+### Changed
+
+- The stress test now takes one continuous set of readings for the whole run. The chart and the pass/fail verdict use the same readings, where before they could differ.
+- For long stress test runs, the stored chart data is capped. When a run goes past the cap, the older half is thinned out and the recent samples are kept, since the end of a run is where the degradation shows.
+
+### Fixed
+
+- **Always-on system jobs that had been switched off are now switched back on at startup.** Jobs marked "Required" or "Always on" could end up disabled, for example from an older build, a settings import or a manual edit. They then silently never ran, and the toggle was hidden so there was no way to re-enable them. Startup now repairs those jobs and logs which ones it fixed.
+- The "Required" and "Always on" labels on jobs now show the job's real enabled state instead of always claiming it is on.
+- Stress test sessions no longer show up as real viewing. A twenty-session ramp used to add twenty plays by the server owner to playback history. It also put a bandwidth spike in the stats that no viewer caused, and showed on the dashboard as load. These sessions are now excluded from playback history, the bandwidth series, the dashboard and the session lists. If someone is genuinely watching when a stress test starts, their play is still recorded.
+
 ## [0.25.0] - 2026-08-21
 
 ### Added
