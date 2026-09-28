@@ -397,6 +397,31 @@ describe("the telemetry series", () => {
     assert.equal(phases.at(-1), "cleanup", "the series must cover the sessions draining away");
   });
 
+  it("still lands the final reading when /status/sessions is slow", async () => {
+    // The regression this guards. A tick that fired just before `clearInterval`
+    // is still awaiting the server, so the final `takeSample()` used to hit the
+    // re-entrancy guard and return after one microtask — the result was built
+    // before the stray reading landed, and the series ended mid-measurement
+    // showing full load. It only reproduced when sessions were slower than the
+    // sample interval, which is a loaded server: the exact case the last frame
+    // is meant to describe.
+    const slow = client();
+    const real = slow.getActiveSessions.bind(slow);
+    slow.getActiveSessions = async () => {
+      await new Promise((r) => setTimeout(r, FAST.sampleIntervalMs * 6));
+      return real();
+    };
+
+    const { ctx } = testContext();
+    const result = await runStressTest(slow, { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST });
+
+    assert.equal(
+      result.telemetry.at(-1)?.phase,
+      "cleanup",
+      "the last frame must be the drained one, not whatever the ticker caught",
+    );
+  });
+
   it("keeps time moving forward and starts from the run's own zero", async () => {
     const { ctx } = testContext();
     const result = await runStressTest(client(), { mode: "transcode", maxSessions: 2 }, ctx, { timings: FAST });

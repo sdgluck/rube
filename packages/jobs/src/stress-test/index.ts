@@ -665,12 +665,23 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
     /** Resolvers waiting on `collect`, notified once per appended sample. */
     let waiters: Array<() => void> = [];
 
-    async function takeSample(): Promise<void> {
+    /**
+     * The capture in progress, so the final reading can wait for it rather
+     * than be dropped by the re-entrancy guard. See `takeFinalSample`.
+     */
+    let inFlight: Promise<void> | null = null;
+
+    function takeSample(): Promise<void> {
       // A slow `/status/sessions` must not queue a second call behind itself:
       // the point of a fixed cadence is that a struggling server produces
       // *fewer* samples, not a backlog of them arriving at once.
-      if (sampling) return;
+      if (sampling) return inFlight ?? Promise.resolve();
       sampling = true;
+      inFlight = captureSample();
+      return inFlight;
+    }
+
+    async function captureSample(): Promise<void> {
       try {
         let ours: PlexSession[] | null = null;
         try {
@@ -709,6 +720,24 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
         waiters = [];
         for (const resolve of woken) resolve();
       }
+    }
+
+    /**
+     * The reading taken once the sessions are gone, and the one the chart's
+     * last frame is drawn from.
+     *
+     * It cannot go through the re-entrancy guard. A tick that fired just before
+     * `clearInterval` can still be awaiting `/status/sessions`, and a plain
+     * `takeSample()` would see `sampling` and return after a single microtask —
+     * while the stray tick is blocked on a macrotask. The result object is then
+     * built synchronously from `samples`, so the series ended at the last
+     * measurement and the stray cleanup reading landed in an array nobody read
+     * again: precisely the saturated final frame the call exists to prevent.
+     * It only showed up under load, which is when the reading matters most.
+     */
+    async function takeFinalSample(): Promise<void> {
+      if (inFlight) await inFlight.catch(() => {});
+      await takeSample().catch(() => {});
     }
 
     const sampleTimer = setInterval(() => void takeSample(), timings.sampleIntervalMs);
@@ -971,7 +1000,7 @@ export const createStressTest = perDeps(function createStressTest(deps: Pick<Ser
       // whatever the ticker happened to catch, which on a fast cleanup is full
       // load — the chart's final frame showing a saturated server at the moment
       // the run stopped.
-      await takeSample().catch(() => {});
+      await takeFinalSample();
       // Anything still blocked in `collect` would otherwise never be woken.
       const stranded = waiters;
       waiters = [];
