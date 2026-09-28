@@ -67,7 +67,14 @@ export default function JobPageShell({ job, actions, children }: Props) {
               {lastDuration && <span className={styles.statusPillMeta}>· {lastDuration}</span>}
             </span>
           )}
-          {fields.enabled === "required" && <span className={styles.alwaysOnPill}>Always on</span>}
+          {fields.enabled === "required" &&
+            (job.enabled ? (
+              <span className={styles.alwaysOnPill}>Always on</span>
+            ) : (
+              <span className={styles.alwaysOnPill} data-state="off" title="Switched off — this job is not running">
+                Always on — currently off
+              </span>
+            ))}
         </div>
         <div className={styles.jobDetailActions}>
           {fields.kind === "feature" && (

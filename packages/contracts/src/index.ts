@@ -95,6 +95,8 @@ export {
 } from "./smart-filter-format.ts";
 export type { RelativeDate, RelativeUnit } from "./smart-filter-format.ts";
 export { narrateSmartFilter, needsTagLookup } from "./smart-filter-narrate.ts";
+export { ALWAYS_ON_JOB_IDS, isAlwaysOnJob } from "./always-on-jobs.ts";
+export type { AlwaysOnJobId } from "./always-on-jobs.ts";
 export { CHANGE_LOG_ACTIONS, CHANGE_LOG_ENTITIES } from "./change-log.ts";
 export type { ChangeLogAction, ChangeLogEntity } from "./change-log.ts";
 export { translateSmartFilterTags } from "./portable-rule.ts";

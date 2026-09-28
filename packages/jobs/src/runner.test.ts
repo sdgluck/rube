@@ -1,4 +1,5 @@
 import { DEFAULT_JOBS, buildEngineConfig } from "./runner.ts";
+import { ALWAYS_ON_JOB_IDS, isAlwaysOnJob } from "@tinkerbell/contracts";
 import { FEATURE_TEMPLATES } from "@tinkerbell/jobs";
 /**
  * The concurrency-sensitive parts of the runner: the start guard, retention,
@@ -259,5 +260,49 @@ describe("job registry drift", () => {
     for (const template of FEATURE_TEMPLATES) {
       assert.ok(isCommandName(template.command), `feature "${template.id}" points at "${template.command}"`);
     }
+  });
+
+  // ALWAYS_ON_JOB_IDS drives two things that must agree: the web hides the
+  // toggle for these, and seedDefaultJobs forces the column to 1. An id here
+  // with no row to force would be a job the UI refuses to switch on and the
+  // server never repairs — the exact shape of the bug this list exists for.
+  it("names only real default jobs as always-on", () => {
+    const defaults = new Set(DEFAULT_JOBS.map((j) => j.id));
+    for (const id of ALWAYS_ON_JOB_IDS) {
+      assert.ok(defaults.has(id), `always-on job "${id}" is not in DEFAULT_JOBS`);
+    }
+  });
+
+  it("ships every always-on job enabled", () => {
+    for (const job of DEFAULT_JOBS) {
+      if (!isAlwaysOnJob(job.id)) continue;
+      assert.equal(job.enabled, 1, `always-on job "${job.id}" ships disabled`);
+    }
+  });
+});
+
+describe("seedDefaultJobs", () => {
+  it("re-enables an always-on job that was switched off", () => {
+    const db = c.resolve(DbToken);
+    const { seedDefaultJobs } = createRunner(c.resolve(ServicesToken));
+
+    seedDefaultJobs();
+    db.update(jobs).set({ enabled: 0 }).where(eq(jobs.id, "generate")).run();
+    seedDefaultJobs();
+
+    const row = db.select().from(jobs).where(eq(jobs.id, "generate")).get();
+    assert.equal(row?.enabled, 1, "generate should have been repaired to enabled");
+  });
+
+  it("leaves a toggleable job switched off", () => {
+    const db = c.resolve(DbToken);
+    const { seedDefaultJobs } = createRunner(c.resolve(ServicesToken));
+
+    seedDefaultJobs();
+    db.update(jobs).set({ enabled: 0 }).where(eq(jobs.id, "cleanup")).run();
+    seedDefaultJobs();
+
+    const row = db.select().from(jobs).where(eq(jobs.id, "cleanup")).get();
+    assert.equal(row?.enabled, 0, "cleanup is the user's to switch off");
   });
 });

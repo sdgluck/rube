@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { eq, and, desc, inArray, notInArray, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 
+import { isAlwaysOnJob } from "@tinkerbell/contracts";
 import { jobs, jobRuns } from "@tinkerbell/db";
 
 import {
@@ -337,7 +338,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
   function seedDefaultJobs(): void {
     const existing = new Map(
       db
-        .select({ id: jobs.id, name: jobs.name, command: jobs.command })
+        .select({ id: jobs.id, name: jobs.name, command: jobs.command, enabled: jobs.enabled })
         .from(jobs)
         .all()
         .map((r) => [r.id, r]),
@@ -345,6 +346,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
 
     let inserted = 0;
     let updated = 0;
+    const repaired: string[] = [];
     for (const job of DEFAULT_JOBS) {
       const current = existing.get(job.id);
       if (!current) {
@@ -356,15 +358,33 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
       }
       // Split ownership, deliberately: `name` and `command` are ours and must
       // reach existing installs when we rename or re-point a default job (the
-      // old `onConflictDoNothing` meant they never did). `schedule`, `enabled`
-      // and `config` belong to the user and are only ever set on first insert.
+      // old `onConflictDoNothing` meant they never did). `schedule` and
+      // `config` belong to the user and are only ever set on first insert.
+      //
+      // `enabled` is split further: the user owns it for jobs they can toggle,
+      // but for an always-on job there is no switch in the UI, so a row that
+      // somehow reached 0 could never be turned back on — it just rendered a
+      // "Required" pill and was skipped by `registerCrons`, which schedules
+      // `enabled = 1` only. Repairing it here is what makes that pill true.
+      const patch: { name?: string; command?: JobCommand; enabled?: number } = {};
       if (current.name !== job.name || current.command !== job.command) {
-        db.update(jobs).set({ name: job.name, command: job.command }).where(eq(jobs.id, job.id)).run();
+        patch.name = job.name;
+        patch.command = job.command;
+      }
+      if (isAlwaysOnJob(job.id) && current.enabled !== 1) {
+        patch.enabled = 1;
+        repaired.push(job.id);
+      }
+      if (Object.keys(patch).length > 0) {
+        db.update(jobs).set(patch).where(eq(jobs.id, job.id)).run();
         updated++;
       }
     }
     if (inserted > 0) log.info("seeded default jobs", { count: inserted });
     if (updated > 0) log.info("refreshed default job name/command", { count: updated });
+    // Loud on purpose: a repair here means the job had not been running, and
+    // the operator deserves to know which ones just came back.
+    if (repaired.length > 0) log.warn("re-enabled always-on jobs that were switched off", { jobs: repaired });
 
     // Clean up removed default jobs (delete runs first due to FK constraint)
     for (const id of REMOVED_JOBS) {
@@ -801,5 +821,5 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     }
   }
 
-  return { startJob, cancelRun, sweepStuckRuns, updateJob, initJobs };
+  return { startJob, cancelRun, sweepStuckRuns, updateJob, initJobs, seedDefaultJobs };
 });

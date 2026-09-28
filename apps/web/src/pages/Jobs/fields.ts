@@ -1,3 +1,5 @@
+import { isAlwaysOnJob } from "@tinkerbell/contracts";
+
 /**
  * Per-job declaration of which standard config fields apply,
  * plus its classification in the Jobs UI.
@@ -23,31 +25,31 @@ export interface JobFieldsConfig {
 
 const fields: Record<string, JobFieldsConfig> = {
   // ── System tasks ─────────────────────────────────────────────────────────
-  "sync-media": { kind: "system", enabled: "required", sections: true },
-  "sync-collections": { kind: "system", enabled: "required", sections: true },
-  "sync-users": { kind: "system", enabled: "required" },
-  "sync-recently-added": { kind: "system", enabled: "required" },
-  "purge-runs": { kind: "system", enabled: "required" },
-  "posters-refresh": { kind: "system", enabled: "required", sections: true },
-  generate: { kind: "system", enabled: "required", sections: true },
-  healthcheck: { kind: "system", enabled: "required" },
+  "sync-media": { kind: "system", sections: true },
+  "sync-collections": { kind: "system", sections: true },
+  "sync-users": { kind: "system" },
+  "sync-recently-added": { kind: "system" },
+  "purge-runs": { kind: "system" },
+  "posters-refresh": { kind: "system", sections: true },
+  generate: { kind: "system", sections: true },
+  healthcheck: { kind: "system" },
   // Manual maintenance: shown so there's a Run button, always-on so it can't
   // be toggled into a state where the button does nothing.
-  "collections-sweep": { kind: "system", enabled: "required", sections: true },
+  "collections-sweep": { kind: "system", sections: true },
   // Driven from Settings → Bandwidth Test, but listed here so its schedule is
   // editable by anyone who wants a nightly figure. Unscheduled by default.
-  "bandwidth-test": { kind: "system", enabled: "required" },
+  "bandwidth-test": { kind: "system" },
   // Playback tracking is infrastructure, not an opt-in capability: the poller is
   // what every watch statistic is derived from, and the import is a one-shot
   // seed for it. Neither is something you "install".
-  "registry-updates": { kind: "system", enabled: "required" },
+  "registry-updates": { kind: "system" },
   "playback-poll": { kind: "system" },
   // Only the source of the `request-fulfilled` rule trigger, so its schedule
   // is the trigger's latency and worth being able to edit. It no-ops in
   // microseconds when Overseerr isn't configured, which is why it is not
   // gated on that.
   "seerr-poll": { kind: "system" },
-  "playback-backfill": { kind: "system", enabled: "required", schedule: "hidden" },
+  "playback-backfill": { kind: "system", schedule: "hidden" },
   // Settings → Watchlist owns the switch; this row exists so the schedule —
   // which is the delay between tapping the watchlist button in the Plex app
   // and the download starting — can be edited, and so there is a Run button.
@@ -65,20 +67,20 @@ const fields: Record<string, JobFieldsConfig> = {
   // Apply Sharing Restrictions runs behind the scenes alongside BYW; users
   // shouldn't toggle it. Clear / Remove variants will surface as Settings
   // escape hatches in a later phase. Migrate Collections is driven from Settings.
-  label: { kind: "hidden", enabled: "required", sections: true },
+  label: { kind: "hidden", sections: true },
   "label-undo": { kind: "hidden", sections: true },
-  "byw-remove": { kind: "hidden", enabled: "required", sections: true },
+  "byw-remove": { kind: "hidden", sections: true },
   "overlays-remove": { kind: "hidden", sections: true },
   "migrate-collections": { kind: "hidden" },
   // One-shot actions, not installable capabilities: these are the buttons on
   // Settings → Portal → Personalization, and listing them as features invited
   // people to "enable" a job whose whole job is to be pressed once. Their run
   // status belongs on the page that triggers them.
-  "personalize-enable": { kind: "hidden", enabled: "required" },
-  "personalize-disable": { kind: "hidden", enabled: "required" },
+  "personalize-enable": { kind: "hidden" },
+  "personalize-disable": { kind: "hidden" },
   // Triggered by the Prerolls page on upload/import; there is nothing to
   // schedule and nothing to toggle.
-  "preroll-process": { kind: "hidden", enabled: "required" },
+  "preroll-process": { kind: "hidden" },
 };
 
 const DEFAULTS: JobFieldsConfig = {};
@@ -88,7 +90,10 @@ export function getJobFields(jobId: string): Required<JobFieldsConfig> {
   return {
     kind: cfg.kind ?? "feature",
     schedule: cfg.schedule ?? "editable",
-    enabled: cfg.enabled ?? "toggleable",
+    // Always-on-ness is not a UI opinion: the server forces these rows to
+    // `enabled = 1` in `seedDefaultJobs`, so the list has to be the same one.
+    // Keeping a second copy here is what let the pill and the column disagree.
+    enabled: cfg.enabled ?? (isAlwaysOnJob(jobId) ? "required" : "toggleable"),
     sections: cfg.sections ?? false,
   };
 }

@@ -466,6 +466,13 @@
   white-space: nowrap;
 }
 
+/* An always-on job that is off is a fault, not a mode — colour it like one so
+   it reads as wrong at a glance rather than as just another grey chip. */
+.alwaysOnPill[data-state="off"] {
+  color: var(--danger);
+  border: 1px solid var(--danger-line);
+}
+
 .jobDetailColumns {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -496,6 +503,11 @@
   color: var(--ink-2);
   border: 1px solid var(--line);
   background: var(--surface);
+}
+
+.requiredPill[data-state="off"] {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .detailSection {

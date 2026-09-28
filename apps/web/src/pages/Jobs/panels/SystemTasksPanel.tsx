@@ -73,7 +73,23 @@ export function SystemTasksPanel({ dragHandle, dragProps }: DashboardPanelProps)
                     </span>
                   </td>
                   <td>
-                    <span className={styles.requiredPill}>Required</span>
+                    {/* Reflects the row, never asserts over it. This pill used
+                        to be a bare "Required" regardless of `enabled`, so a
+                        system job that had been switched off looked healthy
+                        and silently never ran. The server now repairs those on
+                        boot; this is what makes the state visible if one slips
+                        through again. */}
+                    {job.enabled ? (
+                      <span className={styles.requiredPill}>Required</span>
+                    ) : (
+                      <span
+                        className={styles.requiredPill}
+                        data-state="off"
+                        title="Switched off — this job is not running"
+                      >
+                        Off
+                      </span>
+                    )}
                   </td>
                   <td className={styles.monoCell}>
                     {job.lastRunStartedAt ? (
