@@ -4,6 +4,7 @@ import { DistributionBar } from "./DistributionBar";
 import styles from "#pages/Stats/Stats.module.css";
 import { formatFileSize, formatNumber } from "#/format";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
+import RunJobButton from "#components/RunJobButton";
 
 /**
  * How much room each library takes, and how much of that is actually known.
@@ -36,6 +37,7 @@ export function StoragePanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const partial = sections.reduce((sum, s) => sum + s.partial, 0);
   const unknownEpisodes = sections.reduce((sum, s) => sum + s.unknownEpisodes, 0);
   const known = sections.filter((s) => s.bytes > 0);
+  const short = unsized > 0 || partial > 0;
 
   return (
     <PanelShell title="Storage" dragHandle={dragHandle} dragProps={dragProps}>
@@ -43,29 +45,43 @@ export function StoragePanel({ dragHandle, dragProps }: DashboardPanelProps) {
         <>
           <div className={styles.distRows}>
             <DistributionBar
-              label={`${formatFileSize(total)} across ${known.length} librar${known.length === 1 ? "y" : "ies"}`}
+              label={`${short ? "≥ " : ""}${formatFileSize(total)} across ${known.length} librar${known.length === 1 ? "y" : "ies"}`}
               items={known.map((s) => ({ value: s.sectionTitle, count: s.bytes }))}
               formatLabel={(label) => label}
               formatCount={formatFileSize}
             />
           </div>
-          {unsized > 0 && (
-            <div className={styles.muted}>
-              Not counted: {formatNumber(unsized)} item{unsized === 1 ? "" : "s"} of unknown size. Sizes are read during
-              Sync Media, so anything indexed before the last run fills in on the next one.
-            </div>
-          )}
-          {partial > 0 && (
-            <div className={styles.muted}>
-              Partly counted: {formatNumber(partial)} show{partial === 1 ? "" : "s"} where Plex reported no size for{" "}
-              {formatNumber(unknownEpisodes)} episode{unknownEpisodes === 1 ? "" : "s"}, so the total above is short by
-              that much.
+          {short && (
+            <div className={styles.panelEmpty}>
+              <span className={styles.storageGaps}>
+                {unsized > 0 && (
+                  <span className={styles.gapChip} title="Items with no size yet; Sync Media reads them">
+                    +{formatNumber(unsized)} unsized
+                  </span>
+                )}
+                {partial > 0 && (
+                  <span
+                    className={styles.gapChip}
+                    title={`Plex reported no size for ${formatNumber(unknownEpisodes)} episode${unknownEpisodes === 1 ? "" : "s"}`}
+                  >
+                    {formatNumber(partial)} show{partial === 1 ? "" : "s"} partly sized
+                  </span>
+                )}
+              </span>
+              {unsized > 0 && (
+                <RunJobButton jobId="sync-media" small>
+                  Run Sync Media
+                </RunJobButton>
+              )}
             </div>
           )}
         </>
       ) : (
-        <div className={styles.muted}>
-          No file sizes known yet. They are read during Sync Media, so this fills in after the next run.
+        <div className={styles.panelEmpty}>
+          <span>No file sizes yet</span>
+          <RunJobButton jobId="sync-media" small>
+            Run Sync Media
+          </RunJobButton>
         </div>
       )}
     </PanelShell>

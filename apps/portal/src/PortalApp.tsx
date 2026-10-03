@@ -193,7 +193,13 @@ export default function PortalApp() {
           ))}
         </div>
 
-        {tab === "collections" ? <MyCollections /> : tab === "preferences" ? <PreferencesForm /> : <LeavingSoon />}
+        {tab === "collections" ? (
+          <MyCollections onSetTastes={() => setTab("preferences")} />
+        ) : tab === "preferences" ? (
+          <PreferencesForm />
+        ) : (
+          <LeavingSoon />
+        )}
       </div>
     </div>
   );

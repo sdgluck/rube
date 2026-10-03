@@ -59,6 +59,19 @@
   background: var(--surface-sunken);
 }
 
+.emptyUpload {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
 .uploadList {
   margin: 12px 0 0;
   padding: 0;

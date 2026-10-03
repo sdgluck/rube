@@ -3,11 +3,11 @@ import ErrorState from "#components/ErrorState";
 import { SkeletonBlock } from "#components/Skeleton";
 import { DistributionBar } from "./DistributionBar";
 import styles from "#pages/Stats/Stats.module.css";
-import { formatNumber } from "#/format";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { playbackLabel } from "#lib/streamDecision";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
+import PanelEmpty from "./PanelEmpty";
 
 /* The same ramp the other distributions use, but assigned by meaning rather
    than by rank: transcode is the expensive one wherever it lands in the order,
@@ -60,11 +60,7 @@ export function StreamQualityPanel({ dragHandle, dragProps }: DashboardPanelProp
         <ErrorState inline title="Couldn't load stream breakdown" onRetry={() => breakdownQuery.refetch()} />
       )}
       {data && data.total === 0 && (
-        <div className={styles.muted}>
-          {periodDays === 0
-            ? "No watch history yet — it fills in as things are played."
-            : `No plays in the last ${label}`}
-        </div>
+        <PanelEmpty>{periodDays === 0 ? "No plays yet" : `No plays in the last ${label}`}</PanelEmpty>
       )}
       {data && data.total > 0 && (
         <>
@@ -74,6 +70,9 @@ export function StreamQualityPanel({ dragHandle, dragProps }: DashboardPanelProp
               items={data.decisions}
               colorMap={DECISION_COLORS}
               formatLabel={(value) => (value ? playbackLabel({ decision: value }, value) : "Unknown")}
+              explain={(value) =>
+                value ? undefined : "Imported from Plex history, which records no decision. Not in the % transcoded."
+              }
             />
             <DistributionBar
               label="Location"
@@ -82,13 +81,6 @@ export function StreamQualityPanel({ dragHandle, dragProps }: DashboardPanelProp
               formatLabel={(value) => (value === "local" ? "Local" : "Remote")}
             />
           </div>
-          {known < data.total && (
-            <div className={styles.muted}>
-              {formatNumber(data.total - known)} of {formatNumber(data.total)} plays were imported from Plex's own
-              history, which records no playback decision — those are the "Unknown" share, and the percentage above
-              counts only the rest.
-            </div>
-          )}
         </>
       )}
     </PanelShell>

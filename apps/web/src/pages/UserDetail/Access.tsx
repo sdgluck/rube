@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { trpc } from "#/trpc";
 import Banner from "#components/Banner";
-import EmptyState from "#components/EmptyState";
+import AllOption from "#components/AllOption";
+import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
 import shared from "#/styles/shared.module.css";
 import { useUserDetail } from "./context.ts";
@@ -26,25 +27,9 @@ export default function Access() {
   const settingsMutation = trpc.users.updateSettings.useMutation();
   const ratingsMutation = trpc.users.updateContentRatings.useMutation();
 
-  if (user.isOwner) {
-    return (
-      <EmptyState
-        icon="person"
-        title="This is the server owner"
-        description="Plex doesn't let the account that owns a server restrict, unshare or remove itself, so there is nothing to configure here."
-      />
-    );
-  }
-
-  if (!share) {
-    return (
-      <EmptyState
-        icon="person"
-        title="No share on this server"
-        description="This user reaches the server through Plex Home rather than a share, so there are no libraries or permissions to set."
-      />
-    );
-  }
+  // The layout hides this tab for the owner and for Home users, and redirects
+  // a deep link away — this only narrows the types.
+  if (user.isOwner || !share) return null;
 
   const selected = pendingSections ?? new Set(share.librarySectionIds);
   const dirty = pendingSections !== null;
@@ -72,25 +57,26 @@ export default function Access() {
     run("Content ratings updated", () => ratingsMutation.mutateAsync({ userId, [type]: next }));
   };
 
+  // Read-only either way; dimmed when Personalization owns them, so they read
+  // as set elsewhere rather than as something to click.
+  const locked = personalization.ownsLabels ? local.labelLocked : "";
+
   const busy = librariesMutation.isPending || settingsMutation.isPending || ratingsMutation.isPending;
 
   return (
     <div className={local.panels}>
-      {!share.accepted && (
-        <Banner variant="warn">
-          This invite hasn&rsquo;t been accepted yet. The settings below are already in force and will apply the moment
-          it is.
-        </Banner>
-      )}
+      {!share.accepted && <Banner variant="warn">Invite not accepted yet — these apply the moment it is.</Banner>}
 
       <section className={local.panel}>
         <h3 className={local.panelTitle}>Libraries</h3>
-        <p className={local.panelHint}>
-          {selected.size === 0
-            ? "Nothing ticked shares every library — Plex's own convention, and what a new share starts as."
-            : `${selected.size} of ${sections.length} shared.`}
-        </p>
         <div className={shared.labelCheckboxList}>
+          <AllOption
+            label="All libraries"
+            checked={selected.size === 0}
+            disabled={busy}
+            onSelect={() => setPendingSections(new Set())}
+            className={shared.labelCheckboxItem}
+          />
           {sections.map((section) => (
             <label key={section.key} className={shared.labelCheckboxItem}>
               <input
@@ -153,9 +139,6 @@ export default function Access() {
 
       <section className={local.panel}>
         <h3 className={local.panelTitle}>Content ratings</h3>
-        <p className={local.panelHint}>
-          Nothing ticked means no rating limit. Ticking some restricts the user to exactly those.
-        </p>
         {(
           [
             ["movies", "Movies", MOVIE_RATINGS, share.contentRatingMovies],
@@ -164,6 +147,13 @@ export default function Access() {
         ).map(([type, heading, options, current]) => (
           <div key={type} className={local.ratingRow}>
             <span className={local.ratingLead}>{heading}</span>
+            <AllOption
+              label="No limit"
+              checked={current.length === 0}
+              disabled={busy}
+              onSelect={() => run("Content ratings updated", () => ratingsMutation.mutateAsync({ userId, [type]: [] }))}
+              className={local.ratingChip}
+            />
             {options.map((rating) => (
               <label key={rating} className={local.ratingChip}>
                 <input
@@ -181,16 +171,9 @@ export default function Access() {
 
       <section className={local.panel}>
         <h3 className={local.panelTitle}>Label filters</h3>
-        {personalization.ownsLabels ? (
-          <Banner variant="info">
-            Personalized home screens manage this user&rsquo;s label filters, so they&rsquo;re read-only here. Content
-            ratings above are kept alongside them, not replaced by them. Turn the feature off under Settings &rarr;
-            Personalization to edit labels directly in Plex.
-          </Banner>
-        ) : (
+        {personalization.ownsLabels && (
           <p className={local.panelHint}>
-            No labels are in force. Turning on personalized home screens sets these to restrict each user to their own
-            collections.
+            <SettingsPageLink to="/settings/portal/personalization">Managed by Personalization</SettingsPageLink>
           </p>
         )}
         <div className={local.ratingRow}>
@@ -199,7 +182,7 @@ export default function Access() {
             <span className={local.panelHint}>none</span>
           ) : (
             share.labelsMovies.map((l) => (
-              <span key={l} className={`${shared.label} ${shared.labelTinkerbell}`}>
+              <span key={l} className={`${shared.label} ${shared.labelTinkerbell} ${locked}`}>
                 {l}
               </span>
             ))
@@ -211,7 +194,7 @@ export default function Access() {
             <span className={local.panelHint}>none</span>
           ) : (
             share.labelsTelevision.map((l) => (
-              <span key={l} className={`${shared.label} ${shared.labelTinkerbell}`}>
+              <span key={l} className={`${shared.label} ${shared.labelTinkerbell} ${locked}`}>
                 {l}
               </span>
             ))

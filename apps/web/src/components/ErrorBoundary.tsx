@@ -64,8 +64,8 @@ class ErrorBoundaryInner extends Component<Props, State> {
             <h2 className={styles.title}>{stale ? "Tinkerbell was updated" : "Something went wrong"}</h2>
             <p className={styles.message}>
               {stale
-                ? "This tab is running an older version of the app, so part of it could no longer be loaded. Reloading picks up the new one."
-                : "This page hit an unexpected error. Reloading usually clears it; if it keeps happening the details below are worth including in a bug report."}
+                ? "Reload to pick up the new version."
+                : "Reloading usually clears it; if not, include the details below in a bug report."}
             </p>
             {/* A stale chunk's message names a hashed filename and nothing else
                 actionable, so it's noise on a card that already explains the

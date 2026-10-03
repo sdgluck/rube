@@ -177,8 +177,14 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
               type="button"
               className={shared.button}
               onClick={goNext}
-              disabled={saving || !trimmedTitle}
-              title={trimmedTitle ? undefined : "A collection needs a name"}
+              disabled={saving || !trimmedTitle || (isLastStep && !detailsChanged && !labelsChanged)}
+              title={
+                !trimmedTitle
+                  ? "A collection needs a name"
+                  : isLastStep && !detailsChanged && !labelsChanged
+                    ? "No changes"
+                    : undefined
+              }
             >
               {saving ? "Saving…" : isLastStep ? "Save" : "Next"}
             </button>
@@ -210,7 +216,6 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
         {step.id === "details" && (
           <>
             <h3 className={styles.stepHeading}>Name and summary</h3>
-            <p className={styles.stepSub}>Both are written straight to Plex, and are what viewers see.</p>
 
             <div className={styles.field}>
               <label htmlFor="collection-title">Name</label>
@@ -236,9 +241,6 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
                 onChange={(e) => setDraftSummary(e.target.value)}
                 placeholder="A sentence or two about what's in here."
               />
-              <span className={styles.hint}>
-                Shown under the collection's name in Plex. Leave it empty and Plex shows nothing.
-              </span>
             </div>
           </>
         )}
@@ -246,12 +248,11 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
         {step.id === "labels" && (
           <>
             <h3 className={styles.stepHeading}>Labels</h3>
-            <p className={styles.stepSub}>
-              Labels are how rules and filters find this collection again. They are visible in Plex.
-            </p>
 
             <div className={styles.field}>
-              <label htmlFor="collection-label">Add a label</label>
+              <label htmlFor="collection-label" title="How rules and filters find this collection. Visible in Plex.">
+                Add a label
+              </label>
               <div className={styles.addRow}>
                 <input
                   id="collection-label"
@@ -275,7 +276,7 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
                   Add
                 </button>
               </div>
-              <span className={styles.hint}>Press Enter to add. Nothing is written to Plex until you save.</span>
+              <span className={styles.hint}>Written to Plex on save.</span>
             </div>
 
             {draftLabels.length > 0 ? (
@@ -304,11 +305,6 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
         {step.id === "review" && (
           <>
             <h3 className={styles.stepHeading}>Review</h3>
-            <p className={styles.stepSub}>
-              {detailsChanged || labelsChanged
-                ? "Saving writes these to Plex."
-                : "Nothing has changed — saving is a no-op."}
-            </p>
 
             <div className={styles.summary}>
               <div className={styles.summaryRow}>

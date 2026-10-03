@@ -9,6 +9,7 @@ import PageShell from "#components/PageShell";
 import { PageSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import Spinner from "#components/Spinner";
+import SettingsPageLink from "#components/SettingsPageLink";
 import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@tinkerbell/contracts";
 import shared from "#/styles/shared.module.css";
 import styles from "./Overlays.module.css";
@@ -438,7 +439,9 @@ export default function Overlays() {
         <FeatureStatusBanner featureId="overlays" />
 
         {sections.length === 0 ? (
-          <p>No movie or TV libraries found. Configure your Plex libraries in Settings.</p>
+          <p>
+            No movie or TV libraries found. <SettingsPageLink to="/settings/plex" />
+          </p>
         ) : (
           <>
             <div className={styles.workspace}>
@@ -832,7 +835,7 @@ export default function Overlays() {
 
         {confirmClearOpen && (
           <ConfirmModal
-            message={`Remove all ${configs.length} overlay${configs.length === 1 ? "" : "s"} from this section's layout? This won't change posters that have already been applied in Plex.`}
+            message={`Remove all ${configs.length} overlay${configs.length === 1 ? "" : "s"} from this layout? Posters already in Plex stay as they are.`}
             title="Clear overlay layout?"
             confirmLabel="Clear"
             danger

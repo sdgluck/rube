@@ -10,6 +10,7 @@ import { PanelCountBadge, PanelShell, type DashboardPanelProps } from "#componen
 import SortableTh, { type SortDir } from "#components/SortableTh";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
+import PanelEmpty from "./PanelEmpty";
 
 /** 25 rows is as much as the panel can show without dominating the dashboard. */
 const PAGE_SIZES = [10, 15, 20, 25] as const;
@@ -72,11 +73,9 @@ export function HistoryPanel({ dragHandle, dragProps }: DashboardPanelProps) {
         <ErrorState inline title="Couldn't load playback history" onRetry={() => historyQuery.refetch()} />
       )}
       {historyQuery.data && rows.length === 0 && (
-        <div className={styles.muted}>
-          {periodDays === 0
-            ? "Nothing recorded yet. History builds up as things are played — or run Import Plex Watch History from Jobs to seed it."
-            : `Nothing played in the last ${label}`}
-        </div>
+        <PanelEmpty importHistory={periodDays === 0}>
+          {periodDays === 0 ? "Nothing recorded yet" : `Nothing played in the last ${label}`}
+        </PanelEmpty>
       )}
 
       {rows.length > 0 && (

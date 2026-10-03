@@ -80,8 +80,7 @@ export default function ImportExistingModal({ onClose, onImported }: ImportExist
       }
     >
       <p className={styles.detailNotice}>
-        Videos found in the prerolls folder that Tinkerbell isn't managing yet. Importing moves each file into the
-        library and transcodes it if Plex wouldn't direct play it.
+        Unmanaged videos in the prerolls folder. Transcoded only if Plex can't direct play them.
       </p>
 
       {scanQuery.isLoading ? (

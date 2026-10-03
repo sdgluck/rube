@@ -11,6 +11,7 @@ import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
 import InstancePicker from "#components/InstancePicker";
 import FadeImage from "#components/FadeImage";
+import RunJobButton from "#components/RunJobButton";
 import { useListParams } from "#hooks/useListParams";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import shared from "#/styles/shared.module.css";
@@ -128,15 +129,19 @@ export default function ArrLibrary({ service }: { service: ArrService }) {
       </div>
 
       {rows.length === 0 && !query.isFetching ? (
-        <EmptyState
-          icon="film"
-          title={isMovies ? "No movies" : "No series"}
-          description={
-            total === 0 && !search
-              ? "Nothing has been synced yet. Run the Sync Radarr & Sonarr job, or check the instance is reachable."
-              : "No records match these filters."
-          }
-        />
+        total === 0 && !search ? (
+          <EmptyState
+            icon="film"
+            title={isMovies ? "No movies synced yet" : "No series synced yet"}
+            action={
+              <RunJobButton jobId="sync-arr" variant="primary">
+                Sync now
+              </RunJobButton>
+            }
+          />
+        ) : (
+          <EmptyState icon="film" title="No records match these filters" />
+        )
       ) : (
         <>
           <table className={shared.table}>

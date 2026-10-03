@@ -30,9 +30,7 @@ export default function ImportUrlModal({ onClose, onImported }: ImportUrlModalPr
 
   return (
     <Modal open onClose={onClose} title="Import from URL" size="md">
-      <p className={styles.detailNotice}>
-        The link must point directly at a video file — a page that merely embeds one won't work.
-      </p>
+      <p className={styles.detailNotice}>A direct link to a video file, not a page that embeds one.</p>
 
       <label className={styles.field}>
         <span className={styles.fieldLabel}>Video URL</span>

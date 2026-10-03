@@ -6,6 +6,7 @@ import styles from "#pages/Stats/Stats.module.css";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
+import PanelEmpty from "./PanelEmpty";
 
 /** Backfilled history carries no device or app — see `playbackBreakdown`. */
 const labelFor = (value: string) => value || "Unknown";
@@ -37,11 +38,7 @@ export function DevicesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
         <ErrorState inline title="Couldn't load device breakdown" onRetry={() => breakdownQuery.refetch()} />
       )}
       {data && data.total === 0 && (
-        <div className={styles.muted}>
-          {periodDays === 0
-            ? "No watch history yet — it fills in as things are played."
-            : `No plays in the last ${label}`}
-        </div>
+        <PanelEmpty>{periodDays === 0 ? "No plays yet" : `No plays in the last ${label}`}</PanelEmpty>
       )}
       {data && data.total > 0 && (
         <div className={styles.distRows}>

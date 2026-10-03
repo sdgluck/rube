@@ -20,7 +20,18 @@ interface FormState {
   digestEmail: string;
 }
 
-const SEG_LABELS: Record<GenreLevel, string> = { loved: "Love", liked: "Like", hated: "Hate", none: "—" };
+/**
+ * Symbols rather than words, each named by its tooltip: four words per row
+ * across a whole library of genres needed a legend paragraph to decode, and
+ * the symbols read at a glance once hovered once.
+ */
+const SEG_LABELS: Record<GenreLevel, string> = { loved: "♥", liked: "+", hated: "⊘", none: "—" };
+const SEG_TITLES: Record<GenreLevel, string> = {
+  loved: "Love — lots more",
+  liked: "Like — a bit more",
+  hated: "Hate — keep away",
+  none: "No preference",
+};
 
 const WATCHED_BIAS_HINTS: Record<FormState["watchedBias"], string> = {
   balanced: "A mix of new titles and ones you've watched before.",
@@ -147,6 +158,9 @@ export default function PreferencesForm() {
   }
 
   const suggestions = (titleResults.data ?? []).filter((t) => !form.excludedTitles.includes(t));
+  // A subscription with nowhere to send it used to save silently and send
+  // nothing; saying no at the button is the honest version of that.
+  const emailMissing = form.digestFrequency !== "never" && !form.digestEmail.trim();
 
   return (
     <div className="stack">
@@ -159,15 +173,10 @@ export default function PreferencesForm() {
           />
           Personalize my home screen
         </label>
-        <span className="field-hint">Master switch for your account — turn your saved preferences on or off.</span>
       </div>
 
       <div className="field">
         <span className="field-label">Genres</span>
-        <span className="field-hint">
-          Rate the genres in your library so we show more of what you love and less of what you don't. Love = lots more
-          · Like = a bit more · Hate = keep away.
-        </span>
         <div className="genre-box">
           {genres.length === 0 && <div className="genre-row muted">No genres available.</div>}
           {genres.map((g) => {
@@ -182,6 +191,9 @@ export default function PreferencesForm() {
                       type="button"
                       className={`${lv} ${level === lv ? "on" : ""}`}
                       onClick={() => setGenre(g, lv)}
+                      title={SEG_TITLES[lv]}
+                      aria-label={`${g}: ${SEG_TITLES[lv]}`}
+                      aria-pressed={level === lv}
                     >
                       {SEG_LABELS[lv]}
                     </button>
@@ -195,7 +207,7 @@ export default function PreferencesForm() {
 
       <div className="field">
         <span className="field-label">Moods</span>
-        <span className="field-hint">Pick the moods you're in for — recommendations will lean toward them.</span>
+        <span className="field-hint">Recommendations lean toward these.</span>
         <div className="chips">
           {MOOD_OPTIONS.map((m) => (
             <button
@@ -212,7 +224,6 @@ export default function PreferencesForm() {
 
       <div className="field">
         <span className="field-label">Never recommend</span>
-        <span className="field-hint">Search your library and add titles you never want suggested.</span>
         {form.excludedTitles.length > 0 && (
           <div className="pills">
             {form.excludedTitles.map((t) => (
@@ -252,7 +263,6 @@ export default function PreferencesForm() {
 
       <label className="field">
         <span className="field-label">Minimum rating</span>
-        <span className="field-hint">Only suggest titles rated at least this high. Set to "Any" for no limit.</span>
         <div className="slider-row">
           <input
             type="range"
@@ -270,7 +280,6 @@ export default function PreferencesForm() {
 
       <label className="field narrow">
         <span className="field-label">Rows on my home</span>
-        <span className="field-hint">How many personalized rows to add to your Plex home screen.</span>
         <input
           type="number"
           min={1}
@@ -301,19 +310,14 @@ export default function PreferencesForm() {
             checked={form.strictHate}
             onChange={(e) => setForm({ ...form, strictHate: e.target.checked })}
           />
-          Strictly avoid my hated genres
+          Never show hated genres
         </label>
-        <span className="field-hint">
-          When on, hated genres are never included. When off, they're just shown less often.
-        </span>
+        <span className="field-hint">Off, they're just shown less often.</span>
       </div>
 
       <div className="field">
         <span className="field-label">Email digest</span>
-        <span className="field-hint">
-          A summary of what's been added, what people have been watching, and anything about to be removed. Only sent to
-          the address you enter here, and you can stop it at any time by choosing “Never”.
-        </span>
+        <span className="field-hint">What's new, what's popular, and what's leaving.</span>
         <select
           value={form.digestFrequency}
           onChange={(e) => setForm({ ...form, digestFrequency: e.target.value as FormState["digestFrequency"] })}
@@ -324,23 +328,27 @@ export default function PreferencesForm() {
           <option value="monthly">Monthly</option>
         </select>
         {form.digestFrequency !== "never" && (
-          <>
-            <input
-              type="email"
-              value={form.digestEmail}
-              onChange={(e) => setForm({ ...form, digestEmail: e.target.value })}
-              placeholder="you@example.com"
-              style={{ marginTop: 8 }}
-            />
-            <span className="field-hint">
-              Used for this digest and nothing else. Leave it blank and no email is sent.
-            </span>
-          </>
+          <input
+            type="email"
+            required
+            aria-label="Digest email"
+            aria-invalid={emailMissing}
+            value={form.digestEmail}
+            onChange={(e) => setForm({ ...form, digestEmail: e.target.value })}
+            placeholder="you@example.com"
+            style={{ marginTop: 8 }}
+          />
         )}
       </div>
 
       <div className="save-row">
-        <button type="button" className="btn-primary" onClick={save} disabled={setMutation.isPending}>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={save}
+          disabled={setMutation.isPending || emailMissing}
+          title={emailMissing ? "Add an email for the digest, or choose Never" : undefined}
+        >
           {setMutation.isPending ? "Saving…" : "Save"}
         </button>
         {saved && <span className="ok">Saved ✓</span>}

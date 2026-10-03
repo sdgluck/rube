@@ -11,6 +11,8 @@ export interface CollectionContext {
   refresh: () => void;
   /** Opens the smart-filter drawer, which the layout owns because the hero links to it. */
   openFilters: () => void;
+  /** Opens the poster studio, likewise the layout's — its actions menu opens it too. */
+  openStudio: () => void;
 }
 
 const Ctx = createContext<CollectionContext | null>(null);

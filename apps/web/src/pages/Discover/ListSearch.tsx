@@ -78,8 +78,16 @@ export default function ListSearch({
         <EmptyState
           icon="list"
           title="No list providers configured"
-          description="Searching lists needs an MDBList API key or a Trakt client id. Add one under Settings › Databases."
-          action={<Link to="/settings/databases/mdblist">Open settings</Link>}
+          action={
+            <>
+              <Link to="/settings/databases/mdblist" className={shared.button}>
+                Add MDBList
+              </Link>{" "}
+              <Link to="/settings/databases/trakt" className={shared.buttonSecondary}>
+                Add Trakt
+              </Link>
+            </>
+          }
         />
       );
     }

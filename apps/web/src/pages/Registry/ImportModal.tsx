@@ -6,6 +6,8 @@ import Modal from "#components/Modal";
 import ToggleSwitch from "#components/ToggleSwitch";
 import Spinner from "#components/Spinner";
 import { useToast } from "#components/Toast";
+import SettingsPageLink from "#components/SettingsPageLink";
+import { TYPE_LABELS } from "#pages/Rules/constants";
 import { REQUIREMENT_LABELS, REQUIREMENT_SETTINGS } from "./labels";
 import styles from "./Registry.module.css";
 
@@ -122,10 +124,6 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
     >
       <section className={styles.step}>
         <h3>Libraries</h3>
-        <p className={styles.stepHint}>
-          Each imported rule is scoped to the libraries you pick. Filters are matched against these libraries' Plex
-          tags.
-        </p>
         <div className={styles.sections}>
           {(sectionsQuery.data ?? []).map((section) => (
             <label key={section.key} className={styles.sectionChip} data-on={sectionTitles.includes(section.title)}>
@@ -140,26 +138,23 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
           ))}
         </div>
         {sectionsQuery.data?.length === 0 && (
-          <p className={styles.warn}>No Plex libraries found. Check Settings → Plex, then refresh libraries.</p>
+          <p className={styles.warn}>
+            No Plex libraries found. <SettingsPageLink to="/settings/plex" />
+          </p>
         )}
       </section>
 
       {hasGroupedRules && (
         <section className={styles.step}>
           <h3>Collections & homepage</h3>
-          <p className={styles.stepHint}>
-            Applies to the rules in this pack that build one collection per director, genre, decade, and so on. The
-            pack's other rules keep their own settings.
-          </p>
+          <p className={styles.stepHint}>For rules building one collection per director, genre, decade…</p>
 
           <label className={styles.optionRow}>
             <ToggleSwitch checked={pin} onChange={setPin} size="sm" />
             <span>
               Pin to the homepage
               <span className={styles.enableHint}>
-                {pin
-                  ? "A different set is pinned on each run, so one rule can't take over the home screen."
-                  : "Collections are still created in Plex, but your home screen is left alone."}
+                {pin ? "A different set each run." : "Collections are still created; the home screen is left alone."}
               </span>
             </span>
           </label>
@@ -194,8 +189,8 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
                 Fewest items to reach the homepage
                 <span className={styles.enableHint}>
                   {pinMinItems > 0
-                    ? `Collections with fewer than ${pinMinItems} items are still created, just not pinned.`
-                    : "Blank keeps the pack's own floor — these packs ship a small one so one- and two-item shelves stay off your home."}
+                    ? `Smaller ones are still created, just not pinned.`
+                    : "Blank keeps the pack's own floor."}
                 </span>
               </span>
             </label>
@@ -213,9 +208,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
             <span>
               Most collections per rule
               <span className={styles.enableHint}>
-                {limit > 0
-                  ? `Keeps the ${limit} biggest and skips the rest.`
-                  : "Blank builds one for every group in the library — the pack's default."}
+                {limit > 0 ? `Keeps the ${limit} biggest and skips the rest.` : "Blank builds one for every group."}
               </span>
             </span>
           </label>
@@ -232,9 +225,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
             <span>
               Fewest items per collection
               <span className={styles.enableHint}>
-                {minItems > 0
-                  ? `Skips groups with fewer than ${minItems} items.`
-                  : "Blank keeps groups of any size, including one-item ones."}
+                {minItems > 0 ? `Skips groups with fewer than ${minItems} items.` : "Blank keeps groups of any size."}
               </span>
             </span>
           </label>
@@ -302,7 +293,7 @@ export default function ImportModal({ packSlug, packTitle, ruleSlugs, onClose, o
                 {plan.items.map((item) => (
                   <li key={item.rule.slug}>
                     <span className={styles.ruleName}>{item.name}</span>
-                    <span className={styles.type}>{item.rule.type}</span>
+                    <span className={styles.type}>{TYPE_LABELS[item.rule.type] ?? item.rule.type}</span>
                   </li>
                 ))}
               </ul>

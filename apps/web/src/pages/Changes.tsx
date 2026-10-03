@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import PageShell from "#components/PageShell";
 import MultiSelect from "#components/MultiSelect";
@@ -55,6 +55,7 @@ export default function Changes() {
   const [kinds, setKinds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
 
   const query = trpc.changes.feed.useQuery(
@@ -66,7 +67,15 @@ export default function Changes() {
     onSuccess: (res) => {
       utils.changes.feed.invalidate();
       utils.rules.list.invalidate();
-      addToast(res.started ? "Undo started — watch it on the Jobs page." : "Rule restored.", "success");
+      if (res.started) {
+        // The undo mutation doesn't hand back a run id, so this opens the job,
+        // whose page leads with its newest run.
+        addToast("Undo started", "success", {
+          action: { label: "View job", onAction: () => navigate("/jobs/metadata-undo") },
+        });
+      } else {
+        addToast("Rule restored", "success");
+      }
     },
     onError: (err) => addToast(err.message, "error"),
   });
@@ -107,11 +116,7 @@ export default function Changes() {
       {query.isLoading ? (
         <SkeletonTable rows={10} columns={5} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          icon="list"
-          title="Nothing has changed"
-          description="Rule runs, metadata writes and cleanup actions all show up here once they happen."
-        />
+        <EmptyState icon="list" title="Nothing has changed" />
       ) : (
         <div className="table-scroll" data-scroll="x">
           <table className={styles.table}>

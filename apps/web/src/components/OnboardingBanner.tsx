@@ -40,9 +40,6 @@ export default function OnboardingBanner() {
     <div className={`app-notice ${styles.banner}`} role="status">
       <span className={styles.text}>
         <strong>Finish setting up Tinkerbell</strong>
-        {status.missingRequired.includes("connect")
-          ? " — connecting your Plex server is all it takes to get going."
-          : " — a few optional steps are left."}
       </span>
       <span className={styles.progress}>
         <span
@@ -61,7 +58,7 @@ export default function OnboardingBanner() {
       </span>
       <span className={styles.actions}>
         <Link to="/onboarding" className={styles.link}>
-          Resume
+          {status.missingRequired.includes("connect") ? "Connect Plex" : "Resume"}
         </Link>
         <button type="button" className={styles.dismiss} onClick={handleDismiss} disabled={dismiss.isPending}>
           Dismiss

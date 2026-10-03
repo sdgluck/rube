@@ -125,7 +125,6 @@ export default function Events() {
             <EmptyState
               icon="search"
               title="No events match your filters"
-              description="Try a different search term or event type."
               action={
                 <button
                   type="button"

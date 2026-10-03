@@ -1,4 +1,5 @@
 import { formatBytes, formatCustomFormatScore, type ArrService } from "@tinkerbell/contracts";
+import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import Spinner from "#components/Spinner";
 import EmptyState from "#components/EmptyState";
@@ -68,10 +69,7 @@ export default function ReleaseTable({
           {search.isPending && <Spinner size="sm" />}
           {search.isPending ? "Searching indexers…" : "Search indexers"}
         </button>
-        <p className={styles.hint}>
-          Asks every configured indexer directly. This can take a few minutes, and nothing is searched until you press
-          it.
-        </p>
+        {search.isPending && <p className={styles.hint}>May take a few minutes.</p>}
       </header>
 
       {search.isError && (
@@ -83,7 +81,18 @@ export default function ReleaseTable({
           <EmptyState
             icon="search"
             title="No releases"
-            description="No indexer had anything for this. Try again later, or check the indexers are enabled."
+            action={
+              <>
+                <button
+                  type="button"
+                  className={controls.btnSecondary}
+                  onClick={() => search.mutate({ service, instanceId, arrId, seasonNumber })}
+                >
+                  Retry
+                </button>{" "}
+                <Link to={`/arrs/${instanceId}`}>Check the instance</Link>
+              </>
+            }
           />
         ) : (
           <table className={shared.compactTable}>

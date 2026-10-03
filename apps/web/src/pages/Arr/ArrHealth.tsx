@@ -21,14 +21,11 @@ import styles from "./ArrHealth.module.css";
 const ADVISORY: ReadonlySet<ArrIssueKind> = new Set(["inPlexNotInArr", "duplicateAcrossInstances"]);
 
 const EXPLANATIONS: Record<ArrIssueKind, string> = {
-  inArrNotInPlex:
-    "The *Arr has the file on disk, but no Plex item matches it. Usually a library that has not been scanned, or a folder Plex is not watching.",
-  inPlexNotInArr:
-    "Plex holds these, but no Radarr or Sonarr is managing them. Not necessarily wrong — plenty of libraries hold things nobody wants automated.",
-  duplicateAcrossInstances:
-    "Held by more than one instance, both with files. On a deliberate 1080p/4K split that is the intent; otherwise it is disk being spent twice.",
+  inArrNotInPlex: "On disk, but no Plex item matches — often an unscanned library.",
+  inPlexNotInArr: "In Plex, but no Radarr or Sonarr manages them. Often intended.",
+  duplicateAcrossInstances: "Files in more than one instance. Fine on a 1080p/4K split.",
   stuckInQueue: "In the queue but not making progress.",
-  failedImport: "Grabbed, but never imported. The download finished and something stopped it becoming a file.",
+  failedImport: "Downloaded, but never imported.",
   settingsDrift: "Instances of the same service disagree about their configuration.",
 };
 
@@ -64,11 +61,7 @@ export default function ArrHealth() {
   if (issues.length === 0) {
     return (
       <PageShell>
-        <EmptyState
-          icon="list"
-          title="Nothing to reconcile"
-          description="Every managed title with a file has a matching Plex item, and nothing was grabbed without being imported."
-        />
+        <EmptyState icon="list" title="Nothing to reconcile" description="Plex and the *Arrs agree." />
       </PageShell>
     );
   }

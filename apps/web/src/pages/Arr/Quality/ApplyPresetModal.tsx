@@ -183,7 +183,10 @@ export default function ApplyPresetModal({
 
           {preset && (
             <>
-              <p className={styles.presetDescription}>{preset.description}</p>
+              <details className={styles.presetAbout}>
+                <summary>About this preset</summary>
+                <p className={styles.presetDescription}>{preset.description}</p>
+              </details>
 
               <div className={styles.limits}>
                 <label className={styles.field}>
@@ -202,7 +205,7 @@ export default function ApplyPresetModal({
                   </span>
                   {tooSmall && (
                     <span className={styles.fieldError}>
-                      At least {preset.minimumGb} GB: anything smaller is below the minimum for this preset's qualities.
+                      At least {preset.minimumGb} GB for this preset's qualities.
                     </span>
                   )}
                 </label>

@@ -77,8 +77,11 @@ export default function TitleSearch({
         <EmptyState
           icon="cog"
           title="TMDb isn't configured"
-          description="Discover searches TMDb for something to add. Add a key under Settings › Databases › TMDb."
-          action={<Link to="/settings/databases/tmdb">Open settings</Link>}
+          action={
+            <Link to="/settings/databases/tmdb" className={shared.button}>
+              Add a TMDb key
+            </Link>
+          }
         />
       );
     }
@@ -88,8 +91,11 @@ export default function TitleSearch({
         <EmptyState
           icon="cog"
           title="No media managers configured"
-          description="Add a Radarr or Sonarr under Settings › Media Managers, and Discover can send things to it."
-          action={<Link to="/settings/arrs">Open settings</Link>}
+          action={
+            <Link to="/settings/arrs" className={shared.button}>
+              Add Radarr or Sonarr
+            </Link>
+          }
         />
       );
     }
@@ -99,7 +105,7 @@ export default function TitleSearch({
         <EmptyState
           icon="search"
           title="Search for a film or a show"
-          description="Anything TMDb knows about. Results say whether you already have it."
+          description="Results say whether you already have it."
         />
       );
     }

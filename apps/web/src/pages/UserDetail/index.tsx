@@ -1,5 +1,5 @@
 import { useState, Fragment } from "react";
-import { useParams, useNavigate, useLocation, Outlet } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
 import { KeyRound, Trash2, UserMinus } from "lucide-react";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
@@ -13,6 +13,7 @@ import useSwipeBack from "#hooks/useSwipeBack";
 import { PageCrumbs } from "#layout/AppBar";
 import styles from "#/styles/shared.module.css";
 import { UserProvider } from "./context.ts";
+import { removalCopy, type RemovalMode } from "./removal.ts";
 import local from "./UserDetail.module.css";
 
 export default function UserDetailLayout() {
@@ -51,14 +52,9 @@ export default function UserDetailLayout() {
   const { user, share } = detail;
   const base = `/users/${userId}`;
 
-  const confirmRemoval = (mode: "unshare" | "unfriend") => {
+  const confirmRemoval = (mode: RemovalMode) => {
     setPendingConfirm({
-      title: mode === "unshare" ? "Remove access?" : "Remove friend?",
-      message:
-        mode === "unshare"
-          ? `${user.username} will lose access to this server. They stay a Plex friend, and any Tinkerbell collections made for them are deleted.`
-          : `${user.username} will be removed as a Plex friend entirely, along with every server you share with them.`,
-      confirmLabel: mode === "unshare" ? "Remove access" : "Remove friend",
+      ...removalCopy(mode, user.username),
       onConfirm: async () => {
         setPendingConfirm(null);
         try {
@@ -101,13 +97,13 @@ export default function UserDetailLayout() {
 
   // "0 collections" reads as "this user sees nothing", which isn't what the
   // number means: it only counts collections labelled `User:<name>`, i.e. the
-  // ones personalization generated for them. Server-wide collections they can
-  // see are never in it, so say whose collections these are — and when the
-  // count is zero because they never opted in, say that instead of a bare 0.
+  // ones personalization generated for them. When it is zero because they
+  // never opted in, the pill says why instead of a bare 0.
   const personalizationOff = user.collectionCount === 0 && !user.optedIn;
-  const collectionsTitle = personalizationOff
-    ? `${user.username} isn't opted into personalization, so Tinkerbell hasn't made any collections just for them. Server-wide collections are unaffected.`
-    : `Collections Tinkerbell generated for ${user.username} alone. Server-wide collections aren't counted here.`;
+
+  // Plex refuses every share setting on the owner, and a Home user has no
+  // share to set — so for them the Access tab is absent, not an empty page.
+  const hasAccessTab = !user.isOwner && !!share;
 
   const chips = [
     user.isOwner && "Owner",
@@ -146,9 +142,12 @@ export default function UserDetailLayout() {
           </div>
 
           <div className={local.metaLine}>
-            <span title={collectionsTitle}>
+            <span title="Server-wide collections aren't counted">
               {personalizationOff ? (
-                "no personal collections"
+                <>
+                  <strong className={local.metaNum}>—</strong> personal collections{" "}
+                  <span className={styles.metaChip}>opted out</span>
+                </>
               ) : (
                 <>
                   <strong className={local.metaNum}>{user.collectionCount}</strong> personal collection
@@ -191,7 +190,7 @@ export default function UserDetailLayout() {
       <div className={local.tabsRow}>
         <PageTabs
           tabs={[
-            { to: base, label: "Access" },
+            ...(hasAccessTab ? [{ to: base, label: "Access" }] : []),
             { to: `${base}/activity`, label: "Activity" },
             { to: `${base}/sessions`, label: "Sessions" },
           ]}
@@ -203,7 +202,13 @@ export default function UserDetailLayout() {
         {/* Keyed on the path so a tab switch remounts rather than carrying the
             previous tab's local state into a different view. */}
         <Fragment key={location.pathname}>
-          <Outlet />
+          {/* The index route is Access; a deep link to it for a user without
+              one lands on the first tab they do have. */}
+          {!hasAccessTab && location.pathname.replace(/\/$/, "") === base ? (
+            <Navigate to={`${base}/activity`} replace />
+          ) : (
+            <Outlet />
+          )}
         </Fragment>
       </UserProvider>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "#/trpc";
+import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
 import styles from "./MediaEditPanel.module.css";
 
@@ -170,8 +171,9 @@ export default function MediaEditPanel({ ratingKey, onClose }: { ratingKey: stri
                       className={styles.unlock}
                       onClick={() => handleUnlock(key)}
                       disabled={unlockMutation.isPending}
+                      title="Hand this field back to Plex"
                     >
-                      Locked — hand back to Plex
+                      <LockIcon /> Unlock
                     </button>
                   )}
                 </div>
@@ -204,8 +206,9 @@ export default function MediaEditPanel({ ratingKey, onClose }: { ratingKey: stri
                       className={styles.unlock}
                       onClick={() => handleUnlock(key)}
                       disabled={unlockMutation.isPending}
+                      title="Hand this field back to Plex"
                     >
-                      Locked — hand back to Plex
+                      <LockIcon /> Unlock
                     </button>
                   )}
                 </div>
@@ -224,11 +227,7 @@ export default function MediaEditPanel({ ratingKey, onClose }: { ratingKey: stri
             <input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} />
             <span>
               <span className={styles.lockLabel}>Lock what I change</span>
-              <span className={styles.lockHint}>
-                A locked field stops receiving updates from Plex's metadata agents, so your value survives the next
-                scan. Unlocked, Plex may put its own value back the next time it refreshes this item — which usually
-                means the edit looks like it worked and then quietly undoes itself.
-              </span>
+              <span className={styles.lockHint}>Stops Plex overwriting your edits.</span>
             </span>
           </label>
 
@@ -237,13 +236,34 @@ export default function MediaEditPanel({ ratingKey, onClose }: { ratingKey: stri
               {saving
                 ? "Saving…"
                 : totalChanged === 0
-                  ? "No changes"
+                  ? "Save"
                   : `Save ${totalChanged} change${totalChanged === 1 ? "" : "s"}`}
             </button>
-            <span className={styles.hint}>Every change is recorded and can be reverted from Settings → Metadata.</span>
+            <span className={styles.hint}>
+              Revertible from <SettingsPageLink to="/settings/metadata" />
+            </span>
           </div>
         </>
       )}
     </section>
+  );
+}
+
+/** Marks a field Plex's agents won't touch; the button beside it releases it. */
+function LockIcon() {
+  return (
+    <svg
+      className={styles.lockIcon}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 018 0v4" />
+    </svg>
   );
 }

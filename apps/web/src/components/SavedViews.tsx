@@ -101,9 +101,7 @@ export default function SavedViews({ page, extraActions }: SavedViewsProps) {
             <button type="button" className={styles.backdrop} aria-label="Close menu" onClick={() => setOpen(false)} />
             <div className={styles.menu} role="menu">
               {views.length === 0 ? (
-                <p className={styles.empty}>
-                  No saved views yet. Filter the list the way you like it, then save it here.
-                </p>
+                <p className={styles.empty}>No saved views yet.</p>
               ) : (
                 <ul className={styles.list}>
                   {views.map((view) => (
@@ -184,15 +182,13 @@ export default function SavedViews({ page, extraActions }: SavedViewsProps) {
               }}
               placeholder="Unwatched 4K"
             />
-            <p className={styles.saveHint}>
-              Saves the current search, filters and sort. Reusing a name replaces that view.
-            </p>
+            <p className={styles.saveHint}>Saves the current search, filters and sort.</p>
             <div className={styles.saveActions}>
               <button type="button" className={styles.cancelBtn} onClick={() => setSaveOpen(false)}>
                 Cancel
               </button>
               <button type="button" className={styles.saveBtn} onClick={save} disabled={!name.trim()}>
-                Save
+                {views.some((v) => v.name === name.trim()) ? "Replace" : "Save"}
               </button>
             </div>
           </div>

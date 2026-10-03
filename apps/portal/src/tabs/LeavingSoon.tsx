@@ -19,34 +19,22 @@ export default function LeavingSoon() {
   const utils = portalTrpc.useUtils();
   const leavingQuery = portalTrpc.leavingSoon.useQuery();
   const voteKeep = portalTrpc.voteKeep.useMutation({ onSuccess: () => utils.leavingSoon.invalidate() });
-  const summaryQuery = portalTrpc.myWatchSummary.useQuery();
 
   const items = leavingQuery.data ?? [];
-  const summary = summaryQuery.data;
 
   return (
     <div className="stack">
-      {summary && summary.plays > 0 && (
-        <p className="field-hint">
-          You have played {summary.plays} thing{summary.plays === 1 ? "" : "s"} on this server.
-        </p>
-      )}
-
       {leavingQuery.isLoading && <RowsSkeleton rows={2} />}
 
       {leavingQuery.error && <ErrorState message={leavingQuery.error.message} onRetry={() => leavingQuery.refetch()} />}
 
       {!leavingQuery.isLoading && !leavingQuery.error && items.length === 0 && (
-        <EmptyState title="Nothing is going anywhere">
-          Nothing is scheduled to be removed. You will see it here first if that changes.
-        </EmptyState>
+        <EmptyState title="Nothing is going anywhere" />
       )}
 
       {items.length > 0 && (
         <>
-          <p className="field-hint">
-            These are queued for removal. Say if you would rather one stayed — the server owner sees who asked.
-          </p>
+          <p className="field-hint">Queued for removal. The server owner sees who asks to keep one.</p>
           {items.map((item) => (
             <div key={item.ratingKey} className="collection-row">
               <div className="collection-head">

@@ -4,6 +4,8 @@ import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import EmptyState from "#components/EmptyState";
 import RelativeTime from "#components/RelativeTime";
+import RunJobButton from "#components/RunJobButton";
+import shared from "#/styles/shared.module.css";
 import styles from "./ArrInstances.module.css";
 
 /**
@@ -26,20 +28,25 @@ export default function ArrInstances() {
         <EmptyState
           icon="cog"
           title="No media managers configured"
-          description="Add a Radarr or Sonarr under Settings › Media Managers, then run the Sync Radarr & Sonarr job."
-          action={<Link to="/settings/arrs">Open settings</Link>}
+          action={
+            <Link to="/settings/arrs" className={shared.button}>
+              Add Radarr or Sonarr
+            </Link>
+          }
         />
       </PageShell>
     );
   }
 
   return (
-    <PageShell count={String(instances.length)}>
-      <p className={styles.intro}>
-        Counts and disk figures come from the last <strong>Sync Radarr &amp; Sonarr</strong> run, so they are as fresh
-        as that job. Queues update on their own.
-      </p>
-
+    <PageShell
+      count={String(instances.length)}
+      actions={
+        <RunJobButton jobId="sync-arr" small>
+          Sync now
+        </RunJobButton>
+      }
+    >
       <div className={styles.instanceCards}>
         {instances.map((instance) => {
           const state = stateById.get(instance.id);
@@ -82,7 +89,7 @@ export default function ArrInstances() {
                   <dd>{formatBytes(state?.diskFree)}</dd>
                 </div>
                 <div>
-                  <dt>Last synced</dt>
+                  <dt title="Counts and free space are from this sync; queues are live">Last synced</dt>
                   <dd>{state?.lastFullSyncAt ? <RelativeTime timestamp={state.lastFullSyncAt} /> : "Never"}</dd>
                 </div>
               </dl>

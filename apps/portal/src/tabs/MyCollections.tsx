@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
  * output closes that loop, and "Not for me" turns a shrug into the one signal
  * the rules already know how to read.
  */
-export default function MyCollections() {
+export default function MyCollections({ onSetTastes }: { onSetTastes: () => void }) {
   const utils = portalTrpc.useUtils();
   const collectionsQuery = portalTrpc.myCollections.useQuery();
   const notInterested = portalTrpc.notInterested.useMutation();
@@ -29,9 +29,15 @@ export default function MyCollections() {
   const collections = collectionsQuery.data ?? [];
   if (collections.length === 0) {
     return (
-      <EmptyState title="Nothing yet">
-        Collections appear here once the server has built some for you — set your tastes under{" "}
-        <strong>Your tastes</strong>, and they'll show up after the next nightly run.
+      <EmptyState
+        title="Nothing yet"
+        action={
+          <button type="button" className="btn-primary" onClick={onSetTastes}>
+            Set your tastes
+          </button>
+        }
+      >
+        They arrive after the next nightly run.
       </EmptyState>
     );
   }

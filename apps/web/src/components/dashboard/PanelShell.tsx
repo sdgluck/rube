@@ -74,7 +74,6 @@ export function PanelShell({
   badge,
   meta,
   actions,
-  lede,
   dragHandle,
   dragProps,
   children,
@@ -85,8 +84,6 @@ export function PanelShell({
   meta?: React.ReactNode;
   /** Buttons scoped to this panel, right-aligned before the drag handle. */
   actions?: React.ReactNode;
-  /** One line explaining what the panel is for, above its content. */
-  lede?: React.ReactNode;
   dragHandle: React.ReactNode;
   dragProps: PanelDragProps;
   children: React.ReactNode;
@@ -102,10 +99,7 @@ export function PanelShell({
         {actions && <span className={styles.panelActions}>{actions}</span>}
         {dragHandle}
       </div>
-      <div className={styles.panelBody}>
-        {lede && <p className={styles.panelLede}>{lede}</p>}
-        {children}
-      </div>
+      <div className={styles.panelBody}>{children}</div>
     </div>
   );
 }

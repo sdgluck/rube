@@ -587,3 +587,23 @@
 .unknownCell {
   color: var(--ink-3);
 }
+
+.panelEmpty {
+  composes: muted;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.storageGaps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* What the "≥" on the total is short by — counted, never folded in as zero. */
+.gapChip {
+  composes: label from "../../styles/shared.module.css";
+}

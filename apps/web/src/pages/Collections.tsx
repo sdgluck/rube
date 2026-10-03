@@ -6,7 +6,6 @@ import { keepPreviousData } from "@tanstack/react-query";
 import pMap from "p-map";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
-import AlertModal from "#components/AlertModal";
 import BulkBar from "#components/BulkBar";
 import BulkLabelsModal from "#components/BulkLabelsModal";
 import { CollectionsSkeleton } from "#components/Skeleton";
@@ -154,7 +153,6 @@ export default function Collections() {
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; label?: string } | null>(null);
   const [labelEditing, setLabelEditing] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
   const navigate = useNavigate();
 
@@ -407,15 +405,12 @@ export default function Collections() {
         try {
           const { existedInPlex } = await deleteMutation.mutateAsync({ ratingKey });
           // The collection was already gone from Plex, so all we did was drop
-          // our stale copy of it. That's a different outcome from the one the
-          // user asked for, so it gets a dialog rather than a toast.
+          // our stale copy of it. A different outcome from the one asked for,
+          // so the toast says so rather than claiming a delete.
           if (existedInPlex) {
             addToast(`Deleted "${title}"`, "success");
           } else {
-            setAlert({
-              title: "Collection no longer in Plex",
-              message: `"${title}" no longer exists on the Plex server — it was probably deleted there. It has been removed from Tinkerbell.`,
-            });
+            addToast(`"${title}" was already gone from Plex — removed here too`, "info");
           }
           collectionsQuery.refetch();
           filtersQuery.refetch();
@@ -469,10 +464,7 @@ export default function Collections() {
           addToast(`Deleted ${deleted} collection(s)`, "success");
         }
         if (missing > 0) {
-          setAlert({
-            title: "Some collections no longer in Plex",
-            message: `${missing} of the selected collection(s) no longer exist on the Plex server — they were probably deleted there. They have been removed from Tinkerbell.`,
-          });
+          addToast(`${missing} were already gone from Plex — removed here too`, "info");
         }
         collectionsQuery.refetch();
         filtersQuery.refetch();
@@ -779,8 +771,6 @@ export default function Collections() {
             onCancel={() => setPendingConfirm(null)}
           />
         )}
-
-        {alert && <AlertModal title={alert.title} message={alert.message} onDismiss={() => setAlert(null)} />}
 
         {labelEditing && (
           <BulkLabelsModal

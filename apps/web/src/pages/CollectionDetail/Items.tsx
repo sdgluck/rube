@@ -21,7 +21,7 @@ type ViewMode = (typeof VIEW_MODES)[number];
 
 export default function Items() {
   const navigate = useNavigate();
-  const { ratingKey, collection, items, itemsLoading, isSmart, refresh } = useCollection();
+  const { ratingKey, collection, items, itemsLoading, isSmart, refresh, openFilters } = useCollection();
   const { addToast } = useToast();
 
   const [view, setView] = useState<ViewMode>(() => readEnumStorage("collection-items-view", VIEW_MODES, "grid"));
@@ -158,17 +158,17 @@ export default function Items() {
         <EmptyState
           icon="film"
           title="No items in this collection"
-          description={
-            isSmart
-              ? "Nothing in this library matches the collection's filter right now."
-              : "Add something to it, or let the rule that owns it run again."
-          }
+          description={isSmart ? "Nothing matches its filter right now." : undefined}
           action={
-            !isSmart ? (
+            isSmart ? (
+              <button className={styles.buttonSecondary} onClick={openFilters}>
+                Edit filters
+              </button>
+            ) : (
               <button className={styles.button} onClick={() => setAddOpen(true)}>
                 Add items
               </button>
-            ) : undefined
+            )
           }
         />
       ) : filtered.length === 0 ? (

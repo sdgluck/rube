@@ -8,6 +8,7 @@ import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { BarChart } from "./BarChart";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
+import PanelEmpty from "./PanelEmpty";
 
 /**
  * Two readings of the same history, because they answer different questions.
@@ -82,12 +83,7 @@ export function PlaybackActivityPanel({ dragHandle, dragProps }: DashboardPanelP
     >
       {query.isLoading && <SkeletonBlock width="100%" height={104} />}
       {query.error && <ErrorState inline title="Couldn't load playback activity" onRetry={() => query.refetch()} />}
-      {query.data && total === 0 && (
-        <div className={styles.muted}>
-          No plays recorded in this window. History fills in as things are played, or run Import Plex Watch History from
-          Jobs.
-        </div>
-      )}
+      {query.data && total === 0 && <PanelEmpty importHistory>No plays in this window</PanelEmpty>}
       {query.data && total > 0 && view === "day" && (
         <>
           <BarChart

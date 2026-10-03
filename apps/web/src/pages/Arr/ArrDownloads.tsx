@@ -117,8 +117,11 @@ export default function ArrDownloads() {
         <EmptyState
           icon="cog"
           title="No media managers configured"
-          description="Add a Radarr or Sonarr under Settings › Media Managers."
-          action={<Link to="/settings/arrs">Open settings</Link>}
+          action={
+            <Link to="/settings/arrs" className={shared.button}>
+              Add Radarr or Sonarr
+            </Link>
+          }
         />
       </PageShell>
     );
@@ -150,7 +153,7 @@ export default function ArrDownloads() {
 
       {tab === "queue" ? (
         queued === 0 ? (
-          <EmptyState icon="list" title="Nothing downloading" description="Every instance's queue is empty." />
+          <EmptyState icon="list" title="Nothing downloading" />
         ) : (
           instances.map((instance) => (
             <QueueForInstance

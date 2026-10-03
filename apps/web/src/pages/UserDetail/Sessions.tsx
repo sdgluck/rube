@@ -30,13 +30,7 @@ export default function Sessions() {
 
   const sessions = query.data ?? [];
   if (sessions.length === 0) {
-    return (
-      <EmptyState
-        icon="monitor"
-        title="Not watching anything"
-        description="Nothing is playing for this user right now."
-      />
-    );
+    return <EmptyState icon="monitor" title="Not watching anything" />;
   }
 
   return (

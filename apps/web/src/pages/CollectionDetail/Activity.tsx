@@ -4,6 +4,7 @@ import CardSection from "#components/CardSection";
 import RelativeTime from "#components/RelativeTime";
 import EmptyState from "#components/EmptyState";
 import styles from "#/styles/shared.module.css";
+import { TYPE_LABELS } from "#pages/Rules/constants";
 import { useCollection } from "./context.ts";
 import local from "./CollectionDetail.module.css";
 
@@ -16,7 +17,7 @@ const SUMMARY_SOURCES: Record<string, string> = {
 };
 
 export default function Activity() {
-  const { ratingKey, collection } = useCollection();
+  const { ratingKey, collection, openStudio } = useCollection();
 
   const artworkQuery = trpc.collections.artworkState.useQuery({ ratingKey }, { refetchOnWindowFocus: false });
   const ruleQuery = trpc.collections.owningRule.useQuery({ ratingKey }, { refetchOnWindowFocus: false });
@@ -39,14 +40,11 @@ export default function Activity() {
             </div>
             <div className={local.factRow}>
               <span className={local.factName}>Rule type</span>
-              <span className={local.factValue}>{rule.type}</span>
+              <span className={local.factValue}>{TYPE_LABELS[rule.type] ?? rule.type}</span>
             </div>
           </>
         ) : (
-          <p className={styles.hint}>
-            No Tinkerbell rule owns this collection — it was made in Plex, or by something else. Nothing here will
-            rewrite it.
-          </p>
+          <p className={styles.hint}>Not made by a Tinkerbell rule, so nothing rewrites it.</p>
         )}
         <div className={local.factRow}>
           <span className={local.factName}>Last read from Plex</span>
@@ -71,7 +69,12 @@ export default function Activity() {
           <EmptyState
             icon="film"
             title="Tinkerbell hasn't written to this collection"
-            description="Its poster and summary are whatever Plex or you put there. Use “Change poster” above to set one — doing so also stops any rule from replacing it."
+            description="A poster chosen here stops rules replacing it."
+            action={
+              <button type="button" className={styles.buttonSecondary} onClick={openStudio}>
+                Change poster
+              </button>
+            }
           />
         ) : (
           <>

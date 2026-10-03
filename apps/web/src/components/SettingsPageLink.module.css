@@ -1,0 +1,4 @@
+.link {
+  composes: cellLink from "../styles/shared.module.css";
+  font-size: inherit;
+}

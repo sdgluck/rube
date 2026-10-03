@@ -34,12 +34,7 @@ export default function ArrInstanceDetail() {
   if (!instance) {
     return (
       <PageShell>
-        <EmptyState
-          icon="cog"
-          title="No such instance"
-          description="It may have been removed under Settings › Media Managers."
-          action={<Link to="/arrs">All instances</Link>}
-        />
+        <EmptyState icon="cog" title="No such instance" action={<Link to="/arrs">All instances</Link>} />
       </PageShell>
     );
   }

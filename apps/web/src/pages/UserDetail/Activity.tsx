@@ -24,9 +24,7 @@ export default function Activity() {
 
   const items = query.data ?? [];
   if (items.length === 0) {
-    return (
-      <EmptyState icon="film" title="Nothing watched yet" description="Plex has no playback history for this user." />
-    );
+    return <EmptyState icon="film" title="Nothing watched yet" />;
   }
 
   return (

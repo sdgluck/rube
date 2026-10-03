@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import { EMPTY, formatFileSize } from "#/format";
 import BulkBar from "#components/BulkBar";
@@ -12,6 +12,7 @@ import SearchInput from "#components/SearchInput";
 import SortableTh from "#components/SortableTh";
 import { useLocalSort } from "#hooks/useLocalSort";
 import { useToast } from "#components/Toast";
+import type { RuleSeed } from "#/lib/ruleSeed";
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Cleanup.module.css";
 
@@ -60,6 +61,14 @@ const HOLD_OPTIONS = [
   { value: 365, label: "A year" },
 ];
 
+/** An empty smart filter: the wizard opened as its own "New rule" would. */
+const NEW_CLEANUP_RULE: RuleSeed = {
+  kind: "smart_filter",
+  sections: [],
+  smartFilter: { kind: "group", combinator: "all", children: [] },
+  dropped: [],
+};
+
 const STATUS_FILTERS = ["all", "due", "awaitingApproval", "waiting", "held"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 const STATUS_LABELS: Record<StatusFilter, string> = {
@@ -104,6 +113,7 @@ export default function Cleanup() {
   const [holdDays, setHoldDays] = useState(90);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
 
   const query = trpc.cleanup.queue.useQuery(
@@ -119,6 +129,12 @@ export default function Cleanup() {
   const restoreMutation = trpc.cleanup.restoreHolds.useMutation({ onSuccess: invalidate });
   const approveMutation = trpc.cleanup.approve.useMutation({ onSuccess: invalidate });
   const protectMutation = trpc.cleanup.protect.useMutation({
+    onSuccess: () => {
+      invalidate();
+      utils.cleanup.protections.invalidate();
+    },
+  });
+  const unprotectMutation = trpc.cleanup.unprotect.useMutation({
     onSuccess: () => {
       invalidate();
       utils.cleanup.protections.invalidate();
@@ -246,10 +262,27 @@ export default function Cleanup() {
     protectMutation.mutate(
       { kind: "item", value: row.ratingKey, label: row.title, note: "" },
       {
-        onSuccess: () => addToast(`"${row.title}" is protected — no cleanup rule will action it.`, "success"),
+        onSuccess: () =>
+          addToast(`Protected "${row.title}"`, "success", {
+            action: { label: "Undo", onAction: () => void unprotectItem(row.ratingKey) },
+          }),
         onError: (err) => addToast(err.message, "error"),
       },
     );
+  }
+
+  /**
+   * `protect` doesn't hand back the new row's id — the store upserts on
+   * (kind, value) — so the undo finds it by the same pair instead.
+   */
+  async function unprotectItem(ratingKey: string) {
+    try {
+      const all = await utils.cleanup.protections.fetch();
+      const match = all.find((p) => p.kind === "item" && p.value === ratingKey);
+      if (match) await unprotectMutation.mutateAsync({ id: match.id });
+    } catch (err) {
+      addToast((err as Error).message, "error");
+    }
   }
 
   function keep(row: QueueRow) {
@@ -324,12 +357,6 @@ export default function Cleanup() {
         </>
       }
     >
-      <p className={styles.intro}>
-        Items a cleanup rule has matched. Nothing happens until an item has matched on enough consecutive runs — if it
-        stops matching, its streak resets and it leaves this list. <strong>Keep</strong> holds an item back without
-        changing the rule.
-      </p>
-
       <div className={styles.filters}>
         <SearchInput placeholder="Search titles…" ariaLabel="Search the queue" value={search} onChange={setSearch} />
         <MultiSelect
@@ -382,13 +409,20 @@ export default function Cleanup() {
         <EmptyState
           icon="list"
           title="Nothing queued"
-          description="No cleanup rule has matched anything yet. Rules with a Cleanup outcome track what they match here before acting on it."
+          action={
+            <button
+              type="button"
+              className={sharedStyles.button}
+              onClick={() => navigate("/cleanup/rules", { state: { ruleSeed: NEW_CLEANUP_RULE } })}
+            >
+              New cleanup rule
+            </button>
+          }
         />
       ) : sorted.length === 0 ? (
         <EmptyState
           icon="list"
           title="Nothing matches those filters"
-          description="Every queued item is hidden by the current search or filters."
           action={
             <button
               type="button"
@@ -430,7 +464,13 @@ export default function Cleanup() {
                 <SortableTh sortKey="action" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
                   Action
                 </SortableTh>
-                <SortableTh sortKey="streak" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                <SortableTh
+                  sortKey="streak"
+                  activeKey={sortKey}
+                  activeDir={sortDir}
+                  onSort={toggleSort}
+                  title="Consecutive runs matched, of those needed. Resets when it stops matching."
+                >
                   Streak
                 </SortableTh>
                 <SortableTh sortKey="size" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
@@ -503,6 +543,7 @@ export default function Cleanup() {
                               className={sharedStyles.buttonSecondary}
                               onClick={() => keep(row)}
                               disabled={holdMutation.isPending}
+                              title="Hold back without changing the rule"
                             >
                               Keep
                             </button>
@@ -621,7 +662,7 @@ function statusText(
     if (row.requiresApproval && !row.approved) {
       return <span className={styles.statusWaiting}>Due — waiting for approval</span>;
     }
-    return <span className={styles.statusDue}>Due on the next run</span>;
+    return <span className={styles.statusDue}>Due next run</span>;
   }
   return (
     <span className={styles.statusWaiting}>

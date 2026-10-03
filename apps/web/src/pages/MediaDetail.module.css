@@ -370,6 +370,25 @@
   font-weight: 600;
 }
 
+.whyMatch {
+  composes: statusPill from "../styles/shared.module.css";
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.whyNoMatch {
+  composes: statusPill from "../styles/shared.module.css";
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+}
+
+.whyCombinator {
+  margin: 8px 0 0;
+  font: var(--t-caption);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
 .whyReason {
   margin: 4px 0 0;
   color: var(--ink-3);

@@ -5,6 +5,7 @@ import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
 import SetupCard from "./SetupCard";
 import styles from "./Stats.module.css";
+import controls from "#/styles/controls.module.css";
 import {
   CollapsedPanel,
   DashboardGrid,
@@ -60,18 +61,18 @@ import { TopUsersPanel } from "./TopUsersPanel";
  * thing differently is worse than either name being wrong.
  */
 const PANELS = [
-  { id: "streams", label: "Active Streams", hint: "What's playing right now" },
-  { id: "system", label: "System Status", hint: "Service health, running jobs, recent events" },
-  { id: "recentlyAdded", label: "Recently Added", hint: "The latest arrivals in your libraries" },
-  { id: "mostWatched", label: "Most Watched", hint: "Top items by plays or by distinct viewers" },
-  { id: "history", label: "Playback History", hint: "Every recorded play, filterable" },
+  { id: "streams", label: "Active Streams" },
+  { id: "system", label: "System Status" },
+  { id: "recentlyAdded", label: "Recently Added" },
+  { id: "mostWatched", label: "Most Watched" },
+  { id: "history", label: "Playback History" },
   { id: "libraryBreakdown", label: "Library Breakdown", hint: "Resolution and codec mix" },
-  { id: "storage", label: "Storage", hint: "Disk used per library" },
-  { id: "topUsers", label: "Top Users", hint: "Who watches most, and for how long" },
-  { id: "playbackActivity", label: "Playback Activity", hint: "Plays by day, and the shape of a typical day" },
+  { id: "storage", label: "Storage" },
+  { id: "topUsers", label: "Top Users" },
+  { id: "playbackActivity", label: "Playback Activity" },
   { id: "streamQuality", label: "Stream Quality", hint: "Transcode vs. direct play, local vs. remote" },
-  { id: "devices", label: "Devices & Apps", hint: "Which apps and devices playback comes from" },
-  { id: "bandwidth", label: "Bandwidth", hint: "Streaming demand over 24 hours against capacity" },
+  { id: "devices", label: "Devices & Apps" },
+  { id: "bandwidth", label: "Bandwidth" },
 ] as const satisfies readonly PanelDef[];
 
 const PANEL_IDS = PANELS.map((p) => p.id);
@@ -517,7 +518,14 @@ export default function Stats() {
           </DashboardGrid>
           {visible.length === 0 && (
             <div className={styles.emptyPanels}>
-              Every panel is switched off. Turn some back on with the panels button above.
+              Every panel is switched off.{" "}
+              <button
+                type="button"
+                className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+                onClick={() => hidden.replace([])}
+              >
+                Show all panels
+              </button>
             </div>
           )}
         </DashboardLayout>

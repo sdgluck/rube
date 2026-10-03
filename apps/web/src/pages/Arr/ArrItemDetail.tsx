@@ -13,6 +13,7 @@ import ToggleSwitch from "#components/ToggleSwitch";
 import ReleaseTable from "#components/ReleaseTable";
 import RelativeTime from "#components/RelativeTime";
 import { useToast } from "#components/Toast";
+import RunJobButton from "#components/RunJobButton";
 import shared from "#/styles/shared.module.css";
 import controls from "#/styles/controls.module.css";
 import styles from "./ArrItemDetail.module.css";
@@ -139,9 +140,15 @@ export default function ArrItemDetail({ service }: { service: ArrService }) {
       <PageShell>
         <EmptyState
           icon="film"
-          title="Not in the mirror"
-          description="Nothing has been synced for this record. Run the Sync Radarr & Sonarr job, or check the instance is reachable."
-          action={<Link to={isMovie ? "/movies" : "/tv"}>Back to the library</Link>}
+          title="Not synced yet"
+          action={
+            <>
+              <RunJobButton jobId="sync-arr" variant="primary">
+                Sync now
+              </RunJobButton>{" "}
+              <Link to={isMovie ? "/movies" : "/tv"}>Back to the library</Link>
+            </>
+          }
         />
       </PageShell>
     );

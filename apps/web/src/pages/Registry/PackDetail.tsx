@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { RegistryIndex } from "@tinkerbell/contracts";
 import Modal from "#components/Modal";
 import ImportModal from "./ImportModal";
+import { TYPE_LABELS } from "#pages/Rules/constants";
 import { REQUIREMENT_LABELS } from "./labels";
 import styles from "./Registry.module.css";
 
@@ -62,6 +63,7 @@ export default function PackDetail({ packSlug, index, onClose }: PackDetailProps
                 className={styles.primary}
                 disabled={selectedRules.length === 0}
                 onClick={() => setImporting(true)}
+                title="Imported rules start disabled"
               >
                 Import…
               </button>
@@ -80,7 +82,7 @@ export default function PackDetail({ packSlug, index, onClose }: PackDetailProps
                   <span className={styles.ruleName}>{rule.name}</span>
                   <span className={styles.ruleDesc}>{rule.description}</span>
                   <span className={styles.ruleChips}>
-                    <span className={styles.type}>{rule.type}</span>
+                    <span className={styles.type}>{TYPE_LABELS[rule.type] ?? rule.type}</span>
                     {rule.mediaTypes.length === 1 && (
                       <span className={styles.chip}>{rule.mediaTypes[0] === "movie" ? "Movies only" : "TV only"}</span>
                     )}

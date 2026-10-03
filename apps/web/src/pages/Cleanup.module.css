@@ -14,14 +14,6 @@
   padding: 0 28px;
 }
 
-.intro {
-  color: var(--ink-3);
-  font-size: 13px;
-  line-height: 1.55;
-  margin: 0 0 16px;
-  max-width: 70ch;
-}
-
 .actionedToggle {
   align-items: center;
   color: var(--ink-3);
@@ -43,8 +35,9 @@
 }
 
 .statusDue {
-  color: var(--danger);
-  font-weight: 600;
+  composes: statusPill from "../styles/shared.module.css";
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
 }
 
 .statusWaiting {
@@ -106,6 +99,12 @@
 
 /* Advisory, so it reads as a note beside the title rather than as a status. */
 .keepVotes {
+  composes: label from "../styles/shared.module.css";
+  margin-left: 6px;
+}
+
+/* Matched on the title at run time, so what it covers grows with the collection. */
+.futureMembers {
   composes: label from "../styles/shared.module.css";
   margin-left: 6px;
 }

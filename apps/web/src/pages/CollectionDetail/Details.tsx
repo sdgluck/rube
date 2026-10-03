@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import FadeImage from "#components/FadeImage";
+import RunJobButton from "#components/RunJobButton";
 import { useToast } from "#components/Toast";
 import { SmartFilterSummary } from "#components/SmartFiltersEditor";
 import styles from "#/styles/shared.module.css";
@@ -76,10 +77,12 @@ export default function Details() {
         {statsQuery.isLoading ? (
           <p className={styles.hint}>Counting…</p>
         ) : !stats || stats.knownItems === 0 ? (
-          <p className={styles.hint}>
-            None of this collection's items have been synced yet, so there is nothing to summarise. Run a media sync and
-            check back.
-          </p>
+          <div className={local.settingRow}>
+            <p className={styles.hint}>No members in the media index yet.</p>
+            <RunJobButton jobId="sync-media" small>
+              Sync now
+            </RunJobButton>
+          </div>
         ) : (
           <>
             <div className={local.statStrip}>
@@ -130,9 +133,7 @@ export default function Details() {
         <div className={local.settingRow}>
           <div>
             <div className={local.settingName}>Library visibility</div>
-            <div className={local.settingHelp}>
-              Whether the collection's items also appear on their own in the library.
-            </div>
+            <div className={local.settingHelp}>Whether members also show on their own.</div>
           </div>
           <select
             className={styles.select}
@@ -150,7 +151,6 @@ export default function Details() {
         <div className={local.settingRow}>
           <div>
             <div className={local.settingName}>Item order</div>
-            <div className={local.settingHelp}>The order Plex lists the collection's members in.</div>
           </div>
           <select
             className={styles.select}

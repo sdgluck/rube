@@ -68,6 +68,12 @@
   text-align: right;
 }
 
+.lockIcon {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1px;
+}
+
 .unlock:hover:not(:disabled) {
   text-decoration: underline;
 }

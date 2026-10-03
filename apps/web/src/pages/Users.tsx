@@ -20,6 +20,7 @@ import { useToast } from "#components/Toast";
 import { formatRuntime } from "#/format";
 import SearchInput from "#components/SearchInput";
 import sharedStyles from "#/styles/shared.module.css";
+import { removalCopy } from "./UserDetail/removal.ts";
 import styles from "./Users.module.css";
 
 const SORT_KEYS = ["username", "name", "collectionCount", "lastWatchedAt"] as const;
@@ -163,7 +164,6 @@ export default function Users() {
         <EmptyState
           icon="person"
           title="No shared users found"
-          description="Users appear here once you share the server with someone."
           action={
             <button type="button" className={sharedStyles.button} onClick={() => setInviteOpen(true)}>
               Invite a user
@@ -254,7 +254,7 @@ export default function Users() {
                         activeKey={sortKey}
                         activeDir={sortDir}
                         onSort={toggleSort}
-                        title="Collections Tinkerbell generated for this user alone. Server-wide collections aren't counted here."
+                        title="Generated for this user alone; server-wide ones aren't counted"
                       >
                         Personal Collections
                       </SortableTh>
@@ -306,18 +306,17 @@ export default function Users() {
                         <td data-cell="pill">
                           <span
                             className={`${sharedStyles.statusPill} ${user.optedIn ? styles.pillOptedIn : styles.pillOptedOut}`}
-                            title={
-                              user.optedIn
-                                ? "Personalized home screens are on for this user"
-                                : "This user has opted out of personalization"
-                            }
                           >
                             <span className={sharedStyles.statusPillDot} aria-hidden="true" />
                             {user.optedIn ? "opted in" : "opted out"}
                           </span>
                         </td>
                         <td data-cell="meta" className={`${sharedStyles.cellNum} ${styles.collectionsCell}`}>
-                          {user.collectionCount}
+                          {!user.optedIn && user.collectionCount === 0 ? (
+                            <span className={styles.hint}>—</span>
+                          ) : (
+                            user.collectionCount
+                          )}
                         </td>
                         <td data-cell="meta" className={sharedStyles.cellNum}>
                           {(() => {
@@ -410,9 +409,7 @@ export default function Users() {
 
       {pendingRemoval && (
         <ConfirmModal
-          title="Remove access?"
-          message={`${pendingRemoval.username} will lose access to this server. They stay a Plex friend, and any Tinkerbell collections made for them are deleted.`}
-          confirmLabel="Remove access"
+          {...removalCopy("unshare", pendingRemoval.username)}
           danger
           onCancel={() => setPendingRemoval(null)}
           onConfirm={async () => {

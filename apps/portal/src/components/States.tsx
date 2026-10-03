@@ -34,11 +34,12 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
   );
 }
 
-export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="state">
       <p className="state-title">{title}</p>
       {children && <p className="muted">{children}</p>}
+      {action}
     </div>
   );
 }

@@ -112,11 +112,6 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
         </div>
       </header>
 
-      <p className={styles.explanation}>
-        Presets set which qualities are allowed, which release groups and sources are preferred, and how large a
-        download may be. Tinkerbell then watches the profiles it manages and tells you when one is changed elsewhere. It
-        never changes them back on its own.
-      </p>
       {noneAvailable && (
         <p className={styles.warning}>
           {presets.data.presets[0]?.unavailableReason ?? "No preset suits this instance."}
@@ -128,7 +123,7 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
           <tr>
             <th>Profile</th>
             <th>Preset</th>
-            <th>Status</th>
+            <th title="Edits made elsewhere are flagged, never reverted">Status</th>
             <th aria-label="Actions" />
           </tr>
         </thead>
@@ -213,9 +208,7 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
       {(snapshots.data?.length ?? 0) > 0 && (
         <details className={styles.snapshots}>
           <summary className={styles.stepSummary}>Undo history</summary>
-          <p className={styles.hint}>
-            Taken before every apply. Restoring puts back exactly what that apply changed and removes what it created.
-          </p>
+          <p className={styles.hint}>Taken before every apply; restoring undoes exactly that apply.</p>
           <table className={shared.compactTable}>
             <tbody>
               {snapshots.data!.map((s) => (

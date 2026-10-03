@@ -95,7 +95,7 @@ export function Inspector({
           }}
           maxLength={40}
         />
-        <p className={styles.fieldHint}>Override the auto-resolved value (leave empty to use the actual data)</p>
+        <p className={styles.fieldHint}>Blank shows each item's own value.</p>
       </Section>
 
       <Section title="Font size">

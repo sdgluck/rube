@@ -60,7 +60,7 @@ export function ImportLayoutModal({
         </>
       }
     >
-      <p className={styles.modalHintStart}>Choose a JSON file exported from this page, or paste its contents.</p>
+      <p className={styles.modalHintStart}>A JSON file exported from this page, or its contents.</p>
       <div>
         <input
           ref={fileRef}

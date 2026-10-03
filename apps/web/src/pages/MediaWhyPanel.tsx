@@ -55,11 +55,14 @@ export default function MediaWhyPanel({ ratingKey }: { ratingKey: string }) {
       {result && !explainQuery.isFetching && (
         <>
           <p className={styles.whyVerdict}>
-            {result.matches ? "This rule matches this item." : "This rule does not match this item."}
+            <span className={result.matches ? styles.whyMatch : styles.whyNoMatch}>
+              {result.matches ? "Match" : "No match"}
+            </span>
           </p>
           {result.reason && <p className={styles.whyReason}>{result.reason}</p>}
           {result.clauses.length > 0 && (
             <>
+              <p className={styles.whyCombinator}>{result.combinator === "any" ? "ANY of" : "ALL of"}</p>
               <ul className={styles.whyClauses}>
                 {result.clauses.map((clause, i) => (
                   <li key={i} className={clause.passed ? styles.whyPass : styles.whyFail}>
@@ -71,11 +74,6 @@ export default function MediaWhyPanel({ ratingKey }: { ratingKey: string }) {
                   </li>
                 ))}
               </ul>
-              <p className={styles.whyReason}>
-                {result.combinator === "any"
-                  ? "Any one of these is enough to match."
-                  : "Every one of these has to pass."}
-              </p>
             </>
           )}
         </>

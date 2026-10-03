@@ -66,12 +66,6 @@ export default function CleanupProtected() {
 
   return (
     <PageShell count={rows.length > 0 ? String(rows.length) : undefined}>
-      <p className={styles.intro}>
-        Cleanup rules skip everything listed here, however long its streak and whatever its filter says. Unlike{" "}
-        <strong>Keep</strong> on the queue, a protection never expires. Protect a collection and its <em>current</em>{" "}
-        members are covered — including anything added to it later.
-      </p>
-
       <div className={styles.filters}>
         <input
           className={shared.input}
@@ -98,9 +92,10 @@ export default function CleanupProtected() {
         />
         <button
           type="button"
-          className={shared.btn}
+          className={shared.button}
           onClick={addCollection}
           disabled={!collectionTitle.trim() || protectMutation.isPending}
+          title="Never expires, unlike Keep on the queue"
         >
           Protect collection
         </button>
@@ -110,7 +105,11 @@ export default function CleanupProtected() {
         <EmptyState
           icon="list"
           title="Nothing is protected"
-          description="Protect a collection above, or use Protect on any row of the queue to spare a single item for good."
+          action={
+            <Link to="/cleanup" className={shared.buttonSecondary}>
+              Go to queue
+            </Link>
+          }
         />
       ) : (
         <div className="table-scroll">
@@ -127,7 +126,16 @@ export default function CleanupProtected() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.kind === "item" ? <Link to={`/media/${row.value}`}>{row.label}</Link> : row.label}</td>
+                  <td>
+                    {row.kind === "item" ? (
+                      <Link to={`/media/${row.value}`}>{row.label}</Link>
+                    ) : (
+                      <>
+                        {row.label}
+                        <span className={styles.futureMembers}>incl. future members</span>
+                      </>
+                    )}
+                  </td>
                   <td className={shared.cellMuted}>{row.kind === "item" ? "Item" : "Collection"}</td>
                   <td className={shared.cellMuted}>{row.note}</td>
                   <td className={shared.cellMuted}>
@@ -136,7 +144,7 @@ export default function CleanupProtected() {
                   <td className={styles.actionsCell}>
                     <button
                       type="button"
-                      className={shared.btn}
+                      className={shared.buttonSecondary}
                       onClick={() => unprotectMutation.mutate({ id: row.id })}
                       disabled={unprotectMutation.isPending}
                     >

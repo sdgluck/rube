@@ -7,6 +7,7 @@ import { formatDuration } from "#/format";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
+import PanelEmpty from "./PanelEmpty";
 
 /**
  * Who is actually using the server.
@@ -37,11 +38,9 @@ export function TopUsersPanel({ dragHandle, dragProps }: DashboardPanelProps) {
         <ErrorState inline title="Couldn't load user activity" onRetry={() => topUsersQuery.refetch()} />
       )}
       {topUsersQuery.data && rows.length === 0 && (
-        <div className={styles.muted}>
-          {periodDays === 0
-            ? "No watch history yet — it fills in as things are played, or run Import Plex Watch History from Jobs."
-            : `Nobody watched anything in the last ${label}`}
-        </div>
+        <PanelEmpty importHistory={periodDays === 0}>
+          {periodDays === 0 ? "No watch history yet" : `Nobody watched anything in the last ${label}`}
+        </PanelEmpty>
       )}
       {rows.length > 0 && (
         <div className="table-scroll in-panel" data-scroll="x">

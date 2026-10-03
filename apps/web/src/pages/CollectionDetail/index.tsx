@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation, Link, Outlet } from "react-router-
 import { Image, Pencil, Pin, PinOff, RefreshCw, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
 import { trpc } from "#/trpc";
 import ConfirmModal from "#components/ConfirmModal";
-import AlertModal from "#components/AlertModal";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
 import PageTabs from "#components/PageTabs";
@@ -45,7 +44,6 @@ export default function CollectionDetailLayout() {
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
 
   const enabled = !!ratingKey;
   const collectionQuery = trpc.collections.get.useQuery(
@@ -92,17 +90,13 @@ export default function CollectionDetailLayout() {
         setPendingConfirm(null);
         try {
           const { existedInPlex } = await deleteMutation.mutateAsync({ ratingKey });
-          // Already gone from Plex: say so before leaving, since the page the
-          // user is standing on is about to disappear for a reason other than
-          // the one they asked for.
-          if (existedInPlex) {
-            navigate("/collections");
-          } else {
-            setAlert({
-              title: "Collection no longer in Plex",
-              message: `"${collection.title}" no longer exists on the Plex server — it was probably deleted there. It has been removed from Tinkerbell.`,
-            });
+          // Already gone from Plex: the toast says so, since the page the
+          // user is standing on disappears for a reason other than the one
+          // they asked for.
+          if (!existedInPlex) {
+            addToast(`"${collection.title}" was already gone from Plex — removed here too`, "info");
           }
+          navigate("/collections");
         } catch {
           addToast("Failed to delete collection", "error");
         }
@@ -141,8 +135,7 @@ export default function CollectionDetailLayout() {
   const handleRevertArtwork = () => {
     if (!ratingKey) return;
     setPendingConfirm({
-      message:
-        "Stop Tinkerbell managing this collection's artwork? Its summary and poster will be left exactly as they are now, and no job will change them again.",
+      message: "Stop managing this collection's artwork? No job will change its poster or summary again.",
       onConfirm: async () => {
         setPendingConfirm(null);
         try {
@@ -150,12 +143,12 @@ export default function CollectionDetailLayout() {
           utils.collections.artworkState.invalidate({ ratingKey });
           // Be exact about what happened. "Reverted" would imply an image was
           // put back, and usually there is none to put back.
-          setAlert({
-            title: "Artwork unmanaged",
-            message: priorThumb
-              ? "Tinkerbell will no longer write this collection's summary or poster. The artwork it found here originally is still among the collection's posters in Plex, so you can select it from the poster picker."
-              : "Tinkerbell will no longer write this collection's summary or poster. There was no earlier artwork recorded, so nothing has been changed on the collection itself.",
-          });
+          addToast(
+            priorThumb
+              ? "Artwork unmanaged — the original poster is still in Plex's picker"
+              : "Artwork unmanaged — nothing on the collection changed",
+            "success",
+          );
         } catch {
           addToast("Failed to change the artwork setting", "error");
         }
@@ -228,15 +221,16 @@ export default function CollectionDetailLayout() {
                 className={pinned ? styles.buttonSecondary : styles.button}
                 onClick={handleTogglePin}
                 disabled={pinQuery.isLoading || pinMutation.isPending || unpinMutation.isPending}
-                title={
-                  rotatedBy
-                    ? `"${rotatedBy}" manages pinning for this collection and re-chooses on every run, so this won't last past the next one.`
-                    : "Pin this collection to the Plex home screen"
-                }
+                title={rotatedBy ? "Lasts until the rule's next run" : "Pin to the Plex home screen"}
               >
                 {pinned ? <PinOff size={13} /> : <Pin size={13} />}
                 {pinned ? "Unpin" : "Pin"}
               </button>
+              {rotatedBy && (
+                <span className={styles.metaChip} title="Re-chosen on every run of this rule">
+                  Rotated by {rotatedBy}
+                </span>
+              )}
               <RowActions actions={actions} label="Collection actions" />
             </div>
           </div>
@@ -331,6 +325,7 @@ export default function CollectionDetailLayout() {
           isSmart,
           refresh,
           openFilters: () => setFiltersDrawerOpen(true),
+          openStudio: () => setStudioOpen(true),
         }}
       >
         {/* Keyed on the path so a tab switch remounts rather than carrying the
@@ -385,18 +380,6 @@ export default function CollectionDetailLayout() {
           danger
           onConfirm={pendingConfirm.onConfirm}
           onCancel={() => setPendingConfirm(null)}
-        />
-      )}
-
-      {alert && (
-        <AlertModal
-          title={alert.title}
-          message={alert.message}
-          onDismiss={() => {
-            const leaving = alert.title === "Collection no longer in Plex";
-            setAlert(null);
-            if (leaving) navigate("/collections");
-          }}
         />
       )}
     </div>

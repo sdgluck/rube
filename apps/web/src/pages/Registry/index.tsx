@@ -38,28 +38,24 @@ export default function Registry() {
     <PageShell
       count={index.packs.length.toLocaleString()}
       actions={
-        <button
-          type="button"
-          className={styles.refresh}
-          onClick={() => {
-            // `force` bypasses the server's one-hour cache; a plain invalidate
-            // would just re-serve the same cached payload.
-            utils.registry.index.fetch({ force: true }).then(() => utils.registry.index.invalidate());
-          }}
-        >
-          Refresh
-        </button>
+        <>
+          <a className={styles.ghost} href="https://tinkerbell.dev/registry" target="_blank" rel="noreferrer">
+            tinkerbell.dev
+          </a>
+          <button
+            type="button"
+            className={styles.refresh}
+            onClick={() => {
+              // `force` bypasses the server's one-hour cache; a plain invalidate
+              // would just re-serve the same cached payload.
+              utils.registry.index.fetch({ force: true }).then(() => utils.registry.index.invalidate());
+            }}
+          >
+            Refresh
+          </button>
+        </>
       }
     >
-      <p className={styles.intro}>
-        Curated rule packs from{" "}
-        <a href="https://tinkerbell.dev/registry" target="_blank" rel="noreferrer">
-          tinkerbell.dev
-        </a>
-        . Importing rewrites each rule for this server and creates it disabled by default, so nothing touches Plex until
-        you say so.
-      </p>
-
       <div className={styles.grid}>
         {index.packs.map((pack) => {
           const rules = pack.ruleSlugs.flatMap((s) => {

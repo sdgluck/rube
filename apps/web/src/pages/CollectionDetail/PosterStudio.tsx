@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { POSTER_URL_ALLOWED_HOSTS } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
+import ColorField from "#components/ColorField";
 import Modal from "#components/Modal";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { useToast } from "#components/Toast";
@@ -71,13 +72,11 @@ export default function PosterStudio({
   const applySelected = trpc.collections.selectPoster.useMutation();
   const markUploaded = trpc.collections.posterUploaded.useMutation();
 
-  const accentValid = !accent || /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(accent);
-
   // Debounced rather than fired by a button: the point of the picker is that
-  // changing the template changes the picture. The accent field is a text
-  // input and a render is real work on the server, so it doesn't trigger one
-  // per keystroke.
-  const debouncedAccent = useDebouncedValue(accentValid ? accent : "", 350);
+  // changing the template changes the picture. Dragging the colour picker
+  // fires a change per frame and a render is real work on the server, so it
+  // doesn't trigger one per movement.
+  const debouncedAccent = useDebouncedValue(accent, 350);
   const previewQuery = trpc.collections.previewGeneratedPoster.useQuery(
     { ratingKey, poster: template, accentColor: debouncedAccent || undefined },
     { enabled: source === "generate", refetchOnWindowFocus: false },
@@ -181,11 +180,7 @@ export default function PosterStudio({
             <div className={local.studioPlaceholder}>Rendering…</div>
           ) : (
             <div className={local.studioPlaceholder}>
-              {source === "upload"
-                ? "Your image will be cropped to Plex's 1000×1500 poster shape."
-                : source === "plex"
-                  ? "Pick one of the posters Plex already holds."
-                  : "Paste an image URL from one of the allowed hosts."}
+              {source === "upload" ? "Cropped to 1000×1500" : source === "plex" ? "Pick a poster" : "Paste a URL"}
             </div>
           )}
         </div>
@@ -212,21 +207,13 @@ export default function PosterStudio({
               <label className={styles.fieldLabel} htmlFor="poster-accent">
                 Accent colour
               </label>
-              <input
+              <ColorField
                 id="poster-accent"
-                className={styles.input}
-                placeholder="Derived from the member art"
                 value={accent}
-                onChange={(e) => setAccent(e.target.value)}
-                spellCheck={false}
+                onChange={setAccent}
+                autoTitle="Taken from the member art"
               />
-              {!accentValid && <p className={styles.hint}>Use a hex colour like #E5A00D.</p>}
-              {memberCount === 0 && (
-                <p className={styles.hint}>
-                  This collection has no members yet, so the templates have no art to draw on — they still render, just
-                  plainly.
-                </p>
-              )}
+              {memberCount === 0 && <p className={styles.hint}>No members yet, so templates render plainly.</p>}
             </>
           )}
 
@@ -253,10 +240,7 @@ export default function PosterStudio({
                   ? `Uploading… ${Math.round(progress * 100)}%`
                   : "Choose an image — JPEG, PNG, WebP or AVIF, up to 8 MB"}
               </button>
-              <p className={styles.hint}>
-                The image is uploaded to your Plex server and Tinkerbell stops managing this collection's poster, so no
-                job will replace it.
-              </p>
+              <p className={styles.hint}>No job will replace an uploaded poster.</p>
             </>
           )}
 
@@ -304,10 +288,7 @@ export default function PosterStudio({
               />
               {/* The allowlist is enforced on the server; naming it here means
                   a rejected URL is a thing you can avoid rather than discover. */}
-              <p className={styles.hint}>
-                HTTPS only, and hosted on one of: {POSTER_URL_ALLOWED_HOSTS.join(", ")}. Tinkerbell fetches the image
-                itself rather than pointing Plex at the URL.
-              </p>
+              <p className={styles.hint}>HTTPS, from {POSTER_URL_ALLOWED_HOSTS.join(", ")}</p>
             </>
           )}
         </div>

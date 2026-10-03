@@ -1,4 +1,5 @@
 import { useState } from "react";
+import AllOption from "./AllOption";
 import Modal from "./Modal";
 import { trpc } from "#/trpc";
 import { useToast } from "./Toast";
@@ -92,8 +93,13 @@ export default function InviteUserModal({ onClose, onInvited }: Props) {
         <legend className={styles.legend}>Libraries</legend>
         {/* Plex's own convention: an empty selection shares everything, which
             is also what most people mean by "invite a friend". */}
-        <p className={styles.hint}>Leave everything unticked to share all libraries.</p>
         <div className={shared.labelCheckboxList}>
+          <AllOption
+            label="All libraries"
+            checked={sections.size === 0}
+            onSelect={() => setSections(new Set())}
+            className={shared.labelCheckboxItem}
+          />
           {available.map((section) => (
             <label key={section.key} className={shared.labelCheckboxItem}>
               <input type="checkbox" checked={sections.has(section.key)} onChange={() => toggle(section.key)} />

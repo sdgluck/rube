@@ -3,6 +3,8 @@ import { trpc } from "#/trpc";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
+import RelativeTime from "#components/RelativeTime";
+import RunJobButton from "#components/RunJobButton";
 import { MediaSkeleton } from "#components/Skeleton";
 import { EMPTY, formatFileSize } from "#/format";
 import shared from "#/styles/shared.module.css";
@@ -29,6 +31,10 @@ export default function Duplicates() {
   const query = trpc.media.duplicates.useQuery(undefined, { refetchOnWindowFocus: false });
   const identityQuery = trpc.plexIdentity.useQuery(undefined, { staleTime: Infinity, retry: false });
   const machineIdentifier = identityQuery.data?.machineIdentifier;
+  // Sizes come from the media index, so they are only as fresh as the last
+  // completed Sync Media — a failed or running one changed nothing.
+  const syncRuns = trpc.jobs.runs.useQuery({ jobId: "sync-media", limit: 10 }, { refetchOnWindowFocus: false });
+  const lastSync = syncRuns.data?.find((r) => r.status === "completed")?.finishedAt ?? null;
 
   if (query.isLoading) return <MediaSkeleton />;
   if (query.error) {
@@ -48,19 +54,24 @@ export default function Duplicates() {
     <PageShell
       count={groups.length > 0 ? String(groups.length) : undefined}
       actions={
-        reclaimable > 0 ? <StatusChip tone="advisory">{formatFileSize(reclaimable)} recoverable</StatusChip> : null
+        <>
+          {reclaimable > 0 && <StatusChip tone="advisory">{formatFileSize(reclaimable)} recoverable</StatusChip>}
+          {lastSync != null && (
+            <StatusChip tone="ok">
+              Sizes as of <RelativeTime timestamp={lastSync} />
+            </StatusChip>
+          )}
+          <RunJobButton jobId="sync-media" small>
+            Sync now
+          </RunJobButton>
+        </>
       }
     >
-      <p className={styles.intro}>
-        Two kinds of duplicate: an item Plex holds several files for, and two separate items that are the same film.
-        Sizes come from the media index, so they are as fresh as the last <strong>Sync Media</strong> run.
-      </p>
-
       {groups.length === 0 ? (
         <EmptyState
           icon="film"
           title="No duplicates found"
-          description="Nothing in the index has more than one version, and no two items share a title and year in the same library."
+          description="No multi-version items, and no repeated title and year."
         />
       ) : (
         <div className={styles.groups}>
@@ -70,6 +81,15 @@ export default function Duplicates() {
                 <h3 className={styles.groupTitle}>
                   {group.title}
                   {group.year != null && <span className={styles.groupYear}>{group.year}</span>}
+                  {group.kind === "versions" ? (
+                    <span className={styles.kindBadge} title="One Plex item with several files">
+                      Versions
+                    </span>
+                  ) : (
+                    <span className={styles.kindBadge} title="Separate Plex items for the same title and year">
+                      Same film
+                    </span>
+                  )}
                 </h3>
                 <span className={styles.groupMeta}>
                   {group.sectionTitle} ·{" "}

@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import Banner from "#components/Banner";
+import { useSetEnabled } from "#pages/Jobs/shared/useSetEnabled";
+import controls from "#/styles/controls.module.css";
 import styles from "./FeatureStatusBanner.module.css";
 
 interface Props {
@@ -10,11 +12,12 @@ interface Props {
 
 /**
  * Informational banner shown on pages whose effects depend on a Jobs feature
- * being enabled. Surfaces the current state and links to the feature page.
+ * being enabled. Surfaces the current state; off, the button is the fix.
  * Does NOT gate interaction — users can still author/preview when off.
  */
 export default function FeatureStatusBanner({ featureId }: Props) {
   const jobsQuery = trpc.jobs.list.useQuery();
+  const { setEnabled, pending } = useSetEnabled();
   const job = jobsQuery.data?.find((j) => j.id === featureId);
   if (!job) return null;
 
@@ -24,15 +27,26 @@ export default function FeatureStatusBanner({ featureId }: Props) {
       variant={enabled ? "ok" : "warn"}
       dot
       actions={
-        <Link to={`/jobs/${job.id}`} className={styles.link}>
-          Open feature
-        </Link>
+        enabled ? (
+          <Link to={`/jobs/${job.id}`} className={styles.link}>
+            Open feature
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnPrimary} ${controls.btnSm}`}
+            onClick={() => setEnabled(job.id, true)}
+            disabled={pending}
+          >
+            Enable
+          </button>
+        )
       }
     >
       <strong>
         {job.name} is {enabled ? "enabled" : "disabled"}
       </strong>
-      {!enabled && " — changes here won't take effect until you enable the feature."}
+      {!enabled && " — changes here won't take effect yet."}
     </Banner>
   );
 }

@@ -192,3 +192,8 @@
 .dim {
   color: var(--ink-3);
 }
+
+/* Set by Personalization, not here — present, but visibly not this page's. */
+.labelLocked {
+  opacity: 0.6;
+}

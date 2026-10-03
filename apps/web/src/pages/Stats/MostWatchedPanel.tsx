@@ -9,6 +9,7 @@ import { useLocalSort } from "#hooks/useLocalSort";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { PeriodSelector } from "./PeriodSelector";
 import { usePeriod } from "./usePeriod";
+import PanelEmpty from "./PanelEmpty";
 
 /**
  * What "most watched" counts.
@@ -80,11 +81,9 @@ export function MostWatchedPanel({ dragHandle, dragProps }: DashboardPanelProps)
         <ErrorState inline title="Couldn't load watch history" onRetry={() => mostWatchedQuery.refetch()} />
       )}
       {mostWatchedQuery.data && mostWatchedQuery.data.length === 0 && (
-        <div className={styles.muted}>
-          {periodDays === 0
-            ? "No watch history yet — it fills in as things are played, or run Import Plex Watch History from Jobs."
-            : `No watch history in the last ${label}`}
-        </div>
+        <PanelEmpty importHistory={periodDays === 0}>
+          {periodDays === 0 ? "No watch history yet" : `No watch history in the last ${label}`}
+        </PanelEmpty>
       )}
       {mostWatchedQuery.data && mostWatchedQuery.data.length > 0 && (
         <div className="table-scroll in-panel" data-scroll="x">

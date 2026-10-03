@@ -26,6 +26,7 @@ export function DistributionBar({
   colorMap,
   formatLabel,
   formatCount,
+  explain,
 }: {
   label: string;
   items: DistItem[];
@@ -33,6 +34,8 @@ export function DistributionBar({
   formatLabel?: (v: string) => string;
   /** For distributions measured in something other than items — bytes, say. */
   formatCount?: (n: number) => string;
+  /** Extra hover text for a value whose label can't carry its meaning. */
+  explain?: (v: string) => string | undefined;
 }) {
   const renderCount = formatCount ?? ((n: number) => String(n));
   const sorted = [...items].sort((a, b) => b.count - a.count);
@@ -53,7 +56,9 @@ export function DistributionBar({
               key={item.value ?? i}
               className={styles.distSegment}
               style={{ width: `${pct}%`, background: color }}
-              title={`${displayLabel}: ${renderCount(item.count)} (${pct.toFixed(1)}%)`}
+              title={[`${displayLabel}: ${renderCount(item.count)} (${pct.toFixed(1)}%)`, explain?.(item.value ?? "")]
+                .filter(Boolean)
+                .join(" — ")}
             />
           );
         })}
@@ -63,7 +68,7 @@ export function DistributionBar({
           const color = colorMap?.[item.value ?? ""] ?? CODEC_COLORS[i % CODEC_COLORS.length];
           const displayLabel = formatLabel ? formatLabel(item.value ?? "") : (item.value ?? "?");
           return (
-            <span key={item.value ?? i} className={styles.distLegendItem}>
+            <span key={item.value ?? i} className={styles.distLegendItem} title={explain?.(item.value ?? "")}>
               <span className={styles.distLegendDot} style={{ background: color }} />
               {displayLabel}
               <span className={styles.distLegendCount}>{renderCount(item.count)}</span>

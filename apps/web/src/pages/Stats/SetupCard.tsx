@@ -20,21 +20,20 @@ export default function SetupCard() {
 
   if (!status || status.complete || status.dismissedAt == null) return null;
 
+  const needsPlex = status.missingRequired.includes("connect");
   return (
     <Banner
       variant={status.missingRequired.length > 0 ? "warn" : "info"}
       actions={
         <Link to="/onboarding" className={`${controls.btn} ${controls.btnPrimary} ${controls.btnSm}`}>
-          Finish setup
+          {needsPlex ? "Connect Plex" : "Finish setup"}
         </Link>
       }
     >
       <strong>
         Setup is {status.completedCount} of {status.totalCount} done
       </strong>
-      {status.missingRequired.includes("connect")
-        ? " — without a Plex connection these panels have nothing to show."
-        : " — a few optional steps are left."}
+      {needsPlex ? " — these panels need Plex." : null}
     </Banner>
   );
 }

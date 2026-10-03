@@ -6,6 +6,7 @@ import styles from "#pages/Stats/Stats.module.css";
 import { formatBandwidth, formatMbps, formatRelativeShort } from "#/format";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import { BarChart } from "./BarChart";
+import PanelEmpty from "./PanelEmpty";
 
 /** `9pm` for the bucket `hoursAgo` hours back from the current hour. */
 function hourLabel(hoursAgo: number): string {
@@ -46,19 +47,13 @@ export function BandwidthPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   return (
     <PanelShell
       title="Bandwidth"
-      meta={peak > 0 ? `peak ${formatBandwidth(peak)}` : undefined}
-      lede="Streaming demand over the last 24 hours, as the highest rate seen in each hour."
+      meta={peak > 0 ? `hourly peak ${formatBandwidth(peak)} · 24h` : "hourly peak · 24h"}
       dragHandle={dragHandle}
       dragProps={dragProps}
     >
       {usageQuery.isLoading && <SkeletonBlock width="100%" height={104} />}
       {usageQuery.error && <ErrorState inline title="Couldn't load bandwidth" onRetry={() => usageQuery.refetch()} />}
-      {usageQuery.data && peak === 0 && (
-        <div className={styles.muted}>
-          Nothing has streamed in the last 24 hours. Usage is sampled while sessions are playing, so this fills in the
-          next time someone watches something.
-        </div>
-      )}
+      {usageQuery.data && peak === 0 && <PanelEmpty>Nothing streamed in the last 24 hours</PanelEmpty>}
       {usageQuery.data && peak > 0 && (
         <>
           <BarChart
@@ -98,11 +93,10 @@ export function BandwidthPanel({ dragHandle, dragProps }: DashboardPanelProps) {
               the percentage above inherits that. Say when it was made. */}
           {latestQuery.data && latestQuery.data.staleDays > 30 && (
             <div className={styles.muted}>
-              Capacity was measured {formatRelativeShort(latestQuery.data.startedAt)}. Re-run the test from{" "}
+              Capacity measured {formatRelativeShort(latestQuery.data.startedAt)} ·{" "}
               <Link to="/settings/bandwidth" className={styles.eventLink}>
-                Settings → Bandwidth
-              </Link>{" "}
-              if your connection has changed since.
+                Re-test
+              </Link>
             </div>
           )}
         </>

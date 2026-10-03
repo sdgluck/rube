@@ -15,9 +15,3 @@
   text-transform: uppercase;
   color: var(--ink-3);
 }
-
-.hint {
-  margin: 4px 0 8px;
-  font-size: 11.5px;
-  color: var(--ink-3);
-}

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
-import EmptyState from "#components/EmptyState";
+import SettingsPageLink from "#components/SettingsPageLink";
 import ErrorState from "#components/ErrorState";
 import PageShell from "#components/PageShell";
 import ConfirmModal from "#components/ConfirmModal";
@@ -11,7 +11,7 @@ import BulkBar from "#components/BulkBar";
 import { PrerollsSkeleton } from "#components/Skeleton";
 import controls from "#/styles/controls.module.css";
 import UploadModal from "./UploadModal";
-import { UploadProgressList } from "./UploadDropzone";
+import UploadDropzone, { UploadProgressList } from "./UploadDropzone";
 import PrerollCard from "./PrerollCard";
 import PrerollDetailModal from "./PrerollDetailModal";
 import PlexSyncBar from "./PlexSyncBar";
@@ -225,8 +225,7 @@ export default function Prerolls() {
     >
       {ffmpegMissing && (
         <Banner variant="error">
-          ffmpeg isn't available, so uploads can't be processed. <Link to="/settings/prerolls">See Settings</Link> for
-          how to install it.
+          ffmpeg isn't available, so uploads can't be processed. <SettingsPageLink to="/settings/prerolls" />
         </Banner>
       )}
 
@@ -245,11 +244,30 @@ export default function Prerolls() {
       <UploadProgressList uploads={uploads} />
 
       {prerolls.length === 0 ? (
-        <EmptyState
-          icon="film"
-          title="No prerolls yet"
-          description="Upload a clip, import one from a URL, or pull in videos already sitting in the prerolls folder, and it'll be ready to play before your next movie."
-        />
+        // With nothing to show, the page *is* the upload target — a modal
+        // behind a header button is one step too many for the first clip.
+        <div className={styles.emptyUpload}>
+          <UploadDropzone disabled={ffmpegMissing} onFiles={handleFiles} />
+          <div className={styles.emptyActions}>
+            <button
+              type="button"
+              className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+              onClick={() => setImportOpen(true)}
+              disabled={ffmpegMissing}
+            >
+              Import from URL
+            </button>
+            <button
+              type="button"
+              className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+              onClick={() => setImportExistingOpen(true)}
+              disabled={ffmpegMissing}
+              title="Videos already in the prerolls folder"
+            >
+              Import existing
+            </button>
+          </div>
+        </div>
       ) : (
         <div className={styles.grid} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
           {prerolls.map((preroll) => (
