@@ -669,20 +669,26 @@ export function createRuns(deps: RunsDeps) {
    * progress is not history yet.
    */
   function pruneRuleRunsForRule(ruleId: string): void {
+    // Kept by rank, not by a `startedAt` cutoff: runs started in the same
+    // millisecond tie with the cutoff and all survived a strict `<`, so a rule
+    // run in a tight loop kept 51+ — which CI's faster runners hit. `rowid`
+    // breaks the tie in insertion order.
     const keep = db
-      .select({ startedAt: ruleRuns.startedAt })
+      .select({ id: ruleRuns.id })
       .from(ruleRuns)
       .where(eq(ruleRuns.ruleId, ruleId))
-      .orderBy(desc(ruleRuns.startedAt))
+      .orderBy(desc(ruleRuns.startedAt), desc(sql`rowid`))
       .limit(RULE_RUN_KEEP_PER_RULE)
       .all();
     if (keep.length < RULE_RUN_KEEP_PER_RULE) return;
-    const cutoff = keep[keep.length - 1].startedAt;
     db.delete(ruleRuns)
       .where(
         and(
           eq(ruleRuns.ruleId, ruleId),
-          lt(ruleRuns.startedAt, cutoff),
+          notInArray(
+            ruleRuns.id,
+            keep.map((k) => k.id),
+          ),
           notInArray(ruleRuns.status, [...ACTIVE_RULE_RUN_STATUSES]),
         ),
       )
