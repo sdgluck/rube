@@ -53,6 +53,8 @@ export const COMMANDS = {
   // walk. Slow on a 10k library times four instances, but nowhere near
   // `sync-media`, which reads Plex twice for TV.
   "sync-arr": { load: () => import("./sync-arr.ts"), lane: "default", timeoutMs: HOUR_MS },
+  // A handful of reads per instance. Five minutes means an instance is hung.
+  "check-arr-quality": { load: () => import("./check-arr-quality.ts"), lane: "default", timeoutMs: 5 * MINUTE_MS },
   "sync-collections": { load: () => import("./sync-collections.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "sync-users": { load: () => import("./sync-users.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   // Interactive: a human enables it from Settings and watches it fill in. A

@@ -11,9 +11,10 @@
  * without touching anything; `applyImport` takes that classification plus one
  * decision per differing item and writes.
  */
-import { jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
+import { arrManagedProfiles, jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
 import {
   type Bundle,
+  type ExportedManagedProfile,
   BUNDLE_FORMAT_VERSION,
   bundleSchema,
   type ImportResolution,
@@ -27,7 +28,7 @@ import { createLogger, errorMessage, runAsActor, type ConfigKey, type ConfigStor
 
 const log = createLogger("portability");
 
-export type ImportKind = "rule" | "job" | "overlayPreset" | "overlayConfig" | "config";
+export type ImportKind = "rule" | "job" | "overlayPreset" | "overlayConfig" | "arrQualityProfile" | "config";
 
 export interface ImportItem {
   kind: ImportKind;
@@ -104,6 +105,8 @@ export interface ImportWriters {
   }) => unknown;
   updateOverlayConfig: (id: number, patch: { style?: never; rule?: never; overlayType?: never }) => void;
   setConfig: (key: ConfigKey, value: never) => void;
+  /** `arrSettings.quality.importManaged`: records the decision and the change, writes nothing to an *Arr. */
+  importManagedProfiles: (rows: ExportedManagedProfile[], opts: { overwrite: boolean }) => number;
 }
 
 export interface ImportDeps {
@@ -112,6 +115,28 @@ export interface ImportDeps {
   tagLookup: TagLookup;
   sections: () => Array<{ key: string; title: string }>;
   writers: ImportWriters;
+  /** The *Arr instances configured here, for blocking profiles aimed at one that is not. */
+  arrInstanceIds: () => string[];
+}
+
+function managedKey(profile: ExportedManagedProfile): string {
+  return `arrQualityProfile:${profile.instanceId}:${profile.profileName}`;
+}
+
+/** Instances a bundle's own config would create: the defaults, and the extras list. */
+function bundleInstanceIds(bundle: Bundle): string[] {
+  const cfg = bundle.config ?? {};
+  const ids: string[] = [];
+  if (cfg.global_radarr_url) ids.push("radarr");
+  if (cfg.global_sonarr_url) ids.push("sonarr");
+  const extra = cfg.global_arr_instances;
+  if (Array.isArray(extra)) {
+    for (const entry of extra) {
+      const id = (entry as { id?: unknown } | null)?.id;
+      if (typeof id === "string") ids.push(id);
+    }
+  }
+  return ids;
 }
 
 /** Structural equality, key-order independent — same reasoning as the diff in `domains/config-history`. */
@@ -135,7 +160,7 @@ function changedPaths(before: Record<string, unknown>, after: Record<string, unk
 }
 
 export function createImport(deps: ImportDeps) {
-  const { db, config, tagLookup, sections, writers } = deps;
+  const { db, config, tagLookup, sections, writers, arrInstanceIds } = deps;
 
   /**
    * Refuse a bundle this version cannot read, and say what would read it.
@@ -342,6 +367,30 @@ export function createImport(deps: ImportDeps) {
         key: `config:${key}`,
         label: key,
         verdict: current === undefined ? "new" : sameValue(current, value) ? "identical" : "differs",
+      });
+    }
+
+    // An instance arriving in this same bundle's config counts as present:
+    // a restore onto a fresh install brings the instances and the profiles
+    // together, and config is applied first.
+    const knownInstances = new Set([...arrInstanceIds(), ...bundleInstanceIds(bundle)]);
+    const managedRows = db.select().from(arrManagedProfiles).all();
+    for (const profile of bundle.arrQualityProfiles ?? []) {
+      const existing = managedRows.find(
+        (r) => r.instanceId === profile.instanceId && r.profileName === profile.profileName,
+      );
+      items.push({
+        kind: "arrQualityProfile",
+        key: managedKey(profile),
+        label: `${profile.profileName} (${profile.instanceId})`,
+        verdict: !existing
+          ? "new"
+          : existing.presetId === profile.presetId && sameValue(existing.limits, profile.limits)
+            ? "identical"
+            : "differs",
+        blocked: knownInstances.has(profile.instanceId)
+          ? undefined
+          : `This server has no *Arr instance “${profile.instanceId}”.`,
       });
     }
 
@@ -573,6 +622,43 @@ export function createImport(deps: ImportDeps) {
           // read and the write lands in the change log like any other.
           writers.setConfig(configKey as ConfigKey, value as never);
           if (item.verdict === "new") summary.created++;
+          else summary.overwritten++;
+        } catch (err) {
+          summary.failed.push({ key: item.key, error: errorMessage(err) });
+        }
+      }
+
+      // After config, so instances the bundle brought are already configured.
+      // Nothing reaches an *Arr here: rows land as `missing` and are applied,
+      // with a preview, from the instance page.
+      for (const profile of bundle.arrQualityProfiles ?? []) {
+        const item = byKey.get(managedKey(profile));
+        if (!item) continue;
+        if (item.blocked || item.verdict === "identical") {
+          summary.skipped++;
+          continue;
+        }
+        const decision = item.verdict === "differs" ? decide(item.key) : undefined;
+        if (decision === "skip") {
+          summary.skipped++;
+          continue;
+        }
+        try {
+          const taken = new Map(
+            db
+              .select()
+              .from(arrManagedProfiles)
+              .all()
+              .filter((r) => r.instanceId === profile.instanceId)
+              .map((r) => [r.profileName, r] as const),
+          );
+          const profileName = decision === "duplicate" ? uniqueName(profile.profileName, taken) : profile.profileName;
+          const written = writers.importManagedProfiles([{ ...profile, profileName }], {
+            overwrite: decision === "overwrite",
+          });
+          if (written === 0) summary.skipped++;
+          else if (item.verdict === "new") summary.created++;
+          else if (decision === "duplicate") summary.duplicated++;
           else summary.overwritten++;
         } catch (err) {
           summary.failed.push({ key: item.key, error: errorMessage(err) });

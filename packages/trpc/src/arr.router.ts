@@ -6,13 +6,14 @@ import { errorMessage } from "@tinkerbell/core";
 import { t, procedure } from "./_base.ts";
 import { createArrLibraryRouter } from "./arr/library.router.ts";
 import { createArrActivityRouter } from "./arr/activity.router.ts";
+import { createArrQualityRouter } from "./arr/quality.router.ts";
 
 const serviceInput = z.object({
   service: z.enum(["radarr", "sonarr"]),
   instanceId: z.string().optional(),
 });
 
-export function createArrRouter(deps: Pick<TrpcDeps, "arr" | "arrLibrary" | "arrActivity">) {
+export function createArrRouter(deps: Pick<TrpcDeps, "arr" | "arrLibrary" | "arrActivity" | "arrSettings">) {
   const { arr } = deps;
   const { arrInstances, resolveArrInstance } = arr;
 
@@ -84,6 +85,7 @@ export function createArrRouter(deps: Pick<TrpcDeps, "arr" | "arrLibrary" | "arr
      */
     library: createArrLibraryRouter(deps),
     activity: createArrActivityRouter(deps),
+    quality: createArrQualityRouter(deps),
   });
 
   return arrRouter;

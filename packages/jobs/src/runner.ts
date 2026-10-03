@@ -80,6 +80,16 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // links against, so a title that arrived in Plex overnight is matched to
   // its *Arr record on the same pass rather than a day later.
   { id: "sync-arr", name: "Sync Radarr & Sonarr", command: "sync-arr", schedule: "30 0 * * *", enabled: 1 },
+  // 00:45 by habit, beside sync-arr. It reads each instance live rather than
+  // the mirror, so it has no ordering dependency and no `JOB_ORDER` edge: an
+  // edge would warn on every preset that moves sync-arr and not this.
+  {
+    id: "check-arr-quality",
+    name: "Check Quality Profiles",
+    command: "check-arr-quality",
+    schedule: "45 0 * * *",
+    enabled: 1,
+  },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
   // 4am: after sync-media (midnight) so the library index the cleanup guards
   // read is fresh, after generate (1am) so a rule's shelf reflects the night's

@@ -24,7 +24,8 @@
  *   a test can assert that a monitor toggle preserved the rest of the row.
  *   Both *Arrs replace the row wholesale, so a PUT that drops a field nulls it.
  */
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server } from "node:http";
+import { customFormatSchemaFixture, qualityDefinitionsFixture, qualityProfileSchemaFixture } from "./arr-fixtures.ts";
 
 export interface MockMovie {
   id: number;
@@ -60,6 +61,12 @@ export interface ArrJournal {
   /** Every POST to the add endpoint. */
   adds: Array<Record<string, unknown>>;
   lookups: string[];
+  /**
+   * Every write to the quality settings endpoints, in order, as
+   * `METHOD path` plus the body. Ordering is the thing worth asserting: a
+   * profile that references a custom format must be written after it.
+   */
+  settingsWrites: Array<{ method: string; path: string; body: unknown }>;
   unhandled: string[];
   /** Every request, in order, as `METHOD path`. */
   requests: string[];
@@ -88,14 +95,37 @@ export interface MockArr {
   failNext: (n: number, status?: number, body?: string) => void;
   /** Answer every request to `path` with this status until cleared. */
   failWith: (path: string, status: number, body?: string) => void;
+  /** Live quality settings, mutable by a test to simulate an edit made in the *Arr's own UI. */
+  quality: MockQualityState;
   close: () => Promise<void>;
 }
 
-interface Options {
-  service: "radarr" | "sonarr";
-  initial: MockArrRecord[];
+/**
+ * Quality profiles, custom formats and quality definitions, stateful.
+ *
+ * Added for the preset planner, whose whole job is reading these, diffing
+ * them and writing them back in the right order. A static answer could not
+ * show that a second plan after an apply is empty, nor that a drift check
+ * notices an edit made behind Tinkerbell's back.
+ */
+export interface MockQualityState {
+  profiles: Map<number, Record<string, unknown>>;
+  customFormats: Map<number, Record<string, unknown>>;
+  definitions: Array<Record<string, unknown>>;
+}
+
+export interface MockArrExtra {
   /** What a lookup-by-term returns. Defaults to nothing found. */
   lookupResults?: Array<Record<string, unknown>>;
+  /** What `/system/status` reports. Sonarr "3.0.10" switches custom formats off. */
+  version?: string;
+  /** Model an install whose custom format schema predates `SizeSpecification`. */
+  withoutSizeSpecification?: boolean;
+}
+
+interface Options extends MockArrExtra {
+  service: "radarr" | "sonarr";
+  initial: MockArrRecord[];
 }
 
 function startMockArr(opts: Options): Promise<MockArr> {
@@ -108,8 +138,24 @@ function startMockArr(opts: Options): Promise<MockArr> {
     puts: [],
     adds: [],
     lookups: [],
+    settingsWrites: [],
     unhandled: [],
     requests: [],
+  };
+
+  // Seeded with the two profiles the older tests expect.
+  const quality: MockQualityState = {
+    profiles: new Map<number, Record<string, unknown>>([
+      [1, { id: 1, name: "HD-1080p", extra: "ignored" }],
+      [2, { id: 2, name: "Ultra-HD" }],
+    ]),
+    customFormats: new Map(),
+    definitions: qualityDefinitionsFixture(service),
+  };
+  const fixtures = {
+    profileSchema: qualityProfileSchemaFixture(service),
+    customFormatSchema: customFormatSchemaFixture(service, { withoutSize: opts.withoutSizeSpecification }),
+    supportsCustomFormats: !(service === "sonarr" && /^[0-3]\./.test(opts.version ?? "")),
   };
 
   let failuresRemaining = 0;
@@ -143,17 +189,14 @@ function startMockArr(opts: Options): Promise<MockArr> {
     }
 
     if (path === "/api/v3/system/status") {
-      json({ instanceName: service === "radarr" ? "Mock Radarr" : "Mock Sonarr", version: "5.0.0" });
+      json({
+        instanceName: service === "radarr" ? "Mock Radarr" : "Mock Sonarr",
+        version: opts.version ?? "5.0.0",
+      });
       return;
     }
 
-    if (path === "/api/v3/qualityprofile") {
-      json([
-        { id: 1, name: "HD-1080p", extra: "ignored" },
-        { id: 2, name: "Ultra-HD" },
-      ]);
-      return;
-    }
+    if (handleQualitySettings({ req, method, path, quality, fixtures, journal, json })) return;
 
     if (path === "/api/v3/rootfolder") {
       json([{ id: 1, path: "/data/media", freeSpace: 1_000, accessible: true }]);
@@ -271,6 +314,7 @@ function startMockArr(opts: Options): Promise<MockArr> {
         journal,
         records,
         movies: records,
+        quality,
         failNext(n, status = 500, body = "") {
           failuresRemaining = n;
           failureStatus = status;
@@ -285,18 +329,170 @@ function startMockArr(opts: Options): Promise<MockArr> {
   });
 }
 
-export function startMockRadarr(
-  initial: MockMovie[],
-  extra?: { lookupResults?: Array<Record<string, unknown>> },
-): Promise<MockArr> {
-  return startMockArr({ service: "radarr", initial, lookupResults: extra?.lookupResults });
+export function startMockRadarr(initial: MockMovie[], extra?: MockArrExtra): Promise<MockArr> {
+  return startMockArr({ service: "radarr", initial, ...extra });
 }
 
-export function startMockSonarr(
-  initial: MockSeries[],
-  extra?: { lookupResults?: Array<Record<string, unknown>> },
-): Promise<MockArr> {
-  return startMockArr({ service: "sonarr", initial, lookupResults: extra?.lookupResults });
+export function startMockSonarr(initial: MockSeries[], extra?: MockArrExtra): Promise<MockArr> {
+  return startMockArr({ service: "sonarr", initial, ...extra });
+}
+
+interface QualityRequest {
+  req: IncomingMessage;
+  method: string;
+  path: string;
+  quality: MockQualityState;
+  fixtures: {
+    profileSchema: Record<string, unknown>;
+    customFormatSchema: Array<Record<string, unknown>>;
+    supportsCustomFormats: boolean;
+  };
+  journal: ArrJournal;
+  json: (body: unknown, status?: number) => void;
+}
+
+/** Answers the quality settings endpoints. Returns false for anything else. */
+function handleQualitySettings(q: QualityRequest): boolean {
+  const { method, path, quality, fixtures, journal, json } = q;
+
+  const readBody = (then: (body: unknown) => void) => {
+    let raw = "";
+    q.req.on("data", (chunk) => (raw += chunk));
+    q.req.on("end", () => {
+      let parsed: unknown = {};
+      try {
+        parsed = JSON.parse(raw || "{}");
+      } catch {
+        // The test asserts on the journal.
+      }
+      journal.settingsWrites.push({ method, path, body: parsed });
+      then(parsed);
+    });
+  };
+
+  const nextId = (m: Map<number, unknown>) => Math.max(0, ...m.keys()) + 1;
+
+  /** The *Arr's own validation answer, near enough: a 400 with field failures. */
+  const reject = (propertyName: string, errorMessage: string) => json([{ propertyName, errorMessage }], 400);
+
+  if (path === "/api/v3/qualityprofile/schema" && method === "GET") {
+    json(structuredClone(fixtures.profileSchema));
+    return true;
+  }
+
+  if (path === "/api/v3/qualityprofile") {
+    if (method === "GET") {
+      json([...quality.profiles.values()]);
+      return true;
+    }
+    if (method === "POST") {
+      readBody((body) => {
+        const profile = body as Record<string, unknown>;
+        const clash = [...quality.profiles.values()].some((p) => p.name === profile.name);
+        if (clash) return reject("Name", "Must be unique");
+        const id = nextId(quality.profiles);
+        quality.profiles.set(id, { ...profile, id });
+        json({ ...profile, id }, 201);
+      });
+      return true;
+    }
+  }
+
+  const profileById = /^\/api\/v3\/qualityprofile\/(\d+)$/.exec(path);
+  if (profileById) {
+    const id = Number(profileById[1]);
+    if (method === "GET") {
+      const profile = quality.profiles.get(id);
+      if (profile) json(profile);
+      else json({}, 404);
+      return true;
+    }
+    if (method === "PUT") {
+      readBody((body) => {
+        if (!quality.profiles.has(id)) return json({}, 404);
+        // Wholesale replacement, as the real thing does.
+        quality.profiles.set(id, { ...(body as Record<string, unknown>), id });
+        json({ ...(body as Record<string, unknown>), id }, 202);
+      });
+      return true;
+    }
+    if (method === "DELETE") {
+      journal.settingsWrites.push({ method, path, body: null });
+      quality.profiles.delete(id);
+      json({});
+      return true;
+    }
+  }
+
+  if (path === "/api/v3/qualitydefinition" && method === "GET") {
+    json(quality.definitions);
+    return true;
+  }
+
+  if (path === "/api/v3/qualitydefinition/update" && method === "PUT") {
+    readBody((body) => {
+      for (const row of body as Array<Record<string, unknown>>) {
+        const index = quality.definitions.findIndex((d) => d.id === row.id);
+        if (index >= 0) quality.definitions[index] = { ...row };
+      }
+      json(quality.definitions, 202);
+    });
+    return true;
+  }
+
+  if (path.startsWith("/api/v3/customformat") && !fixtures.supportsCustomFormats) {
+    // Sonarr v3 has no such resource.
+    json({ message: "NotFound" }, 404);
+    return true;
+  }
+
+  if (path === "/api/v3/customformat/schema" && method === "GET") {
+    json(structuredClone(fixtures.customFormatSchema));
+    return true;
+  }
+
+  if (path === "/api/v3/customformat") {
+    if (method === "GET") {
+      json([...quality.customFormats.values()]);
+      return true;
+    }
+    if (method === "POST") {
+      readBody((body) => {
+        const format = body as Record<string, unknown>;
+        const clash = [...quality.customFormats.values()].some((f) => f.name === format.name);
+        if (clash) return reject("Name", "Must be unique");
+        const supported = new Set(fixtures.customFormatSchema.map((s) => s.implementation));
+        const specs = (format.specifications as Array<Record<string, unknown>> | undefined) ?? [];
+        const unknown = specs.find((s) => !supported.has(s.implementation));
+        if (unknown) return reject("Specifications", `Unknown implementation ${String(unknown.implementation)}`);
+        const id = nextId(quality.customFormats);
+        quality.customFormats.set(id, { ...format, id });
+        json({ ...format, id }, 201);
+      });
+      return true;
+    }
+  }
+
+  const formatById = /^\/api\/v3\/customformat\/(\d+)$/.exec(path);
+  if (formatById) {
+    const id = Number(formatById[1]);
+    if (method === "PUT") {
+      readBody((body) => {
+        if (!quality.customFormats.has(id)) return json({}, 404);
+        quality.customFormats.set(id, { ...(body as Record<string, unknown>), id });
+        json({ ...(body as Record<string, unknown>), id }, 202);
+      });
+      return true;
+    }
+    if (method === "DELETE") {
+      journal.settingsWrites.push({ method, path, body: null });
+      quality.customFormats.delete(id);
+      json({});
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function closeServer(server: Server): Promise<void> {

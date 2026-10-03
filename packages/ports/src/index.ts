@@ -105,7 +105,14 @@ export const PostCollectionSyncToken = token<PostCollectionSync>("collections.po
  * and can therefore misconfigure; the rest are either derived (`media_items`,
  * `collections`) or already have a ledger of their own.
  */
-export type ChangeEntity = "rule" | "config" | "job" | "overlay_preset" | "preroll" | "schedule";
+export type ChangeEntity =
+  | "rule"
+  | "config"
+  | "job"
+  | "overlay_preset"
+  | "preroll"
+  | "schedule"
+  | "arr_quality_profile";
 
 /**
  * `import` and `restore` are separate from `update` because they answer a

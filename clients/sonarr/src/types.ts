@@ -200,15 +200,70 @@ export interface SonarrBlocklistItem {
   series?: SonarrSeries;
 }
 
+/** One quality as the profile and definition endpoints spell it. */
+export interface SonarrQuality {
+  id: number;
+  name: string;
+  source?: string;
+  resolution?: number;
+}
+
+/**
+ * One row of a profile's `items`: either a single quality or a named group of
+ * them. Groups carry an `id` (1000 and up) and no `quality`; singles carry a
+ * `quality` and an empty `items`. Order is lowest preference first.
+ */
+export interface SonarrQualityProfileItem {
+  id?: number;
+  name?: string;
+  quality?: SonarrQuality;
+  items: SonarrQualityProfileItem[];
+  allowed: boolean;
+}
+
 export interface SonarrQualityProfile {
   id: number;
   name: string;
   upgradeAllowed?: boolean;
+  /** A quality id, or a group id when the cutoff is a group. */
   cutoff?: number;
   minFormatScore?: number;
   cutoffFormatScore?: number;
-  items?: unknown[];
+  minUpgradeFormatScore?: number;
+  items?: SonarrQualityProfileItem[];
   formatItems?: Array<{ format: number; name?: string; score: number }>;
+  /** Anything else the record carries. Kept, because a PUT replaces wholesale. */
+  [extra: string]: unknown;
+}
+
+/** Size bounds per quality, in MB per minute of runtime. A `null` max is unlimited. */
+export interface SonarrQualityDefinition {
+  id: number;
+  quality: SonarrQuality;
+  title: string;
+  weight?: number;
+  minSize: number | null;
+  maxSize: number | null;
+  preferredSize: number | null;
+}
+
+/** v4+ only — Sonarr v3 has release profiles instead. */
+export interface SonarrCustomFormatSpecification {
+  id?: number;
+  name: string;
+  /** ReleaseTitleSpecification, SourceSpecification, ReleaseTypeSpecification, SizeSpecification, … */
+  implementation: string;
+  implementationName?: string;
+  negate: boolean;
+  required: boolean;
+  fields: Array<{ name: string; value?: unknown; [extra: string]: unknown }>;
+}
+
+export interface SonarrCustomFormat {
+  id?: number;
+  name: string;
+  includeCustomFormatWhenRenaming?: boolean;
+  specifications: SonarrCustomFormatSpecification[];
 }
 
 export interface SonarrRootFolder {

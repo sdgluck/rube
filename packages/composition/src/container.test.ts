@@ -56,6 +56,7 @@ describe("the container", () => {
       "users",
       "arrLibrary",
       "arrActivity",
+      "arrSettings",
     ]) {
       assert.ok(names.includes(expected), `no registration for "${expected}"`);
     }

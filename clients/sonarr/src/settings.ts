@@ -9,7 +9,14 @@
  */
 
 import type { ServarrHttp, ServarrProvider } from "@tinkerbell/servarr-http";
-import type { SonarrQualityProfile, SonarrRootFolder, SonarrTag } from "./types.ts";
+import type {
+  SonarrCustomFormat,
+  SonarrCustomFormatSpecification,
+  SonarrQualityDefinition,
+  SonarrQualityProfile,
+  SonarrRootFolder,
+  SonarrTag,
+} from "./types.ts";
 
 /** The four groupings the UI and the snapshot format are organised by. */
 export const SONARR_SETTINGS_AREAS = ["profiles", "media", "indexers", "general"] as const;
@@ -52,13 +59,16 @@ export function createSettings(http: ServarrHttp) {
       http.put<SonarrQualityProfile>(`/qualityprofile/${id}`, profile),
     deleteQualityProfile: (id: number) => http.del(`/qualityprofile/${id}`),
 
-    qualityDefinitions: () => http.get<unknown[]>("/qualitydefinition"),
-    updateQualityDefinitions: (definitions: unknown[]) => http.put("/qualitydefinition/update", definitions),
+    qualityDefinitions: () => http.get<SonarrQualityDefinition[]>("/qualitydefinition"),
+    updateQualityDefinitions: (definitions: SonarrQualityDefinition[]) =>
+      http.put<SonarrQualityDefinition[]>("/qualitydefinition/update", definitions),
 
-    customFormats: () => http.get<unknown[]>("/customformat"),
-    customFormatSchema: () => http.get<unknown[]>("/customformat/schema"),
-    createCustomFormat: (format: unknown) => http.post("/customformat", format),
-    updateCustomFormat: (id: number, format: unknown) => http.put(`/customformat/${id}`, format),
+    customFormats: () => http.get<SonarrCustomFormat[]>("/customformat"),
+    /** One template per specification implementation this instance supports. */
+    customFormatSchema: () => http.get<SonarrCustomFormatSpecification[]>("/customformat/schema"),
+    createCustomFormat: (format: SonarrCustomFormat) => http.post<SonarrCustomFormat>("/customformat", format),
+    updateCustomFormat: (id: number, format: SonarrCustomFormat) =>
+      http.put<SonarrCustomFormat>(`/customformat/${id}`, format),
     deleteCustomFormat: (id: number) => http.del(`/customformat/${id}`),
 
     delayProfiles: () => http.get<unknown[]>("/delayprofile"),

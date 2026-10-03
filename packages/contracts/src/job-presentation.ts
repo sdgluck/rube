@@ -52,6 +52,13 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     settingsHref: "/settings/arrs",
     settingsLabel: "Media Managers",
   },
+  "check-arr-quality": {
+    kind: "system",
+    description:
+      "Compares the quality profiles Tinkerbell manages with their presets, and reports any changed outside Tinkerbell. It never changes them.",
+    settingsHref: "/arrs",
+    settingsLabel: "Instances",
+  },
   generate: {
     kind: "system",
     description: "Builds and updates rule-based collections in Plex from the rules you've defined.",

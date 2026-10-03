@@ -519,6 +519,15 @@ export function createArrLibrarySync(deps: ArrLibrarySyncDeps) {
 
   return {
     syncInstance,
+    /**
+     * Re-mirror profiles, root folders and tags for one instance, right now.
+     *
+     * Exposed for writers of the *Arr's own settings. A profile created by a
+     * preset apply should appear in the rule wizard's picker straight away,
+     * not after tonight's `sync-arr`.
+     */
+    refreshConfigMirror: (instance: ArrInstance, client: Parameters<typeof syncConfigTables>[1]) =>
+      syncConfigTables(instance, client, Date.now()),
     linkToPlex,
     recordState,
     chunk,

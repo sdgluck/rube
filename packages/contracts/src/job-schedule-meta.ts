@@ -66,6 +66,8 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "sync-media": { heavy: true, essential: "warning", estimateMs: 20 * MINUTE_MS },
   "sync-collections": { heavy: true, essential: "warning", estimateMs: 5 * MINUTE_MS },
   "sync-arr": { requires: "arr", noopWithoutService: true, estimateMs: 5 * MINUTE_MS },
+  // A few reads per instance with a managed profile, and nothing at all without one.
+  "check-arr-quality": { requires: "arr", noopWithoutService: true, estimateMs: MINUTE_MS },
   generate: { heavy: true, essential: "warning", estimateMs: 30 * MINUTE_MS },
   cleanup: { heavy: true, estimateMs: 15 * MINUTE_MS },
   metadata: { heavy: true, estimateMs: 15 * MINUTE_MS },

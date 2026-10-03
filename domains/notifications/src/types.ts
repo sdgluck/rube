@@ -73,6 +73,9 @@ export const EVENT_TYPES = [
   // The failure is separate because it needs a different destination. A
   // request that didn't land is the one thing here somebody has to act on.
   { id: "watchlist.failed", label: "Watchlist Request Failed" },
+  // Fires on the transition only. A profile that drifted last week and is
+  // still drifted is one notification, not seven.
+  { id: "arr.quality_drift", label: "Quality Profile Drifted" },
   // Not an emitted event, unlike everything above it: nothing ever calls
   // `emitEvent("digest.sent")`. It appears here because per-service event
   // selection is already the UI for "route this to that channel", and a

@@ -18,6 +18,7 @@ const ENTITY_LABELS: Record<Entity, string> = {
   preroll: "Prerolls",
   // A whole-page save from Jobs → Schedule: several jobs and the window at once.
   schedule: "Schedule changes",
+  arr_quality_profile: "Quality profiles",
 };
 
 /** Who did it, in words rather than the raw source token. */

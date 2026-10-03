@@ -147,15 +147,70 @@ export interface RadarrRelease {
   releaseWeight?: number;
 }
 
+/** One quality as the profile and definition endpoints spell it. */
+export interface RadarrQuality {
+  id: number;
+  name: string;
+  source?: string;
+  resolution?: number;
+  modifier?: string;
+}
+
+/**
+ * One row of a profile's `items`: either a single quality or a named group of
+ * them. Groups carry an `id` (1000 and up) and no `quality`; singles carry a
+ * `quality` and an empty `items`. Order is lowest preference first.
+ */
+export interface RadarrQualityProfileItem {
+  id?: number;
+  name?: string;
+  quality?: RadarrQuality;
+  items: RadarrQualityProfileItem[];
+  allowed: boolean;
+}
+
 export interface RadarrQualityProfile {
   id: number;
   name: string;
   upgradeAllowed?: boolean;
+  /** A quality id, or a group id when the cutoff is a group. */
   cutoff?: number;
   minFormatScore?: number;
   cutoffFormatScore?: number;
-  items?: unknown[];
+  minUpgradeFormatScore?: number;
+  items?: RadarrQualityProfileItem[];
   formatItems?: Array<{ format: number; name?: string; score: number }>;
+  /** Anything else the record carries (`language`, …). Kept, because a PUT replaces wholesale. */
+  [extra: string]: unknown;
+}
+
+/** Size bounds per quality, in MB per minute of runtime. A `null` max is unlimited. */
+export interface RadarrQualityDefinition {
+  id: number;
+  quality: RadarrQuality;
+  title: string;
+  weight?: number;
+  minSize: number | null;
+  maxSize: number | null;
+  preferredSize: number | null;
+}
+
+export interface RadarrCustomFormatSpecification {
+  id?: number;
+  name: string;
+  /** ReleaseTitleSpecification, SourceSpecification, QualityModifierSpecification, SizeSpecification, … */
+  implementation: string;
+  implementationName?: string;
+  negate: boolean;
+  required: boolean;
+  fields: Array<{ name: string; value?: unknown; [extra: string]: unknown }>;
+}
+
+export interface RadarrCustomFormat {
+  id?: number;
+  name: string;
+  includeCustomFormatWhenRenaming?: boolean;
+  specifications: RadarrCustomFormatSpecification[];
 }
 
 export interface RadarrRootFolder {

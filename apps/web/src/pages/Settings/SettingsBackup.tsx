@@ -20,6 +20,7 @@ const PART_LABELS: Record<BundlePart, string> = {
   rules: "Rules",
   jobs: "Job schedules",
   overlayPresets: "Overlay presets",
+  arrQualityProfiles: "Quality profile presets",
   overlayConfigs: "Overlay layouts",
   config: "Settings",
 };

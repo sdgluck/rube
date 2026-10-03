@@ -11,12 +11,13 @@
  *    the whole reason this is a format rather than a `SELECT *`.
  */
 import { eq } from "drizzle-orm";
-import { jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
+import { arrManagedProfiles, jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
 import {
   BUNDLE_FORMAT_VERSION,
   translateSmartFilterTags,
   type Bundle,
   type BundlePart,
+  type ExportedManagedProfile,
   type ExportedRule,
   type TagLookup,
   type TagTranslationWarning,
@@ -218,6 +219,20 @@ export function createExport(deps: ExportDeps) {
           order: row.order,
           style: row.style ? (JSON.parse(row.style) as unknown) : null,
           rule: row.rule ? (JSON.parse(row.rule) as unknown) : null,
+        }));
+    }
+
+    if (want("arrQualityProfiles")) {
+      // The decision travels, the *Arr's ids do not. See the schema comment.
+      bundle.arrQualityProfiles = db
+        .select()
+        .from(arrManagedProfiles)
+        .all()
+        .map((row) => ({
+          instanceId: row.instanceId,
+          profileName: row.profileName,
+          presetId: row.presetId,
+          limits: row.limits as ExportedManagedProfile["limits"],
         }));
     }
 

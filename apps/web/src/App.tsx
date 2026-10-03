@@ -65,6 +65,7 @@ const ArrInstances = lazy(() => import("#pages/Arr/ArrInstances"));
 const ArrHealth = lazy(() => import("#pages/Arr/ArrHealth"));
 const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
 const ArrItemDetail = lazy(() => import("#pages/Arr/ArrItemDetail"));
+const ArrInstanceDetail = lazy(() => import("#pages/Arr/ArrInstanceDetail"));
 const Discover = lazy(() => import("#pages/Discover/Discover"));
 const Jobs = lazy(() => import("#pages/Jobs"));
 const JobsLayout = lazy(() => import("#pages/Jobs/JobsLayout"));
@@ -302,6 +303,14 @@ export default function App() {
                     element={
                       <LazyPage>
                         <ArrHealth />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/arrs/:instanceId"
+                    element={
+                      <LazyPage>
+                        <ArrInstanceDetail />
                       </LazyPage>
                     }
                   />

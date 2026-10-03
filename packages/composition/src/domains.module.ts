@@ -12,6 +12,7 @@ import { DbToken } from "@tinkerbell/db";
 import { ArrInstancesToken, ClientsToken, ConfigStoreToken, SharingToken } from "@tinkerbell/core";
 import {
   ChangeRecorderToken,
+  ClockToken,
   CollectionsReaderToken,
   JobConfigWriterToken,
   EventBusToken,
@@ -24,6 +25,7 @@ import { BandwidthToken, createBandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, createChanges } from "@tinkerbell/domain.changes";
 import { ArrActivityToken, createArrActivity } from "@tinkerbell/domain.arr-activity";
 import { ArrLibraryToken, createArrLibrary } from "@tinkerbell/domain.arr-library";
+import { ArrSettingsToken, createArrSettings } from "@tinkerbell/domain.arr-settings";
 import { ConfigHistoryToken, createConfigHistory } from "@tinkerbell/domain.config-history";
 import { CleanupToken, createCleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, createCollections } from "@tinkerbell/domain.collections";
@@ -99,6 +101,16 @@ export function registerDomains(r: Registry): void {
   );
   r.register(ArrLibraryToken, (c) => createArrLibrary({ db: c.resolve(DbToken) }));
   r.register(ArrActivityToken, (c) => createArrActivity({ db: c.resolve(DbToken) }));
+  r.register(ArrSettingsToken, (c) =>
+    createArrSettings({
+      db: c.resolve(DbToken),
+      arr: c.resolve(ArrInstancesToken),
+      refreshConfigMirror: (instance, client) => c.resolve(ArrLibraryToken).refreshConfigMirror(instance, client),
+      recordChange: c.resolve(ChangeRecorderToken),
+      emitEvent: c.resolve(EventBusToken),
+      now: c.resolve(ClockToken),
+    }),
+  );
   r.register(ChangesToken, (c) => createChanges({ db: c.resolve(DbToken) }));
   r.register(ConfigHistoryToken, (c) => createConfigHistory({ db: c.resolve(DbToken) }));
   r.register(CleanupToken, (c) => createCleanup({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }));
@@ -170,7 +182,13 @@ export function registerDomains(r: Registry): void {
         addOverlayConfig: (input) => c.resolve(OverlaysToken).addOverlayConfig(input),
         updateOverlayConfig: (id, patch) => c.resolve(OverlaysToken).updateOverlayConfig(id, patch),
         setConfig: (key, value) => c.resolve(ConfigStoreToken).setConfig(key, value),
+        importManagedProfiles: (rows, opts) => c.resolve(ArrSettingsToken).quality.importManaged(rows, opts),
       },
+      arrInstanceIds: () =>
+        c
+          .resolve(ArrInstancesToken)
+          .arrInstances()
+          .map((i) => i.id),
     }),
   );
   r.register(PrerollsToken, (c) =>

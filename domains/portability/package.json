@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@tinkerbell/composition": "workspace:*",
+    "@tinkerbell/domain.arr-settings": "workspace:*",
     "@tinkerbell/domain.config-history": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"

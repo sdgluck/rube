@@ -2076,3 +2076,77 @@ export const arrSyncState = sqliteTable("arr_sync_state", {
   lastError: text("last_error").notNull().default(""),
   lastErrorAt: integer("last_error_at"),
 });
+
+/**
+ * Quality profiles Tinkerbell applied a preset to, and therefore owns.
+ *
+ * Ownership is the whole point of the table. Without it, a drift check has no
+ * way to tell "the user edited the profile we wrote" from "this was never ours",
+ * and the loosest-wins rule for the shared quality definitions has nothing to
+ * take the maximum over.
+ *
+ * `arr_profile_id` is null until the first apply. That is the state a portable
+ * import restores into: the bundle carries the preset and the limits but never
+ * the \*Arr's ids, which mean nothing on another install. The drift job reports
+ * such a row as `missing`, and one click applies it.
+ *
+ * `preset_version` is the catalogue version at the last apply. A lower number
+ * than the catalogue's is "update available", which is distinct from drift:
+ * nothing changed in the \*Arr, Tinkerbell's opinion did.
+ */
+export const arrManagedProfiles = sqliteTable(
+  "arr_managed_profiles",
+  {
+    id: text("id").primaryKey(),
+    instanceId: text("instance_id").notNull(),
+    service: text("service").notNull(),
+    arrProfileId: integer("arr_profile_id"),
+    profileName: text("profile_name").notNull(),
+    presetId: text("preset_id").notNull(),
+    presetVersion: integer("preset_version").notNull(),
+    /** `SizeLimit` from contracts. */
+    limits: text("limits", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    appliedAt: integer("applied_at"),
+    appliedBy: text("applied_by"),
+    /** in_sync | drifted | missing | update_available | unknown */
+    status: text("status").notNull().default("unknown"),
+    /** The field changes a re-apply would make, from the last check. */
+    drift: text("drift", { mode: "json" }).$type<unknown[]>(),
+    checkedAt: integer("checked_at"),
+    /** Empty when the last check reached the instance. */
+    lastError: text("last_error").notNull().default(""),
+  },
+  (table) => [
+    uniqueIndex("idx_arr_managed_profiles_profile").on(table.instanceId, table.arrProfileId),
+    uniqueIndex("idx_arr_managed_profiles_name").on(table.instanceId, table.profileName),
+  ],
+);
+
+/**
+ * The \*Arr's own settings, as they were before Tinkerbell wrote to them.
+ *
+ * Taken immediately before every apply, and restorable. `payload` is a
+ * `readArea` result (endpoint path → document). `touched` names the exact
+ * records that apply went on to write, so a restore puts back those and
+ * nothing else. Restoring the whole area would also revert every unrelated
+ * edit made in the \*Arr since, which is a worse surprise than the one being
+ * undone.
+ *
+ * 180 days, and never fewer than the newest 20 per instance, like `change_log`.
+ */
+export const arrSettingsSnapshots = sqliteTable(
+  "arr_settings_snapshots",
+  {
+    id: text("id").primaryKey(),
+    instanceId: text("instance_id").notNull(),
+    area: text("area").notNull(),
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    touched: text("touched", { mode: "json" })
+      .$type<{ profiles: number[]; customFormats: number[]; definitions: number[] }>()
+      .notNull(),
+    reason: text("reason").notNull(),
+    createdAt: integer("created_at").notNull(),
+    createdBy: text("created_by"),
+  },
+  (table) => [index("idx_arr_settings_snapshots_instance").on(table.instanceId, table.createdAt)],
+);
