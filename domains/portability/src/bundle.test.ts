@@ -9,12 +9,13 @@ import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
 
 import { createTestContainer, type TestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken, REDACTED_SECRET } from "@tinkerbell/core";
+import { ArrInstancesToken, ConfigStoreToken, REDACTED_SECRET } from "@tinkerbell/core";
+import { ArrSettingsToken } from "@tinkerbell/domain.arr-settings";
 import { ConfigHistoryToken } from "@tinkerbell/domain.config-history";
 import { OverlaysToken } from "@tinkerbell/domain.overlays";
 import { RulesToken } from "@tinkerbell/domain.rules";
 import { SectionsToken } from "@tinkerbell/domain.sections";
-import { jobs, plexSections, DbToken } from "@tinkerbell/db";
+import { arrManagedProfiles, jobs, plexSections, DbToken } from "@tinkerbell/db";
 import type { Bundle } from "@tinkerbell/contracts";
 
 import { createPortability, PortabilityToken } from "./index.ts";
@@ -62,7 +63,13 @@ function containerWithTags(updateJob: JobWriter = () => {}): TestContainer {
             addOverlayConfig: (input) => overlays.addOverlayConfig(input),
             updateOverlayConfig: (id, patch) => overlays.updateOverlayConfig(id, patch),
             setConfig: (key, value) => ctx.resolve(ConfigStoreToken).setConfig(key, value),
+            importManagedProfiles: (rows, opts) => ctx.resolve(ArrSettingsToken).quality.importManaged(rows, opts),
           },
+          arrInstanceIds: () =>
+            ctx
+              .resolve(ArrInstancesToken)
+              .arrInstances()
+              .map((i) => i.id),
         });
       });
     },
@@ -295,6 +302,74 @@ describe("conflicts", () => {
       const names = getRules().map((r) => r.name);
       assert.ok(names.includes("Mine"));
       assert.ok(names.includes("Mine (imported)"));
+    } finally {
+      await c.dispose();
+    }
+  });
+});
+
+describe("managed quality profiles", () => {
+  const LIMIT = { maxGb: 12, basisMinutes: 120, ceilingGb: 15 };
+
+  function withRadarr(c: TestContainer): TestContainer {
+    const store = c.resolve(ConfigStoreToken);
+    store.setConfig("global_radarr_url", "http://radarr.invalid:7878");
+    store.setConfig("global_radarr_api_key", "k");
+    return c;
+  }
+
+  test("travel as a decision, and land as missing with no *Arr id", async () => {
+    const source = withRadarr(containerWithTags());
+    const target = withRadarr(containerWithTags());
+    try {
+      source
+        .resolve(DbToken)
+        .insert(arrManagedProfiles)
+        .values({
+          id: "m1",
+          instanceId: "radarr",
+          service: "radarr",
+          arrProfileId: 9,
+          profileName: "HD",
+          presetId: "radarr-hd-bluray-web",
+          presetVersion: 1,
+          limits: LIMIT,
+          status: "in_sync",
+        })
+        .run();
+      const { bundle } = await source.resolve(PortabilityToken).exportBundle({
+        parts: ["arrQualityProfiles"],
+        tinkerbellVersion: "test",
+      });
+      assert.deepEqual(bundle.arrQualityProfiles, [
+        { instanceId: "radarr", profileName: "HD", presetId: "radarr-hd-bluray-web", limits: LIMIT },
+      ]);
+
+      const summary = await target.resolve(PortabilityToken).applyImport(bundle, {});
+      assert.equal(summary.created, 1);
+      const [row] = target.resolve(DbToken).select().from(arrManagedProfiles).all();
+      assert.equal(row.arrProfileId, null);
+      assert.equal(row.status, "missing");
+      assert.deepEqual(row.limits, LIMIT);
+    } finally {
+      await source.dispose();
+      await target.dispose();
+    }
+  });
+
+  test("an instance that isn't here blocks the item", async () => {
+    const c = containerWithTags();
+    try {
+      const bundle = {
+        formatVersion: 1,
+        exportedAt: 0,
+        tinkerbellVersion: "test",
+        arrQualityProfiles: [
+          { instanceId: "radarr-4k", profileName: "UHD", presetId: "radarr-uhd-bluray-web", limits: LIMIT },
+        ],
+      };
+      const preview = await c.resolve(PortabilityToken).previewImport(bundle);
+      assert.match(preview.items[0].blocked ?? "", /radarr-4k/);
     } finally {
       await c.dispose();
     }

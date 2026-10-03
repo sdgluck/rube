@@ -16,6 +16,7 @@ const ENTITY_LABELS: Record<Entity, string> = {
   job: "Job schedules",
   overlay_preset: "Overlay presets",
   preroll: "Prerolls",
+  arr_quality_profile: "Quality profiles",
 };
 
 /** Who did it, in words rather than the raw source token. */

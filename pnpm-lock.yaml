@@ -512,6 +512,52 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/arr-settings:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.config-history':
+        specifier: workspace:*
+        version: link:../config-history
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      '@tinkerbell/radarr':
+        specifier: workspace:*
+        version: link:../../clients/radarr
+      '@tinkerbell/sonarr':
+        specifier: workspace:*
+        version: link:../../clients/sonarr
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@tinkerbell/domain.arr-library':
+        specifier: workspace:*
+        version: link:../arr-library
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/backups:
     dependencies:
       '@tinkerbell/container':
@@ -1112,6 +1158,9 @@ importers:
       '@tinkerbell/composition':
         specifier: workspace:*
         version: link:../../packages/composition
+      '@tinkerbell/domain.arr-settings':
+        specifier: workspace:*
+        version: link:../arr-settings
       '@tinkerbell/domain.config-history':
         specifier: workspace:*
         version: link:../config-history
@@ -1484,6 +1533,9 @@ importers:
       '@tinkerbell/domain.arr-library':
         specifier: workspace:*
         version: link:../../domains/arr-library
+      '@tinkerbell/domain.arr-settings':
+        specifier: workspace:*
+        version: link:../../domains/arr-settings
       '@tinkerbell/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
@@ -1612,6 +1664,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../test-support
       '@types/node':
         specifier: ^25.2.3
         version: 25.9.1
@@ -2011,6 +2066,9 @@ importers:
       '@tinkerbell/domain.arr-library':
         specifier: workspace:*
         version: link:../../domains/arr-library
+      '@tinkerbell/domain.arr-settings':
+        specifier: workspace:*
+        version: link:../../domains/arr-settings
       '@tinkerbell/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups

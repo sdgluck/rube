@@ -109,6 +109,7 @@ export function sampleMessageFor(type: string): RichMessage {
     "registry.update_available": "3 registry rules have updates available.",
     "watchlist.requested": 'Requested "Sinners" from radarr.',
     "watchlist.failed": 'Couldn\'t request "Sinners" — sonarr returned 401 Unauthorized.',
+    "arr.quality_drift": "“HD Bluray + WEB” on Radarr was changed outside Tinkerbell (3 differences).",
     "digest.sent": "Your weekly digest — 12 added, 3 leaving soon.",
   };
   return plainMessage(label, `${samples[type] ?? "Test notification from Tinkerbell."} (test)`);

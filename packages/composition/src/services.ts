@@ -41,6 +41,7 @@ import { BandwidthToken, type Bandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, type Changes } from "@tinkerbell/domain.changes";
 import { ArrActivityToken, type ArrActivity } from "@tinkerbell/domain.arr-activity";
 import { ArrLibraryToken, type ArrLibrary } from "@tinkerbell/domain.arr-library";
+import { ArrSettingsToken, type ArrSettings } from "@tinkerbell/domain.arr-settings";
 import { ConfigHistoryToken, type ConfigHistory } from "@tinkerbell/domain.config-history";
 import { CleanupToken, type Cleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, type Collections } from "@tinkerbell/domain.collections";
@@ -95,6 +96,7 @@ export interface Services {
   changes: Changes;
   arrLibrary: ArrLibrary;
   arrActivity: ArrActivity;
+  arrSettings: ArrSettings;
   configHistory: ConfigHistory;
   cleanup: Cleanup;
   collections: Collections;
@@ -145,6 +147,7 @@ export function registerServices(r: Registry): void {
     changes: c.resolve(ChangesToken),
     arrLibrary: c.resolve(ArrLibraryToken),
     arrActivity: c.resolve(ArrActivityToken),
+    arrSettings: c.resolve(ArrSettingsToken),
     configHistory: c.resolve(ConfigHistoryToken),
     cleanup: c.resolve(CleanupToken),
     collections: c.resolve(CollectionsToken),

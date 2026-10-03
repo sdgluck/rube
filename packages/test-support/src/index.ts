@@ -14,6 +14,7 @@
  * Nothing here is imported by production code, and the package is a
  * `devDependency` everywhere it is used, so it does not reach the image.
  */
+export * from "./arr-fixtures.ts";
 export * from "./mock-arr-server.ts";
 export * from "./mock-list-server.ts";
 export * from "./mock-plex-server.ts";

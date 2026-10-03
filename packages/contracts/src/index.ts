@@ -97,6 +97,7 @@ export type {
   BundlePart,
   ExportedJob,
   ExportedOverlayConfig,
+  ExportedManagedProfile,
   ExportedPreset,
   ExportedRule,
   ImportResolution,
@@ -221,6 +222,8 @@ export {
   type MinimumAvailability,
   type SeriesMonitorMode,
 } from "./arr.ts";
+
+export * from "./arr-quality/index.ts";
 
 export { TMDB_IMAGE_BASE, tmdbPosterUrl, serviceForMediaType, type TmdbPosterSize } from "./discover.ts";
 export {

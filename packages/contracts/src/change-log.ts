@@ -19,7 +19,14 @@
  * can therefore misconfigure; everything else is either derived from Plex or
  * already has a ledger of its own.
  */
-export const CHANGE_LOG_ENTITIES = ["rule", "config", "job", "overlay_preset", "preroll"] as const;
+export const CHANGE_LOG_ENTITIES = [
+  "rule",
+  "config",
+  "job",
+  "overlay_preset",
+  "preroll",
+  "arr_quality_profile",
+] as const;
 
 /**
  * `import` and `restore` are separate from `update` because they answer a

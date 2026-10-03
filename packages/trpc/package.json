@@ -23,6 +23,7 @@
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.arr-activity": "workspace:*",
     "@tinkerbell/domain.arr-library": "workspace:*",
+    "@tinkerbell/domain.arr-settings": "workspace:*",
     "@tinkerbell/domain.backups": "workspace:*",
     "@tinkerbell/domain.bandwidth": "workspace:*",
     "@tinkerbell/domain.changes": "workspace:*",

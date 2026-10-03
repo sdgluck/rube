@@ -20,6 +20,7 @@
  *    and matches nothing, which is the worst possible failure mode: silent.
  */
 import { z } from "zod";
+import { sizeLimitSchema } from "./arr-quality/limits.ts";
 
 /**
  * Bumped only for a change an older reader cannot cope with.
@@ -84,6 +85,21 @@ const exportedOverlayConfigSchema = z.object({
   rule: z.unknown().nullable().optional(),
 });
 
+/**
+ * A quality profile Tinkerbell manages, as a decision rather than a record.
+ *
+ * The *Arr's own profile and format ids never travel: they mean nothing on
+ * another install. What travels is "this instance should have a profile
+ * called X built from preset Y at these limits", which imports as `missing`
+ * and is applied, with a preview, from the instance page.
+ */
+const exportedManagedProfileSchema = z.object({
+  instanceId: z.string(),
+  profileName: z.string(),
+  presetId: z.string(),
+  limits: sizeLimitSchema,
+});
+
 export const bundleSchema = z.object({
   formatVersion: z.number().int().positive(),
   exportedAt: z.number().int(),
@@ -100,6 +116,7 @@ export const bundleSchema = z.object({
   jobs: z.array(exportedJobSchema).optional(),
   overlayPresets: z.array(exportedPresetSchema).optional(),
   overlayConfigs: z.array(exportedOverlayConfigSchema).optional(),
+  arrQualityProfiles: z.array(exportedManagedProfileSchema).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -108,9 +125,17 @@ export type ExportedRule = z.infer<typeof exportedRuleSchema>;
 export type ExportedJob = z.infer<typeof exportedJobSchema>;
 export type ExportedPreset = z.infer<typeof exportedPresetSchema>;
 export type ExportedOverlayConfig = z.infer<typeof exportedOverlayConfigSchema>;
+export type ExportedManagedProfile = z.infer<typeof exportedManagedProfileSchema>;
 
 /** What an export may contain. Every part is opt-out in the UI. */
-export const BUNDLE_PARTS = ["rules", "jobs", "overlayPresets", "overlayConfigs", "config"] as const;
+export const BUNDLE_PARTS = [
+  "rules",
+  "jobs",
+  "overlayPresets",
+  "overlayConfigs",
+  "arrQualityProfiles",
+  "config",
+] as const;
 export type BundlePart = (typeof BUNDLE_PARTS)[number];
 
 /**
