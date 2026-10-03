@@ -62,8 +62,13 @@ describe("the stress-test worker entrypoint", () => {
     try {
       child.send({ id, config: { mode: "transcode", maxSessions: 1 } });
 
+      // A deadline, not a fixed number of polls. The child loads the whole jobs
+      // graph through strip-types before it registers its listener: ~1.5s on a
+      // dev machine, but past 10s on a CI runner sharing its cores with the rest
+      // of the suite, which is where the old 100 × 100ms budget failed.
+      const deadline = Date.now() + 60_000;
       let row = testDb.db.select().from(stressTestRuns).where(eq(stressTestRuns.id, id)).get();
-      for (let i = 0; i < 100 && row?.status === "running"; i++) {
+      while (row?.status === "running" && Date.now() < deadline) {
         await delay(100);
         row = testDb.db.select().from(stressTestRuns).where(eq(stressTestRuns.id, id)).get();
       }
