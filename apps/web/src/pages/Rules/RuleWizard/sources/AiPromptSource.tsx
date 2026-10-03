@@ -20,10 +20,6 @@ export default function AiPromptSource({ form, setForm }: SourceStepProps) {
   return (
     <>
       <h3 className={styles.stepHeading}>Themes & style</h3>
-      <p className={styles.stepSub}>
-        Pick the angles the AI should explore. Past collections from this rule are automatically fed back in so it
-        doesn't repeat itself.
-      </p>
 
       <div className={styles.field}>
         <label>Themes</label>
@@ -43,7 +39,7 @@ export default function AiPromptSource({ form, setForm }: SourceStepProps) {
             );
           })}
         </div>
-        <span className={styles.hint}>Pick one or more. The AI uses these as starting angles.</span>
+        <span className={styles.hint}>Starting angles for the AI.</span>
       </div>
 
       <div className={styles.field}>

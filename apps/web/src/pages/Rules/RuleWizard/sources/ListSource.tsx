@@ -7,10 +7,6 @@ export default function ListSource({ form, setForm }: SourceStepProps) {
   return (
     <>
       <h3 className={styles.stepHeading}>List source</h3>
-      <p className={styles.stepSub}>
-        Choose where the list lives, then provide its ID. Each section the rule runs against gets one collection
-        populated with the items it already has.
-      </p>
       <div className={styles.field}>
         <label>Provider</label>
         <div className={styles.pills}>

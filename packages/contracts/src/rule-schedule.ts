@@ -33,7 +33,7 @@ export const RULE_TRIGGER_LABELS: Record<RuleTrigger, string> = {
 };
 
 /**
- * The honest small print for each trigger, shown beside its checkbox.
+ * The honest small print for each trigger, as the checkbox's tooltip.
  *
  * Every one of these rides on a job that was already asking the question, so
  * every one inherits that job's cadence and its idea of what happened. Saying
@@ -41,13 +41,25 @@ export const RULE_TRIGGER_LABELS: Record<RuleTrigger, string> = {
  * didn't fire "instantly".
  */
 export const RULE_TRIGGER_NOTES: Record<RuleTrigger, string> = {
-  "item-added":
-    "Fires shortly after the recently-added sync notices new files. A bulk import is one trigger, not one per file.",
-  "item-watched":
-    "Fires when the playback poller closes a session past the completion threshold. A part-watched film is not a trigger.",
-  "item-removed": "Fires after a media sync finds items that are no longer on the server. Nightly by default.",
-  "request-fulfilled":
-    "Fires when Overseerr reports a request as available. Needs Overseerr configured; polled on its own schedule.",
+  "item-added": "After the recently-added sync sees new files. A bulk import is one trigger.",
+  "item-watched": "When the playback poller closes a session past the completion threshold.",
+  "item-removed": "After a media sync finds items no longer on the server.",
+  "request-fulfilled": "When Overseerr reports a request as available. Needs Overseerr configured.",
+};
+
+/**
+ * How soon after the event a trigger can fire, as a badge beside it.
+ *
+ * The latency is the period of the source job's shipped schedule
+ * (`DEFAULT_JOBS` in `@tinkerbell/jobs`), which is the number someone
+ * expecting "instantly" needs. Approximate on purpose: a user can move those
+ * schedules, and the badge is a scale rather than a promise.
+ */
+export const RULE_TRIGGER_CADENCE: Record<RuleTrigger, string> = {
+  "item-added": "~every 15 min",
+  "item-watched": "~within a minute",
+  "item-removed": "nightly",
+  "request-fulfilled": "~every 15 min",
 };
 
 /**

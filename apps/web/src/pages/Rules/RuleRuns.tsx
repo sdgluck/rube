@@ -230,15 +230,7 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
           {runsQuery.isLoading ? (
             <SkeletonTable rows={5} columns={3} />
           ) : sorted.length === 0 ? (
-            <EmptyState
-              icon="list"
-              title="No runs yet"
-              description={
-                phase === "test"
-                  ? "This rule hasn't been tested yet."
-                  : "Runs appear here once this rule has run — by you or by the nightly job."
-              }
-            />
+            <EmptyState icon="list" title={phase === "test" ? "Not tested yet" : "No runs yet"} />
           ) : (
             <div className="table-scroll in-panel" data-scroll="x">
               <table className={shared.compactTable}>
@@ -455,7 +447,7 @@ function MetadataWrites({ ruleId }: { ruleId: string }) {
         <EmptyState
           icon="list"
           title="Nothing written"
-          description="This rule hasn't changed any fields yet — either it's still in preview-only mode, or every item already held the right values."
+          description="Preview-only, or every item already held these values."
         />
       ) : (
         <ul className={styles.metadataBatches}>
@@ -497,10 +489,8 @@ function MetadataWrites({ ruleId }: { ruleId: string }) {
           // night, so a revert buys time to fix the rule rather than pinning
           // the value.
           message={
-            `${confirming.writes.toLocaleString()} field${confirming.writes === 1 ? "" : "s"} will go back to the ` +
-            `values they held before this run, along with their original locked state. ` +
-            `This changes Plex now, but not the rule — the next run writes the same values again from the same ` +
-            `templates, so fix the rule if you don't want this back.`
+            `${confirming.writes.toLocaleString()} field${confirming.writes === 1 ? "" : "s"} go back to their ` +
+            `previous values. The rule is unchanged, so the next run redoes this.`
           }
           confirmLabel={revertMutation.isPending ? "Reverting…" : "Revert"}
           danger
@@ -613,9 +603,7 @@ function RunChanges({ runId, live }: { runId: string; live: boolean }) {
           icon="list"
           title="Nothing moved"
           description={
-            live
-              ? "This run is still going — changes appear as each collection is committed."
-              : "Every collection this rule owns came out the same as it went in."
+            live ? "Changes appear as each collection is committed." : "Every collection came out unchanged."
           }
         />
       ) : (
@@ -656,10 +644,8 @@ function RunChanges({ runId, live }: { runId: string; live: boolean }) {
           // Spelled out in both directions: "revert" alone doesn't say whether
           // it puts things back or takes them away, and here it does both.
           message={
-            `${totals.removed.toLocaleString()} item${totals.removed === 1 ? "" : "s"} will go back into ` +
-            `their collections and ${totals.added.toLocaleString()} will come out again. ` +
-            `This changes Plex now, but not the rule — the next scheduled run works the membership out ` +
-            `from the same sources again, so fix the rule if you don't want this back.`
+            `${totals.removed.toLocaleString()} item${totals.removed === 1 ? "" : "s"} go back in and ` +
+            `${totals.added.toLocaleString()} come out. The rule is unchanged, so the next run redoes this.`
           }
           confirmLabel={revertMutation.isPending ? "Reverting…" : "Revert"}
           danger

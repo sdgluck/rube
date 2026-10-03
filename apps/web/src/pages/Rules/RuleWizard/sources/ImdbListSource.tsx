@@ -6,7 +6,6 @@ export default function ImdbListSource({ form, setForm }: SourceStepProps) {
   return (
     <>
       <h3 className={styles.stepHeading}>IMDb list</h3>
-      <p className={styles.stepSub}>Paste a public IMDb list URL or list ID.</p>
       <div className={styles.field}>
         <label htmlFor="rule-list-id">List URL or ID</label>
         <input

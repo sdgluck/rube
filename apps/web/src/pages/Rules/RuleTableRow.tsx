@@ -13,8 +13,17 @@ import {
   Square,
   Trash2,
 } from "lucide-react";
-import { describeRuleWindow, RULE_TRIGGER_NOTES, type RuleSchedule, type RuleTrigger } from "@tinkerbell/contracts";
+import {
+  describeRuleWindow,
+  describeSchedule,
+  parseSchedule,
+  RULE_TRIGGER_CADENCE,
+  RULE_TRIGGER_NOTES,
+  type RuleSchedule,
+  type RuleTrigger,
+} from "@tinkerbell/contracts";
 import { EMPTY } from "#/format";
+import { trpc } from "#/trpc";
 import { Link, useNavigate } from "react-router-dom";
 import RowActions from "#components/RowActions";
 import ToggleSwitch from "#components/ToggleSwitch";
@@ -60,7 +69,7 @@ function ScheduleBadges({ config }: { config: unknown }) {
               : `Runs nightly and on its own schedule: ${schedule.cron}`
           }
         >
-          {schedule.cron}
+          {describeSchedule(parseSchedule(schedule.cron))}
         </span>
       )}
       {window && (
@@ -72,19 +81,31 @@ function ScheduleBadges({ config }: { config: unknown }) {
         </span>
       )}
       {(schedule.triggers ?? []).map((trigger) => (
-        <span key={trigger} className={styles.scheduleBadge} title={RULE_TRIGGER_NOTES[trigger]}>
+        <span
+          key={trigger}
+          className={styles.scheduleBadge}
+          title={`${RULE_TRIGGER_NOTES[trigger]} (${RULE_TRIGGER_CADENCE[trigger]})`}
+        >
           {TRIGGER_BADGES[trigger]}
         </span>
       ))}
-      {(schedule.afterRules?.length ?? 0) > 0 && (
-        <span
-          className={styles.scheduleBadge}
-          title="Runs after another rule finishes, when that rule runs outside the nightly batch"
-        >
-          chained
-        </span>
-      )}
+      {(schedule.afterRules?.length ?? 0) > 0 && <ChainedBadge afterRules={schedule.afterRules ?? []} />}
     </>
+  );
+}
+
+/**
+ * "chained", with the rules it waits on named in the tooltip — "after another
+ * rule" leaves the reader to open the editor to find out which. Reads the
+ * list the page has already loaded, so it costs no request.
+ */
+function ChainedBadge({ afterRules }: { afterRules: string[] }) {
+  const rulesQuery = trpc.rules.list.useQuery();
+  const names = afterRules.map((id) => rulesQuery.data?.find((r) => r.id === id)?.name ?? "a deleted rule");
+  return (
+    <span className={styles.scheduleBadge} title={`Runs after ${names.join(", ")}`}>
+      chained
+    </span>
   );
 }
 

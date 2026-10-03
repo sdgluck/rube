@@ -607,9 +607,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     setPendingConfirm({
       message:
         `Stop generating artwork for "${rule.name}"?\n\n` +
-        "Tinkerbell will upload nothing further and forget what it wrote. It can't put the previous posters back — " +
-        "Plex regenerates a collection's default mosaic from its members, so that is what these collections will " +
-        "show again after the next run.",
+        "The previous posters can't be restored; Plex's own mosaic returns after the next run.",
       onConfirm: () => {
         const config = { ...rule.config } as Record<string, unknown>;
         const presentation = { ...(config.presentation as Record<string, unknown> | undefined) };
@@ -987,23 +985,42 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       )}
 
       {allRules.length === 0 && !form ? (
-        outcome === "cleanup" ? (
-          <EmptyState
-            icon="cog"
-            title="No cleanup rules yet"
-            description="A cleanup rule finds items to remove instead of building a collection. What it matches is queued here first, and nothing is acted on until an item has matched several runs in a row."
-          />
-        ) : outcome === "metadata" ? (
-          <EmptyState
-            icon="cog"
-            title="No metadata rules yet"
-            description="A metadata rule rewrites fields on the items it matches — sort titles, content ratings, studios, genres — instead of building a collection. Every run is previewed first and can be undone from Settings → Metadata."
-          />
-        ) : (
-          <EmptyState icon="cog" title="No rules yet" description="Add a rule to start generating collections." />
-        )
+        <EmptyState
+          icon="cog"
+          title={
+            outcome === "cleanup"
+              ? "No cleanup rules yet"
+              : outcome === "metadata"
+                ? "No metadata rules yet"
+                : "No rules yet"
+          }
+          description={
+            outcome === "cleanup"
+              ? "Matches queue for several runs before anything is removed."
+              : outcome === "metadata"
+                ? "Every run is previewed first and can be undone."
+                : undefined
+          }
+          action={
+            <button type="button" className={shared.button} onClick={startCreate}>
+              New rule
+            </button>
+          }
+        />
       ) : rules.length === 0 ? (
-        <EmptyState icon="cog" title="No matching rules" description="Try a different search or filter." />
+        <EmptyState
+          icon="cog"
+          title="No matching rules"
+          action={
+            <button
+              type="button"
+              className={shared.buttonSecondary}
+              onClick={() => setParams({ q: "", type: "", enabled: "" })}
+            >
+              Clear filters
+            </button>
+          }
+        />
       ) : (
         <div className={`table-scroll ${styles.tableBleedRight}`}>
           <table className={shared.table}>

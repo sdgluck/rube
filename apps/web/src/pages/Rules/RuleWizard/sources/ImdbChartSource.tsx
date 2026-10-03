@@ -6,7 +6,6 @@ export default function ImdbChartSource({ form, setForm }: SourceStepProps) {
   return (
     <>
       <h3 className={styles.stepHeading}>Pick a chart</h3>
-      <p className={styles.stepSub}>The chart's media type also determines which sections are included.</p>
       <div className={styles.typeGrid}>
         {IMDB_CHARTS.map((c) => {
           const selected = form.chart === c.value;

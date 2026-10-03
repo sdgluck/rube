@@ -8,21 +8,28 @@ import {
   RULE_TRIGGERS,
   RULE_TRIGGER_LABELS,
   RULE_TRIGGER_NOTES,
+  RULE_TRIGGER_CADENCE,
   METADATA_SETTABLE_FIELDS,
-  METADATA_TOKENS,
   SORT_ARTICLES,
   templateError,
   templatedCollectionSummary,
   volumeLevel,
+  type RuleSchedule,
 } from "@tinkerbell/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
+import ColorField from "#components/ColorField";
 import CronPreview from "#components/CronPreview";
 import MultiSelect from "#components/MultiSelect";
+import SchedulePicker from "#components/SchedulePicker";
+import SettingsPageLink from "#components/SettingsPageLink";
+import controls from "#/styles/controls.module.css";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import Modal from "#components/Modal";
 import styles from "./RuleWizard.module.css";
+import MonthDaySelect from "./MonthDaySelect.tsx";
+import TemplateInput from "./TemplateInput.tsx";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
   arrServiceForType,
@@ -46,6 +53,7 @@ import {
   typeMinItemsOnByDefault,
   typeProducesManyCollections,
   validateStep,
+  type RuleType,
   type StepId,
 } from "./rule-types.ts";
 import { hasSourceStep, SOURCE_STEPS, type SourceStepType } from "./sources/index.ts";
@@ -102,9 +110,7 @@ function templatedSummaryHint(type: string, sampleTitle: string, sectionType: st
     collectionName: SAMPLE_GROUP_NAMES[type] ?? sampleTitle,
     sectionType,
   });
-  return example
-    ? `Deterministic, free, and written before the collection is a second old. For example: "${example}"`
-    : "This rule type picks its own titles, so there's no sentence to derive from it — the AI option is the one that can describe these.";
+  return example ? `e.g. "${example}"` : "Nothing to derive for this type; the AI option can describe it.";
 }
 
 /** The review row — the last place the outcome is stated before saving. */
@@ -181,6 +187,20 @@ const METADATA_FIELD_PLACEHOLDERS: Record<MetadataSettableField, string> = {
   originallyAvailableAt: "",
 };
 
+/** "English — the, a, an": the language and exactly what it would move. */
+const SORT_LANGUAGE_OPTIONS = (() => {
+  let names: Intl.DisplayNames | null = null;
+  try {
+    names = new Intl.DisplayNames(["en"], { type: "language" });
+  } catch {
+    // Older engines: the code alone still identifies the language.
+  }
+  return Object.entries(SORT_ARTICLES).map(([code, articles]) => ({
+    value: code,
+    label: `${names?.of(code) ?? code} — ${articles.join(", ")}`,
+  }));
+})();
+
 /** Comma-separated tags, trimmed, with the blanks dropped. */
 function splitTags(value: string): string[] {
   return value
@@ -189,11 +209,39 @@ function splitTags(value: string): string[] {
     .filter(Boolean);
 }
 
+type TypeRequirement = NonNullable<RuleType["requires"]>;
+
+/** What an unconfigured rule type is missing, and the settings page that fixes it. */
+const REQUIREMENTS: Record<TypeRequirement, { label: string; to: string }> = {
+  omdb: { label: "an OMDb API key", to: "/settings/databases" },
+  seerr: { label: "Seerr", to: "/settings/arrs" },
+  tmdb: { label: "a TMDb API key", to: "/settings/databases" },
+};
+
+function RequirementLink({ requirement }: { requirement: TypeRequirement }) {
+  const r = REQUIREMENTS[requirement];
+  return (
+    <span className={styles.typeCardWarn}>
+      Needs {r.label} · <SettingsPageLink to={r.to} />
+    </span>
+  );
+}
+
+/**
+ * What rotation does, said once for both places it can be switched on — the
+ * many-collection types, where it's required, and the rest, where it's opt-in.
+ */
+function RotationHint({ count, whenOff }: { count: number; whenOff: string }) {
+  return (
+    <span className={styles.hint}>{count > 0 ? `${count} per library, a fresh random set each run.` : whenOff}</span>
+  );
+}
+
 /** One line per mode, saying what it actually does rather than restating it. */
 const CLEANUP_MODE_HINTS: Record<CleanupMode, string> = {
-  collection_only: "Nothing is removed and nothing is written to Plex. Matches just gather on the Cleanup queue.",
-  label: "Stamps a Tinkerbell:Cleanup label on each item. Nothing is removed; useful as a dry run with a paper trail.",
-  unmonitor: "Leaves the files alone but stops Radarr/Sonarr upgrading or re-grabbing them.",
+  collection_only: "Matches gather on the Cleanup queue; nothing changes.",
+  label: "Adds a Tinkerbell:Cleanup label in Plex; nothing is removed.",
+  unmonitor: "Keeps the files; stops Radarr/Sonarr re-grabbing them.",
   delete: "Removes the files from disk. There is no undo.",
 };
 
@@ -257,8 +305,19 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   // here as well as in the runner: a rule offering to run after itself reads
   // as a feature rather than as the no-op it is.
   const rulesQuery = trpc.rules.list.useQuery(undefined, { enabled: open, staleTime: 30_000 });
+  //
+  // A chain only fires when the upstream rule runs outside the nightly batch,
+  // so one with neither a cron nor a trigger is marked: inside the batch the
+  // running order already decides which goes first.
   const chainableRules = useMemo(
-    () => (rulesQuery.data ?? []).filter((r) => r.id !== form.id).map((r) => ({ value: r.id, label: r.name })),
+    () =>
+      (rulesQuery.data ?? [])
+        .filter((r) => r.id !== form.id)
+        .map((r) => {
+          const schedule = (r.config as { schedule?: RuleSchedule } | null)?.schedule;
+          const nightlyOnly = !schedule?.cron && !schedule?.triggers?.length;
+          return { value: r.id, label: nightlyOnly ? `${r.name} (nightly — order decides)` : r.name };
+        }),
     [rulesQuery.data, form.id],
   );
   const sections = sectionsQuery.data || [];
@@ -484,17 +543,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
         : kind === "metadata"
           ? "Which items?"
           : "Choose a rule type";
-    const sub =
-      kind === "cleanup"
-        ? "Start from one of these, or pick a way to select items yourself. Nothing is removed until you have set the action and the streak on the next step."
-        : kind === "metadata"
-          ? "How this rule picks the items it will rewrite. Types that slice the library into one collection per director or decade aren't offered here — a metadata rule writes to items, not groups."
-          : "Each type drives how the Generate Collections job builds collections during a run.";
+    const configured: Record<TypeRequirement, boolean> = {
+      omdb: omdbConfigured,
+      seerr: seerrConfigured,
+      tmdb: tmdbConfigured,
+    };
 
     return (
       <>
         <h3 className={styles.stepHeading}>{heading}</h3>
-        <p className={styles.stepSub}>{sub}</p>
         {kind === "cleanup" && (
           <>
             <div className={styles.typeGrid}>
@@ -515,22 +572,29 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 );
               })}
             </div>
-            <p className={styles.stepSub}>Or select the items yourself:</p>
+            <p className={styles.subLabel}>Or select the items yourself:</p>
           </>
         )}
         <div className={styles.typeGrid}>
           {types.map((t) => {
-            const missing = t.requires === "omdb" && !omdbConfigured ? "Requires OMDB API key (Settings → AI)" : null;
-            const seerrMissing =
-              t.requires === "seerr" && !seerrConfigured ? "Requires Seerr (Settings → Media Managers)" : null;
-            const tmdbMissing =
-              t.requires === "tmdb" && !tmdbConfigured ? "Requires TMDb API key (Settings → AI)" : null;
-            const warn = missing || seerrMissing || tmdbMissing;
+            const missing = t.requires && !configured[t.requires] ? t.requires : null;
             const disabled = mode === "edit" && t.value !== form.type;
             // A preset also selects `smart_filter`, but it is the preset that
             // is chosen — showing both highlighted would claim two answers to
             // one question.
             const selected = form.type === t.value && !form.cleanupPreset;
+            // An unconfigured type is not a button: picking it would build a
+            // rule that fails every run, and a link to the fix can't live
+            // inside a <button>. A rule being edited keeps its own card.
+            if (missing && !selected) {
+              return (
+                <div key={t.value} className={`${styles.typeCard} ${styles.typeCardUnavailable}`}>
+                  <span className={styles.typeCardName}>{t.label}</span>
+                  <span className={styles.typeCardDesc}>{t.description}</span>
+                  <RequirementLink requirement={missing} />
+                </div>
+              );
+            }
             return (
               <button
                 key={t.value}
@@ -542,7 +606,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               >
                 <span className={styles.typeCardName}>{t.label}</span>
                 <span className={styles.typeCardDesc}>{t.description}</span>
-                {warn && <span className={styles.typeCardWarn}>{warn}</span>}
+                {missing && <span className={styles.typeCardWarn}>Needs {REQUIREMENTS[missing].label}</span>}
               </button>
             );
           })}
@@ -597,18 +661,19 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {severe ? `This will build around ${count} collections` : `That's around ${count} collections`}
         </p>
         <p className={styles.volumePanelBody}>
-          One per {noun} across {items} items in the selected sections.{" "}
-          {severe
-            ? `Most of them will hold one or two titles, and building that many is enough Plex writes to make the server itself start refusing them mid-run.`
-            : `The long tail of that is ${noun}s with one or two titles.`}{" "}
-          {form.minItems > 0
-            ? `Raise the minimum above ${form.minItems} to cut it down.`
-            : `Switch on "Skip small collections" above to cut it down.`}
+          One per {noun} across {items} items
+          {severe ? ", mostly with one or two titles — enough writes for Plex to start refusing them." : "."}{" "}
+          {form.minItems > 0 && `Raise the minimum above ${form.minItems} to cut it down.`}
         </p>
-        <p className={styles.volumePanelBody}>
-          Estimated from your library size — the real number depends on your metadata, so treat it as an order of
-          magnitude.
-        </p>
+        {form.minItems === 0 && (
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+            onClick={() => setForm({ ...form, minItems: defaultMinItemsForType(form.type) })}
+          >
+            Skip small collections
+          </button>
+        )}
       </div>
     );
   }
@@ -617,9 +682,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>Scope</h3>
-        <p className={styles.stepSub}>
-          Which Plex sections to apply this rule to{typeHasLimit(form.type) ? ", and how many items to include." : "."}
-        </p>
 
         {availableSections.length > 0 ? (
           <div className={styles.field}>
@@ -663,24 +725,22 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 );
               })}
             </div>
-            <span className={styles.hint}>
-              {sectionsLocked
-                ? `Locked to ${requiredSectionType === "movie" ? "Movie" : "TV"} sections by the chosen chart.`
-                : requiredSectionType
-                  ? `Only ${requiredSectionType === "movie" ? "Movie" : "TV"} sections apply to this rule type.`
-                  : form.type === "seerr_requests"
-                    ? "Seerr produces a single collection — only the first selected Movie/TV section is used."
-                    : form.sections.length === 0
-                      ? "Default — applies to all sections."
-                      : `${form.sections.length} selected.`}
-            </span>
+            {(() => {
+              const hint = sectionsLocked
+                ? "Set by the chosen chart."
+                : form.type === "seerr_requests"
+                  ? "Only the first selected section is used."
+                  : form.sections.length === 0
+                    ? "None selected means all of them."
+                    : null;
+              return hint && <span className={styles.hint}>{hint}</span>;
+            })()}
           </div>
         ) : requiredSectionType && sections.length > 0 ? (
           <div className={styles.field}>
             <label>Sections</label>
             <span className={styles.hint}>
-              No {requiredSectionType === "movie" ? "Movie" : "TV"} sections found in your Plex library — this rule type
-              won't produce any collections.
+              No {requiredSectionType === "movie" ? "Movie" : "TV"} sections in your Plex library.
             </span>
           </div>
         ) : null}
@@ -707,11 +767,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   aria-label={limitFieldLabel(form.type)}
                 />
               )}
-              <span className={styles.hint}>
-                {form.limit > 0
-                  ? `Builds the ${form.limit} largest ${groupNounForType(form.type)} collections per library; the rest are skipped.`
-                  : `Off — one collection per ${groupNounForType(form.type)}, however many that turns out to be.`}
-              </span>
+              {form.limit > 0 && <span className={styles.hint}>Keeps the largest {form.limit} per library.</span>}
             </div>
           ) : (
             <div className={styles.field}>
@@ -730,13 +786,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   })
                 }
               />
-              <span className={styles.hint}>
-                {form.type === "seerr_requests"
-                  ? "We'll fetch as many Seerr requests as needed to fill the collection up to this many items."
-                  : typeProducesManyCollections(form.type)
-                    ? "How many to pull from TMDb each run. Each one costs API calls, so this is a fetch budget rather than a collection cap."
-                    : "Collections replace those generated in previous runs."}
-              </span>
+              {typeProducesManyCollections(form.type) && (
+                <span className={styles.hint}>A TMDb fetch budget per run, not a collection cap.</span>
+              )}
             </div>
           ))}
 
@@ -763,29 +815,24 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 aria-label="Minimum items per collection"
               />
             )}
-            <span className={styles.hint}>
-              {form.minItems > 0
-                ? `Only builds a collection for a ${groupNounForType(form.type)} with ${form.minItems}+ items in the library.`
-                : `Off — every ${groupNounForType(form.type)} gets a collection, including ones with a single item. Large libraries can produce hundreds or thousands of collections this way.`}
-            </span>
+            {form.minItems > 0 && (
+              <span className={styles.hint}>
+                Only {groupNounForType(form.type)}s with {form.minItems}+ items get a collection.
+              </span>
+            )}
           </div>
         )}
 
         {renderVolumeEstimate()}
 
         {form.type === "rt_top_rated" && !omdbConfigured && (
-          <p className={styles.hint}>Heads-up: OMDB API key is not configured in Settings → AI.</p>
+          <div className={styles.field}>
+            <RequirementLink requirement="omdb" />
+          </div>
         )}
 
-        {/* A cleanup rule builds nothing to pin — see `rulePins`. The Outcome
-            step comes first precisely so this block can be absent rather than
-            retracted. */}
-        {form.outcome.kind === "cleanup" && (
-          <p className={styles.hint}>
-            Cleanup rules build no collections at all, so there's nothing to pin. What matched is on the Cleanup queue
-            here in Tinkerbell.
-          </p>
-        )}
+        {/* A cleanup rule builds nothing to pin — see `rulePins` — so the
+            pin block is simply absent for one. */}
 
         {form.outcome.kind === "collection" && (
           <>
@@ -810,10 +857,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 />{" "}
                 Pin generated collections to homepage
               </label>
-              <span className={styles.hint}>
-                When off, collections are still created in Plex but won't be promoted to the home, recommended, or
-                shared home rows.
-              </span>
             </div>
 
             {form.pinToHomepage && typeProducesManyCollections(form.type) && (
@@ -830,13 +873,10 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                     setForm({ ...form, pinRotationCount: Math.max(0, parseInt(e.target.value, 10) || 0) })
                   }
                 />
-                <span className={styles.hint}>
-                  {form.pinRotationCount > 0
-                    ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
-                      "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
-                      `${form.pinRotationCount * 2} collections.`
-                    : "Required — this rule type can build far more collections than a homepage can show."}
-                </span>
+                <RotationHint
+                  count={form.pinRotationCount}
+                  whenOff="Required — this type builds more than a homepage can show."
+                />
               </div>
             )}
 
@@ -865,13 +905,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                     }
                   />
                 )}
-                <span className={styles.hint}>
-                  {form.pinRotationCount > 0
-                    ? `Each run pins ${form.pinRotationCount} of this rule's collections per library, picked at random. ` +
-                      "Consecutive runs pick a different set — with no overlap, as long as the rule produces more than " +
-                      `${form.pinRotationCount * 2} collections.`
-                    : "When off, every collection this rule generates is pinned."}
-                </span>
+                <RotationHint count={form.pinRotationCount} whenOff="Off pins every collection." />
               </div>
             )}
 
@@ -896,11 +930,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                     aria-label="Minimum items to pin a collection"
                   />
                 )}
-                <span className={styles.hint}>
-                  {form.pinMinItems > 0
-                    ? `Only collections with ${form.pinMinItems}+ items reach the homepage. Smaller ones are still created in Plex, just not promoted.`
-                    : "Off — every collection this rule pins goes to the homepage, however few items it has."}
-                </span>
+                {form.pinMinItems > 0 && (
+                  <span className={styles.hint}>Smaller ones are still built, just not pinned.</span>
+                )}
               </div>
             )}
           </>
@@ -926,9 +958,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <div className={styles.scheduleBlock}>
         <h4 className={styles.scheduleHeading}>When it runs</h4>
-        <p className={styles.hint}>
-          By default every rule runs in the nightly Generate job. These are for the ones that shouldn't.
-        </p>
+        <p className={styles.hint}>Every rule runs nightly unless set otherwise here.</p>
 
         <div className={styles.field}>
           <label>
@@ -937,15 +967,14 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           </label>
           {s.useCron && (
             <>
-              <input
-                type="text"
-                className={shared.input}
-                style={{ maxWidth: 200 }}
+              {/* No Manual (a rule is run by hand from its row) and no seconds:
+                  rule crons are checked once a minute by Run Scheduled Rules. */}
+              <SchedulePicker
                 value={s.cron}
-                onChange={(e) => setSchedule({ cron: e.target.value })}
-                aria-label="Cron expression"
-                placeholder="0 3 * * *"
+                onChange={(cron) => setSchedule({ cron })}
+                kinds={["daily", "weekly", "interval", "custom"]}
               />
+              <CronPreview expr={s.cron} />
               <label>
                 <input
                   type="checkbox"
@@ -954,13 +983,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 />{" "}
                 And skip the nightly job
               </label>
-              <CronPreview expr={s.cron} />
-              <span className={styles.hint}>
-                A cron expression, evaluated in the timezone set under Jobs → Schedule.{" "}
-                {s.excludeFromBatch
-                  ? "This rule now runs only on this schedule."
-                  : "This rule runs on this schedule as well as nightly."}
-              </span>
             </>
           )}
         </div>
@@ -977,29 +999,24 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {s.useWindow && (
             <>
               <div className={styles.scheduleDates}>
-                <input
-                  type="text"
-                  className={shared.input}
+                <MonthDaySelect
                   value={s.activeFrom}
-                  onChange={(e) => setSchedule({ activeFrom: e.target.value })}
-                  aria-label="Active from (MM-DD)"
-                  placeholder="MM-DD"
+                  onChange={(activeFrom) => setSchedule({ activeFrom })}
+                  label="Active from"
                 />
                 <span className={styles.hint}>to</span>
-                <input
-                  type="text"
-                  className={shared.input}
+                <MonthDaySelect
                   value={s.activeTo}
-                  onChange={(e) => setSchedule({ activeTo: e.target.value })}
-                  aria-label="Active to (MM-DD)"
-                  placeholder="MM-DD"
+                  onChange={(activeTo) => setSchedule({ activeTo })}
+                  label="Active to"
                 />
               </div>
-              <span className={styles.hint}>
-                {describeRuleWindow({ activeFrom: s.activeFrom, activeTo: s.activeTo })
-                  ? `Runs ${describeRuleWindow({ activeFrom: s.activeFrom, activeTo: s.activeTo })} each year. Outside that, its collections are removed and put back when the window comes round again.`
-                  : "Two dates as MM-DD. An end before the start wraps the year end, so 12-01 to 01-05 is Christmas."}
-              </span>
+              {describeRuleWindow({ activeFrom: s.activeFrom, activeTo: s.activeTo }) && (
+                <span className={styles.hint}>
+                  Runs {describeRuleWindow({ activeFrom: s.activeFrom, activeTo: s.activeTo })} each year; its
+                  collections are removed outside it.
+                </span>
+              )}
             </>
           )}
         </div>
@@ -1007,7 +1024,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
         <div className={styles.field}>
           <span className={styles.label}>Also run when…</span>
           {RULE_TRIGGERS.map((trigger) => (
-            <label key={trigger}>
+            <label key={trigger} title={RULE_TRIGGER_NOTES[trigger]}>
               <input
                 type="checkbox"
                 checked={s.triggers.includes(trigger)}
@@ -1018,13 +1035,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 }
               />{" "}
               {RULE_TRIGGER_LABELS[trigger]}
-              <span className={styles.hint}>{RULE_TRIGGER_NOTES[trigger]}</span>
+              <span className={styles.cadence}>{RULE_TRIGGER_CADENCE[trigger]}</span>
             </label>
           ))}
-          <span className={styles.hint}>
-            Each trigger rides on the job that already knows the answer, so it inherits that job's cadence rather than
-            firing the instant something happens. The nightly run still happens either way.
-          </span>
         </div>
 
         {/* Chaining. Deliberately below the triggers: it is the same idea —
@@ -1039,11 +1052,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             selected={s.afterRules}
             onChange={(afterRules) => setSchedule({ afterRules })}
           />
-          <span className={styles.hint}>
-            For two-stage curation: one rule builds a pool, this one curates it. Only applies when the upstream rule
-            runs <em>outside</em> the nightly batch — on its own cron, or from a trigger. Inside the batch the rule
-            order on the Rules page already decides this.
-          </span>
+          <span className={styles.hint}>Runs when these finish.</span>
         </div>
       </div>
     );
@@ -1079,22 +1088,18 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>What should this rule write?</h3>
-        <p className={styles.stepSub}>
-          Every matching item gets these fields. Leave a field blank to leave it alone. Values can use tokens —{" "}
-          {METADATA_TOKENS.map((t) => `{${t}}`).join(", ")} — which are filled in per item.
-        </p>
+        <p className={styles.hint}>Blank fields are left alone.</p>
 
         {METADATA_SETTABLE_FIELDS.map((field) => {
           const error = tokenError(o.set[field]);
           return (
             <div key={field} className={styles.field}>
               <label htmlFor={`meta-set-${field}`}>{METADATA_FIELD_LABELS[field]}</label>
-              <input
+              <TemplateInput
                 id={`meta-set-${field}`}
-                className={shared.input}
                 value={o.set[field]}
                 placeholder={METADATA_FIELD_PLACEHOLDERS[field]}
-                onChange={(e) => setOutcome({ set: { ...o.set, [field]: e.target.value } })}
+                onChange={(value) => setOutcome({ set: { ...o.set, [field]: value } })}
               />
               {error && <span className={styles.errorText}>{error}</span>}
             </div>
@@ -1103,26 +1108,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
         {usesSortableTitle && (
           <div className={styles.field}>
-            <label htmlFor="meta-sort-languages">Languages whose leading articles to move</label>
-            <input
-              id="meta-sort-languages"
-              className={shared.input}
-              value={o.sortLanguages.join(", ")}
-              placeholder="en"
-              onChange={(e) =>
-                setOutcome({
-                  sortLanguages: e.target.value
-                    .split(",")
-                    .map((v) => v.trim().toLowerCase())
-                    .filter(Boolean),
-                })
-              }
+            <span className={styles.label}>Languages whose leading articles to move</span>
+            <MultiSelect
+              allLabel="No languages"
+              ariaLabel="Languages whose leading articles to move"
+              options={SORT_LANGUAGE_OPTIONS}
+              selected={o.sortLanguages}
+              onChange={(sortLanguages) => setOutcome({ sortLanguages })}
             />
-            <span className={styles.hint}>
-              Two-letter codes, comma separated. Supported: {Object.keys(SORT_ARTICLES).join(", ")}. Only add a language
-              your library actually contains — stripping "La" is right in a French library and wrong for "La Bamba" in
-              an English one.
-            </span>
+            <span className={styles.hint}>Only languages your library contains — "La Bamba" isn't French.</span>
           </div>
         )}
 
@@ -1173,11 +1167,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             <input type="checkbox" checked={o.lock} onChange={(e) => setOutcome({ lock: e.target.checked })} /> Lock the
             fields this rule writes
           </label>
-          <span className={styles.hint}>
-            A locked field stops receiving updates from Plex's metadata agents, so the value survives the next scan.
-            Unlocked, Plex may put its own value back on the next refresh — which looks exactly like the rule working
-            and then quietly undoing itself.
-          </span>
+          <span className={styles.hint}>Unlocked, Plex's next refresh may put its own value back.</span>
         </div>
 
         <div className={styles.field}>
@@ -1189,10 +1179,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             />{" "}
             Overwrite fields somebody has already locked
           </label>
-          <span className={styles.hint}>
-            Off by default. A locked field holding a different value is almost always a deliberate fix — the rule skips
-            it and says so in the run log.
-          </span>
+          <span className={styles.hint}>A locked field is usually someone's deliberate fix.</span>
         </div>
 
         <div className={styles.field}>
@@ -1207,7 +1194,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             onChange={(e) => setOutcome({ maxWritesPerRun: Math.max(1, parseInt(e.target.value, 10) || 1) })}
           />
           <span className={styles.hint}>
-            A per-rule brake. There is a second, global one in Settings → Metadata that no rule can exceed.
+            Can't exceed the global cap in <SettingsPageLink to="/settings/metadata" />.
           </span>
         </div>
 
@@ -1216,10 +1203,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             <input type="checkbox" checked={o.dryRun} onChange={(e) => setOutcome({ dryRun: e.target.checked })} />{" "}
             Preview only — report what would change and write nothing
           </label>
-          <span className={styles.hint}>
-            On by default, and worth leaving on for a run or two. Metadata is the one thing here that can't be
-            regenerated: run it, read the log, then switch this off.
-          </span>
+          <span className={styles.hint}>Leave on until the run log looks right.</span>
         </div>
       </>
     );
@@ -1232,10 +1216,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>How should the playlist look?</h3>
-        <p className={styles.stepSub}>
-          A playlist is an ordered list rather than a set, which is the whole reason to want one. It belongs to the Plex
-          account Tinkerbell signs in as — the server owner — so everyone sharing this server sees the same one.
-        </p>
 
         <div className={styles.field}>
           <label htmlFor="playlist-name">Name</label>
@@ -1246,6 +1226,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             onChange={(e) => setOutcome({ playlistName: e.target.value })}
             placeholder={form.name || "Defaults to the rule's name"}
           />
+          <span className={styles.hint}>Owned by the server account, so everyone sees the same one.</span>
         </div>
 
         <div className={styles.field}>
@@ -1262,11 +1243,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             <option value="title">Alphabetical</option>
             <option value="random">Shuffled</option>
           </select>
-          <span className={styles.hint}>
-            {o.playlistOrder === "handler"
-              ? "Keeps the source's own order — for a list, that's the order it was written in, which is usually the point."
-              : "Re-sorts whatever the source produced."}
-          </span>
+          {o.playlistOrder === "handler" && (
+            <span className={styles.hint}>For a list, the order it was written in.</span>
+          )}
         </div>
 
         <div className={styles.field}>
@@ -1278,10 +1257,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             />{" "}
             One playlist across every library
           </label>
-          <span className={styles.hint}>
-            Playlists aren't tied to a library, so this is usually what you want. Turn it off to get one playlist per
-            library instead.
-          </span>
+          <span className={styles.hint}>Off makes one playlist per library.</span>
         </div>
 
         <div className={styles.field}>
@@ -1295,7 +1271,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             onChange={(e) => setOutcome({ playlistLimit: Number(e.target.value) || 0 })}
             placeholder="No limit"
           />
-          <span className={styles.hint}>Applied after ordering, so a cap keeps the front of the list.</span>
+          <span className={styles.hint}>Applied after ordering.</span>
         </div>
       </>
     );
@@ -1305,6 +1281,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     const o = form.outcome;
     const setOutcome = (patch: Partial<OutcomeFormState>) => setForm({ ...form, outcome: { ...o, ...patch } });
     const destructive = isDestructiveMode(o.mode);
+    const cleanupEnabled = configQuery.data?.cleanup_enabled === true;
 
     if (o.kind === "metadata") return renderMetadataStep();
     if (o.kind === "playlist") return renderPlaylistStep();
@@ -1312,10 +1289,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>What should happen to matches?</h3>
-        <p className={styles.stepSub}>
-          Matching items are tracked over several runs, then labelled, unmonitored, or deleted. Nothing is written to
-          Plex until then — what matched shows up on the Cleanup queue here, where you can keep or protect it.
-        </p>
 
         {o.kind === "cleanup" && (
           <>
@@ -1356,10 +1329,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 value={o.consecutiveRuns}
                 onChange={(e) => setOutcome({ consecutiveRuns: parseInt(e.target.value, 10) || 1 })}
               />
-              <span className={styles.hint}>
-                An item that stops matching loses its streak and starts over, so a one-off metadata glitch can never
-                trigger this rule.
-              </span>
+              <span className={styles.hint}>A miss resets the streak.</span>
             </div>
 
             <div className={styles.field}>
@@ -1383,13 +1353,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                       checked={o.viaArr}
                       onChange={(e) => setOutcome({ viaArr: e.target.checked })}
                     />{" "}
-                    Delete through Radarr/Sonarr
+                    Delete through Radarr/Sonarr <span className={styles.recommended}>Recommended</span>
                   </label>
-                  <span className={styles.hint}>
-                    Strongly recommended. Deleting in Plex alone leaves the Radarr/Sonarr record behind, and it will
-                    re-download the same file. With this on, an item with no matching record is skipped rather than
-                    half-deleted.
-                  </span>
+                  <span className={styles.hint}>Otherwise Radarr/Sonarr re-downloads the file.</span>
                 </div>
                 <div className={styles.field}>
                   <label>
@@ -1400,10 +1366,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                     />{" "}
                     Add to the import exclusion list
                   </label>
-                  <span className={styles.hint}>
-                    Stops a list you subscribe to from re-adding it later. Undo means editing the exclusion list in
-                    Radarr/Sonarr by hand.
-                  </span>
+                  <span className={styles.hint}>Stops lists re-adding it; undone by hand in Radarr/Sonarr.</span>
                 </div>
               </>
             )}
@@ -1413,9 +1376,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 <input type="checkbox" checked={o.dryRun} onChange={(e) => setOutcome({ dryRun: e.target.checked })} />{" "}
                 Preview only — don't touch anything yet
               </label>
-              <span className={styles.hint}>
-                Leave this on until you've run the rule and read the log. The queue fills up either way.
-              </span>
+              <span className={styles.hint}>Leave on until the run log looks right.</span>
             </div>
 
             {/* Only meaningful for a rule that actually removes something, and
@@ -1431,11 +1392,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   />{" "}
                   Ask me before removing each item
                 </label>
-                <span className={styles.hint}>
-                  Items still build their streak and still reach the queue; nothing is {o.mode}d until you approve it
-                  there. The streak protects against a metadata blip — this protects against a filter that is
-                  consistently wrong, which looks exactly as confident on run three as on run one.
-                </span>
+                <span className={styles.hint}>Nothing is {o.mode}d until you approve it on the queue.</span>
               </div>
             )}
 
@@ -1462,10 +1419,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   {o.mode === "delete" && "There is no undo."}
                 </p>
                 <p className={styles.dangerPanelBody}>
-                  Cleanup also has to be switched on globally in Settings before any of this happens, and it is skipped
-                  entirely if the library hasn't synced in the last two days or if the rule suddenly matches more than a
-                  quarter of your library.
+                  <span className={cleanupEnabled ? styles.chipOn : styles.chipOff}>
+                    Cleanup: {cleanupEnabled ? "on" : "off"} globally
+                  </span>{" "}
+                  <SettingsPageLink to="/settings/cleanup">{cleanupEnabled ? "Settings" : "Turn on"}</SettingsPageLink>
                 </p>
+                <ul className={styles.dangerPanelList}>
+                  <li>Skipped if the library hasn't synced in two days.</li>
+                  <li>Skipped if it suddenly matches over a quarter of the library.</li>
+                </ul>
               </div>
             )}
           </>
@@ -1495,10 +1457,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>How should these collections look?</h3>
-        <p className={styles.stepSub}>
-          Plex shows a collection with no artwork as a grey grid of its first four posters, and no description at all.
-          This is where that stops being true.
-        </p>
 
         <div className={styles.field}>
           <label htmlFor="presentation-summary">Description</label>
@@ -1513,15 +1471,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             <option value="custom">The same sentence on every collection</option>
             <option value="none">None</option>
           </select>
-          <span className={styles.hint}>
-            {p.summary === "template"
-              ? templatedSummaryHint(form.type, sampleTitle, sectionType)
-              : p.summary === "llm"
-                ? "Costs one AI call per collection, once, and is reused until the rule changes. Needs a provider in Settings → AI; without one the templated sentence is used instead."
-                : p.summary === "custom"
-                  ? "Every collection this rule builds gets the same text — right for a single-collection rule, repetitive for a grouped one."
-                  : "Collections are left with no description."}
-          </span>
+          {p.summary === "template" ? (
+            <span className={styles.hint}>{templatedSummaryHint(form.type, sampleTitle, sectionType)}</span>
+          ) : p.summary === "llm" ? (
+            <span className={styles.hint}>
+              One AI call per collection, using the <SettingsPageLink to="/settings/ai">AI provider</SettingsPageLink>.
+            </span>
+          ) : p.summary === "custom" ? (
+            <span className={styles.hint}>Same text on every collection.</span>
+          ) : null}
         </div>
 
         {p.summary === "custom" && (
@@ -1552,11 +1510,15 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             />{" "}
             Generate a poster for these collections
           </label>
-          <span className={styles.hint}>
-            {p.poster === "none"
-              ? "Off by default on purpose: uploading artwork changes what everyone with access to your server sees, and Plex has no undo for it."
-              : "Generated on the server and uploaded by the Generate Collection Artwork job, which runs after the nightly rule run rather than inside it."}
-          </span>
+          {p.poster === "none" ? (
+            <span className={styles.hint}>Everyone on the server sees it, and Plex has no undo.</span>
+          ) : (
+            configQuery.data?.collection_art_enabled === false && (
+              <span className={styles.chipOff}>
+                Artwork is off globally · <SettingsPageLink to="/settings/appearance">Turn on</SettingsPageLink>
+              </span>
+            )
+          )}
         </div>
 
         {p.poster !== "none" && (
@@ -1576,15 +1538,10 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             </select>
             {p.poster === "asset" && (
               <span className={styles.hint}>
-                Looks each collection up by name in the asset directory set in Settings → Appearance, the way Kometa
-                does. Collections with no matching file keep the poster they already have.
+                Matched by name in the <SettingsPageLink to="/settings/appearance">asset directory</SettingsPageLink>.
               </span>
             )}
-            {p.poster === "url" && (
-              <span className={styles.hint}>
-                Fetched by the server on a schedule, so it has to be HTTPS on a known image host.
-              </span>
-            )}
+            {p.poster === "url" && <span className={styles.hint}>HTTPS, on a known image host.</span>}
           </div>
         )}
 
@@ -1604,26 +1561,12 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
         {p.poster !== "none" && p.poster !== "url" && (
           <div className={styles.field}>
             <label htmlFor="presentation-accent">Accent colour</label>
-            <input
+            <ColorField
               id="presentation-accent"
-              className={shared.input}
-              style={{ maxWidth: 200 }}
               value={p.accentColor}
-              onChange={(e) => setPresentation({ accentColor: e.target.value })}
-              placeholder="Leave blank to derive it"
+              onChange={(accentColor) => setPresentation({ accentColor })}
             />
-            <span className={styles.hint}>
-              Blank takes the colour from the collection's own posters, which is what makes a generated set look like it
-              belongs to the films rather than to a theme.
-            </span>
           </div>
-        )}
-
-        {p.poster !== "none" && configQuery.data?.collection_art_enabled === false && (
-          <p className={styles.hint}>
-            Heads-up: collection artwork is switched off globally in Settings → Appearance, so nothing will be uploaded
-            until that's turned back on.
-          </p>
         )}
 
         {p.poster !== "none" && (
@@ -1643,10 +1586,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               ruleType={form.type}
               enabled={!presentationError(form)}
             />
-            <span className={styles.hint}>
-              A real render, using art from your library. A grouped rule builds one of these per{" "}
-              {groupNounForType(form.type)}, so this is the layout rather than the exact collection.
-            </span>
+            {typeProducesManyCollections(form.type) && (
+              <span className={styles.hint}>One per {groupNounForType(form.type)}; this shows the layout.</span>
+            )}
           </div>
         )}
       </>
@@ -1664,15 +1606,12 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>Send missing items to {service === "radarr" ? "Radarr" : "Sonarr"}</h3>
-        <p className={styles.stepSub}>
-          When this rule runs, items from the source that aren't in your Plex library can be sent to{" "}
-          {service === "radarr" ? "Radarr" : "Sonarr"} for download. Off by default.
-        </p>
-
         {!arrConfigured && (
-          <p className={styles.hint}>
-            {service === "radarr" ? "Radarr" : "Sonarr"} is not configured in Settings → Media Managers.
-          </p>
+          <div className={styles.field}>
+            <span className={styles.typeCardWarn}>
+              Needs {service === "radarr" ? "Radarr" : "Sonarr"} · <SettingsPageLink to="/settings/arrs" />
+            </span>
+          </div>
         )}
 
         <div className={styles.field}>
@@ -1775,9 +1714,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 />{" "}
                 Search on add
               </label>
-              <span className={styles.hint}>
-                If off, items are added but not searched until your next scheduled scan.
-              </span>
+              <span className={styles.hint}>Off waits for the next scheduled search.</span>
             </div>
 
             <div className={styles.field}>
@@ -1794,7 +1731,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   setArr({ maxAddsPerRun: Math.max(1, Math.min(500, parseInt(e.target.value, 10) || 1)) })
                 }
               />
-              <span className={styles.hint}>Safety cap. Extras beyond this number are skipped each run.</span>
+              <span className={styles.hint}>Extras are skipped until the next run.</span>
             </div>
 
             <div className={styles.field}>
@@ -1806,7 +1743,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 />{" "}
                 Dry run (log only — don't actually add)
               </label>
-              <span className={styles.hint}>Recommended on first save. Disable once the run log looks right.</span>
+              <span className={styles.hint}>Leave on until the run log looks right.</span>
             </div>
           </>
         )}
@@ -1849,7 +1786,6 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     return (
       <>
         <h3 className={styles.stepHeading}>Name & review</h3>
-        <p className={styles.stepSub}>Give the rule a name. The summary below shows what will be saved.</p>
 
         <div className={styles.field}>
           <label htmlFor="rule-name">Name</label>

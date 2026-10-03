@@ -837,6 +837,14 @@ td.previewBlockCell {
   color: var(--ink);
 }
 
+/* Sits beside the title; the auto margin keeps Clear at the far end. */
+.previewOnlyBadge {
+  composes: statusPill from "../../styles/shared.module.css";
+  margin-right: auto;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
 .detailMeta {
   font: var(--t-data);
   color: var(--ink-3);

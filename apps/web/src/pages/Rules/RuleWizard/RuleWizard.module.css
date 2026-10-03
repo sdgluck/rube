@@ -98,8 +98,8 @@
   letter-spacing: var(--t-card-tracking);
 }
 
-.stepSub {
-  margin: 0 0 16px;
+.subLabel {
+  margin: 16px 0 10px;
   font-size: 12.5px;
   color: var(--ink-3);
 }
@@ -165,6 +165,18 @@
   line-height: 1.4;
 }
 
+/* A type whose service isn't configured: shown, so the option is discoverable,
+   but not a button — the card carries the link to the fix instead. */
+.typeCardUnavailable {
+  cursor: default;
+  border-style: dashed;
+}
+
+.typeCardUnavailable .typeCardName,
+.typeCardUnavailable .typeCardDesc {
+  color: var(--ink-faint);
+}
+
 .typeCardWarn {
   margin-top: 6px;
   font-size: 11px;
@@ -192,6 +204,48 @@
 .hint {
   font-size: 11.5px;
   color: var(--ink-3);
+}
+
+.label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* A template field and its token picker, side by side. */
+.templateRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.templateRow > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cadence {
+  composes: monoTag from "../../../styles/shared.module.css";
+  margin-left: 8px;
+}
+
+.recommended {
+  composes: statusPill from "../../../styles/shared.module.css";
+  margin-left: 6px;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.chipOn {
+  composes: statusPill from "../../../styles/shared.module.css";
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.chipOff {
+  composes: statusPill from "../../../styles/shared.module.css";
+  align-self: flex-start;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
 }
 
 .errorText {
@@ -443,6 +497,14 @@
   font-weight: 600;
 }
 
+.dangerPanelList {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
 /* ── "When it runs" ─────────────────────────────────────────────────────────
    A separated block at the foot of Scope: three switches most rules never
    touch, kept visibly apart from the questions every rule answers. */
@@ -461,7 +523,12 @@
 
 .scheduleDates {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  max-width: 260px;
+}
+
+.monthDay {
+  display: inline-flex;
+  gap: 4px;
 }

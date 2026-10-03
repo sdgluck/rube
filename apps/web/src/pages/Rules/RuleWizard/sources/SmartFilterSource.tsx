@@ -1,6 +1,9 @@
 import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@tinkerbell/contracts";
 import { hasLocalLeaves, isLocalField } from "@tinkerbell/plex-smart-filter";
+import controls from "#/styles/controls.module.css";
 import shared from "#/styles/shared.module.css";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
 import FilterValueInput from "#components/smart-filter/FilterValueInput.tsx";
 import {
@@ -49,22 +52,21 @@ export default function SmartFilterSource({ form, setForm, tagSectionId = null }
   return (
     <>
       <h3 className={styles.stepHeading}>Smart filter</h3>
-      <p className={styles.stepSub}>
-        Build the criteria the rule will use to query Plex. Combine clauses with AND / OR, and nest groups for more
-        complex queries (e.g. <em>(director = Lynch OR Nolan) AND year ≥ 2000</em>). One collection per section is
-        created from the matching items each time the rule runs.
-      </p>
       {usesWatchHistory && <WatchHistoryWarning />}
-      <div className={styles.field}>
-        <label htmlFor="rule-smart-filter-name">Collection name (optional)</label>
-        <input
-          id="rule-smart-filter-name"
-          className={shared.input}
-          value={form.collectionName}
-          onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
-          placeholder="Smart Filter"
-        />
-      </div>
+      {/* Only a collection rule has a collection to name; a cleanup or
+          metadata rule's matches never become one. */}
+      {form.outcome.kind === "collection" && (
+        <div className={styles.field}>
+          <label htmlFor="rule-smart-filter-name">Collection name (optional)</label>
+          <input
+            id="rule-smart-filter-name"
+            className={shared.input}
+            value={form.collectionName}
+            onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
+            placeholder="Smart Filter"
+          />
+        </div>
+      )}
       <div className={styles.field}>
         <label>Filter</label>
         <GroupEditor group={form.smartFilter} onChange={setRoot} depth={0} sectionId={tagSectionId} />
@@ -103,7 +105,6 @@ function PresetEditor({
   return (
     <>
       <h3 className={styles.stepHeading}>{preset.label}</h3>
-      <p className={styles.stepSub}>{preset.description}</p>
       <WatchHistoryWarning />
       <div className={styles.field}>
         <label htmlFor="cleanup-preset-knob">{preset.knobLabel}</label>
@@ -127,16 +128,6 @@ function PresetEditor({
             {preset.note}
           </p>
         )}
-      </div>
-      <div className={styles.field}>
-        <label htmlFor="rule-smart-filter-name">Collection name (optional)</label>
-        <input
-          id="rule-smart-filter-name"
-          className={shared.input}
-          value={form.collectionName}
-          onChange={(e) => setForm({ ...form, collectionName: e.target.value })}
-          placeholder={preset.label}
-        />
       </div>
       <button
         type="button"
@@ -164,6 +155,9 @@ const MIN_DAYS = 7;
  * plays for two days. Saying so up front costs one line.
  */
 function WatchHistoryWarning() {
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+  const backfill = trpc.jobs.start.useMutation();
   const coverage = trpc.stats.watchHistoryCoverage.useQuery(undefined, {
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
@@ -179,11 +173,35 @@ function WatchHistoryWarning() {
       : `${sessions} play${sessions === 1 ? "" : "s"} over ${days} day${days === 1 ? "" : "s"}`;
 
   return (
-    <p className={styles.hint} role="status">
-      ⚠︎ Watch-history filters read Tinkerbell's own playback record, which is still filling up — {recorded}. Until it
-      has a representative stretch of history, "watched by nobody" will match almost everything and "watched by
-      everyone" almost nothing. Backfilling from Plex's view log (Settings → Playback) gives it a head start.
-    </p>
+    <div className={styles.field} role="status">
+      <span
+        className={styles.chipOff}
+        title={`"Watched by nobody" will match almost everything until the history fills up.`}
+      >
+        Watch history is thin — {recorded}
+        <button
+          type="button"
+          className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+          disabled={backfill.isPending}
+          onClick={() =>
+            backfill.mutate(
+              { jobId: "playback-backfill" },
+              {
+                // A toast rather than a redirect: leaving now would throw away
+                // the rule half-built in this wizard.
+                onSuccess: ({ runId }) =>
+                  addToast("Backfill started", "success", {
+                    action: { label: "View job", onAction: () => navigate(`/jobs/runs/${runId}`) },
+                  }),
+                onError: (err) => addToast(err.message, "error"),
+              },
+            )
+          }
+        >
+          {backfill.isSuccess ? "Backfill started" : "Backfill"}
+        </button>
+      </span>
+    </div>
   );
 }
 
@@ -395,13 +413,18 @@ function LeafEditor({ leaf, sectionId, underOr, onChange, onRemove }: LeafEditor
         Remove
       </button>
       {invalid ? (
-        <p className={styles.hint} style={{ margin: 0, flexBasis: "100%", color: "var(--danger, #c33)" }} role="alert">
-          {OR_DISABLED_REASON} Switch this group to AND, or remove the clause.
+        <p
+          className={styles.errorText}
+          style={{ margin: 0, flexBasis: "100%" }}
+          role="alert"
+          title={OR_DISABLED_REASON}
+        >
+          Watch-history fields need an AND group.
         </p>
       ) : (
         isLocal && (
-          <p className={styles.hint} style={{ margin: 0, flexBasis: "100%" }}>
-            {LOCAL_FIELD_HINTS.get(leaf.field)} {LOCAL_FIELD_GROUP_NOTE}
+          <p className={styles.hint} style={{ margin: 0, flexBasis: "100%" }} title={LOCAL_FIELD_GROUP_NOTE}>
+            {LOCAL_FIELD_HINTS.get(leaf.field)}
           </p>
         )
       )}

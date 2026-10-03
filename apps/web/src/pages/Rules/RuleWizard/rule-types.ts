@@ -132,8 +132,7 @@ export const RULE_TYPES: RuleType[] = [
   {
     value: "smart_filter",
     label: "Smart Filter",
-    description:
-      "Build a single collection by AND'ing Plex filter clauses (genre, year, studio, …). Mirrors a Plex smart collection but materialised as a regular collection on the rule's schedule.",
+    description: "Build a single collection from Plex filter clauses (genre, year, studio, …) combined with AND / OR.",
   },
   {
     value: "rt_top_rated",

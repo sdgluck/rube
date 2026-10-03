@@ -94,6 +94,11 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
     <div>
       <div className={styles.detailHeader}>
         <span className={styles.detailTitle}>Test results</span>
+        {(result.cleanup?.dryRun || result.metadata?.dryRun) && (
+          <span className={styles.previewOnlyBadge} title="A real run of this rule changes nothing">
+            Preview only
+          </span>
+        )}
         <button
           type="button"
           className={styles.testPreviewCloseBtn}
@@ -126,7 +131,6 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
           <strong>{result.cleanup.dueThisRun}</strong> would be {result.cleanup.mode.replace("_", " ")}d on a real run;{" "}
           <strong>{result.cleanup.waiting}</strong> need more consecutive matches ({result.cleanup.consecutiveRuns} in a
           row).
-          {result.cleanup.dryRun && " This rule is in preview-only mode, so a real run would act on none of them."}
           {result.cleanup.dueTitles.length > 0 && (
             <div className={styles.cleanupPreviewTitles}>{result.cleanup.dueTitles.join(", ")}</div>
           )}
@@ -146,17 +150,10 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
                 .join(" · ")}
             </div>
           )}
-          {result.metadata.blocked > 0 && (
-            <div>
-              {result.metadata.blocked} would be skipped — the field is locked to a different value and this rule
-              doesn't overwrite locked fields.
-            </div>
-          )}
-          {result.metadata.dryRun && " This rule is in preview-only mode, so a real run would write none of them."}
+          {result.metadata.blocked > 0 && <div>{result.metadata.blocked} skipped — locked to a different value.</div>}
           {result.metadata.truncated && (
             <div>
-              Showing the first {result.metadata.inspected} of {result.metadata.matched} matched items — a real run
-              covers them all.
+              First {result.metadata.inspected} of {result.metadata.matched} matched items; a real run covers all.
             </div>
           )}
           {result.metadata.diffs.length > 0 && (

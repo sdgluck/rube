@@ -1,3 +1,4 @@
+import SettingsPageLink from "#components/SettingsPageLink";
 import styles from "#pages/Rules/RuleWizard/RuleWizard.module.css";
 import { SEERR_FILTERS } from "#pages/Rules/RuleWizard/constants.ts";
 import type { SourceStepProps } from "#pages/Rules/RuleWizard/types.ts";
@@ -7,7 +8,6 @@ export default function SeerrRequestsSource({ form, setForm, config }: SourceSte
   return (
     <>
       <h3 className={styles.stepHeading}>Which requests?</h3>
-      <p className={styles.stepSub}>Filter the request set used to build this collection.</p>
       <div className={styles.field}>
         <label>Filter</label>
         <div className={styles.pills}>
@@ -25,7 +25,9 @@ export default function SeerrRequestsSource({ form, setForm, config }: SourceSte
         </div>
       </div>
       {!seerrConfigured && (
-        <p className={styles.hint}>Heads-up: Seerr is not configured in Settings → Media Managers.</p>
+        <span className={styles.typeCardWarn}>
+          Needs Seerr · <SettingsPageLink to="/settings/arrs" />
+        </span>
       )}
     </>
   );

@@ -85,10 +85,7 @@ export default function RuleHistoryRow({ ruleId }: RuleHistoryRowProps) {
           )}
 
           {!historyQuery.isLoading && entries.length === 0 && (
-            <div className={styles.testPreviewEmpty}>
-              No recorded changes yet. Edits are recorded from the version of Tinkerbell that introduced this tab
-              onwards — a rule created before then has no history until the next time it is edited.
-            </div>
+            <div className={styles.testPreviewEmpty}>No recorded changes yet.</div>
           )}
 
           {entries.map((entry) => (
@@ -145,11 +142,7 @@ export default function RuleHistoryRow({ ruleId }: RuleHistoryRowProps) {
         {pendingRestore && (
           <ConfirmModal
             title="Restore this version"
-            message={
-              "This writes the rule back to how it was at that point, as a new change — nothing is erased, and you " +
-              "can undo it by restoring the version that is current now. The rule is not re-run; the next scheduled " +
-              "run uses the restored settings."
-            }
+            message={"Saved as a new change, so it can be undone. The next run uses it."}
             confirmLabel="Restore"
             onConfirm={() => {
               restoreMutation.mutate({ id: pendingRestore.id });
