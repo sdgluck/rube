@@ -35,6 +35,16 @@ const AUTH_KEYS = {
 
 type SavableKey = Exclude<ConfigKey, keyof typeof AUTH_KEYS>;
 
+/** An absolute http(s) URL — what Plex will accept as a sign-in forward URL. */
+export function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "jobs">) {
   const { restartSchedules, schedulerTimezone } = deps.jobs;
   const { config, health } = deps;
@@ -66,6 +76,19 @@ export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "j
       // from, and its bounds are what the layout was designed to fit. The
       // stored schema is deliberately loose (it also runs on read), so the
       // strict one is applied here as well as on the card's own mutation.
+      // It becomes the forward URL of every portal sign-in, so a value Plex
+      // can't redirect to locks every user out of the portal at once.
+      if (
+        input.user_app_public_url !== undefined &&
+        input.user_app_public_url.trim() !== "" &&
+        !isHttpUrl(input.user_app_public_url.trim())
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The portal address must be a full URL starting with http:// or https://",
+        });
+      }
+
       if (input.portal_preroll !== undefined) {
         const parsed = portalPrerollCardInput.partial().safeParse(input.portal_preroll);
         if (!parsed.success) {

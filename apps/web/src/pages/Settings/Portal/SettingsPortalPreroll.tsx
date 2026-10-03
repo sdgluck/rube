@@ -154,8 +154,16 @@ export default function SettingsPortalPreroll() {
             placeholder={publicUrl || "https://portal.example.com"}
           />
           <span className={styles.hint}>
-            Where people can reach the portal from their phone — its public address, not this admin page.
-            {publicUrl ? " Leave blank to use the portal's configured public URL." : ""}
+            Where people can reach the portal from their phone — its public address, not this admin page.{" "}
+            {publicUrl ? (
+              <>
+                Leave blank to use the <Link to="/settings/portal/address">portal&apos;s address</Link>.
+              </>
+            ) : (
+              <>
+                Or set the <Link to="/settings/portal/address">portal&apos;s address</Link> once and leave this blank.
+              </>
+            )}
           </span>
         </label>
 

@@ -142,6 +142,11 @@ and `USER_HOST` (default: same as `HOST`). For a public deployment, expose only
 `3100`. The portal listener only runs while Personalized Home Screens is
 enabled.
 
+Set the address users reach it at under **Settings → Portal → Address**. Plex
+sign-in returns people there, cleanup warnings link to it, and the portal
+preroll shows it. Left blank, sign-in falls back to whichever address the
+visitor arrived from.
+
 ## Personalized home screens
 
 Per-user recommendations (Because You Watched, and any rule marked
@@ -216,7 +221,7 @@ preroll — so it follows the same random or in-order playback, and can be
 switched off or reordered from the Prerolls page. Editing the card re-renders
 it in place.
 
-The address defaults to the portal's public URL. It has to be one your users can
+The address defaults to the one under **Settings → Portal → Address**. It has to be one your users can
 reach from their phones — the portal port, not the admin one — and the portal
 only listens while one of its features (personalization, cleanup warnings or
 digests) is on; the page warns when it isn't.
