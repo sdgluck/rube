@@ -13,7 +13,7 @@ export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections"
   const getPlexClient = mapNotConfiguredClient(clients);
   const { collections, config, db, media } = deps;
   const { getConfig, setConfig } = config;
-  const { findDuplicates, getLocalMediaItems } = media;
+  const { findDuplicates, getLocalMediaItems, listLabels } = media;
   const { getCollectionsForItem } = collections;
 
   const mediaRouter = t.router({
@@ -30,6 +30,7 @@ export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections"
           audioCodecs: z.array(z.string()).default([]),
           audioChannels: z.array(z.number()).default([]),
           containers: z.array(z.string()).default([]),
+          labels: z.array(z.string()).default([]),
           sort: z.string().optional(),
           sortDir: z.enum(["asc", "desc"]).default("asc"),
         }),
@@ -46,6 +47,7 @@ export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections"
           audioCodecs: input.audioCodecs,
           audioChannels: input.audioChannels,
           containers: input.containers,
+          labels: input.labels,
           sort: input.sort,
           sortDir: input.sortDir,
         });
@@ -59,6 +61,9 @@ export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections"
      * somebody has to schedule.
      */
     duplicates: procedure.query(() => findDuplicates()),
+
+    /** The label filter's options — every label the local index has seen. */
+    labels: procedure.query(() => listLabels()),
 
     get: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
       const client = getPlexClient();

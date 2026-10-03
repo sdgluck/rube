@@ -733,6 +733,17 @@ export const mediaItems = sqliteTable(
      * rather than "fails the filter".
      */
     genres: text("genres", { mode: "json" }).$type<string[]>(),
+    /**
+     * Plex labels, verbatim. Free in the same listing as `genres`, and stored
+     * the same way — null when Plex reported none.
+     *
+     * Indexed so the Media page can filter by label without asking Plex: a
+     * filter answered upstream couldn't be combined with the local ones (size,
+     * codec) or paginated against them. The cost is that it is only as fresh as
+     * the last sync — which is why a bulk label edit writes through to this
+     * column as well as to Plex.
+     */
+    labels: text("labels", { mode: "json" }).$type<string[]>(),
     /** Critic rating where Plex has one, else audience rating. 0–10. */
     rating: real("rating"),
     contentRating: text("content_rating"),

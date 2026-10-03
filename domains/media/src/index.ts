@@ -49,6 +49,8 @@ interface MediaFilters {
   audioCodecs?: string[];
   audioChannels?: number[];
   containers?: string[];
+  /** Matches an item carrying any of these labels — compared ignoring case, as Plex does. */
+  labels?: string[];
   offset?: number;
   limit?: number;
   sort?: string;
@@ -267,6 +269,7 @@ export function createMedia(deps: MediaDeps) {
 
         const media = item.Media?.[0];
         const genres = item.Genre?.map((g) => g.tag).filter((tag) => tag.length > 0) ?? [];
+        const labels = item.Label?.map((l) => l.tag).filter((tag) => tag.length > 0) ?? [];
         const guids = item.Guid?.map((g) => g.id).filter((id) => id.length > 0) ?? [];
         // The item's own parts where it has them, else what its episodes came to.
         // A show has no parts, so the second term is the only answer for TV; the
@@ -287,6 +290,7 @@ export function createMedia(deps: MediaDeps) {
           // "Plex told us nothing" and "Plex told us none" don't have to be
           // distinguished downstream — neither should exclude an item.
           genres: genres.length > 0 ? genres : null,
+          labels: labels.length > 0 ? labels : null,
           rating: item.rating ?? item.audienceRating ?? null,
           contentRating: item.contentRating ?? null,
           durationMs: item.duration ?? null,
@@ -462,6 +466,34 @@ export function createMedia(deps: MediaDeps) {
     return out;
   }
 
+  /**
+   * Every label in the index, once each, for the Media page's filter.
+   *
+   * Collapsed case-insensitively — the first spelling seen wins — so a library
+   * with both "keep" and "Keep" offers one option, which the filter then
+   * matches either way.
+   */
+  function listLabels(): string[] {
+    const rows = db.all<{ label: string }>(
+      sql`select min(json_each.value) as label from ${mediaItems}, json_each(${mediaItems.labels}) group by lower(json_each.value) order by lower(json_each.value)`,
+    );
+    return rows.map((r) => r.label);
+  }
+
+  /**
+   * Write an item's labels into the index after they've been changed in Plex.
+   *
+   * Without this a bulk relabel on the Media page left the label filter showing
+   * the old answer until the next media sync — the edit "didn't take" from
+   * where the user was standing. A no-op for an item the index hasn't seen.
+   */
+  function setItemLabels(ratingKey: string, labels: string[]): void {
+    db.update(mediaItems)
+      .set({ labels: labels.length > 0 ? labels : null })
+      .where(eq(mediaItems.ratingKey, ratingKey))
+      .run();
+  }
+
   function getLocalMediaItems(filters: MediaFilters): {
     items: Array<{
       ratingKey: string;
@@ -478,6 +510,7 @@ export function createMedia(deps: MediaDeps) {
       container?: string;
       fileSize?: number;
       bitrate?: number;
+      labels: string[];
     }>;
     total: number;
     offset: number;
@@ -501,6 +534,17 @@ export function createMedia(deps: MediaDeps) {
     anyOf(mediaItems.audioCodec, filters.audioCodecs);
     anyOf(mediaItems.audioChannels, filters.audioChannels);
     anyOf(mediaItems.container, filters.containers);
+    if (filters.labels && filters.labels.length > 0) {
+      // `lower()` on both sides because Plex treats "keep" and "Keep" as one
+      // label, and a filter that missed half of them would look like data loss.
+      const wanted = filters.labels.map((l) => l.toLowerCase());
+      conditions.push(
+        sql`exists (select 1 from json_each(${mediaItems.labels}) where lower(json_each.value) in (${sql.join(
+          wanted.map((l) => sql`${l}`),
+          sql`, `,
+        )}))`,
+      );
+    }
 
     const offset = filters.offset ?? 0;
     const limit = filters.limit ?? 50;
@@ -542,6 +586,7 @@ export function createMedia(deps: MediaDeps) {
         container: row.container ?? undefined,
         fileSize: row.fileSize ?? undefined,
         bitrate: row.bitrate ?? undefined,
+        labels: row.labels ?? [],
       })),
       total,
       offset,
@@ -549,7 +594,16 @@ export function createMedia(deps: MediaDeps) {
     };
   }
 
-  return { ...duplicates, syncMedia, getStorageBySection, getSizeForItems, searchMediaTitles, getLocalMediaItems };
+  return {
+    ...duplicates,
+    syncMedia,
+    getStorageBySection,
+    getSizeForItems,
+    searchMediaTitles,
+    getLocalMediaItems,
+    listLabels,
+    setItemLabels,
+  };
 }
 
 export type Media = ReturnType<typeof createMedia>;

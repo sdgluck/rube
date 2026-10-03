@@ -17,6 +17,7 @@ const EMPTY: MediaViewFilters = {
   audioCodecs: [],
   audioChannels: [],
   containers: [],
+  labels: [],
 };
 
 const titles: Record<string, string> = { "1": "Movies", "2": "TV Shows" };
@@ -56,6 +57,19 @@ test("ruleSeedFromView", async (t) => {
     const seed = ruleSeedFromView({ ...EMPTY, resolutions: ["4k", "1080"] }, titleFor);
     const group = seed.smartFilter.children[0] as { kind: string; combinator: string; children: unknown[] };
     assert.equal(group.kind, "group");
+    assert.equal(group.combinator, "any");
+    assert.equal(group.children.length, 2);
+  });
+
+  await t.test("labels cross over, ORed like any other multi-value filter", () => {
+    // Unlike codec or container, Plex smart filters can express a label — so it
+    // is carried rather than reported as dropped.
+    const one = ruleSeedFromView({ ...EMPTY, labels: ["Keep"] }, titleFor);
+    assert.deepEqual(one.smartFilter.children, [{ kind: "leaf", field: "label", op: "=", value: "Keep" }]);
+    assert.deepEqual(one.dropped, []);
+
+    const two = ruleSeedFromView({ ...EMPTY, labels: ["Keep", "Kids"] }, titleFor);
+    const group = two.smartFilter.children[0] as { combinator: string; children: unknown[] };
     assert.equal(group.combinator, "any");
     assert.equal(group.children.length, 2);
   });

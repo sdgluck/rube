@@ -22,6 +22,7 @@ export interface MediaViewFilters {
   audioCodecs: string[];
   audioChannels: string[];
   containers: string[];
+  labels: string[];
 }
 
 export interface SmartFilterRuleSeed {
@@ -59,15 +60,8 @@ export function ruleSeedFromView(
     children.push({ kind: "leaf", field: "title", op: "=", value: filters.search.trim() });
   }
 
-  if (filters.resolutions.length === 1) {
-    children.push({ kind: "leaf", field: "resolution", op: "=", value: filters.resolutions[0]! });
-  } else if (filters.resolutions.length > 1) {
-    children.push({
-      kind: "group",
-      combinator: "any",
-      children: filters.resolutions.map((value) => ({ kind: "leaf", field: "resolution", op: "=", value })),
-    });
-  }
+  anyOf(children, "resolution", filters.resolutions);
+  anyOf(children, "label", filters.labels);
 
   const dropped: string[] = [];
   for (const [key, label] of Object.entries(DROPPED_LABELS)) {
@@ -80,6 +74,19 @@ export function ruleSeedFromView(
   const sections = filters.sections.map(sectionTitleFor).filter((title): title is string => !!title);
 
   return { kind: "smart_filter", sections, smartFilter: { kind: "group", combinator: "all", children }, dropped };
+}
+
+/** One value is a leaf; several are an OR group of leaves. */
+function anyOf(children: unknown[], field: string, values: readonly string[]): void {
+  if (values.length === 1) {
+    children.push({ kind: "leaf", field, op: "=", value: values[0]! });
+  } else if (values.length > 1) {
+    children.push({
+      kind: "group",
+      combinator: "any",
+      children: values.map((value) => ({ kind: "leaf", field, op: "=", value })),
+    });
+  }
 }
 
 /** The sentence shown before the wizard opens, or null when nothing was lost. */

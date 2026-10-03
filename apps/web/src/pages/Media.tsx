@@ -332,6 +332,7 @@ export default function Media() {
 
   const sectionFilter = listParam("section");
   const typeFilter = listParam("type");
+  const labelFilter = listParam("label");
   const search = searchParams.get("q") ?? "";
   const [viewMode, setViewMode] = useState<ViewMode>(() => readEnumStorage("media-view", VIEW_MODES, "table"));
   const [showAdvanced, setShowAdvanced] = useState(() => ADVANCED_FILTER_KEYS.some((k) => searchParams.has(k)));
@@ -419,6 +420,7 @@ export default function Media() {
       audioCodecs: acodecFilter,
       audioChannels: achFilter.map(Number),
       containers: containerFilter,
+      labels: labelFilter,
       sort: sortKey,
       sortDir,
     },
@@ -426,6 +428,8 @@ export default function Media() {
   );
 
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false });
+  const labelsQuery = trpc.media.labels.useQuery(undefined, { refetchOnWindowFocus: false });
+  const labelOptions = (labelsQuery.data ?? []).map((l) => ({ value: l, label: l }));
 
   const utils = trpc.useUtils();
   const bulkTagsMutation = trpc.metadata.bulkTags.useMutation();
@@ -469,6 +473,7 @@ export default function Media() {
         audioCodecs: acodecFilter,
         audioChannels: achFilter,
         containers: containerFilter,
+        labels: labelFilter,
       },
       (key) => sections.find((s) => s.key === key)?.title ?? null,
     );
@@ -503,7 +508,9 @@ export default function Media() {
         failed > 0 ? "error" : "success",
       );
       setSelected(new Set());
-      await utils.media.list.invalidate();
+      // The server writes the new labels through to the index, so both the rows
+      // and the filter's options are already current on refetch.
+      await Promise.all([utils.media.list.invalidate(), utils.media.labels.invalidate()]);
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Failed to apply labels", "error");
     } finally {
@@ -558,6 +565,17 @@ export default function Media() {
           selected={typeFilter}
           onChange={(next) => setListParam("type", next)}
         />
+        {/* Hidden on a library with no labels rather than shown empty — unless
+            the URL already carries one, so a shared link can still be undone. */}
+        {(labelOptions.length > 0 || labelFilter.length > 0) && (
+          <MultiSelect
+            allLabel="Any label"
+            ariaLabel="Filter by label"
+            options={labelOptions}
+            selected={labelFilter}
+            onChange={(next) => setListParam("label", next)}
+          />
+        )}
         <button
           className={`${styles.advancedFilterToggle} ${showAdvanced ? styles.advancedFilterToggleActive : ""}`}
           onClick={() => setShowAdvanced((v) => !v)}

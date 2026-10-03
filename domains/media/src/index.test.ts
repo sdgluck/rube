@@ -16,7 +16,7 @@ const c = createTestContainer();
 after(() => c.dispose());
 
 const db = c.resolve(DbToken);
-const { syncMedia, getStorageBySection } = c.resolve(MediaToken);
+const { syncMedia, getStorageBySection, getLocalMediaItems, listLabels, setItemLabels } = c.resolve(MediaToken);
 
 const { createPlexClient } = await import("@tinkerbell/plex");
 
@@ -30,6 +30,7 @@ interface FakeItem {
   year?: number;
   leafCount?: number;
   Genre?: Array<{ tag: string }>;
+  Label?: Array<{ tag: string }>;
   rating?: number;
   audienceRating?: number;
   contentRating?: string;
@@ -412,5 +413,58 @@ describe("the stale sweep", () => {
     await syncMedia(perSection(both), [SECTION, TV]);
     const stats = await syncMedia(perSection(both), [SECTION]);
     assert.equal(stats.removed, 1);
+  });
+});
+
+describe("labels", () => {
+  const labelled = (ratingKey: string, ...tags: string[]): FakeItem => ({
+    ratingKey,
+    title: ratingKey,
+    Label: tags.map((tag) => ({ tag })),
+  });
+  const keys = (labels: string[]) =>
+    getLocalMediaItems({ labels })
+      .items.map((i) => i.ratingKey)
+      .sort();
+
+  test("are stored from the listing, and none is null rather than an empty list", async () => {
+    await syncMedia(fakeClient([labelled("a", "Keep", "Kids"), labelled("b")]), [SECTION]);
+    const rows = new Map(
+      db
+        .select()
+        .from(mediaItems)
+        .all()
+        .map((r) => [r.ratingKey, r.labels]),
+    );
+    assert.deepEqual(rows.get("a"), ["Keep", "Kids"]);
+    assert.equal(rows.get("b"), null);
+  });
+
+  test("filter to items carrying any of the chosen labels, ignoring case as Plex does", async () => {
+    await syncMedia(
+      fakeClient([labelled("a", "Keep"), labelled("b", "keep", "Kids"), labelled("c", "Kids"), labelled("d")]),
+      [SECTION],
+    );
+    assert.deepEqual(keys(["KEEP"]), ["a", "b"]);
+    assert.deepEqual(keys(["Keep", "Kids"]), ["a", "b", "c"]);
+    assert.deepEqual(keys([]), ["a", "b", "c", "d"]);
+  });
+
+  test("the options list each label once, however it is cased", async () => {
+    await syncMedia(fakeClient([labelled("a", "Keep"), labelled("b", "keep", "Anime")]), [SECTION]);
+    const options = listLabels();
+    assert.equal(options.length, 2);
+    assert.equal(options[0], "Anime");
+    assert.equal(options[1]?.toLowerCase(), "keep");
+  });
+
+  test("an edit written through to the index is filterable straight away", async () => {
+    // Without the write-through a bulk relabel only showed up after the next
+    // media sync, so the filter answered with the labels from before the edit.
+    await syncMedia(fakeClient([labelled("a"), labelled("b", "Keep")]), [SECTION]);
+    setItemLabels("a", ["Keep"]);
+    setItemLabels("b", []);
+    assert.deepEqual(keys(["Keep"]), ["a"]);
+    assert.deepEqual(listLabels(), ["Keep"]);
   });
 });

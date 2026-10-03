@@ -23,13 +23,14 @@ import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 const fieldEnum = z.enum(METADATA_FIELDS);
 const tagFieldEnum = z.enum(METADATA_TAG_FIELDS);
 
-export function createMetadataRouter(deps: Pick<TrpcDeps, "clients" | "config" | "jobs" | "metadata">) {
+export function createMetadataRouter(deps: Pick<TrpcDeps, "clients" | "config" | "jobs" | "media" | "metadata">) {
   const { startJob } = deps.jobs;
   const { clients } = deps;
   const getPlexClient = mapNotConfiguredClient(clients);
   const { config, metadata } = deps;
   const { getConfig, setConfig } = config;
   const { itemHistory, listBatches, snapshotWrites } = metadata;
+  const { setItemLabels } = deps.media;
 
   const metadataRouter = t.router({
     /** Everything editable on one item, plus what Plex has locked. */
@@ -124,6 +125,7 @@ export function createMetadataRouter(deps: Pick<TrpcDeps, "clients" | "config" |
           await client.setItemTags(current.sectionId, current.sectionType, input.ratingKey, field, tags, {
             lock: input.lock,
           });
+          if (field === "label") setItemLabels(input.ratingKey, tags);
         }
 
         return { ok: true, batchId, writes: snapshots.length };
@@ -229,6 +231,9 @@ export function createMetadataRouter(deps: Pick<TrpcDeps, "clients" | "config" |
             await client.setItemTags(current.sectionId, current.sectionType, ratingKey, input.field, next, {
               lock: input.lock,
             });
+            // The Media page filters on the local index, so it has to hear about
+            // the edit too — see `setItemLabels`.
+            if (input.field === "label") setItemLabels(ratingKey, next);
             changed++;
           } catch (err) {
             failures.push({ ratingKey, message: err instanceof Error ? err.message : "Unknown error" });
