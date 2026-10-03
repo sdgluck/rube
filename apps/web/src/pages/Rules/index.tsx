@@ -937,7 +937,14 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     >
       <MigrationBanner />
       <RegistryUpdatesBanner />
-      <ConflictsBanner />
+      <ConflictsBanner
+        onOpenRule={(ruleId) => {
+          // The unfiltered list: a conflict can name a cleanup rule while
+          // this page is showing collection rules, and that one should open too.
+          const rule = ((rulesQuery.data ?? []) as RuleRow[]).find((r) => r.id === ruleId);
+          if (rule) startEdit(rule);
+        }}
+      />
 
       {allRules.length > 0 && (
         <RulesToolbar

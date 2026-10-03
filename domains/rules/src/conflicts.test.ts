@@ -65,6 +65,8 @@ describe("collection name conflicts", () => {
     assert.equal(conflicts.length, 1);
     assert.equal(conflicts[0].subject, "Top Rated");
     assert.deepEqual(conflicts[0].rules.map((r) => r.id).sort(), ["a", "b"]);
+    // Says where, so the page can link to the two copies.
+    assert.equal(conflicts[0].library?.key, "1");
   });
 
   test("the same name in two libraries is two collections, not a conflict", () => {

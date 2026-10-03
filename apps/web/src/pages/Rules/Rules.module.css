@@ -1016,6 +1016,37 @@ td.previewBlockCell {
   padding-left: 18px;
 }
 
+.conflictGroup {
+  margin-top: 6px;
+}
+
+/* A rule name in running text that opens the rule — a button, because it
+   opens the editor in place rather than navigating. */
+.conflictRule {
+  composes: ruleLink from "../../styles/shared.module.css";
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.conflictRules {
+  white-space: nowrap;
+}
+
+.conflictNames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.conflictName {
+  composes: metaChip metaChipLink from "../../styles/shared.module.css";
+}
+
 .conflictHint {
   display: block;
   margin-top: 4px;

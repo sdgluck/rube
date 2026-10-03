@@ -17,7 +17,7 @@
  * just be an invisible precedence rule again.
  */
 import { inArray } from "drizzle-orm";
-import { cleanupCandidates, ruleCollectionMembers, rules, type Db } from "@tinkerbell/db";
+import { cleanupCandidates, plexSections, ruleCollectionMembers, rules, type Db } from "@tinkerbell/db";
 import { ruleAction, type RuleConfig } from "@tinkerbell/contracts";
 
 export type ConflictKind = "collection-name" | "metadata-field" | "cleanup-vs-collection";
@@ -30,6 +30,12 @@ export interface RuleConflict {
   subject: string;
   /** One line, in the words the Rules page shows. */
   detail: string;
+  /**
+   * The library it happens in, where there is exactly one — a collection name
+   * only collides within a section. Lets the page say *where*, and link to
+   * the duplicates themselves.
+   */
+  library?: { key: string; title: string };
 }
 
 interface RuleRow {
@@ -156,23 +162,38 @@ export function createConflicts(deps: ConflictsDeps) {
     // Keyed as a JSON pair rather than a joined string: nearly every collection
     // name contains a space, and the display name is carried in the value so it
     // never has to be parsed back out of the key.
-    const owners = new Map<string, { displayName: string; ruleIds: Set<string> }>();
+    const owners = new Map<string, { displayName: string; sectionKey: string; ruleIds: Set<string> }>();
     for (const row of members) {
       if (!byId.has(row.ruleId)) continue;
       const key = JSON.stringify([row.sectionKey, row.collectionName.toLowerCase()]);
-      const entry = owners.get(key) ?? { displayName: row.collectionName, ruleIds: new Set<string>() };
+      const entry = owners.get(key) ?? {
+        displayName: row.collectionName,
+        sectionKey: row.sectionKey,
+        ruleIds: new Set<string>(),
+      };
       entry.ruleIds.add(row.ruleId);
       owners.set(key, entry);
     }
 
+    // A section that has since vanished from the index still gets named, by
+    // key — "in library 7" beats dropping the where entirely.
+    const sectionTitles = new Map(
+      db
+        .select({ key: plexSections.key, title: plexSections.title })
+        .from(plexSections)
+        .all()
+        .map((s) => [s.key, s.title]),
+    );
+
     const conflicts: RuleConflict[] = [];
-    for (const { displayName, ruleIds } of owners.values()) {
+    for (const { displayName, sectionKey, ruleIds } of owners.values()) {
       if (ruleIds.size < 2) continue;
       const involved = ordered.filter((r) => ruleIds.has(r.id));
       conflicts.push({
         kind: "collection-name",
         rules: involved.map((r) => ({ id: r.id, name: r.name })),
         subject: displayName,
+        library: { key: sectionKey, title: sectionTitles.get(sectionKey) ?? `library ${sectionKey}` },
         detail: `Both build a collection called "${displayName}" in the same library. Plex allows two collections with one name, so you get two — and which one a user sees depends on the order they were built.`,
       });
     }
