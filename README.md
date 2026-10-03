@@ -1,47 +1,37 @@
 # Tinkerbell
 
-A self-hosted Plex companion for automating library curation. Define rules over
-your Plex media — using metadata from IMDb/OMDb and requests from Overseerr — to
-drive collections, overlays, labels, and notifications on a schedule.
+A self-hosted companion for Plex. You write rules over your library, and
+Tinkerbell uses them to manage collections, overlays, labels, playlists, cleanup
+and notifications on a schedule.
 
-> [Screenshots of every page](screenshots/) · [Development guide](DEVELOPMENT.md)
+> [Screenshots](screenshots/) · [Development guide](DEVELOPMENT.md)
 
 ## Features
 
-- **Rules engine** — rules that produce Plex collections from your library,
-  refreshed on a schedule, with full run history.
-- **Smart filters** — compose criteria over Plex metadata, IMDb ratings, and
-  Overseerr requests. AI-assisted filter generation via Anthropic.
-- **Collections** — auto-managed Plex collections with sort order, pinning, and
-  shuffle hubs for a randomised home screen.
-- **Overlays** — stamp ratings, badges, and labels onto poster artwork.
-- **Because you watched** — per-user recommendation collections.
-- **Personalized home screens** — an opt-in, server-wide mode where each Plex
-  user tunes their own recommendations. [See below](#personalized-home-screens).
-- **Prerolls** — upload the videos Plex plays before a movie; Tinkerbell
-  transcodes anything Plex wouldn't direct play and manages the server setting.
-  [See below](#prerolls).
-- **Labels** — bulk apply and undo Plex labels from rules, with a preview of
-  what will change.
-- **Discover** — search TMDb for films and shows, see at a glance what your
-  \*Arrs and Plex already hold, and send anything else to Radarr or Sonarr with
-  the profile, root folder and monitoring you choose. Records get a detail page
-  with an interactive release picker for grabbing a specific release yourself.
-- **Watchlist sync** — anything you add to your Plex watchlist that isn't
-  already in your library is sent to Radarr or Sonarr, with a per-run cap, a
-  dry-run mode, and a ledger so a request is never made twice.
-- **Notifications** — Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
-  LunaSea, and generic webhooks.
-- **Backup, export and change history** — nightly copies of the database, a
-  portable JSON export of your configuration, and a record of every settings
-  change with the previous value. [See below](#backup-export-and-change-history).
-- **Stats & events** — library stats, an activity feed, and playback history.
-- **Stress test** — ramps real playback sessions against your server until it
-  stops keeping up, and reports how many it handled. [See below](#stress-test--how-many-streams-can-this-server-actually-serve).
-- **Multi-user** — per-user settings and integrations (Plex, \*Arrs, Overseerr).
-- **User management** — invite people to the server, choose the libraries each
-  one gets, set downloads / Live TV / content-rating limits, watch what they're
-  streaming and stop a stream, all without leaving for app.plex.tv.
+- **Rules**: build Plex collections from your library on a schedule, with a
+  history of every run.
+- **Smart filters**: match on Plex metadata, IMDb ratings and Overseerr
+  requests, or describe a filter in words and let AI build it.
+- **Collections**: sort order, pinning to the home screen, and shuffled hubs.
+- **Overlays**: draw ratings, badges and labels on posters.
+- **Because you watched**: recommendation collections for each user.
+- **Personalized home screens**: each Plex user sets their own tastes.
+  [More](#personalized-home-screens)
+- **Prerolls**: upload videos for Plex to play before a movie.
+  [More](#prerolls)
+- **Labels**: apply and undo Plex labels in bulk, with a preview.
+- **Discover**: search TMDb, see what Plex and Radarr/Sonarr already have, and
+  send the rest to Radarr or Sonarr.
+- **Watchlist sync**: send new Plex watchlist items to Radarr or Sonarr.
+- **Notifications**: Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
+  LunaSea, email and webhooks.
+- **Backup, export and change history**.
+  [More](#backup-export-and-change-history)
+- **Stats and events**: library stats, an activity feed and playback history.
+- **Stress test**: find how many streams your server can handle.
+  [More](#stress-test)
+- **Users**: invite people, choose their libraries, set limits, and see or stop
+  what they're streaming.
 
 ## Install
 
@@ -56,327 +46,175 @@ docker run -d --name tinkerbell \
   ghcr.io/sdgluck/tinkerbell:latest
 ```
 
-Images are published to GHCR for `linux/amd64` and `linux/arm64`: `latest` plus
-the semver tags on each release, and `edge` on every push to `master`. Or build
-your own with `docker build -t tinkerbell .`.
+| Item        | Value                                                    |
+| ----------- | -------------------------------------------------------- |
+| Images      | `linux/amd64`, `linux/arm64` on GHCR                     |
+| Tags        | `latest` and version tags per release; `edge` per commit |
+| Port `3000` | Admin app                                                |
+| Port `3100` | User portal                                              |
+| `/config`   | Database and settings                                    |
+| `/prerolls` | Optional. Only for prerolls; mount it into Plex too      |
+| `PUID/PGID` | Owner of `/config`. Default `99:100`                     |
+| `TZ`        | Timezone for schedules. Jobs → Schedule can override it  |
 
-One Node process serves the admin UI, the tRPC API, and the user portal.
-Persistent state (SQLite database and config) lives in `/config`, and is chowned
-to `PUID:PGID` (default `99:100`, Unraid's `nobody:users`) by the entrypoint,
-which drops from root before starting the server. The `/prerolls` volume is only
-needed for the Prerolls feature, and must be mounted into Plex too.
+To build the image yourself: `docker build -t tinkerbell .`
 
 ### Unraid
 
-`unraid/tinkerbell.xml` is a Community Applications template. Until it is listed
-in the CA appfeed, install it by hand:
-
-1. Copy the template onto the array:
+1. Download the template:
 
    ```sh
    wget -O /boot/config/plugins/dockerMan/templates-user/my-Tinkerbell.xml \
      https://raw.githubusercontent.com/sdgluck/tinkerbell/master/unraid/tinkerbell.xml
    ```
 
-2. **Docker → Add Container**, and pick `Tinkerbell` from the _Template_
-   dropdown (under "User templates").
-3. Check the paths and hit **Apply**.
+2. Go to **Docker → Add Container** and choose `Tinkerbell` under
+   _User templates_.
+3. Check the paths and click **Apply**.
 
-| Setting            | Default                        | Notes                                                                              |
-| ------------------ | ------------------------------ | ---------------------------------------------------------------------------------- |
-| WebUI port (admin) | `3000`                         | Unauthenticated until you turn on auth. See [Network exposure](#network-exposure). |
-| User Portal port   | `3100`                         | Sign in with Plex; safe to expose.                                                 |
-| `/config`          | `/mnt/user/appdata/tinkerbell` | SQLite database and settings. Back this up.                                        |
-| `/prerolls`        | `/mnt/user/prerolls`           | Optional. Map the **same host path** into the Plex container.                      |
-| `PUID` / `PGID`    | `99` / `100`                   | Unraid's `nobody:users`.                                                           |
-| `TZ`               | `Europe/London`                | The zone cron schedules run in; Jobs → Schedule overrides it.                      |
+Defaults: `/config` → `/mnt/user/appdata/tinkerbell`, `/prerolls` →
+`/mnt/user/prerolls` (map the same host path into Plex).
 
-## Network exposure
+## Security
 
-### Admin authentication
+### Admin sign-in
 
-Off by default, and worth turning on. Under **Settings → Security**, "Turn on"
-makes the admin app require a Plex sign-in: Tinkerbell asks plex.tv which
-account owns the server behind your configured Plex token, and lets in that
-account and no other. There's no password to store, no reset flow, and no
-second identity system — you already have a Plex account, and the app is
-useless without a Plex token anyway.
+Admin sign-in is off by default. Turn it on under **Settings → Security**. After
+that, only the Plex account that owns your server can sign in.
 
-Details worth knowing:
+- Sessions last 7 days and renew while you use the app.
+- The user portal has its own separate sign-in.
+- **Locked out?** Set `TINKERBELL_DISABLE_AUTH=1` and restart. Remove it once
+  you're back in.
 
-- The session is an opaque cookie; only its SHA-256 reaches the database. It
-  lasts 7 days and slides forward while you're using the app. `Secure` is set
-  when the request arrived over HTTPS — directly, or via
-  `X-Forwarded-Proto: https` from a reverse proxy — and omitted on plain HTTP
-  so a LAN install still works.
-- `/api/plex-image` and `/api/prerolls/…` are gated too. Plex reads preroll
-  files from the shared filesystem path, never over HTTP, so nothing on the
-  Plex side breaks.
-- The user portal on `3100` is unaffected: it has its own sign-in, its own
-  cookie, and its own session scope. A portal session can't authorise an admin
-  call.
-- **Locked out?** Set `TINKERBELL_DISABLE_AUTH=1` and restart. That bypasses
-  the check entirely — it needs shell access on the host, which is the right
-  bar — and logs a warning every 60 seconds for as long as it's set. Unset it
-  once you're back in.
-- Turning auth on doesn't happen on upgrade. An existing install keeps
-  behaving exactly as it did.
+### Network
 
-### The bind address
+| Variable    | Default        | Meaning                                             |
+| ----------- | -------------- | --------------------------------------------------- |
+| `HOST`      | `127.0.0.1`    | Admin app address. The Docker image sets `0.0.0.0`. |
+| `PORT`      | `3000`         | Admin app port                                      |
+| `USER_HOST` | same as `HOST` | Portal address                                      |
+| `USER_PORT` | `3100`         | Portal port                                         |
 
-With auth off, anyone who can reach the server port can call every mutation.
-So the server binds to `127.0.0.1` by default.
-
-- `HOST=127.0.0.1` (default) — loopback only, safe.
-- `HOST=0.0.0.0` — all interfaces. The Docker image sets this so the container
-  is reachable from the host. With auth off, only do this behind a trusted
-  reverse proxy or firewall, and **do not port-forward `3000`**.
-
-A `[security]` warning is logged at startup whenever the server binds to a
-non-loopback interface with auth off — that combination is the dangerous one.
-With auth on, startup notes that instead.
-
-The **user portal** (Sign in with Plex) runs on its own port so it can be
-exposed publicly without exposing the admin API: `USER_PORT` (default `3100`)
-and `USER_HOST` (default: same as `HOST`). For a public deployment, expose only
-`3100`. The portal listener only runs while Personalized Home Screens is
-enabled.
-
-Set the address users reach it at under **Settings → Portal → Address**. Plex
-sign-in returns people there, cleanup warnings link to it, and the portal
-preroll shows it. Left blank, sign-in falls back to whichever address the
-visitor arrived from.
+- **Don't expose port `3000` to the internet** unless admin sign-in is on.
+- Port `3100` (the portal) is safe to expose. It only runs while a portal
+  feature is on.
+- Set the portal's public address under **Settings → Portal → Address**.
 
 ## Personalized home screens
 
-Per-user recommendations (Because You Watched, and any rule marked
-_personalizable_) work by giving each user a `User:<name>`-labelled collection
-and restricting their Plex sharing so they only see their own. Isolation only
-holds when **every** shared user is restricted, so this sits behind a single
-server-wide switch under **Settings → Personalization**.
+Each user gets their own recommendation collections, and only they can see them.
+Turn it on under **Settings → Personalization**.
 
-- **Enable** stamps the `Tinkerbell` label on every item in your configured
-  libraries (so restricted users keep full library access) and restricts each
-  shared user to `[Tinkerbell, User:<self>]`, snapshotting their prior sharing
-  settings first.
-- **Disable** deletes every per-user collection _before_ lifting restrictions
-  (so nothing briefly leaks to everyone), restores each snapshot, and removes
-  the `Tinkerbell` labels — leaving the server as if it had never been enabled.
-- Users set their own tastes (loved/liked/hated genres, moods, rating floor,
-  excluded titles, …) in the **portal** by signing in with Plex; an admin can
-  also set them under **Settings → User Preferences**. Preferences are inert
-  until the user opts in.
+- **Enable** labels your libraries and limits each shared user to their own
+  collections. Each user's previous sharing settings are saved first.
+- **Disable** removes the per-user collections and restores those settings.
+- Users set their tastes in the portal by signing in with Plex. Admins can also
+  set them under **Settings → User Preferences**.
 
-Caveats: the Plex server **owner cannot be restricted**, so the owner sees every
-user's personalized collections. Newly shared users are not restricted
-automatically — use **Reconcile users** after adding someone.
+Limits:
+
+- The server owner can't be restricted, so the owner sees everyone's
+  collections.
+- Click **Reconcile users** after sharing with someone new.
 
 ## Prerolls
 
-A preroll is a short video Plex plays before every movie. Plex stores them as a
-list of paths **on its own filesystem** (the `CinemaTrailersPrerollID` server
-preference), which means Tinkerbell and Plex have to share a directory.
+A preroll is a short video that Plex plays before a movie. Prerolls need Plex
+Pass.
 
-Mount one directory into both containers:
+1. Mount the same folder into both Tinkerbell and Plex:
 
-```yaml
-services:
-  tinkerbell:
-    volumes:
-      - ./config:/config
-      - ./prerolls:/prerolls
-  plex:
-    volumes:
-      - ./prerolls:/prerolls # must be readable by Plex
-```
+   ```yaml
+   services:
+     tinkerbell:
+       volumes:
+         - ./prerolls:/prerolls
+     plex:
+       volumes:
+         - ./prerolls:/prerolls
+   ```
 
-Then set **Settings → Prerolls → "The same directory, as Plex sees it"** to
-whatever path Plex mounts it at. If both containers use `/prerolls`, the default
-is already correct.
+2. If Plex mounts the folder at a different path, enter that path under
+   **Settings → Prerolls**.
+3. Upload videos on the **Prerolls** page.
 
-Uploads are probed with `ffprobe` and left untouched when Plex would already
-direct play them; anything else is normalised to H.264/AAC in an MP4 so a
-ten-second clip can't occupy a transcode session. `ffmpeg` ships in the Docker
-image; for a bare install, put it on `PATH` (`brew install ffmpeg`,
-`apt install ffmpeg`).
+Videos that Plex can't play directly are converted to H.264/AAC MP4. The Docker
+image includes `ffmpeg`; outside Docker, install it yourself. Set
+`PREROLLS_DIR` to change where Tinkerbell keeps prerolls.
 
-Two things worth knowing:
+### Portal preroll
 
-- **Prerolls are a Plex Pass feature.** Without a subscription Plex stores the
-  setting and plays nothing.
-- **A wrong path mapping fails silently.** Plex accepts the setting and then
-  finds no file. The Prerolls page reports whether Plex is in sync, and the
-  health check watches for drift.
-
-Set `PREROLLS_DIR` to move Tinkerbell's side of the directory; it defaults to
-`$DATA_DIR/prerolls` outside Docker.
-
-### The portal preroll
-
-**Settings → Portal → Preroll** makes a card that tells your users where to
-sign in to the portal and customise their Plex: a headline, a short message, the
-portal's address and (optionally) a QR code, in your colours. Tinkerbell renders
-it to a few seconds of H.264/AAC video and adds it to the pool like any other
-preroll — so it follows the same random or in-order playback, and can be
-switched off or reordered from the Prerolls page. Editing the card re-renders
-it in place.
-
-The address defaults to the one under **Settings → Portal → Address**. It has to be one your users can
-reach from their phones — the portal port, not the admin one — and the portal
-only listens while one of its features (personalization, cleanup warnings or
-digests) is on; the page warns when it isn't.
+**Settings → Portal → Preroll** makes a short video telling users where to find
+the portal. It shows a message, the portal address and an optional QR code. It
+plays alongside your other prerolls.
 
 ## Backup, export and change history
 
-Three separate things, because they answer three separate questions.
+### Backups
 
-### Backups — "the disk had a bad day"
+A compressed copy of the database is made every night at 03:30, and the last 7
+are kept. Configure it under **Settings → Backup & Restore**. In Docker, keep the
+backup folder on a mounted volume.
 
-A gzipped copy of the whole database, taken nightly at 03:30 and kept for the
-last 7 runs. **On by default**: a backup nobody enabled is a backup nobody has.
-Settings → Backup & Restore.
-
-The copy is taken with SQLite's online backup API rather than by copying the
-file. That matters — the database runs in WAL mode, and `cp` of a live one
-produces a file that opens cleanly, looks fine, and is missing whatever was in
-the write-ahead log.
-
-**In Docker, put the backup directory on a mounted volume.** The default is
-`<DATA_DIR>/backups`, which is inside the volume you already mount for
-`tinkerbell.db`. A path outside it lives on the container's own filesystem and
-disappears when the container is replaced, which is worse than having no backup
-because it looks like one.
-
-**Restoring is a manual procedure**, and deliberately not a button — a restore
-that runs while the app has the database open produces two corrupt files rather
-than one good one:
+To restore:
 
 1. Stop the container.
-2. `gunzip tinkerbell-20260820T033000.db.gz`
-3. Replace `tinkerbell.db` in your data directory with the result, and delete
-   any `tinkerbell.db-wal` and `tinkerbell.db-shm` sitting beside it.
+2. Unzip the backup: `gunzip tinkerbell-20260820T033000.db.gz`
+3. In your data folder, replace `tinkerbell.db` with the unzipped file. Delete
+   `tinkerbell.db-wal` and `tinkerbell.db-shm` if they exist.
 4. Start the container.
 
-### Export — "I'm moving hosts", "here's my broken rule"
+### Export and import
 
-One JSON file holding rules, job schedules, overlay presets and settings, in a
-form another Tinkerbell can read. Library-specific values are translated on the
-way out: genre and director tag ids become names, section references become
-library titles. Without that a rule imports cleanly on another server and
-matches nothing, silently.
+Export saves your rules, job schedules, overlay presets and settings to a JSON
+file that another Tinkerbell can import.
 
-**Credentials are excluded by default.** There is a checkbox to include them,
-which warns first and marks the file — but an export is the kind of thing people
-paste into issues, so the default is the safe one.
+- Passwords and API keys are left out unless you tick the box to include them.
+- Import shows a preview first. Items that differ from yours keep your version
+  unless you choose otherwise.
 
-Importing always previews first. Every item is classified as new, identical, or
-different from what you already have, and anything different defaults to keeping
-your copy until you say otherwise. Replacements are recorded in the change
-history, so you can see what they were and put them back.
+### Change history
 
-### Change history — "what did I change last Tuesday?"
+Every change to a rule, setting, job schedule, overlay preset or preroll is
+logged with its old value and who made it. See **Settings → Change History**, or
+**Change history** in a rule's menu to restore an older version. Secrets are
+hidden, and entries are kept for 180 days.
 
-Every edit to a rule, a setting, a job schedule, an overlay preset or a preroll,
-with the previous value and who made it — a signed-in admin, a job, or an
-import. Rules get a **Change history** entry in their row menu with a
-"restore this version" action; the full log is at Settings → Change History.
+The **Changes** page is different: it lists what Tinkerbell did to Plex.
 
-Secrets are recorded redacted, so this never becomes a plaintext history of
-every API key you have entered. Transient job state and dashboard layout are not
-recorded at all — they would bury everything else. Entries are kept for 180 days.
+## Stress test
 
-This is the counterpart to the **Changes** page, which is what Tinkerbell did to
-_Plex_: collections built, metadata written, files removed. This one is what you
-did to Tinkerbell.
+**Settings → Stress Test** starts real Plex streams one at a time until your
+server can't keep up, then reports how many it handled.
 
-## Stress test — "how many streams can this server actually serve?"
+- Modes: **Transcode**, **Direct Play** or **Mixed**. Up to 50 sessions.
+- It puts real load on the server, so don't run it while people are watching.
+- It only plays unwatched items, and marks them unwatched again afterwards.
+- Test streams are left out of your stats and playback history.
+- You can watch the run live and replay past runs.
 
-Settings → Stress Test ramps real playback sessions against your Plex server,
-one at a time, and stops when the server stops keeping up. The number it reports
-is the last session count that was still healthy.
+## Running unattended
 
-It is a genuine load test, not a simulation: each step starts a real transcode
-(or a real direct-play stream), pulls the segments, and reports a timeline so
-Plex counts the session. Expect real transcoding, disk and network load for the
-duration, and don't run it while other people are watching.
+- **Timezone:** set it in **Jobs → Schedule**. Otherwise `TZ` is used.
+- **Missed schedules** run once at the next start. Jobs that run more often than
+  hourly are skipped.
+- **Time limits:** a job that runs too long is stopped (most jobs: 30 minutes;
+  generate: 4 hours; preroll processing: 6 hours).
+- **Restarts:** `generate` and `sync-media` carry on where they stopped if
+  restarted within 24 hours. Cancelling a run starts it over next time.
+- **Job settings** are on each job's page. Add optional features from
+  **Jobs → Add Feature**.
+- **Run one copy only.** Two copies on the same database will run every job
+  twice.
 
-Choose **Transcode**, **Direct Play**, or **Mixed** with a transcode share, and
-a session cap (1–50). What each mode measures differs:
+### Logging
 
-- **Transcode** watches the transcoder's speed. Below 1.0x it is producing less
-  than a second of video per second of wall clock — the point a real viewer
-  starts buffering.
-- **Direct Play** has no transcoder to read, so it watches whether Plex is still
-  reporting the sessions and whether the bytes are still flowing. A server that
-  quietly kills streams under load shows up as sessions disappearing.
-
-Watch-state hygiene is deliberate. Only never-watched items are used, and the
-run marks every one of them unwatched again when it finishes — including when
-you cancel it, or when it fails. Anything already watched or part-watched is
-skipped rather than played, so the cleanup can never erase history you cared
-about.
-
-A step that looks degraded is re-measured before the run stops, so a single
-unlucky reading doesn't understate your server. Runs are kept with their full
-log, so a failed run can be read back afterwards.
-
-**Watching it happen.** While a run is in flight the page becomes a live view of
-what your server is doing: bandwidth (what Plex says it is sending against what
-the harness actually receives — the two diverging is what a server failing to
-deliver a stream it still reports looks like), encode speed with the slowest
-single session shaded beneath the average, one lane per simulated session, and a
-strip showing which phase each moment belonged to. When the run ends it keeps the
-whole series, so an old run replays its charts and you can hover any moment to
-read every number at that instant. The capacity curve — sessions against speed
-and throughput — is drawn for every run, including ones recorded before any of
-this existed.
-
-**It stays out of your statistics.** The sessions are real ones as far as Plex is
-concerned, so without care a twenty-session ramp would land in playback history
-as twenty plays and put a spike in the bandwidth chart nobody watching caused.
-Every simulated player carries a reserved client identifier, and the poller,
-Stats, the per-user session lists and the bandwidth test all exclude them. A run
-started while somebody is genuinely watching still records _their_ play.
-
-## Running it unattended
-
-Scheduled work runs through a background job queue. A few things worth knowing:
-
-- **Schedules are timezone-aware.** Set the zone in Jobs → Schedule; it
-  falls back to `TZ`, then the container's clock. Cron expressions are evaluated
-  in that zone, so "3am" means 3am there across daylight-saving changes.
-- **Missed schedules run once on the next boot**, staggered a few seconds apart.
-  On a server only powered on in the evenings, expect several jobs catching up
-  at each boot — every decision is logged. Jobs scheduled more often than hourly
-  are never caught up.
-- **Every run has a deadline** (6h for preroll processing, 4h for generate,
-  30min for most things). A watchdog fails anything past it, so one wedged job
-  can't stop the queue forever.
-- **Long jobs checkpoint.** `generate` and `sync-media` resume where they left
-  off if the container restarts mid-run. Checkpoints expire after 24 hours, and
-  cancelling a run discards its checkpoint — so an explicit cancel followed by
-  "Run now" starts over rather than resuming.
-- **Each job page holds its settings.** Schedule, libraries and the job's own
-  options (Digest's period and recipients, how many rules run at once, who
-  Personalized Collections covers, …) are saved together and validated against
-  what the job accepts. Prerequisites set elsewhere — an AI provider, SMTP, a
-  notification channel — are listed under "What this needs" with a link.
-  Optional features are installed, and can be configured first, from Jobs → Add
-  Feature.
-- **One-off runs.** Some jobs offer variants beside "Run now": preview the
-  duplicate-collection sweep without deleting, force collection artwork to
-  re-render, remove overlays. A variant applies to that run only and is marked
-  in the run history.
-- **Run one instance.** Cron schedules and the "already running" guard both
-  assume a single process. Pointing two replicas at one database will
-  double-fire every schedule.
-
-**Logging:** `LOG_LEVEL` (`debug` | `info` | `warn` | `error`, default `info`)
-controls verbosity, including the job engine's own output — raise it to `debug`
-when a job misbehaves. Set `LOG_FORMAT=json` for one JSON object per line if you
-ship container logs to a collector.
+| Variable     | Values                                     |
+| ------------ | ------------------------------------------ |
+| `LOG_LEVEL`  | `debug`, `info` (default), `warn`, `error` |
+| `LOG_FORMAT` | `json` for one JSON object per line        |
 
 ## Development
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the stack, local setup, tests, and
-release process.
+See [DEVELOPMENT.md](DEVELOPMENT.md).
