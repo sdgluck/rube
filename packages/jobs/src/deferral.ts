@@ -21,6 +21,7 @@ import { type Services } from "@tinkerbell/composition";
 import { and, isNull, sql } from "drizzle-orm";
 import { playbackSessions } from "@tinkerbell/db";
 import { minutesOfDay, parseClock, MINUTE_MS } from "@tinkerbell/core";
+import { HEAVY_JOB_IDS } from "@tinkerbell/contracts";
 
 /**
  * The jobs worth deferring: the ones that render, transcode or walk the whole
@@ -31,21 +32,12 @@ import { minutesOfDay, parseClock, MINUTE_MS } from "@tinkerbell/core";
  * the job does, not a preference, and a per-job checkbox would be twelve more
  * switches to explain in return for a choice nobody has a reason to make
  * differently.
+ *
+ * Declared as `heavy` in contracts' `JOB_SCHEDULE_META`, which the schedule
+ * page reads too — so the jobs it warns about starting outside the window are
+ * exactly the ones this gate holds back.
  */
-export const DEFERRABLE_JOBS: readonly string[] = [
-  "generate",
-  "cleanup",
-  // Same engine as the two above, plus one Plex read per matched item.
-  "metadata",
-  "sync-media",
-  "sync-collections",
-  "overlays",
-  "posters-refresh",
-  "collection-art",
-  "preroll-process",
-  "because-you-watched",
-  "personalize",
-];
+export const DEFERRABLE_JOBS: readonly string[] = HEAVY_JOB_IDS;
 
 export function isDeferrable(jobId: string): boolean {
   return DEFERRABLE_JOBS.includes(jobId);

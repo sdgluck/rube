@@ -29,23 +29,9 @@ import { errorMessage } from "./util.ts";
 
 const timezoneLog = createLogger("timezone");
 
-/**
- * Does the runtime's ICU data recognise this timezone?
- *
- * An empty string is accepted as "unset" — that's how the Settings form clears
- * the setting back to following the server's own clock.
- */
-export function isValidTimezone(value: string): boolean {
-  if (value.trim() === "") return true;
-  try {
-    // Throws RangeError on an unknown zone. This is the same check croner
-    // performs internally, done somewhere we can still report it to the user.
-    new Intl.DateTimeFormat(undefined, { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-}
+// Shared with the browser's schedule editor; see contracts' clock.ts.
+export { isValidTimezone } from "@tinkerbell/contracts";
+import { isValidTimezone } from "@tinkerbell/contracts";
 
 /**
  * Where one service's watchlist adds land.
@@ -1089,7 +1075,13 @@ export function createConfigStore(deps: ConfigStoreDeps) {
     return configSchema.shape[key].parse(row.value) as ConfigValue<K>;
   }
 
-  function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
+  /**
+   * `record: false` leaves the change log to the caller, for a save that writes
+   * config alongside other things and logs the whole edit as one entry — the
+   * schedule page's timezone and window are part of "changed the schedule",
+   * not three separate settings edits beside it.
+   */
+  function setConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>, opts: { record?: boolean } = {}): void {
     // Validate on the way in, not just on the way out.
     //
     // `getConfig` parses, `setConfig` used not to — so a value the schema
@@ -1106,7 +1098,7 @@ export function createConfigStore(deps: ConfigStoreDeps) {
     // Read before write, and only when the key is actually logged — an
     // unconditional read would double every settings write's query count to
     // populate a column that `UNLOGGED_CONFIG_KEYS` then throws away.
-    const logged = !UNLOGGED_CONFIG_KEYS.has(key);
+    const logged = opts.record !== false && !UNLOGGED_CONFIG_KEYS.has(key);
     const before = logged ? getConfig(key) : undefined;
 
     db.insert(config).values({ key, value }).onConflictDoUpdate({ target: config.key, set: { value } }).run();

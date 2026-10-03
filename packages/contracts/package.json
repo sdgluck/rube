@@ -17,6 +17,7 @@
   "dependencies": {
     "@tinkerbell/overlays": "workspace:*",
     "@tinkerbell/plex-smart-filter": "workspace:*",
+    "croner": "^9.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -276,3 +276,65 @@ export {
   variantsForJob,
 } from "./job-fields.ts";
 export type { FieldControl, FieldSpec, VariantSpec } from "./job-fields.ts";
+
+export { formatClock, isValidTimezone, minutesOfDay, parseClock } from "./clock.ts";
+export {
+  cronError,
+  DAY_MS,
+  describeDays,
+  describeSchedule,
+  dstShifts,
+  formatSchedule,
+  HOUR_MS,
+  INTERVAL_STEPS,
+  minGapMs,
+  MINUTE_MS,
+  parseSchedule,
+  sameSchedule,
+  SECOND_MS,
+  wallClock,
+  WEEK_MINUTES,
+  weekOccurrences,
+} from "./job-schedule.ts";
+export type { DstShift, IntervalUnit, JobSchedule } from "./job-schedule.ts";
+export {
+  canDisableJob,
+  HEAVY_JOB_IDS,
+  isSchedulableJob,
+  JOB_ORDER,
+  JOB_SCHEDULE_META,
+  jobScheduleMeta,
+  RECOMMENDED_SCHEDULE_SETTINGS,
+  SCHEDULE_SERVICE_LABELS,
+} from "./job-schedule-meta.ts";
+export type { JobOrderEdge, JobScheduleMeta, ScheduleCapabilities, ScheduleService } from "./job-schedule-meta.ts";
+export {
+  applyFix,
+  scheduleSettingsSchema,
+  diffSchedulePlans,
+  diffScheduleSettings,
+  effectiveTimezone,
+  FREQUENT_HEAVY_MS,
+  hasBlockingIssues,
+  inWindow,
+  isJobChanged,
+  planFromContext,
+  roundUpTo,
+  SNAP_MINUTES,
+  typicalDurationMs,
+  validateSchedulePlan,
+} from "./job-schedule-validate.ts";
+export type {
+  JobPlanEntry,
+  ScheduleContext,
+  ScheduleFix,
+  ScheduleIssue,
+  ScheduleIssueCode,
+  ScheduleJob,
+  ScheduleLane,
+  SchedulePlan,
+  ScheduleSettings,
+  ScheduleSeverity,
+} from "./job-schedule-validate.ts";
+export { buildPreset, packChain, SCHEDULE_PRESETS } from "./job-schedule-presets.ts";
+export type { SchedulePreset } from "./job-schedule-presets.ts";

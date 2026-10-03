@@ -1,5 +1,5 @@
 import { type ConfigValue, type ConfigStore } from "@tinkerbell/core";
-import { isSeededRule } from "@tinkerbell/contracts";
+import { isSeededRule, RECOMMENDED_SCHEDULE_SETTINGS } from "@tinkerbell/contracts";
 
 import {
   countableSteps,
@@ -202,9 +202,12 @@ export function createOnboarding(deps: OnboardingDeps) {
    * is "not while anyone is watching".
    */
   function applyScheduleDefaults(timezone: string): void {
+    // The same constant the Recommended preset on Jobs → Schedule applies, so
+    // the setup flow can't recommend a window the schedule then ignores.
+    const { maintenanceWindow, deferWhileStreaming } = RECOMMENDED_SCHEDULE_SETTINGS;
     setConfig("global_timezone", timezone);
-    setConfig("jobs_maintenance_window", { enabled: true, from: "01:00", to: "06:00" });
-    setConfig("jobs_defer_while_streaming", { enabled: true, maxWaitMinutes: 120, transcodesOnly: false });
+    setConfig("jobs_maintenance_window", { ...maintenanceWindow });
+    setConfig("jobs_defer_while_streaming", { ...deferWhileStreaming });
   }
 
   return {

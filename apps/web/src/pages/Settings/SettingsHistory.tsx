@@ -13,9 +13,11 @@ type Entity = ChangeLogEntity;
 const ENTITY_LABELS: Record<Entity, string> = {
   rule: "Rules",
   config: "Settings",
-  job: "Job schedules",
+  job: "Jobs",
   overlay_preset: "Overlay presets",
   preroll: "Prerolls",
+  // A whole-page save from Jobs → Schedule: several jobs and the window at once.
+  schedule: "Schedule changes",
 };
 
 /** Who did it, in words rather than the raw source token. */

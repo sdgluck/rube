@@ -39,6 +39,7 @@
     "@tinkerbell/domain.metadata-overrides": "workspace:*",
     "@tinkerbell/domain.migration": "workspace:*",
     "@tinkerbell/domain.notifications": "workspace:*",
+    "@tinkerbell/domain.onboarding": "workspace:*",
     "@tinkerbell/domain.overlays": "workspace:*",
     "@tinkerbell/domain.playback": "workspace:*",
     "@tinkerbell/domain.playlists": "workspace:*",

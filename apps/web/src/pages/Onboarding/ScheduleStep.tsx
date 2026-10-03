@@ -1,26 +1,18 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { describeSchedule, parseSchedule, RECOMMENDED_SCHEDULE_SETTINGS } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
+import { timezoneOptions } from "#lib/timezones";
 import controls from "#/styles/controls.module.css";
 import styles from "./Onboarding.module.css";
 
-/** Mirrors `applyScheduleDefaults` in `domains/onboarding` — shown, not guessed. */
+// Read from the constant `applyScheduleDefaults` writes — shown, not guessed.
+const { maintenanceWindow, deferWhileStreaming } = RECOMMENDED_SCHEDULE_SETTINGS;
 const RECOMMENDED = {
-  window: "01:00 to 06:00",
-  defer: "hold off while anyone is streaming, for up to 2 hours",
+  window: `${maintenanceWindow.from} to ${maintenanceWindow.to}`,
+  defer: `hold off while anyone is streaming, for up to ${deferWhileStreaming.maxWaitMinutes / 60} hours`,
 };
-
-function timezoneOptions(): string[] {
-  const supported = (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
-  if (typeof supported === "function") {
-    try {
-      return supported("timeZone");
-    } catch {
-      // Fall through to the pair below on an engine without ICU data.
-    }
-  }
-  return ["UTC", Intl.DateTimeFormat().resolvedOptions().timeZone].filter(Boolean);
-}
 
 export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) {
   const { addToast } = useToast();
@@ -80,6 +72,10 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
           <li>Timezone set to {timezone}</li>
           <li>Heavy jobs confined to {RECOMMENDED.window}</li>
           <li>And they {RECOMMENDED.defer}</li>
+          <li>
+            Nightly jobs moved into that window, each after the ones it depends on — any you have already rescheduled
+            stay put
+          </li>
         </ul>
         <button
           type="button"
@@ -89,7 +85,9 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
         >
           {applying ? "Applying…" : "Use recommended"}
         </button>
-        <p className={styles.fieldHint}>All three are editable later in Settings → Schedules.</p>
+        <p className={styles.fieldHint}>
+          All of it is editable later in <Link to="/jobs/schedule">Jobs → Schedule</Link>.
+        </p>
       </div>
 
       {scheduled.length > 0 && (
@@ -99,7 +97,7 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
             {scheduled.map((job) => (
               <li key={job.id} className={styles.jobRow}>
                 <span>{job.name}</span>
-                <code className={styles.cron}>{job.schedule}</code>
+                <code className={styles.cron}>{describeSchedule(parseSchedule(job.schedule))}</code>
               </li>
             ))}
           </ul>

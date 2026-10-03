@@ -1,5 +1,5 @@
-import { COMMANDS, isCommandName, JobUpdateError } from "@tinkerbell/jobs";
-import { JobConfigError } from "@tinkerbell/contracts";
+import { COMMANDS, isCommandName, JobScheduleConflictError, JobUpdateError } from "@tinkerbell/jobs";
+import { JobConfigError, scheduleSettingsSchema } from "@tinkerbell/contracts";
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -23,6 +23,8 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     getJobs,
     getRecentRuns,
     getRunsInWindow,
+    scheduleContext,
+    updateSchedules,
     installFeature,
     listFeatureCatalog,
     startJob,
@@ -184,6 +186,53 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
           throw err;
         }
         return { ok: true };
+      }),
+
+    /**
+     * Everything the Jobs → Schedule page draws and validates against: every
+     * job with its lane, timeout and typical duration, the window and timezone,
+     * and which services are set up.
+     */
+    scheduleContext: procedure.query(() => scheduleContext()),
+
+    /**
+     * The Schedule page's save: many jobs and the scheduling settings in one
+     * transaction, one change-log entry, validated by the same function the
+     * page runs while you drag. Each change carries what the page last saw, so
+     * a save over somebody else's edit is a 409 rather than a silent revert.
+     */
+    updateSchedules: procedure
+      .input(
+        z.object({
+          jobs: z.array(
+            z.object({
+              jobId: z.string(),
+              schedule: z.string().max(200).optional(),
+              enabled: z.boolean().optional(),
+              expected: z.object({ schedule: z.string(), enabled: z.boolean() }),
+            }),
+          ),
+          settings: z
+            .object({
+              values: scheduleSettingsSchema.partial(),
+              expected: scheduleSettingsSchema.partial(),
+            })
+            .optional(),
+          summary: z.string().max(200).optional(),
+        }),
+      )
+      .mutation(({ input }) => {
+        try {
+          return updateSchedules(input);
+        } catch (err) {
+          if (err instanceof JobScheduleConflictError) {
+            throw new TRPCError({ code: "CONFLICT", message: err.message, cause: err });
+          }
+          if (err instanceof JobConfigError || err instanceof JobUpdateError) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          }
+          throw err;
+        }
       }),
 
     start: procedure

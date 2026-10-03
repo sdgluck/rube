@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { isOnboardingStepId, type OnboardingStepId } from "@tinkerbell/domain.onboarding";
 import { isValidTimezone } from "@tinkerbell/core";
+import { buildPreset, planFromContext } from "@tinkerbell/contracts";
 
 import { t, procedure } from "./_base.ts";
 
@@ -26,7 +27,7 @@ function asStepId(value: string): OnboardingStepId {
 }
 
 export function createOnboardingRouter(deps: Pick<TrpcDeps, "jobs" | "onboarding">) {
-  const { restartSchedules } = deps.jobs;
+  const { applyToUntouchedDefaults, restartSchedules, scheduleContext } = deps.jobs;
   const { onboarding } = deps;
   const {
     acknowledgeStep,
@@ -101,7 +102,16 @@ export function createOnboardingRouter(deps: Pick<TrpcDeps, "jobs" | "onboarding
       // The live Cron objects bake their zone in at construction, so they keep
       // evaluating against the old one until restarted.
       restartSchedules();
-      return { ok: true as const };
+      // The window alone used to be the whole recommendation, and it held the
+      // shipped midnight syncs back onto `generate` every night. The jobs move
+      // into it too — but only those still on their shipped time, so a user
+      // who has already chosen a schedule keeps it.
+      const ctx = scheduleContext();
+      const moved = applyToUntouchedDefaults(
+        buildPreset("recommended", ctx, planFromContext(ctx)),
+        "Applied the recommended schedule during setup",
+      );
+      return { ok: true as const, moved };
     }),
   });
 

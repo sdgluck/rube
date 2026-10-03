@@ -15,11 +15,11 @@
 /**
  * The kinds of thing whose edits are worth keeping.
  *
- * Deliberately not "every table". These are the five a person configures, and
+ * Deliberately not "every table". These are the things a person configures, and
  * can therefore misconfigure; everything else is either derived from Plex or
  * already has a ledger of its own.
  */
-export const CHANGE_LOG_ENTITIES = ["rule", "config", "job", "overlay_preset", "preroll"] as const;
+export const CHANGE_LOG_ENTITIES = ["rule", "config", "job", "overlay_preset", "preroll", "schedule"] as const;
 
 /**
  * `import` and `restore` are separate from `update` because they answer a

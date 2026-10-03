@@ -25,6 +25,8 @@ import { createRuleSchedules } from "./rule-schedules.ts";
 import { createRuleQueue } from "./rule-queue.ts";
 import { createInternalJobs } from "./internal-jobs.ts";
 import { createFeatures } from "./features.ts";
+import { createSchedulePlan } from "./schedule-plan.ts";
+import { createCapabilities } from "./capabilities.ts";
 import { createStressTest } from "./stress-test/index.ts";
 import { createGenerateCommand } from "./commands/generate/index.ts";
 import { createDigestCommand } from "./commands/digest.ts";
@@ -55,6 +57,7 @@ export {
   type StressTestResult,
 } from "./stress-test/index.ts";
 export { JobUpdateError } from "./runner.ts";
+export { JobScheduleConflictError, type ScheduleUpdate, type ScheduleJobChange } from "./schedule-plan.ts";
 export type { StartResult, JobCommand, JobUpdate } from "./runner.ts";
 export type { CheckpointStatus } from "./checkpoint.ts";
 export type { RuleWorkReason } from "./rule-queue.ts";
@@ -78,6 +81,8 @@ export const createJobs = perDeps(function createJobs(deps: Services) {
     ...createRuleQueue(deps),
     ...createInternalJobs(deps),
     ...createFeatures(deps),
+    ...createSchedulePlan(deps),
+    ...createCapabilities(deps),
     ...createStressTest(deps),
     ...createReconcile(deps),
     ...createFieldOptions(deps),

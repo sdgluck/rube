@@ -249,7 +249,43 @@ export function createQueries(deps: Pick<Services, "db">) {
       .all();
   }
 
+  /**
+   * How long each job usually takes: the median of its recent completed runs.
+   *
+   * What the schedule page draws as a block's width, and what the presets pack
+   * by. A median rather than a mean because one cold-cache `generate` after an
+   * upgrade shouldn't push the whole night back, and completed runs only
+   * because a failure's duration is how long it took to fail.
+   *
+   * Run history is kept for about a week, so a daily job has at most seven
+   * samples and a weekly one a single run — the page says when a width is an
+   * estimate rather than a measurement.
+   */
+  function typicalDurations(perJob = 20): Record<string, { medianMs: number; p90Ms: number; samples: number }> {
+    const rows = db
+      .select({ jobId: jobRuns.jobId, startedAt: jobRuns.startedAt, finishedAt: jobRuns.finishedAt })
+      .from(jobRuns)
+      .where(and(eq(jobRuns.status, "completed"), sql`${jobRuns.finishedAt} IS NOT NULL`))
+      .orderBy(desc(jobRuns.startedAt))
+      .all();
+    const byJob = new Map<string, number[]>();
+    for (const row of rows) {
+      const list = byJob.get(row.jobId) ?? [];
+      if (list.length >= perJob) continue;
+      list.push(Math.max(0, (row.finishedAt ?? row.startedAt) - row.startedAt));
+      byJob.set(row.jobId, list);
+    }
+    const out: Record<string, { medianMs: number; p90Ms: number; samples: number }> = {};
+    for (const [jobId, durations] of byJob) {
+      const sorted = durations.sort((a, b) => a - b);
+      const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+      out[jobId] = { medianMs: at(0.5), p90Ms: at(0.9), samples: sorted.length };
+    }
+    return out;
+  }
+
   return {
+    typicalDurations,
     getJobs,
     getJobRuns,
     lastSuccessfulRunAt,

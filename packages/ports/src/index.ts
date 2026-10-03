@@ -101,11 +101,11 @@ export const PostCollectionSyncToken = token<PostCollectionSync>("collections.po
 /**
  * The kinds of thing whose edits are worth keeping.
  *
- * Deliberately not "every table". These are the five that a person configures
+ * Deliberately not "every table". These are the things a person configures
  * and can therefore misconfigure; the rest are either derived (`media_items`,
  * `collections`) or already have a ledger of their own.
  */
-export type ChangeEntity = "rule" | "config" | "job" | "overlay_preset" | "preroll";
+export type ChangeEntity = "rule" | "config" | "job" | "overlay_preset" | "preroll" | "schedule";
 
 /**
  * `import` and `restore` are separate from `update` because they answer a
