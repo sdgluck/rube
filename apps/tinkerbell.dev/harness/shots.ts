@@ -276,7 +276,7 @@ export const SHOTS: Shot[] = [
     // modal are labelled "Smart Filter" too, and they come first in the DOM.
     steps: [
       { click: "Add Rule" },
-      { clickText: "Build a single collection by AND'ing Plex filter clauses" },
+      { clickText: "Build a single collection from Plex filter clauses" },
       { click: "Next" },
       // Not the AND/OR row: that only renders once a group has more than one
       // clause, and a new rule starts with one.
@@ -286,8 +286,9 @@ export const SHOTS: Shot[] = [
   {
     // A Smart Filter rule can't leave its source step until it has a clause, so
     // the scope step is reached through a type that has no source step at all.
-    // The card is picked by its description because "Studios" also names a
-    // filter chip on the page behind the modal.
+    // Decade rather than Studios: a type whose service isn't configured is a
+    // disabled card now, and the capture has no TMDb key. Picked by its
+    // description because type names also label filter chips behind the modal.
     name: "10-rule-wizard-3-scope",
     description: "Rule wizard step 3 — library sections and scope",
     path: "/rules",
@@ -297,7 +298,7 @@ export const SHOTS: Shot[] = [
     // opened the wizard from now, and the trail is Type → Scope → Look → Review.
     steps: [
       { click: "Add Rule" },
-      { clickText: "Build a collection per production company" },
+      { clickText: "Build a collection per decade" },
       { click: "Next" },
       { wait: "text=Sections" },
     ],
