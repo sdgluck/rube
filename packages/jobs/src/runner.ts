@@ -86,6 +86,17 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // by anything — a sort title fixed here should be what the next night's
   // collections sort on. Clear of purge-runs (3am) and cleanup (4am).
   { id: "metadata", name: "Apply Metadata", command: "metadata", schedule: "0 2 * * *", enabled: 1 },
+  // Per-item edits stored by a Kometa migration. It had a command but no row,
+  // so nothing could start it — while the migration told people to run it.
+  // Daily, after `metadata`: it returns immediately when nothing is pending or
+  // metadata writing is switched off, and caps each pass at 500 items.
+  {
+    id: "metadata-overrides",
+    name: "Apply Metadata Edits",
+    command: "metadata-overrides",
+    schedule: "30 2 * * *",
+    enabled: 1,
+  },
   { id: "purge-runs", name: "Purge Old Runs", command: "purge-runs", schedule: "0 3 * * *", enabled: 1 },
   // 3:30am: after purge-runs has trimmed the tables it trims, so the copy is
   // of a database that has already shed a night's worth of expired rows, and

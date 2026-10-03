@@ -1,22 +1,14 @@
-import { trpc } from "#/trpc";
 import ToggleSwitch from "#components/ToggleSwitch";
 import styles from "#pages/Jobs/Jobs.module.css";
+import { useSetEnabled } from "../useSetEnabled";
 
 export default function EnabledRow({ jobId, enabled }: { jobId: string; enabled: boolean }) {
-  const utils = trpc.useUtils();
-  const updateMutation = trpc.jobs.update.useMutation({
-    onSuccess: () => utils.jobs.list.invalidate(),
-  });
-
+  const { setEnabled } = useSetEnabled();
   return (
     <tr>
       <td className={styles.fieldLabel}>Enabled</td>
       <td>
-        <ToggleSwitch
-          size="sm"
-          checked={enabled}
-          onChange={(checked) => updateMutation.mutate({ jobId, enabled: checked })}
-        />
+        <ToggleSwitch size="sm" checked={enabled} onChange={(checked) => setEnabled(jobId, checked)} />
       </td>
     </tr>
   );

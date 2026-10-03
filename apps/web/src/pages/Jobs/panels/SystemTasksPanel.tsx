@@ -2,7 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { PanelCountBadge, PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import RelativeTime from "#components/RelativeTime";
 import SortableTh from "#components/SortableTh";
+import ToggleSwitch from "#components/ToggleSwitch";
 import { EMPTY } from "#/format";
+import { isAlwaysOnJob } from "@tinkerbell/contracts";
+import { useSetEnabled } from "#pages/Jobs/shared/useSetEnabled";
 import { describeCron } from "#/utils";
 import styles from "#pages/Jobs/Jobs.module.css";
 import { useJobsData } from "#pages/Jobs/useJobsData";
@@ -10,6 +13,7 @@ import { useJobsData } from "#pages/Jobs/useJobsData";
 export function SystemTasksPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const navigate = useNavigate();
   const { systemJobs, sortKey, sortDir, toggleSort } = useJobsData();
+  const { setEnabled } = useSetEnabled();
 
   if (systemJobs.length === 0) return null;
 
@@ -17,7 +21,7 @@ export function SystemTasksPanel({ dragHandle, dragProps }: DashboardPanelProps)
     <PanelShell
       title="System Tasks"
       badge={<PanelCountBadge>{systemJobs.length}</PanelCountBadge>}
-      lede="Infrastructure that keeps Tinkerbell in sync with Plex. Always on; schedules are tweakable."
+      lede="Infrastructure that keeps Tinkerbell in sync with Plex. Most are required; every schedule is editable."
       dragHandle={dragHandle}
       dragProps={dragProps}
     >
@@ -73,13 +77,16 @@ export function SystemTasksPanel({ dragHandle, dragProps }: DashboardPanelProps)
                     </span>
                   </td>
                   <td>
-                    {/* Reflects the row, never asserts over it. This pill used
-                        to be a bare "Required" regardless of `enabled`, so a
-                        system job that had been switched off looked healthy
-                        and silently never ran. The server now repairs those on
-                        boot; this is what makes the state visible if one slips
-                        through again. */}
-                    {job.enabled ? (
+                    {/* "Required" only for jobs the server keeps on. The rest —
+                        seerr-poll, watchlist-sync, backup and others — really
+                        can be switched off, and calling them "Required" here
+                        contradicted the toggle on their own page. */}
+                    {!isAlwaysOnJob(job.id) ? (
+                      // The row navigates on click; the switch must not.
+                      <span onClick={(e) => e.stopPropagation()} role="presentation">
+                        <ToggleSwitch size="sm" checked={!!job.enabled} onChange={(next) => setEnabled(job.id, next)} />
+                      </span>
+                    ) : job.enabled ? (
                       <span className={styles.requiredPill}>Required</span>
                     ) : (
                       <span

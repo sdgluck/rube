@@ -1,5 +1,11 @@
 import { DEFAULT_JOBS, buildEngineConfig } from "./runner.ts";
-import { ALWAYS_ON_JOB_IDS, isAlwaysOnJob } from "@tinkerbell/contracts";
+import {
+  ALWAYS_ON_JOB_IDS,
+  FEATURE_IDS,
+  isAlwaysOnJob,
+  JOB_PRESENTATION,
+  validateJobConfig,
+} from "@tinkerbell/contracts";
 import { FEATURE_TEMPLATES } from "@tinkerbell/jobs";
 /**
  * The concurrency-sensitive parts of the runner: the start guard, retention,
@@ -270,6 +276,32 @@ describe("job registry drift", () => {
     const defaults = new Set(DEFAULT_JOBS.map((j) => j.id));
     for (const id of ALWAYS_ON_JOB_IDS) {
       assert.ok(defaults.has(id), `always-on job "${id}" is not in DEFAULT_JOBS`);
+    }
+  });
+
+  // `JOB_PRESENTATION` decides which list a job appears in. A job missing from
+  // it falls back to `system`, which is safe, but silent — this makes adding a
+  // job without describing it a test failure instead.
+  it("classifies every job and only real ones", () => {
+    const known = new Set([...DEFAULT_JOBS.map((j) => j.id), ...FEATURE_TEMPLATES.map((f) => f.id)]);
+    for (const id of known) assert.ok(JOB_PRESENTATION[id], `job "${id}" has no entry in JOB_PRESENTATION`);
+    for (const id of Object.keys(JOB_PRESENTATION))
+      assert.ok(known.has(id), `JOB_PRESENTATION names unknown job "${id}"`);
+  });
+
+  it("agrees with the server about which jobs are features", () => {
+    const templates = FEATURE_TEMPLATES.map((f) => f.id).sort();
+    assert.deepEqual([...FEATURE_IDS].sort(), templates);
+    const presentedAsFeatures = Object.entries(JOB_PRESENTATION)
+      .filter(([, p]) => p.kind === "feature")
+      .map(([id]) => id)
+      .sort();
+    assert.deepEqual(presentedAsFeatures, templates);
+  });
+
+  it("installs every feature with a config its command accepts", () => {
+    for (const t of FEATURE_TEMPLATES) {
+      assert.doesNotThrow(() => validateJobConfig(t.command, t.id, t.defaultConfig), `feature "${t.id}"`);
     }
   });
 

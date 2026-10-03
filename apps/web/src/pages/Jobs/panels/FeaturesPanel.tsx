@@ -16,7 +16,7 @@ import { describeCron } from "#/utils";
 import styles from "#pages/Jobs/Jobs.module.css";
 import shared from "#/styles/shared.module.css";
 import FeatureWizard from "#pages/Jobs/FeatureWizard";
-import { getFeatureCatalogEntry } from "#pages/Jobs/FeatureWizard/feature-catalog";
+import { isFeatureId } from "@tinkerbell/contracts";
 import { isRunActive } from "#pages/Jobs/shared/useRunLog";
 import { useJobsData } from "#pages/Jobs/useJobsData";
 
@@ -92,7 +92,7 @@ export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
 
     for (const item of data) {
       if (!item || typeof item.id !== "string") continue;
-      if (!getFeatureCatalogEntry(item.id)) {
+      if (!isFeatureId(item.id)) {
         unknown.push(item.id);
         continue;
       }

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import useSwipeBack from "#hooks/useSwipeBack";
 import RelativeTime from "#components/RelativeTime";
@@ -8,8 +8,8 @@ import { PageCrumbs } from "#layout/AppBar";
 import { useToast } from "#components/Toast";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { Job } from "#pages/Jobs/types";
-import { getJobDescription } from "#pages/Jobs/descriptions";
-import { getJobFields } from "#pages/Jobs/fields";
+import { isFeatureId } from "@tinkerbell/contracts";
+import { jobUi } from "#pages/Jobs/presentation";
 import { useJobActions } from "./useJobActions";
 import CheckpointNotice from "./CheckpointNotice";
 import { formatElapsed } from "#/format";
@@ -31,8 +31,8 @@ export default function JobPageShell({ job, actions, children }: Props) {
   const navigate = useNavigate();
   const swipeRef = useSwipeBack(navigate);
   const { isRunning, latestRun, start, starting, cancel, cancelling } = actions;
-  const description = getJobDescription(job.id);
-  const fields = getJobFields(job.id);
+  const fields = jobUi(job);
+  const description = fields.description;
   const { addToast } = useToast();
   const utils = trpc.useUtils();
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -77,7 +77,9 @@ export default function JobPageShell({ job, actions, children }: Props) {
             ))}
         </div>
         <div className={styles.jobDetailActions}>
-          {fields.kind === "feature" && (
+          {/* By id, not by kind: only an installed template can be uninstalled,
+              and an id the server doesn't know would only throw. */}
+          {isFeatureId(job.id) && (
             <button
               type="button"
               className={`${styles.button} ${styles.buttonDanger}`}
@@ -102,7 +104,17 @@ export default function JobPageShell({ job, actions, children }: Props) {
         </div>
       </div>
 
-      {description && <p className={styles.jobDescription}>{description}</p>}
+      {description && (
+        <p className={styles.jobDescription}>
+          {description}
+          {fields.settingsHref && (
+            <>
+              {" "}
+              Related settings: <Link to={fields.settingsHref}>{fields.settingsLabel ?? "Settings"}</Link>.
+            </>
+          )}
+        </p>
+      )}
 
       {/* In the shell rather than per job page: which commands checkpoint is
           the runner's business, and the notice renders nothing for the ones

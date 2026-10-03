@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { applyConfigPatch, configSchemaFor, lockedConfigFor, validateJobConfig } from "./job-config.ts";
+import { applyConfigPatch, lockedConfigFor, validateJobConfig } from "./job-config.ts";
 
 describe("applyConfigPatch", () => {
   it("sets, clears with null, and treats empty selection lists as 'all'", () => {
@@ -24,8 +24,8 @@ describe("validateJobConfig", () => {
     assert.deepEqual(lockedConfigFor("overlays"), {});
   });
 
-  it("falls back to the common schema for a command without its own", () => {
-    assert.equal(configSchemaFor("sync-media"), configSchemaFor("not-a-command"));
+  it("strips everything for a command that reads no config", () => {
+    assert.deepEqual(validateJobConfig("posters-refresh", "posters-refresh", { sections: ["Films"] }), {});
     assert.deepEqual(validateJobConfig("sync-media", "sync-media", { sections: ["Films"], extra: 1 }), {
       sections: ["Films"],
     });

@@ -6,14 +6,14 @@ import ConfigPanel from "./shared/ConfigPanel";
 import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
 import JobConfigRows from "./shared/JobConfigRows";
-import { getJobFields } from "./fields";
+import { jobUi } from "./presentation";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
 export default function DefaultJob({ job }: JobPageProps) {
   const utils = trpc.useUtils();
   const actions = useJobActions(job);
-  const fields = getJobFields(job.id);
+  const fields = jobUi(job);
   const [sections, setSections] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
 

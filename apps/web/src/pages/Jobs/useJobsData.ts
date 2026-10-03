@@ -1,6 +1,6 @@
 import { trpc } from "#/trpc";
 import { useListParams } from "#hooks/useListParams";
-import { getJobFields } from "./fields";
+import { jobUi } from "./presentation";
 import { isRunActive } from "./shared/useRunLog";
 
 export const JOB_SORT_KEYS = ["name", "schedule", "enabled", "lastRun", "lastRunStatus"] as const;
@@ -42,7 +42,7 @@ export function useJobsData() {
   const statusParam = param("status");
   const statusFilter = (JOB_STATUS_KEYS as string[]).includes(statusParam) ? (statusParam as JobStatusFilter) : null;
 
-  const rawJobs = (jobsQuery.data ?? []).filter((j) => getJobFields(j.id).kind !== "hidden");
+  const rawJobs = (jobsQuery.data ?? []).filter((j) => jobUi(j).kind !== "hidden");
   const sortedJobs = [...rawJobs].sort((a, b) => {
     let cmp = 0;
     switch (sortKey) {
@@ -75,9 +75,9 @@ export function useJobsData() {
     recentRunsQuery,
     rawJobs,
     sortedJobs,
-    // System Tasks vs Features split — kind comes from fields.ts.
-    systemJobs: visibleJobs.filter((j) => getJobFields(j.id).kind === "system"),
-    featureJobs: visibleJobs.filter((j) => getJobFields(j.id).kind === "feature"),
+    // System Tasks vs Features split — kind comes from contracts' JOB_PRESENTATION.
+    systemJobs: visibleJobs.filter((j) => jobUi(j).kind === "system"),
+    featureJobs: visibleJobs.filter((j) => jobUi(j).kind === "feature"),
     statusFilter,
     setStatusFilter: (next: JobStatusFilter | null) => setParam("status", next ?? ""),
     sortKey,

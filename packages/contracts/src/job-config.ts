@@ -111,12 +111,24 @@ export const personalizeJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type PersonalizeJobConfig = z.infer<typeof personalizeJobConfigSchema>;
 
+/** For commands that read no config at all. */
+export const noJobConfigSchema = z.object({});
+
 /**
  * The config schema a command validates against, keyed by command name.
- * Commands not listed take only the common `sections` filter (or nothing —
- * stripping is harmless for those).
+ *
+ * A command that ignores its config gets the empty schema rather than the
+ * common one, so the UI can tell from the schema alone whether a job has a
+ * library filter — posters-refresh used to show a sections picker it ignored.
  */
 const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
+  "sync-media": commonJobConfigSchema,
+  "sync-collections": commonJobConfigSchema,
+  shuffle: commonJobConfigSchema,
+  label: commonJobConfigSchema,
+  "label-undo": commonJobConfigSchema,
+  "personalize-enable": commonJobConfigSchema,
+  "personalize-disable": commonJobConfigSchema,
   generate: generateJobConfigSchema,
   cleanup: generateJobConfigSchema,
   metadata: generateJobConfigSchema,
@@ -130,7 +142,7 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
 };
 
 export function configSchemaFor(command: string): z.ZodObject {
-  return SCHEMAS_BY_COMMAND[command] ?? commonJobConfigSchema;
+  return SCHEMAS_BY_COMMAND[command] ?? noJobConfigSchema;
 }
 
 /**

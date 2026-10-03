@@ -248,6 +248,7 @@ export {
   generateJobConfigSchema,
   JobConfigError,
   lockedConfigFor,
+  noJobConfigSchema,
   overlaysJobConfigSchema,
   personalizeJobConfigSchema,
   validateConfigPatch,
@@ -263,3 +264,5 @@ export type {
   OverlaysJobConfig,
   PersonalizeJobConfig,
 } from "./job-config.ts";
+export { FEATURE_IDS, isFeatureId, JOB_PRESENTATION, jobPresentation } from "./job-presentation.ts";
+export type { FeatureId, JobKind, JobPresentation } from "./job-presentation.ts";

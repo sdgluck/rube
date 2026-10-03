@@ -1,5 +1,5 @@
 import type { Job } from "#pages/Jobs/types";
-import { getJobFields } from "#pages/Jobs/fields";
+import { jobUi } from "#pages/Jobs/presentation";
 import ScheduleRow from "./rows/ScheduleRow";
 import EnabledRow from "./rows/EnabledRow";
 import SectionsRow from "./rows/SectionsRow";
@@ -11,7 +11,7 @@ interface Props {
 
 /** Renders the standard schedule/enabled/sections rows according to the job's fields descriptor. */
 export default function JobConfigRows({ job, sections }: Props) {
-  const fields = getJobFields(job.id);
+  const fields = jobUi(job);
   return (
     <>
       {fields.schedule !== "hidden" && <ScheduleRow jobId={job.id} schedule={job.schedule} />}
@@ -20,5 +20,3 @@ export default function JobConfigRows({ job, sections }: Props) {
     </>
   );
 }
-
-export { getJobFields };
