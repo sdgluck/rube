@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-03
+
+### Added
+
+- Media page can now filter by Plex label. Labels are indexed during media sync and kept up to date when you edit them, so the filter works instantly, and it carries into a rule created from the filtered view.
+- Rule conflicts are grouped by the set of rules involved, with links to each rule and its duplicates.
+
+### Changed
+
+- **Personalization labelling now only touches items that are missing the label.** Enabling personalization used to re-label the whole library on every run at roughly 3 items/s, against an assumed 25. It now labels in batches of 100 per request and removes labels using the explicit removal form. The measured speed is recorded and used for the next time estimate.
+- Personalization enable and disable jobs now have a 2-hour budget.
+
+### Fixed
+
+- Cancelling a timed-out personalization enable no longer leaves it marked as enabled with 0 of 16 users restricted.
+- A personalization disable no longer clears every sharing backup when some restores fail. Jobs that are aborted or only partly successful stay in the enabling or disabling state rather than reporting completion.
+- Pending catch-up starts are cancelled when a schedule is cleared, so they can't fire after their container is gone.
+- Rule run history retention is now enforced correctly when several runs finish in the same millisecond, so the retained count can no longer exceed the cap.
+- Stress-test telemetry now includes the final reading taken after the sessions drain. Previously it could be dropped on slow runs, leaving the chart ending mid-measurement.
+
 ## [0.26.0] - 2026-09-28
 
 ### Added
