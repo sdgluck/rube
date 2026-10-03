@@ -1,4 +1,5 @@
-import { COMMANDS, isCommandName } from "@tinkerbell/jobs";
+import { COMMANDS, isCommandName, JobUpdateError } from "@tinkerbell/jobs";
+import { JobConfigError } from "@tinkerbell/contracts";
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -152,12 +153,24 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
           jobId: z.string(),
           schedule: z.string().optional(),
           enabled: z.boolean().optional(),
+          /** Merge into the stored config; `null` clears a key. What pages send. */
+          configPatch: z.record(z.string(), z.unknown()).optional(),
+          /** Replace the whole config. For importers. */
           config: z.record(z.string(), z.unknown()).optional(),
         }),
       )
       .mutation(({ input }) => {
         const { jobId, ...updates } = input;
-        updateJob(jobId, updates);
+        try {
+          updateJob(jobId, updates);
+        } catch (err) {
+          // Both are "this edit is wrong and here's why" — a 400 the form can
+          // show next to the field, not a 500.
+          if (err instanceof JobConfigError || err instanceof JobUpdateError) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          }
+          throw err;
+        }
         return { ok: true };
       }),
 

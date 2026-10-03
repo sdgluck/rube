@@ -14,7 +14,7 @@ import { ConfigHistoryToken } from "@tinkerbell/domain.config-history";
 import { OverlaysToken } from "@tinkerbell/domain.overlays";
 import { RulesToken } from "@tinkerbell/domain.rules";
 import { SectionsToken } from "@tinkerbell/domain.sections";
-import { plexSections, DbToken } from "@tinkerbell/db";
+import { jobs, plexSections, DbToken } from "@tinkerbell/db";
 import type { Bundle } from "@tinkerbell/contracts";
 
 import { createPortability, PortabilityToken } from "./index.ts";
@@ -38,7 +38,9 @@ const TAGS: Record<string, Record<string, { key: string; title: string }[]>> = {
  * substitution to one edge and leaves everything else — the rules domain the
  * importer writes through, the change log it records to — genuinely wired.
  */
-function containerWithTags(): TestContainer {
+type JobWriter = Parameters<typeof createPortability>[0]["writers"]["updateJob"];
+
+function containerWithTags(updateJob: JobWriter = () => {}): TestContainer {
   const c = createTestContainer({
     overrides: (r) => {
       r.replace(PortabilityToken, (ctx) => {
@@ -55,7 +57,7 @@ function containerWithTags(): TestContainer {
             // No job runner in a test container; a bundle carrying schedules
             // records what it was asked to do rather than rescheduling a cron
             // that isn't running.
-            updateJob: () => {},
+            updateJob,
             savePreset: (input) => overlays.savePreset(input),
             addOverlayConfig: (input) => overlays.addOverlayConfig(input),
             updateOverlayConfig: (id, patch) => overlays.updateOverlayConfig(id, patch),
@@ -357,5 +359,35 @@ describe("bundles this version can't read", () => {
         .filter((r) => r.name === "Hostile").length,
       0,
     );
+  });
+});
+
+describe("importing jobs", () => {
+  test("an always-on job's enabled flag is dropped, so the rest of it still imports", async () => {
+    const writes: { id: string; updates: Record<string, unknown> }[] = [];
+    const target = containerWithTags((id, updates) => writes.push({ id, updates }));
+    try {
+      target
+        .resolve(DbToken)
+        .insert(jobs)
+        .values({ id: "generate", name: "Generate", command: "generate", schedule: "", enabled: 1, config: {} })
+        .run();
+      const bundle: Bundle = {
+        formatVersion: 1,
+        exportedAt: Date.now(),
+        tinkerbellVersion: "test",
+        containsSecrets: false,
+        jobs: [
+          { id: "generate", name: "Generate", command: "generate", schedule: "0 4 * * *", enabled: false, config: {} },
+        ],
+      };
+      const summary = await target.resolve(PortabilityToken).applyImport(bundle, { "job:generate": "overwrite" });
+      assert.equal(summary.failed.length, 0);
+      assert.deepEqual(writes, [
+        { id: "generate", updates: { schedule: "0 4 * * *", enabled: undefined, config: {} } },
+      ]);
+    } finally {
+      await target.dispose();
+    }
   });
 });

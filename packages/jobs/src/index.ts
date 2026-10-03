@@ -52,7 +52,8 @@ export {
   type StressTestStep,
   type StressTestResult,
 } from "./stress-test/index.ts";
-export type { StartResult, JobCommand } from "./runner.ts";
+export { JobUpdateError } from "./runner.ts";
+export type { StartResult, JobCommand, JobUpdate } from "./runner.ts";
 export type { CheckpointStatus } from "./checkpoint.ts";
 export type { RuleWorkReason } from "./rule-queue.ts";
 export type { TestRuleResult, TestCollectionPreview } from "./commands/generate/index.ts";

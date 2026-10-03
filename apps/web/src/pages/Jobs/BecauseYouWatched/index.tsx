@@ -57,20 +57,22 @@ export default function BecauseYouWatchedJob({ job }: JobPageProps) {
   });
 
   const handleSave = () => {
-    const config: Record<string, unknown> = {};
-    if (sections.length > 0) config.sections = sections;
-    config.limit = form.limit;
-    config.mode = form.mode;
     const users = form.users
       .split(",")
       .map((u) => u.trim())
       .filter(Boolean);
-    if (users.length > 0) config.users = users;
-    config.pinToHomepage = form.pin;
-    config.minItems = form.minItems;
-    config.maxItems = form.maxItems;
-    config.minLibrarySize = form.minLib;
-    updateMutation.mutate({ jobId: job.id, config }, { onSuccess: () => setDirty(false) });
+    // Empty `sections`/`users` clear the key server-side, meaning "all".
+    const configPatch = {
+      sections,
+      users,
+      limit: form.limit,
+      mode: form.mode,
+      pinToHomepage: form.pin,
+      minItems: form.minItems,
+      maxItems: form.maxItems,
+      minLibrarySize: form.minLib,
+    };
+    updateMutation.mutate({ jobId: job.id, configPatch }, { onSuccess: () => setDirty(false) });
   };
 
   return (

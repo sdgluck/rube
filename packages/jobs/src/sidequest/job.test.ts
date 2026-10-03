@@ -153,8 +153,10 @@ describe("config parsing", () => {
 
     await runCommandJob(JSON.stringify({ sections: ["Movies"], custom: 1 }));
 
-    // passthrough(): unknown keys survive for command-specific config.
-    assert.deepEqual(received, { sections: ["Movies"], custom: 1 });
+    // Validated against the command's own schema (`shuffle` takes only
+    // `sections`), so a key it doesn't know — left by an older release, say —
+    // is stripped rather than fatal or silently handed through.
+    assert.deepEqual(received, { sections: ["Movies"] });
   });
 });
 

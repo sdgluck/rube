@@ -13,14 +13,15 @@
  */
 import { jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
 import {
+  type Bundle,
   BUNDLE_FORMAT_VERSION,
   bundleSchema,
-  ruleConfigSchema,
-  translateSmartFilterTags,
-  type Bundle,
   type ImportResolution,
   type ImportVerdict,
+  isAlwaysOnJob,
+  ruleConfigSchema,
   type TagLookup,
+  translateSmartFilterTags,
 } from "@tinkerbell/contracts";
 import { createLogger, errorMessage, runAsActor, type ConfigKey, type ConfigStore } from "@tinkerbell/core";
 
@@ -470,7 +471,15 @@ export function createImport(deps: ImportDeps) {
           continue;
         }
         try {
-          writers.updateJob(job.id, { schedule: job.schedule, enabled: job.enabled, config: job.config });
+          // An always-on job can't be switched off, and an older bundle may
+          // carry `enabled: false` for one from before that was enforced.
+          // Dropping the flag keeps the rest of the job's settings importable
+          // rather than failing the whole item on a field that has no effect.
+          writers.updateJob(job.id, {
+            schedule: job.schedule,
+            enabled: isAlwaysOnJob(job.id) ? undefined : job.enabled,
+            config: job.config,
+          });
           summary.overwritten++;
         } catch (err) {
           summary.failed.push({ key: item.key, error: errorMessage(err) });

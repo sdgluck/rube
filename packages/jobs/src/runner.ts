@@ -9,7 +9,13 @@ import { join } from "node:path";
 import { eq, and, desc, inArray, notInArray, sql, type InferSelectModel } from "drizzle-orm";
 import { Cron } from "croner";
 
-import { isAlwaysOnJob } from "@tinkerbell/contracts";
+import {
+  applyConfigPatch,
+  isAlwaysOnJob,
+  lockedConfigFor,
+  validateConfigPatch,
+  validateJobConfig,
+} from "@tinkerbell/contracts";
 import { jobs, jobRuns } from "@tinkerbell/db";
 
 import {
@@ -35,6 +41,23 @@ import {
 } from "./limits.ts";
 
 const log = createLogger("jobs");
+
+export type JobUpdate = {
+  schedule?: string;
+  enabled?: boolean;
+  /** Replace the whole config. For importers; pages send `configPatch`. */
+  config?: Record<string, unknown>;
+  /** Merge into the stored config — see `applyConfigPatch`. */
+  configPatch?: Record<string, unknown>;
+};
+
+/** A rejected edit the caller can fix — the router reports it as a 400. */
+export class JobUpdateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "JobUpdateError";
+  }
+}
 
 type Job = InferSelectModel<typeof jobs>;
 
@@ -212,10 +235,6 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   },
 ];
 
-const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
-  "overlays-remove": { mode: "remove" },
-};
-
 // `sync-most-watched` retired in favour of playback history: most-watched and
 // the activity summary are now derived from playback_sessions at query time
 // rather than cached by a job. Its row must be deleted on upgrade or the
@@ -351,7 +370,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
       const current = existing.get(job.id);
       if (!current) {
         db.insert(jobs)
-          .values({ ...job, config: DEFAULT_CONFIGS[job.id] ?? {} })
+          .values({ ...job, config: lockedConfigFor(job.id) })
           .run();
         inserted++;
         continue;
@@ -747,34 +766,67 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     watchdogTimer.unref();
   }
 
-  function updateJob(
-    jobId: string,
-    updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
-  ): void {
+  /**
+   * Change a job's schedule, enabled flag or config — all validated before
+   * anything is written, so a bad field can't leave the other two half-applied.
+   *
+   * `configPatch` merges into the stored config (see `applyConfigPatch`); it is
+   * what every page uses, because a page only knows the fields it renders.
+   * `config` replaces the whole object, for the importers that mean exactly
+   * that. Both are validated against the command's schema, with the job's
+   * locked keys re-applied.
+   */
+  function updateJob(jobId: string, updates: JobUpdate): void {
     const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
     if (!job) throw new Error(`Job "${jobId}" not found`);
-    // Snapshotted before any of the three writes below, because `job` is
-    // mutated in place as they go — `scheduleCron` needs the updated object.
+    // Snapshotted before any of the writes below, because `job` is mutated in
+    // place as they go — `scheduleCron` needs the updated object.
     const before = { schedule: job.schedule, enabled: job.enabled, config: job.config };
 
-    if (updates.schedule !== undefined) {
-      // Validate cron expression (throws if invalid)
-      if (updates.schedule) {
+    if (updates.config !== undefined && updates.configPatch !== undefined) {
+      throw new JobUpdateError("Send either a whole config or a patch, not both");
+    }
+    if (updates.configPatch !== undefined && Object.keys(updates.configPatch).length === 0) {
+      throw new JobUpdateError("Nothing to change");
+    }
+    // The server re-enables these on every boot anyway; refusing here means the
+    // UI can't show a job as off for the minutes until the next restart.
+    if (updates.enabled === false && isAlwaysOnJob(jobId)) {
+      throw new JobUpdateError(`${job.name} is always on and can't be disabled`);
+    }
+    if (updates.schedule) {
+      try {
         new Cron(updates.schedule);
+      } catch (err) {
+        throw new JobUpdateError(`"${updates.schedule}" isn't a valid schedule: ${errorMessage(err)}`);
       }
-      db.update(jobs).set({ schedule: updates.schedule }).where(eq(jobs.id, jobId)).run();
-      job.schedule = updates.schedule;
     }
 
-    if (updates.enabled !== undefined) {
-      const val = updates.enabled ? 1 : 0;
-      db.update(jobs).set({ enabled: val }).where(eq(jobs.id, jobId)).run();
-      job.enabled = val;
+    let nextConfig: Record<string, unknown> | undefined;
+    if (updates.configPatch !== undefined) {
+      validateConfigPatch(job.command, updates.configPatch);
+      nextConfig = validateJobConfig(job.command, jobId, applyConfigPatch(job.config, updates.configPatch));
+    } else if (updates.config !== undefined) {
+      nextConfig = validateJobConfig(job.command, jobId, updates.config);
     }
 
-    if (updates.config !== undefined) {
-      db.update(jobs).set({ config: updates.config }).where(eq(jobs.id, jobId)).run();
-    }
+    db.transaction((tx) => {
+      if (updates.schedule !== undefined) {
+        tx.update(jobs).set({ schedule: updates.schedule }).where(eq(jobs.id, jobId)).run();
+      }
+      if (updates.enabled !== undefined) {
+        tx.update(jobs)
+          .set({ enabled: updates.enabled ? 1 : 0 })
+          .where(eq(jobs.id, jobId))
+          .run();
+      }
+      if (nextConfig !== undefined) {
+        tx.update(jobs).set({ config: nextConfig }).where(eq(jobs.id, jobId)).run();
+      }
+    });
+    if (updates.schedule !== undefined) job.schedule = updates.schedule;
+    if (updates.enabled !== undefined) job.enabled = updates.enabled ? 1 : 0;
+    if (nextConfig !== undefined) job.config = nextConfig;
 
     // One row for the whole call, not one per field: "moved Cleanup to 5am and
     // turned it on" is a single thing somebody did, and splitting it into three
@@ -784,11 +836,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
       entityId: jobId,
       action: "update",
       before,
-      after: {
-        schedule: updates.schedule ?? before.schedule,
-        enabled: updates.enabled === undefined ? before.enabled : updates.enabled ? 1 : 0,
-        config: updates.config ?? before.config,
-      },
+      after: { schedule: job.schedule, enabled: job.enabled, config: job.config },
     });
 
     // Reschedule cron

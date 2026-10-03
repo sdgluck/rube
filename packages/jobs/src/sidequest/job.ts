@@ -4,8 +4,8 @@ import { jobRuns } from "@tinkerbell/db";
 import type { Scope } from "@tinkerbell/container";
 import { buildContainer, ServicesToken, type Services } from "@tinkerbell/composition";
 import { registerJobs } from "../index.ts";
+import { validateJobConfig } from "@tinkerbell/contracts";
 import {
-  commonJobConfigSchema,
   createLogger,
   errorMessage,
   formatDuration,
@@ -175,10 +175,14 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
       // job configured with `mode: "remove"` would silently *apply* overlays
       // instead — a data-affecting silent fallback. A failed run with the Zod
       // message in its log is visible and actionable.
+      //
+      // Against the command's own schema, not just the shared `sections` shape:
+      // a BYW `limit` of 500 is as much a broken config as a malformed one.
+      // Keys an older release left behind are stripped, not fatal.
       let jobConfig: CommonJobConfig;
       try {
         const raw = JSON.parse(configJson);
-        jobConfig = commonJobConfigSchema.passthrough().parse(raw);
+        jobConfig = validateJobConfig(commandName, jobId, raw);
       } catch (err) {
         const msg = `Invalid job config: ${errorMessage(err)}`;
         log.error("invalid job config", { err: errorMessage(err) });

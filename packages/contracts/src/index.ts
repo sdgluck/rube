@@ -2,15 +2,6 @@
 // Web should never import directly from server-side packages — only from here
 // or from @tinkerbell/trpc (for AppRouter).
 
-/**
- * Bounds for the generate job's `ruleConcurrency` setting. They live here
- * because both sides need them and neither owns them: the schema in
- * `@tinkerbell/core` enforces the max, the job applies the default, and the
- * admin UI renders the input — and web can't import either of those.
- */
-export const RULE_CONCURRENCY_DEFAULT = 3;
-export const RULE_CONCURRENCY_MAX = 8;
-
 export {
   CLEANUP_MODES,
   DEFAULT_CONSECUTIVE_RUNS,
@@ -243,3 +234,32 @@ export {
   resolvePortalPrerollCard,
 } from "./portal-preroll.ts";
 export type { PortalPrerollCard, PortalPrerollCardInput } from "./portal-preroll.ts";
+export {
+  RULE_CONCURRENCY_DEFAULT,
+  RULE_CONCURRENCY_MAX,
+  applyConfigPatch,
+  bywJobConfigSchema,
+  collectionArtJobConfigSchema,
+  collectionsSweepJobConfigSchema,
+  commonJobConfigSchema,
+  configIssues,
+  configSchemaFor,
+  digestJobConfigSchema,
+  generateJobConfigSchema,
+  JobConfigError,
+  lockedConfigFor,
+  overlaysJobConfigSchema,
+  personalizeJobConfigSchema,
+  validateConfigPatch,
+  validateJobConfig,
+} from "./job-config.ts";
+export type {
+  BywJobConfig,
+  CollectionArtJobConfig,
+  CollectionsSweepJobConfig,
+  CommonJobConfig,
+  DigestJobConfig,
+  GenerateJobConfig,
+  OverlaysJobConfig,
+  PersonalizeJobConfig,
+} from "./job-config.ts";

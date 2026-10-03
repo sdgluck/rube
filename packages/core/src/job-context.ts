@@ -1,6 +1,4 @@
-import { z } from "zod";
 import type { Scope } from "@tinkerbell/container";
-import { RULE_CONCURRENCY_MAX } from "@tinkerbell/contracts";
 
 /**
  * Per-job resumable state.
@@ -80,81 +78,26 @@ export function deriveJobContext(
   };
 }
 
-export const commonJobConfigSchema = z.object({
-  sections: z.array(z.string()).optional(),
-});
-export type CommonJobConfig = z.infer<typeof commonJobConfigSchema>;
-
-export const generateJobConfigSchema = commonJobConfigSchema.extend({
-  /**
-   * How many rules to run at once. Rules are independent, but they share
-   * one Plex server and the external APIs behind it, so this is capped low
-   * and defaults conservatively — see `RULE_CONCURRENCY_DEFAULT`.
-   */
-  ruleConcurrency: z.number().int().min(1).max(RULE_CONCURRENCY_MAX).optional(),
-});
-export type GenerateJobConfig = z.infer<typeof generateJobConfigSchema>;
-
-export const bywJobConfigSchema = commonJobConfigSchema.extend({
-  limit: z.number().int().min(1).max(50).optional(),
-  mode: z.enum(["per-user", "server"]).optional(),
-  users: z.array(z.string()).optional(),
-  pinToHomepage: z.boolean().optional(),
-  minItems: z.number().int().min(5).max(50).optional(),
-  maxItems: z.number().int().min(10).max(100).optional(),
-  minLibrarySize: z.number().int().min(1).optional(),
-});
-export type BywJobConfig = z.infer<typeof bywJobConfigSchema>;
-
-export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
-  /**
-   * Report what would be deleted and stop. Off by default — the job's own log
-   * lists every collection before it deletes anything, so the normal run is
-   * already auditable after the fact.
-   */
-  dryRun: z.boolean().optional(),
-});
-export type CollectionsSweepJobConfig = z.infer<typeof collectionsSweepJobConfigSchema>;
-
-export const collectionArtJobConfigSchema = commonJobConfigSchema.extend({
-  /**
-   * Restrict the run to these rules. Set by the "Generate artwork now" action
-   * on a single rule; absent means every rule that has opted in, which is what
-   * the scheduled run does.
-   */
-  ruleIds: z.array(z.string()).optional(),
-  /**
-   * Re-render and re-upload even where the input hash says nothing changed.
-   * For the case the ledger can't see: someone replaced the poster in Plex by
-   * hand and wants Tinkerbell's back.
-   */
-  force: z.boolean().optional(),
-});
-export type CollectionArtJobConfig = z.infer<typeof collectionArtJobConfigSchema>;
-
-export const overlaysJobConfigSchema = commonJobConfigSchema.extend({
-  mode: z.enum(["apply", "remove"]).optional(),
-});
-export type OverlaysJobConfig = z.infer<typeof overlaysJobConfigSchema>;
-
-export const digestJobConfigSchema = commonJobConfigSchema.extend({
-  /**
-   * How much history the server-wide digest covers, and — via the ledger —
-   * how often it may be sent. Each subscriber's own frequency governs theirs.
-   */
-  frequency: z.enum(["weekly", "monthly"]).optional(),
-  /**
-   * Fewest new items worth sending for. A digest saying "nothing happened"
-   * trains people to ignore the channel, so below this the run records
-   * `skipped_empty` and sends nothing — unless something is about to be
-   * deleted, which is worth a message on its own.
-   */
-  minAddedItems: z.number().int().min(0).optional(),
-  /** Cap on the tailored list in a per-user digest. */
-  userItemCap: z.number().int().min(1).max(25).optional(),
-  /** Send the server-wide digest to the admin's subscribed channels. */
-  includeServerDigest: z.boolean().optional(),
-  /** Send per-user digests by email to portal users who asked for one. */
-  includeUserDigests: z.boolean().optional(),
-});
-export type DigestJobConfig = z.infer<typeof digestJobConfigSchema>;
+// The schemas moved to contracts so the admin UI can render forms from the
+// same definitions the server validates with. Re-exported so command code keeps
+// importing them from here.
+export {
+  bywJobConfigSchema,
+  collectionArtJobConfigSchema,
+  collectionsSweepJobConfigSchema,
+  commonJobConfigSchema,
+  digestJobConfigSchema,
+  generateJobConfigSchema,
+  overlaysJobConfigSchema,
+  personalizeJobConfigSchema,
+} from "@tinkerbell/contracts";
+export type {
+  BywJobConfig,
+  CollectionArtJobConfig,
+  CollectionsSweepJobConfig,
+  CommonJobConfig,
+  DigestJobConfig,
+  GenerateJobConfig,
+  OverlaysJobConfig,
+  PersonalizeJobConfig,
+} from "@tinkerbell/contracts";

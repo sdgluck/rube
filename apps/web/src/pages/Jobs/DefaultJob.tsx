@@ -28,9 +28,10 @@ export default function DefaultJob({ job }: JobPageProps) {
   });
 
   const handleSave = () => {
-    const config: Record<string, unknown> = {};
-    if (sections.length > 0) config.sections = sections;
-    updateMutation.mutate({ jobId: job.id, config }, { onSuccess: () => setDirty(false) });
+    // A patch, not the whole config: this page only knows `sections`, and
+    // replacing the object erased everything else (Remove Overlays' `mode`).
+    // An empty list clears the key server-side — "all sections".
+    updateMutation.mutate({ jobId: job.id, configPatch: { sections } }, { onSuccess: () => setDirty(false) });
   };
 
   const sectionsBinding = fields.sections

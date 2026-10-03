@@ -39,11 +39,10 @@ export default function GenerateJob({ job }: JobPageProps) {
   });
 
   const handleSave = () => {
-    const config: Record<string, unknown> = {};
-    if (sections.length > 0) config.sections = sections;
+    const configPatch: Record<string, unknown> = { sections };
     // Left unset at the default, so the job keeps following it if it changes.
-    if (concurrency !== RULE_CONCURRENCY_DEFAULT) config.ruleConcurrency = concurrency;
-    updateMutation.mutate({ jobId: job.id, config }, { onSuccess: () => setDirty(false) });
+    configPatch.ruleConcurrency = concurrency === RULE_CONCURRENCY_DEFAULT ? null : concurrency;
+    updateMutation.mutate({ jobId: job.id, configPatch }, { onSuccess: () => setDirty(false) });
   };
 
   return (

@@ -10,6 +10,7 @@ import { createSchedule } from "./schedule.ts";
 import { and, inArray, eq } from "drizzle-orm";
 import { jobs, jobRuns } from "@tinkerbell/db";
 import { createLogger } from "@tinkerbell/core";
+import { validateJobConfig } from "@tinkerbell/contracts";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
 
@@ -91,7 +92,8 @@ export interface FeatureCatalogEntry {
 }
 
 export function createFeatures(deps: Services) {
-  const { config, db } = deps;
+  const { config, configHistory, db } = deps;
+  const { record: recordChange } = configHistory;
   const { getPersonalizedSharingStatus } = config;
   const { cancelRun, startJob } = createRunner(deps);
   const { scheduleCron } = createSchedule(deps);
@@ -126,7 +128,9 @@ export function createFeatures(deps: Services) {
 
     const schedule = opts.schedule ?? template.defaultSchedule;
     if (schedule) new Cron(schedule); // validate
-    const config = opts.config ?? template.defaultConfig;
+    // Validated like any other job save: the wizard's settings are the same
+    // fields the job page edits, and an install is the first save.
+    const config = validateJobConfig(template.command, template.id, { ...template.defaultConfig, ...opts.config });
 
     const existing = db.select().from(jobs).where(eq(jobs.id, featureId)).get();
     if (existing) {
@@ -144,6 +148,16 @@ export function createFeatures(deps: Services) {
         .run();
     }
 
+    recordChange({
+      entity: "job",
+      entityId: template.id,
+      action: existing ? "update" : "create",
+      before: existing
+        ? { schedule: existing.schedule, enabled: existing.enabled, config: existing.config }
+        : undefined,
+      after: { schedule, enabled: 1, config },
+    });
+
     scheduleCron({ id: template.id, name: template.name, enabled: 1, schedule });
   }
 
@@ -158,9 +172,19 @@ export function createFeatures(deps: Services) {
       cronJobs.delete(featureId);
     }
 
+    const row = db.select().from(jobs).where(eq(jobs.id, featureId)).get();
+
     // Delete run history then the row itself (FK constraint).
     db.delete(jobRuns).where(eq(jobRuns.jobId, featureId)).run();
     db.delete(jobs).where(eq(jobs.id, featureId)).run();
+    if (row) {
+      recordChange({
+        entity: "job",
+        entityId: featureId,
+        action: "delete",
+        before: { schedule: row.schedule, enabled: row.enabled, config: row.config },
+      });
+    }
 
     // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
     // collections on the Plex server — fire byw-remove so removing the feature

@@ -168,7 +168,12 @@ export const ChangeRecorderToken = token<ChangeRecorder>("history.recorder");
  */
 export type JobConfigWriter = (
   jobId: string,
-  updates: { schedule?: string; enabled?: boolean; config?: Record<string, unknown> },
+  updates: {
+    schedule?: string;
+    enabled?: boolean;
+    config?: Record<string, unknown>;
+    configPatch?: Record<string, unknown>;
+  },
 ) => void;
 
 export const JobConfigWriterToken = token<JobConfigWriter>("jobs.configWriter");
