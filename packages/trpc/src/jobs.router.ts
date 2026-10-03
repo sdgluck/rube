@@ -14,6 +14,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     deferredStarts,
     discardCheckpoint,
     fieldOptions,
+    readinessFor,
     getActiveRuns,
     getJobRun,
     getJobRunFullLog,
@@ -150,6 +151,13 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
 
     /** Choices for the settings form's user and rule pickers. */
     fieldOptions: procedure.query(() => fieldOptions()),
+
+    /** What a job depends on that is set elsewhere, and whether it's in place. */
+    readiness: procedure.input(z.object({ jobId: z.string() })).query(({ input }) => {
+      const job = getJobs().find((j) => j.id === input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobId}" does not exist` });
+      return { items: readinessFor(job) };
+    }),
 
     update: procedure
       .input(

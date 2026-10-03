@@ -13,6 +13,7 @@ import { jobUi } from "#pages/Jobs/presentation";
 import { useJobActions } from "./useJobActions";
 import CheckpointNotice from "./CheckpointNotice";
 import RunButton from "./RunButton";
+import ReadinessPanel from "./ReadinessPanel";
 import { formatElapsed } from "#/format";
 
 interface Props {
@@ -118,6 +119,8 @@ export default function JobPageShell({ job, actions, children }: Props) {
       {/* In the shell rather than per job page: which commands checkpoint is
           the runner's business, and the notice renders nothing for the ones
           that don't. */}
+      <ReadinessPanel jobId={job.id} alwaysShow={fields.kind === "feature"} />
+
       <CheckpointNotice jobId={job.id} />
 
       {children}

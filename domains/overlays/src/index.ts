@@ -230,6 +230,11 @@ export interface OverlaysDeps {
 export function createOverlays(deps: OverlaysDeps) {
   const { db, recordChange } = deps;
 
+  /** Whether any library has an overlay configured — what the overlays job needs to do anything. */
+  function hasAnyOverlayConfig(): boolean {
+    return db.select({ id: overlayConfigs.id }).from(overlayConfigs).limit(1).get() !== undefined;
+  }
+
   function getOverlayConfigs(sectionId: string): OverlayConfigRow[] {
     const rows = db.select().from(overlayConfigs).where(eq(overlayConfigs.sectionId, sectionId)).all();
     return parseOverlayRows(rows).sort((a, b) => {
@@ -549,6 +554,7 @@ export function createOverlays(deps: OverlaysDeps) {
 
   return {
     getOverlayConfigs,
+    hasAnyOverlayConfig,
     getOverlayConfig,
     addOverlayConfig,
     updateOverlayConfig,
