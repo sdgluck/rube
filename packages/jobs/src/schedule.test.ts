@@ -37,13 +37,17 @@ const c = createTestContainer({
     });
   },
 });
-after(() => c.dispose());
-
 const services = c.resolve(ServicesToken);
 const db = c.resolve(DbToken);
 const { catchUpMissedRuns, clearDeferredStarts, deferredStarts, scheduleCron, schedulerTimezone, startCronSchedules } =
   createSchedule(services);
 const { setConfig, deleteConfig } = c.resolve(ConfigStoreToken);
+// Pending catch-up starts go first: one firing after disposal resolves from a
+// dead scope and fails the whole file.
+after(() => {
+  clearDeferredStarts();
+  return c.dispose();
+});
 
 /** 2026-08-04T12:00:00Z — a fixed "now" so the assertions don't drift. */
 const NOW = Date.parse("2026-08-04T12:00:00Z");

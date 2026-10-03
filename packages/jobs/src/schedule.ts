@@ -98,9 +98,20 @@ export const createSchedule = perDeps(function createSchedule(deps: Services) {
     return [...deferred.entries()].map(([jobId, entry]) => ({ jobId, ...entry }));
   }
 
-  /** Drop every pending deferral. For tests and shutdown. */
+  /**
+   * Catch-up starts still waiting out their stagger.
+   *
+   * Held so they can be cancelled: an uncancellable timer outlived the
+   * container that scheduled it, then resolved the job starter from a disposed
+   * scope — an uncaught `DisposedScopeError` that failed CI at random.
+   */
+  const catchUpTimers = new Set<ReturnType<typeof setTimeout>>();
+
+  /** Drop every pending deferral and catch-up start. For tests and shutdown. */
   function clearDeferredStarts(): void {
     deferred.clear();
+    for (const timer of catchUpTimers) clearTimeout(timer);
+    catchUpTimers.clear();
     if (deferralSweep) {
       clearInterval(deferralSweep);
       deferralSweep = null;
@@ -306,7 +317,12 @@ export const createSchedule = perDeps(function createSchedule(deps: Services) {
     // the one the catch-up reasoned about, which is both slightly wrong and, for
     // a window boundary, not reproducible.
     due.forEach((job, index) => {
-      setTimeout(() => startScheduled(job.id, job.name, new Date(now)), index * CATCHUP_STAGGER_MS).unref();
+      const timer = setTimeout(() => {
+        catchUpTimers.delete(timer);
+        startScheduled(job.id, job.name, new Date(now));
+      }, index * CATCHUP_STAGGER_MS);
+      timer.unref();
+      catchUpTimers.add(timer);
     });
 
     return due.map((job) => job.id);
