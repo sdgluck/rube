@@ -24,6 +24,8 @@ export interface JobPresentation {
   /** Where the switches this job obeys are set, when that isn't the job page. */
   settingsHref?: string;
   settingsLabel?: string;
+  /** Features only: what to set up first, in a sentence, for the install wizard. */
+  requires?: string;
 }
 
 /** The opt-in jobs, in the order the wizard offers them. */
@@ -159,11 +161,13 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   // ── Features ────────────────────────────────────────────────────────────
   "because-you-watched": {
     kind: "feature",
+    requires: "Personalized Home Screens and an AI provider.",
     description:
       "Generates personalised “Because You Watched” collections for each Plex user using their recent watch history.",
   },
   personalize: {
     kind: "feature",
+    requires: "Personalized Home Screens, and rules marked personalizable.",
     description:
       "For each opted-in user, re-runs the rules you've marked personalizable using their preferences, and pins the results to their own home screen.",
   },
@@ -173,10 +177,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   overlays: {
     kind: "feature",
+    requires: "Overlay styles set up on the Overlays page.",
     description: "Renders configured overlays onto poster artwork and uploads the composited posters to Plex.",
   },
   digest: {
     kind: "feature",
+    requires: "A notification service routed for the digest, or email set up for portal users.",
     description:
       "Sends a periodic summary of what was added, watched and is about to be removed — to your own notification channels, and by email to portal users who asked for one.",
   },
@@ -226,7 +232,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
 };
 
-const UNKNOWN: Required<Omit<JobPresentation, "settingsHref" | "settingsLabel">> = {
+const UNKNOWN: Required<Omit<JobPresentation, "settingsHref" | "settingsLabel" | "requires">> = {
   kind: "system",
   schedule: "editable",
   description: "",

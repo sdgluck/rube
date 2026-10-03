@@ -1,11 +1,24 @@
-import { useEffect, useState } from "react";
+/**
+ * Add a feature: pick, configure, review.
+ *
+ * The list comes from the server's feature catalog rather than a copy kept
+ * here — the copy had drifted, which is how Digest came to be impossible to
+ * install. Configure renders the same settings form as the feature's own page,
+ * so a feature can be set up before its first run instead of installed with
+ * defaults and fixed afterwards.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { applyConfigPatch, fieldsFor, jobPresentation } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
-import { describeCron } from "#/utils";
-import { FEATURE_CATALOG, type FeatureCatalogEntry } from "./feature-catalog";
 import Modal from "#components/Modal";
 import ErrorState from "#components/ErrorState";
+import CronPreview from "#components/CronPreview";
+import jobStyles from "#pages/Jobs/Jobs.module.css";
+import JobSettingsForm, { draftErrors } from "#pages/Jobs/shared/JobSettingsForm";
+import ScheduleRow from "#pages/Jobs/shared/rows/ScheduleRow";
+import { draftFromConfig, patchFromDraft, type Draft } from "#pages/Jobs/shared/config-draft";
 import styles from "./FeatureWizard.module.css";
 
 interface Props {
@@ -14,22 +27,37 @@ interface Props {
 
 type Step = "pick" | "configure" | "review";
 
+function describeValue(value: unknown): string {
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "All";
+  if (typeof value === "boolean") return value ? "On" : "Off";
+  return String(value);
+}
+
 export default function FeatureWizard({ onClose }: Props) {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const utils = trpc.useUtils();
-  const jobsQuery = trpc.jobs.list.useQuery();
+  const catalogQuery = trpc.jobs.featureCatalog.useQuery();
   const installMutation = trpc.jobs.install.useMutation({
-    onSuccess: () => utils.jobs.list.invalidate(),
+    onSuccess: () => {
+      utils.jobs.list.invalidate();
+      utils.jobs.featureCatalog.invalidate();
+    },
   });
 
   const [step, setStep] = useState<Step>("pick");
-  const [selected, setSelected] = useState<FeatureCatalogEntry | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [schedule, setSchedule] = useState("");
+  const [draft, setDraft] = useState<Draft>({});
+  const [serverError, setServerError] = useState<string>();
 
-  const installedIds = new Set((jobsQuery.data ?? []).map((j) => j.id));
+  const selected = catalogQuery.data?.find((f) => f.id === selectedId) ?? null;
+  const fields = useMemo(() => (selected ? fieldsFor(selected.command) : []), [selected]);
+  const errors = draftErrors(fields, draft);
+  // Changes from the template, so the review lists only what was customised
+  // and the install sends the template's defaults merged with those changes.
+  const changes = selected ? patchFromDraft(fields, selected.defaultConfig, draft) : {};
 
-  // Close on Escape.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -38,35 +66,38 @@ export default function FeatureWizard({ onClose }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function pick(entry: FeatureCatalogEntry) {
-    if (installedIds.has(entry.id)) return;
-    setSelected(entry);
+  function pick(id: string) {
+    const entry = catalogQuery.data?.find((f) => f.id === id);
+    if (!entry || entry.installed || entry.locked) return;
+    setSelectedId(id);
     setSchedule(entry.defaultSchedule);
+    setDraft(draftFromConfig(fieldsFor(entry.command), entry.defaultConfig));
+    setServerError(undefined);
     setStep("configure");
   }
 
   function install() {
     if (!selected) return;
+    setServerError(undefined);
     installMutation.mutate(
-      { featureId: selected.id, schedule },
+      {
+        featureId: selected.id,
+        schedule: schedule.trim(),
+        config: applyConfigPatch(selected.defaultConfig, changes),
+      },
       {
         onSuccess: () => {
           addToast(`${selected.name} installed`, "success");
           onClose();
           navigate(`/jobs/${selected.id}`);
         },
-        onError: (err) => addToast(err.message, "error"),
+        onError: (err) => {
+          // Back to the step that can fix it, with the server's reason.
+          setServerError(err.message);
+          setStep("configure");
+        },
       },
     );
-  }
-
-  let scheduleHint: string | null = null;
-  if (schedule) {
-    try {
-      scheduleHint = describeCron(schedule);
-    } catch {
-      scheduleHint = "Invalid cron expression";
-    }
   }
 
   return (
@@ -86,7 +117,12 @@ export default function FeatureWizard({ onClose }: Props) {
               <button type="button" className={styles.secondaryBtn} onClick={() => setStep("pick")}>
                 Back
               </button>
-              <button type="button" className={styles.primaryBtn} onClick={() => setStep("review")}>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                disabled={Object.keys(errors).length > 0}
+                onClick={() => setStep("review")}
+              >
                 Continue
               </button>
             </>
@@ -116,32 +152,40 @@ export default function FeatureWizard({ onClose }: Props) {
       </div>
 
       <div className={styles.body}>
-        {step === "pick" && jobsQuery.error && (
+        {step === "pick" && catalogQuery.error && (
           <ErrorState
             inline
-            title="Couldn't check which features are installed"
-            error={jobsQuery.error}
-            onRetry={() => jobsQuery.refetch()}
+            title="Couldn't load the features"
+            error={catalogQuery.error}
+            onRetry={() => catalogQuery.refetch()}
           />
         )}
-        {step === "pick" && !jobsQuery.error && (
+        {step === "pick" && catalogQuery.data && (
           <div className={styles.catalog}>
-            {FEATURE_CATALOG.map((entry) => {
-              const already = installedIds.has(entry.id);
+            {catalogQuery.data.map((entry) => {
+              const info = jobPresentation(entry.id);
+              const unmet = entry.readiness.filter((r) => !r.met && r.severity === "required");
+              const unavailable = entry.installed || entry.locked;
               return (
                 <button
                   key={entry.id}
                   type="button"
-                  className={`${styles.wizardCard} ${already ? styles.cardDisabled : ""}`}
-                  onClick={() => pick(entry)}
-                  disabled={already}
+                  className={`${styles.wizardCard} ${unavailable ? styles.cardDisabled : ""}`}
+                  onClick={() => pick(entry.id)}
+                  disabled={unavailable}
                 >
                   <div className={styles.cardHeader}>
                     <strong>{entry.name}</strong>
-                    {already && <span className={styles.installedTag}>Installed</span>}
+                    {entry.installed && <span className={styles.installedTag}>Installed</span>}
                   </div>
-                  <p className={styles.cardDesc}>{entry.description}</p>
-                  {entry.requires && <p className={styles.cardRequires}>Requires: {entry.requires}</p>}
+                  <p className={styles.cardDesc}>{info.description}</p>
+                  {entry.locked ? (
+                    <p className={styles.cardRequires}>Turn on Personalized Home Screens first.</p>
+                  ) : unmet.length > 0 && !entry.installed ? (
+                    <p className={styles.cardRequires}>Still needs: {unmet.map((r) => r.label).join("; ")}.</p>
+                  ) : (
+                    info.requires && <p className={styles.cardRequires}>Requires: {info.requires}</p>
+                  )}
                 </button>
               );
             })}
@@ -151,32 +195,37 @@ export default function FeatureWizard({ onClose }: Props) {
         {step === "configure" && selected && (
           <div className={styles.form}>
             <h3>{selected.name}</h3>
-            <p className={styles.muted}>
-              You can fine-tune sections, limits and other options on the feature's page after installing.
-            </p>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Schedule (cron)</span>
-              <input
-                type="text"
-                className={styles.input}
-                value={schedule}
-                onChange={(e) => setSchedule(e.target.value)}
-                placeholder="e.g. 0 2 * * *"
-              />
-              {scheduleHint && <span className={styles.fieldHint}>{scheduleHint}</span>}
-              {!schedule && <span className={styles.fieldHint}>No schedule — runs only on demand.</span>}
-            </label>
+            <table className={jobStyles.configTable}>
+              <tbody>
+                <ScheduleRow value={schedule} onChange={setSchedule} />
+                <JobSettingsForm fields={fields} draft={draft} onChange={setDraft} errors={errors} />
+              </tbody>
+            </table>
+            {serverError && (
+              <p role="alert" className={jobStyles.fieldHelpError}>
+                {serverError}
+              </p>
+            )}
           </div>
         )}
 
         {step === "review" && selected && (
           <div className={styles.form}>
             <h3>Install {selected.name}</h3>
-            <p className={styles.muted}>{selected.description}</p>
+            <p className={styles.muted}>{jobPresentation(selected.id).description}</p>
             <dl className={styles.summary}>
               <dt>Schedule</dt>
-              <dd>{schedule ? `${schedule} — ${scheduleHint}` : "Manual / on demand"}</dd>
+              <dd>{schedule.trim() ? <CronPreview expr={schedule.trim()} /> : "Manual / on demand"}</dd>
+              {fields
+                .filter((f) => f.key in changes)
+                .map((f) => (
+                  <div key={f.key}>
+                    <dt>{f.label}</dt>
+                    <dd>{describeValue(draft[f.key])}</dd>
+                  </div>
+                ))}
             </dl>
+            {Object.keys(changes).length === 0 && <p className={styles.muted}>Every other setting at its default.</p>}
           </div>
         )}
       </div>

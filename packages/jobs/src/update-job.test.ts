@@ -109,7 +109,15 @@ describe("other fields", () => {
 
 describe("installing a feature", async () => {
   const { createFeatures } = await import("./features.ts");
-  const { installFeature, uninstallFeature } = createFeatures(c.resolve(ServicesToken));
+  const { installFeature, listFeatureCatalog, uninstallFeature } = createFeatures(c.resolve(ServicesToken));
+
+  it("offers every feature with what the wizard needs to configure it", () => {
+    const digest = listFeatureCatalog().find((f) => f.id === "digest");
+    assert.ok(digest, "Digest is installable — the web's own copy of this list had left it out");
+    assert.equal(digest.command, "digest");
+    assert.equal(digest.defaultSchedule, "0 9 * * MON");
+    assert.ok(digest.readiness.some((r) => r.id === "smtp"));
+  });
 
   it("validates the settings it installs with", () => {
     db.delete(jobs).where(eq(jobs.id, "digest")).run();

@@ -77,7 +77,10 @@ export const overlaysJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type OverlaysJobConfig = z.infer<typeof overlaysJobConfigSchema>;
 
-export const digestJobConfigSchema = commonJobConfigSchema.extend({
+// Not built on the common schema: a digest covers the whole server, and the
+// command never reads `sections` — extending it put a library picker on the
+// Digest page that did nothing.
+export const digestJobConfigSchema = z.object({
   /**
    * How much history the server-wide digest covers, and — via the ledger —
    * how often it may be sent. Each subscriber's own frequency governs theirs.

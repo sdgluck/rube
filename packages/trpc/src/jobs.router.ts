@@ -232,7 +232,16 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
         }),
       )
       .mutation(({ input }) => {
-        installFeature(input.featureId, { schedule: input.schedule, config: input.config });
+        try {
+          installFeature(input.featureId, { schedule: input.schedule, config: input.config });
+        } catch (err) {
+          // A bad setting from the wizard, or a gate that isn't open yet — both
+          // things the person installing can fix, so a 400 with the reason.
+          if (err instanceof JobConfigError || err instanceof JobUpdateError) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          }
+          throw err;
+        }
         return { ok: true };
       }),
 

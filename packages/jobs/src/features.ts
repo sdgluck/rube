@@ -1,5 +1,5 @@
 import { type Services } from "@tinkerbell/composition";
-import { createRunner } from "./runner.ts";
+import { createRunner, JobUpdateError } from "./runner.ts";
 import { createSchedule } from "./schedule.ts";
 /**
  * User-installable feature templates. Plugs into the lifecycle in
@@ -9,13 +9,14 @@ import { createSchedule } from "./schedule.ts";
  */
 import { and, inArray, eq } from "drizzle-orm";
 import { jobs, jobRuns } from "@tinkerbell/db";
-import { createLogger } from "@tinkerbell/core";
+import { createLogger, errorMessage } from "@tinkerbell/core";
 import { validateJobConfig } from "@tinkerbell/contracts";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
 
 import type { CommandName } from "./commands/catalog.ts";
 import { cronJobs } from "./schedule.ts";
+import { createReadiness, type ReadinessItem } from "./readiness.ts";
 
 const log = createLogger("jobs");
 
@@ -84,6 +85,11 @@ function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {
 export interface FeatureCatalogEntry {
   id: string;
   name: string;
+  command: CommandName;
+  defaultSchedule: string;
+  defaultConfig: Record<string, unknown>;
+  /** What it needs that's set elsewhere — so the wizard can say so before install. */
+  readiness: ReadinessItem[];
   installed: boolean;
   /** Requires the personalization master switch to be enabled. */
   requiresPersonalizedSharing: boolean;
@@ -97,6 +103,7 @@ export function createFeatures(deps: Services) {
   const { getPersonalizedSharingStatus } = config;
   const { cancelRun, startJob } = createRunner(deps);
   const { scheduleCron } = createSchedule(deps);
+  const { readinessFor } = createReadiness(deps);
 
   function listFeatureCatalog(): FeatureCatalogEntry[] {
     const installedIds = new Set(
@@ -110,6 +117,10 @@ export function createFeatures(deps: Services) {
     return FEATURE_TEMPLATES.map((t) => ({
       id: t.id,
       name: t.name,
+      command: t.command,
+      defaultSchedule: t.defaultSchedule,
+      defaultConfig: t.defaultConfig,
+      readiness: readinessFor({ id: t.id, command: t.command, config: t.defaultConfig }),
       installed: installedIds.has(t.id),
       requiresPersonalizedSharing: t.requiresPersonalizedSharing ?? false,
       locked: (t.requiresPersonalizedSharing ?? false) && !sharingEnabled,
@@ -118,16 +129,22 @@ export function createFeatures(deps: Services) {
 
   function installFeature(featureId: string, opts: { schedule?: string; config?: Record<string, unknown> } = {}): void {
     const template = getFeatureTemplate(featureId);
-    if (!template) throw new Error(`Unknown feature "${featureId}"`);
+    if (!template) throw new JobUpdateError(`Unknown feature "${featureId}"`);
 
     if (template.requiresPersonalizedSharing && getPersonalizedSharingStatus() !== "enabled") {
-      throw new Error(
+      throw new JobUpdateError(
         `"${template.name}" requires Personalized Home Screens to be enabled first (Settings → Personalization).`,
       );
     }
 
     const schedule = opts.schedule ?? template.defaultSchedule;
-    if (schedule) new Cron(schedule); // validate
+    if (schedule) {
+      try {
+        new Cron(schedule);
+      } catch (err) {
+        throw new JobUpdateError(`"${schedule}" isn't a valid schedule: ${errorMessage(err)}`);
+      }
+    }
     // Validated like any other job save: the wizard's settings are the same
     // fields the job page edits, and an install is the first save.
     const config = validateJobConfig(template.command, template.id, { ...template.defaultConfig, ...opts.config });

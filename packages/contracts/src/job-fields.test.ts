@@ -33,6 +33,7 @@ describe("job field descriptors", () => {
   it("offers a library picker exactly where the command reads one", () => {
     assert.equal(fieldsFor("sync-media")[0]?.key, "sections");
     assert.equal(fieldsFor("posters-refresh").length, 0);
+    assert.ok(!fieldsFor("digest").some((f) => f.key === "sections"));
   });
 });
 
