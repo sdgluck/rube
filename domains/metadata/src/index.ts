@@ -21,6 +21,7 @@
 import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { metadataOriginals, type Db } from "@tinkerbell/db";
 import { token } from "@tinkerbell/container";
+import { DAY_MS } from "@tinkerbell/core";
 
 /** How a field is written, and therefore how it is reverted. */
 export type MetadataFieldKind = "scalar" | "tag";
@@ -99,6 +100,8 @@ export const DEFAULT_RETENTION_DAYS = 90;
 
 export interface MetadataDeps {
   db: Db;
+  /** The composition root's clock, so a pinned test clock reaches the cap readout. */
+  now: () => number;
 }
 export function createMetadata(deps: MetadataDeps) {
   const { db } = deps;
@@ -268,7 +271,17 @@ export function createMetadata(deps: MetadataDeps) {
     return res.changes;
   }
 
-  return { snapshotWrites, batchRows, markReverted, listBatches, itemHistory, writesSince, pruneOlderThan };
+  return {
+    snapshotWrites,
+    batchRows,
+    markReverted,
+    listBatches,
+    itemHistory,
+    writesSince,
+    /** What the Settings cap readout shows: the same window the run budget enforces. */
+    writesInLastDay: () => writesSince(deps.now() - DAY_MS),
+    pruneOlderThan,
+  };
 }
 
 export type Metadata = ReturnType<typeof createMetadata>;

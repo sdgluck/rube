@@ -173,13 +173,6 @@
   margin: 0;
 }
 
-.stepLede {
-  font: var(--t-body);
-  color: var(--ink-2);
-  margin: 0;
-  max-inline-size: 62ch;
-}
-
 .groupHeading {
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
@@ -386,6 +379,18 @@
   font: var(--t-meta);
   color: var(--ink-3);
   margin: 0;
+}
+
+/* A text input with the button that fills it ("Detect") on the same line. */
+.inputAction {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inputAction input {
+  flex: 1;
+  min-width: 0;
 }
 
 .checkField {

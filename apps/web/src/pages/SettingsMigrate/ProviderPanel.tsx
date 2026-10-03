@@ -179,14 +179,10 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
         title={<>Proposed rules ({plan.proposed.length})</>}
       >
         {plan.proposed.length === 0 ? (
-          <p className={styles.hint}>
-            No rules to propose. Either no {providerLabel} collections were found, or none classified into a supported
-            bucket.
-          </p>
+          <p className={styles.hint}>No rules to propose.</p>
         ) : (
           <p className={styles.hint}>
-            One rule per (bucket, section). Created rules are <strong>disabled</strong> by default — review and enable
-            them on the Rules page after migration.
+            One rule per bucket and library, created <strong>disabled</strong>.
           </p>
         )}
         {plan.proposed.length > 0 && (
@@ -251,10 +247,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           titleClassName={styles.groupTitle}
           title={<>Recognized but not yet supported ({plan.future.length})</>}
         >
-          <p className={styles.hint}>
-            These {providerLabel} collections classify into known buckets that don't have a Tinkerbell rule type yet.
-            They'll be skipped by this migration; future Tinkerbell releases will add the missing rule types.
-          </p>
+          <p className={styles.hint}>Skipped — no matching Tinkerbell rule type yet.</p>
           <ul className={local.bullets}>
             {plan.future.map((f, i) => (
               <li key={`${f.bucket}-${f.sectionId}-${i}`}>
@@ -272,12 +265,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           titleClassName={styles.groupTitle}
           title={<>Unmappable ({plan.unmappable.length})</>}
         >
-          <p className={styles.hint}>
-            These {providerLabel}-managed collections didn't classify into any known bucket. They'll be left untouched
-            by the migration.
-            {deleteOriginals &&
-              " Delete-originals only removes collections behind selected proposed rules, so these are safe."}
-          </p>
+          <p className={styles.hint}>Left untouched, even when deleting originals.</p>
           <ul className={local.bulletsScroll}>
             {plan.unmappable.map((u) => (
               <li key={u.ratingKey}>
@@ -298,10 +286,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
               </span>
             </label>
             <p className={`${styles.hint} ${local.warnHint}`}>
-              Selected rules will replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
-              {deleteOriginals
-                ? " Originals will be deleted from Plex — this cannot be undone."
-                : " Originals will be left in Plex; you can clean them up later."}
+              Selected rules replace <strong>{totalSelectedReplaces}</strong> {providerLabel} collection(s).
             </p>
           </>
         )}
@@ -338,10 +323,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           <strong>{totalSelectedReplaces}</strong> {providerLabel} collection
           {totalSelectedReplaces === 1 ? "" : "s"} will be removed from Plex as soon as the rules are created.
         </p>
-        <p className={styles.hint}>
-          The rules haven't run yet at that point, so the collections will be missing from Plex until the first run
-          rebuilds them. This can't be undone.
-        </p>
+        <p className={styles.hint}>They stay missing until the rules first run. This can't be undone.</p>
       </Modal>
     </>
   );

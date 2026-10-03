@@ -129,8 +129,8 @@ export default function JobPageShell({ job, actions, children }: Props) {
         <ConfirmModal
           message={
             job.id === "because-you-watched"
-              ? `Remove ${job.name}? This will delete its config, run history, and every Because You Watched collection from Plex, then clear every shared user's sharing restrictions. Item-level Tinkerbell labels are kept (use Settings → Maintenance to clear those).`
-              : `Remove ${job.name}? This will delete its config and run history. You can re-install it later from the Jobs page.`
+              ? "Deletes its config, run history and every Because You Watched collection from Plex, and clears shared users' restrictions. Item labels stay — clear them in Settings › Maintenance."
+              : "Deletes its config and run history. It can be re-installed later."
           }
           title={`Remove ${job.name}?`}
           confirmLabel="Remove"

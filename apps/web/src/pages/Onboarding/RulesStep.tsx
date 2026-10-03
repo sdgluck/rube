@@ -35,11 +35,6 @@ export default function RulesStep() {
   return (
     <div className={styles.stepBody}>
       <h2 className={styles.stepTitle}>Add your first rules</h2>
-      <p className={styles.stepLede}>
-        Import a curated pack to see what Tinkerbell does, or write your own. Either way rules arrive{" "}
-        <strong>disabled</strong> — the next steps are where you try them out and switch them on.
-      </p>
-
       {rules.length > 0 && (
         <p className={styles.notice}>
           You have {rules.length} rule{rules.length === 1 ? "" : "s"}
@@ -52,8 +47,7 @@ export default function RulesStep() {
         <Spinner />
       ) : registryQuery.error || !index ? (
         <p className={styles.fieldHint}>
-          Couldn't reach the rule registry. You can skip this and import later from <Link to="/registry">Registry</Link>
-          .
+          Couldn't reach the rule registry — try <Link to="/registry">Registry</Link> later.
         </p>
       ) : (
         <div className={styles.tileGrid}>
@@ -94,9 +88,6 @@ export default function RulesStep() {
       )}
 
       <h3 className={styles.groupHeading}>Or write your own</h3>
-      <p className={styles.fieldHint}>
-        The rule builder walks you through picking a source, narrowing it down and choosing how the collection looks.
-      </p>
       <Link to="/rules" className={`${styles.inlineAction} ${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}>
         Open the rule builder
       </Link>

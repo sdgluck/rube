@@ -1,14 +1,6 @@
 /* Only what the shared settings card can't express. Layout, fields, hints and
    buttons all come from Settings.module.css so this pane reads like the rest. */
 
-.intro {
-  color: var(--ink-3);
-  font-size: 13px;
-  line-height: 1.55;
-  margin: 0;
-  max-width: 72ch;
-}
-
 .switchRow {
   align-items: flex-start;
   cursor: pointer;

@@ -1,14 +1,21 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { errorMessage } from "@tinkerbell/core";
-import { EVENT_TYPES, NOTIFICATION_SERVICES, sampleMessageFor } from "@tinkerbell/domain.notifications";
+import { errorMessage, REDACTED_SECRET } from "@tinkerbell/core";
+import {
+  detectTelegramChats,
+  EVENT_TYPES,
+  NOTIFICATION_SERVICES,
+  sampleMessageFor,
+  TelegramDetectError,
+} from "@tinkerbell/domain.notifications";
 import { t, procedure } from "./_base.ts";
 
 const EVENT_IDS = EVENT_TYPES.map((e) => e.id) as [string, ...string[]];
 
-export function createNotificationsRouter(deps: Pick<TrpcDeps, "notifications">) {
+export function createNotificationsRouter(deps: Pick<TrpcDeps, "config" | "notifications">) {
   const { notifications } = deps;
+  const { getConfig } = deps.config;
   const { routingMatrix, sendRichNotification } = notifications;
 
   const notificationsRouter = t.router({
@@ -39,6 +46,22 @@ export function createNotificationsRouter(deps: Pick<TrpcDeps, "notifications">)
           throw new TRPCError({ code: "BAD_GATEWAY", message: errorMessage(err) });
         }
       }),
+
+    /**
+     * The chats a Telegram bot has been messaged from, for the "Detect" button
+     * beside the chat id. Takes the token from the form so it works before the
+     * first save; the redaction sentinel means "the one already stored".
+     */
+    detectTelegramChats: procedure.input(z.object({ token: z.string() })).mutation(async ({ input }) => {
+      const token = input.token === REDACTED_SECRET ? (getConfig("global_telegram_bot_token") ?? "") : input.token;
+      if (!token.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "Enter the bot token first." });
+      try {
+        return { chats: await detectTelegramChats(token.trim()) };
+      } catch (err) {
+        if (err instanceof TelegramDetectError) throw new TRPCError({ code: "BAD_GATEWAY", message: err.message });
+        throw err;
+      }
+    }),
   });
 
   return notificationsRouter;

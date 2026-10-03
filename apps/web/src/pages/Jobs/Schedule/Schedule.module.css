@@ -526,13 +526,6 @@
   white-space: nowrap;
 }
 
-.editorField {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .editorLabel {
   font: var(--t-body-sm);
   color: var(--ink-2);
@@ -540,30 +533,6 @@
 
 .minuteInput {
   width: 72px;
-}
-
-.dayPicker {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.day {
-  min-width: 38px;
-  padding: 4px 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink-2);
-  font: var(--t-caption);
-  cursor: pointer;
-}
-
-.dayOn {
-  composes: day;
-  border-color: var(--accent);
-  background: var(--accent-fill);
-  color: var(--on-accent);
 }
 
 .editorFooter {
@@ -741,6 +710,17 @@
   gap: 8px;
   font: var(--t-body-sm);
   color: var(--ink-2);
+}
+
+.holdGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  min-width: 0;
 }
 
 .settingsHint {

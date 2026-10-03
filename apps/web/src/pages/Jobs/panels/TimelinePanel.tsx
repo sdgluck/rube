@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PanelShell, type DashboardPanelProps } from "#components/dashboard";
 import EmptyState from "#components/EmptyState";
+import controls from "#/styles/controls.module.css";
 import { formatDuration } from "#/format";
 import { trpc } from "#/trpc";
 import styles from "./TimelinePanel.module.css";
@@ -89,12 +90,19 @@ export function TimelinePanel({ dragHandle, dragProps }: DashboardPanelProps) {
     <PanelShell
       title="Last 24 hours"
       meta={data ? `${data.runs.length} run${data.runs.length === 1 ? "" : "s"}` : undefined}
-      lede="One row per lane. The default lane runs a single job at a time, which is why the nightly batch is a chain rather than a pile-up."
       dragHandle={dragHandle}
       dragProps={dragProps}
     >
       {lanes.length === 0 ? (
-        <EmptyState icon="list" title="Nothing ran" description="No job has run in the last 24 hours." />
+        <EmptyState
+          icon="list"
+          title="Nothing ran"
+          action={
+            <Link to="/jobs/schedule" className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}>
+              View schedule
+            </Link>
+          }
+        />
       ) : (
         <>
           <div className={styles.chart}>

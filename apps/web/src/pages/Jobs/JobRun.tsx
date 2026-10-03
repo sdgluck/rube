@@ -106,7 +106,7 @@ export default function JobRun() {
             <span className={styles.metaLabel}>Failed by</span>
             <span>
               {run.failureKind === "watchdog"
-                ? "Watchdog — it blew its time budget without unwinding. If it was a command job, the work may still be running in its worker thread."
+                ? "Watchdog — over its time budget; a command job's work may still be running."
                 : run.failureKind === "cancel-timeout"
                   ? "Cancellation timed out — it was asked to stop and never did."
                   : run.failureKind}

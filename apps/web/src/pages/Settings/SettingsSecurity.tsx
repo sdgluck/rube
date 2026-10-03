@@ -3,6 +3,7 @@ import { trpc } from "#/trpc";
 import SettingsPageHeader from "./SettingsPageHeader";
 import ConfirmModal from "#components/ConfirmModal";
 import ErrorState from "#components/ErrorState";
+import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
 import styles from "./SettingsSecurity.module.css";
 
@@ -70,12 +71,6 @@ export default function SettingsSecurity() {
     <div className={styles.stack}>
       <SettingsPageHeader title="Security" />
 
-      <p className={styles.lede}>
-        With authentication on, the admin app asks for a Plex sign-in and only the account that owns this Plex server
-        gets in. With it off, anyone who can reach this port can call every mutation — which is why the server binds to
-        loopback by default.
-      </p>
-
       <div className={styles.card}>
         <div className={styles.row}>
           <div className={styles.statusBlock}>
@@ -106,14 +101,12 @@ export default function SettingsSecurity() {
             )}
             {!status.configured && status.ownerResolved && (
               <p className={styles.hint}>
-                Turning this on will let {status.ownerUsername} — the owner of this Plex server — sign in, and nobody
-                else.
+                Only {status.ownerUsername}, this server's Plex owner, will be able to sign in.
               </p>
             )}
             {!status.configured && !status.ownerResolved && (
               <p className={styles.hint}>
-                Tinkerbell will ask plex.tv who owns this server when you turn this on. It needs a working Plex token in
-                Settings → Plex first.
+                Only this server's Plex owner will sign in. Needs a token in <SettingsPageLink to="/settings/plex" />.
               </p>
             )}
           </div>

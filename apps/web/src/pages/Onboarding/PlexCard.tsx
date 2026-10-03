@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import controls from "#/styles/controls.module.css";
 import styles from "./Onboarding.module.css";
+
+const SIGN_IN_POLL_MS = 2000;
+const SIGN_IN_POLL_ATTEMPTS = 90; // three minutes, then give up and let them retry
 
 interface Props {
   cfg: Record<string, unknown>;
@@ -20,6 +23,11 @@ interface Props {
  * because a Radarr that is briefly down shouldn't block entering its key; Plex
  * is different because a wrong token here means every later step in this
  * wizard silently has nothing to work with.
+ *
+ * The token comes from "Sign in with Plex" by default. Plex's own page opens
+ * in a popup rather than taking over the tab, as the admin sign-in does,
+ * because this card holds a half-typed URL that a full-page round trip would
+ * lose. The server keeps the PIN and stores the token; this side only polls.
  */
 export default function PlexCard({ cfg, connected }: Props) {
   const { addToast } = useToast();
@@ -39,6 +47,17 @@ export default function PlexCard({ cfg, connected }: Props) {
   const [testing, setTesting] = useState(false);
   const [savingLibs, setSavingLibs] = useState(false);
   const [touchedLibs, setTouchedLibs] = useState(false);
+  const [pasting, setPasting] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const signInStart = trpc.onboarding.plexSignIn.useMutation();
+  const signInPoll = trpc.onboarding.plexSignInPoll.useMutation();
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     setUrl(storedUrl);
@@ -106,6 +125,60 @@ export default function PlexCard({ cfg, connected }: Props) {
     }
   }
 
+  async function handleSignIn() {
+    // Opened before the request, while the click still counts as a user
+    // gesture — a popup opened after an await is what blockers refuse.
+    const popup = window.open("", "plex-sign-in", "width=800,height=720");
+    if (!popup) {
+      addToast("Allow pop-ups for this site to sign in with Plex", "error");
+      return;
+    }
+    setSigningIn(true);
+    try {
+      const { authUrl } = await signInStart.mutateAsync();
+      popup.location.href = authUrl;
+    } catch (err) {
+      popup.close();
+      addToast(`Couldn't start Plex sign-in: ${(err as Error).message}`, "error");
+      setSigningIn(false);
+      return;
+    }
+
+    let attempts = 0;
+    const finish = () => {
+      setSigningIn(false);
+      popup.close();
+    };
+    const tick = async () => {
+      attempts++;
+      try {
+        const res = await signInPoll.mutateAsync();
+        if (res.status === "ok") {
+          finish();
+          addToast(`Signed in as ${res.username}`, "success");
+          await utils.config.get.invalidate();
+          return;
+        }
+        if (res.status === "expired") {
+          finish();
+          addToast("That sign-in expired — try again", "error");
+          return;
+        }
+      } catch (err) {
+        finish();
+        addToast(`Plex sign-in failed: ${(err as Error).message}`, "error");
+        return;
+      }
+      // Still pending with the window gone: they closed it without approving.
+      if (popup.closed || attempts >= SIGN_IN_POLL_ATTEMPTS) {
+        finish();
+        return;
+      }
+      pollTimer.current = setTimeout(tick, SIGN_IN_POLL_MS);
+    };
+    pollTimer.current = setTimeout(tick, SIGN_IN_POLL_MS);
+  }
+
   async function handleSaveLibraries() {
     setSavingLibs(true);
     try {
@@ -133,10 +206,7 @@ export default function PlexCard({ cfg, connected }: Props) {
         </span>
         <span className={styles.tileState}>{connected ? "Connected" : "Required"}</span>
       </div>
-      <p className={styles.tileBlurb}>
-        Your Plex server is where Tinkerbell reads your library from and writes collections back to. Everything else on
-        this page is optional.
-      </p>
+      <p className={styles.tileBlurb}>Where Tinkerbell reads your library and writes collections.</p>
 
       <div className={styles.tileBody}>
         <label className={styles.field}>
@@ -149,20 +219,43 @@ export default function PlexCard({ cfg, connected }: Props) {
             onChange={(e) => setUrl(e.target.value)}
           />
         </label>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>Plex Token</span>
-          <input
-            className={controls.input}
-            type="password"
-            placeholder="Enter token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-          />
-          <span className={styles.fieldHint}>
-            Find yours by opening any item in Plex, choosing Get Info, then View XML — the token is the{" "}
-            <code>X-Plex-Token</code> at the end of the URL.
-          </span>
-        </label>
+        {pasting ? (
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Plex Token</span>
+            <input
+              className={controls.input}
+              type="password"
+              placeholder="Enter token"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+            <span className={styles.fieldHint}>
+              In Plex: Get Info › View XML › <code>X-Plex-Token</code> in the URL.
+            </span>
+          </label>
+        ) : (
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>Plex account</span>
+            <div className={styles.tileActions}>
+              <button
+                type="button"
+                className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+                onClick={handleSignIn}
+                disabled={signingIn}
+              >
+                {signingIn ? "Waiting for Plex…" : storedToken ? "Sign in again" : "Sign in with Plex"}
+              </button>
+              <button
+                type="button"
+                className={`${controls.btn} ${controls.btnGhost} ${controls.btnSm}`}
+                onClick={() => setPasting(true)}
+              >
+                Paste a token instead
+              </button>
+            </div>
+            {storedToken && <span className={styles.fieldHint}>Token saved.</span>}
+          </div>
+        )}
         <div className={styles.tileActions}>
           <button
             type="button"
@@ -192,10 +285,7 @@ export default function PlexCard({ cfg, connected }: Props) {
             <p className={styles.fieldHint}>No libraries found. Check the connection above.</p>
           ) : (
             <>
-              <p className={styles.fieldHint}>
-                Which libraries Tinkerbell may read and write. All of them to start with — narrow it down if you'd
-                rather it left some alone.
-              </p>
+              <p className={styles.fieldHint}>Tinkerbell leaves unticked libraries alone.</p>
               <div className={styles.libraryList}>
                 {sections.map((s) => (
                   <label key={s.key} className={styles.libraryItem}>

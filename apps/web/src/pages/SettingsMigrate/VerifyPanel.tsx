@@ -71,10 +71,7 @@ export default function VerifyPanel() {
       titleClassName={styles.groupTitle}
       title={<>Check the migration ({checkable.length})</>}
     >
-      <p className={styles.hint}>
-        Dry-runs each migrated rule and compares what it would build against the Kometa collection it replaced. Nothing
-        is written to Plex.
-      </p>
+      <p className={styles.hint}>Dry-runs each rule against the Kometa collection it replaced.</p>
 
       <div className={styles.buttons}>
         <button type="button" className={styles.buttonSecondary} onClick={() => void runAll()} disabled={busy !== null}>

@@ -31,6 +31,7 @@ export default function SettingsCleanup() {
   const utils = trpc.useUtils();
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveMutation = trpc.config.save.useMutation();
+  const capUsage = trpc.cleanup.capUsage.useQuery();
   const queueQuery = trpc.cleanup.queue.useQuery(undefined, { refetchOnWindowFocus: false });
 
   useEffect(() => {
@@ -76,27 +77,17 @@ export default function SettingsCleanup() {
       <SettingsPageHeader title="Cleanup" />
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Rule-driven cleanup">
-        <p className={styles.intro}>
-          Rules whose outcome is <strong>Cleanup</strong> can label, unmonitor, or delete the items they match. Nothing
-          destructive happens unless this switch is on — it is checked every time a rule is about to act, not when the
-          rule is saved, so turning it off stops work already in progress.
-        </p>
-
         <label className={styles.switchRow}>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           <span>
-            <span className={styles.switchLabel}>Allow cleanup rules to remove things</span>
-            <span className={styles.switchHint}>
-              Off means unmonitor and delete are refused for every rule, with the reason in the run log. Labelling and
-              queue-only rules keep working — they don't remove anything.
-            </span>
+            <span className={styles.switchLabel}>Allow cleanup rules to unmonitor and delete</span>
+            <span className={styles.switchHint}>Takes effect immediately, even mid-run.</span>
           </span>
         </label>
 
         {enabled && (
           <div className={styles.armed} role="status">
-            Cleanup is armed. Rules that are past their preview-only setting will remove things on their next scheduled
-            run.
+            Armed — rules past preview remove items on their next run.
           </div>
         )}
 
@@ -104,19 +95,19 @@ export default function SettingsCleanup() {
           <label className={settings.label} htmlFor="cleanup-max">
             Most items to remove per day, across all rules
           </label>
-          <input
-            id="cleanup-max"
-            type="number"
-            min={1}
-            className={settings.input}
-            value={maxDeletes}
-            onChange={(e) => setMaxDeletes(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          />
-          <p className={settings.hint}>
-            A backstop over and above each rule's own limit. Per-rule caps don't compose — five rules each staying under
-            thirty can still empty a library in one night. Counted over a rolling 24 hours from what was actually
-            removed, so scheduled runs and rules you run by hand draw on the same allowance.
-          </p>
+          <div className={settings.suffixRow}>
+            <input
+              id="cleanup-max"
+              type="number"
+              min={1}
+              className={settings.input}
+              value={maxDeletes}
+              onChange={(e) => setMaxDeletes(Math.max(1, parseInt(e.target.value, 10) || 1))}
+            />
+            {capUsage.data && (
+              <span className={settings.suffix}>{capUsage.data.used.toLocaleString()} used in the last 24 h</span>
+            )}
+          </div>
         </div>
 
         <p className={styles.queueLine}>

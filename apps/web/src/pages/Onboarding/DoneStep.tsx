@@ -19,8 +19,6 @@ export default function DoneStep() {
   return (
     <div className={styles.stepBody}>
       <h2 className={styles.stepTitle}>You're set up</h2>
-      <p className={styles.stepLede}>Here's where that leaves things.</p>
-
       <ul className={styles.summary}>
         <li>
           <strong>{connected.length}</strong> service{connected.length === 1 ? "" : "s"} connected
@@ -47,11 +45,6 @@ export default function DoneStep() {
           </Link>
         ))}
       </div>
-
-      <p className={styles.fieldHint}>
-        This setup stays available under <strong>Settings › Setup</strong> — nothing here is a one-time chance. It
-        leaves the sidebar once every step is done, and comes back if one ever needs attention again.
-      </p>
     </div>
   );
 }

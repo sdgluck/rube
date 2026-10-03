@@ -23,6 +23,7 @@ import { token } from "@tinkerbell/container";
 
 export * from "./types.ts";
 export { renderEmailHtml, SmtpNotConfiguredError, type SmtpTarget } from "./smtp.ts";
+export { detectTelegramChats, TelegramDetectError, type TelegramChat } from "./telegram-detect.ts";
 
 // --- Agent registry ---
 

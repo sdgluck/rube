@@ -105,7 +105,9 @@ thead .eventHead {
 }
 
 .suppressedNote {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font: var(--t-caption);
   color: var(--ink-3);
   margin-top: 2px;

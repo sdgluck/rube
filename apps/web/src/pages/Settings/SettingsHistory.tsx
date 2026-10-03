@@ -98,11 +98,7 @@ export default function SettingsHistory() {
         )}
 
         {!historyQuery.isLoading && entries.length === 0 && (
-          <p className={settings.hint}>
-            Nothing recorded yet. Changes are logged from the version of Tinkerbell that introduced this page onwards —
-            an install that has not been touched since upgrading has an empty history, which is correct rather than
-            broken.
-          </p>
+          <p className={settings.hint}>Nothing recorded yet — changes are logged from now on.</p>
         )}
 
         {entries.map((entry) => (

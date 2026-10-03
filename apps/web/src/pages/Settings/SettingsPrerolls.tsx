@@ -23,11 +23,15 @@ export default function SettingsPrerolls() {
   const [maxHeight, setMaxHeight] = useState<number>(DEFAULTS.maxHeight);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  // Null until the user touches the checkbox: before that it follows whether
+  // the saved path already equals Tinkerbell's own, which is the common setup.
+  const [samePathChoice, setSamePathChoice] = useState<boolean | null>(null);
 
   const { addToast } = useToast();
   const utils = trpc.useUtils();
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const envQuery = trpc.prerolls.environment.useQuery();
+  const plexPass = trpc.prerolls.plexStatus.useQuery(undefined, { refetchOnWindowFocus: false }).data?.plexPass;
   const saveMutation = trpc.config.save.useMutation();
   const verifyMutation = trpc.prerolls.verifyPlexPath.useMutation();
 
@@ -84,10 +88,24 @@ export default function SettingsPrerolls() {
   if (configQuery.error) return <div className={`${styles.toast} ${styles.error}`}>Failed to load settings</div>;
 
   const env = envQuery.data;
+  const samePath = env ? (samePathChoice ?? plexPath === env.dir) : false;
 
   return (
     <div className={styles.form}>
-      <SettingsPageHeader title="Prerolls" />
+      <SettingsPageHeader
+        title="Prerolls"
+        meta={
+          plexPass == null ? undefined : (
+            <span
+              className={`${styles.status} ${plexPass ? styles.statusOk : styles.statusWarn}`}
+              title={plexPass ? undefined : "Plex only plays pre-rolls with an active Plex Pass"}
+            >
+              <span className={styles.statusDot} aria-hidden="true" />
+              Plex Pass {plexPass ? "active" : "not active"}
+            </span>
+          )
+        }
+      />
 
       {env && env.ffmpeg === null && (
         <Banner variant="error">
@@ -104,52 +122,53 @@ export default function SettingsPrerolls() {
       )}
 
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Storage">
-        <p className={styles.hint}>
-          Prerolls are files, and Plex plays them off its own disk — so the same directory has to be visible to both
-          programs. Mount one directory into both containers, then tell Tinkerbell what Plex calls it.
-        </p>
+        <p className={styles.hint}>Mount one directory into both Tinkerbell and Plex.</p>
 
         <div className={styles.field}>
           <span className={styles.label}>Tinkerbell's directory</span>
           <code className={styles.hint}>{env?.dir ?? "—"}</code>
           <p className={styles.hint}>
-            Set with the <code>PREROLLS_DIR</code> environment variable. Defaults to a <code>prerolls</code> folder
-            inside the data directory.
+            Set by <code>PREROLLS_DIR</code>.
           </p>
         </div>
 
-        <label className={styles.field}>
-          <span className={styles.label}>The same directory, as Plex sees it</span>
-          <input
-            className={styles.input}
-            value={plexPath}
-            placeholder="/prerolls"
-            onChange={(e) => setPlexPath(e.target.value)}
-          />
-          <p className={styles.hint}>
-            If both containers mount the directory at the same path, this matches the line above. If Plex mounts it
-            somewhere else — say <code>/data/prerolls</code> — put that here instead. Getting this wrong is the usual
-            reason prerolls don't play: Plex accepts the setting and then finds nothing at the path.
-          </p>
-        </label>
+        {env && (
+          <label className={styles.checkRow}>
+            <input
+              type="checkbox"
+              checked={samePath}
+              onChange={(e) => {
+                setSamePathChoice(e.target.checked);
+                if (e.target.checked) setPlexPath(env.dir);
+              }}
+            />
+            <span className={styles.label}>Plex sees it at the same path</span>
+          </label>
+        )}
+
+        {!samePath && (
+          <label className={styles.field}>
+            <span className={styles.label}>The same directory, as Plex sees it</span>
+            <input
+              className={styles.input}
+              value={plexPath}
+              placeholder="/data/prerolls"
+              onChange={(e) => setPlexPath(e.target.value)}
+            />
+            <p className={styles.hint}>A wrong path is the usual reason prerolls don't play.</p>
+          </label>
+        )}
 
         <div className={styles.buttons}>
           <button type="button" className={styles.buttonSecondary} onClick={handleVerify} disabled={verifying}>
             {verifying ? "Checking…" : "Test Plex connection"}
           </button>
         </div>
-        <p className={styles.hint}>
-          This writes a throwaway value to Plex's pre-roll setting and reads it back, then restores what was there. It
-          proves Plex accepts the setting — it can't prove the path resolves on Plex's filesystem, because nothing over
-          the API can.
-        </p>
+        <p className={styles.hint}>Checks Plex accepts the setting, not that the path exists.</p>
       </CardSection>
 
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Transcoding">
-        <p className={styles.hint}>
-          Uploads are inspected and left alone when Plex would already direct play them. Anything else is converted to
-          H.264/AAC in an MP4 — otherwise a ten-second clip can occupy a transcode session and stutter.
-        </p>
+        <p className={styles.hint}>Uploads Plex can't direct play are converted to H.264/AAC MP4.</p>
 
         <label className={styles.field}>
           <span className={styles.label}>Maximum resolution</span>
@@ -167,13 +186,6 @@ export default function SettingsPrerolls() {
           <span className={styles.label}>ffmpeg</span>
           <span className={styles.hint}>{env ? (env.ffmpeg ?? "Not found") : "Checking…"}</span>
         </div>
-      </CardSection>
-
-      <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Requirements">
-        <p className={styles.hint}>
-          Pre-rolls are a Plex Pass feature. Without an active subscription Plex will store the setting but never play
-          anything — if everything here looks right and nothing plays, that's the first thing to check.
-        </p>
       </CardSection>
 
       <div className={styles.buttons}>

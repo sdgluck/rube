@@ -17,7 +17,7 @@ import { t, procedure } from "./_base.ts";
  * cancel button as the rest rather than a bespoke spinner.
  */
 export function createBackupsRouter(deps: Pick<TrpcDeps, "backups">) {
-  const { listBackups, backupsEnabled, backupDir } = deps.backups;
+  const { listBackups, backupsEnabled, backupDir, directoryMount } = deps.backups;
 
   const backupsRouter = t.router({
     list: procedure.query(async () => ({
@@ -27,6 +27,9 @@ export function createBackupsRouter(deps: Pick<TrpcDeps, "backups">) {
       // mounted volume produces backups that die with the container, and the
       // only way to notice is to be told the path.
       directory: backupDir(),
+      // …and whether it is on a mount, so a wrong one is shown rather than
+      // described. Null outside a container, where there's nothing to warn of.
+      directoryMount: await directoryMount(),
       files: await listBackups(),
     })),
   });

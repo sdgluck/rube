@@ -2,6 +2,9 @@ import { useRef } from "react";
 import styles from "#pages/Settings/Settings.module.css";
 import local from "../SettingsMigrate.module.css";
 
+/** A Kometa `file:` reference — collections defined outside the pasted file. */
+const FILE_REF = /^\s*-?\s*file:/m;
+
 export type SourceMode = "server" | "upload" | "scan";
 
 interface SourceStepProps {
@@ -46,11 +49,6 @@ export default function SourceStep({
 
   return (
     <div className={styles.form}>
-      <p className={styles.hint}>
-        Tinkerbell reads your Kometa config and turns each collection definition into a rule. Nothing is written to Plex
-        until you've reviewed what it found.
-      </p>
-
       <div className={local.choiceGrid}>
         <button
           type="button"
@@ -89,9 +87,7 @@ export default function SourceStep({
             placeholder="/config"
             spellCheck={false}
           />
-          <p className={styles.hint}>
-            A folder (Tinkerbell finds config.yml inside it) or the path to config.yml itself. Only YAML files are read.
-          </p>
+          <p className={styles.hint}>The folder, or config.yml itself.</p>
         </div>
       )}
 
@@ -154,20 +150,17 @@ export default function SourceStep({
               placeholder={"libraries:\n  Movies:\n    collection_files:\n      - default: genre"}
               spellCheck={false}
             />
-            <p className={styles.hint}>
-              Collections defined in separate files won't be found this way — use the folder picker if your config
-              points at other files.
-            </p>
+            {/* Only once the paste actually points elsewhere: until then the
+                caveat is about a problem this config doesn't have. */}
+            {FILE_REF.test(pastedText) && (
+              <p className={styles.hint}>This config references other files — use the folder picker to include them.</p>
+            )}
           </div>
         </>
       )}
 
       {mode === "scan" && (
-        <p className={styles.hint}>
-          Tinkerbell will look at the collections Kometa built in Plex and infer rules from their names. It's a rougher
-          migration — a collection's filters, limits and ordering aren't visible from Plex — but it needs nothing from
-          you.
-        </p>
+        <p className={styles.hint}>Rougher: filters, limits and ordering aren&apos;t visible from Plex.</p>
       )}
 
       {error && (

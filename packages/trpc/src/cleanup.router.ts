@@ -32,6 +32,13 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
       .query(({ input }) => queuedCandidates({ includeActioned: input?.includeActioned ?? false })),
 
     /**
+     * How much of the daily ceiling the last 24 hours spent — the same count,
+     * over the same window, that the run budget starts from, so the number
+     * beside the setting is the one the next run will be held to.
+     */
+    capUsage: procedure.query(() => ({ used: cleanup.actionedInLastDay() })),
+
+    /**
      * Queued/actioned tallies keyed by rule id, for the Rules table.
      *
      * One query for the whole table rather than one per row — a cleanup rule's

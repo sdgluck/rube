@@ -52,6 +52,11 @@ export function createPersonalizationRouter(deps: Pick<TrpcDeps, "clients" | "co
      * Counts only items still missing the label, asked of Plex directly — one
      * `label!=` count per library. Counting the whole local index meant a
      * reconcile on a fully labelled library still claimed every item.
+     *
+     * Per library too, with each one's total: a library where *nothing* carries
+     * the label is one added since personalization was turned on — invisible
+     * to every restricted user until a reconcile labels it — which is distinct
+     * from a few new arrivals the label job hasn't reached yet.
      */
     estimate: procedure.query(async () => {
       const client = getPlexClient();
@@ -59,14 +64,25 @@ export function createPersonalizationRouter(deps: Pick<TrpcDeps, "clients" | "co
       const sections = (await client.getSections()).filter(
         (s) => !libraries || libraries.length === 0 || libraries.includes(s.title),
       );
-      const counts = await Promise.all(
-        sections.map((s) => client.getSectionItemCount(s.key, { "label!": BASELINE_LABEL })),
+      const perLibrary = await Promise.all(
+        sections.map(async (s) => {
+          const [items, unlabelled] = await Promise.all([
+            client.getSectionItemCount(s.key),
+            client.getSectionItemCount(s.key, { "label!": BASELINE_LABEL }),
+          ]);
+          return { title: s.title, items, unlabelled };
+        }),
       );
-      const itemCount = counts.reduce((a, b) => a + b, 0);
+      const itemCount = perLibrary.reduce((a, b) => a + b.unlabelled, 0);
       const measured = getConfig("personalize_label_rate");
       const itemsPerSecond = measured?.itemsPerSecond ?? DEFAULT_ITEMS_PER_SECOND;
       const estimatedSeconds = Math.ceil(itemCount / itemsPerSecond) + BASELINE_SECONDS;
-      return { itemCount, estimatedSeconds, measured: measured != null };
+      return {
+        itemCount,
+        estimatedSeconds,
+        measured: measured != null,
+        unlabelledLibraries: perLibrary.filter((l) => l.items > 0 && l.unlabelled === l.items).map((l) => l.title),
+      };
     }),
 
     enable: procedure.mutation(async () => {

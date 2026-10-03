@@ -98,7 +98,13 @@ function Control({
             : (pickers?.users ?? []);
       return (
         <MultiSelect
-          allLabel={control.kind === "rules" ? "All rules" : "All users"}
+          allLabel={
+            control.kind === "rules"
+              ? "All personalizable rules"
+              : control.source === "opted-in"
+                ? "All opted-in users"
+                : "All users"
+          }
           ariaLabel={field.label}
           options={withMissing(base, selected)}
           selected={selected}

@@ -87,10 +87,7 @@ export default function SettingsAi() {
     <div className={styles.form}>
       <SettingsPageHeader title="AI" />
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="LLM provider">
-        <p className={styles.hint}>
-          Tinkerbell sends prompts to whichever LLM you configure here. Switch providers any time — your existing rules
-          will use the new one on the next run.
-        </p>
+        <p className={styles.hint}>Rules use the new provider from their next run.</p>
 
         <label className={styles.field}>
           <span className={styles.label}>Provider</span>

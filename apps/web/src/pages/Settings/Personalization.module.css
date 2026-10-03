@@ -28,16 +28,6 @@
   gap: 16px;
 }
 
-/* Prose that explains the switch. Capped so it stays readable on a wide
-   settings pane — the cards below can use the full width, the sentences can't. */
-.lede {
-  max-width: 72ch;
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ink-2);
-}
-
 .row {
   display: flex;
   justify-content: space-between;
@@ -169,6 +159,11 @@
 
 .hint {
   composes: hint from "./Settings.module.css";
+}
+
+/* A feature that silently does nothing until the field above is filled in. */
+.warnMark {
+  color: var(--status-warn-fg);
 }
 
 .muted {

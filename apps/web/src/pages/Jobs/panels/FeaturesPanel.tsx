@@ -193,7 +193,6 @@ export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
     <PanelShell
       title="Your Features"
       badge={featureJobs.length > 0 ? <PanelCountBadge>{featureJobs.length}</PanelCountBadge> : null}
-      lede="Optional capabilities you've installed. Toggle off to pause; remove anytime from each feature's page."
       actions={
         <>
           <button type="button" className={styles.headerBtn} onClick={() => setWizardOpen(true)}>

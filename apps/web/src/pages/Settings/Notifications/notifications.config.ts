@@ -1,4 +1,10 @@
 import type { NotificationField } from "./NotificationServiceForm";
+import {
+  readSmtpEncryption,
+  SMTP_ENCRYPTION_OPTIONS,
+  writeSmtpEncryption,
+  type SmtpEncryption,
+} from "./smtpEncryption";
 
 export interface NotificationServiceConfig {
   service: string;
@@ -26,7 +32,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         key: "global_discord_webhook_url",
         label: "Webhook URL",
         placeholder: "https://discord.com/api/webhooks/...",
-        hint: "Create a webhook in your Discord server's channel settings under Integrations",
+        hint: "Channel settings → Integrations → Webhooks",
       },
     ],
     credentialKeys: ["global_discord_webhook_url"],
@@ -42,14 +48,13 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         key: "global_gotify_url",
         label: "Server URL",
         placeholder: "https://gotify.example.com",
-        hint: "The base URL of your Gotify server",
       },
       {
         key: "global_gotify_token",
         label: "Application Token",
         type: "password",
         placeholder: "Enter Gotify application token",
-        hint: "Create an application in Gotify to get a token",
+        hint: "Create an application in Gotify",
       },
     ],
     credentialKeys: ["global_gotify_url", "global_gotify_token"],
@@ -65,7 +70,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         key: "global_lunasea_webhook_url",
         label: "Webhook URL",
         placeholder: "https://notify.lunasea.app/v1/custom/...",
-        hint: "Found in the LunaSea app under Settings > Notifications",
+        hint: "In LunaSea under Settings › Notifications",
       },
     ],
     credentialKeys: ["global_lunasea_webhook_url"],
@@ -82,7 +87,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         label: "Access Token",
         type: "password",
         placeholder: "Enter Pushbullet access token",
-        hint: "Found at pushbullet.com under Settings > Access Tokens",
+        hint: "pushbullet.com › Settings › Access Tokens",
       },
     ],
     credentialKeys: ["global_pushbullet_token"],
@@ -99,7 +104,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         label: "API Key (Application Token)",
         type: "password",
         placeholder: "Enter Pushover API key",
-        hint: "Create an application at pushover.net to get a token",
+        hint: "Create an application at pushover.net",
       },
       {
         key: "global_pushover_user_key",
@@ -126,31 +131,29 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         hint: "Your mail provider's outgoing server",
       },
       {
-        key: "port",
-        label: "Port",
-        type: "number",
-        placeholder: "587",
-        hint: "587 for STARTTLS, 465 for implicit TLS, 25 for an unauthenticated relay on your LAN",
+        key: "encryption",
+        label: "Encryption",
+        derived: {
+          options: SMTP_ENCRYPTION_OPTIONS,
+          read: (v) => readSmtpEncryption(!!v.secure, String(v.port ?? "")),
+          write: (mode, v) => writeSmtpEncryption(mode as SmtpEncryption, String(v.port ?? "")),
+        },
       },
-      {
-        key: "secure",
-        label: "Use implicit TLS (port 465)",
-        type: "checkbox",
-        hint: "Leave off for port 587 — STARTTLS is negotiated automatically",
-      },
+      { key: "port", label: "Port", type: "number", placeholder: "587" },
+      { key: "secure", label: "Implicit TLS", type: "checkbox", hidden: true },
       { key: "user", label: "Username", placeholder: "Leave blank for an open relay" },
       { key: "password", label: "Password", type: "password", placeholder: "Enter SMTP password" },
       {
         key: "from",
         label: "From Address",
         placeholder: "tinkerbell@example.com",
-        hint: "What recipients see in the From field. Many providers require this to match the authenticated account",
+        hint: "Many providers require this to match the username",
       },
       {
         key: "to",
         label: "Your Address",
         placeholder: "you@example.com",
-        hint: "Where event notifications and the server-wide digest go. Per-user digests go to the address each portal user enters themselves",
+        hint: "Gets events and the server digest; users set their own",
       },
     ],
     credentialKeys: ["host", "port", "from"],
@@ -166,7 +169,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         key: "global_slack_webhook_url",
         label: "Webhook URL",
         placeholder: "https://hooks.slack.com/services/...",
-        hint: "Create an Incoming Webhook in your Slack workspace's app settings",
+        hint: "An Incoming Webhook from your Slack app settings",
       },
     ],
     credentialKeys: ["global_slack_webhook_url"],
@@ -183,13 +186,31 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         label: "Bot Token",
         type: "password",
         placeholder: "Enter Telegram bot token",
-        hint: "Create a bot via @BotFather and copy the token",
+        hint: "From @BotFather",
       },
       {
         key: "global_telegram_chat_id",
         label: "Chat ID",
         placeholder: "Enter chat ID or group ID",
-        hint: "Send a message to your bot, then visit api.telegram.org/bot<token>/getUpdates to find your chat ID",
+        hint: "Message your bot first, then Detect",
+        action: {
+          label: "Detect",
+          busyLabel: "Detecting…",
+          run: async (values, client) => {
+            const { chats } = await client.notifications.detectTelegramChats.mutate({
+              token: String(values.global_telegram_bot_token ?? ""),
+            });
+            const [latest] = chats;
+            if (!latest) throw new Error("No messages yet — message your bot, then try again");
+            return {
+              value: latest.id,
+              message:
+                chats.length > 1
+                  ? `Using ${latest.title}, the most recent of ${chats.length} chats`
+                  : `Found ${latest.title}`,
+            };
+          },
+        },
       },
       {
         key: "global_telegram_send_silently",
@@ -210,7 +231,16 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
         key: "global_webhook_url",
         label: "Webhook URL",
         placeholder: "https://example.com/webhook",
-        hint: 'Receives a POST with JSON body: { "title": "...", "message": "...", "timestamp": ... }',
+        hint: "Receives a JSON POST per notification",
+        sample: [
+          "{",
+          '  "title": "Plex Unreachable",',
+          '  "message": "Plex has not answered for 3 minutes",',
+          '  "timestamp": 1767225600000,',
+          '  "blocks": [ … ],  // when the event has them',
+          '  "data": { … }     // when the event has them',
+          "}",
+        ].join("\n"),
       },
     ],
     credentialKeys: ["global_webhook_url"],

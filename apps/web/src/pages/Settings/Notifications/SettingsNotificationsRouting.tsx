@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Filter, Minus } from "lucide-react";
+import { AlertTriangle, Check, Filter, Minus, Moon } from "lucide-react";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { FormSkeleton } from "#components/Skeleton";
@@ -56,11 +56,7 @@ export default function SettingsNotificationsRouting() {
 
   return (
     <div className={settings.form}>
-      <p className={settings.hint}>
-        What would happen, right now, if each event fired. Subscriptions, the job and health-target allow-lists and
-        quiet hours are all folded in — this is the decision the dispatcher makes, not a summary of the checkboxes.
-        Press any cell to send that service a sample of that event.
-      </p>
+      <p className={settings.hint}>What each event would do right now. Press a cell to send a sample.</p>
 
       <div className={styles.scroller}>
         <table className={styles.matrix}>
@@ -84,7 +80,11 @@ export default function SettingsNotificationsRouting() {
                     {row.label}
                     {!row.emitted && <span className={styles.notEmitted}> · routing target</span>}
                   </span>
-                  {row.suppressed && <span className={styles.suppressedNote}>held by {row.suppressed}</span>}
+                  {row.suppressed && (
+                    <span className={styles.suppressedNote}>
+                      <Moon size={11} aria-hidden /> held by {row.suppressed}
+                    </span>
+                  )}
                 </th>
                 {row.services.map((cell) => {
                   const Icon =
@@ -122,22 +122,21 @@ export default function SettingsNotificationsRouting() {
           <Check size={14} className={styles.on} aria-hidden /> subscribed
         </span>
         <span className={styles.legendItem}>
-          <Filter size={14} className={styles.filtered} aria-hidden /> subscribed, narrowed by an allow-list
+          <Filter size={14} className={styles.filtered} aria-hidden /> narrowed by an allow-list
         </span>
         <span className={styles.legendItem}>
-          <AlertTriangle size={14} className={styles.unconfigured} aria-hidden /> subscribed, but not configured — add
-          its credentials
+          <AlertTriangle size={14} className={styles.unconfigured} aria-hidden /> not configured
         </span>
         <span className={styles.legendItem}>
           <Minus size={14} className={styles.off} aria-hidden /> not subscribed
         </span>
+        <span
+          className={styles.legendItem}
+          title="Delivery only — the event is still recorded in Activity, with a Not Notified entry beside it"
+        >
+          <Moon size={14} aria-hidden /> held by quiet hours
+        </span>
       </div>
-
-      <p className={settings.hint}>
-        A greyed row is one quiet hours would hold right now. Suppression is delivery-only and happens late, so the
-        event is still recorded in Activity either way — and it now leaves a <em>Not Notified</em> entry beside it, so a
-        silent phone can be told apart from a broken webhook.
-      </p>
     </div>
   );
 }

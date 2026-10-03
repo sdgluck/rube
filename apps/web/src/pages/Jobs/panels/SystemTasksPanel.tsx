@@ -21,7 +21,6 @@ export function SystemTasksPanel({ dragHandle, dragProps }: DashboardPanelProps)
     <PanelShell
       title="System Tasks"
       badge={<PanelCountBadge>{systemJobs.length}</PanelCountBadge>}
-      lede="Infrastructure that keeps Tinkerbell in sync with Plex. Most are required; every schedule is editable."
       dragHandle={dragHandle}
       dragProps={dragProps}
     >

@@ -32,8 +32,8 @@ const COOLDOWN_MS = 15 * 60 * 1000;
  * someone is being asked to accept before clicking, and "200.0 MB" implies a
  * precision the figure doesn't have.
  */
-function formatCeiling(bytes: number | undefined): string {
-  return bytes ? `${Math.round(bytes / 1_000_000)} MB` : "a few hundred MB";
+function formatCeiling(bytes: number | undefined): string | null {
+  return bytes ? `${Math.round(bytes / 1_000_000)} MB` : null;
 }
 
 function ResultCard({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
@@ -103,6 +103,7 @@ export default function SettingsBandwidth() {
   // Upload only, because upload is what the bars plot. Including download
   // scaled every bar against a number four times larger than any of them — a
   // row of slivers under an axis label claiming a peak the chart never showed.
+  const ceiling = formatCeiling(maxTransferQuery.data);
   const peak = Math.max(1, ...history.map((h) => h.upMbps ?? 0));
 
   return (
@@ -110,23 +111,8 @@ export default function SettingsBandwidth() {
       <SettingsPageHeader title="Bandwidth Test" />
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Connection test">
-        <p className={styles.intro}>
-          Measures this server's internet connection against Cloudflare's speed endpoints. The upload figure is what
-          remote streams actually consume, so it's the capacity the Stats bandwidth tile divides live playback by. A run
-          takes under a minute and moves up to {formatCeiling(maxTransferQuery.data)} of data — worth knowing if this
-          connection is metered.
-        </p>
-
-        {/* Expect this to read higher than a browser speed test, and say why
-          before someone concludes the tool is broken. Both halves matter: the
-          machine (a wired server, not a laptop on Wi-Fi) and the method
-          (parallel connections, which is also what several viewers streaming
-          at once looks like — so it is the right measure for this number). */}
-        <p className={styles.intro}>
-          Expect a higher figure than a speed test run in your browser. This measures the machine Tinkerbell runs on,
-          which is usually wired, rather than the device you're reading this on; and it uses several connections at
-          once, the way several people streaming at once would. A single connection often can't saturate a fast line, so
-          one-connection tests can report less than half of what the link will actually carry.
+        <p className={settings.hint}>
+          This server's link, measured against Cloudflare. Upload sets the Stats capacity.
         </p>
 
         <div className={styles.header}>
@@ -136,18 +122,16 @@ export default function SettingsBandwidth() {
             title={cooldownLeftMs > 0 ? "Cloudflare throttles frequent tests" : undefined}
             onClick={() => startMutation.mutate({ jobId: JOB_ID })}
           >
-            {run ? "Running…" : "Run test"}
+            {run ? "Running…" : ceiling ? `Run test (uses up to ${ceiling})` : "Run test"}
           </button>
           {!run && cooldownLeftMs > 0 && (
             <span className={styles.warning}>
-              Another test can be run in {Math.ceil(cooldownLeftMs / 60_000)} min — Cloudflare throttles servers that
-              test back to back, and it takes about that long to lift.
+              Next test in {Math.ceil(cooldownLeftMs / 60_000)} min — Cloudflare throttles back-to-back runs.
             </span>
           )}
           {!run && cooldownLeftMs === 0 && activeStreams > 0 && (
             <span className={styles.warning}>
-              {activeStreams} {activeStreams === 1 ? "stream is" : "streams are"} playing — the test will compete with
-              playback, and both will look worse than they are.
+              {activeStreams} {activeStreams === 1 ? "stream is" : "streams are"} playing — both will read low.
             </span>
           )}
         </div>
@@ -204,6 +188,11 @@ export default function SettingsBandwidth() {
               {latest.concurrentKbps > 0 &&
                 ` ${formatBandwidth(latest.concurrentKbps)} of playback was in flight at the time, so this reads low.`}
             </p>
+            {/* Expect this to read higher than a browser speed test, and say so
+              before someone concludes the tool is broken: the server is usually
+              wired, and parallel connections are what several viewers
+              streaming at once look like — so it is the right measure here. */}
+            <p className={styles.caveat}>Usually higher than a browser test: wired, and several connections at once.</p>
           </>
         ) : (
           !latestQuery.isLoading && <div className={styles.empty}>No bandwidth test has been run yet.</div>
@@ -212,7 +201,7 @@ export default function SettingsBandwidth() {
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Last 90 days">
         {history.length === 0 ? (
-          <div className={styles.empty}>Results will appear here once you've run a test.</div>
+          <div className={styles.empty}>No runs yet.</div>
         ) : (
           <>
             <div className={styles.chart}>

@@ -5,6 +5,7 @@ import RelativeTime from "#components/RelativeTime";
 import shared from "#/styles/shared.module.css";
 import CardSection from "#components/CardSection";
 import CronPreview from "#components/CronPreview";
+import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
 import { DIGEST_DEFAULTS } from "@tinkerbell/contracts";
 import SettingsPageHeader from "./SettingsPageHeader";
@@ -67,7 +68,7 @@ export default function SettingsDigest() {
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Digest job">
         {!jobsQuery.data ? null : !digestJob ? (
           <>
-            <p className={styles.intro}>The Digest feature isn't installed, so nothing is sent.</p>
+            <p className={settings.readout}>Not installed — nothing is sent.</p>
             <div>
               <button
                 type="button"
@@ -81,7 +82,7 @@ export default function SettingsDigest() {
           </>
         ) : (
           <>
-            <p className={styles.intro}>
+            <p className={settings.readout}>
               {digestJob.enabled ? "On" : "Switched off"} · covers{" "}
               {(digestConfig.frequency ?? DIGEST_DEFAULTS.frequency) === "monthly" ? "the past month" : "the past week"}
               {unmet.length > 0 && ` · still needs: ${unmet.map((i) => i.label.toLowerCase()).join("; ")}`}
@@ -89,9 +90,9 @@ export default function SettingsDigest() {
             {digestJob.schedule ? (
               <CronPreview expr={digestJob.schedule} />
             ) : (
-              <p className={styles.intro}>No schedule — runs only when started.</p>
+              <p className={settings.readout}>No schedule — runs only when started.</p>
             )}
-            <p className={styles.intro}>
+            <p className={settings.readout}>
               <Link to="/jobs/digest">Configure on the Digest job &rarr;</Link>
             </p>
           </>
@@ -99,18 +100,15 @@ export default function SettingsDigest() {
       </CardSection>
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Preview">
-        <p className={styles.intro}>
-          A periodic summary of what was added, what people watched, and anything about to be removed. It goes to
-          whichever notification services you've ticked <strong>Digest</strong> for, and by email to portal users who
-          asked for one. Its schedule is on the <Link to="/jobs/digest">Digest job</Link>; who receives it is set per
-          service under <Link to="/settings/notifications">Notifications</Link>.
+        <p className={settings.hint}>
+          Goes to channels ticked for <strong>Digest</strong> in <SettingsPageLink to="/settings/notifications" />, and
+          to portal subscribers.
         </p>
 
         {emailStatusQuery.data && !emailStatusQuery.data.smtpConfigured && (
           <p className={styles.notice}>
-            Email isn't configured, so per-user digests won't be sent. Set up a mail server under{" "}
-            <Link to="/settings/notifications/smtp">Notifications → Email</Link>. The server-wide digest still goes to
-            your other channels.
+            Per-user digests need email —{" "}
+            <SettingsPageLink to="/settings/notifications/smtp">Settings › Notifications › Email</SettingsPageLink>
           </p>
         )}
 
@@ -148,10 +146,7 @@ export default function SettingsDigest() {
             <h2 className={styles.previewTitle}>{preview.message.title}</h2>
             <p className={styles.previewText}>{preview.message.text}</p>
             {(preview.message.blocks ?? []).length === 0 ? (
-              <p className={styles.empty}>
-                Nothing happened in this period, so no digest would be sent — the run would record it as skipped rather
-                than mail out an empty summary.
-              </p>
+              <p className={styles.empty}>Nothing happened in this period, so nothing would be sent.</p>
             ) : (
               (preview.message.blocks ?? []).map((block) => (
                 <div key={block.heading} className={styles.block}>
@@ -170,10 +165,7 @@ export default function SettingsDigest() {
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Subscribers">
         {subscribers.length === 0 ? (
-          <span className={styles.hint}>
-            Nobody has subscribed yet. Portal users choose a frequency and enter their own address — Tinkerbell never
-            takes an address from Plex.
-          </span>
+          <span className={styles.hint}>Nobody yet — portal users subscribe themselves.</span>
         ) : (
           <table className={`${shared.table} ${styles.table}`}>
             <thead>

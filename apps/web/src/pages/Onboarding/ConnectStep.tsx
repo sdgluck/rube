@@ -19,11 +19,6 @@ export default function ConnectStep({ cfg, plexConnected }: Props) {
   return (
     <div className={styles.stepBody}>
       <h2 className={styles.stepTitle}>Connect your services</h2>
-      <p className={styles.stepLede}>
-        Plex is the only one Tinkerbell needs. The rest unlock particular kinds of rule, and you can add them whenever —
-        nothing here is a one-time chance.
-      </p>
-
       <PlexCard cfg={cfg} connected={plexConnected} />
 
       <h3 className={styles.groupHeading}>Optional</h3>
@@ -54,10 +49,7 @@ export default function ConnectStep({ cfg, plexConnected }: Props) {
               {llmConfigured ? "Configured" : "Set up →"}
             </Link>
           </div>
-          <p className={styles.tileBlurb}>
-            Lets rules be described in plain English, and writes collection summaries. Setup will be waiting when you
-            come back.
-          </p>
+          <p className={styles.tileBlurb}>Describe rules in plain English; writes collection summaries.</p>
         </div>
       </div>
 

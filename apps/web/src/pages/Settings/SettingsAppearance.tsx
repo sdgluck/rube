@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { DEFAULT_PRESENTATION } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import ToggleSwitch from "#components/ToggleSwitch";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
+import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import { FormSkeleton } from "#components/Skeleton";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
+import ColorField from "#components/ColorField";
+import controls from "#/styles/controls.module.css";
 import ThemeToggle from "#components/ThemeToggle";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
@@ -14,22 +18,16 @@ import CardSection from "#components/CardSection";
 
 type DefaultTemplate = "gradient" | "mosaic" | "spotlight";
 
-const TEMPLATES: { value: DefaultTemplate; label: string; hint: string }[] = [
-  {
-    value: "gradient",
-    label: "Gradient",
-    hint: "A coloured plate with the title set large. Never depends on the collection's items looking good together.",
-  },
-  {
-    value: "mosaic",
-    label: "Mosaic",
-    hint: "A grid of the collection's own posters, darkened, with the title over it. 2×2 or 3×2 depending on how much art there is.",
-  },
-  {
-    value: "spotlight",
-    label: "Spotlight",
-    hint: "One member's poster framed over a blurred copy of itself.",
-  },
+/**
+ * A segmented choice over the one live preview below it, rather than a tile
+ * per template: each preview is a server-side render, and three of them on
+ * every accent change is real work for a choice the single preview already
+ * shows. The description rides on the button's tooltip.
+ */
+const TEMPLATES: { value: DefaultTemplate; label: string; title: string }[] = [
+  { value: "gradient", label: "Gradient", title: "A coloured plate with the title set large" },
+  { value: "mosaic", label: "Mosaic", title: "A darkened grid of the collection's own posters" },
+  { value: "spotlight", label: "Spotlight", title: "One member's poster over a blurred copy of itself" },
 ];
 
 export default function SettingsAppearance() {
@@ -69,6 +67,13 @@ export default function SettingsAppearance() {
   // Blank is fine (the feature is off); anything else has to be absolute,
   // because the server resolves it with no working directory worth speaking of.
   const assetDirValid = assetDir.trim() === "" || assetDir.trim().startsWith("/");
+  // Read as the artwork job would read it, while it's typed — the count is
+  // what tells someone they've pointed at the right folder.
+  const assetProbe = useDebouncedValue(assetDir.trim(), 400);
+  const assetQuery = trpc.posters.assetDirectory.useQuery(
+    { path: assetProbe },
+    { enabled: assetProbe.startsWith("/"), refetchOnWindowFocus: false, retry: false },
+  );
 
   const handleSave = async () => {
     if (!accentValid) {
@@ -121,24 +126,11 @@ export default function SettingsAppearance() {
             <ThemeToggle />
           </div>
         </label>
-        <p className={styles.hint}>
-          <strong>System</strong> follows the operating system's light/dark setting and changes with it — including
-          mid-session, when the OS switches at sunset. The other two pin it.
-        </p>
-        <p className={styles.hint}>
-          Saved to the server, so the choice follows you to another browser, and mirrored into this browser's local
-          storage, which is what the page reads before it first paints. A browser that has already been given a scheme
-          keeps it: this setting seeds new browsers rather than overruling them.
-        </p>
+        <p className={styles.hint}>Seeds new browsers; one already set keeps its own.</p>
       </CardSection>
 
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Collection artwork">
-        <p className={styles.hint}>
-          Tinkerbell can generate a poster for each collection its rules build, so a shelf of generated collections
-          reads as designed rather than as Plex's grey four-poster mosaic. Artwork is opted into <em>per rule</em>, in
-          the rule wizard — this page sets the defaults those rules start from, and the switch that stops all of it at
-          once.
-        </p>
+        <p className={styles.hint}>Defaults for rules that opt into generated posters.</p>
 
         <label className={styles.field}>
           <span className={styles.label}>Generate collection artwork</span>
@@ -146,45 +138,37 @@ export default function SettingsAppearance() {
             <ToggleSwitch checked={enabled} onChange={setEnabled} />
           </div>
         </label>
-        <p className={styles.hint}>
-          Off stops every upload immediately, without editing a single rule. Collections keep whatever artwork they
-          already have — turning this off doesn't put the old posters back, because Plex regenerates a collection's
-          default mosaic from its members.
-        </p>
+        <p className={styles.hint}>Off stops uploads; existing posters stay.</p>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Default template</span>
-          <select
-            className={styles.input}
-            value={template}
-            onChange={(e) => setTemplate(e.target.value as DefaultTemplate)}
-            disabled={!enabled}
-          >
+        <div className={styles.field}>
+          <span className={styles.label} id="default-template">
+            Default template
+          </span>
+          <div className={controls.segmented} role="radiogroup" aria-labelledby="default-template">
             {TEMPLATES.map((t) => (
-              <option key={t.value} value={t.value}>
+              <button
+                key={t.value}
+                type="button"
+                role="radio"
+                aria-checked={template === t.value}
+                title={t.title}
+                className={`${controls.segmentedItem} ${template === t.value ? controls.segmentedItemActive : ""}`}
+                onClick={() => setTemplate(t.value)}
+                disabled={!enabled}
+              >
                 {t.label}
-              </option>
+              </button>
             ))}
-          </select>
-        </label>
-        <p className={styles.hint}>{TEMPLATES.find((t) => t.value === template)?.hint}</p>
+          </div>
+        </div>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Default accent</span>
-          <input
-            className={styles.input}
-            value={accent}
-            onChange={(e) => setAccent(e.target.value)}
-            placeholder="#E5A00D — leave blank to take the colour from each collection's own posters"
-            disabled={!enabled}
-            aria-invalid={!accentValid}
-          />
-        </label>
-        <p className={styles.hint}>
-          {accentValid
-            ? "Blank is usually the better answer: each poster takes its colour from the films in it, which is what makes a generated set look like it belongs to the library rather than to a theme."
-            : "Use a hex colour like #E5A00D, or leave it blank."}
-        </p>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="default-accent">
+            Default accent
+          </label>
+          <ColorField id="default-accent" value={accent} onChange={setAccent} disabled={!enabled} />
+          {!accentValid && <p className={styles.hint}>Saved value isn't a hex colour — pick one or choose Auto.</p>}
+        </div>
 
         <label className={styles.field}>
           <span className={styles.label}>Asset directory</span>
@@ -192,15 +176,18 @@ export default function SettingsAppearance() {
             className={styles.input}
             value={assetDir}
             onChange={(e) => setAssetDir(e.target.value)}
-            placeholder="/config/assets — leave blank if you don't have one"
+            placeholder="/config/assets"
             spellCheck={false}
             aria-invalid={!assetDirValid}
           />
         </label>
         <p className={styles.hint}>
-          {assetDirValid
-            ? "A folder of artwork on this server, laid out the way Kometa's assets are — either “<Name>/poster.jpg” or “<Name>.jpg”. Rules whose poster source is “Asset” look their collection up in here by name. Nothing is read until a rule asks for it."
-            : "Use an absolute path, like /config/assets."}
+          {!assetDirValid
+            ? "Use an absolute path, like /config/assets."
+            : assetDir.trim() === "" || !assetQuery.data
+              ? "Kometa layout: <Name>/poster.jpg or <Name>.jpg."
+              : (assetQuery.data.error ??
+                `Found ${assetQuery.data.found.toLocaleString()} asset${assetQuery.data.found === 1 ? "" : "s"}.`)}
         </p>
 
         <div className={styles.field}>
@@ -227,9 +214,7 @@ export default function SettingsAppearance() {
           <UnsavedBanner visible={isDirty} />
         </div>
         <p className={styles.hint}>
-          Artwork is generated by the <strong>Generate Collection Artwork</strong> job, which runs after the nightly
-          rule run rather than inside it — rendering a poster per collection is minutes of image work, and it has no
-          business holding up the rules.
+          Runs after the nightly rules as the <Link to="/jobs/collection-art">Generate Collection Artwork</Link> job.
         </p>
       </CardSection>
     </div>

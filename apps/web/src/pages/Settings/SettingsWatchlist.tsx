@@ -4,6 +4,8 @@ import { useToast } from "#components/Toast";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
 import CardSection from "#components/CardSection";
 import { formatRelativeShort } from "#/format";
+import { describeCron } from "#/utils";
+import SettingsPageLink from "#components/SettingsPageLink";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import styles from "./SettingsWatchlist.module.css";
@@ -135,6 +137,10 @@ export default function SettingsWatchlist() {
   };
 
   const items = listQuery.data?.items ?? [];
+  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchOnWindowFocus: false });
+  const syncJob = jobsQuery.data?.find((j) => j.id === "watchlist-sync");
+  const syncSchedule = syncJob?.schedule;
+  const account = listQuery.data?.account;
   const armed = form.enabled && !form.dryRun && (form.radarr.enabled || form.sonarr.enabled);
 
   return (
@@ -142,16 +148,17 @@ export default function SettingsWatchlist() {
       <SettingsPageHeader title="Watchlist" />
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Plex Watchlist sync">
-        <p className={styles.intro}>
-          Anything you add to your Plex watchlist that isn't already in your library can be sent to Radarr or Sonarr.
-          The list is checked every fifteen minutes; each item is only ever acted on once, so a request that fails is
-          retried rather than repeated.
-        </p>
-
         <p className={styles.scopeNote}>
-          This syncs <strong>your own</strong> watchlist — the account whose token is in Settings → Plex. Watchlists
-          belonging to people you share the server with need their Plex tokens, which Tinkerbell deliberately doesn't
-          store.
+          {form.enabled ? "Syncing" : "Syncs"}{" "}
+          {account ? (
+            <strong>@{account}</strong>
+          ) : (
+            <SettingsPageLink to="/settings/plex">your Plex account</SettingsPageLink>
+          )}
+          {syncJob?.lastRunStartedAt != null &&
+            (syncJob.lastRunStatus === "failed"
+              ? " · last check failed"
+              : ` · checked ${formatRelativeShort(syncJob.lastRunStartedAt)}`)}
         </p>
 
         <label className={styles.switchRow}>
@@ -162,17 +169,19 @@ export default function SettingsWatchlist() {
           />
           <span>
             <span className={styles.switchLabel}>Sync my Plex watchlist</span>
-            <span className={styles.switchHint}>
-              Off means the scheduled job returns without contacting plex.tv at all.
-            </span>
+            {syncSchedule && (
+              <span className={styles.switchHint}>
+                {describeCron(syncSchedule)}; missing titles go to Radarr or Sonarr.
+              </span>
+            )}
           </span>
         </label>
 
         {armed && (
           <div className={styles.armed} role="status">
-            Watchlist sync is live. Items you add in the Plex app will be sent to{" "}
+            Live — new watchlist items go to{" "}
             {[form.radarr.enabled && "Radarr", form.sonarr.enabled && "Sonarr"].filter(Boolean).join(" and ")} without
-            further confirmation.
+            confirmation.
           </div>
         )}
 
@@ -184,9 +193,7 @@ export default function SettingsWatchlist() {
           />
           <span>
             <span className={styles.switchLabel}>Dry run — log what would be requested, don't request it</span>
-            <span className={styles.switchHint}>
-              Recommended until the run log looks right. Items stay pending, so turning this off picks them all up.
-            </span>
+            <span className={styles.switchHint}>Pending items are picked up when this goes off.</span>
           </span>
         </label>
 
@@ -208,10 +215,7 @@ export default function SettingsWatchlist() {
               }))
             }
           />
-          <p className={settings.hint}>
-            One allowance for the whole run, shared by both services — two caps of twenty are a cap of forty. A first
-            sync of a long watchlist is spread over several runs rather than refused.
-          </p>
+          <p className={settings.hint}>Shared by Radarr and Sonarr; the rest wait for later runs.</p>
         </div>
 
         <label className={styles.switchRow}>
@@ -222,9 +226,7 @@ export default function SettingsWatchlist() {
           />
           <span>
             <span className={styles.switchLabel}>Remove items from my watchlist once they've arrived</span>
-            <span className={styles.switchHint}>
-              This edits your Plex account, not just Tinkerbell's copy. Off by default for that reason.
-            </span>
+            <span className={styles.switchHint}>Edits your Plex account.</span>
           </span>
         </label>
       </CardSection>
@@ -247,9 +249,7 @@ export default function SettingsWatchlist() {
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Recent watchlist activity">
         {items.length === 0 ? (
-          <p className={styles.empty}>
-            Nothing seen yet. The next run records everything currently on your watchlist, whether or not it acts on it.
-          </p>
+          <p className={styles.empty}>Nothing seen yet.</p>
         ) : (
           <table className={styles.table}>
             <thead>
@@ -332,7 +332,11 @@ function TargetCard(props: {
       titleClassName={settings.groupTitle}
       title={`${label} — watchlisted ${SERVICE_KIND[service]}`}
     >
-      {!configured && <p className={settings.hint}>{label} is not configured in Settings → Media Managers.</p>}
+      {!configured && (
+        <p className={settings.hint}>
+          {label} isn't connected — <SettingsPageLink to="/settings/arrs" />
+        </p>
+      )}
 
       <label className={styles.switchRow}>
         <input
@@ -435,9 +439,7 @@ function TargetCard(props: {
             />
             <span>
               <span className={styles.switchLabel}>Search on add</span>
-              <span className={styles.switchHint}>
-                If off, items are added but not searched until {label}'s next scheduled scan.
-              </span>
+              <span className={styles.switchHint}>Off waits for {label}'s next scheduled search.</span>
             </span>
           </label>
         </>

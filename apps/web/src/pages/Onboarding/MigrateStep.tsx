@@ -34,10 +34,7 @@ export default function MigrateStep() {
     return (
       <>
         <h2 className={styles.stepTitle}>Already migrated</h2>
-        <p className={styles.stepLede}>
-          You've brought a configuration across. Once you're happy the rules do what your old setup did, you can stop
-          running it.
-        </p>
+        <p>Once the rules match your old setup, you can stop running it.</p>
         <p>
           <Link to="/settings/migrate">Check the migration</Link>
         </p>
@@ -49,12 +46,9 @@ export default function MigrateStep() {
     return (
       <>
         <h2 className={styles.stepTitle}>Coming from somewhere else?</h2>
-        <p className={styles.stepLede}>
-          Tinkerbell can read a Kometa config and turn each collection definition into a rule. Nothing on this server
-          looks like it's managed by another tool, so there's probably nothing to bring across — skip this step.
-        </p>
+        <p>Nothing on this server looks managed by another tool.</p>
         <p>
-          If you do have a Kometa config, <Link to="/settings/migrate">import it here</Link>.
+          <Link to="/settings/migrate">Import a Kometa config anyway →</Link>
         </p>
       </>
     );
@@ -63,18 +57,11 @@ export default function MigrateStep() {
   return (
     <>
       <h2 className={styles.stepTitle}>Coming from Kometa?</h2>
-      <p className={styles.stepLede}>
-        <strong>{total}</strong> collection{total === 1 ? "" : "s"} on this server look like another tool built{" "}
-        {total === 1 ? "it" : "them"}.
-      </p>
       <p>
-        Give Tinkerbell your Kometa config and it will turn each collection definition into a rule — carrying across
-        filters, limits, schedules and posters, and telling you exactly what it couldn't. Nothing is written to Plex
-        until you've reviewed it.
+        <strong>{total}</strong> collection{total === 1 ? "" : "s"} on this server look like another tool built{" "}
+        {total === 1 ? "it" : "them"}. Each Kometa collection becomes a rule, reviewed before anything reaches Plex.
       </p>
-      <p className={styles.notice}>
-        Worth doing before you pick rules below, so your own collections don't end up competing with a starter pack.
-      </p>
+      <p className={styles.notice}>Do this before picking rules, so the two don't compete.</p>
       <p>
         <Link to="/settings/migrate">Import my Kometa config →</Link>
       </p>

@@ -110,8 +110,8 @@ export default function ReviewStep({ proposed, unmappable, selected, onToggle, o
 
       {counts.partial > 0 && (
         <p className={`${styles.hint} ${local.warnHint}`}>
-          The {counts.partial} “partial” rule{counts.partial === 1 ? "" : "s"} will hold a different set of items than
-          Kometa's did. They're created switched off so you can check them first.
+          {counts.partial} “partial” rule{counts.partial === 1 ? "" : "s"} won&apos;t match Kometa exactly, and
+          {counts.partial === 1 ? " is" : " are"} created off.
         </p>
       )}
 
@@ -194,10 +194,7 @@ export default function ReviewStep({ proposed, unmappable, selected, onToggle, o
               {showNotMigrated ? "hide" : "show"}
             </button>
           </h3>
-          <p className={styles.hint}>
-            These collections stay exactly as they are in Plex — nothing is deleted. But Tinkerbell won't be updating
-            them, so they'll go stale once you stop running Kometa.
-          </p>
+          <p className={styles.hint}>Left as they are in Plex, but nothing will update them.</p>
           {showNotMigrated && (
             <>
               <ul className={local.bulletsScroll}>

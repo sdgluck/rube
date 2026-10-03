@@ -203,12 +203,24 @@ export function createPrerollsRouter(deps: TrpcDeps) {
 
     /** Read-only drift check for the page's sync bar. */
     plexStatus: procedure.query(async () => {
+      // Plex Pass is asked alongside rather than inside the drift check, which
+      // the health check also runs and has no use for. `null` is "couldn't
+      // tell" — the page shows nothing rather than a wrong "Not active".
+      const plexPass = Promise.resolve()
+        .then(() => getPlexClient().hasPlexPass())
+        .catch(() => null);
       try {
-        return await getPlexPrerollStatus();
+        return { ...(await getPlexPrerollStatus()), plexPass: await plexPass };
       } catch (err) {
         // Not an error the page should blow up over — Plex being unreachable is
         // a state the sync bar renders, not a reason to lose the whole list.
-        return { expected: expectedPrefValue(), actual: "", inSync: false, error: errorMessage(err) };
+        return {
+          expected: expectedPrefValue(),
+          actual: "",
+          inSync: false,
+          error: errorMessage(err),
+          plexPass: await plexPass,
+        };
       }
     }),
 

@@ -7,6 +7,7 @@ import {
   renderCollectionPoster,
   resolveKometaUrl,
   fetchPosterUrl,
+  indexAssetDirectory,
 } from "@tinkerbell/posters";
 import { errorMessage } from "@tinkerbell/core";
 import {
@@ -29,6 +30,21 @@ export function createPostersRouter(deps: Pick<TrpcDeps, "clients" | "media" | "
   const { getLocalMediaItems } = media;
 
   const postersRouter = t.router({
+    /**
+     * What an asset directory holds, read the way the artwork job will read
+     * it — so "Found 212 assets" or "No directory found" appears while the
+     * path is being typed rather than as a log line after the first run.
+     * The index is capped in depth and size, so a mistyped `/` stays cheap.
+     */
+    assetDirectory: procedure.input(z.object({ path: z.string() })).query(async ({ input }) => {
+      try {
+        const index = await indexAssetDirectory(input.path.trim());
+        return { found: index.size, error: null };
+      } catch (err) {
+        return { found: 0, error: errorMessage(err) };
+      }
+    }),
+
     /**
      * Resolve a Kometa source to a URL and return whether the asset
      * actually exists upstream. Used by the Settings UI to preview the

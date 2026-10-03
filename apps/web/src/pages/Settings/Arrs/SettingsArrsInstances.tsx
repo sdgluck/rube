@@ -84,12 +84,9 @@ export default function SettingsArrsInstances() {
   return (
     <div className={styles.form}>
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Extra instances">
-        <p className={styles.hint}>
-          For a split setup — a second Radarr for 4K, a third for anime. The Radarr and Sonarr tabs remain the default
-          instance of each service, and any rule that doesn&rsquo;t name an instance keeps using them.
-        </p>
+        <p className={styles.hint}>E.g. a 4K Radarr; rules without an instance use the default tabs.</p>
 
-        {instances.length === 0 && <p className={styles.hint}>No extra instances. The defaults are all that run.</p>}
+        {instances.length === 0 && <p className={styles.hint}>No extra instances.</p>}
 
         {instances.map((instance) => (
           <div key={instance.id} className={styles.group}>

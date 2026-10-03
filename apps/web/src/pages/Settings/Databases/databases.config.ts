@@ -43,7 +43,7 @@ export const DATABASE_SERVICES: Record<string, DatabaseServiceConfig> = {
     apiKeyLabel: "Trakt Client ID",
     apiKeyPlaceholder: "Enter Trakt client ID",
     apiKeyConfigKey: "global_trakt_client_id",
-    hint: "Reads public Trakt lists. Create an API app at trakt.tv/oauth/applications and paste its Client ID. Private lists and watchlists need a Trakt sign-in, which isn't supported yet.",
+    hint: "Public lists only. Create an app at trakt.tv/oauth/applications.",
   },
 };
 

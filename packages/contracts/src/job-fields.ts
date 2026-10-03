@@ -97,7 +97,6 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
     {
       key: "users",
       label: "Users",
-      help: "Leave empty to include every user.",
       control: { kind: "users", source: "plex-users" },
       showWhen: { key: "mode", equals: "per-user" },
     },
@@ -135,13 +134,13 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
     {
       key: "users",
       label: "Users",
-      help: "Leave empty to include everyone who has opted in. Only users who opted in through the portal are ever included; rows already made for users you remove are deleted on the next run.",
+      help: "Rows for users you remove are deleted on the next run.",
       control: { kind: "users", source: "opted-in" },
     },
     {
       key: "ruleIds",
       label: "Rules",
-      help: "Leave empty to use every rule marked personalizable. Rows made from rules you remove are deleted on the next run.",
+      help: "Rows from rules you remove are deleted on the next run.",
       control: { kind: "rules" },
     },
   ],

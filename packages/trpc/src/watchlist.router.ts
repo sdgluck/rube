@@ -15,13 +15,20 @@ import { t, procedure } from "./_base.ts";
  * root folder is chosen, and the alternative to a button is telling somebody
  * to remove the item from their watchlist in the Plex app and add it back.
  */
-export function createWatchlistRouter(deps: Pick<TrpcDeps, "watchlist">) {
+export function createWatchlistRouter(deps: Pick<TrpcDeps, "adminAuth" | "watchlist">) {
   const { listWatchlistItems, watchlistCounts, retryWatchlistItem } = deps.watchlist;
+  const { resolveOwner } = deps.adminAuth;
 
   const watchlistRouter = t.router({
-    list: procedure.query(() => ({
+    list: procedure.query(async () => ({
       items: listWatchlistItems(),
       counts: watchlistCounts(),
+      // Whose watchlist this is: the sync reads the Plex token's own account,
+      // which is the server owner. Cached and keyed to the token, so this asks
+      // plex.tv at most once per token; unreachable means no name, not an error.
+      account: await resolveOwner()
+        .then((o) => o.username)
+        .catch(() => null),
     })),
 
     retry: procedure.input(z.object({ guid: z.string() })).mutation(({ input }) => {

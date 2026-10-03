@@ -63,10 +63,7 @@ export default function ResolveStep({ summary, sections, sectionMap, onSectionCh
 
       <div className={styles.group}>
         <h3 className={styles.groupTitle}>Which Plex library is which?</h3>
-        <p className={styles.hint}>
-          Kometa names libraries by their Plex title, so these are usually right — but a renamed library would send its
-          collections to the wrong place, so it's worth a look.
-        </p>
+        <p className={styles.hint}>Matched by title — check any library you&apos;ve renamed.</p>
         {summary.libraries.map((lib) => (
           <div className={styles.field} key={lib.name}>
             <label htmlFor={`lib-${lib.name}`}>{lib.name}</label>
@@ -116,10 +113,8 @@ export default function ResolveStep({ summary, sections, sectionMap, onSectionCh
         </ul>
         {missing.length > 0 && (
           <p className={`${styles.hint} ${local.warnHint}`}>
-            {missing.length} file{missing.length === 1 ? "" : "s"} couldn't be read. Any collections defined in
-            {missing.length === 1 ? " it" : " them"} won't be migrated — go back and include{" "}
-            {missing.length === 1 ? "it" : "them"} if you want{" "}
-            {missing.length === 1 ? "that collection" : "those collections"} too.
+            {missing.length} file{missing.length === 1 ? "" : "s"} couldn&apos;t be read;{" "}
+            {missing.length === 1 ? "its" : "their"} collections won&apos;t be migrated.
           </p>
         )}
       </div>

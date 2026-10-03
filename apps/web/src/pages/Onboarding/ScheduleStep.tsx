@@ -19,6 +19,8 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
   const utils = trpc.useUtils();
   const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const stored = (cfg.global_timezone as string) ?? "";
+  // The browser's zone is preselected unless one is already stored: it is
+  // right for nearly everyone, and an unset zone follows the container clock.
   const [timezone, setTimezone] = useState(stored || detected);
   const [applying, setApplying] = useState(false);
 
@@ -44,12 +46,6 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
   return (
     <div className={styles.stepBody}>
       <h2 className={styles.stepTitle}>When should Tinkerbell work?</h2>
-      <p className={styles.stepLede}>
-        Jobs walk your whole library and talk to Plex constantly, so the sane default is “not while anyone is watching”.
-        Set the timezone every schedule is read in — without it, crons quietly follow whatever the container thinks
-        local time is and misfire on daylight saving.
-      </p>
-
       <label className={styles.field}>
         <span className={styles.fieldLabel}>Timezone</span>
         <select className={controls.select} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
@@ -60,11 +56,19 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
             </option>
           ))}
         </select>
-        <span className={styles.fieldHint}>
-          Detected from your browser: <strong>{detected}</strong>
-          {stored ? ` · currently set to ${stored}` : ""}
-        </span>
+        <span className={styles.fieldHint}>Every schedule is read in this zone.</span>
       </label>
+      {detected && timezone !== detected && (
+        <div>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+            onClick={() => setTimezone(detected)}
+          >
+            Use detected ({detected})
+          </button>
+        </div>
+      )}
 
       <div className={styles.recommend}>
         <h3 className={styles.groupHeading}>Recommended</h3>
@@ -72,10 +76,7 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
           <li>Timezone set to {timezone}</li>
           <li>Heavy jobs confined to {RECOMMENDED.window}</li>
           <li>And they {RECOMMENDED.defer}</li>
-          <li>
-            Nightly jobs moved into that window, each after the ones it depends on — any you have already rescheduled
-            stay put
-          </li>
+          <li>Nightly jobs moved into that window in dependency order, unless you&apos;ve moved them</li>
         </ul>
         <button
           type="button"

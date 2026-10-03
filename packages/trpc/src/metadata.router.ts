@@ -267,6 +267,9 @@ export function createMetadataRouter(deps: Pick<TrpcDeps, "clients" | "config" |
         return { refreshed, failures };
       }),
 
+    /** The daily ceiling's spend, counted exactly as the run budget counts it. */
+    capUsage: procedure.query(() => ({ used: metadata.writesInLastDay() })),
+
     /** Every metadata write Tinkerbell has made, grouped by the run that made it. */
     batches: procedure
       .input(

@@ -22,18 +22,15 @@ const ACTIONS: MaintenanceAction[] = [
   {
     jobId: "label-undo",
     title: "Clear Tinkerbell Labels",
-    description:
-      "Remove the Tinkerbell label from every item in your Plex libraries and strip per-user labels from collections. Does not change which users see what — sharing restrictions are managed by the Because You Watched lifecycle.",
-    confirmMessage:
-      "This will remove the Tinkerbell label from every item in your configured Plex libraries. Sharing restrictions are NOT affected. Continue?",
+    description: "Removes Tinkerbell labels from every item and collection; sharing is unaffected.",
+    confirmMessage: "Removes the Tinkerbell label from every item in your configured Plex libraries.",
     confirmLabel: "Clear labels",
   },
   {
     jobId: "overlays-remove",
     title: "Remove Overlays",
-    description:
-      "Restore original poster artwork by removing overlays previously applied. Use this before disabling the Overlays feature if you want to undo its effects.",
-    confirmMessage: "This will restore original poster artwork on every overlay-affected item. Continue?",
+    description: "Restores original posters; run before disabling Overlays to undo them.",
+    confirmMessage: "Restores the original poster on every item with an overlay.",
     confirmLabel: "Remove overlays",
   },
 ];

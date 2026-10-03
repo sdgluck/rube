@@ -9,12 +9,12 @@ import CardSection from "#components/CardSection";
 import ConfirmModal from "#components/ConfirmModal";
 import RelativeTime from "#components/RelativeTime";
 import ErrorState from "#components/ErrorState";
+import { describeCron } from "#/utils";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import local from "./SettingsBackup.module.css";
 
 const DEFAULT_KEEP = 7;
-const DEFAULT_SCHEDULE = "30 3 * * *";
 
 const PART_LABELS: Record<BundlePart, string> = {
   rules: "Rules",
@@ -74,17 +74,15 @@ export default function SettingsBackup() {
   const backupsQuery = trpc.backups.list.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveMutation = trpc.config.save.useMutation();
   const startJob = trpc.jobs.start.useMutation();
-  // The schedule is the backup job's own, edited here as a convenience. It
-  // used to be a separate setting nothing read, so changing it did nothing.
+  // The schedule is the backup job's own. It is shown here read-only and
+  // edited on the job page, where the cron picker and its preview live — a
+  // second free-text cron field here could only ever be the worse editor.
   const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchOnWindowFocus: false });
-  const backupJob = jobsQuery.data?.find((j) => j.id === "backup");
-  const backupSchedule = backupJob?.schedule;
-  const updateJob = trpc.jobs.update.useMutation();
+  const backupSchedule = jobsQuery.data?.find((j) => j.id === "backup")?.schedule;
 
   // ── Backups ───────────────────────────────────────────────────────────────
   const [enabled, setEnabled] = useState(true);
   const [dir, setDir] = useState("");
-  const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
   const [keep, setKeep] = useState(DEFAULT_KEEP);
   const [saving, setSaving] = useState(false);
 
@@ -95,20 +93,15 @@ export default function SettingsBackup() {
     setKeep(configQuery.data.backup_keep_count ?? DEFAULT_KEEP);
   }, [configQuery.data]);
 
-  useEffect(() => {
-    if (backupSchedule !== undefined) setSchedule(backupSchedule);
-  }, [backupSchedule]);
-
   const isDirty = useMemo(() => {
     const d = configQuery.data;
     if (!d) return false;
     return (
       enabled !== (d.backup_enabled ?? true) ||
       dir !== (d.backup_dir ?? "") ||
-      schedule !== (backupSchedule ?? DEFAULT_SCHEDULE) ||
       keep !== (d.backup_keep_count ?? DEFAULT_KEEP)
     );
-  }, [enabled, dir, schedule, keep, configQuery.data, backupSchedule]);
+  }, [enabled, dir, keep, configQuery.data]);
 
   useUnsavedChanges(isDirty);
 
@@ -120,10 +113,6 @@ export default function SettingsBackup() {
         backup_dir: dir,
         backup_keep_count: keep,
       });
-      if (backupJob && schedule.trim() !== backupJob.schedule) {
-        await updateJob.mutateAsync({ jobId: "backup", schedule: schedule.trim() });
-        await utils.jobs.list.invalidate();
-      }
       addToast("Backup settings saved", "success");
       await utils.config.get.invalidate();
       await utils.backups.list.invalidate();
@@ -205,18 +194,11 @@ export default function SettingsBackup() {
 
       {/* ── Backups ─────────────────────────────────────────────────────── */}
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Automatic backups">
-        <p className={settings.hint}>
-          A compressed copy of the whole database, taken while Tinkerbell is running. This covers what an export
-          doesn't: playback history, watch state, the cleanup ledger, and the metadata snapshots that make an undo
-          possible.
-        </p>
+        <p className={settings.hint}>The whole database, including playback history and undo snapshots.</p>
 
         <label className={settings.checkRow}>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-          <span>
-            <span className={settings.label}>Back up the database on a schedule</span>
-            <span className={settings.hint}>On by default. A backup nobody enabled is a backup nobody has.</span>
-          </span>
+          <span className={settings.label}>Back up the database on a schedule</span>
         </label>
 
         <div className={settings.field}>
@@ -230,27 +212,25 @@ export default function SettingsBackup() {
             placeholder={backupsQuery.data?.directory ?? "<data dir>/backups"}
             onChange={(e) => setDir(e.target.value)}
           />
-          <p className={settings.hint}>
-            Blank uses <code>{backupsQuery.data?.directory ?? "<data dir>/backups"}</code>. In Docker this must be on a
-            mounted volume — a backup written to the container's own filesystem disappears with the container, which is
-            worse than no backup because it looks like one.
-          </p>
+          {/* Describes the saved directory, so it hides while another is being typed. */}
+          {backupsQuery.data?.directoryMount && dir === (configQuery.data?.backup_dir ?? "") && (
+            <span
+              className={`${settings.status} ${
+                backupsQuery.data.directoryMount === "mounted" ? settings.statusOk : settings.statusWarn
+              }`}
+            >
+              <span className={settings.statusDot} aria-hidden="true" />
+              {backupsQuery.data.directoryMount === "mounted"
+                ? "On a mounted volume"
+                : "Inside the container — lost when it's replaced"}
+            </span>
+          )}
         </div>
 
         <div className={settings.field}>
-          <label className={settings.label} htmlFor="backup-schedule">
-            Schedule
-          </label>
-          <input
-            id="backup-schedule"
-            className={settings.input}
-            value={schedule}
-            onChange={(e) => setSchedule(e.target.value)}
-          />
-          <p className={settings.hint}>
-            A cron expression, evaluated in the app's timezone. The default runs at 03:30 — after the nightly purge and
-            before cleanup does anything destructive. This is the <Link to="/jobs/backup">Back Up Database</Link> job's
-            schedule.
+          <span className={settings.label}>Schedule</span>
+          <p className={settings.readout}>
+            {backupSchedule ? describeCron(backupSchedule) : "…"} · <Link to="/jobs/backup">Edit schedule →</Link>
           </p>
         </div>
 
@@ -258,19 +238,19 @@ export default function SettingsBackup() {
           <label className={settings.label} htmlFor="backup-keep">
             Keep
           </label>
-          <input
-            id="backup-keep"
-            type="number"
-            min={1}
-            max={365}
-            className={settings.input}
-            value={keep}
-            onChange={(e) => setKeep(Math.max(1, Number(e.target.value) || 1))}
-          />
-          <p className={settings.hint}>
-            Older files are removed after a successful backup — never after a failed one, so a broken backup job can't
-            delete the last good copy.
-          </p>
+          <div className={settings.suffixRow}>
+            <input
+              id="backup-keep"
+              type="number"
+              min={1}
+              max={365}
+              className={settings.input}
+              value={keep}
+              onChange={(e) => setKeep(Math.max(1, Number(e.target.value) || 1))}
+            />
+            <span className={settings.suffix}>most recent backups</span>
+          </div>
+          <p className={settings.hint}>Pruned only after a successful backup.</p>
         </div>
 
         <div className={settings.buttons}>
@@ -305,11 +285,7 @@ export default function SettingsBackup() {
             onRetry={() => backupsQuery.refetch()}
           />
         )}
-        {backupsQuery.data?.files.length === 0 && (
-          <p className={settings.hint}>
-            Nothing yet. The first one is written on the next scheduled run, or press “Back up now”.
-          </p>
-        )}
+        {backupsQuery.data?.files.length === 0 && <p className={settings.hint}>No backups yet.</p>}
         {(backupsQuery.data?.files.length ?? 0) > 0 && (
           <ul className={local.fileList}>
             {backupsQuery.data!.files.map((file) => (
@@ -339,20 +315,12 @@ export default function SettingsBackup() {
             </li>
             <li>Start the container.</li>
           </ol>
-          <p className={settings.hint}>
-            There is no button for this because a restore that runs while the app has the database open produces two
-            corrupt files rather than one good one.
-          </p>
         </div>
       </CardSection>
 
       {/* ── Export ──────────────────────────────────────────────────────── */}
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Export">
-        <p className={settings.hint}>
-          One JSON file holding your configuration, in a form another Tinkerbell can read. Library-specific values —
-          genre and director tag ids, section references — are written as names rather than this server's internal ids,
-          so the file means the same thing elsewhere.
-        </p>
+        <p className={settings.hint}>Your configuration as one JSON file, portable to another server.</p>
 
         <div className={local.partGrid}>
           {BUNDLE_PARTS.map((part) => (
@@ -382,10 +350,7 @@ export default function SettingsBackup() {
           />
           <span>
             <span className={settings.label}>Include API keys and tokens</span>
-            <span className={settings.hint}>
-              Off by default. With this on, the file contains your Plex token and every *Arr, Overseerr and notification
-              credential in plain text — do not attach it to an issue or paste it anywhere.
-            </span>
+            <span className={settings.hint}>Written in plain text — never attach the file to an issue.</span>
           </span>
         </label>
 
@@ -396,9 +361,7 @@ export default function SettingsBackup() {
 
       {/* ── Import ──────────────────────────────────────────────────────── */}
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Import">
-        <p className={settings.hint}>
-          Pick a bundle to see what it would change. Nothing is written until you confirm.
-        </p>
+        <p className={settings.hint}>Previewed first; nothing is written until you confirm.</p>
 
         <input
           ref={fileInput}
@@ -547,8 +510,7 @@ export default function SettingsBackup() {
         <ConfirmModal
           title="Include credentials in the export?"
           message={
-            "The file will contain your Plex token and every API key you have configured, in plain text. Anyone who " +
-            "opens it can use them. Only do this if the file is going somewhere as trusted as this server."
+            "The file will contain your Plex token and every API key, in plain text. Anyone who opens it can use them."
           }
           confirmLabel="Include them"
           danger
@@ -566,7 +528,7 @@ export default function SettingsBackup() {
           message={
             `${arriving.length} item(s) will be created. ` +
             `${Object.values(decisions).filter((d) => d === "overwrite").length} existing item(s) will be replaced — ` +
-            "replacements are recorded in the change history, so you can see what they were and put them back."
+            "the old versions stay in Change History."
           }
           confirmLabel="Import"
           onConfirm={() => void apply()}

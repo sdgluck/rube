@@ -31,6 +31,9 @@ import { token } from "@tinkerbell/container";
 import { createLogger, dataDir, errorMessage, type ConfigStore } from "@tinkerbell/core";
 import type { Db } from "@tinkerbell/db";
 import type { EventBus } from "@tinkerbell/ports";
+import { backupDirMount } from "./mount.ts";
+
+export { backupDirMount, runningInContainer, type BackupDirMount } from "./mount.ts";
 
 const log = createLogger("backup");
 
@@ -192,6 +195,7 @@ export function createBackups(deps: BackupsDeps) {
     listBackups: () => listBackups(config),
     backupsEnabled,
     backupDir: () => backupDir(config),
+    directoryMount: () => backupDirMount(backupDir(config)),
   };
 }
 

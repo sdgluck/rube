@@ -22,6 +22,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import Banner from "#components/Banner";
 import ErrorState from "#components/ErrorState";
+import SettingsPageLink from "#components/SettingsPageLink";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import styles from "../Personalization.module.css";
@@ -60,6 +61,7 @@ export default function SettingsPortalPreroll() {
     if (cardQuery.data && !form) setForm(cardQuery.data.card);
   }, [cardQuery.data, form]);
 
+  const plexPass = trpc.prerolls.plexStatus.useQuery(undefined, { refetchOnWindowFocus: false }).data?.plexPass;
   const previewInput = useDebouncedValue(form, 250);
   const previewQuery = trpc.prerolls.portalCardPreview.useQuery(previewInput ?? {}, {
     enabled: previewInput !== null,
@@ -118,16 +120,19 @@ export default function SettingsPortalPreroll() {
 
   return (
     <div className={styles.stack}>
-      <p className={styles.lede}>
-        A few seconds before a film, Plex shows your users where to sign in and make their home screen their own. It
-        joins your other <Link to="/prerolls">prerolls</Link>, so it follows the same random or in-order playback.
-        Prerolls need Plex Pass.
+      <p className={styles.hint}>
+        Plays among your other <Link to="/prerolls">prerolls</Link>.
       </p>
+
+      {plexPass === false && (
+        <Banner variant="warn">This server has no Plex Pass, so Plex won&apos;t play prerolls.</Banner>
+      )}
 
       {!portalRunning && (
         <Banner variant="warn">
-          The portal isn&apos;t running, so this address won&apos;t answer. It starts when Personalization, Cleanup
-          warnings or digests are turned on.
+          The portal isn&apos;t running — it starts with{" "}
+          <SettingsPageLink to="/settings/portal/personalization">Personalization</SettingsPageLink>, cleanup warnings
+          or digests.
         </Banner>
       )}
 
@@ -154,16 +159,7 @@ export default function SettingsPortalPreroll() {
             placeholder={publicUrl || "https://portal.example.com"}
           />
           <span className={styles.hint}>
-            Where people can reach the portal from their phone — its public address, not this admin page.{" "}
-            {publicUrl ? (
-              <>
-                Leave blank to use the <Link to="/settings/portal/address">portal&apos;s address</Link>.
-              </>
-            ) : (
-              <>
-                Or set the <Link to="/settings/portal/address">portal&apos;s address</Link> once and leave this blank.
-              </>
-            )}
+            Blank uses the <Link to="/settings/portal/address">portal&apos;s address</Link>.
           </span>
         </label>
 
@@ -198,9 +194,7 @@ export default function SettingsPortalPreroll() {
             value={form.durationSeconds}
             onChange={(e) => update("durationSeconds", Math.round(Number(e.target.value) || 0))}
           />
-          <span className={styles.hint}>
-            Long enough to point a phone at the QR code; short enough not to become the thing people skip.
-          </span>
+          <span className={styles.hint}>Long enough to scan the QR code.</span>
         </label>
 
         <div className={local.toggleRow}>

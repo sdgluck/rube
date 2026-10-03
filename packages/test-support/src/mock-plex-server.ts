@@ -184,7 +184,12 @@ export interface MockPlex {
   close: () => Promise<void>;
 }
 
-export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[] }): Promise<MockPlex> {
+export function startMockPlex(opts: {
+  sections: MockSection[];
+  items: MockItem[];
+  /** What the identity root reports as `myPlexSubscription`. Absent by default, as on a free server. */
+  plexPass?: boolean;
+}): Promise<MockPlex> {
   const items = new Map(opts.items.map((i) => [i.ratingKey, { ...i, labels: [...i.labels] }]));
   const collections = new Map<string, MockCollection>();
   const prefs = new Map<string, string>();
@@ -248,7 +253,11 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
 
     // ── Identity ────────────────────────────────────────────────────────────
     if (path === "/") {
-      json({ friendlyName: "Mock Plex", machineIdentifier: MACHINE_ID });
+      json({
+        friendlyName: "Mock Plex",
+        machineIdentifier: MACHINE_ID,
+        ...(opts.plexPass === undefined ? {} : { myPlexSubscription: opts.plexPass }),
+      });
       return;
     }
 

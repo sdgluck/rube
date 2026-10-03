@@ -1,14 +1,14 @@
 import { ARRS_SERVICES, ARRS_TAB_ORDER } from "#pages/Settings/Arrs/arrs.config";
 import { DATABASE_SERVICES, DATABASE_TAB_ORDER } from "#pages/Settings/Databases/databases.config";
 import { NOTIFICATION_SERVICES } from "#pages/Settings/Notifications/notifications.config";
+import type { NotificationField } from "#pages/Settings/Notifications/NotificationServiceForm";
 
-export interface ServiceField {
-  key: string;
-  label: string;
-  type?: "text" | "password" | "number" | "checkbox";
-  placeholder?: string;
-  hint?: string;
-}
+/**
+ * The settings catalogues' own field shape, so a derived control (SMTP's
+ * encryption select) or a hidden stored flag behaves the same on a card as on
+ * the settings page.
+ */
+export type ServiceField = NotificationField;
 
 /**
  * How a service's connection is probed. `null` for services with no probe of
@@ -30,6 +30,12 @@ export interface OnboardingService {
   objectKey?: string;
   /** Notification providers only — which events the provider is subscribed to. */
   eventsKey?: string;
+  /**
+   * The fields that must hold something for the service to count as set up.
+   * Absent means every stored field — right for the key-and-URL services, but
+   * not for one with optional switches beside its credentials.
+   */
+  credentialKeys?: string[];
 }
 
 /**
@@ -133,6 +139,7 @@ export const NOTIFY_SERVICES: OnboardingService[] = Object.values(NOTIFICATION_S
     probe: "notification" as const,
     objectKey: svc.objectKey,
     eventsKey: svc.eventsKey,
+    credentialKeys: svc.credentialKeys,
     fields: svc.fields,
   }))
   .sort((a, b) => a.title.localeCompare(b.title));
@@ -145,8 +152,9 @@ export const NOTIFY_SERVICES: OnboardingService[] = Object.values(NOTIFICATION_S
  */
 export function isServiceConfigured(cfg: Record<string, unknown>, service: OnboardingService): boolean {
   const source = service.objectKey ? ((cfg[service.objectKey] as Record<string, unknown>) ?? {}) : cfg;
-  return service.fields.every((field) => {
-    const value = source[field.key];
+  const keys = service.credentialKeys ?? service.fields.filter((f) => !f.derived).map((f) => f.key);
+  return keys.every((key) => {
+    const value = source[key];
     if (typeof value === "number") return value > 0;
     if (typeof value === "boolean") return true;
     return typeof value === "string" && value.length > 0;

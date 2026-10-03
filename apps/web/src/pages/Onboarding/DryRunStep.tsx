@@ -150,7 +150,6 @@ export default function DryRunStep() {
         <EmptyState
           icon="cog"
           title="No rules to try yet"
-          description="Go back a step to import a pack or build one, or skip this — you can dry-run any rule from the Rules page whenever you like."
           action={
             <Link to="/rules" className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}>
               Open Rules
@@ -164,11 +163,6 @@ export default function DryRunStep() {
   return (
     <div className={styles.stepBody}>
       <h2 className={styles.stepTitle}>Try a rule before you trust it</h2>
-      <p className={styles.stepLede}>
-        A dry run reports what a rule <em>would</em> build without creating anything in Plex. Worth doing on at least
-        one before you switch them on — and if a real run ever surprises you, it can be reverted.
-      </p>
-
       <ul className={styles.ruleList}>
         {rules.map((rule) => (
           <RuleRow key={rule.id} rule={rule} running={activeIds.has(rule.id)} />
@@ -179,8 +173,7 @@ export default function DryRunStep() {
         <div className={styles.recommend}>
           <h3 className={styles.groupHeading}>Ready to go live?</h3>
           <p className={styles.fieldHint}>
-            {disabled.length} rule{disabled.length === 1 ? " is" : "s are"} still disabled. Enabling means they run on
-            the schedule you set and start creating collections for real.
+            {disabled.length} rule{disabled.length === 1 ? " is" : "s are"} still disabled.
           </p>
           <button
             type="button"

@@ -21,14 +21,6 @@
 }
 
 /* Capped so the explanation stays readable on a wide settings pane. */
-.lede {
-  max-width: 72ch;
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ink-2);
-}
-
 .row {
   display: flex;
   justify-content: space-between;

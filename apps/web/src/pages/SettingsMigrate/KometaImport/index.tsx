@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import Modal from "#components/Modal";
 import Spinner from "#components/Spinner";
+import SettingsPageLink from "#components/SettingsPageLink";
 import styles from "#pages/Settings/Settings.module.css";
 import local from "../SettingsMigrate.module.css";
 import SourceStep, { type SourceMode } from "./SourceStep";
@@ -59,6 +60,8 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [running, setRunning] = useState(false);
 
+  const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
+  const metadataWritesOn = configQuery.data?.metadata_writes_enabled ?? false;
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
   const importMutation = trpc.migration.importFiles.useMutation();
   const setSectionMapMutation = trpc.migration.setSectionMap.useMutation();
@@ -280,10 +283,7 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
             <input type="checkbox" checked={enableRules} onChange={(e) => setEnableRules(e.target.checked)} />
             <span>
               Switch the new rules on straight away
-              <span className={local.muted}>
-                {" "}
-                — off by default so you can look before they touch Plex. Rules marked “partial” stay off either way.
-              </span>
+              <span className={local.muted}> — “partial” rules stay off either way.</span>
             </span>
           </label>
 
@@ -294,9 +294,14 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
                 <span>Keep your {metadataCount} hand-written item edit(s)</span>
               </label>
               <p className={styles.hint}>
-                Titles, sort titles, summaries and genres you set per film or show
-                {metadataSamples.length > 0 ? ` — ${metadataSamples.join(", ")}, …` : ""}. They're stored now and
-                written to Plex by the metadata job, which only runs if metadata writing is switched on in Settings.
+                {metadataSamples.length > 0 ? `${metadataSamples.join(", ")}, … · ` : ""}
+                {metadataWritesOn ? (
+                  "Written by the metadata job."
+                ) : (
+                  <>
+                    Stored until metadata writing is on — <SettingsPageLink to="/settings/metadata" />
+                  </>
+                )}
               </p>
             </>
           )}
@@ -312,8 +317,8 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
               </label>
               <p className={`${styles.hint} ${local.warnHint}`}>
                 {applyOverlays
-                  ? "This replaces whatever overlay layout those libraries already have. Tinkerbell draws text badges rather than Kometa's images, so ribbons, logos and language flags aren't included — the review notes list what was left out."
-                  : "Your Kometa overlay layout won't be recreated. You can set it up yourself on the Overlays page."}
+                  ? "Replaces those libraries' overlay layout; text badges only, no ribbons or logos."
+                  : "Your Kometa overlay layout won't be recreated."}
               </p>
             </>
           )}
@@ -328,11 +333,9 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
                 />
                 <span>Delete the {totalReplaces} Kometa collection(s) these rules replace</span>
               </label>
-              <p className={`${styles.hint} ${local.warnHint}`}>
-                {deleteOriginals
-                  ? "They're deleted as soon as the rules are created — before any rule has run, so there'll be a gap until the first run rebuilds them. This can't be undone."
-                  : "They'll be left alone. Tinkerbell's rules will take them over on the first run."}
-              </p>
+              {!deleteOriginals && (
+                <p className={styles.hint}>Left alone; the rules take them over on their first run.</p>
+              )}
             </>
           )}
         </div>
@@ -419,10 +422,7 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
           <strong>{totalReplaces}</strong> Kometa collection{totalReplaces === 1 ? "" : "s"} will be removed from Plex
           as soon as the rules are created.
         </p>
-        <p className={styles.hint}>
-          The rules haven't run yet at that point, so the collections will be missing from Plex until the first run
-          rebuilds them. This can't be undone.
-        </p>
+        <p className={styles.hint}>They stay missing until the rules first run. This can't be undone.</p>
       </Modal>
     </>
   );

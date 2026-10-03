@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { isOnboardingStepId, type OnboardingStepId } from "@tinkerbell/domain.onboarding";
 import { isValidTimezone } from "@tinkerbell/core";
 import { buildPreset, planFromContext } from "@tinkerbell/contracts";
+import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@tinkerbell/plex";
 
 import { t, procedure } from "./_base.ts";
 
@@ -26,8 +27,21 @@ function asStepId(value: string): OnboardingStepId {
   return value as OnboardingStepId;
 }
 
-export function createOnboardingRouter(deps: Pick<TrpcDeps, "jobs" | "onboarding">) {
+/** How long a started Plex sign-in can be finished — plex.tv's own PIN lifetime. */
+const PLEX_PIN_TTL_MS = 15 * 60_000;
+
+export function createOnboardingRouter(deps: Pick<TrpcDeps, "config" | "jobs" | "onboarding" | "sessions">) {
   const { applyToUntouchedDefaults, restartSchedules, scheduleContext } = deps.jobs;
+  const { setConfig } = deps.config;
+  const { ensureAdminPlexClientId } = deps.sessions;
+
+  /**
+   * The one Plex sign-in in flight. The PIN id stays here rather than going to
+   * the browser for the reason `handshake.ts` gives — plex.tv hands the token
+   * to anyone who polls the id — and one slot is enough: there is one Plex
+   * connection to set up, and starting again simply replaces it.
+   */
+  let pendingPin: { id: number; expiresAt: number } | null = null;
   const { onboarding } = deps;
   const {
     acknowledgeStep,
@@ -83,6 +97,40 @@ export function createOnboardingRouter(deps: Pick<TrpcDeps, "jobs" | "onboarding
     reset: procedure.mutation(() => {
       resetOnboarding();
       return { ok: true as const };
+    }),
+
+    /**
+     * "Sign in with Plex" for the Plex token, so nobody has to dig one out of
+     * an item's XML. The admin sign-in's PIN flow, but authenticated — before
+     * admin auth is adopted that admits anyone who can reach setup at all,
+     * which is the same set who could already paste a token — and redeemed
+     * into `global_plex_token` rather than a session.
+     */
+    plexSignIn: procedure.mutation(async ({ ctx }) => {
+      const clientId = ensureAdminPlexClientId();
+      const pin = await createPlexPin(clientId);
+      pendingPin = { id: pin.id, expiresAt: Date.now() + PLEX_PIN_TTL_MS };
+      return { authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl: ctx.origin }) };
+    }),
+
+    /**
+     * Finish it. The token is stored server-side and never returned: the
+     * browser only learns whose account it was. A token from plex.tv's own
+     * sign-in is valid by construction, so unlike a pasted one there is
+     * nothing for a connection test to catch before storing it.
+     */
+    plexSignInPoll: procedure.mutation(async () => {
+      if (!pendingPin || pendingPin.expiresAt < Date.now()) {
+        pendingPin = null;
+        return { status: "expired" as const };
+      }
+      const clientId = ensureAdminPlexClientId();
+      const token = await checkPlexPin(pendingPin.id, clientId);
+      if (!token) return { status: "pending" as const };
+      pendingPin = null;
+      const account = await getPlexAccount(token, clientId);
+      setConfig("global_plex_token", token);
+      return { status: "ok" as const, username: account.username };
     }),
 
     /**

@@ -113,7 +113,9 @@ export function registerDomains(r: Registry): void {
   );
   r.register(ChangesToken, (c) => createChanges({ db: c.resolve(DbToken) }));
   r.register(ConfigHistoryToken, (c) => createConfigHistory({ db: c.resolve(DbToken) }));
-  r.register(CleanupToken, (c) => createCleanup({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }));
+  r.register(CleanupToken, (c) =>
+    createCleanup({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken), now: c.resolve(ClockToken) }),
+  );
   r.register(CollectionsToken, (c) =>
     createCollections({
       db: c.resolve(DbToken),
@@ -139,7 +141,7 @@ export function registerDomains(r: Registry): void {
     }),
   );
   r.register(MediaToken, (c) => createMedia({ db: c.resolve(DbToken), emitEvent: c.resolve(EventBusToken) }));
-  r.register(MetadataToken, (c) => createMetadata({ db: c.resolve(DbToken) }));
+  r.register(MetadataToken, (c) => createMetadata({ db: c.resolve(DbToken), now: c.resolve(ClockToken) }));
   r.register(MetadataOverridesToken, (c) => createMetadataOverrides({ db: c.resolve(DbToken) }));
   r.register(PlaylistsToken, (c) => createPlaylists({ db: c.resolve(DbToken) }));
   r.register(MigrationToken, (c) => createMigration({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }));

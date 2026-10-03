@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
@@ -27,9 +28,11 @@ export default function SettingsMetadata() {
   const [saving, setSaving] = useState(false);
 
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
   const configQuery = trpc.config.get.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveMutation = trpc.config.save.useMutation();
+  const capUsage = trpc.metadata.capUsage.useQuery();
   const batchesQuery = trpc.metadata.batches.useQuery(undefined, { refetchOnWindowFocus: false });
   const revertMutation = trpc.metadata.undo.useMutation();
   const [confirming, setConfirming] = useState<{ batchId: string; writes: number } | null>(null);
@@ -73,8 +76,10 @@ export default function SettingsMetadata() {
   const handleRevert = async () => {
     if (!confirming) return;
     try {
-      await revertMutation.mutateAsync({ batchId: confirming.batchId });
-      addToast("Revert started — watch it on the Jobs page", "success");
+      const { runId } = await revertMutation.mutateAsync({ batchId: confirming.batchId });
+      addToast("Revert started", "success", {
+        action: { label: "View job", onAction: () => navigate(`/jobs/runs/${runId}`) },
+      });
       await utils.metadata.batches.invalidate();
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Failed to start the revert", "error");
@@ -90,27 +95,17 @@ export default function SettingsMetadata() {
       <SettingsPageHeader title="Metadata" />
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Rule-driven metadata writes">
-        <p className={styles.intro}>
-          Rules whose outcome is <strong>Metadata</strong> can rewrite the fields on the items they match — sort titles,
-          content ratings, studios, genres. Nothing is written unless this switch is on. It is checked every time a rule
-          is about to write, not when the rule is saved, so turning it off stops work already in progress.
-        </p>
-
         <label className={styles.switchRow}>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           <span>
             <span className={styles.switchLabel}>Allow metadata rules to write to Plex</span>
-            <span className={styles.switchHint}>
-              Off means every metadata rule refuses, with the reason in its run log. Editing an item by hand from its
-              page still works — that switch is for the runs nobody is watching.
-            </span>
+            <span className={styles.switchHint}>Takes effect immediately, even mid-run.</span>
           </span>
         </label>
 
         {enabled && (
           <div className={styles.armed} role="status">
-            Metadata writing is armed. Rules that are past their preview-only setting will change fields on their next
-            scheduled run.
+            Armed — rules past preview change fields on their next run.
           </div>
         )}
 
@@ -118,19 +113,19 @@ export default function SettingsMetadata() {
           <label className={settings.label} htmlFor="metadata-max">
             Most fields to change per day, across all rules
           </label>
-          <input
-            id="metadata-max"
-            type="number"
-            min={1}
-            className={settings.input}
-            value={maxWrites}
-            onChange={(e) => setMaxWrites(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          />
-          <p className={settings.hint}>
-            A backstop over and above each rule's own limit. Per-rule caps don't compose — five rules each staying under
-            two hundred can still rewrite a library in one night. Counted over a rolling 24 hours from what was actually
-            written, so scheduled runs and rules you run by hand draw on the same allowance.
-          </p>
+          <div className={settings.suffixRow}>
+            <input
+              id="metadata-max"
+              type="number"
+              min={1}
+              className={settings.input}
+              value={maxWrites}
+              onChange={(e) => setMaxWrites(Math.max(1, parseInt(e.target.value, 10) || 1))}
+            />
+            {capUsage.data && (
+              <span className={settings.suffix}>{capUsage.data.used.toLocaleString()} used in the last 24 h</span>
+            )}
+          </div>
         </div>
 
         <div className={settings.field}>
@@ -145,10 +140,7 @@ export default function SettingsMetadata() {
             value={retentionDays}
             onChange={(e) => setRetentionDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
           />
-          <p className={settings.hint}>
-            How long a run stays revertible. A metadata write cannot be regenerated the way a collection can, and the
-            gap between a bad nightly run and somebody noticing a title looks wrong is usually weeks rather than days.
-          </p>
+          <p className={settings.hint}>How long a run stays revertible.</p>
         </div>
 
         <div className={settings.buttons}>
@@ -160,7 +152,7 @@ export default function SettingsMetadata() {
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="History">
         {batches.length === 0 ? (
-          <p className={styles.intro}>Nothing has written metadata yet.</p>
+          <p className={settings.hint}>Nothing has written metadata yet.</p>
         ) : (
           <ul className={styles.batches}>
             {batches.map((batch) => (
@@ -202,9 +194,7 @@ export default function SettingsMetadata() {
           // armed means the next run writes it again.
           message={
             `${confirming.writes.toLocaleString()} field${confirming.writes === 1 ? "" : "s"} will go back to the ` +
-            `values they held before this run, along with their original locked state. ` +
-            `This changes Plex now, but not the rule — the next run writes the same values again from the same ` +
-            `templates, so fix the rule if you don't want this back.`
+            `values they held before this run. The rule's next run writes them again unless you change it.`
           }
           confirmLabel={revertMutation.isPending ? "Reverting…" : "Revert"}
           danger

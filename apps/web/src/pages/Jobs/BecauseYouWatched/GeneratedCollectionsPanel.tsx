@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import EmptyState from "#components/EmptyState";
@@ -8,9 +8,17 @@ import ErrorState from "#components/ErrorState";
 import FadeImage from "#components/FadeImage";
 import styles from "#pages/Jobs/Jobs.module.css";
 import CardSection from "#components/CardSection";
+import { useToast } from "#components/Toast";
+import controls from "#/styles/controls.module.css";
 
 export default function GeneratedCollectionsPanel() {
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  const startJob = trpc.jobs.start.useMutation({
+    onSuccess: ({ runId }) => navigate(`/jobs/runs/${runId}`),
+    onError: (err) => addToast(err.message, "error"),
+  });
   const collectionsQuery = trpc.jobs.bywCollections.useQuery(undefined, { refetchInterval: 10000 });
   const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
 
@@ -44,7 +52,16 @@ export default function GeneratedCollectionsPanel() {
         <EmptyState
           icon="list"
           title="No collections yet"
-          description="Run the job to generate Because You Watched collections."
+          action={
+            <button
+              type="button"
+              className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+              disabled={startJob.isPending}
+              onClick={() => startJob.mutate({ jobId: "because-you-watched" })}
+            >
+              Run now
+            </button>
+          }
         />
       ) : (
         <div className={styles.bywGroups}>

@@ -41,9 +41,15 @@ export default function SettingsPersonalization() {
   const reconcileMutation = trpc.personalization.reconcile.useMutation();
 
   const [pending, setPending] = useState<PendingAction>(null);
-  const estimateQuery = trpc.personalization.estimate.useQuery(undefined, { enabled: pending === "enable" });
-
   const status = statusQuery.data?.status ?? "disabled";
+  // Also read while on: it names the libraries added since, which restricted
+  // users can't see until a reconcile labels them.
+  const estimateQuery = trpc.personalization.estimate.useQuery(undefined, {
+    enabled: pending === "enable" || status === "enabled",
+    refetchOnWindowFocus: false,
+  });
+  const unlabelled = status === "enabled" ? (estimateQuery.data?.unlabelledLibraries ?? []) : [];
+
   const enabledAt = statusQuery.data && "enabledAt" in statusQuery.data ? statusQuery.data.enabledAt : undefined;
   const lastReconcileAt =
     statusQuery.data && "lastReconcileAt" in statusQuery.data ? statusQuery.data.lastReconcileAt : undefined;
@@ -93,11 +99,7 @@ export default function SettingsPersonalization() {
 
   return (
     <div className={styles.stack}>
-      <p className={styles.lede}>
-        Personalization is the master switch that makes per-user collections — Because You Watched, the self-service
-        portal — visible only to the user they were built for. Plex has no per-user visibility of its own, so Tinkerbell
-        gets it by labelling your whole library and restricting each shared user to their own slice of it.
-      </p>
+      <p className={styles.hint}>Shows each per-user collection only to the user it was built for.</p>
 
       <div className={styles.card}>
         <div className={styles.row}>
@@ -112,18 +114,21 @@ export default function SettingsPersonalization() {
                   since <RelativeTime timestamp={enabledAt} />
                 </span>
               )}
+              {unlabelled.length > 0 && (
+                <span className={`${styles.pill} ${styles.pillWarn}`} title={unlabelled.join(", ")}>
+                  <span className={styles.pillDot} />
+                  {unlabelled.length === 1
+                    ? `${unlabelled[0]} not labelled`
+                    : `${unlabelled.length} libraries not labelled`}
+                </span>
+              )}
             </div>
             {status === "enabled" && lastReconcileAt && (
               <p className={styles.hint}>
                 Users last reconciled <RelativeTime timestamp={lastReconcileAt} />.
               </p>
             )}
-            {inProgress && (
-              <p className={styles.hint}>
-                A job is running — this can take a while on large libraries. It's safe to leave and come back;
-                re-running picks up where it left off.
-              </p>
-            )}
+            {inProgress && <p className={styles.hint}>A job is running — safe to leave; re-running resumes.</p>}
             {status === "disabled" && <p className={styles.hint}>Nothing is labelled and no user is restricted.</p>}
           </div>
 
@@ -161,10 +166,7 @@ export default function SettingsPersonalization() {
         </div>
 
         {status === "enabled" && (
-          <p className={styles.hint}>
-            Reconcile users re-applies restrictions to anyone shared with since you turned this on — useful if you don't
-            want to wait for the next Sync Plex Users run.
-          </p>
+          <p className={styles.hint}>Reconcile labels new libraries and restricts newly shared users.</p>
         )}
       </div>
 
@@ -222,9 +224,6 @@ export default function SettingsPersonalization() {
             Both jobs walk every item in your configured libraries, so a large server takes a while. Either one is safe
             to interrupt and re-run — they pick up where they left off.
           </li>
-          <li>
-            If you change your library selection in Settings → Plex, re-run this so the new libraries get labelled too.
-          </li>
         </ul>
       </div>
 
@@ -232,19 +231,19 @@ export default function SettingsPersonalization() {
         <ConfirmModal
           message={(() => {
             const base =
-              "This labels every item in your configured Plex libraries and restricts each shared user's view to their own content plus the shared baseline. Nothing is deleted and every user keeps the access they have today.";
-            if (estimateQuery.isLoading) return `${base} Estimating duration… Continue?`;
+              "Labels every item in your configured libraries and restricts each shared user. Nothing is deleted.";
+            if (estimateQuery.isLoading) return `${base} Estimating duration…`;
             const est = estimateQuery.data;
-            if (!est) return `${base} Continue?`;
+            if (!est) return base;
             if (est.itemCount === 0) {
-              return `${base} Every item is already labelled, so this only updates sharing restrictions. Continue?`;
+              return `${base} Every item is already labelled, so only sharing changes.`;
             }
             const items = est.itemCount.toLocaleString();
             const duration = formatDuration(est.estimatedSeconds * 1000);
             // Until a pass has been timed on this server the rate is a cautious
             // default, and saying so beats a precise-looking number that's wrong.
             const basis = est.measured ? "based on this server's last run" : "a cautious first guess";
-            return `${base} About ${items} items to label — estimated ~${duration} (${basis}). Continue?`;
+            return `${base} About ${items} items to label — ~${duration} (${basis}).`;
           })()}
           title="Turn on personalization?"
           confirmLabel="Turn on"
@@ -254,7 +253,7 @@ export default function SettingsPersonalization() {
       )}
       {pending === "disable" && (
         <ConfirmModal
-          message="This deletes all per-user collections (Because You Watched, etc.) and restores every user's previous sharing settings — leaving your server as if personalization was never enabled. Continue?"
+          message="Deletes every per-user collection and restores each user's previous sharing settings."
           title="Turn off personalization?"
           confirmLabel="Turn off"
           danger

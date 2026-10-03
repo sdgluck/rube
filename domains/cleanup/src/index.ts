@@ -151,6 +151,8 @@ export interface QueuedCandidate extends CleanupCandidate {
 export interface CleanupDeps {
   db: Db;
   config: ConfigStore;
+  /** The composition root's clock, so a pinned test clock reaches the cap readout. */
+  now: () => number;
 }
 export function createCleanup(deps: CleanupDeps) {
   const { db } = deps;
@@ -733,6 +735,8 @@ export function createCleanup(deps: CleanupDeps) {
     queuedCandidates,
     countsByRule,
     actionedSince,
+    /** What the Settings cap readout shows: the same window the run budget enforces. */
+    actionedInLastDay: () => actionedSince(deps.now() - DAY_MS),
     dueSoonCount,
   };
 }

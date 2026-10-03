@@ -4,6 +4,7 @@ import { trpc } from "#/trpc";
 import { timezoneOptions } from "#lib/timezones";
 import controls from "#/styles/controls.module.css";
 import styles from "./Schedule.module.css";
+import { describeTimeRange } from "./timeRange";
 
 /**
  * Timezone, the maintenance window and defer-while-streaming — what used to be
@@ -50,90 +51,83 @@ export default function SettingsCard({
             </option>
           ))}
         </select>
-        <span className={styles.settingsHint}>
-          Every schedule here is read in this zone. Leaving it unset follows the container's clock, which is easy to get
-          wrong.
-        </span>
+        <span className={styles.settingsHint}>Unset follows the container's clock.</span>
       </label>
 
-      <label className={styles.settingsCheck}>
-        <input
-          type="checkbox"
-          className={controls.toggleSm}
-          checked={window.enabled}
-          onChange={(e) => onChange({ maintenanceWindow: { ...window, enabled: e.target.checked } })}
-        />
-        Only start heavy jobs during a window
-      </label>
-      {window.enabled && (
-        <div className={styles.settingsInline}>
-          <input
-            type="time"
-            className={controls.inputSm}
-            value={window.from}
-            aria-label="Window start"
-            onChange={(e) => onChange({ maintenanceWindow: { ...window, from: e.target.value } })}
-          />
-          <span>to</span>
-          <input
-            type="time"
-            className={controls.inputSm}
-            value={window.to}
-            aria-label="Window end"
-            onChange={(e) => onChange({ maintenanceWindow: { ...window, to: e.target.value } })}
-          />
-        </div>
-      )}
-      <span className={styles.settingsHint}>
-        Shaded on the timeline. A heavy job due outside it waits for it — but only for as long as the limit below, then
-        runs anyway. An end before the start spans midnight.
-      </span>
-
-      <label className={styles.settingsCheck}>
-        <input
-          type="checkbox"
-          className={controls.toggleSm}
-          checked={defer.enabled}
-          onChange={(e) => onChange({ deferWhileStreaming: { ...defer, enabled: e.target.checked } })}
-        />
-        Wait while someone is watching
-      </label>
-      {defer.enabled && (
+      {/* The two holds share one ceiling, so they are one group: "Wait at most"
+          caps both, and has nothing to cap while both are off. */}
+      <fieldset className={styles.holdGroup}>
         <label className={styles.settingsCheck}>
           <input
             type="checkbox"
-            className={controls.checkbox}
-            checked={defer.transcodesOnly}
-            onChange={(e) => onChange({ deferWhileStreaming: { ...defer, transcodesOnly: e.target.checked } })}
+            className={controls.toggleSm}
+            checked={window.enabled}
+            onChange={(e) => onChange({ maintenanceWindow: { ...window, enabled: e.target.checked } })}
           />
-          Only for transcodes
+          Only start heavy jobs during a window
         </label>
-      )}
-      <label className={styles.settingsInline}>
-        <span>Wait at most</span>
-        <input
-          type="number"
-          min={1}
-          max={1440}
-          className={`${controls.inputSm} ${styles.minuteInput}`}
-          value={defer.maxWaitMinutes}
-          onChange={(e) =>
-            onChange({ deferWhileStreaming: { ...defer, maxWaitMinutes: Math.round(Number(e.target.value) || 0) } })
-          }
-        />
-        <span>minutes</span>
-      </label>
-      <span className={styles.settingsHint}>
-        The ceiling for both: a household that streams every evening would otherwise push the nightly jobs into never
-        running. Nothing here applies to <strong>Run now</strong>.
-      </span>
+        {window.enabled && (
+          <div className={styles.settingsInline}>
+            <input
+              type="time"
+              className={controls.inputSm}
+              value={window.from}
+              aria-label="Window start"
+              onChange={(e) => onChange({ maintenanceWindow: { ...window, from: e.target.value } })}
+            />
+            <span>to</span>
+            <input
+              type="time"
+              className={controls.inputSm}
+              value={window.to}
+              aria-label="Window end"
+              onChange={(e) => onChange({ maintenanceWindow: { ...window, to: e.target.value } })}
+            />
+            <span className={styles.settingsHint}>{describeTimeRange(window.from, window.to)}</span>
+          </div>
+        )}
 
-      {waiting.length > 0 && (
-        <p className={styles.waiting}>
-          Waiting right now: {waiting.join(", ")}. Each starts as soon as the server is quiet, or when its wait runs
-          out.
-        </p>
-      )}
+        <label className={styles.settingsCheck}>
+          <input
+            type="checkbox"
+            className={controls.toggleSm}
+            checked={defer.enabled}
+            onChange={(e) => onChange({ deferWhileStreaming: { ...defer, enabled: e.target.checked } })}
+          />
+          Wait while someone is watching
+        </label>
+        {defer.enabled && (
+          <label className={styles.settingsCheck}>
+            <input
+              type="checkbox"
+              className={controls.checkbox}
+              checked={defer.transcodesOnly}
+              onChange={(e) => onChange({ deferWhileStreaming: { ...defer, transcodesOnly: e.target.checked } })}
+            />
+            Only for transcodes
+          </label>
+        )}
+        <label className={styles.settingsInline}>
+          <span>Wait at most</span>
+          <input
+            type="number"
+            min={1}
+            max={1440}
+            className={`${controls.inputSm} ${styles.minuteInput}`}
+            disabled={!window.enabled && !defer.enabled}
+            value={defer.maxWaitMinutes}
+            onChange={(e) =>
+              onChange({ deferWhileStreaming: { ...defer, maxWaitMinutes: Math.round(Number(e.target.value) || 0) } })
+            }
+          />
+          <span>minutes</span>
+        </label>
+        <span className={styles.settingsHint}>
+          Doesn't apply to <strong>Run now</strong>.
+        </span>
+      </fieldset>
+
+      {waiting.length > 0 && <p className={styles.waiting}>Waiting right now: {waiting.join(", ")}.</p>}
     </div>
   );
 }
