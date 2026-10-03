@@ -1,0 +1,264 @@
+/* Quality profiles on an instance page, and the apply-preset dialog. */
+
+.section {
+  margin-top: 24px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
+}
+
+.sectionActions {
+  display: flex;
+  gap: 8px;
+}
+
+.explanation {
+  margin: 0 0 12px;
+  max-width: 72ch;
+  font: var(--t-body-sm);
+  color: var(--ink-3);
+}
+
+.hint {
+  margin: 8px 0 0;
+  max-width: 72ch;
+  font: var(--t-body-sm);
+  color: var(--ink-3);
+}
+
+.warning {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--status-warn-bg);
+  font: var(--t-body-sm);
+  color: var(--status-warn-fg);
+}
+
+.statusCell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+/* Wraps rather than widening the table: on a phone the actions stack under
+   each other instead of pushing the page sideways. */
+.rowActions {
+  text-align: right;
+}
+
+.rowButton {
+  composes: btnGhost btnSm from "../../../styles/controls.module.css";
+}
+
+.snapshots {
+  margin-top: 16px;
+}
+
+/* ── The dialog ─────────────────────────────────────────────────────────── */
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.chooser {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.fieldError {
+  display: block;
+  font: var(--t-body-sm);
+  color: var(--danger);
+}
+
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.presetTile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.presetTile:hover:not(:disabled) {
+  border-color: var(--line-hover);
+}
+
+.presetTile:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.presetTile:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.presetTileActive,
+.presetTileActive:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.presetName {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  color: var(--ink);
+}
+
+.presetResolution {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.presetSummary {
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.presetUnavailable {
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.presetDescription {
+  margin: 0;
+  max-width: 72ch;
+  font: var(--t-body);
+  color: var(--ink-2);
+}
+
+.limits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.inputWithUnit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 180px;
+}
+
+.unit {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.createdList {
+  margin: 0;
+  padding: 4px 12px 10px;
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.examples {
+  margin: 0;
+  font: var(--t-data);
+  color: var(--ink);
+}
+
+/* ── The preview ────────────────────────────────────────────────────────── */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.stepSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font: var(--t-body);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.stepCount {
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.changes {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--t-body-sm);
+}
+
+.changes th,
+.changes td {
+  padding: 4px 12px;
+  border-top: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.changes th {
+  width: 30%;
+  font: var(--t-data);
+  color: var(--ink-2);
+}
+
+.before {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+@media (max-width: 768px) {
+  .limits {
+    grid-template-columns: 1fr;
+  }
+}

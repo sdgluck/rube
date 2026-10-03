@@ -215,7 +215,8 @@ export function createQualityService(deps: QualityServiceDeps) {
         touched,
         reason: `Apply "${preset.name}" to ${current.profileName}`,
         createdAt: deps.now(),
-        createdBy: actor.username || actor.source,
+        // A person's name, or nothing: "by ui" says nothing a reader wants.
+        createdBy: actor.username || null,
       })
       .run();
     const saveTouched = () =>
