@@ -356,6 +356,17 @@ Scheduled work runs through a background job queue. A few things worth knowing:
   off if the container restarts mid-run. Checkpoints expire after 24 hours, and
   cancelling a run discards its checkpoint — so an explicit cancel followed by
   "Run now" starts over rather than resuming.
+- **Each job page holds its settings.** Schedule, libraries and the job's own
+  options (Digest's period and recipients, how many rules run at once, who
+  Personalized Collections covers, …) are saved together and validated against
+  what the job accepts. Prerequisites set elsewhere — an AI provider, SMTP, a
+  notification channel — are listed under "What this needs" with a link.
+  Optional features are installed, and can be configured first, from Jobs → Add
+  Feature.
+- **One-off runs.** Some jobs offer variants beside "Run now": preview the
+  duplicate-collection sweep without deleting, force collection artwork to
+  re-render, remove overlays. A variant applies to that run only and is marked
+  in the run history.
 - **Run one instance.** Cron schedules and the "already running" guard both
   assume a single process. Pointing two replicas at one database will
   double-fire every schedule.

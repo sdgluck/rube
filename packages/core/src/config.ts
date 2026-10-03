@@ -807,6 +807,11 @@ export const configSchema = z.object({
    * theatre, not a backup — so the Settings page says so next to this field.
    */
   backup_dir: z.string(),
+  /**
+   * @deprecated Never read: backups run on the `backup` job's own schedule,
+   * which Settings → Backup now edits. Kept so an old row still parses; boot
+   * carries a customised value over to the job once and deletes the key.
+   */
   backup_schedule: z.string(),
   /** How many to keep. The oldest beyond this are deleted after a good run. */
   backup_keep_count: z.number().int().min(1).max(365),

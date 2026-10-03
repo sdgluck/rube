@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import EmptyState from "#components/EmptyState";
+import ConfirmModal from "#components/ConfirmModal";
 import ErrorState from "#components/ErrorState";
 import FadeImage from "#components/FadeImage";
 import styles from "#pages/Jobs/Jobs.module.css";
@@ -10,6 +12,7 @@ import CardSection from "#components/CardSection";
 export default function GeneratedCollectionsPanel() {
   const utils = trpc.useUtils();
   const collectionsQuery = trpc.jobs.bywCollections.useQuery(undefined, { refetchInterval: 10000 });
+  const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
 
   const deleteMutation = trpc.collections.delete.useMutation({
     onSuccess: () => utils.jobs.bywCollections.invalidate(),
@@ -80,11 +83,7 @@ export default function GeneratedCollectionsPanel() {
                       </div>
                       <button
                         className={`${styles.button} ${styles.buttonSmall} ${styles.buttonDanger}`}
-                        onClick={() => {
-                          if (confirm(`Delete "${col.title}"?`)) {
-                            deleteMutation.mutate({ ratingKey: col.plexRatingKey });
-                          }
-                        }}
+                        onClick={() => setConfirming({ title: col.title, ratingKey: col.plexRatingKey })}
                         disabled={deleteMutation.isPending}
                       >
                         Delete
@@ -96,6 +95,19 @@ export default function GeneratedCollectionsPanel() {
             </details>
           ))}
         </div>
+      )}
+      {confirming && (
+        <ConfirmModal
+          danger
+          title={`Delete "${confirming.title}"?`}
+          message="The collection is removed from Plex. The next Because You Watched run may make it again."
+          confirmLabel="Delete"
+          onConfirm={() => {
+            deleteMutation.mutate({ ratingKey: confirming.ratingKey });
+            setConfirming(null);
+          }}
+          onCancel={() => setConfirming(null)}
+        />
       )}
     </CardSection>
   );

@@ -872,11 +872,36 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     scheduleCron(job);
   }
 
+  /**
+   * Settings → Backup saved its schedule to `backup_schedule`, which nothing
+   * ever read — backups ran on the job's own schedule regardless. That page
+   * now edits the job directly. Here, once, a schedule someone set there is
+   * carried over, so what they typed finally takes effect; it only wins while
+   * the job is still on its default, so a schedule changed on the job page is
+   * never overwritten. The key is then removed.
+   */
+  function adoptLegacyBackupSchedule(): void {
+    const legacy = config.getConfig("backup_schedule")?.trim();
+    if (legacy === undefined) return;
+    const defaultSchedule = DEFAULT_JOBS.find((j) => j.id === "backup")?.schedule;
+    const job = db.select().from(jobs).where(eq(jobs.id, "backup")).get();
+    if (job && legacy && legacy !== defaultSchedule && job.schedule === defaultSchedule) {
+      try {
+        runAsActor({ source: "job:migrate", username: "" }, () => updateJob("backup", { schedule: legacy }));
+        log.info("adopted the backup schedule from Settings", { schedule: legacy });
+      } catch (err) {
+        log.warn("couldn't adopt the backup schedule from Settings", { schedule: legacy, err: errorMessage(err) });
+      }
+    }
+    config.deleteConfig("backup_schedule");
+  }
+
   async function initJobs(): Promise<void> {
     // Wire startJob into the cron-trigger callback before any schedule
     // can fire. See schedule.ts for the dependency-inversion shape.
     migrateCleanupBudgetKey();
     seedDefaultJobs();
+    adoptLegacyBackupSchedule();
     seedDefaultRules();
     markStaleRunsAsFailed();
     markStaleStressTestsAsFailed();
@@ -898,5 +923,5 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     }
   }
 
-  return { startJob, cancelRun, sweepStuckRuns, updateJob, initJobs, seedDefaultJobs };
+  return { startJob, cancelRun, sweepStuckRuns, updateJob, initJobs, seedDefaultJobs, adoptLegacyBackupSchedule };
 });

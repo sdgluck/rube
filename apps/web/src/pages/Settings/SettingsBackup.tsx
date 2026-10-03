@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Download, Upload } from "lucide-react";
 import { BUNDLE_PARTS, formatFileSize, type BundlePart, type ImportResolution } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
@@ -73,6 +73,12 @@ export default function SettingsBackup() {
   const backupsQuery = trpc.backups.list.useQuery(undefined, { refetchOnWindowFocus: false });
   const saveMutation = trpc.config.save.useMutation();
   const startJob = trpc.jobs.start.useMutation();
+  // The schedule is the backup job's own, edited here as a convenience. It
+  // used to be a separate setting nothing read, so changing it did nothing.
+  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchOnWindowFocus: false });
+  const backupJob = jobsQuery.data?.find((j) => j.id === "backup");
+  const backupSchedule = backupJob?.schedule;
+  const updateJob = trpc.jobs.update.useMutation();
 
   // ── Backups ───────────────────────────────────────────────────────────────
   const [enabled, setEnabled] = useState(true);
@@ -85,9 +91,12 @@ export default function SettingsBackup() {
     if (!configQuery.data) return;
     setEnabled(configQuery.data.backup_enabled ?? true);
     setDir(configQuery.data.backup_dir ?? "");
-    setSchedule(configQuery.data.backup_schedule ?? DEFAULT_SCHEDULE);
     setKeep(configQuery.data.backup_keep_count ?? DEFAULT_KEEP);
   }, [configQuery.data]);
+
+  useEffect(() => {
+    if (backupSchedule !== undefined) setSchedule(backupSchedule);
+  }, [backupSchedule]);
 
   const isDirty = useMemo(() => {
     const d = configQuery.data;
@@ -95,10 +104,10 @@ export default function SettingsBackup() {
     return (
       enabled !== (d.backup_enabled ?? true) ||
       dir !== (d.backup_dir ?? "") ||
-      schedule !== (d.backup_schedule ?? DEFAULT_SCHEDULE) ||
+      schedule !== (backupSchedule ?? DEFAULT_SCHEDULE) ||
       keep !== (d.backup_keep_count ?? DEFAULT_KEEP)
     );
-  }, [enabled, dir, schedule, keep, configQuery.data]);
+  }, [enabled, dir, schedule, keep, configQuery.data, backupSchedule]);
 
   useUnsavedChanges(isDirty);
 
@@ -108,9 +117,12 @@ export default function SettingsBackup() {
       await saveMutation.mutateAsync({
         backup_enabled: enabled,
         backup_dir: dir,
-        backup_schedule: schedule,
         backup_keep_count: keep,
       });
+      if (backupJob && schedule.trim() !== backupJob.schedule) {
+        await updateJob.mutateAsync({ jobId: "backup", schedule: schedule.trim() });
+        await utils.jobs.list.invalidate();
+      }
       addToast("Backup settings saved", "success");
       await utils.config.get.invalidate();
       await utils.backups.list.invalidate();
@@ -236,7 +248,8 @@ export default function SettingsBackup() {
           />
           <p className={settings.hint}>
             A cron expression, evaluated in the app's timezone. The default runs at 03:30 — after the nightly purge and
-            before cleanup does anything destructive.
+            before cleanup does anything destructive. This is the <Link to="/jobs/backup">Back Up Database</Link> job's
+            schedule.
           </p>
         </div>
 

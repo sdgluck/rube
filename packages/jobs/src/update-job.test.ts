@@ -147,3 +147,33 @@ describe("shared defaults", () => {
     assert.equal(DEFAULT_USER_ITEM_CAP, DIGEST_DEFAULTS.userItemCap);
   });
 });
+
+describe("adopting the old Settings → Backup schedule", async () => {
+  const { ConfigStoreToken } = await import("@tinkerbell/core");
+  const { getConfig, setConfig } = c.resolve(ConfigStoreToken);
+  const { adoptLegacyBackupSchedule } = createRunner(c.resolve(ServicesToken));
+  // Adopting schedules a real cron, whose timer would hold the test process
+  // open; an empty schedule stops it.
+  after(() => updateJob("backup", { schedule: "" }));
+  const scheduleOf = () => db.select().from(jobs).where(eq(jobs.id, "backup")).get()!.schedule;
+
+  it("carries a customised value over to the job once, then removes the key", () => {
+    seed("backup", "backup");
+    db.update(jobs).set({ schedule: "30 3 * * *" }).where(eq(jobs.id, "backup")).run();
+    setConfig("backup_schedule", "0 5 * * *");
+    adoptLegacyBackupSchedule();
+    assert.equal(scheduleOf(), "0 5 * * *");
+    assert.equal(getConfig("backup_schedule"), undefined);
+    adoptLegacyBackupSchedule();
+    assert.equal(scheduleOf(), "0 5 * * *");
+  });
+
+  it("never overrides a schedule already changed on the job", () => {
+    seed("backup", "backup");
+    db.update(jobs).set({ schedule: "0 1 * * *" }).where(eq(jobs.id, "backup")).run();
+    setConfig("backup_schedule", "0 5 * * *");
+    adoptLegacyBackupSchedule();
+    assert.equal(scheduleOf(), "0 1 * * *");
+    assert.equal(getConfig("backup_schedule"), undefined);
+  });
+});

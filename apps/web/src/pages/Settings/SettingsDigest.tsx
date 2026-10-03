@@ -4,6 +4,9 @@ import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import shared from "#/styles/shared.module.css";
 import CardSection from "#components/CardSection";
+import CronPreview from "#components/CronPreview";
+import { useToast } from "#components/Toast";
+import { DIGEST_DEFAULTS } from "@tinkerbell/contracts";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import styles from "./SettingsDigest.module.css";
@@ -35,6 +38,24 @@ export default function SettingsDigest() {
     { refetchOnWindowFocus: false },
   );
 
+  // The Digest job: whether it's installed, when it runs, and what it still
+  // needs. Shown here because this is where people come looking for "is my
+  // digest on?" — the settings themselves stay on the job's page.
+  const { addToast } = useToast();
+  const utils = trpc.useUtils();
+  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchOnWindowFocus: false });
+  const digestJob = jobsQuery.data?.find((j) => j.id === "digest");
+  const readinessQuery = trpc.jobs.readiness.useQuery({ jobId: "digest" }, { enabled: !!digestJob });
+  const unmet = (readinessQuery.data?.items ?? []).filter((i) => !i.met && i.severity === "required");
+  const installMutation = trpc.jobs.install.useMutation({
+    onSuccess: () => {
+      utils.jobs.list.invalidate();
+      addToast("Digest installed", "success");
+    },
+    onError: (err) => addToast(err.message, "error"),
+  });
+  const digestConfig = (digestJob?.config ?? {}) as { frequency?: string };
+
   const subscribers = subscribersQuery.data ?? [];
   const deliveries = deliveriesQuery.data ?? [];
   const preview = previewQuery.data;
@@ -42,6 +63,40 @@ export default function SettingsDigest() {
   return (
     <div className={settings.form}>
       <SettingsPageHeader title="Digest" />
+
+      <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Digest job">
+        {!jobsQuery.data ? null : !digestJob ? (
+          <>
+            <p className={styles.intro}>The Digest feature isn't installed, so nothing is sent.</p>
+            <div>
+              <button
+                type="button"
+                className={settings.button}
+                disabled={installMutation.isPending}
+                onClick={() => installMutation.mutate({ featureId: "digest" })}
+              >
+                {installMutation.isPending ? "Installing…" : "Install Digest"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className={styles.intro}>
+              {digestJob.enabled ? "On" : "Switched off"} · covers{" "}
+              {(digestConfig.frequency ?? DIGEST_DEFAULTS.frequency) === "monthly" ? "the past month" : "the past week"}
+              {unmet.length > 0 && ` · still needs: ${unmet.map((i) => i.label.toLowerCase()).join("; ")}`}
+            </p>
+            {digestJob.schedule ? (
+              <CronPreview expr={digestJob.schedule} />
+            ) : (
+              <p className={styles.intro}>No schedule — runs only when started.</p>
+            )}
+            <p className={styles.intro}>
+              <Link to="/jobs/digest">Configure on the Digest job &rarr;</Link>
+            </p>
+          </>
+        )}
+      </CardSection>
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Preview">
         <p className={styles.intro}>
