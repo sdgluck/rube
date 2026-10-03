@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-10-03
+
+### Added
+
+- Feature install is now configured up front. The Add Feature wizard lists every feature, including Digest, which previously could not be installed, and each card says what is still needed before it will work. The Configure step shows the same settings form as the feature's page, and the review lists what you customised.
+- Job pages now include a "What this needs" checklist of prerequisites set elsewhere: Plex connection, personalization, an AI provider, a digest channel, SMTP, overlays and backups. Each item shows as met or missing with a link to where it is set. Feature pages always show it; system pages show it only when something is missing.
+- Personalized Collections can be limited to chosen opted-in users and chosen personalizable rules. A named user who has not opted in through the portal is skipped and logged. Because You Watched also gets a user picker.
+- Run Now is a split button offering each job's one-off variants: preview or run the duplicate sweep for real, force re-render collection art, remove overlays, and send only the server digest. A variant applies to that run only, and the run history records it, so a dry run is easy to tell apart. Variants that would change nothing for the job as configured are not offered.
+- Settings → Digest shows a summary of the Digest job (on or off, schedule, period, anything still needed), or an Install button if it is not installed.
+- Job settings for every job now use one shared form. Digest's five settings, the duplicate sweep's preview-only switch and Metadata's rules-at-a-time setting appear on their job pages for the first time.
+- Phone layouts of the portal fit the screen without sideways scrolling: tighter gutters, stacked genre controls, equal-width tabs, and a tappable pill remove button.
+
+### Changed
+
+- **The backup schedule set in Settings → Backup now drives the Back Up Database job.** Previously it was saved to a setting that nothing read, so backups ran on the job's own schedule regardless of what was typed. On upgrade, a customised backup schedule is copied to the job once (only if the job is still on its default schedule), and the old setting is removed. Check the job's schedule after upgrading.
+- **Settings for a job now save together with its schedule, and a field set back to its default is stored as unset** so it follows future default changes.
+- Deleting a Because You Watched collection asks for confirmation inside the app rather than in a browser dialog.
+- A job page for a feature that is not installed says so, rather than showing "Job not found".
+- System jobs (Cleanup, Metadata, Backup and others) are listed under System Tasks rather than Your Features, and their Remove button is gone. System Tasks shows "Required" only for always-on jobs and a working toggle for the rest.
+- Feature install and uninstall are recorded in change history.
+- Digest no longer shows a library picker that its command never read. Posters refresh no longer shows a library picker it ignored.
+- The portal no longer shows the "These are yours" copy.
+
+### Fixed
+
+- Saving a job no longer wipes its other settings. Saving Remove Overlays previously dropped its mode, so the job started applying overlays instead of removing them. Saves now merge with the existing configuration.
+- Every job's settings are checked against that job's own rules when saved, installed or run, so invalid values are rejected up front.
+- Remove Overlays' mode is fixed to remove, and always-on jobs can no longer be disabled.
+- Metadata Overrides has a job entry, so it can be run.
+- Personalized Collections rows for users or rules you have dropped from the target are deleted at the start of the next run, so they do not stay pinned to anyone's home. Only collections carrying Tinkerbell's User and Rule labels for a known user and rule are removed.
+- The job run page's breadcrumb shows the job's name.
+- The portal's digest email input is styled to match the rest of the form.
+
+### Removed
+
+- Backup schedule setting in Settings → Backup no longer exists as a separate value; it is now the Back Up Database job's schedule (see Changed).
+
 ## [0.28.0] - 2026-10-03
 
 ### Added
