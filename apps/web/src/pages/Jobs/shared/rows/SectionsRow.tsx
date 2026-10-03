@@ -2,21 +2,22 @@ import { trpc } from "#/trpc";
 import styles from "#pages/Jobs/Jobs.module.css";
 
 interface Props {
+  label?: string;
   selected: string[];
   onChange: (next: string[]) => void;
 }
 
-export default function SectionsRow({ selected, onChange }: Props) {
+export default function SectionsRow({ label = "Libraries", selected, onChange }: Props) {
   const sectionsQuery = trpc.plexSections.useQuery(undefined, {
     refetchOnWindowFocus: false,
     retry: false,
   });
   const sections = sectionsQuery.data;
-  const summary = selected.length > 0 ? selected.join(", ") : "All sections";
+  const summary = selected.length > 0 ? selected.join(", ") : "All libraries";
 
   return (
     <tr>
-      <td className={styles.fieldLabel}>Sections</td>
+      <td className={styles.fieldLabel}>{label}</td>
       <td>
         {sections && sections.length > 0 ? (
           <>

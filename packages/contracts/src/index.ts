@@ -266,3 +266,5 @@ export type {
 } from "./job-config.ts";
 export { FEATURE_IDS, isFeatureId, JOB_PRESENTATION, jobPresentation } from "./job-presentation.ts";
 export type { FeatureId, JobKind, JobPresentation } from "./job-presentation.ts";
+export { BYW_DEFAULTS, commandsWithFields, DIGEST_DEFAULTS, fieldsFor } from "./job-fields.ts";
+export type { FieldControl, FieldSpec } from "./job-fields.ts";

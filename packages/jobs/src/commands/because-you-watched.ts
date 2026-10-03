@@ -1,3 +1,4 @@
+import { BYW_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
 import { errorMessage } from "@tinkerbell/core";
@@ -74,12 +75,14 @@ export function createBecauseYouWatchedCommand(
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
     const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
     const llmConfig = getLlmConfig();
-    const LIMIT = config.limit ?? 10;
-    const MODE = config.mode ?? "per-user";
-    const PIN_TO_HOMEPAGE = config.pinToHomepage ?? true;
-    const MIN_ITEMS = config.minItems ?? 10;
-    const MAX_ITEMS = config.maxItems ?? 30;
-    const MIN_LIBRARY_SIZE = config.minLibrarySize ?? 15;
+    // Defaults shared with the settings form, so what it shows for an unset
+    // field is what runs.
+    const LIMIT = config.limit ?? BYW_DEFAULTS.limit;
+    const MODE = config.mode ?? BYW_DEFAULTS.mode;
+    const PIN_TO_HOMEPAGE = config.pinToHomepage ?? BYW_DEFAULTS.pinToHomepage;
+    const MIN_ITEMS = config.minItems ?? BYW_DEFAULTS.minItems;
+    const MAX_ITEMS = config.maxItems ?? BYW_DEFAULTS.maxItems;
+    const MIN_LIBRARY_SIZE = config.minLibrarySize ?? BYW_DEFAULTS.minLibrarySize;
     const userAllowlist = (config.users ?? []).map((u) => u.toLowerCase());
 
     if (!PLEX_TOKEN) {

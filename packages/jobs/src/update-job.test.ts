@@ -131,3 +131,11 @@ describe("installing a feature", async () => {
     assert.deepEqual(actions.slice(0, 2), ["delete", "create"]);
   });
 });
+
+describe("shared defaults", () => {
+  it("the digest domain's per-user cap is the one the form shows", async () => {
+    const { DEFAULT_USER_ITEM_CAP } = await import("@tinkerbell/domain.digest");
+    const { DIGEST_DEFAULTS } = await import("@tinkerbell/contracts");
+    assert.equal(DEFAULT_USER_ITEM_CAP, DIGEST_DEFAULTS.userItemCap);
+  });
+});

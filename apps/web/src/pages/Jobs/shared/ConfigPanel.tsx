@@ -7,7 +7,7 @@ import CardSection from "#components/CardSection";
 interface Props {
   children: ReactNode;
   /** When provided, renders the save footer. Omit for read-only / no-config jobs. */
-  save?: { dirty: boolean; onSave: () => void };
+  save?: { dirty: boolean; onSave: () => void; pending?: boolean; blocked?: boolean };
 }
 
 export default function ConfigPanel({ children, save }: Props) {
@@ -26,8 +26,12 @@ export default function ConfigPanel({ children, save }: Props) {
       </div>
       {save && (
         <div className={styles.detailSectionFooter}>
-          <button className={`${styles.button} ${styles.buttonSmall}`} onClick={save.onSave} disabled={!save.dirty}>
-            Save Config
+          <button
+            className={`${styles.button} ${styles.buttonSmall}`}
+            onClick={save.onSave}
+            disabled={!save.dirty || save.pending || save.blocked}
+          >
+            {save.pending ? "Saving…" : "Save"}
           </button>
           <UnsavedBanner visible={save.dirty} />
         </div>

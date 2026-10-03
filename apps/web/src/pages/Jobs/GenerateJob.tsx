@@ -1,95 +1,39 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { RULE_CONCURRENCY_DEFAULT, RULE_CONCURRENCY_MAX } from "@tinkerbell/contracts";
-import { trpc } from "#/trpc";
 import { useJobActions } from "./shared/useJobActions";
 import JobPageShell from "./shared/JobPageShell";
-import ConfigPanel from "./shared/ConfigPanel";
+import JobSettingsPanel from "./shared/JobSettingsPanel";
 import RunHistoryPanel from "./shared/RunHistoryPanel";
 import LatestRunLogPanel from "./shared/LatestRunLogPanel";
 import RuleBreakdownPanel from "./shared/RuleBreakdownPanel";
-import JobConfigRows from "./shared/JobConfigRows";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "./types";
 
+/** Where each rule-engine job's rules are managed. */
+const RULES_LINKS: Record<string, { to: string; label: string }> = {
+  generate: { to: "/rules", label: "Manage rules" },
+  cleanup: { to: "/cleanup/rules", label: "Manage cleanup rules" },
+  metadata: { to: "/metadata", label: "Manage metadata rules" },
+};
+
 /**
- * Config page for both batch rule jobs.
- *
- * `generate` and `cleanup` run the same engine over different rules, so they
- * take the same settings — libraries and how many rules at a time. Only the
- * list they send you to differs.
+ * The three batch rule jobs. They run one engine over different rules, so they
+ * share settings (libraries, rules at a time) and a per-rule breakdown of the
+ * last run — only the list they send you to differs.
  */
 export default function GenerateJob({ job }: JobPageProps) {
-  const isCleanup = job.command === "cleanup";
-  const utils = trpc.useUtils();
   const actions = useJobActions(job);
-  const [sections, setSections] = useState<string[]>([]);
-  const [concurrency, setConcurrency] = useState<number>(RULE_CONCURRENCY_DEFAULT);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    const cfg = (job.config ?? {}) as { sections?: string[]; ruleConcurrency?: number };
-    setSections(cfg.sections ?? []);
-    setConcurrency(cfg.ruleConcurrency ?? RULE_CONCURRENCY_DEFAULT);
-    setDirty(false);
-  }, [job.config]);
-
-  const updateMutation = trpc.jobs.update.useMutation({
-    onSuccess: () => utils.jobs.list.invalidate(),
-  });
-
-  const handleSave = () => {
-    const configPatch: Record<string, unknown> = { sections };
-    // Left unset at the default, so the job keeps following it if it changes.
-    configPatch.ruleConcurrency = concurrency === RULE_CONCURRENCY_DEFAULT ? null : concurrency;
-    updateMutation.mutate({ jobId: job.id, configPatch }, { onSuccess: () => setDirty(false) });
-  };
-
+  const rulesLink = RULES_LINKS[job.command] ?? RULES_LINKS.generate;
   return (
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
-        <ConfigPanel save={{ dirty, onSave: handleSave }}>
-          <JobConfigRows
-            job={job}
-            sections={{
-              value: sections,
-              onChange: (next) => {
-                setSections(next);
-                setDirty(true);
-              },
-            }}
-          />
-          <tr>
-            <td className={styles.fieldLabel}>Rules at a time</td>
-            <td>
-              <input
-                type="number"
-                className={styles.configNumberInput}
-                min={1}
-                max={RULE_CONCURRENCY_MAX}
-                value={concurrency}
-                onChange={(e) => {
-                  const next = parseInt(e.target.value, 10) || RULE_CONCURRENCY_DEFAULT;
-                  setConcurrency(Math.max(1, Math.min(RULE_CONCURRENCY_MAX, next)));
-                  setDirty(true);
-                }}
-              />
-              <div className={styles.fieldHelp}>
-                {concurrency === 1
-                  ? "One rule at a time — slowest, gentlest on your Plex server"
-                  : `Up to ${concurrency} rules run together. Faster, but more load on Plex and the metadata APIs.`}
-              </div>
-            </td>
-          </tr>
+        <JobSettingsPanel job={job}>
           <tr>
             <td className={styles.fieldLabel}>Rules</td>
             <td>
-              <Link to={isCleanup ? "/cleanup/rules" : "/rules"}>
-                {isCleanup ? "Manage cleanup rules" : "Manage rules"} &rarr;
-              </Link>
+              <Link to={rulesLink.to}>{rulesLink.label} &rarr;</Link>
             </td>
           </tr>
-        </ConfigPanel>
+        </JobSettingsPanel>
         <RunHistoryPanel runsQuery={actions.runsQuery} />
       </div>
       <RuleBreakdownPanel jobRunId={actions.latestRun?.id} />

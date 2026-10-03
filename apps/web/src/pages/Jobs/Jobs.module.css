@@ -704,3 +704,27 @@
 .sortable {
   composes: sortable from "../../styles/shared.module.css";
 }
+
+/* ─── Settings form (JobSettingsForm) ────────────────────────────────────── */
+
+.configSelect {
+  composes: select selectSm from "../../styles/controls.module.css";
+  width: auto;
+}
+
+.configTextInput {
+  composes: input inputSm from "../../styles/controls.module.css";
+  width: 100%;
+  max-width: 320px;
+}
+
+.configUnit {
+  margin-left: 6px;
+  color: var(--ink-3);
+}
+
+/* A row-wide toggle for the advanced group, styled as a quiet link so it reads
+   as disclosure rather than as one of the settings. */
+.advancedToggle {
+  composes: btn btnGhost btnSm from "../../styles/controls.module.css";
+}

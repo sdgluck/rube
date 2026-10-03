@@ -1,3 +1,4 @@
+import { DIGEST_DEFAULTS } from "@tinkerbell/contracts";
 import { perDeps } from "@tinkerbell/container";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 /**
@@ -32,7 +33,7 @@ import { SmtpNotConfiguredError, type RichMessage } from "@tinkerbell/domain.not
  */
 const DIGEST_EVENT = "digest.sent";
 
-const DEFAULT_MIN_ADDED_ITEMS = 1;
+const DEFAULT_MIN_ADDED_ITEMS = DIGEST_DEFAULTS.minAddedItems;
 
 type SendOutcome = "sent" | "skipped" | "failed";
 
@@ -72,12 +73,12 @@ export const createDigestCommand = perDeps(function createDigestCommand(
       else skipped++;
     };
 
-    if (config.includeServerDigest ?? true) {
+    if (config.includeServerDigest ?? DIGEST_DEFAULTS.includeServerDigest) {
       ctx.progress(1, 3, "Building the server digest…");
       for (const outcome of await sendServerDigest(ctx, config, minAddedItems, serverName, now)) tally(outcome);
     }
 
-    if (config.includeUserDigests ?? true) {
+    if (config.includeUserDigests ?? DIGEST_DEFAULTS.includeUserDigests) {
       ctx.progress(2, 3, "Building per-user digests…");
       for (const outcome of await sendUserDigests(ctx, config, minAddedItems, serverName, now)) tally(outcome);
     }
@@ -108,7 +109,7 @@ export const createDigestCommand = perDeps(function createDigestCommand(
       return [];
     }
 
-    const period = periodFor(config.frequency ?? "weekly", now);
+    const period = periodFor(config.frequency ?? DIGEST_DEFAULTS.frequency, now);
     const digest = buildDigest({ since: period.since, until: period.until });
     const message = renderDigest(digest, { serverName });
     const empty = isDigestEmpty(digest, minAddedItems);

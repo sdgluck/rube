@@ -1,36 +1,20 @@
-import { useState, useCallback } from "react";
-import { trpc } from "#/trpc";
 import CronPreview from "#components/CronPreview";
 import styles from "#pages/Jobs/Jobs.module.css";
 
-export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedule: string }) {
-  const utils = trpc.useUtils();
-  const [editing, setEditing] = useState<string | undefined>(undefined);
-  const [error, setError] = useState<string | undefined>(undefined);
-
-  const updateMutation = trpc.jobs.update.useMutation({
-    onSuccess: () => utils.jobs.list.invalidate(),
-  });
-
-  const handleBlur = useCallback(() => {
-    if (editing === undefined) return;
-    updateMutation.mutate(
-      { jobId, schedule: editing },
-      {
-        onError: (err) => setError(err.message),
-        onSuccess: () => {
-          setEditing(undefined);
-          setError(undefined);
-        },
-      },
-    );
-  }, [editing, jobId, updateMutation]);
-
-  const value = editing ?? schedule;
-  // Only the error and the plain-English gloss live here; the fire times come
-  // from CronPreview, which knows the schedule zone.
-  const help = error ?? "";
-
+/**
+ * Controlled, and saved with the rest of the settings. It used to save on blur
+ * on its own while the fields beside it waited for Save — two save models in
+ * one card, and a half-typed cron could be committed by clicking away.
+ */
+export default function ScheduleRow({
+  value,
+  onChange,
+  error,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  error?: string;
+}) {
   return (
     <tr>
       <td className={styles.fieldLabel}>Schedule</td>
@@ -39,17 +23,9 @@ export default function ScheduleRow({ jobId, schedule }: { jobId: string; schedu
           className={styles.cronInput}
           value={value}
           placeholder="manual only"
-          onChange={(e) => {
-            setEditing(e.target.value);
-            setError(undefined);
-          }}
-          onBlur={handleBlur}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
+          onChange={(e) => onChange(e.target.value)}
         />
-        {help && <div className={styles.fieldHelpError}>{help}</div>}
-        {!error && <CronPreview expr={value} />}
+        {error ? <div className={styles.fieldHelpError}>{error}</div> : <CronPreview expr={value} />}
       </td>
     </tr>
   );
