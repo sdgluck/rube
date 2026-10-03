@@ -96,15 +96,19 @@ export const COMMANDS = {
   },
   overlays: { load: () => import("./overlays.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
   "byw-remove": { load: () => import("./byw-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  // Both walk every item in the managed libraries. Batched labelling should
+  // make that minutes, but a first pass on a large library or a slow server
+  // took 30+ with one item per request, and the old 30-minute budget aborted
+  // it — so the budget is sized for the slow case, not the hoped-for one.
   "personalize-enable": {
     load: () => import("./personalize-enable.ts"),
     lane: "interactive",
-    timeoutMs: DEFAULT_TIMEOUT_MS,
+    timeoutMs: 2 * HOUR_MS,
   },
   "personalize-disable": {
     load: () => import("./personalize-disable.ts"),
     lane: "interactive",
-    timeoutMs: DEFAULT_TIMEOUT_MS,
+    timeoutMs: 2 * HOUR_MS,
   },
   "migrate-collections": {
     load: () => import("./migrate-collections.ts"),

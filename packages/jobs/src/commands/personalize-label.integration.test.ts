@@ -57,6 +57,19 @@ describe("addLabelToAllItems", () => {
     assert.deepEqual(labelsOf("121"), ["Disney+ Movies", "Tinkerbell"]);
   });
 
+  it("fails when the run is aborted, rather than reporting the pass done", async () => {
+    // A timed-out enable used to swallow every remaining batch's abort as an
+    // ordinary failure, then carry on and mark personalization enabled.
+    const controller = new AbortController();
+    const aborting = createPlexClient({ url: plex.origin, token: "t", signal: controller.signal });
+    await assert.rejects(
+      aborting.addLabelToAllItems("1", "movie", "Tinkerbell", (current) => {
+        if (current === 0) controller.abort();
+      }),
+    );
+    assert.deepEqual(plex.journal.labelWriteRequests, []);
+  });
+
   it("does nothing on a library that is already labelled", async () => {
     // The Reconcile button's case: it used to cost a full pass every time.
     await client().addLabelToAllItems("1", "movie", "Tinkerbell");

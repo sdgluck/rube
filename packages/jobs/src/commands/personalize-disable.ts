@@ -2,6 +2,7 @@ import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createPlexClient } from "@tinkerbell/plex";
 import { errorMessage } from "@tinkerbell/core";
 import { sharingRestrictionBackups } from "@tinkerbell/db";
+import { eq } from "drizzle-orm";
 
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
@@ -81,13 +82,25 @@ export function createPersonalizeDisableCommand(deps: Pick<Services, "clients" |
           } else {
             await client.setSharingFilters(b.sharingId, b.filterMovies, b.filterTelevision);
           }
+          // Each backup goes only once its user is restored. Clearing the table
+          // wholesale after the loop threw away the only record of a user's
+          // original sharing whenever their restore failed or the run was
+          // aborted — and a re-run then had nothing to restore them to.
+          db.delete(sharingRestrictionBackups).where(eq(sharingRestrictionBackups.sharingId, b.sharingId)).run();
           restored++;
         } catch (err) {
+          if (ctx.signal.aborted) throw err;
           ctx.log(`Failed to restore ${b.username}: ${errorMessage(err)}`);
         }
       }
-      db.delete(sharingRestrictionBackups).run();
       ctx.log(`Restored ${restored}/${backups.length} user(s).`);
+      if (restored < backups.length) {
+        // Stay "disabling": users still restricted to the Tinkerbell label would
+        // lose access to everything once the label comes off below.
+        throw new Error(
+          `Restored only ${restored} of ${backups.length} user(s) — leaving labels in place. Run it again to finish.`,
+        );
+      }
 
       // Phase 3: remove the baseline label from every item.
       ctx.log(`Removing "${BASELINE_LABEL}" label from all items...`);

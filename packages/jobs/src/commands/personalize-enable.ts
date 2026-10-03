@@ -113,10 +113,22 @@ export function createPersonalizeEnableCommand(deps: Pick<Services, "clients" | 
           await client.setSharingRestrictions(s.id, [BASELINE_LABEL, `User:${s.username}`], detailFor(s.userId));
           configured++;
         } catch (err) {
+          if (ctx.signal.aborted) throw err;
           ctx.log(`Failed to restrict ${s.username}: ${errorMessage(err)}`);
         }
       }
       ctx.log(`Restricted ${configured}/${sharings.length} user(s).`);
+
+      // "Enabled" is a claim that every shared user is restricted. A run that
+      // timed out here once marked itself enabled with 0 of 16 restricted —
+      // every user could still see everyone's per-user collections while the
+      // settings page said otherwise. Stay "enabling" so it shows as unfinished;
+      // a re-run picks up where this left off.
+      if (configured < sharings.length) {
+        throw new Error(
+          `Restricted only ${configured} of ${sharings.length} user(s) — not marking personalization enabled. Run it again to finish.`,
+        );
+      }
 
       setConfig("global_personalized_sharing", {
         status: "enabled",

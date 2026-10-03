@@ -339,6 +339,10 @@ export function createItemsModule(http: PlexHttp) {
         });
         updated += batch.length;
       } catch (err) {
+        // An abort is the run ending, not a batch failing: carrying on turned
+        // every remaining batch into an instant failure and reported the pass
+        // as complete.
+        if (http.signal?.aborted) throw err;
         console.warn(
           `[plex] Label write failed for ${batch.length} item(s) in section ${sectionId}:`,
           errorMessage(err),
