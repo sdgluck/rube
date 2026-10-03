@@ -12,6 +12,7 @@ import { isFeatureId } from "@tinkerbell/contracts";
 import { jobUi } from "#pages/Jobs/presentation";
 import { useJobActions } from "./useJobActions";
 import CheckpointNotice from "./CheckpointNotice";
+import RunButton from "./RunButton";
 import { formatElapsed } from "#/format";
 
 interface Props {
@@ -98,9 +99,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
               Cancel
             </button>
           )}
-          <button className={styles.button} disabled={isRunning || starting} onClick={start}>
-            {isRunning ? "Running…" : "Run Now"}
-          </button>
+          <RunButton job={job} isRunning={isRunning} starting={starting} start={start} />
         </div>
       </div>
 

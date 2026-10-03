@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { trpc } from "#/trpc";
+import { useToast } from "#components/Toast";
 import type { Job } from "#pages/Jobs/types";
 import { isRunActive } from "./useRunLog";
 
 export function useJobActions(job: Job) {
   const utils = trpc.useUtils();
+  const { addToast } = useToast();
 
   const runsQuery = trpc.jobs.runs.useQuery({ jobId: job.id, limit: 10 }, { refetchInterval: 3000 });
   const latestRunId = runsQuery.data?.[0]?.id;
@@ -22,6 +24,9 @@ export function useJobActions(job: Job) {
       utils.jobs.list.invalidate();
       utils.jobs.runs.invalidate();
     },
+    // "Already running" and friends used to vanish silently, leaving a button
+    // that apparently did nothing.
+    onError: (err) => addToast(err.message, "error"),
   });
 
   const cancelMutation = trpc.jobs.cancel.useMutation({
@@ -46,7 +51,7 @@ export function useJobActions(job: Job) {
     runsQuery,
     latestRun: latestRunQuery.data,
     isRunning,
-    start: () => startMutation.mutate({ jobId: job.id }),
+    start: (variant?: string) => startMutation.mutate({ jobId: job.id, variant }),
     starting: startMutation.isPending,
     cancel: (runId: string) => cancelMutation.mutate({ runId }),
     cancelling: cancelMutation.isPending,

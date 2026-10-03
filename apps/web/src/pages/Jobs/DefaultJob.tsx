@@ -12,7 +12,7 @@ export default function DefaultJob({ job }: JobPageProps) {
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
         <JobSettingsPanel job={job} />
-        <RunHistoryPanel runsQuery={actions.runsQuery} />
+        <RunHistoryPanel runsQuery={actions.runsQuery} command={job.command} />
       </div>
       <LatestRunLogPanel latestRun={actions.latestRun} />
     </JobPageShell>

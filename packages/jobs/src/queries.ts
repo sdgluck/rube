@@ -47,6 +47,7 @@ export function createQueries(deps: Pick<Services, "db">) {
         progress: jobRuns.progress,
         message: jobRuns.message,
         failureKind: jobRuns.failureKind,
+        variant: jobRuns.variant,
         startedAt: jobRuns.startedAt,
         finishedAt: jobRuns.finishedAt,
       })
@@ -84,20 +85,26 @@ export function createQueries(deps: Pick<Services, "db">) {
    * multi-megabyte log over tRPC every second is the single most expensive thing
    * the API used to do.
    */
-  function getJobRun(runId: string): Omit<JobRun, "log"> | null {
+  function getJobRun(runId: string): (Omit<JobRun, "log"> & { jobName: string | null; command: string | null }) | null {
     return (
       db
         .select({
           id: jobRuns.id,
           jobId: jobRuns.jobId,
+          // For the run page's breadcrumb and variant label, which used to show
+          // the raw job id because this was all it had.
+          jobName: jobs.name,
+          command: jobs.command,
           status: jobRuns.status,
           progress: jobRuns.progress,
           message: jobRuns.message,
           failureKind: jobRuns.failureKind,
+          variant: jobRuns.variant,
           startedAt: jobRuns.startedAt,
           finishedAt: jobRuns.finishedAt,
         })
         .from(jobRuns)
+        .leftJoin(jobs, eq(jobs.id, jobRuns.jobId))
         .where(eq(jobRuns.id, runId))
         .get() ?? null
     );
@@ -217,6 +224,7 @@ export function createQueries(deps: Pick<Services, "db">) {
     status: string;
     message: string;
     failureKind: string | null;
+    variant: string | null;
     startedAt: number;
     finishedAt: number | null;
   }> {
@@ -230,6 +238,7 @@ export function createQueries(deps: Pick<Services, "db">) {
         status: jobRuns.status,
         message: jobRuns.message,
         failureKind: jobRuns.failureKind,
+        variant: jobRuns.variant,
         startedAt: jobRuns.startedAt,
         finishedAt: jobRuns.finishedAt,
       })

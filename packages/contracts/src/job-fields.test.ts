@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { commandsWithFields, fieldsFor } from "./job-fields.ts";
+import { allVariants, commandsWithFields, fieldsFor, variantsForJob } from "./job-fields.ts";
 import { configSchemaFor } from "./job-config.ts";
 
 describe("job field descriptors", () => {
@@ -33,5 +33,23 @@ describe("job field descriptors", () => {
   it("offers a library picker exactly where the command reads one", () => {
     assert.equal(fieldsFor("sync-media")[0]?.key, "sections");
     assert.equal(fieldsFor("posters-refresh").length, 0);
+  });
+});
+
+describe("run variants", () => {
+  it("override only keys their command accepts, with values it accepts", () => {
+    for (const [command, variant] of allVariants()) {
+      const parsed = configSchemaFor(command).partial().strict().safeParse(variant.overrides);
+      assert.ok(parsed.success, `${command}/${variant.id}: ${JSON.stringify(variant.overrides)}`);
+    }
+  });
+
+  it("aren't offered when they'd change nothing", () => {
+    const ids = (jobId: string, command: string, stored: Record<string, unknown>) =>
+      variantsForJob(jobId, command, stored).map((v) => v.id);
+    assert.deepEqual(ids("collections-sweep", "collections-sweep", {}), ["preview"]);
+    assert.deepEqual(ids("collections-sweep", "collections-sweep", { dryRun: true }), ["delete"]);
+    assert.deepEqual(ids("overlays", "overlays", {}), ["remove"]);
+    assert.deepEqual(ids("overlays-remove", "overlays", {}), []);
   });
 });

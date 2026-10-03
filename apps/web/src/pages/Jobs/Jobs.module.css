@@ -204,6 +204,12 @@
   composes: runBadgeCancelled from "../../styles/shared.module.css";
 }
 
+/* Neutral, beside the status: how the run was started, not how it went. */
+.badgeVariant {
+  composes: runBadgeCancelled from "../../styles/shared.module.css";
+  margin-left: 6px;
+}
+
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
 
 .button {
@@ -727,4 +733,25 @@
    as disclosure rather than as one of the settings. */
 .advancedToggle {
   composes: btn btnGhost btnSm from "../../styles/controls.module.css";
+}
+
+/* ─── Run button: primary action + a caret for one-off variants ──────────── */
+
+.splitGroup {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.splitMain {
+  composes: btn btnPrimary btnSm from "../../styles/controls.module.css";
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.splitCaret {
+  composes: btn btnPrimary btnSm from "../../styles/controls.module.css";
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid var(--line-soft);
+  padding: 0 6px;
 }

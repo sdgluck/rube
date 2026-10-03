@@ -34,7 +34,7 @@ export default function GenerateJob({ job }: JobPageProps) {
             </td>
           </tr>
         </JobSettingsPanel>
-        <RunHistoryPanel runsQuery={actions.runsQuery} />
+        <RunHistoryPanel runsQuery={actions.runsQuery} command={job.command} />
       </div>
       <RuleBreakdownPanel jobRunId={actions.latestRun?.id} />
       <LatestRunLogPanel latestRun={actions.latestRun} />

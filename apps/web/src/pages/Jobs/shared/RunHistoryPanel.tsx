@@ -11,9 +11,11 @@ import { useLocalSort } from "#hooks/useLocalSort";
 
 interface Props {
   runsQuery: ReturnType<typeof useJobActions>["runsQuery"];
+  /** The job's command, to name the variant a run was started as. */
+  command?: string;
 }
 
-export default function RunHistoryPanel({ runsQuery }: Props) {
+export default function RunHistoryPanel({ runsQuery, command }: Props) {
   const { sortKey, sortDir, toggleSort, sorted } = useLocalSort({
     rows: runsQuery.data ?? [],
     accessors: {
@@ -53,7 +55,7 @@ export default function RunHistoryPanel({ runsQuery }: Props) {
               {sorted.map((run) => (
                 <tr key={run.id}>
                   <td>
-                    <StatusBadge status={run.status} />
+                    <StatusBadge status={run.status} variant={run.variant} command={command} />
                   </td>
                   <td className={styles.runMeta}>
                     <RelativeTime timestamp={run.startedAt} />

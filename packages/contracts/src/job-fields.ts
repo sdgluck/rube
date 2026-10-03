@@ -10,7 +10,7 @@
  * Defaults live here too, as constants the commands read — so the number the
  * form shows for an unset field is the number the job actually uses.
  */
-import { RULE_CONCURRENCY_DEFAULT, RULE_CONCURRENCY_MAX, configSchemaFor } from "./job-config.ts";
+import { RULE_CONCURRENCY_DEFAULT, RULE_CONCURRENCY_MAX, configSchemaFor, lockedConfigFor } from "./job-config.ts";
 
 export const BYW_DEFAULTS = {
   limit: 10,
@@ -197,4 +197,107 @@ export function fieldsFor(command: string): FieldSpec[] {
 /** For the drift test: every command that declares fields. */
 export function commandsWithFields(): string[] {
   return Object.keys(COMMAND_FIELDS);
+}
+
+/**
+ * A one-off way to run a job: overrides applied to a single run and never
+ * saved. For options that make sense per run but would be a trap as a stored
+ * setting — "force re-render every poster" left switched on re-uploads the
+ * whole library every night.
+ *
+ * The client sends only the variant's id; the server looks the overrides up
+ * here, so "Run now" can't be used to run a job with arbitrary config.
+ */
+export interface VariantSpec {
+  id: string;
+  label: string;
+  description: string;
+  overrides: Record<string, unknown>;
+  confirm?: { title: string; message: string; danger?: boolean };
+}
+
+const COMMAND_VARIANTS: Record<string, VariantSpec[]> = {
+  "collections-sweep": [
+    {
+      id: "preview",
+      label: "Preview (dry run)",
+      description: "List what would be deleted, and delete nothing.",
+      overrides: { dryRun: true },
+    },
+    {
+      id: "delete",
+      label: "Run for real",
+      description: "Delete the collections this run finds, even though the job is set to preview only.",
+      overrides: { dryRun: false },
+      confirm: {
+        title: "Delete collections now?",
+        message:
+          "This run deletes every duplicate or orphaned collection it finds from Plex. Run a preview first if you haven't checked the list.",
+        danger: true,
+      },
+    },
+  ],
+  "collection-art": [
+    {
+      id: "force",
+      label: "Force re-render",
+      description: "Re-render and re-upload every poster, even ones that haven't changed.",
+      overrides: { force: true },
+      confirm: {
+        title: "Re-render every poster?",
+        message:
+          "Every opted-in collection's artwork is rendered and uploaded again, replacing any poster changed by hand in Plex.",
+      },
+    },
+  ],
+  overlays: [
+    {
+      id: "remove",
+      label: "Remove overlays",
+      description: "Restore the original posters instead of applying overlays.",
+      overrides: { mode: "remove" },
+      confirm: {
+        title: "Remove overlays?",
+        message: "Every poster this job has overlaid is put back to its original artwork.",
+        danger: true,
+      },
+    },
+  ],
+  digest: [
+    {
+      id: "server-only",
+      label: "Send server digest only",
+      description: "Send the server-wide digest to your channels without emailing portal users.",
+      overrides: { includeUserDigests: false },
+    },
+  ],
+};
+
+export function variantFor(command: string, id: string): VariantSpec | undefined {
+  return COMMAND_VARIANTS[command]?.find((v) => v.id === id);
+}
+
+/** For the drift test. */
+export function allVariants(): [string, VariantSpec][] {
+  return Object.entries(COMMAND_VARIANTS).flatMap(([command, vs]) =>
+    vs.map((v) => [command, v] as [string, VariantSpec]),
+  );
+}
+
+/**
+ * The variants worth offering for a job as it is configured now: ones that
+ * would change nothing are left out. "Remove overlays" on the job that only
+ * removes overlays, or "Preview" on a sweep already set to preview, would be a
+ * menu item that does exactly what the main button does.
+ */
+export function variantsForJob(jobId: string, command: string, stored: Record<string, unknown>): VariantSpec[] {
+  const defaults = Object.fromEntries(
+    fieldsFor(command)
+      .filter((f) => f.default !== undefined)
+      .map((f) => [f.key, f.default]),
+  );
+  const effective = { ...defaults, ...stored, ...lockedConfigFor(jobId) };
+  return (COMMAND_VARIANTS[command] ?? []).filter(
+    (v) => !Object.entries(v.overrides).every(([k, value]) => effective[k] === value),
+  );
 }

@@ -13,7 +13,7 @@ export default function BecauseYouWatchedJob({ job }: JobPageProps) {
     <JobPageShell job={job} actions={actions}>
       <div className={styles.jobDetailColumns}>
         <JobSettingsPanel job={job} />
-        <RunHistoryPanel runsQuery={actions.runsQuery} />
+        <RunHistoryPanel runsQuery={actions.runsQuery} command={job.command} />
       </div>
       <GeneratedCollectionsPanel />
       <LatestRunLogPanel latestRun={actions.latestRun} />

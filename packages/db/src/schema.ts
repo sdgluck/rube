@@ -557,6 +557,13 @@ export const jobRuns = sqliteTable(
      * `[watchdog]`.
      */
     failureKind: text("failure_kind"),
+    /**
+     * The run variant it was started as (`preview`, `force`, …), or null for an
+     * ordinary run. A variant's overrides apply to that run only and are never
+     * written to the job, so without this a dry-run sweep and a real one would
+     * look identical in the run history.
+     */
+    variant: text("variant"),
     startedAt: integer("started_at").notNull(),
     finishedAt: integer("finished_at"),
   },

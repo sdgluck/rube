@@ -15,7 +15,10 @@ import {
   lockedConfigFor,
   validateConfigPatch,
   validateJobConfig,
+  variantFor,
+  type VariantSpec,
 } from "@tinkerbell/contracts";
+import { buildRunConfig } from "./run-config.ts";
 import { jobs, jobRuns } from "@tinkerbell/db";
 
 import {
@@ -333,7 +336,7 @@ export type StartResult =
    * saying `ok: true` would have made a caller checking that flag believe work
    * was underway.
    */
-  | { ok: false; reason: "not-found" | "already-running" | "unknown-command"; runId?: string };
+  | { ok: false; reason: "not-found" | "already-running" | "unknown-command" | "unknown-variant"; runId?: string };
 
 // ── Watchdog ────────────────────────────────────────────────────────────────
 
@@ -440,20 +443,35 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     }
   }
 
-  async function startJob(jobId: string): Promise<StartResult> {
+  /**
+   * Start a run, optionally as a named variant (see `VariantSpec`). An unknown
+   * variant — or any variant of an in-process job, which takes no config — is
+   * refused before a run row exists, so a bad request leaves no failed run
+   * behind.
+   */
+  async function startJob(jobId: string, opts: { variant?: string } = {}): Promise<StartResult> {
     const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
     if (!job) return { ok: false, reason: "not-found" };
 
+    let variant: VariantSpec | undefined;
+    if (opts.variant !== undefined) {
+      variant = isInternalJobName(job.command) ? undefined : variantFor(job.command, opts.variant);
+      if (!variant) return { ok: false, reason: "unknown-variant" };
+    }
+
     const runId = randomUUID();
     const now = Date.now();
+    // Named in the log's first line as well as the column, so it survives a
+    // copy-paste of the log into a bug report.
+    const initialLog = variant ? `Variant: ${variant.label} ${JSON.stringify(variant.overrides)}\n` : "";
 
     // Atomic insert — prevents a race where two concurrent requests both see no
     // running job and both insert. `cancelling` counts as occupying the job:
     // the command is still executing until it unwinds, so letting a second run
     // start would put two live executions on the same job.
     const result = db.run(sql`
-    INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at)
-    SELECT ${runId}, ${jobId}, 'running', '', 0, '', ${now}
+    INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at, variant)
+    SELECT ${runId}, ${jobId}, 'running', ${initialLog}, 0, '', ${now}, ${variant?.id ?? null}
     WHERE NOT EXISTS (
       SELECT 1 FROM job_runs WHERE job_id = ${jobId} AND status IN ('running', 'cancelling')
     )
@@ -505,7 +523,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     const { CommandJob } = await import("./sidequest/job.ts");
     await Sidequest.build(CommandJob)
       .queue(descriptor.lane)
-      .enqueue(job.command, runId, JSON.stringify(job.config ?? {}), job.name, job.id);
+      .enqueue(job.command, runId, JSON.stringify(buildRunConfig(job, variant)), job.name, job.id);
 
     return { ok: true, runId };
   }

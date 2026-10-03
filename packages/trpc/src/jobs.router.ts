@@ -174,26 +174,30 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
         return { ok: true };
       }),
 
-    start: procedure.input(z.object({ jobId: z.string() })).mutation(async ({ input }) => {
-      const result = await startJob(input.jobId);
-      if (!result.ok) {
-        switch (result.reason) {
-          case "not-found":
-            throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobId}" does not exist` });
-          case "already-running":
-            throw new TRPCError({ code: "CONFLICT", message: `Job "${input.jobId}" is already running` });
-          case "unknown-command":
-            // The job row exists but points at a command this build doesn't have
-            // — usually a downgrade, or a hand-edited row. A failed run row was
-            // created with the details; point the user at it.
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: `Job "${input.jobId}" points at a command this version doesn't have. See the run log.`,
-            });
+    start: procedure
+      .input(z.object({ jobId: z.string(), variant: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const result = await startJob(input.jobId, { variant: input.variant });
+        if (!result.ok) {
+          switch (result.reason) {
+            case "not-found":
+              throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobId}" does not exist` });
+            case "already-running":
+              throw new TRPCError({ code: "CONFLICT", message: `Job "${input.jobId}" is already running` });
+            case "unknown-command":
+              // The job row exists but points at a command this build doesn't have
+              // — usually a downgrade, or a hand-edited row. A failed run row was
+              // created with the details; point the user at it.
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Job "${input.jobId}" points at a command this version doesn't have. See the run log.`,
+              });
+            case "unknown-variant":
+              throw new TRPCError({ code: "BAD_REQUEST", message: `"${input.variant}" isn't a way this job can run` });
+          }
         }
-      }
-      return { runId: result.runId };
-    }),
+        return { runId: result.runId };
+      }),
 
     cancel: procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
       const ok = cancelRun(input.runId);

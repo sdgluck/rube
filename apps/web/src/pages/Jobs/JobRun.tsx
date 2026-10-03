@@ -3,6 +3,7 @@ import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import { DetailSkeleton } from "#components/Skeleton";
 import { PageCrumbs } from "#layout/AppBar";
+import StatusBadge from "./shared/StatusBadge";
 import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
 import RunLog from "#components/RunLog";
@@ -15,21 +16,6 @@ function formatEta(startMs: number, progress: number): string | null {
   const remaining = elapsed / progress - elapsed;
   if (remaining < 1000) return null;
   return `~${formatDuration(remaining)} remaining`;
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "running" || status === "cancelling"
-      ? styles.badgeRunning
-      : status === "completed"
-        ? styles.badgeCompleted
-        : status === "failed"
-          ? styles.badgeFailed
-          : styles.badgeCancelled;
-  // `cancelling` is a real, visible state: the cancel has been requested but
-  // the command hasn't unwound yet, and pretending it's already gone would be
-  // a lie the user can see through (the job is still occupied).
-  return <span className={`${styles.badge} ${cls}`}>{status === "cancelling" ? "cancelling…" : status}</span>;
 }
 
 export default function JobRun() {
@@ -58,10 +44,12 @@ export default function JobRun() {
 
   return (
     <div ref={swipeRef} className={styles.runDetail}>
-      <PageCrumbs crumbs={[{ label: run.jobId, to: `/jobs/${run.jobId}` }, { label: `Run ${run.id}` }]} />
+      <PageCrumbs
+        crumbs={[{ label: run.jobName ?? run.jobId, to: `/jobs/${run.jobId}` }, { label: `Run ${run.id}` }]}
+      />
 
       <div className={styles.runHeader}>
-        <StatusBadge status={run.status} />
+        <StatusBadge status={run.status} variant={run.variant} command={run.command ?? undefined} />
         {run.status === "running" && (
           // Only a `running` run can be cancelled — one already `cancelling`
           // has been asked and is unwinding.

@@ -4,12 +4,14 @@ import styles from "./DropdownButton.module.css";
 
 interface DropdownButtonProps {
   label: string;
-  options: { label: string; onClick: () => void; disabled?: boolean }[];
+  options: { label: string; onClick: () => void; disabled?: boolean; danger?: boolean; title?: string }[];
   className?: string;
   disabled?: boolean;
+  /** For a trigger with no visible label — a split button's caret. */
+  ariaLabel?: string;
 }
 
-export default function DropdownButton({ label, options, className, disabled }: DropdownButtonProps) {
+export default function DropdownButton({ label, options, className, disabled, ariaLabel }: DropdownButtonProps) {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -39,17 +41,25 @@ export default function DropdownButton({ label, options, className, disabled }: 
 
   return (
     <div className={styles.wrapper} ref={ref}>
-      <button className={className} onClick={toggle} disabled={disabled}>
+      <button
+        className={className}
+        onClick={toggle}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
         {label}
-        <ChevronDown className={styles.caret} size={13} strokeWidth={2.5} aria-hidden="true" />
+        <ChevronDown className={label ? styles.caret : undefined} size={13} strokeWidth={2.5} aria-hidden="true" />
       </button>
       {visible && (
         <div className={`${styles.menu} ${!open ? styles.menuExiting : ""}`}>
           {options.map((opt) => (
             <button
               key={opt.label}
-              className={styles.menuItem}
+              className={`${styles.menuItem} ${opt.danger ? styles.menuItemDanger : ""}`}
               disabled={opt.disabled}
+              title={opt.title}
               onClick={() => {
                 close();
                 opt.onClick();
