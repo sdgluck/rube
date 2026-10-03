@@ -26,6 +26,7 @@ import {
   MINUTE_MS,
   WEEK_MINUTES,
   cronError,
+  describeSchedule,
   dstShifts,
   formatSchedule,
   minGapMs,
@@ -600,10 +601,10 @@ export function validateSchedulePlan(plan: SchedulePlan, ctx: ScheduleContext): 
   return issues.sort((a, b) => rank[a.severity] - rank[b.severity]);
 }
 
+/** "daily at 03:00", "every minute" — for a fix label, mid-sentence. */
 function describe(cron: string): string {
-  const s = parseSchedule(cron);
-  if (s.kind === "daily") return `daily at ${formatClock(s.time)}`;
-  return cron;
+  const text = describeSchedule(parseSchedule(cron));
+  return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
 /** Can this plan be saved? */

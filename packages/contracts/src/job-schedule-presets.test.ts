@@ -44,10 +44,12 @@ describe("schedule presets", () => {
       const ctx = fixtureContext();
       const base = planFromContext(ctx);
       base.jobs.cleanup = { schedule: "", enabled: true };
+      base.jobs.healthcheck = { schedule: "", enabled: true };
       base.jobs.digest = { schedule: "0 9 * * 1", enabled: false };
       const plan = buildPreset(preset.id, ctx, base);
       for (const [id, entry] of Object.entries(plan.jobs)) assert.equal(entry.enabled, base.jobs[id].enabled, id);
       assert.equal(plan.jobs.cleanup.schedule, "");
+      assert.equal(plan.jobs.healthcheck.schedule, "");
       assert.equal(plan.jobs.overlays.schedule, "");
     });
   }

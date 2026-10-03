@@ -48,6 +48,14 @@ const NAVIGATION: SearchHit[] = [
   })),
   { kind: "navigation", id: "nav:/settings/changelog", title: "Changelog", href: "/settings/changelog" },
   { kind: "navigation", id: "nav:/cleanup/rules", title: "Cleanup rules", href: "/cleanup/rules" },
+  // Where Settings → Schedules went; "timezone" and "maintenance window" should still find it.
+  {
+    kind: "navigation",
+    id: "nav:/jobs/schedule",
+    title: "Job schedule",
+    subtitle: "Timeline, presets, timezone, maintenance window",
+    href: "/jobs/schedule",
+  },
 ];
 
 interface Props {

@@ -1,0 +1,791 @@
+/* ─── Jobs → Schedule ──────────────────────────────────────────────────────
+ *
+ * A timeline on the left, the selected job and what's wrong with the draft on
+ * the right. The right column is where the eye goes after every drag — the
+ * problems list is the feedback for the move just made — so on a narrow screen
+ * it stacks *under* the timeline rather than being hidden behind a tab.
+ */
+
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.side {
+  position: sticky;
+  top: calc(var(--appbar-h) + 12px);
+}
+
+.section {
+  background: var(--surface);
+  border-radius: var(--r-panel);
+  box-shadow: var(--e-card);
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font: var(--t-panel);
+  letter-spacing: var(--t-panel-tracking);
+  color: var(--ink);
+}
+
+.sectionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.timelineMeta {
+  font: var(--t-caption);
+  color: var(--ink-3);
+  margin-right: auto;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.muted {
+  margin: 0;
+  font: var(--t-body-sm);
+  color: var(--ink-3);
+}
+
+/* ─── Presets ───────────────────────────────────────────────────────────── */
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+
+.preset:hover:not(:disabled) {
+  border-color: var(--line-hover);
+  background: var(--fill-hover);
+}
+
+.preset:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.preset:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.presetRecommended {
+  composes: preset;
+  border-color: var(--line-accent);
+  background: var(--accent-soft);
+}
+
+.presetName {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+}
+
+.presetDescription {
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.presetEffect {
+  margin-top: auto;
+  padding-top: 4px;
+  font: var(--t-caption);
+  color: var(--accent-text);
+}
+
+/* ─── Timeline ──────────────────────────────────────────────────────────── */
+
+.timeline {
+  position: relative;
+}
+
+.timelineScroll {
+  overflow-x: auto;
+}
+
+/* Below this the blocks get too thin to grab, so the track scrolls instead. */
+.timelineInner {
+  min-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.axisRow,
+.row {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.axis {
+  position: relative;
+  height: 18px;
+}
+
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font: var(--t-caption);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.tick:first-child {
+  transform: none;
+}
+
+.dropMarker {
+  position: absolute;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font: var(--t-caption);
+}
+
+.laneGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.laneHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: var(--t-label);
+  letter-spacing: var(--t-label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 2px 0;
+}
+
+.laneHint {
+  font: var(--t-caption);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row {
+  border-radius: var(--r-sm);
+}
+
+.rowSelected {
+  background: var(--fill-quiet);
+}
+
+.rowHighlighted {
+  background: var(--status-warn-bg);
+}
+
+.rowLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 3px 4px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rowLabel:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  border-radius: var(--r-sm);
+}
+
+.rowName {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  font: var(--t-body-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowMeta {
+  font: var(--t-caption);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.track {
+  position: relative;
+  height: 28px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+/* The window is where heavy work may *start*. Drawn under everything. */
+.windowBand {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+
+.gridLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-soft);
+  pointer-events: none;
+}
+
+.nowLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--danger);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.block {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  min-width: 4px;
+  padding: 0 4px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--ramp-3);
+  color: var(--on-accent);
+  font: var(--t-caption);
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+  touch-action: none;
+}
+
+.blockDraggable {
+  cursor: grab;
+}
+
+.blockDraggable:active {
+  cursor: grabbing;
+}
+
+.block:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+  z-index: 3;
+}
+
+/* No runs to measure yet: the width is a guess, and looks like one. */
+.blockEstimate {
+  background: repeating-linear-gradient(45deg, var(--ramp-3), var(--ramp-3) 4px, var(--ramp-2) 4px, var(--ramp-2) 8px);
+}
+
+.blockOff {
+  opacity: 0.35;
+}
+
+.blockWarning {
+  box-shadow: inset 0 0 0 2px var(--status-warn-dot);
+}
+
+.blockError {
+  box-shadow: inset 0 0 0 2px var(--status-error-dot);
+}
+
+.blockDragging {
+  z-index: 3;
+  box-shadow: var(--e-float);
+}
+
+.blockTime {
+  pointer-events: none;
+  white-space: nowrap;
+  line-height: 20px;
+}
+
+.dotError,
+.dotWarning,
+.dotInfo {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dotError {
+  background: var(--status-error-dot);
+}
+
+.dotWarning {
+  background: var(--status-warn-dot);
+}
+
+.dotInfo {
+  background: var(--status-info-dot);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendWindow,
+.legendBlock,
+.legendEstimate,
+.legendNow {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  border-radius: var(--r-sm);
+}
+
+.legendWindow {
+  background: var(--accent-soft);
+  border: 1px solid var(--line-accent);
+}
+
+.legendBlock {
+  background: var(--ramp-3);
+}
+
+.legendEstimate {
+  composes: blockEstimate;
+}
+
+.legendNow {
+  width: 2px;
+  background: var(--danger);
+}
+
+.legendNote {
+  margin-left: auto;
+  color: var(--ink-faint);
+}
+
+/* ─── Repeating / manual lists ──────────────────────────────────────────── */
+
+.otherList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.otherRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.otherRow:last-child {
+  border-bottom: none;
+}
+
+.otherRow[draggable="true"] {
+  cursor: grab;
+}
+
+.otherRowSelected {
+  composes: otherRow;
+  background: var(--fill-quiet);
+}
+
+.otherName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: var(--t-body-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.otherActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.offTag {
+  font: var(--t-caption);
+  color: var(--ink-faint);
+}
+
+.cronTag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ─── Job editor ────────────────────────────────────────────────────────── */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.editorHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editorTitle {
+  font: var(--t-card);
+  letter-spacing: var(--t-card-tracking);
+  color: var(--ink);
+}
+
+.editorMeta,
+.editorHint {
+  margin: 0;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.editorLink {
+  font: var(--t-caption);
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.editorField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editorLabel {
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.minuteInput {
+  width: 72px;
+}
+
+.dayPicker {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.day {
+  min-width: 38px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: var(--t-caption);
+  cursor: pointer;
+}
+
+.dayOn {
+  composes: day;
+  border-color: var(--accent);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+}
+
+.editorFooter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.enabledToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+/* ─── Problems ──────────────────────────────────────────────────────────── */
+
+.allClear {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font: var(--t-body-sm);
+  color: var(--status-ok-fg);
+}
+
+.issues {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.issue {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+}
+
+.issueError {
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+}
+
+.issueWarning {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+.issueInfo {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.issueIcon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.issueBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.issueText {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: var(--t-body-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.issueText:disabled {
+  cursor: default;
+}
+
+.blockingTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: var(--r-tag);
+  background: var(--status-error-dot);
+  color: var(--on-accent);
+  font: var(--t-caption);
+}
+
+.issueFixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ─── Unsaved changes ───────────────────────────────────────────────────── */
+
+.changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.change {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name revert"
+    "diff revert";
+  column-gap: 8px;
+  font: var(--t-body-sm);
+}
+
+.changeName {
+  grid-area: name;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.changeDiff {
+  grid-area: diff;
+  color: var(--ink-3);
+  font: var(--t-caption);
+}
+
+.iconButton {
+  grid-area: revert;
+  align-self: center;
+  display: inline-flex;
+  padding: 4px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
+/* ─── Timezone & holding back ───────────────────────────────────────────── */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settingsField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settingsCheck,
+.settingsInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.settingsHint {
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.waiting {
+  margin: 0;
+  font: var(--t-caption);
+  color: var(--status-warn-fg);
+}
+
+/* ─── Narrow screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .axisRow,
+  .row {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  /* The track scrolls sideways at this width; the names stay put so a block
+     a screen to the right still says whose it is. */
+  .rowLabel {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    background: var(--surface);
+  }
+
+  .legendNote {
+    margin-left: 0;
+  }
+}

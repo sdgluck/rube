@@ -223,7 +223,10 @@ export function buildPreset(presetId: string, ctx: ScheduleContext, base: Schedu
 
   for (const job of ctx.jobs) {
     const cron = spec.fixed[job.id];
-    if (cron !== undefined && usable(job)) jobs[job.id] = { ...jobs[job.id], schedule: cron };
+    // Same rule as the chain: a manual job stays manual.
+    if (cron !== undefined && usable(job) && jobs[job.id].schedule !== "") {
+      jobs[job.id] = { ...jobs[job.id], schedule: cron };
+    }
   }
 
   const chain = NIGHTLY.flatMap((id) => {

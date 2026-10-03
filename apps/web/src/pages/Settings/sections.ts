@@ -19,7 +19,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     heading: "Automation",
     links: [
-      { to: "/settings/schedules", label: "Schedules" },
       { to: "/settings/cleanup", label: "Cleanup" },
       { to: "/settings/watchlist", label: "Watchlist" },
       { to: "/settings/metadata", label: "Metadata" },

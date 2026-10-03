@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import CronPreview from "#components/CronPreview";
 import styles from "#pages/Jobs/Jobs.module.css";
 
@@ -26,6 +27,10 @@ export default function ScheduleRow({
           onChange={(e) => onChange(e.target.value)}
         />
         {error ? <div className={styles.fieldHelpError}>{error}</div> : <CronPreview expr={value} />}
+        {/* The schedule in context: what runs around it, and whether it fits. */}
+        <Link to="/jobs/schedule" className={styles.fieldHelp}>
+          See it on the schedule timeline
+        </Link>
       </td>
     </tr>
   );

@@ -41,7 +41,6 @@ const SettingsMaintenance = lazy(() => import("#pages/Settings/SettingsMaintenan
 const SettingsBackup = lazy(() => import("#pages/Settings/SettingsBackup"));
 const SettingsHistory = lazy(() => import("#pages/Settings/SettingsHistory"));
 const SettingsSecurity = lazy(() => import("#pages/Settings/SettingsSecurity"));
-const SettingsSchedules = lazy(() => import("#pages/Settings/SettingsSchedules"));
 const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
 const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
 const SettingsPortalAppearance = lazy(() => import("#pages/Settings/Portal/SettingsPortalAppearance"));
@@ -68,6 +67,8 @@ const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
 const ArrItemDetail = lazy(() => import("#pages/Arr/ArrItemDetail"));
 const Discover = lazy(() => import("#pages/Discover/Discover"));
 const Jobs = lazy(() => import("#pages/Jobs"));
+const JobsLayout = lazy(() => import("#pages/Jobs/JobsLayout"));
+const JobSchedule = lazy(() => import("#pages/Jobs/Schedule"));
 const JobDetail = lazy(() => import("#pages/Jobs/JobDetail"));
 const JobRun = lazy(() => import("#pages/Jobs/JobRun"));
 const Users = lazy(() => import("#pages/Users"));
@@ -379,10 +380,13 @@ export default function App() {
                     path="/jobs"
                     element={
                       <LazyPage>
-                        <Jobs />
+                        <JobsLayout />
                       </LazyPage>
                     }
-                  />
+                  >
+                    <Route index element={<Jobs />} />
+                    <Route path="schedule" element={<JobSchedule />} />
+                  </Route>
                   <Route
                     path="/jobs/:jobId"
                     element={
@@ -513,14 +517,8 @@ export default function App() {
                         </LazyPage>
                       }
                     />
-                    <Route
-                      path="schedules"
-                      element={
-                        <LazyPage>
-                          <SettingsSchedules />
-                        </LazyPage>
-                      }
-                    />
+                    {/* Moved to Jobs → Schedule, beside the timeline it governs. */}
+                    <Route path="schedules" element={<Navigate to="/jobs/schedule" replace />} />
                     <Route
                       path="cleanup"
                       element={

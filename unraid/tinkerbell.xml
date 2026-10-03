@@ -109,7 +109,7 @@
     Target="TZ"
     Default="Europe/London"
     Mode=""
-    Description="Timezone used to evaluate cron schedules, so '3am' stays 3am across daylight-saving changes. Can also be set in Settings → Schedules, which takes precedence."
+    Description="Timezone used to evaluate cron schedules, so '3am' stays 3am across daylight-saving changes. Can also be set in Jobs → Schedule, which takes precedence."
     Type="Variable"
     Display="always"
     Required="false"

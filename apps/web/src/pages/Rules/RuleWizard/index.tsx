@@ -956,7 +956,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </label>
               <CronPreview expr={s.cron} />
               <span className={styles.hint}>
-                A cron expression, evaluated in the timezone set under Settings → Schedules.{" "}
+                A cron expression, evaluated in the timezone set under Jobs → Schedule.{" "}
                 {s.excludeFromBatch
                   ? "This rule now runs only on this schedule."
                   : "This rule runs on this schedule as well as nightly."}

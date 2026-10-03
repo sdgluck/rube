@@ -19,6 +19,7 @@ const ROUTE_TITLES: [prefix: string, title: string][] = [
   ["/settings/changelog", "Changelog"],
   ["/cleanup/rules", "Cleanup rules"],
   ["/more", "More"],
+  ["/jobs/schedule", "Job schedule"],
 ];
 
 /** Also used by the route announcer, so both say the same thing. */

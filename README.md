@@ -89,7 +89,7 @@ in the CA appfeed, install it by hand:
 | `/config`          | `/mnt/user/appdata/tinkerbell` | SQLite database and settings. Back this up.                                        |
 | `/prerolls`        | `/mnt/user/prerolls`           | Optional. Map the **same host path** into the Plex container.                      |
 | `PUID` / `PGID`    | `99` / `100`                   | Unraid's `nobody:users`.                                                           |
-| `TZ`               | `Europe/London`                | The zone cron schedules run in; Settings → Schedules overrides it.                 |
+| `TZ`               | `Europe/London`                | The zone cron schedules run in; Jobs → Schedule overrides it.                      |
 
 ## Network exposure
 
@@ -342,7 +342,7 @@ started while somebody is genuinely watching still records _their_ play.
 
 Scheduled work runs through a background job queue. A few things worth knowing:
 
-- **Schedules are timezone-aware.** Set the zone in Settings → Schedules; it
+- **Schedules are timezone-aware.** Set the zone in Jobs → Schedule; it
   falls back to `TZ`, then the container's clock. Cron expressions are evaluated
   in that zone, so "3am" means 3am there across daylight-saving changes.
 - **Missed schedules run once on the next boot**, staggered a few seconds apart.

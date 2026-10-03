@@ -1,6 +1,19 @@
 /* Jobs page styles. The dashboard frame — grid, panels, summary tiles, tile
  * picker — lives in components/dashboard/Dashboard.module.css. */
 
+/* Overview / Schedule tabs. Same inset reasoning as Cleanup's layout: the
+   gutter belongs to the child's PageShell, so only the tabs restate it. */
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 16px;
+}
+
+.layoutTabs {
+  padding: 0 28px;
+}
+
 .headerActions {
   display: flex;
   gap: 6px;

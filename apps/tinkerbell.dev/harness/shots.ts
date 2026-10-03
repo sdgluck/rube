@@ -331,6 +331,12 @@ export const SHOTS: Shot[] = [
     settleMs: 700,
   },
   {
+    name: "11-jobs-schedule",
+    description: "Jobs → Schedule — the night on a timeline, presets, and what's wrong with it",
+    path: "/jobs/schedule",
+    settleMs: 700,
+  },
+  {
     name: "12-job-detail",
     description: "Job detail — Generate Collections, with run history and configuration",
     path: "/jobs/generate",
@@ -392,11 +398,6 @@ export const SHOTS: Shot[] = [
     name: "16-settings-notifications",
     description: "Settings → Notifications — Discord, with configured channels dotted",
     path: "/settings/notifications/discord",
-  },
-  {
-    name: "16-settings-schedules",
-    description: "Settings → Schedules — the timezone job schedules are evaluated in",
-    path: "/settings/schedules",
   },
   {
     name: "16-settings-portal-personalization",

@@ -331,6 +331,20 @@ export interface DstShift {
  */
 export function dstShifts(timezone: string | undefined, from: number = Date.now()): DstShift[] {
   if (!timezone) return [];
+  // ~400 Intl calls, and the schedule page validates on every pointer move
+  // while a block is dragged — so once per zone per day is plenty.
+  const key = `${timezone}@${Math.floor(from / DAY_MS)}`;
+  const cached = dstCache.get(key);
+  if (cached) return cached;
+  const shifts = computeDstShifts(timezone, from);
+  if (dstCache.size > 20) dstCache.clear();
+  dstCache.set(key, shifts);
+  return shifts;
+}
+
+const dstCache = new Map<string, DstShift[]>();
+
+function computeDstShifts(timezone: string, from: number): DstShift[] {
   const shifts: DstShift[] = [];
   try {
     let prev = offsetMinutes(from, timezone);
