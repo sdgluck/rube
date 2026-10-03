@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-10-03
+
+### Added
+
+- Radarr and Sonarr quality profiles can now be managed from a new instance page (`/arrs/:instanceId`). It lists every profile with its managed status, applies a curated quality preset to a new or existing profile after you preview the changes, and can restore a profile from the snapshot taken before each apply.
+- Radarr and Sonarr quality presets are built in, derived from TRaSH Guides, with size limits and a custom format library. A nightly check compares managed profiles against their preset and flags any that have drifted.
+- Jobs → Schedule is a new tab showing every job that runs at a time of day as a block on a 24-hour or 7-day timeline, grouped by queue and sized by typical run time. Drag a block, or focus it and use the arrow keys, to move it. Repeating jobs get a frequency picker. Presets pack the nightly chain by measured run time. Edits collect in an undoable draft that is validated as you make it, and Save writes everything at once.
+- Settings pages now show live status in place of the explanatory text: Plex Pass status on prerolls, today's spend beside each daily cap, whether the backup folder sits on a mounted volume, the asset folder's poster count, unlabelled libraries, the watchlist account and its last check, and Sign in with Plex during setup.
+- A Detect button finds the Telegram chat ID for you.
+- Settings → SMTP has an Encryption select, and time ranges show where they end.
+- Rule wizard: triggers show a cadence badge instead of a paragraph, and the wizard offers schedule presets, a month/day window, token insertion and a language picker.
+- Rule wizard: rule types whose service isn't configured are dimmed and link to the page that sets it up. OMDb and TMDb now link to their own settings rather than Settings → AI.
+- Empty states on several pages now have sync and import buttons in place of instructions.
+- Library and rating pickers have an explicit "All" / "No limit" option.
+
+### Changed
+
+- **Schedules moved from Settings → Schedules to Jobs → Schedule. The old address redirects, but existing schedules are not touched.**
+- **Onboarding's "Use recommended" now moves untouched default jobs into the maintenance window it recommends, instead of leaving the midnight syncs running alongside generate. If you accepted the recommendation before, check your job times.**
+- Successful outcomes such as saves and syncs now appear as toasts rather than modals.
+- Status that was previously described in prose is now shown as status pills.
+- Page intros and step intros in the rule wizard have been removed, and the remaining hints are a single clause each.
+- Backup links to its job's schedule rather than repeating it on the settings page.
+- The portal's genre legend is now made of buttons.
+
+### Fixed
+
+- Screenshots of the rule wizard now match its corrected Smart Filter copy, and unconfigured rule types appear disabled.
+
 ## [0.29.0] - 2026-10-03
 
 ### Added
