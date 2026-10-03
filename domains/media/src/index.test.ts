@@ -45,9 +45,15 @@ interface FakeItem {
 function fakeClient(items: FakeItem[]): PlexClient {
   return {
     async *allItems() {
-      for (const item of items) {
+      // `Label` stays off the rows, as a real section listing leaves it off.
+      for (const { Label: _, ...item } of items) {
         yield { item: { ...item, type: "movie", addedAt: 1_700_000_000 }, totalSize: items.length };
       }
+    },
+    async itemLabelsBySection() {
+      return new Map(
+        items.filter((i) => i.Label?.length).map((i) => [i.ratingKey, i.Label!.map((l) => l.tag)] as const),
+      );
     },
   } as unknown as PlexClient;
 }
@@ -235,6 +241,7 @@ describe("show sizes", () => {
           yield { item: { ...item, type: "show", addedAt: 1_700_000_000 }, totalSize: shows.length };
         }
       },
+      itemLabelsBySection: async () => new Map(),
       async showSizes(sectionId: string) {
         onShowSizes?.(sectionId);
         return new Map(Object.entries(sizes));
@@ -307,6 +314,7 @@ describe("show sizes", () => {
       async *allItems() {
         yield { item: { ratingKey: "s1", title: "A show", type: "show" }, totalSize: 1 };
       },
+      itemLabelsBySection: async () => new Map(),
       async showSizes() {
         throw new Error("boom");
       },
@@ -343,6 +351,7 @@ describe("the stale sweep", () => {
           yield { item: { ...item, type: "movie", addedAt: 1_700_000_000 }, totalSize: items.length };
         }
       },
+      itemLabelsBySection: async () => new Map(),
     } as unknown as PlexClient;
   }
 
@@ -456,6 +465,18 @@ describe("labels", () => {
     assert.equal(options.length, 2);
     assert.equal(options[0], "Anime");
     assert.equal(options[1]?.toLowerCase(), "keep");
+  });
+
+  test("a failed label read keeps the labels from the last sync", async () => {
+    // Wiping them would empty the label filter until the next good sync, for
+    // what is usually a transient error.
+    await syncMedia(fakeClient([labelled("a", "Keep")]), [SECTION]);
+    const failing = fakeClient([labelled("a")]);
+    (failing as unknown as { itemLabelsBySection: () => Promise<never> }).itemLabelsBySection = async () => {
+      throw new Error("Plex said no");
+    };
+    await syncMedia(failing, [SECTION]);
+    assert.deepEqual(keys(["Keep"]), ["a"]);
   });
 
   test("an edit written through to the index is filterable straight away", async () => {

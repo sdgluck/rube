@@ -236,8 +236,15 @@ export default function SettingsPersonalization() {
             if (estimateQuery.isLoading) return `${base} Estimating duration… Continue?`;
             const est = estimateQuery.data;
             if (!est) return `${base} Continue?`;
+            if (est.itemCount === 0) {
+              return `${base} Every item is already labelled, so this only updates sharing restrictions. Continue?`;
+            }
             const items = est.itemCount.toLocaleString();
-            return `${base} About ${items} items to label — estimated ~${formatDuration(est.estimatedSeconds * 1000)}. Continue?`;
+            const duration = formatDuration(est.estimatedSeconds * 1000);
+            // Until a pass has been timed on this server the rate is a cautious
+            // default, and saying so beats a precise-looking number that's wrong.
+            const basis = est.measured ? "based on this server's last run" : "a cautious first guess";
+            return `${base} About ${items} items to label — estimated ~${duration} (${basis}). Continue?`;
           })()}
           title="Turn on personalization?"
           confirmLabel="Turn on"

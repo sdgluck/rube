@@ -1,4 +1,3 @@
-import PQueue from "p-queue";
 import type { PlexHttp } from "./http.ts";
 
 function errorMessage(err: unknown): string {
@@ -22,10 +21,26 @@ import {
   type MediaFilters,
 } from "./types.ts";
 
+/**
+ * Items per label write.
+ *
+ * Plex's tag PUT takes a comma-separated `id`, and each request costs it a few
+ * seconds whatever it carries — so one item per request held personalization's
+ * labelling pass to ~3 items/s, ~27 minutes for a 5,000-item library. A hundred
+ * keeps the URL around a kilobyte, well inside any proxy's limit.
+ */
+const LABEL_BATCH_SIZE = 100;
+
+/**
+ * Server-side listing filters, as Plex's filter syntax spells them: `label`
+ * matches, `label!` excludes. Values are a tag's title or its numeric key.
+ */
+export type ListingFilters = Partial<Record<"label" | "label!", string>>;
+
 export function createItemsModule(http: PlexHttp) {
   async function* allItems(
     sectionId: string,
-    opts?: { includeGuids?: boolean; type?: number },
+    opts?: { includeGuids?: boolean; type?: number; filters?: ListingFilters },
   ): AsyncGenerator<{ item: PlexMetadataRaw; totalSize: number }> {
     const pageSize = 100;
     let offset = 0;
@@ -40,6 +55,7 @@ export function createItemsModule(http: PlexHttp) {
           // `type` asks for a different level of the same library, which is the
           // only way to reach the rows that actually carry the files.
           ...(opts?.type ? { type: opts.type } : {}),
+          ...opts?.filters,
         },
       });
 
@@ -206,9 +222,9 @@ export function createItemsModule(http: PlexHttp) {
    * every run, and walking a 20,000-item library to count it would cost more
    * than the rule it is guarding.
    */
-  async function getSectionItemCount(sectionId: string): Promise<number> {
+  async function getSectionItemCount(sectionId: string, filters?: ListingFilters): Promise<number> {
     const data = await http.request(`/library/sections/${sectionId}/all`, {
-      params: { "X-Plex-Container-Start": 0, "X-Plex-Container-Size": 0 },
+      params: { "X-Plex-Container-Start": 0, "X-Plex-Container-Size": 0, ...filters },
     });
     return data?.MediaContainer?.totalSize ?? 0;
   }
@@ -224,9 +240,10 @@ export function createItemsModule(http: PlexHttp) {
   /**
    * Add one label to one item, preserving whatever it already carries.
    *
-   * Two things this has to get right. Plex's tag PUT replaces the whole set,
-   * so existing labels are read and resent — omitting them silently strips
-   * every other label on the item, including ones the user set by hand. And
+   * Two things this has to get right. Existing labels are read and resent.
+   * That was written on the belief that Plex's tag PUT replaces the whole set;
+   * a real server has since been seen to *add* (see `addLabelToAllItems`), so
+   * the resend is now belt-and-braces rather than load-bearing. And
    * the write goes to the *section* endpoint with `type` and `id`, matching
    * `addLabelToAllItems` below: a PUT to `/library/metadata/:key` answers 200
    * for a library item and applies nothing, so the caller would believe it had
@@ -254,6 +271,95 @@ export function createItemsModule(http: PlexHttp) {
     await http.request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
   }
 
+  /**
+   * Every label on every item in a section, keyed by rating key.
+   *
+   * A section listing carries no `Label` at all — checked against a real
+   * server, where not one row of a 4,000-film listing had the key, including
+   * films that were labelled. Anything reading `item.Label` off a listing
+   * always saw "no labels". So this asks the other way round: the label
+   * directory, then one filtered listing per label. A library has a few dozen
+   * labels, most on nothing in a given section, so that is a few dozen cheap
+   * requests rather than one per item.
+   */
+  async function itemLabelsBySection(sectionId: string): Promise<Map<string, string[]>> {
+    const data = await http.request(`/library/sections/${sectionId}/label`);
+    const directory: Array<{ key?: string | number; title?: string }> = data?.MediaContainer?.Directory ?? [];
+    const byItem = new Map<string, string[]>();
+    for (const entry of directory) {
+      if (entry.key == null || !entry.title) continue;
+      for await (const { item } of allItems(sectionId, { filters: { label: String(entry.key) } })) {
+        if (!item.ratingKey) continue;
+        const labels = byItem.get(item.ratingKey);
+        if (labels) labels.push(entry.title);
+        else byItem.set(item.ratingKey, [entry.title]);
+      }
+    }
+    return byItem;
+  }
+
+  /**
+   * Rating keys from a filtered walk, collected before anything is written.
+   *
+   * Collected first because the writes change the filter's answer: labelling
+   * page one of a `label!=X` listing shrinks it, and the next page would then
+   * start a hundred items too far in and skip them.
+   */
+  async function keysMatching(sectionId: string, filters: ListingFilters): Promise<string[]> {
+    const keys: string[] = [];
+    for await (const { item } of allItems(sectionId, { filters })) {
+      if (item.ratingKey) keys.push(item.ratingKey);
+    }
+    return keys;
+  }
+
+  /**
+   * One label PUT per batch of items, sequentially.
+   *
+   * Sequential because concurrency bought nothing: Plex serialises metadata
+   * writes, and ten in flight ran at the same ~3 items/s as one. A failed batch
+   * is logged and skipped rather than aborting the walk — every caller is
+   * idempotent and a re-run picks the stragglers up through its filter.
+   */
+  async function writeLabelInBatches(
+    sectionId: string,
+    typeNum: number,
+    keys: string[],
+    params: Record<string, string | number>,
+    onProgress?: (current: number, total: number) => void,
+  ): Promise<number> {
+    let updated = 0;
+    onProgress?.(0, keys.length);
+    for (let i = 0; i < keys.length; i += LABEL_BATCH_SIZE) {
+      const batch = keys.slice(i, i + LABEL_BATCH_SIZE);
+      try {
+        await http.request(`/library/sections/${sectionId}/all`, {
+          method: "PUT",
+          params: { type: typeNum, id: batch.join(","), ...params },
+        });
+        updated += batch.length;
+      } catch (err) {
+        console.warn(
+          `[plex] Label write failed for ${batch.length} item(s) in section ${sectionId}:`,
+          errorMessage(err),
+        );
+      }
+      onProgress?.(Math.min(i + batch.length, keys.length), keys.length);
+    }
+    return updated;
+  }
+
+  /**
+   * Put `label` on every item in a section that doesn't already carry it.
+   *
+   * Plex does the "doesn't already" part (`label!=`), so a re-run — the
+   * personalization Reconcile button, or a resume after a failure — touches
+   * only what is missing instead of the whole library again.
+   *
+   * Only the new label is sent. Plex's indexed tag PUT adds to what an item
+   * has rather than replacing it (verified on a real server: films' existing
+   * streaming-service labels survived), so there is nothing to read and merge.
+   */
   async function addLabelToAllItems(
     sectionId: string,
     sectionType: string,
@@ -262,41 +368,17 @@ export function createItemsModule(http: PlexHttp) {
   ): Promise<number> {
     const typeNum = SECTION_TYPE_MAP[sectionType];
     if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
-
-    const queue = new PQueue({ concurrency: 10 });
-    let updated = 0;
-    let processed = 0;
-
-    for await (const { item, totalSize } of allItems(sectionId)) {
-      void queue.add(async () => {
-        try {
-          const existingLabels: string[] = (item.Label ?? []).map((l) => l.tag);
-          if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-            const newLabels = [...existingLabels, label];
-            const labelParams: Record<string, string | number> = {
-              type: typeNum,
-              id: item.ratingKey ?? "",
-              "label.locked": 1,
-            };
-            for (let i = 0; i < newLabels.length; i++) {
-              labelParams[`label[${i}].tag.tag`] = newLabels[i];
-            }
-            await http.request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-            updated++;
-          }
-        } catch (err) {
-          console.warn(`[plex] Failed to add label to item ${item.ratingKey}:`, errorMessage(err));
-        }
-        processed++;
-        if (onProgress) onProgress(processed, totalSize);
-      });
-    }
-
-    await queue.onIdle();
-
-    return updated;
+    const keys = await keysMatching(sectionId, { "label!": label });
+    return writeLabelInBatches(sectionId, typeNum, keys, { "label.locked": 1, "label[0].tag.tag": label }, onProgress);
   }
 
+  /**
+   * Take `label` off every item in a section that carries it.
+   *
+   * Uses Plex's explicit removal form, `label[].tag.tag-=`, rather than
+   * re-sending the list without it: since the indexed form *adds*, a list
+   * that merely omits a label cannot be relied on to remove it.
+   */
   async function removeLabelFromAllItems(
     sectionId: string,
     sectionType: string,
@@ -305,48 +387,8 @@ export function createItemsModule(http: PlexHttp) {
   ): Promise<number> {
     const typeNum = SECTION_TYPE_MAP[sectionType];
     if (!typeNum) throw new Error(`Unknown section type: ${sectionType}`);
-
-    const queue = new PQueue({ concurrency: 10 });
-    let updated = 0;
-    let processed = 0;
-
-    for await (const { item, totalSize } of allItems(sectionId)) {
-      void queue.add(async () => {
-        try {
-          // Bulk listing may not include Label data — fetch individual metadata
-          const detail = await http.request(`/library/metadata/${item.ratingKey}`);
-          const meta = detail?.MediaContainer?.Metadata?.[0];
-          const existingLabels: string[] = (meta?.Label || []).map((l: { tag: string }) => l.tag);
-
-          if (!existingLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
-            processed++;
-            if (onProgress) onProgress(processed, totalSize);
-            return;
-          }
-
-          const newLabels = existingLabels.filter((l) => l.toLowerCase() !== label.toLowerCase());
-          const labelParams: Record<string, string | number> = {
-            type: typeNum,
-            id: item.ratingKey ?? "",
-            "label.locked": 1,
-          };
-          for (let i = 0; i < newLabels.length; i++) {
-            labelParams[`label[${i}].tag.tag`] = newLabels[i];
-          }
-
-          await http.request(`/library/sections/${sectionId}/all`, { method: "PUT", params: labelParams });
-          updated++;
-        } catch (err) {
-          console.warn(`[plex] Failed to remove label from item ${item.ratingKey}:`, errorMessage(err));
-        }
-        processed++;
-        if (onProgress) onProgress(processed, totalSize);
-      });
-    }
-
-    await queue.onIdle();
-
-    return updated;
+    const keys = await keysMatching(sectionId, { label });
+    return writeLabelInBatches(sectionId, typeNum, keys, { "label.locked": 1, "label[].tag.tag-": label }, onProgress);
   }
 
   /**
@@ -633,6 +675,7 @@ export function createItemsModule(http: PlexHttp) {
     getItemGuids,
     addItemLabel,
     addLabelToAllItems,
+    itemLabelsBySection,
     removeLabelFromAllItems,
     getFilterFieldValues,
     getItems,

@@ -96,8 +96,10 @@ export interface PlexJournal {
   deletedItems: string[];
   deletedCollections: string[];
   createdCollections: Array<{ title: string; sectionId: string; memberKeys: string[] }>;
-  /** `{ ratingKey, labels }` for every tag write, whichever endpoint carried it. */
+  /** `{ ratingKey, labels }` for every tag write, whichever endpoint carried it — the labels it was left with. */
   labelWrites: Array<{ ratingKey: string; labels: string[] }>;
+  /** One entry per label PUT to a section, with every id it named — so a test can see batching. */
+  labelWriteRequests: Array<{ ids: string[] }>;
   /** Label values the job narrowed a collection listing by, server-side. */
   labelFilteredListings: string[];
   /** Every summary written onto a collection, in order. */
@@ -184,6 +186,7 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
     deletedCollections: [],
     createdCollections: [],
     labelWrites: [],
+    labelWriteRequests: [],
     labelFilteredListings: [],
     summaryWrites: [],
     posterUploads: [],
@@ -254,21 +257,47 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
       const sectionId = sectionAll[1];
 
       // Plex's tag editor for a library item: PUT to the section with `type`
-      // and `id`. The label params arrive as `label[N].tag.tag`.
+      // and `id`, where `id` may be a comma-separated batch. Modelled on what a
+      // real server did (2026-10): `label[N].tag.tag` *adds* to an item's
+      // labels, `label[].tag.tag-=a,b` removes, and an empty `label[].tag.tag=`
+      // clears. A mock that replaced the set would pass code that relies on
+      // omission to remove — which real Plex ignores.
       if (method === "PUT") {
-        const target = q.get("id");
-        const labels: string[] = [];
-        for (const [k, v] of q) if (/^label\[\d+]\.tag\.tag$/.test(k)) labels.push(v);
-        if (!target) {
+        const ids = (q.get("id") ?? "").split(",").filter(Boolean);
+        const added: string[] = [];
+        for (const [k, v] of q) if (/^label\[\d+]\.tag\.tag$/.test(k)) added.push(v);
+        const removed = new Set(
+          q
+            .getAll("label[].tag.tag-")
+            .flatMap((v) => v.split(","))
+            .map((v) => v.toLowerCase()),
+        );
+        const clear = q.get("label[].tag.tag") === "";
+        if (ids.length === 0) {
           journal.unhandled.push(`PUT ${path} with no id`);
           notFound();
           return;
         }
-        journal.labelWrites.push({ ratingKey: target, labels });
-        const item = items.get(target);
-        if (item) item.labels = labels;
-        const collection = collections.get(target);
-        if (collection) collection.labels = labels;
+        journal.labelWriteRequests.push({ ids });
+        for (const id of ids) {
+          const item = items.get(id);
+          if (item) {
+            const next = clear ? [] : [...item.labels];
+            for (const label of added) {
+              if (!next.some((l) => l.toLowerCase() === label.toLowerCase())) next.push(label);
+            }
+            item.labels = next.filter((l) => !removed.has(l.toLowerCase()));
+            journal.labelWrites.push({ ratingKey: id, labels: item.labels });
+          }
+          // Collections keep replace semantics: their label writes go through
+          // `/library/metadata/:key`, which nothing here has checked against a
+          // real server, so the mock doesn't claim to know better.
+          const collection = collections.get(id);
+          if (collection) {
+            collection.labels = added;
+            journal.labelWrites.push({ ratingKey: id, labels: added });
+          }
+        }
         emptyOk();
         return;
       }
@@ -292,11 +321,17 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
         return;
       }
 
-      // Otherwise it's an item query. `genre` is the only facet this mock
-      // filters on — enough for a rule to select a deliberate subset.
+      // Otherwise it's an item query. `genre` and `label` / `label!` are the
+      // facets this mock filters on — enough for a rule to select a deliberate
+      // subset, and for a label pass to touch only what it must.
       let matched = [...items.values()].filter((i) => i.sectionId === sectionId);
       const genre = q.get("genre");
       if (genre) matched = matched.filter((i) => i.genre === genre);
+      const hasLabel = (i: MockItem, l: string) => i.labels.some((x) => x.toLowerCase() === l.toLowerCase());
+      const withLabel = q.get("label");
+      if (withLabel) matched = matched.filter((i) => hasLabel(i, withLabel));
+      const withoutLabel = q.get("label!");
+      if (withoutLabel) matched = matched.filter((i) => !hasLabel(i, withoutLabel));
 
       const start = Number(q.get("X-Plex-Container-Start") ?? "0");
       const sizeParam = q.get("X-Plex-Container-Size");
@@ -305,8 +340,23 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
       json({
         size: page.length,
         totalSize: matched.length,
-        Metadata: page.map(metadataFor),
+        // No `Label` on listing rows: a real server's section listing leaves
+        // it off entirely, so labels are only learnt from item detail or from
+        // a `label=` listing.
+        Metadata: page.map((i) => {
+          const { Label: _, ...row } = metadataFor(i);
+          return row;
+        }),
       });
+      return;
+    }
+
+    // The label directory. Plex serves the same server-wide list under every
+    // section; keyed by title here, which `label=` also accepts.
+    if (/^\/library\/sections\/[^/]+\/label$/.test(path)) {
+      const titles = new Map<string, string>();
+      for (const i of items.values()) for (const l of i.labels) titles.set(l.toLowerCase(), l);
+      json({ Directory: [...titles.values()].map((title) => ({ key: title, title })) });
       return;
     }
 

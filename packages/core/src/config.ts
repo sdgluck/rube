@@ -97,6 +97,20 @@ export const configSchema = z.object({
     enabledAt: z.number().optional(),
     lastReconcileAt: z.number().optional(),
   }),
+  /**
+   * Items per second the last personalization labelling pass actually managed,
+   * as `{ itemsPerSecond, items, measuredAt }`.
+   *
+   * Feeds the enable confirmation's duration estimate. A constant there said
+   * "~3m" for a pass that took ~27 — the rate is a property of the user's Plex
+   * server and disk, not of this code, so it is measured rather than assumed.
+   * Only passes that labelled enough items to time meaningfully write it.
+   */
+  personalize_label_rate: z.object({
+    itemsPerSecond: z.number().positive(),
+    items: z.number().int().nonnegative(),
+    measuredAt: z.number(),
+  }),
   /** Stable X-Plex-Client-Identifier for the Sign-in-with-Plex portal flow. */
   global_plex_client_id: z.string(),
 
@@ -892,6 +906,7 @@ export const NESTED_SECRET_KEYS = new Set<ConfigKey>(NESTED_SECRETS.map((n) => n
 export const UNLOGGED_CONFIG_KEYS = new Set<ConfigKey>([
   // Job state
   "global_personalized_sharing",
+  "personalize_label_rate",
   "metadata_undo_pending_batch",
   "migration_state",
   "migration_last_result",

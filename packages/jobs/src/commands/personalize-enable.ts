@@ -6,6 +6,13 @@ import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
 const BASELINE_LABEL = "Tinkerbell";
 
+/**
+ * Fewest items a pass must label before its speed is worth remembering. A
+ * reconcile that labels three new films is dominated by the listing walk, and
+ * recording its rate would make the next full enable's estimate absurd.
+ */
+const MIN_ITEMS_TO_MEASURE = 200;
+
 export function createPersonalizeEnableCommand(deps: Pick<Services, "clients" | "config" | "db">) {
   const { clients, config, db } = deps;
   const { plexHealthCallback } = clients;
@@ -74,13 +81,24 @@ export function createPersonalizeEnableCommand(deps: Pick<Services, "clients" | 
       }
 
       // Phase 2: label every item so restricted users retain library access.
-      ctx.log(`Labelling all items "${BASELINE_LABEL}"...`);
+      // Only items missing the label are touched, so a reconcile after a full
+      // enable is a few listing requests rather than the whole library again.
+      ctx.log(`Labelling items not yet labelled "${BASELINE_LABEL}"...`);
+      const labelStart = Date.now();
+      let labelled = 0;
       for (let i = 0; i < sections.length; i++) {
         const section = sections[i];
         const updated = await client.addLabelToAllItems(section.key, section.type, BASELINE_LABEL, (current, total) => {
           ctx.progress(current, total, `Labelling "${section.title}" (${i + 1}/${sections.length})...`);
         });
+        labelled += updated;
         ctx.log(`Labelled ${updated} item(s) in "${section.title}"`);
+      }
+      const labelSeconds = (Date.now() - labelStart) / 1000;
+      if (labelled >= MIN_ITEMS_TO_MEASURE && labelSeconds > 0) {
+        const itemsPerSecond = labelled / labelSeconds;
+        setConfig("personalize_label_rate", { itemsPerSecond, items: labelled, measuredAt: Date.now() });
+        ctx.log(`Labelling ran at ${itemsPerSecond.toFixed(1)} items/s.`);
       }
 
       // Phase 3: restrict every shared user to [Tinkerbell, User:<self>].

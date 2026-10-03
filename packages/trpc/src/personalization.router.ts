@@ -1,25 +1,34 @@
 import type { TrpcDeps } from "./deps.ts";
 import { TRPCError } from "@trpc/server";
-import { inArray, sql } from "drizzle-orm";
 
-import { mediaItems } from "@tinkerbell/db";
-
-import { t, procedure } from "./_base.ts";
+import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 
 const ENABLE_JOB = "personalize-enable";
 const DISABLE_JOB = "personalize-disable";
 
-// Labelling phase runs Plex PUTs at concurrency 10; ~25 items/sec is a
-// conservative steady-state we've observed against a healthy server.
-const ITEMS_PER_SECOND = 25;
-// Snapshot + sharing-restriction phases scale with user count but the
-// labelling phase dominates; add a flat baseline for setup overhead.
+/** Must match `BASELINE_LABEL` in the personalize-enable job. */
+const BASELINE_LABEL = "Tinkerbell";
+
+/**
+ * Items per second when no labelling pass has been timed on this server yet.
+ *
+ * This was 25, described as "observed", and it wasn't: a real 4,859-item
+ * library labelled at ~3/s with one item per request, so the confirmation said
+ * ~3m for a 27-minute job. Labelling is now batched, which should be much
+ * faster — but how much depends on the server, so the default stays the slow
+ * number that was actually measured, and the job replaces it with its own
+ * timing (`personalize_label_rate`) after its first real pass. Over-promising
+ * on a job that restricts every user's sharing is the worse error.
+ */
+const DEFAULT_ITEMS_PER_SECOND = 3;
+// Snapshot + sharing-restriction phases scale with user count, not items.
 const BASELINE_SECONDS = 30;
 
-export function createPersonalizationRouter(deps: Pick<TrpcDeps, "config" | "db" | "jobs">) {
+export function createPersonalizationRouter(deps: Pick<TrpcDeps, "clients" | "config" | "jobs">) {
   const { startJob } = deps.jobs;
-  const { config, db } = deps;
+  const { config } = deps;
   const { getConfig } = config;
+  const getPlexClient = mapNotConfiguredClient(deps.clients);
 
   async function start(jobId: string): Promise<{ runId: string }> {
     const result = await startJob(jobId);
@@ -36,15 +45,28 @@ export function createPersonalizationRouter(deps: Pick<TrpcDeps, "config" | "db"
       return getConfig("global_personalized_sharing") ?? { status: "disabled" as const };
     }),
 
-    estimate: procedure.query(() => {
+    /**
+     * How much labelling an enable (or reconcile) has left, and how long it
+     * should take.
+     *
+     * Counts only items still missing the label, asked of Plex directly — one
+     * `label!=` count per library. Counting the whole local index meant a
+     * reconcile on a fully labelled library still claimed every item.
+     */
+    estimate: procedure.query(async () => {
+      const client = getPlexClient();
       const libraries = getConfig("global_plex_libraries");
-      const base = db.select({ count: sql<number>`count(*)` }).from(mediaItems);
-      const itemCount =
-        libraries && libraries.length > 0
-          ? (base.where(inArray(mediaItems.sectionTitle, libraries)).get()?.count ?? 0)
-          : (base.get()?.count ?? 0);
-      const estimatedSeconds = Math.ceil(itemCount / ITEMS_PER_SECOND) + BASELINE_SECONDS;
-      return { itemCount, estimatedSeconds };
+      const sections = (await client.getSections()).filter(
+        (s) => !libraries || libraries.length === 0 || libraries.includes(s.title),
+      );
+      const counts = await Promise.all(
+        sections.map((s) => client.getSectionItemCount(s.key, { "label!": BASELINE_LABEL })),
+      );
+      const itemCount = counts.reduce((a, b) => a + b, 0);
+      const measured = getConfig("personalize_label_rate");
+      const itemsPerSecond = measured?.itemsPerSecond ?? DEFAULT_ITEMS_PER_SECOND;
+      const estimatedSeconds = Math.ceil(itemCount / itemsPerSecond) + BASELINE_SECONDS;
+      return { itemCount, estimatedSeconds, measured: measured != null };
     }),
 
     enable: procedure.mutation(async () => {

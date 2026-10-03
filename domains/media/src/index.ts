@@ -159,6 +159,24 @@ async function episodeSizes(
   }
 }
 
+/**
+ * Labels per item for one section, or null if Plex wouldn't say.
+ *
+ * Read through the label directory rather than off the listing rows, because a
+ * real server's section listing carries no `Label` at all — reading it there
+ * stored "no labels" for every item and left the Media page's label filter
+ * permanently empty. Null on failure, like `episodeSizes`: a label filter is a
+ * nicety, and the caller keeps whatever labels it already had.
+ */
+async function sectionLabels(client: PlexClient, section: PlexSection): Promise<Map<string, string[]> | null> {
+  try {
+    return await client.itemLabelsBySection(section.key);
+  } catch (err) {
+    console.warn(`[media] Couldn't read labels in ${section.title}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 const SORT_COLUMNS = {
   title: mediaItems.title,
   section: mediaItems.sectionTitle,
@@ -259,6 +277,7 @@ export function createMedia(deps: MediaDeps) {
       // before the show rows are written — see `episodeSizes`. Movie sections
       // carry their parts in the listing below and skip this entirely.
       const episodeBytes = section.type === "show" ? await episodeSizes(client, section, onProgress) : null;
+      const labelsByItem = await sectionLabels(client, section);
 
       // Reset per section, because the progress bar is per section — see below.
       let sectionSynced = 0;
@@ -269,7 +288,7 @@ export function createMedia(deps: MediaDeps) {
 
         const media = item.Media?.[0];
         const genres = item.Genre?.map((g) => g.tag).filter((tag) => tag.length > 0) ?? [];
-        const labels = item.Label?.map((l) => l.tag).filter((tag) => tag.length > 0) ?? [];
+        const labels = labelsByItem?.get(ratingKey) ?? [];
         const guids = item.Guid?.map((g) => g.id).filter((id) => id.length > 0) ?? [];
         // The item's own parts where it has them, else what its episodes came to.
         // A show has no parts, so the second term is the only answer for TV; the
@@ -290,7 +309,9 @@ export function createMedia(deps: MediaDeps) {
           // "Plex told us nothing" and "Plex told us none" don't have to be
           // distinguished downstream — neither should exclude an item.
           genres: genres.length > 0 ? genres : null,
-          labels: labels.length > 0 ? labels : null,
+          // Left out entirely when the label read failed, so the upsert keeps
+          // the labels from the last sync rather than wiping them.
+          ...(labelsByItem ? { labels: labels.length > 0 ? labels : null } : {}),
           rating: item.rating ?? item.audienceRating ?? null,
           contentRating: item.contentRating ?? null,
           durationMs: item.duration ?? null,
