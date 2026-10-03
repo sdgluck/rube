@@ -232,3 +232,14 @@ export {
 } from "./arr.ts";
 
 export { TMDB_IMAGE_BASE, tmdbPosterUrl, serviceForMediaType, type TmdbPosterSize } from "./discover.ts";
+export {
+  PORTAL_PREROLL_DEFAULTS,
+  PORTAL_PREROLL_DURATION_MAX,
+  PORTAL_PREROLL_DURATION_MIN,
+  PORTAL_PREROLL_HEADLINE_MAX,
+  PORTAL_PREROLL_MESSAGE_MAX,
+  portalPrerollCardInput,
+  portalPrerollCardSchema,
+  resolvePortalPrerollCard,
+} from "./portal-preroll.ts";
+export type { PortalPrerollCard, PortalPrerollCardInput } from "./portal-preroll.ts";

@@ -21,6 +21,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { token } from "@tinkerbell/container";
+import { portalPrerollCardSchema } from "@tinkerbell/contracts";
 import { config, type Db } from "@tinkerbell/db";
 import type { ChangeRecorder } from "@tinkerbell/ports";
 import { createLogger } from "./logger.ts";
@@ -605,6 +606,14 @@ export const configSchema = z.object({
   prerolls_mode: z.enum(["random", "sequential"]),
   /** Downscale ceiling for the transcoder. */
   prerolls_max_height: z.number().int().positive(),
+  /**
+   * Text and colours of the generated "customise your Plex" preroll, which
+   * points viewers at the portal. Whether the card is *in the pool* is not
+   * stored here — that is the existence of a `kind = 'portal'` prerolls row,
+   * so deleting the card from the Prerolls page can't leave a setting that
+   * claims otherwise. Strict validation is `portalPrerollCardInput`, on write.
+   */
+  portal_preroll: portalPrerollCardSchema,
   /**
    * Master switch for the `collection-art` job. Off stops every upload at
    * once — one switch to flip rather than N rules to find and edit, the same

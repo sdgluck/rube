@@ -1,5 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { TRPCError } from "@trpc/server";
+import { portalPrerollCardInput } from "@tinkerbell/contracts";
 import {
   isValidTimezone,
   configSchema,
@@ -59,6 +60,17 @@ export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "j
           code: "BAD_REQUEST",
           message: `"${input.global_timezone}" is not a known timezone. Use an IANA name such as "Europe/London" or "UTC".`,
         });
+      }
+
+      // The card's colours are interpolated into the SVG the preroll is drawn
+      // from, and its bounds are what the layout was designed to fit. The
+      // stored schema is deliberately loose (it also runs on read), so the
+      // strict one is applied here as well as on the card's own mutation.
+      if (input.portal_preroll !== undefined) {
+        const parsed = portalPrerollCardInput.partial().safeParse(input.portal_preroll);
+        if (!parsed.success) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: parsed.error.issues[0]?.message ?? "Invalid card" });
+        }
       }
 
       const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");

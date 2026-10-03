@@ -1,0 +1,1 @@
+ALTER TABLE `prerolls` ADD `kind` text DEFAULT 'upload' NOT NULL;

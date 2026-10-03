@@ -16,12 +16,16 @@
   },
   "dependencies": {
     "@tinkerbell/container": "workspace:*",
+    "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/http": "workspace:*",
+    "@tinkerbell/overlays": "workspace:*",
+    "@tinkerbell/ports": "workspace:*",
     "@tinkerbell/video": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "drizzle-orm": "^0.45.1",
+    "sharp": "^0.34.5",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

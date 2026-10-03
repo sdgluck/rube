@@ -5,6 +5,7 @@ import styles from "../Settings.module.css";
 const TABS = [
   { to: "personalization", label: "Personalization" },
   { to: "appearance", label: "Appearance" },
+  { to: "preroll", label: "Preroll" },
 ];
 
 export default function SettingsPortal() {

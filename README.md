@@ -206,6 +206,21 @@ Two things worth knowing:
 Set `PREROLLS_DIR` to move Tinkerbell's side of the directory; it defaults to
 `$DATA_DIR/prerolls` outside Docker.
 
+### The portal preroll
+
+**Settings → Portal → Preroll** makes a card that tells your users where to
+sign in to the portal and customise their Plex: a headline, a short message, the
+portal's address and (optionally) a QR code, in your colours. Tinkerbell renders
+it to a few seconds of H.264/AAC video and adds it to the pool like any other
+preroll — so it follows the same random or in-order playback, and can be
+switched off or reordered from the Prerolls page. Editing the card re-renders
+it in place.
+
+The address defaults to the portal's public URL. It has to be one your users can
+reach from their phones — the portal port, not the admin one — and the portal
+only listens while one of its features (personalization, cleanup warnings or
+digests) is on; the page warns when it isn't.
+
 ## Backup, export and change history
 
 Three separate things, because they answer three separate questions.

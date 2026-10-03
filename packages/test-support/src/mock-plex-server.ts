@@ -135,6 +135,12 @@ export interface MockPlex {
   items: Map<string, MockItem>;
   collections: Map<string, MockCollection>;
   /**
+   * Server preferences, as `/:/prefs` serves them and `PUT /:/prefs?id=value`
+   * sets them — which is how the preroll path list reaches Plex. Every write is
+   * stored, known id or not, because that is what Plex does too.
+   */
+  prefs: Map<string, string>;
+  /**
    * Playback knobs for the stress harness.
    *
    * Both are expressed in terms of *how many sessions are live*, so a test says
@@ -181,6 +187,7 @@ export interface MockPlex {
 export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[] }): Promise<MockPlex> {
   const items = new Map(opts.items.map((i) => [i.ratingKey, { ...i, labels: [...i.labels] }]));
   const collections = new Map<string, MockCollection>();
+  const prefs = new Map<string, string>();
   const journal: PlexJournal = {
     deletedItems: [],
     deletedCollections: [],
@@ -663,6 +670,16 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
       return;
     }
 
+    if (path === "/:/prefs") {
+      if (method === "PUT") {
+        for (const [id, value] of q) prefs.set(id, value);
+        emptyOk();
+        return;
+      }
+      json({ Setting: [...prefs].map(([id, value]) => ({ id, value })) });
+      return;
+    }
+
     if (path === "/:/unscrobble") {
       journal.unscrobbled.push(q.get("key") ?? "");
       emptyOk();
@@ -684,6 +701,7 @@ export function startMockPlex(opts: { sections: MockSection[]; items: MockItem[]
         journal,
         items,
         collections,
+        prefs,
         playback,
         close: () => closeServer(server),
       });

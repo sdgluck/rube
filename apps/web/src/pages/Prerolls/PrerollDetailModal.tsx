@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Modal from "#components/Modal";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
@@ -86,10 +87,20 @@ export default function PrerollDetailModal({ preroll, onClose, onDelete }: Prero
       </label>
 
       <dl className={styles.metaGrid}>
-        <div>
-          <dt>Original file</dt>
-          <dd>{preroll.originalFilename}</dd>
-        </div>
+        {preroll.kind === "portal" ? (
+          <div>
+            <dt>Source</dt>
+            <dd>
+              {/* There is no file to replace: the card is edited where it's defined. */}
+              <Link to="/settings/portal/preroll">Portal preroll card</Link>
+            </dd>
+          </div>
+        ) : (
+          <div>
+            <dt>Original file</dt>
+            <dd>{preroll.originalFilename}</dd>
+          </div>
+        )}
         <div>
           <dt>Duration</dt>
           <dd>{formatDuration(preroll.durationMs)}</dd>
@@ -123,7 +134,11 @@ export default function PrerollDetailModal({ preroll, onClose, onDelete }: Prero
       {preroll.transcodeReasons.length > 0 && (
         <div className={styles.reasons}>
           <p className={styles.reasonsTitle}>
-            {preroll.transcodeAction === "copy" ? "Why it was left alone" : "Why it was re-encoded"}
+            {preroll.transcodeAction === "copy"
+              ? "Why it was left alone"
+              : preroll.transcodeAction === "render"
+                ? "What it shows"
+                : "Why it was re-encoded"}
           </p>
           <ul>
             {preroll.transcodeReasons.map((reason) => (

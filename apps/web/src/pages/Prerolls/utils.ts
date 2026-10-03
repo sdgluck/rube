@@ -44,4 +44,5 @@ export const ACTION_LABELS: Record<string, string> = {
   copy: "Kept as-is",
   remux: "Remuxed",
   encode: "Re-encoded",
+  render: "Generated",
 };

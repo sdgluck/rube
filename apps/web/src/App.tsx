@@ -45,6 +45,7 @@ const SettingsSchedules = lazy(() => import("#pages/Settings/SettingsSchedules")
 const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
 const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
 const SettingsPortalAppearance = lazy(() => import("#pages/Settings/Portal/SettingsPortalAppearance"));
+const SettingsPortalPreroll = lazy(() => import("#pages/Settings/Portal/SettingsPortalPreroll"));
 const Collections = lazy(() => import("#pages/Collections"));
 const RuleRuns = lazy(() => import("#pages/Rules/RuleRuns"));
 const CollectionDetail = lazy(() => import("#pages/CollectionDetail"));
@@ -605,6 +606,14 @@ export default function App() {
                         element={
                           <LazyPage>
                             <SettingsPortalAppearance />
+                          </LazyPage>
+                        }
+                      />
+                      <Route
+                        path="preroll"
+                        element={
+                          <LazyPage>
+                            <SettingsPortalPreroll />
                           </LazyPage>
                         }
                       />

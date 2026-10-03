@@ -13,8 +13,17 @@
 
 export { probe, parseProbeOutput, ProbeError } from "./probe.ts";
 export { decide } from "./policy.ts";
-export { applyAction, runFfmpeg, encodeArgs, remuxArgs, FfmpegError, MAX_FPS } from "./transcode.ts";
-export type { EncodeOptions, ProcessOptions } from "./transcode.ts";
+export {
+  applyAction,
+  runFfmpeg,
+  encodeArgs,
+  encodeStill,
+  remuxArgs,
+  stillArgs,
+  FfmpegError,
+  MAX_FPS,
+} from "./transcode.ts";
+export type { EncodeOptions, ProcessOptions, StillOptions } from "./transcode.ts";
 export { generateThumbnail } from "./thumbnail.ts";
 export type { ThumbnailOptions } from "./thumbnail.ts";
 export { ffmpegVersion, resetFfmpegVersionCache } from "./available.ts";

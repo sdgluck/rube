@@ -194,3 +194,91 @@ export async function applyAction(
     throw err;
   }
 }
+
+export type StillOptions = {
+  durationMs: number;
+  maxHeight: number;
+};
+
+/** Frame rate for a held still. Nothing moves, so the lowest common rate. */
+const STILL_FPS = 24;
+const STILL_FADE_S = 0.5;
+
+/**
+ * Hold one image for `durationMs`, as the same H.264/AAC MP4 profile
+ * `encodeArgs` produces, so a generated preroll direct plays wherever an
+ * uploaded one does.
+ *
+ * The silent stereo track is deliberate: a video-only preroll in front of a
+ * film with audio makes some Plex clients rebuild their audio pipeline at the
+ * cut, which is an audible pop or a second of dead air. A short fade in and
+ * out keeps the card from slamming onto and off the screen.
+ */
+export function stillArgs(input: string, output: string, opts: StillOptions): string[] {
+  const seconds = Math.max(1, opts.durationMs / 1000);
+  const fadeOutAt = Math.max(0, seconds - STILL_FADE_S);
+  return [
+    "-y",
+    "-loop",
+    "1",
+    "-framerate",
+    String(STILL_FPS),
+    "-i",
+    input,
+    "-f",
+    "lavfi",
+    "-i",
+    "anullsrc=channel_layout=stereo:sample_rate=48000",
+    "-t",
+    seconds.toFixed(3),
+    "-map",
+    "0:v:0",
+    "-map",
+    "1:a:0",
+    "-vf",
+    `scale=-2:'min(ih,${opts.maxHeight})',fade=t=in:st=0:d=${STILL_FADE_S},fade=t=out:st=${fadeOutAt.toFixed(3)}:d=${STILL_FADE_S},format=yuv420p`,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "medium",
+    "-tune",
+    "stillimage",
+    "-crf",
+    "20",
+    "-profile:v",
+    "high",
+    "-level",
+    "4.1",
+    "-r",
+    String(STILL_FPS),
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-movflags",
+    "+faststart",
+    output,
+  ];
+}
+
+/** {@link stillArgs}, written atomically like {@link applyAction}. */
+export async function encodeStill(
+  input: string,
+  output: string,
+  opts: StillOptions & { signal?: AbortSignal; onProgress?: ProgressCallback },
+): Promise<void> {
+  const tmp = `${output}.tmp.mp4`;
+  try {
+    await runFfmpeg(stillArgs(input, tmp, opts), {
+      signal: opts.signal,
+      durationMs: opts.durationMs,
+      onProgress: opts.onProgress,
+    });
+    await rename(tmp, output);
+  } catch (err) {
+    await rm(tmp, { force: true });
+    throw err;
+  }
+}

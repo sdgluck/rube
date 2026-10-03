@@ -1127,6 +1127,9 @@ importers:
       '@tinkerbell/container':
         specifier: workspace:*
         version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -1136,6 +1139,9 @@ importers:
       '@tinkerbell/http':
         specifier: workspace:*
         version: link:../../packages/http
+      '@tinkerbell/overlays':
+        specifier: workspace:*
+        version: link:../../packages/overlays
       '@tinkerbell/ports':
         specifier: workspace:*
         version: link:../../packages/ports
@@ -1145,6 +1151,12 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
+      uqr:
+        specifier: ^0.1.3
+        version: 0.1.3
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -5123,6 +5135,9 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
+  uqr@0.1.3:
+    resolution: {integrity: sha512-0rjE8iEJe4YmT9TOhwsZtqCMRLc5DXZUI2UEYUUg63ikBkqqE5EYWaI0etFe/5KUcmcYwLih2RND1kq+hrUJXA==}
+
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
@@ -7729,6 +7744,8 @@ snapshots:
       browserslist: 4.28.2
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  uqr@0.1.3: {}
 
   util-deprecate@1.0.2: {}
 

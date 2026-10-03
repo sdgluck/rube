@@ -5,7 +5,10 @@ import { randomUUID } from "node:crypto";
 import { createLogger, errorMessage } from "@tinkerbell/core";
 
 import { UnsafeUrlError } from "@tinkerbell/http";
+import { portalPrerollCardInput, portalPrerollCardSchema, resolvePortalPrerollCard } from "@tinkerbell/contracts";
 import {
+  buildPortalCardSvg,
+  PortalUrlMissingError,
   OrphanNotFoundError,
   UnsupportedFormatError,
   UploadTooLargeError,
@@ -49,7 +52,7 @@ export function createPrerollsRouter(deps: TrpcDeps) {
   const { clients } = deps;
   const getPlexClient = mapNotConfiguredClient(clients);
   const { config, prerolls } = deps;
-  const { setConfig } = config;
+  const { getConfig, portalShouldRun, setConfig } = config;
   const {
     adoptOrphan,
     createPreroll,
@@ -65,6 +68,10 @@ export function createPrerollsRouter(deps: TrpcDeps) {
     scanOrphans,
     syncToPlex,
     updatePreroll,
+    getPortalPreroll,
+    portalCardContent,
+    queuePortalPreroll,
+    removePortalPreroll,
   } = prerolls;
 
   const prerollsRouter = t.router({
@@ -206,6 +213,67 @@ export function createPrerollsRouter(deps: TrpcDeps) {
     }),
 
     environment: procedure.query(() => getEnvironment()),
+
+    /**
+     * The "customise your Plex" card: its stored settings with defaults
+     * filled in, the row if it's in the pool, and the two facts that decide
+     * whether it would actually work — an address to show, and a portal
+     * listening behind that address.
+     */
+    portalCard: procedure.query(() => ({
+      card: resolvePortalPrerollCard(getConfig("portal_preroll")),
+      publicUrl: getConfig("user_app_public_url") ?? "",
+      effectiveUrl: portalCardContent().url,
+      preroll: getPortalPreroll() ?? null,
+      portalRunning: portalShouldRun(),
+    })),
+
+    /**
+     * The frame the job would encode, for an unsaved card. SVG rather than a
+     * PNG: every glyph is already path data, so the browser draws the same
+     * pixels librsvg will, at a tenth of the payload, on every keystroke.
+     */
+    portalCardPreview: procedure.input(portalPrerollCardSchema).query(({ input }) => {
+      return { svg: buildPortalCardSvg(portalCardContent(input)) };
+    }),
+
+    /**
+     * Save the card and, when asked or when it's already in the pool, queue
+     * a render. Saving without adding is allowed so the card can be drafted
+     * before the portal has a public address.
+     */
+    savePortalCard: procedure
+      .input(z.object({ card: portalPrerollCardInput, addToPool: z.boolean().default(false) }))
+      .mutation(async ({ input }) => {
+        setConfig("portal_preroll", input.card);
+        if (!input.addToPool && !getPortalPreroll()) return { queued: false };
+        try {
+          const row = queuePortalPreroll();
+          await triggerProcessing();
+          return { queued: true, id: row.id };
+        } catch (err) {
+          if (err instanceof PortalUrlMissingError) {
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+          }
+          throw err;
+        }
+      }),
+
+    /**
+     * Take the card out of the pool and tell Plex. Synced here, unlike a
+     * delete on the Prerolls page, because this runs from Settings → Portal
+     * where there is no sync bar to notice the drift from.
+     */
+    removePortalCard: procedure.mutation(async () => {
+      const removed = await removePortalPreroll();
+      if (!removed) return { removed, synced: false };
+      try {
+        return { removed, synced: (await syncToPlex()).inSync };
+      } catch (err) {
+        log.warn("removed the portal preroll but couldn't update Plex", { err: errorMessage(err) });
+        return { removed, synced: false };
+      }
+    }),
 
     setMode: procedure.input(z.object({ mode: z.enum(["random", "sequential"]) })).mutation(({ input }) => {
       setConfig("prerolls_mode", input.mode);

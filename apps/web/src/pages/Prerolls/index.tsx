@@ -70,6 +70,9 @@ export default function Prerolls() {
   const prerolls = useMemo(() => listQuery.data ?? [], [listQuery.data]);
   const mode = envQuery.data?.mode ?? "random";
   const ffmpegMissing = envQuery.data ? envQuery.data.ffmpeg === null : false;
+  // The card is made and edited in Settings → Portal, so this only offers the
+  // way there — and stops offering once it exists, when its own card links back.
+  const hasPortalCard = prerolls.some((p) => p.kind === "portal");
   const enabledCount = prerolls.filter((p) => p.enabled === 1 && p.status === "ready").length;
 
   const handleFiles = useCallback(
@@ -188,6 +191,11 @@ export default function Prerolls() {
       count={prerolls.length > 0 ? prerolls.length : undefined}
       actions={
         <>
+          {!hasPortalCard && !ffmpegMissing && (
+            <Link to="/settings/portal/preroll" className={`${controls.btn} ${controls.btnSecondary}`}>
+              Add portal card
+            </Link>
+          )}
           <button
             type="button"
             className={`${controls.btn} ${controls.btnSecondary}`}

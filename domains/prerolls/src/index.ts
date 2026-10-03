@@ -17,6 +17,8 @@ import { ffmpegVersion } from "@tinkerbell/video";
 import { buildPrefValue, prefsMatch, type PrerollMode } from "./pref.ts";
 import { token } from "@tinkerbell/container";
 import { createAdopt } from "./adopt.ts";
+import { resolvePortalPrerollCard, type PortalPrerollCard } from "@tinkerbell/contracts";
+import type { PortalCardContent } from "./portal-card.ts";
 
 export { buildPrefValue, joinPlexPath, prefsMatch, MODE_SEPARATORS } from "./pref.ts";
 export type { PrerollMode } from "./pref.ts";
@@ -31,9 +33,31 @@ export {
   writeIncoming,
 } from "./ingest.ts";
 export { OrphanNotFoundError } from "./adopt.ts";
+export {
+  buildPortalCardSvg,
+  displayUrl,
+  renderPortalCardPng,
+  writePortalCardThumb,
+  CARD_HEIGHT,
+  CARD_WIDTH,
+} from "./portal-card.ts";
+export type { PortalCardContent } from "./portal-card.ts";
 export type { OrphanFile } from "./adopt.ts";
 
 export type PrerollStatus = "pending" | "processing" | "ready" | "failed";
+export type PrerollKind = "upload" | "portal";
+
+/** Default name for the card's row; the admin can rename it like any other. */
+const PORTAL_PREROLL_NAME = "Customise your Plex";
+
+export class PortalUrlMissingError extends Error {
+  constructor() {
+    super("The portal preroll needs an address to show. Set one in Settings → Portal → Preroll.");
+    this.name = "PortalUrlMissingError";
+  }
+}
+
+const HEX = /^#[0-9a-f]{6}$/i;
 
 export type Preroll = typeof prerolls.$inferSelect;
 
@@ -65,6 +89,7 @@ export type CreatePrerollInput = {
   name: string;
   originalFilename: string;
   sourceUrl?: string;
+  kind?: PrerollKind;
 };
 
 export type ProcessedMetadata = {
@@ -164,6 +189,7 @@ export function createPrerolls(deps: PrerollsDeps) {
       name: input.name.trim() || input.originalFilename,
       originalFilename: input.originalFilename,
       sourceUrl: input.sourceUrl ?? null,
+      kind: input.kind ?? "upload",
       position: nextPosition(),
       createdAt: now,
       updatedAt: now,
@@ -321,6 +347,66 @@ export function createPrerolls(deps: PrerollsDeps) {
     };
   }
 
+  // ── The portal card ─────────────────────────────────────────────────────────
+
+  function getPortalPreroll(): Preroll | undefined {
+    return db.select().from(prerolls).where(eq(prerolls.kind, "portal")).get();
+  }
+
+  /**
+   * Everything the renderer needs, from the stored card or — for the Settings
+   * preview — an unsaved one.
+   *
+   * The address falls back to `user_app_public_url` because that is already
+   * the portal's public address for Plex sign-in; asking for it twice would
+   * let the two drift. Colours are re-checked here although the write path
+   * validates them: they are interpolated into SVG, and a row that predates
+   * validation shouldn't get to put markup there.
+   */
+  function portalCardContent(card: PortalPrerollCard | undefined = getConfig("portal_preroll")): PortalCardContent {
+    const resolved = resolvePortalPrerollCard(card);
+    const fallback = resolvePortalPrerollCard(undefined);
+    const colour = (value: string, def: string) => (HEX.test(value) ? value : def);
+    return {
+      url: resolved.url.trim() || (getConfig("user_app_public_url") ?? "").trim(),
+      headline: resolved.headline,
+      message: resolved.message,
+      eyebrow: getConfig("portal_branding")?.title,
+      background: colour(resolved.background, fallback.background),
+      foreground: colour(resolved.foreground, fallback.foreground),
+      accent: colour(resolved.accent, fallback.accent),
+      showQr: resolved.showQr,
+    };
+  }
+
+  function portalCardDurationMs(): number {
+    return resolvePortalPrerollCard(getConfig("portal_preroll")).durationSeconds * 1000;
+  }
+
+  /**
+   * Put the card in the pool, or re-render the one already there.
+   *
+   * Re-rendering goes through the ordinary `pending` → processing path, so
+   * the job, its progress, its failure reporting and the Plex sync after it
+   * are the same ones an upload gets. The row keeps its id, position, name
+   * and enabled flag — editing the text shouldn't reshuffle anybody's order.
+   */
+  function queuePortalPreroll(): Preroll {
+    if (!portalCardContent().url) throw new PortalUrlMissingError();
+    const existing = getPortalPreroll();
+    if (existing) {
+      retryPreroll(existing.id);
+      return getPreroll(existing.id)!;
+    }
+    return createPreroll({ name: PORTAL_PREROLL_NAME, originalFilename: "portal-card.png", kind: "portal" });
+  }
+
+  /** Take the card out. Returns whether there was one. */
+  async function removePortalPreroll(): Promise<boolean> {
+    const row = getPortalPreroll();
+    return row ? deletePreroll(row.id) : false;
+  }
+
   /** Ids that are mid-flight, so the UI knows to keep polling. */
   function hasWorkInFlight(): boolean {
     const rows = db
@@ -352,6 +438,11 @@ export function createPrerolls(deps: PrerollsDeps) {
     syncToPlex,
     getEnvironment,
     hasWorkInFlight,
+    getPortalPreroll,
+    portalCardContent,
+    portalCardDurationMs,
+    queuePortalPreroll,
+    removePortalPreroll,
   };
 
   // `adopt` walks the incoming directory and turns stray files into prerolls,

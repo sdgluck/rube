@@ -1149,6 +1149,14 @@ export const prerolls = sqliteTable(
     /** Why, shown verbatim in the detail modal. */
     transcodeReasons: text("transcode_reasons", { mode: "json" }).$type<string[]>().notNull().default([]),
     sourceUrl: text("source_url"),
+    /**
+     * `upload` — bytes someone supplied, probed and normalised.
+     * `portal` — the "customise your Plex" card, rendered from the
+     * `portal_preroll` setting rather than read from `incoming/`. A kind rather
+     * than a config-held row id so the card can't be orphaned by deleting it
+     * from the Prerolls page: the row *is* the switch.
+     */
+    kind: text("kind").notNull().default("upload"),
     error: text("error").notNull().default(""),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),

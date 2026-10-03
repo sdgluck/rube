@@ -1,20 +1,41 @@
 import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { rm, stat } from "node:fs/promises";
+import { rm, stat, writeFile } from "node:fs/promises";
 import { errorMessage } from "@tinkerbell/core";
 import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
-import { FfmpegError, applyAction, decide, ffmpegVersion, generateThumbnail, probe } from "@tinkerbell/video";
+import {
+  FfmpegError,
+  applyAction,
+  decide,
+  encodeStill,
+  ffmpegVersion,
+  generateThumbnail,
+  probe,
+} from "@tinkerbell/video";
 import {
   ensurePrerollDirs,
   extensionOf,
   incomingPath,
   processedPath,
+  PortalUrlMissingError,
+  renderPortalCardPng,
+  writePortalCardThumb,
   thumbPath,
   type Preroll,
+  type ProcessedMetadata,
 } from "@tinkerbell/domain.prerolls";
 
 export function createPrerollProcessCommand(deps: Pick<Services, "prerolls">) {
   const { prerolls } = deps;
-  const { getMaxHeight, listPending, markReady, setStatus, syncToPlex } = prerolls;
+  const {
+    getMaxHeight,
+    getPreroll,
+    listPending,
+    markReady,
+    portalCardContent,
+    portalCardDurationMs,
+    setStatus,
+    syncToPlex,
+  } = prerolls;
 
   /**
    * Probe every freshly-uploaded preroll, normalise it if Plex wouldn't direct
@@ -98,6 +119,7 @@ export function createPrerollProcessCommand(deps: Pick<Services, "prerolls">) {
 
   async function processOne(ctx: JobContext, row: Preroll, onProgress: (fraction: number) => void): Promise<void> {
     setStatus(row.id, "processing");
+    if (row.kind === "portal") return renderPortal(ctx, row, onProgress);
 
     const source = incomingPath(row.id, extensionOf(row.originalFilename));
     const output = processedPath(row.id);
@@ -169,6 +191,75 @@ export function createPrerollProcessCommand(deps: Pick<Services, "prerolls">) {
     if (action !== "copy") {
       await rm(source, { force: true });
     }
+  }
+
+  /**
+   * The portal card has no upload to probe: draw the frame, hold it for the
+   * configured length, and record it like any other ready preroll.
+   *
+   * The card is read at render time, not when the row was queued. Saving in
+   * Settings mid-encode requeues the row (`pending`) underneath this run, and
+   * the run already in flight is the one that covers it — so the encode is
+   * repeated until the card it drew is still the current one, rather than
+   * `markReady` stamping a stale frame as done.
+   */
+  async function renderPortal(ctx: JobContext, row: Preroll, onProgress: (fraction: number) => void): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+      const meta = await renderPortalOnce(ctx, row, onProgress);
+      // No await between this read and `markReady`, so a save can't land in
+      // between. Bounded, so somebody hammering Save can't pin the job here.
+      const requeued = getPreroll(row.id)?.status === "pending";
+      if (!requeued || attempt >= 2) {
+        markReady(row.id, meta);
+        return;
+      }
+      ctx.log(`${row.name}: the card changed while rendering — rendering again`);
+      setStatus(row.id, "processing");
+    }
+  }
+
+  async function renderPortalOnce(
+    ctx: JobContext,
+    row: Preroll,
+    onProgress: (fraction: number) => void,
+  ): Promise<ProcessedMetadata> {
+    const content = portalCardContent();
+    if (!content.url) throw new PortalUrlMissingError();
+    const durationMs = portalCardDurationMs();
+    const maxHeight = getMaxHeight();
+    ctx.log(`${row.name}: rendering the portal card for ${content.url}`);
+
+    // Staged where an upload's source would be, so `deletePreroll` already
+    // knows to clean it up (the row's `originalFilename` is a .png).
+    const frame = incomingPath(row.id, ".png");
+    const output = processedPath(row.id);
+    try {
+      const png = await renderPortalCardPng(content);
+      await writeFile(frame, png);
+      await encodeStill(frame, output, { durationMs, maxHeight, signal: ctx.signal, onProgress });
+      await writePortalCardThumb(png, thumbPath(row.id));
+    } finally {
+      await rm(frame, { force: true });
+    }
+
+    const final = await probe(output, ctx.signal);
+    const size = await stat(output).then(
+      (s) => s.size,
+      () => final.sizeBytes,
+    );
+    return {
+      filename: `${row.id}.mp4`,
+      sizeBytes: size,
+      durationMs: final.durationMs,
+      width: final.video?.width ?? 0,
+      height: final.video?.height ?? 0,
+      fps: final.video?.fps ?? 0,
+      videoCodec: final.video?.codec ?? "",
+      audioCodec: final.audio?.codec ?? "",
+      container: "mp4",
+      transcodeAction: "render",
+      transcodeReasons: [`Points viewers at ${content.url}`],
+    };
   }
 
   return { run };

@@ -1,0 +1,43 @@
+/* The rendered card, at the aspect ratio Plex will play it. The image is the
+   server's own SVG frame, so nothing here styles the card itself — only the
+   slot it sits in. */
+.frame {
+  aspect-ratio: 16 / 9;
+  max-width: 720px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.frameImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.textarea {
+  composes: input from "../../../styles/controls.module.css";
+  min-height: 72px;
+  resize: vertical;
+  font: inherit;
+}
+
+.numberInput {
+  composes: input from "../../../styles/controls.module.css";
+  width: 96px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.colours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
