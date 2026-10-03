@@ -53,20 +53,20 @@ export default function PortalApp() {
   const [tab, setTab] = useState<TabId>("collections");
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PENDING_KEY));
 
-  // Apply the admin's background image to the page.
+  // Apply the admin's background image to the page. It is painted by a fixed
+  // `body::before` (portal.css) rather than `background-attachment: fixed` on
+  // the body, which iOS Safari ignores — it sized the image against the whole
+  // scroll height, so a phone showed a blurry, hugely zoomed-in crop of it.
   useEffect(() => {
     const bg = branding.backgroundImage?.trim();
     const { style } = document.body;
     if (bg) {
-      style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("${bg}")`;
-      style.backgroundSize = "cover";
-      style.backgroundPosition = "center";
-      style.backgroundAttachment = "fixed";
+      style.setProperty("--page-image", `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("${bg}")`);
     } else {
-      style.backgroundImage = "";
+      style.removeProperty("--page-image");
     }
     return () => {
-      style.backgroundImage = "";
+      style.removeProperty("--page-image");
     };
   }, [branding.backgroundImage]);
 
@@ -171,10 +171,10 @@ export default function PortalApp() {
           </h1>
           <button
             type="button"
-            className="btn-ghost"
+            className="btn-ghost btn-signout"
             onClick={() => logoutMutation.mutate(undefined, { onSuccess: () => utils.me.reset() })}
           >
-            Sign out ({meQuery.data.username})
+            Sign out <span className="signout-user">({meQuery.data.username})</span>
           </button>
         </div>
 

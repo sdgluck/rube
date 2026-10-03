@@ -4,6 +4,13 @@
   box-sizing: border-box;
 }
 
+html {
+  /* iOS enlarges text it thinks is too small when a phone turns landscape,
+     which reflowed the genre rows out of their boxes. */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   /* A radial lift behind the card so the page reads as lit rather than flat. */
@@ -11,16 +18,31 @@ body {
     radial-gradient(120% 60% at 50% 0%, var(--page-lift) 0%, var(--bg-page) 60%) no-repeat,
     var(--bg-page);
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--text-primary);
   font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
+/* The branding background. A fixed layer rather than
+   `background-attachment: fixed`, which iOS Safari ignores — see PortalApp. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--page-image) center / cover no-repeat;
+  pointer-events: none;
+}
+
+/* index.html sets `viewport-fit=cover`, so on a notched phone in landscape the
+   page runs under the notch unless the gutters make room for it. */
 .page {
   max-width: 680px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 32px max(20px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
 }
 
 .card {
@@ -63,6 +85,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* Wraps rather than squeezes: a server name and a long username side by
+     side used to crush each other into two ragged lines. */
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -70,6 +95,28 @@ body {
 h1.title {
   font-size: 1.4rem;
   margin: 0;
+  min-width: 0;
+}
+
+/* The username is whatever Plex holds, and a long one pushed the sign-out
+   button off a phone screen and made the whole page scroll sideways. It
+   shrinks to an ellipsis instead; the button keeps "Sign out" whole. */
+.btn-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.signout-user {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  color: var(--text-secondary);
 }
 
 /* ── Buttons ───────────────────────────────────────────────── */
@@ -158,7 +205,11 @@ button:disabled {
   color: var(--text-muted);
 }
 
+/* `email` was missing from this list, so the digest address rendered as the
+   browser's bare default box. Inputs inherit 16px text, which also keeps iOS
+   from zooming the page every time one is focused. */
 input[type="text"],
+input[type="email"],
 input[type="number"],
 textarea,
 select {
@@ -172,6 +223,7 @@ select {
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
 input[type="number"]:focus,
 textarea:focus,
 select:focus {
@@ -336,13 +388,21 @@ textarea {
   font-size: 0.85rem;
 }
 
+/* Sized as a target rather than as a glyph: the bare "×" was about 16px
+   across, which on a phone usually hit the pill instead. */
 .pill button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   border: none;
-  min-height: 0;
+  min-height: 32px;
+  min-width: 32px;
+  margin: -6px 0;
   background: transparent;
   color: inherit;
   opacity: 0.6;
-  padding: 0 5px;
+  padding: 0;
   font-size: 1.05rem;
   line-height: 1;
   border-radius: var(--radius-sm);
@@ -363,7 +423,9 @@ textarea {
 
 .combo-results {
   position: absolute;
-  z-index: 5;
+  /* Above the sticky save bar (10), which otherwise covered the last few
+     suggestions on a short phone screen. */
+  z-index: 11;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
@@ -426,6 +488,9 @@ textarea {
 /* One centred card and nothing else: signing in is the only thing to do. */
 .page-signin {
   min-height: 100vh;
+  /* The visible height, so a phone's browser bar doesn't push the card off
+     centre. */
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -458,7 +523,8 @@ textarea {
 /* Preferences save from wherever you are on the page — the bar follows. */
 .save-row {
   position: sticky;
-  bottom: 16px;
+  /* Clear of the home indicator on a phone (`viewport-fit=cover`). */
+  bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 10;
   margin-top: 8px;
   padding: 10px 14px;
@@ -589,5 +655,77 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .skeleton-row {
     animation: none;
+  }
+}
+
+/* ── Phones ────────────────────────────────────────────────────────────────
+ *
+ * The portal is a link people open from a text message, so a phone is its
+ * main screen rather than an afterthought. At 375px the layout above lost 96px
+ * to gutters, wrapped the tabs unevenly, and the genre controls ran off the
+ * edge of their box.
+ */
+@media (max-width: 480px) {
+  .page {
+    padding: 12px max(12px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .card {
+    padding: 20px 16px;
+  }
+
+  h1.title,
+  .brand {
+    font-size: 1.2rem;
+  }
+
+  .row-between {
+    margin-bottom: 12px;
+  }
+
+  /* Three equal columns, so each label wraps inside its own tab rather than
+     the third one being pushed off the edge. */
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+
+  .tab {
+    padding: 8px 4px;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  /* The genre name over a full-width segmented control: side by side there
+     is not room for "Action/Adventure" and four buttons. */
+  .genre-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .seg {
+    display: flex;
+  }
+
+  .seg button {
+    flex: 1;
+    min-height: 36px;
+  }
+
+  /* No inner scroll box on a touchscreen: a finger on the list scrolled the
+     list, a finger beside it scrolled the page, and the list's own end was
+     invisible. The page scrolls, and the save bar follows it. */
+  .genre-box {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .combo-results {
+    max-height: 50vh;
   }
 }

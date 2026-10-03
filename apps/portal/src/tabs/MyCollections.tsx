@@ -46,9 +46,6 @@ export default function MyCollections() {
 
   return (
     <div className="stack">
-      <p className="field-hint">
-        These are yours — nobody else on the server sees them. Tell us what missed and the next run will leave it out.
-      </p>
       {collections.map((collection) => (
         <div key={collection.ratingKey} className="collection-row">
           <div className="collection-head">

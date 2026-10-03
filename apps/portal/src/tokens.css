@@ -51,6 +51,10 @@
 
   /* The radial lift behind the card, so the page reads as lit not flat. */
   --page-lift: #f3f8f6;
+
+  /* The admin's branding background, set on <body> by PortalApp when one is
+     configured. */
+  --page-image: none;
 }
 
 @media (prefers-color-scheme: dark) {
