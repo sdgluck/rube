@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-03
+
+### Added
+
+- Portal address setting: Settings → Portal → Address now sets the public address viewers use to sign in to Plex through the portal. It is used for the sign-in link, cleanup warning links and the portal preroll. The address must be a full http or https URL, and the save is rejected otherwise, since a bad value would break every portal sign-in.
+- Portal preroll: Settings → Portal → Preroll lets you design a preroll card (headline, message, sign-in address, optional QR code and colours). It is rendered to a video clip and added to your preroll pool as a portal preroll, so it can be ordered, enabled or disabled, and synced to Plex like any uploaded preroll. The Settings preview shows the card as it will appear.
+
 ## [0.27.0] - 2026-10-03
 
 ### Added
