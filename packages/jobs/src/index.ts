@@ -30,6 +30,7 @@ import { createGenerateCommand } from "./commands/generate/index.ts";
 import { createDigestCommand } from "./commands/digest.ts";
 import { createReconcile } from "./personalize/reconcile.ts";
 import { JobStarterToken } from "./starter.ts";
+import { createFieldOptions } from "./field-options.ts";
 import { JobConfigWriterToken } from "@tinkerbell/ports";
 
 // ─── Pure exports ────────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ export const createJobs = perDeps(function createJobs(deps: Services) {
     ...createFeatures(deps),
     ...createStressTest(deps),
     ...createReconcile(deps),
+    ...createFieldOptions(deps),
     runSingleRule: generate.runSingleRule,
     testRule: generate.testRule,
     previewDigest: createDigestCommand(deps).previewDigest,

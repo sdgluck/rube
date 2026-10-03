@@ -6,6 +6,8 @@
 import { useState } from "react";
 import type { FieldSpec } from "@tinkerbell/contracts";
 import ToggleSwitch from "#components/ToggleSwitch";
+import MultiSelect, { type MultiSelectOption } from "#components/MultiSelect";
+import { trpc } from "#/trpc";
 import styles from "#pages/Jobs/Jobs.module.css";
 import SectionsRow from "./rows/SectionsRow";
 import { isVisible, type Draft } from "./config-draft";
@@ -31,7 +33,30 @@ export function draftErrors(fields: FieldSpec[], draft: Draft): Record<string, s
   return errors;
 }
 
-function Control({ field, value, onChange }: { field: FieldSpec; value: unknown; onChange: (next: unknown) => void }) {
+type PickerOptions = { users: MultiSelectOption[]; optedInUsers: MultiSelectOption[]; rules: MultiSelectOption[] };
+
+/**
+ * A stored selection that no longer resolves — a user who left the server, a
+ * rule since deleted — is kept as a visible "not found" option rather than
+ * dropped from the list, so saving can't silently change the target and the
+ * admin can see and remove it.
+ */
+function withMissing(options: MultiSelectOption[], selected: string[]): MultiSelectOption[] {
+  const known = new Set(options.map((o) => o.value));
+  return [...options, ...selected.filter((v) => !known.has(v)).map((v) => ({ value: v, label: `${v} (not found)` }))];
+}
+
+function Control({
+  field,
+  value,
+  onChange,
+  pickers,
+}: {
+  field: FieldSpec;
+  value: unknown;
+  onChange: (next: unknown) => void;
+  pickers?: PickerOptions;
+}) {
   const { control } = field;
   switch (control.kind) {
     case "number":
@@ -63,24 +88,24 @@ function Control({ field, value, onChange }: { field: FieldSpec; value: unknown;
         </select>
       );
     case "users":
-    case "rules":
-      // A plain list until the pickers land; the stored shape is the same.
+    case "rules": {
+      const selected = Array.isArray(value) ? (value as string[]) : [];
+      const base =
+        control.kind === "rules"
+          ? (pickers?.rules ?? [])
+          : control.source === "opted-in"
+            ? (pickers?.optedInUsers ?? [])
+            : (pickers?.users ?? []);
       return (
-        <input
-          type="text"
-          className={styles.configTextInput}
-          placeholder="All"
-          value={Array.isArray(value) ? value.join(", ") : ""}
-          onChange={(e) =>
-            onChange(
-              e.target.value
-                .split(",")
-                .map((v) => v.trim())
-                .filter(Boolean),
-            )
-          }
+        <MultiSelect
+          allLabel={control.kind === "rules" ? "All rules" : "All users"}
+          ariaLabel={field.label}
+          options={withMissing(base, selected)}
+          selected={selected}
+          onChange={onChange}
         />
       );
+    }
     default:
       return null;
   }
@@ -101,6 +126,14 @@ export default function JobSettingsForm({ fields, draft, onChange, errors }: Pro
 
   const set = (key: string, value: unknown) => onChange({ ...draft, [key]: value });
 
+  const needsPickers = fields.some((f) => f.control.kind === "users" || f.control.kind === "rules");
+  const optionsQuery = trpc.jobs.fieldOptions.useQuery(undefined, { enabled: needsPickers });
+  const pickers: PickerOptions | undefined = optionsQuery.data && {
+    users: optionsQuery.data.users.map((u) => ({ value: u.username, label: u.label })),
+    optedInUsers: optionsQuery.data.users.filter((u) => u.optedIn).map((u) => ({ value: u.username, label: u.label })),
+    rules: optionsQuery.data.rules.map((r) => ({ value: r.id, label: r.name })),
+  };
+
   const row = (field: FieldSpec) => {
     if (field.control.kind === "sections") {
       return (
@@ -117,7 +150,7 @@ export default function JobSettingsForm({ fields, draft, onChange, errors }: Pro
       <tr key={field.key}>
         <td className={styles.fieldLabel}>{field.label}</td>
         <td>
-          <Control field={field} value={draft[field.key]} onChange={(next) => set(field.key, next)} />
+          <Control field={field} value={draft[field.key]} onChange={(next) => set(field.key, next)} pickers={pickers} />
           {errors[field.key] ? (
             <div className={styles.fieldHelpError}>{errors[field.key]}</div>
           ) : (

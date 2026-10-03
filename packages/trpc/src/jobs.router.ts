@@ -13,6 +13,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     deferredRuleStarts,
     deferredStarts,
     discardCheckpoint,
+    fieldOptions,
     getActiveRuns,
     getJobRun,
     getJobRunFullLog,
@@ -146,6 +147,9 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
      * window as soon as enough jobs have run since.
      */
     lastFailure: procedure.query(() => getLastFailedRun()),
+
+    /** Choices for the settings form's user and rule pickers. */
+    fieldOptions: procedure.query(() => fieldOptions()),
 
     update: procedure
       .input(

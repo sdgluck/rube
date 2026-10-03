@@ -5,7 +5,8 @@ import { errorMessage } from "@tinkerbell/core";
 
 import { meetsPinFloor } from "./generate/rotation.ts";
 import { parseRuleConfig } from "./generate/config.ts";
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, PersonalizeJobConfig } from "@tinkerbell/core";
+import { isNarrowed, removeOutOfTarget, selectTargets, type TargetScope } from "../personalize/targets.ts";
 
 const BASELINE_LABEL = "Tinkerbell";
 
@@ -31,7 +32,7 @@ export function createPersonalizeCommand(deps: Services) {
    * home. Requires the personalization master switch to be enabled (that's what
    * keeps each collection visible only to its owner).
    */
-  async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
+  async function run(ctx: JobContext, config: PersonalizeJobConfig): Promise<void> {
     if (getPersonalizedSharingStatus() !== "enabled") {
       throw new Error("Personalized Home Screens must be enabled first (Settings → Personalization).");
     }
@@ -40,17 +41,33 @@ export function createPersonalizeCommand(deps: Services) {
     const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
     if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
 
-    const users = listOptedInUserPreferences();
-    if (users.length === 0) {
+    const optedIn = listOptedInUserPreferences();
+    if (optedIn.length === 0) {
       ctx.log("No opted-in users — nothing to personalize.");
       return;
     }
 
-    const rules = getEnabledRules().filter((r) => parseRuleConfig(r).personalizable);
-    if (rules.length === 0) {
+    const personalizable = getEnabledRules().filter((r) => parseRuleConfig(r).personalizable);
+    if (personalizable.length === 0) {
       ctx.log("No rules are marked personalizable — nothing to do.");
       return;
     }
+
+    const targets = selectTargets(optedIn, personalizable, config);
+    for (const name of targets.notOptedIn) {
+      ctx.log(`Skipping ${name} — targeted, but hasn't opted in through the portal.`);
+    }
+    for (const id of targets.unknownRules) {
+      ctx.log(`Skipping rule ${id} — targeted, but it isn't an enabled personalizable rule.`);
+    }
+    const users = targets.users;
+    const rules = targets.rules;
+    const scope: TargetScope = {
+      optedIn: new Set(optedIn.map((u) => u.username.toLowerCase())),
+      personalizable: new Set(personalizable.map((r) => r.id)),
+      targetUsers: new Set(users.map((u) => u.username.toLowerCase())),
+      targetRules: new Set(rules.map((r) => r.id)),
+    };
 
     const client = createPlexClient({
       url: PLEX_URL,
@@ -60,12 +77,24 @@ export function createPersonalizeCommand(deps: Services) {
     });
     const identity = await client.getIdentity();
     const machineId = identity.machineIdentifier;
-    ctx.log(`Personalizing ${rules.length} rule(s) for ${users.length} user(s).`);
 
     let allSections = await client.getSections();
     const configuredLibraries = getConfig("global_plex_libraries");
     if (configuredLibraries) allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
     if (config.sections?.length) allSections = allSections.filter((s) => config.sections!.includes(s.title));
+
+    // Before building, so a user dropped from the target loses their rows on
+    // this run rather than keeping them pinned until someone notices.
+    if (isNarrowed(scope)) {
+      const removed = await removeOutOfTarget(client, allSections, scope, ctx);
+      if (removed.length > 0) forgetCollections(removed);
+    }
+
+    if (users.length === 0 || rules.length === 0) {
+      ctx.log("Nothing left to personalize after targeting.");
+      return;
+    }
+    ctx.log(`Personalizing ${rules.length} rule(s) for ${users.length} user(s).`);
 
     const total = users.length * rules.length;
     let step = 0;

@@ -718,12 +718,6 @@
   width: auto;
 }
 
-.configTextInput {
-  composes: input inputSm from "../../styles/controls.module.css";
-  width: 100%;
-  max-width: 320px;
-}
-
 .configUnit {
   margin-left: 6px;
   color: var(--ink-3);
