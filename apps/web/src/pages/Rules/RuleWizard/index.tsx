@@ -297,6 +297,8 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   const initialKeyRef = useRef<unknown>(null);
 
   const configQuery = trpc.config.get.useQuery(undefined, { staleTime: 60_000 });
+  const personalizationOn =
+    trpc.personalization.status.useQuery(undefined, { staleTime: 60_000 }).data?.status === "enabled";
   const sectionsQuery = trpc.plexSections.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
 
   // Candidates for `afterRules`. Fetched only while the wizard is open —
@@ -935,6 +937,22 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 )}
               </div>
             )}
+
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.personalizable}
+                  onChange={(e) => setForm({ ...form, personalizable: e.target.checked })}
+                />{" "}
+                Personalizable
+              </label>
+              <span className={styles.hint}>
+                {personalizationOn
+                  ? "Personalized Collections also builds a copy for each opted-in user, shaped by their tastes."
+                  : "Takes effect once Personalized Home Screens is on (Settings › Portal › Personalization)."}
+              </span>
+            </div>
           </>
         )}
 

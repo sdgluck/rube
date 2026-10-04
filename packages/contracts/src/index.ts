@@ -19,6 +19,7 @@ export {
   isPlaylistRule,
   PLAYLIST_CAPABLE_RULE_TYPES,
   isNonPortableField,
+  isPersonalizableAction,
   isTagField,
   METADATA_RULE_TAG_FIELDS,
   METADATA_SETTABLE_FIELDS,
@@ -342,3 +343,17 @@ export type {
 } from "./job-schedule-validate.ts";
 export { buildPreset, packChain, SCHEDULE_PRESETS } from "./job-schedule-presets.ts";
 export type { SchedulePreset } from "./job-schedule-presets.ts";
+
+export {
+  isPortalComponentId,
+  PORTAL_COMPONENT_IDS,
+  PORTAL_COMPONENTS,
+  resolvePortalComponents,
+  TASTES_PREFERENCE_KEYS,
+} from "./portal-components.ts";
+export type {
+  PortalComponentGroup,
+  PortalComponentId,
+  PortalComponentState,
+  PortalPrerequisite,
+} from "./portal-components.ts";

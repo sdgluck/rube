@@ -51,6 +51,7 @@ export function createRulesRouter(
     getRule,
     createRule,
     updateRule,
+    setPersonalizable,
     deleteRule,
     setRuleLastRun,
     setRuleLastTest,
@@ -281,6 +282,14 @@ export function createRulesRouter(
         });
         return { ok: true };
       }),
+
+    /**
+     * Bulk on/off for `personalizable`. Without `ids`, every rule that builds a
+     * collection — what installing Personalized Collections offers to do.
+     */
+    setPersonalizable: procedure
+      .input(z.object({ ids: z.array(z.string()).min(1).max(500).optional(), personalizable: z.boolean() }))
+      .mutation(({ input }) => setPersonalizable(input.ids ?? "all-eligible", input.personalizable)),
 
     delete: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
       deleteRule(input.id);

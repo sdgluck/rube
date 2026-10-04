@@ -199,6 +199,16 @@ export function ruleAction(config: { action?: RuleAction }): RuleAction {
   return config.action ?? { kind: "collection" };
 }
 
+/**
+ * Whether the personalize job can make a per-user copy of this rule: only a
+ * rule that builds a collection produces a row for someone's home screen. A
+ * playlist, metadata or cleanup rule marked personalizable would be run per
+ * user for nothing — or, for cleanup, run per user at all.
+ */
+export function isPersonalizableAction(config: { action?: RuleAction }): boolean {
+  return ruleAction(config).kind === "collection";
+}
+
 export function isCleanupRule(config: { action?: RuleAction }): boolean {
   return config.action?.kind === "cleanup";
 }

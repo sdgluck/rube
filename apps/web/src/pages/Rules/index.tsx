@@ -19,12 +19,13 @@ import { RulesSkeleton } from "#components/Skeleton";
 import SortableTh from "#components/SortableTh";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
+import { isPersonalizableAction, type RuleAction } from "@tinkerbell/contracts";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
 import ConflictsBanner from "./ConflictsBanner";
 import BulkBar from "#components/BulkBar";
-import BulkEditModal from "./BulkEditModal";
+import BulkEditModal, { type BulkEditPatch } from "./BulkEditModal";
 import { useTagLabels } from "#components/smart-filter/TagValueSelect.tsx";
 import {
   EMPTY_FORM,
@@ -67,6 +68,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   const rulesQuery = trpc.rules.list.useQuery();
   const createMutation = trpc.rules.create.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const updateMutation = trpc.rules.update.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
+  const setPersonalizableMutation = trpc.rules.setPersonalizable.useMutation();
   const deleteMutation = trpc.rules.delete.useMutation({ onSuccess: () => utils.rules.list.invalidate() });
   const restoreMutation = trpc.rules.restore.useMutation();
   const reorderMutation = trpc.rules.reorder.useMutation({
@@ -430,6 +432,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
       pinMinItems: (config.pinMinItems as number | undefined) ?? 0,
+      personalizable: config.personalizable === true,
       outcome: outcomeFromConfig(config.action),
       presentation: presentationFromConfig(config.presentation),
       schedule: scheduleFromConfig(config.schedule),
@@ -480,6 +483,10 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       if (!next.pinToHomepage) config.pinToHomepage = false;
       if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
       if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
+      // Rebuilt from the form like everything else here, so a rule marked by
+      // Personalized Collections' install keeps the mark through an edit
+      // rather than losing it to a config that never mentioned it.
+      if (next.personalizable) config.personalizable = true;
 
       // Written only when it says something other than the default, so a rule
       // that never visited the Look step stays byte-identical to how it was
@@ -725,18 +732,28 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     });
   }
 
-  async function handleBulkEditApply(patch: { limit?: number }) {
+  async function handleBulkEditApply(patch: BulkEditPatch) {
     setBulkEditOpen(false);
-    const eligibleRules = allRules.filter((r) => selected.has(r.id) && typeHasLimit(r.type));
-    let updated = 0;
-    for (const rule of eligibleRules) {
-      const config = { ...rule.config };
-      if (patch.limit !== undefined) config.limit = patch.limit;
-      await updateMutation.mutateAsync({ id: rule.id, config });
-      updated++;
+    const updated = new Set<string>();
+    if (patch.limit !== undefined) {
+      for (const rule of allRules.filter((r) => selected.has(r.id) && typeHasLimit(r.type))) {
+        await updateMutation.mutateAsync({ id: rule.id, config: { ...rule.config, limit: patch.limit } });
+        updated.add(rule.id);
+      }
+    }
+    // After the limit pass, and server-side: it reads each rule fresh, so the
+    // config written above isn't overwritten with the stale copy held here.
+    if (patch.personalizable !== undefined) {
+      const ids = allRules
+        .filter((r) => selected.has(r.id) && isPersonalizableAction((r.config ?? {}) as { action?: RuleAction }))
+        .map((r) => r.id);
+      if (ids.length > 0) {
+        await setPersonalizableMutation.mutateAsync({ ids, personalizable: patch.personalizable });
+        for (const id of ids) updated.add(id);
+      }
     }
     utils.rules.list.invalidate();
-    addToast(`Updated ${updated} rule${updated !== 1 ? "s" : ""}`, "success");
+    addToast(`Updated ${updated.size} rule${updated.size !== 1 ? "s" : ""}`, "success");
   }
 
   async function handleBulkSetEnabled(enabled: boolean) {
@@ -1143,7 +1160,12 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
 
       {bulkEditOpen && (
         <BulkEditModal
-          eligibleCount={allRules.filter((r) => selected.has(r.id) && typeHasLimit(r.type)).length}
+          limitEligibleCount={allRules.filter((r) => selected.has(r.id) && typeHasLimit(r.type)).length}
+          personalizableEligibleCount={
+            allRules.filter(
+              (r) => selected.has(r.id) && isPersonalizableAction((r.config ?? {}) as { action?: RuleAction }),
+            ).length
+          }
           totalSelected={selected.size}
           onApply={handleBulkEditApply}
           onCancel={() => setBulkEditOpen(false)}

@@ -7,7 +7,7 @@ import { createExplain } from "./explain.ts";
 import type { Playback } from "@tinkerbell/domain.playback";
 import { createLock } from "./lock.ts";
 import { createRecycle } from "./recycle.ts";
-import { SEEDED_RULE } from "@tinkerbell/contracts";
+import { isPersonalizableAction, SEEDED_RULE, type RuleAction } from "@tinkerbell/contracts";
 import { token } from "@tinkerbell/container";
 
 export { RuleLockedError, RULE_LOCK_LEASE_MS, type RuleLockHandle, type RuleLockInfo } from "./lock.ts";
@@ -269,6 +269,43 @@ export function createRules(deps: RulesDeps) {
     });
   }
 
+  /**
+   * Mark rules personalizable (or not) in bulk.
+   *
+   * Nothing in the rule editor set this flag, so installing Personalized
+   * Collections left the feature with nothing to run until someone imported a
+   * rule that happened to carry it. `"all-eligible"` is what the install offers.
+   *
+   * One `updateRule` per rule rather than one UPDATE, so each rule's history
+   * shows the change and can be reverted one at a time. Rules that aren't
+   * eligible — anything whose action isn't a collection — are skipped rather
+   * than refused, because a selection from the rules list legitimately mixes
+   * them.
+   */
+  function setPersonalizable(
+    ids: string[] | "all-eligible",
+    value: boolean,
+    origin?: { source: string },
+  ): { changed: number; skipped: number } {
+    const candidates = ids === "all-eligible" ? getRules() : ids.map(getRule).filter((r) => r !== undefined);
+    let changed = 0;
+    let skipped = ids === "all-eligible" ? 0 : ids.length - candidates.length;
+    for (const rule of candidates) {
+      const config = rule.config as { action?: RuleAction; personalizable?: boolean };
+      if (!isPersonalizableAction(config)) {
+        if (ids !== "all-eligible") skipped++;
+        continue;
+      }
+      if ((config.personalizable ?? false) === value) continue;
+      // Absent rather than `false` when switching off, so the rule reads the
+      // same as one that was never marked.
+      const { personalizable: _, ...rest } = config;
+      updateRule(rule.id, { config: value ? { ...rest, personalizable: true } : rest }, origin);
+      changed++;
+    }
+    return { changed, skipped };
+  }
+
   function setRuleLastCollection(id: string, ratingKey: string): void {
     db.update(rules).set({ lastCollectionRatingKey: ratingKey }).where(eq(rules.id, id)).run();
   }
@@ -388,6 +425,7 @@ export function createRules(deps: RulesDeps) {
     reorderRules,
     createRule,
     updateRule,
+    setPersonalizable,
     setRuleLastCollection,
     setRuleLastPinnedCollections,
     setRuleLastScheduled,

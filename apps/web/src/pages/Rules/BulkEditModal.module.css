@@ -24,6 +24,19 @@
   margin-left: 26px;
 }
 
+.personalizableSelect {
+  max-width: 260px;
+  margin-left: 26px;
+}
+
+/* Per option, because the two skip different rules: a smart filter has no
+   Max collections, and a cleanup rule can't be personalized. */
+.optionNote {
+  margin: -4px 0 0 26px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
 .apply {
   composes: btn btnPrimary from "../../styles/controls.module.css";
 }
