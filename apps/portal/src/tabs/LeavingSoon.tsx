@@ -1,4 +1,4 @@
-import { portalTrpc } from "../trpc.ts";
+import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 
 /**
@@ -15,7 +15,10 @@ import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
  * that removing something turns into a decision the owner makes, rather than
  * one that simply happens at 4am.
  */
-export default function LeavingSoon() {
+export default function LeavingSoon({ components }: { components: PortalComponents }) {
+  // Off, the list is still worth reading: knowing something is going is the
+  // part that matters, and the vote is the admin's to offer.
+  const canVote = components["action.keep"];
   const utils = portalTrpc.useUtils();
   const leavingQuery = portalTrpc.leavingSoon.useQuery();
   const voteKeep = portalTrpc.voteKeep.useMutation({ onSuccess: () => utils.leavingSoon.invalidate() });
@@ -34,7 +37,9 @@ export default function LeavingSoon() {
 
       {items.length > 0 && (
         <>
-          <p className="field-hint">Queued for removal. The server owner sees who asks to keep one.</p>
+          <p className="field-hint">
+            {canVote ? "Queued for removal. The server owner sees who asks to keep one." : "Queued for removal."}
+          </p>
           {items.map((item) => (
             <div key={item.ratingKey} className="collection-row">
               <div className="collection-head">
@@ -45,14 +50,16 @@ export default function LeavingSoon() {
                     : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
                 </span>
               </div>
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={voteKeep.isPending}
-                onClick={() => voteKeep.mutate({ ratingKey: item.ratingKey, keep: !item.voted })}
-              >
-                {item.voted ? "Asked to keep \u2713" : "Keep this"}
-              </button>
+              {canVote && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={voteKeep.isPending}
+                  onClick={() => voteKeep.mutate({ ratingKey: item.ratingKey, keep: !item.voted })}
+                >
+                  {item.voted ? "Asked to keep \u2713" : "Keep this"}
+                </button>
+              )}
             </div>
           ))}
         </>

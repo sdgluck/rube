@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { portalTrpc } from "../trpc.ts";
+import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 
 /**
@@ -11,7 +11,14 @@ import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
  * output closes that loop, and "Not for me" turns a shrug into the one signal
  * the rules already know how to read.
  */
-export default function MyCollections({ onSetTastes }: { onSetTastes: () => void }) {
+export default function MyCollections({
+  components,
+  onSetTastes,
+}: {
+  components: PortalComponents;
+  /** Absent when the tastes tab is switched off — nowhere to send them. */
+  onSetTastes?: () => void;
+}) {
   const utils = portalTrpc.useUtils();
   const collectionsQuery = portalTrpc.myCollections.useQuery();
   const notInterested = portalTrpc.notInterested.useMutation();
@@ -32,9 +39,11 @@ export default function MyCollections({ onSetTastes }: { onSetTastes: () => void
       <EmptyState
         title="Nothing yet"
         action={
-          <button type="button" className="btn-primary" onClick={onSetTastes}>
-            Set your tastes
-          </button>
+          onSetTastes && (
+            <button type="button" className="btn-primary" onClick={onSetTastes}>
+              Set your tastes
+            </button>
+          )
         }
       >
         They arrive after the next nightly run.
@@ -61,14 +70,16 @@ export default function MyCollections({ onSetTastes }: { onSetTastes: () => void
             </span>
           </div>
           {collection.summary && <p className="collection-summary">{collection.summary}</p>}
-          <button
-            type="button"
-            className="btn-ghost"
-            disabled={excluded.includes(collection.title)}
-            onClick={() => exclude(collection.title)}
-          >
-            {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
-          </button>
+          {components["action.notForMe"] && (
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={excluded.includes(collection.title)}
+              onClick={() => exclude(collection.title)}
+            >
+              {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
+            </button>
+          )}
         </div>
       ))}
     </div>

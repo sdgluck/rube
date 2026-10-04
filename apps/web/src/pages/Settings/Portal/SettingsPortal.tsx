@@ -5,6 +5,7 @@ import styles from "../Settings.module.css";
 const TABS = [
   { to: "address", label: "Address" },
   { to: "personalization", label: "Personalization" },
+  { to: "components", label: "Components" },
   { to: "appearance", label: "Appearance" },
   { to: "preroll", label: "Preroll" },
 ];

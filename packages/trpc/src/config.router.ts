@@ -1,6 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { TRPCError } from "@trpc/server";
-import { portalPrerollCardInput } from "@tinkerbell/contracts";
+import { isPortalComponentId, portalPrerollCardInput } from "@tinkerbell/contracts";
 import {
   isValidTimezone,
   configSchema,
@@ -12,6 +12,7 @@ import {
 } from "@tinkerbell/core";
 
 import { t, procedure } from "./_base.ts";
+import { createPortalComponents } from "./portal-components.ts";
 
 /**
  * Auth state is not settings.
@@ -45,14 +46,23 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 
-export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "jobs">) {
+export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "jobs" | "notifications">) {
   const { restartSchedules, schedulerTimezone } = deps.jobs;
   const { config, health } = deps;
   const { getAllConfigForClient, getConfig, setConfig, restoreNestedSecrets } = config;
   const { renameArrHealthServices } = health;
+  const { portalComponentStates } = createPortalComponents(deps);
 
   const configRouter = t.router({
     get: procedure.query(() => getAllConfigForClient()),
+
+    /**
+     * Each portal component's switch and whether shared users actually see it,
+     * from the same resolver the portal enforces with — so Settings → Portal →
+     * Components can say "needs cleanup" rather than a switch that looks on and
+     * does nothing.
+     */
+    portalComponents: procedure.query(() => portalComponentStates()),
 
     /** The zone every cron schedule is evaluated in, resolved (config → TZ → system). */
     effectiveTimezone: procedure.query(() => ({
@@ -94,6 +104,14 @@ export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "j
         if (!parsed.success) {
           throw new TRPCError({ code: "BAD_REQUEST", message: parsed.error.issues[0]?.message ?? "Invalid card" });
         }
+      }
+
+      // The schema takes any string so a retired id can't break reads; a typo
+      // or stale client is refused here instead of being stored as a switch
+      // that controls nothing.
+      const unknownComponent = input.portal_components_hidden?.find((id) => !isPortalComponentId(id));
+      if (unknownComponent !== undefined) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `"${unknownComponent}" is not a portal component.` });
       }
 
       const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");

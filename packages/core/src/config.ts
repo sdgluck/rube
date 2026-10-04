@@ -145,6 +145,14 @@ export const configSchema = z.object({
     // row — and the payload shipped to the browser — to a sane size.
     backgroundImage: z.string().max(8_000_000).optional(),
   }),
+  /**
+   * Portal components the admin has switched off, by id from
+   * `PORTAL_COMPONENTS` (contracts). A hidden list rather than a visible one so
+   * a component added later is on by default. Plain strings, not an enum: a
+   * build that retires an id must not turn this row into a throw out of every
+   * config read — `configRouter.save` rejects unknown ids on the way in.
+   */
+  portal_components_hidden: z.array(z.string()).max(40),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
     provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),

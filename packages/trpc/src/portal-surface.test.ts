@@ -8,7 +8,7 @@
  * hole — `auth.poll` used to take the plex.tv PIN id as an input, and plex.tv
  * hands a PIN's token to anyone who asks with the client id that minted it.
  */
-import { describe, test, after } from "node:test";
+import { describe, test, after, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
 import { ServicesToken } from "@tinkerbell/composition";
@@ -183,11 +183,78 @@ describe("a shared user's own data", () => {
     assert.deepEqual((await client.preferences.get()).preferences.excludedTitles, []);
   });
 
+  const SMTP_OFF = { host: "", port: 0, secure: false, user: "", password: "", from: "" };
+  const SMTP_ON = { ...SMTP_OFF, host: "smtp.example.test", port: 587, from: "tinkerbell@example.test" };
+
+  test("a component needs its feature as well as its switch", async () => {
+    // Leaving soon on a server with cleanup off could only ever say nothing was
+    // leaving, and the digest without SMTP saved an address nothing would use.
+    const client = await signedIn(10);
+    const { setConfig } = trpcDeps.config;
+    setConfig("cleanup_enabled", false);
+    setConfig("global_smtp", SMTP_OFF);
+    let on = await client.components();
+    assert.equal(on["tab.leaving"], false);
+    assert.equal(on["action.keep"], false, "a tab's actions go with it");
+    assert.equal(on["tastes.digest"], false);
+    assert.equal(on["tab.collections"], true);
+
+    setConfig("cleanup_enabled", true);
+    setConfig("global_smtp", SMTP_ON);
+    on = await client.components();
+    assert.equal(on["tab.leaving"], true);
+    assert.equal(on["action.keep"], true);
+    assert.equal(on["tastes.digest"], true);
+  });
+
+  describe("a switched-off component", () => {
+    const { setConfig } = trpcDeps.config;
+    beforeEach(() => setConfig("cleanup_enabled", true));
+    afterEach(() => setConfig("portal_components_hidden", []));
+
+    async function refused(fn: () => Promise<unknown>) {
+      await assert.rejects(fn, (err: { code?: string }) => {
+        assert.equal(err.code, "FORBIDDEN");
+        return true;
+      });
+    }
+
+    test("is refused by the server, not only hidden", async () => {
+      const client = await signedIn(11);
+      setConfig("portal_components_hidden", ["tab.collections", "tab.leaving", "tab.tastes"]);
+      await refused(() => client.myCollections());
+      await refused(() => client.notInterested({ title: "A row" }));
+      await refused(() => client.leavingSoon());
+      await refused(() => client.voteKeep({ ratingKey: "made-up", keep: true }));
+      await refused(() => client.preferences.set({ optedIn: true, preferences: { moods: ["Cosy"] } }));
+    });
+
+    test("never strands a keep vote its owner wants to withdraw", async () => {
+      const client = await signedIn(11);
+      setConfig("portal_components_hidden", ["action.keep"]);
+      assert.deepEqual(await client.voteKeep({ ratingKey: "made-up", keep: false }), { ok: true });
+    });
+
+    test("keeps a hidden section's stored answer through a save", async () => {
+      const client = await signedIn(12);
+      await client.preferences.set({ optedIn: true, preferences: { moods: ["Cosy"] } });
+
+      setConfig("portal_components_hidden", ["tastes.moods"]);
+      await client.preferences.set({ optedIn: true, preferences: { moods: [], excludedTitles: ["Cats"] } });
+
+      const prefs = (await client.preferences.get()).preferences;
+      assert.deepEqual(prefs.moods, ["Cosy"], "the hidden section's key was dropped, not applied");
+      assert.deepEqual(prefs.excludedTitles, ["Cats"], "a visible section still saves");
+    });
+  });
+
   test("voteKeep refuses a rating key no rule has queued", async () => {
     // The vote is shown on the admin's queue with the voter's name against it, so
     // an unchecked key let a shared user put named rows there for items nothing
     // had ever matched.
     const client = await signedIn();
+    // On, so the refusal under test is the queue check and not the switch.
+    trpcDeps.config.setConfig("cleanup_enabled", true);
     await assert.rejects(
       () => client.voteKeep({ ratingKey: "made-up", keep: true }),
       (err: { code?: string }) => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { portalTrpc } from "./trpc.ts";
 import BrandHeader, { type Branding } from "./components/BrandHeader.tsx";
 import SignIn from "./components/SignIn.tsx";
-import { ErrorState, RowsSkeleton } from "./components/States.tsx";
+import { EmptyState, ErrorState, RowsSkeleton } from "./components/States.tsx";
 import MyCollections from "./tabs/MyCollections.tsx";
 import PreferencesForm from "./tabs/PreferencesForm.tsx";
 import LeavingSoon from "./tabs/LeavingSoon.tsx";
@@ -34,9 +34,12 @@ const TABS = [
   // never heard back from, so what your answers produced should be the thing
   // you land on. "Leaving soon" is last because it is the one nobody wants to
   // be looking at.
-  { id: "collections", label: "Your collections" },
-  { id: "preferences", label: "Your tastes" },
-  { id: "leaving", label: "Leaving soon" },
+  // Each behind the admin's switch for it (Settings → Portal → Components),
+  // and Leaving soon behind cleanup being on as well — it used to show on
+  // servers that could never remove anything, saying so forever.
+  { id: "collections", label: "Your collections", component: "tab.collections" },
+  { id: "preferences", label: "Your tastes", component: "tab.tastes" },
+  { id: "leaving", label: "Leaving soon", component: "tab.leaving" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -48,6 +51,7 @@ export default function PortalApp() {
   const pollMutation = portalTrpc.auth.poll.useMutation();
   const logoutMutation = portalTrpc.auth.logout.useMutation();
   const brandingQuery = portalTrpc.branding.useQuery();
+  const componentsQuery = portalTrpc.components.useQuery(undefined, { enabled: !!meQuery.data });
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("collections");
@@ -124,7 +128,7 @@ export default function PortalApp() {
     });
   }
 
-  if (meQuery.isLoading) {
+  if (meQuery.isLoading || (meQuery.data && componentsQuery.isLoading)) {
     return (
       <div className="page">
         <div className="card">
@@ -162,6 +166,21 @@ export default function PortalApp() {
     );
   }
 
+  if (componentsQuery.error) {
+    return (
+      <div className="page">
+        <div className="card">
+          <ErrorState message={componentsQuery.error.message} onRetry={() => componentsQuery.refetch()} />
+        </div>
+      </div>
+    );
+  }
+
+  const components = componentsQuery.data!;
+  const tabs = TABS.filter((t) => components[t.component]);
+  // The remembered tab can be one the admin has since switched off.
+  const current = tabs.find((t) => t.id === tab)?.id ?? tabs[0]?.id;
+
   return (
     <div className="page">
       <div className="card">
@@ -178,27 +197,40 @@ export default function PortalApp() {
           </button>
         </div>
 
-        <div className="tabs" role="tablist" aria-label="Portal sections">
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              className={`tab ${tab === id ? "tab-on" : ""}`}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* One tab is no choice at all, so the bar only appears for two. */}
+        {tabs.length > 1 && (
+          <div
+            className="tabs"
+            role="tablist"
+            aria-label="Portal sections"
+            style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
+          >
+            {tabs.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={current === id}
+                className={`tab ${current === id ? "tab-on" : ""}`}
+                onClick={() => setTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {tab === "collections" ? (
-          <MyCollections onSetTastes={() => setTab("preferences")} />
-        ) : tab === "preferences" ? (
-          <PreferencesForm />
+        {current === "collections" ? (
+          <MyCollections
+            components={components}
+            onSetTastes={components["tab.tastes"] ? () => setTab("preferences") : undefined}
+          />
+        ) : current === "preferences" ? (
+          <PreferencesForm components={components} />
+        ) : current === "leaving" ? (
+          <LeavingSoon components={components} />
         ) : (
-          <LeavingSoon />
+          <EmptyState title="Nothing here yet">The server's owner hasn't turned anything on for you.</EmptyState>
         )}
       </div>
     </div>

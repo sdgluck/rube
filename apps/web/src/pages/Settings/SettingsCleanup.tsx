@@ -1,3 +1,4 @@
+import SettingsPageLink from "#components/SettingsPageLink";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
@@ -81,7 +82,10 @@ export default function SettingsCleanup() {
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           <span>
             <span className={styles.switchLabel}>Allow cleanup rules to unmonitor and delete</span>
-            <span className={styles.switchHint}>Takes effect immediately, even mid-run.</span>
+            <span className={styles.switchHint}>
+              Takes effect immediately, even mid-run. While on, shared users see what's{" "}
+              <SettingsPageLink to="/settings/portal/components">leaving soon</SettingsPageLink> in the portal.
+            </span>
           </span>
         </label>
 

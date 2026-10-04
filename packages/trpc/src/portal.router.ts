@@ -8,6 +8,7 @@ import type { TrpcDeps } from "./deps.ts";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { userPreferencesSchema } from "@tinkerbell/core";
+import { TASTES_PREFERENCE_KEYS, type PortalComponentId } from "@tinkerbell/contracts";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { mapNotConfiguredClient } from "./_base.ts";
 import {
@@ -21,6 +22,7 @@ import {
   setSessionCookie,
 } from "./cookies.ts";
 import { createHandshakes } from "./handshake.ts";
+import { createPortalComponents } from "./portal-components.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 
 export interface PortalContext {
@@ -56,6 +58,7 @@ export function createPortalRouter(deps: TrpcDeps) {
   const { getCollectionsForUser } = collections;
   const { isQueuedCandidate, keepVotesForUser, leavingSoon, recordKeepVote, removeKeepVote } = cleanup;
   const { userTotals } = playback;
+  const { isComponentOn, portalComponentStates, requireComponent } = createPortalComponents(deps);
 
   function createPortalContext(opts: { req: Request; resHeaders: Headers; ip?: string }): PortalContext {
     const secure = isSecureRequest(opts.req);
@@ -169,6 +172,22 @@ export function createPortalRouter(deps: TrpcDeps) {
       return { userId: ctx.session.userId, username: ctx.session.username };
     }),
 
+    /**
+     * Which tabs, sections and actions this server offers — the admin's
+     * switches combined with whether the feature behind each is configured
+     * (Leaving soon needs cleanup on; the Email digest needs SMTP, since
+     * offering a subscription the digest job will skip asks for an address it
+     * can never use). Behind the session, not public: the sign-in screen has no
+     * use for it.
+     */
+    components: userProcedure.query(() => {
+      const states = portalComponentStates();
+      return Object.fromEntries(Object.entries(states).map(([id, s]) => [id, s.on])) as Record<
+        PortalComponentId,
+        boolean
+      >;
+    }),
+
     preferences: tp.router({
       get: userProcedure.query(({ ctx }) => getUserPreferences(ctx.session.userId)),
 
@@ -190,9 +209,18 @@ export function createPortalRouter(deps: TrpcDeps) {
         // unchanged" while still refusing a malformed value.
         .input(z.object({ preferences: z.record(z.string(), z.unknown()), optedIn: z.boolean() }))
         .mutation(({ ctx, input }) => {
+          requireComponent("tab.tastes");
+          // A hidden section's keys are dropped rather than refused: the form
+          // might be a tab opened before the admin hid it, and dropping them
+          // leaves the stored answer to come back when the section does.
+          const hiddenKeys = new Set(
+            Object.entries(TASTES_PREFERENCE_KEYS)
+              .filter(([id]) => !isComponentOn(id as PortalComponentId))
+              .flatMap(([, keys]) => keys ?? []),
+          );
           const current = getUserPreferences(ctx.session.userId);
           const provided = Object.fromEntries(
-            Object.entries(input.preferences).filter(([, value]) => value !== undefined),
+            Object.entries(input.preferences).filter(([key, value]) => value !== undefined && !hiddenKeys.has(key)),
           );
           const merged = userPreferencesSchema.parse({ ...current.preferences, ...provided });
           setUserPreferences(ctx.session.userId, merged, input.optedIn);
@@ -214,6 +242,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      * is a portal that falls over when the server is busy.
      */
     myCollections: userProcedure.query(({ ctx }) => {
+      requireComponent("tab.collections");
       const rows = getCollectionsForUser(ctx.session.username);
       return rows.map((row) => ({
         ratingKey: row.plexRatingKey,
@@ -239,6 +268,7 @@ export function createPortalRouter(deps: TrpcDeps) {
     notInterested: userProcedure
       .input(z.object({ title: z.string().trim().min(1).max(500) }))
       .mutation(({ ctx, input }) => {
+        requireComponent("action.notForMe");
         const current = getUserPreferences(ctx.session.userId);
         // The collection's name, not an item's — this button is pressed on a row.
         // It used to be added to `excludedTitles`, which every consumer matches
@@ -270,6 +300,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      * portal that cries wolf is one nobody reads the week it matters.
      */
     leavingSoon: userProcedure.query(({ ctx }) => {
+      requireComponent("tab.leaving");
       const voted = keepVotesForUser(ctx.session.userId);
       // Scoped to the libraries shared with this user — see `sharedSectionKeys`.
       const sections = sharedSectionKeys(ctx.session.userId);
@@ -291,7 +322,10 @@ export function createPortalRouter(deps: TrpcDeps) {
         // admin's queue with the voter's name against it, so an unchecked rating
         // key let a shared user put named rows there for items no rule had ever
         // looked at — noise on the one page that has to be trustworthy.
+        // Withdrawing is never refused, so switching "Keep this" off can't
+        // strand a vote on the admin's queue that its owner can't take back.
         if (input.keep) {
+          requireComponent("action.keep");
           if (!isQueuedCandidate(input.ratingKey)) {
             throw new TRPCError({ code: "NOT_FOUND", message: "That isn't queued for removal." });
           }

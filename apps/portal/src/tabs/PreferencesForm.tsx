@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { portalTrpc } from "../trpc.ts";
+import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { ErrorState, RowsSkeleton } from "../components/States.tsx";
 import { useDebounced } from "../useDebounced.ts";
-
-type GenreLevel = "none" | "loved" | "liked" | "hated";
+import { GenrePicker, type GenreLevel } from "./GenrePicker.tsx";
 
 interface FormState {
   loved: string[];
@@ -19,19 +18,6 @@ interface FormState {
   digestFrequency: "never" | "weekly" | "monthly";
   digestEmail: string;
 }
-
-/**
- * Symbols rather than words, each named by its tooltip: four words per row
- * across a whole library of genres needed a legend paragraph to decode, and
- * the symbols read at a glance once hovered once.
- */
-const SEG_LABELS: Record<GenreLevel, string> = { loved: "♥", liked: "+", hated: "⊘", none: "—" };
-const SEG_TITLES: Record<GenreLevel, string> = {
-  loved: "Love — lots more",
-  liked: "Like — a bit more",
-  hated: "Hate — keep away",
-  none: "No preference",
-};
 
 const WATCHED_BIAS_HINTS: Record<FormState["watchedBias"], string> = {
   balanced: "A mix of new titles and ones you've watched before.",
@@ -60,7 +46,7 @@ const MOOD_OPTIONS = [
   "Tear-jerker",
 ];
 
-export default function PreferencesForm() {
+export default function PreferencesForm({ components: show }: { components: PortalComponents }) {
   const utils = portalTrpc.useUtils();
   const prefsQuery = portalTrpc.preferences.get.useQuery();
   const genresQuery = portalTrpc.availableGenres.useQuery();
@@ -128,26 +114,32 @@ export default function PreferencesForm() {
   function save() {
     if (!form) return;
     setSaved(false);
-    setMutation.mutate(
-      {
-        optedIn: form.optedIn,
-        preferences: {
-          genres: { loved: form.loved, liked: form.liked, hated: form.hated },
-          moods: form.moods,
-          excludedTitles: form.excludedTitles,
-          ratingFloor: Number(form.ratingFloor) > 0 ? Number(form.ratingFloor) : undefined,
-          rowCount: form.rowCount.trim() ? Number(form.rowCount) : undefined,
-          watchedBias: form.watchedBias,
-          strictHate: form.strictHate,
-          digest: {
-            frequency: form.digestFrequency,
-            // Cleared alongside the subscription: leaving an address stored
-            // for someone who has just unsubscribed is the sort of thing that
-            // makes people distrust an unsubscribe button.
-            email: form.digestFrequency === "never" ? "" : form.digestEmail.trim(),
-          },
+    // Only what the form shows. A hidden section is omitted rather than sent
+    // as empty: `set` merges over what is stored, so the user's earlier answer
+    // — a digest subscription made before SMTP went away, say — survives and is
+    // back when the section is. The server drops hidden keys regardless.
+    const preferences = {
+      ...(show["tastes.genres"] && { genres: { loved: form.loved, liked: form.liked, hated: form.hated } }),
+      ...(show["tastes.moods"] && { moods: form.moods }),
+      ...(show["tastes.neverRecommend"] && { excludedTitles: form.excludedTitles }),
+      ...(show["tastes.ratingFloor"] && {
+        ratingFloor: Number(form.ratingFloor) > 0 ? Number(form.ratingFloor) : undefined,
+      }),
+      ...(show["tastes.rowCount"] && { rowCount: form.rowCount.trim() ? Number(form.rowCount) : undefined }),
+      ...(show["tastes.watchedBias"] && { watchedBias: form.watchedBias }),
+      ...(show["tastes.strictHate"] && { strictHate: form.strictHate }),
+      ...(show["tastes.digest"] && {
+        digest: {
+          frequency: form.digestFrequency,
+          // Cleared alongside the subscription: leaving an address stored
+          // for someone who has just unsubscribed is the sort of thing that
+          // makes people distrust an unsubscribe button.
+          email: form.digestFrequency === "never" ? "" : form.digestEmail.trim(),
         },
-      },
+      }),
+    };
+    setMutation.mutate(
+      { optedIn: form.optedIn, preferences },
       {
         onSuccess: () => {
           setSaved(true);
@@ -160,7 +152,7 @@ export default function PreferencesForm() {
   const suggestions = (titleResults.data ?? []).filter((t) => !form.excludedTitles.includes(t));
   // A subscription with nowhere to send it used to save silently and send
   // nothing; saying no at the button is the honest version of that.
-  const emailMissing = form.digestFrequency !== "never" && !form.digestEmail.trim();
+  const emailMissing = show["tastes.digest"] && form.digestFrequency !== "never" && !form.digestEmail.trim();
 
   return (
     <div className="stack">
@@ -175,171 +167,162 @@ export default function PreferencesForm() {
         </label>
       </div>
 
-      <div className="field">
-        <span className="field-label">Genres</span>
-        <div className="genre-box">
-          {genres.length === 0 && <div className="genre-row muted">No genres available.</div>}
-          {genres.map((g) => {
-            const level = genreLevel(g);
-            return (
-              <div key={g} className="genre-row">
-                <span>{g}</span>
-                <span className="seg">
-                  {(["loved", "liked", "hated", "none"] as GenreLevel[]).map((lv) => (
-                    <button
-                      key={lv}
-                      type="button"
-                      className={`${lv} ${level === lv ? "on" : ""}`}
-                      onClick={() => setGenre(g, lv)}
-                      title={SEG_TITLES[lv]}
-                      aria-label={`${g}: ${SEG_TITLES[lv]}`}
-                      aria-pressed={level === lv}
-                    >
-                      {SEG_LABELS[lv]}
-                    </button>
-                  ))}
-                </span>
-              </div>
-            );
-          })}
+      {show["tastes.genres"] && (
+        <div className="field">
+          <span className="field-label">Genres</span>
+          <GenrePicker genres={genres} levelOf={genreLevel} onChange={setGenre} />
         </div>
-      </div>
+      )}
 
-      <div className="field">
-        <span className="field-label">Moods</span>
-        <span className="field-hint">Recommendations lean toward these.</span>
-        <div className="chips">
-          {MOOD_OPTIONS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={`chip ${form.moods.includes(m) ? "on" : ""}`}
-              onClick={() => toggleMood(m)}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="field">
-        <span className="field-label">Never recommend</span>
-        {form.excludedTitles.length > 0 && (
-          <div className="pills">
-            {form.excludedTitles.map((t) => (
-              <span key={t} className="pill">
-                {t}
-                <button type="button" aria-label={`Remove ${t}`} onClick={() => removeExcluded(t)}>
-                  ×
-                </button>
-              </span>
+      {show["tastes.moods"] && (
+        <div className="field">
+          <span className="field-label">Moods</span>
+          <span className="field-hint">Recommendations lean toward these.</span>
+          <div className="chips">
+            {MOOD_OPTIONS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`chip ${form.moods.includes(m) ? "on" : ""}`}
+                onClick={() => toggleMood(m)}
+              >
+                {m}
+              </button>
             ))}
           </div>
-        )}
-        <div className="combo">
-          <input
-            type="text"
-            value={titleQuery}
-            onChange={(e) => setTitleQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addExcluded(titleQuery);
-              }
-            }}
-            placeholder="Search titles…"
-          />
-          {suggestions.length > 0 && (
-            <div className="combo-results">
-              {suggestions.map((t) => (
-                <button key={t} type="button" onClick={() => addExcluded(t)}>
+        </div>
+      )}
+
+      {show["tastes.neverRecommend"] && (
+        <div className="field">
+          <span className="field-label">Never recommend</span>
+          {form.excludedTitles.length > 0 && (
+            <div className="pills">
+              {form.excludedTitles.map((t) => (
+                <span key={t} className="pill">
                   {t}
-                </button>
+                  <button type="button" aria-label={`Remove ${t}`} onClick={() => removeExcluded(t)}>
+                    ×
+                  </button>
+                </span>
               ))}
             </div>
           )}
+          <div className="combo">
+            <input
+              type="text"
+              value={titleQuery}
+              onChange={(e) => setTitleQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addExcluded(titleQuery);
+                }
+              }}
+              placeholder="Search titles…"
+            />
+            {suggestions.length > 0 && (
+              <div className="combo-results">
+                {suggestions.map((t) => (
+                  <button key={t} type="button" onClick={() => addExcluded(t)}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      <label className="field">
-        <span className="field-label">Minimum rating</span>
-        <div className="slider-row">
-          <input
-            type="range"
-            min={0}
-            max={10}
-            step={0.5}
-            value={form.ratingFloor || "0"}
-            onChange={(e) => setForm({ ...form, ratingFloor: e.target.value })}
-          />
-          <span className="slider-val">
-            {Number(form.ratingFloor || 0) === 0 ? "Any" : Number(form.ratingFloor).toFixed(1)}
-          </span>
-        </div>
-      </label>
-
-      <label className="field narrow">
-        <span className="field-label">Rows on my home</span>
-        <input
-          type="number"
-          min={1}
-          max={20}
-          value={form.rowCount}
-          onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
-        />
-      </label>
-
-      <div className="field">
-        <span className="field-label">Watched bias</span>
-        <select
-          value={form.watchedBias}
-          onChange={(e) => setForm({ ...form, watchedBias: e.target.value as FormState["watchedBias"] })}
-          style={{ alignSelf: "flex-start" }}
-        >
-          <option value="balanced">Balanced</option>
-          <option value="new_to_me">New to me</option>
-          <option value="include_favorites">Include favourites</option>
-        </select>
-        <span className="field-hint">{WATCHED_BIAS_HINTS[form.watchedBias]}</span>
-      </div>
-
-      <div className="field">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={form.strictHate}
-            onChange={(e) => setForm({ ...form, strictHate: e.target.checked })}
-          />
-          Never show hated genres
+      {show["tastes.ratingFloor"] && (
+        <label className="field">
+          <span className="field-label">Minimum rating</span>
+          <div className="slider-row">
+            <input
+              type="range"
+              min={0}
+              max={10}
+              step={0.5}
+              value={form.ratingFloor || "0"}
+              onChange={(e) => setForm({ ...form, ratingFloor: e.target.value })}
+            />
+            <span className="slider-val">
+              {Number(form.ratingFloor || 0) === 0 ? "Any" : Number(form.ratingFloor).toFixed(1)}
+            </span>
+          </div>
         </label>
-        <span className="field-hint">Off, they're just shown less often.</span>
-      </div>
+      )}
 
-      <div className="field">
-        <span className="field-label">Email digest</span>
-        <span className="field-hint">What's new, what's popular, and what's leaving.</span>
-        <select
-          value={form.digestFrequency}
-          onChange={(e) => setForm({ ...form, digestFrequency: e.target.value as FormState["digestFrequency"] })}
-          style={{ alignSelf: "flex-start" }}
-        >
-          <option value="never">Never</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-        {form.digestFrequency !== "never" && (
+      {show["tastes.rowCount"] && (
+        <label className="field narrow">
+          <span className="field-label">Rows on my home</span>
           <input
-            type="email"
-            required
-            aria-label="Digest email"
-            aria-invalid={emailMissing}
-            value={form.digestEmail}
-            onChange={(e) => setForm({ ...form, digestEmail: e.target.value })}
-            placeholder="you@example.com"
-            style={{ marginTop: 8 }}
+            type="number"
+            min={1}
+            max={20}
+            value={form.rowCount}
+            onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
           />
-        )}
-      </div>
+        </label>
+      )}
+
+      {show["tastes.watchedBias"] && (
+        <div className="field">
+          <span className="field-label">Watched bias</span>
+          <select
+            value={form.watchedBias}
+            onChange={(e) => setForm({ ...form, watchedBias: e.target.value as FormState["watchedBias"] })}
+            style={{ alignSelf: "flex-start" }}
+          >
+            <option value="balanced">Balanced</option>
+            <option value="new_to_me">New to me</option>
+            <option value="include_favorites">Include favourites</option>
+          </select>
+          <span className="field-hint">{WATCHED_BIAS_HINTS[form.watchedBias]}</span>
+        </div>
+      )}
+
+      {show["tastes.strictHate"] && (
+        <div className="field">
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={form.strictHate}
+              onChange={(e) => setForm({ ...form, strictHate: e.target.checked })}
+            />
+            Never show genres I avoid
+          </label>
+          <span className="field-hint">Off, they're just shown less often.</span>
+        </div>
+      )}
+
+      {show["tastes.digest"] && (
+        <div className="field">
+          <span className="field-label">Email digest</span>
+          <span className="field-hint">What's new, what's popular, and what's leaving.</span>
+          <select
+            value={form.digestFrequency}
+            onChange={(e) => setForm({ ...form, digestFrequency: e.target.value as FormState["digestFrequency"] })}
+            style={{ alignSelf: "flex-start" }}
+          >
+            <option value="never">Never</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          {form.digestFrequency !== "never" && (
+            <input
+              type="email"
+              required
+              aria-label="Digest email"
+              aria-invalid={emailMissing}
+              value={form.digestEmail}
+              onChange={(e) => setForm({ ...form, digestEmail: e.target.value })}
+              placeholder="you@example.com"
+              style={{ marginTop: 8 }}
+            />
+          )}
+        </div>
+      )}
 
       <div className="save-row">
         <button

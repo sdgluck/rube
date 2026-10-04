@@ -25,6 +25,8 @@ import { ServicesToken } from "@tinkerbell/composition";
 import {
   DbToken,
   cleanupCandidates,
+  jobRuns,
+  jobs,
   mediaItems,
   plexUserShares,
   plexUsers,
@@ -74,6 +76,35 @@ function seedMedia(ratingKey: string, title: string, sectionId: string): void {
     .run();
 }
 
+/**
+ * Cleanup able to act — the switch on and a fresh library sync — because the
+ * Leaving soon tab is off without the switch, and the list is empty without
+ * both. A scoping test against an empty list proves nothing.
+ */
+function enableCleanup(): void {
+  services.config.setConfig("cleanup_enabled", true);
+  db.insert(jobs)
+    .values({ id: "sync-media", name: "Sync Media", command: "sync-media", schedule: "", enabled: 1, config: {} })
+    .onConflictDoNothing()
+    .run();
+  const now = Date.now();
+  db.insert(jobRuns)
+    .values({
+      id: `sync-${now}`,
+      jobId: "sync-media",
+      status: "completed",
+      log: "",
+      progress: 1,
+      message: "",
+      startedAt: now,
+      finishedAt: now,
+    })
+    .onConflictDoNothing()
+    .run();
+}
+
+const CLEANUP_RULE_CONFIG = { action: { kind: "cleanup", mode: "delete", consecutiveRuns: 3 } };
+
 beforeEach(() => {
   db.delete(userPreferences).run();
   db.delete(cleanupCandidates).run();
@@ -81,6 +112,7 @@ beforeEach(() => {
   db.delete(plexUserShares).run();
   db.delete(plexUsers).run();
   db.delete(rules).run();
+  enableCleanup();
 
   seedUser(ALICE, "alice", [1]);
   seedUser(BOB, "bob", [2]);
@@ -182,7 +214,9 @@ describe("library scoping", () => {
   test("leavingSoon is scoped to shared libraries too", async () => {
     // Being warned about a film leaving a library you cannot open is the exact
     // complaint `sharedSectionKeys` was added for.
-    db.insert(rules).values({ id: "r1", name: "Cleanup", type: "cleanup", createdAt: 0 }).run();
+    db.insert(rules)
+      .values({ id: "r1", name: "Cleanup", type: "smart_filter", config: CLEANUP_RULE_CONFIG, createdAt: 0 })
+      .run();
     for (const [ratingKey, sectionId] of [
       ["m1", "1"],
       ["m2", "2"],
@@ -202,9 +236,11 @@ describe("library scoping", () => {
     }
 
     const alice = await callerFor(ALICE, "alice").leavingSoon();
-    for (const item of alice as Array<{ ratingKey: string }>) {
-      assert.notEqual(item.ratingKey, "m2", "alice was warned about a library she cannot see");
-    }
+    assert.deepEqual(
+      alice.map((item) => item.ratingKey),
+      ["m1"],
+      "alice is warned about her own library, and not about one she cannot see",
+    );
   });
 });
 

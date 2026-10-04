@@ -1,0 +1,29 @@
+/* One row per portal component: name, why it's blocked (if it is), switch. */
+.componentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.componentRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.componentRow:last-child {
+  border-bottom: none;
+}
+
+.componentName {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Switched on but not shown — its tab is off or its feature is missing. */
+.componentBlocked .componentName {
+  color: var(--ink-3);
+}
