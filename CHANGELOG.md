@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-10-04
+
+### Added
+
+- Settings → Portal → Components lets you switch off each portal tab, each tastes section, and the Not for me / Keep this actions. A switched-off part is hidden from users, and so is anything its feature can't back: "Leaving soon" disappears when cleanup is off, and the digest address section disappears when SMTP isn't configured. The admin page names what's missing and links to it.
+- The Feature Wizard for Personalized Collections offers, ticked by default, to mark every collection rule as personalizable. Cleanup, playlist and metadata rules are skipped.
+- Bulk edit has a Personalizable on/off option, and the rule wizard has a per-rule Personalizable checkbox.
+- The tastes form's genre list folds down to the user's picks, with the rest behind "Show all" and a filter.
+
+### Changed
+
+- **Switched-off portal features are refused on the server, not only hidden.** Requests to a disabled portal feature return FORBIDDEN. Saving the tastes form drops answers for a hidden section, and they come back when the section is switched on again. Withdrawing a keep vote is always allowed, so turning voting off can't leave a vote stuck.
+- The tastes form's buttons are labelled Love, Like and Avoid instead of symbols that needed a hover to explain.
+- Changes to a rule's personalizable flag are recorded in that rule's history, so each one can be reverted on its own.
+
+### Fixed
+
+- The Feature Wizard for Personalized Collections installed without error but did nothing, because no collection rule was marked personalizable. It now marks them.
+- Saving a rule in the rule wizard no longer drops its personalizable flag.
+
 ## [0.30.0] - 2026-10-03
 
 ### Added
