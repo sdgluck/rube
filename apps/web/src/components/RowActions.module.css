@@ -15,6 +15,7 @@
   justify-content: center;
   gap: 5px;
   width: 26px;
+  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the one row-action size app-wide, inside a 38px row; a 32px target would crowd it */
   height: 26px;
   padding: 0;
   border: none;
@@ -37,16 +38,16 @@
   cursor: not-allowed;
 }
 
-.btnPrimary {
+.triggerPrimary {
   color: var(--accent-text);
 }
 
-.btnActive {
+.triggerActive {
   background: var(--fill-quiet);
   color: var(--ink);
 }
 
-.btnDanger:hover:not(:disabled) {
+.triggerDanger:hover:not(:disabled) {
   color: var(--status-error-fg);
 }
 

@@ -192,13 +192,7 @@
 }
 
 .summaryEdit {
-  background: none;
-  border: none;
-  color: var(--accent-text);
-  cursor: pointer;
-  font-size: 11.5px;
-  padding: 0;
-  text-decoration: underline;
+  composes: btnLink from "../../styles/controls.module.css";
 }
 
 /* ─── Footer ──────────────────────────────────────────────────────────────── */

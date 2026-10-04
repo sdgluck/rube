@@ -82,22 +82,9 @@
 }
 
 .close {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+  composes: btn btnGhost btnIcon from "../styles/controls.module.css";
   margin: -4px -6px 0 0;
-  padding: 0;
-  background: none;
-  border: none;
-  border-radius: var(--r-sm);
   color: var(--ink-3);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
 }
 
 .close svg {
@@ -105,14 +92,8 @@
   height: 18px;
 }
 
-.close:hover {
-  background: var(--fill-hover);
+.close:hover:not(:disabled) {
   color: var(--ink);
-}
-
-.close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .body {

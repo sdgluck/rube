@@ -58,7 +58,7 @@ function PanelTitle({ title, onToggle }: { title: string; onToggle: (() => void)
   return (
     <button
       type="button"
-      className={`${styles.panelTitle} ${styles.panelTitleButton}`}
+      className={`${styles.panelTitle} ${styles.panelTitleToggle}`}
       onClick={onToggle}
       aria-expanded={true}
       title="Collapse panel"
@@ -130,7 +130,7 @@ export function CollapsedPanel({
       <div className={styles.panelHeader}>
         <button
           type="button"
-          className={`${styles.panelTitle} ${styles.panelTitleButton}`}
+          className={`${styles.panelTitle} ${styles.panelTitleToggle}`}
           onClick={onToggle}
           aria-expanded={false}
           title="Expand panel"

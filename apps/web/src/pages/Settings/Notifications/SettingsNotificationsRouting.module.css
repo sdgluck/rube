@@ -5,30 +5,21 @@
   background: var(--surface);
 }
 
+/* The shared table: its header band, its 38px rows, its rules between them.
+   What is local is the sticky event column and the cell-sized toggles. */
 .matrix {
-  width: 100%;
-  border-collapse: collapse;
-  font: var(--t-body-sm);
+  composes: table from "../../../styles/shared.module.css";
 }
 
-.matrix th,
-.matrix td {
-  border-bottom: 1px solid var(--line-soft);
-  padding: 0;
-}
-
-.matrix tbody tr:last-child th,
-.matrix tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* The event name column stays put while the nine service columns scroll. */
-.eventHead {
+/* The event name column stays put while the nine service columns scroll.
+   Doubled class so its opaque surface outranks the table primitive's row
+   header (`.table tbody th`), which is transparent — a see-through sticky
+   column shows the toggles scrolling underneath it. */
+.eventHead.eventHead {
   position: sticky;
   left: 0;
   z-index: 1;
   text-align: left;
-  padding: 10px 14px;
   background: var(--surface);
   border-right: 1px solid var(--line);
   min-width: 200px;
@@ -36,18 +27,11 @@
   color: var(--ink);
 }
 
-thead .eventHead {
+thead .eventHead.eventHead {
   background: var(--surface-header);
 }
 
 .serviceHead {
-  padding: 10px 8px;
-  background: var(--surface-header);
-  font: var(--t-label);
-  letter-spacing: var(--t-label-tracking);
-  text-transform: uppercase;
-  color: var(--ink-3);
-  white-space: nowrap;
   /* Nine columns of service names read as a header row either way, and
      horizontal is what keeps the table one screen tall. */
   text-align: center;
@@ -55,12 +39,13 @@ thead .eventHead {
 
 .cell {
   text-align: center;
-  vertical-align: middle;
+  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the toggle inside fills the cell, so the target is the whole cell */
+  padding: 0;
 }
 
 /* The whole cell is the test-send button — the target is otherwise a 10px dot
    in a 60px column, and the state it shows is exactly what you want to test. */
-.cellButton {
+.cellToggle {
   appearance: none;
   width: 100%;
   border: none;
@@ -73,11 +58,11 @@ thead .eventHead {
   justify-content: center;
 }
 
-.cellButton:hover:not(:disabled) {
+.cellToggle:hover:not(:disabled) {
   background: var(--fill-hover);
 }
 
-.cellButton:disabled {
+.cellToggle:disabled {
   cursor: default;
 }
 

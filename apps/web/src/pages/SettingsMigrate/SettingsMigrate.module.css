@@ -114,7 +114,7 @@
   list-style: none;
 }
 
-.stepButton {
+.stepTab {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -127,7 +127,7 @@
   cursor: pointer;
 }
 
-.stepButton:disabled {
+.stepTab:disabled {
   cursor: default;
 }
 
@@ -142,7 +142,7 @@
   font-size: 11px;
 }
 
-.stepActive .stepButton {
+.stepActive .stepTab {
   color: var(--ink);
   font-weight: 600;
 }
@@ -156,7 +156,7 @@
   color: var(--on-accent);
 }
 
-.stepDone .stepButton {
+.stepDone .stepTab {
   color: var(--ink);
 }
 
@@ -214,19 +214,8 @@
 }
 
 .linkButton {
-  padding: 0;
+  composes: btnLink from "../../styles/controls.module.css";
   margin-left: 6px;
-  background: none;
-  border: 0;
-  color: var(--ink-3);
-  font: inherit;
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.linkButton:hover {
-  color: var(--ink);
 }
 
 /* How closely a migrated rule reproduces the collection it replaced. The

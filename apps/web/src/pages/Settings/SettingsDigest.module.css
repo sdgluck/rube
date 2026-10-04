@@ -109,11 +109,10 @@
   margin: 0;
 }
 
-/* The subscriber and delivery lists are the app's table, narrowed: two short
-   lists inside a settings card, not a page of rows. */
+/* The subscriber and delivery lists are two short lists inside a settings
+   card, not a page of rows — the compact table, narrowed. */
 .table {
-  composes: table from "../../styles/shared.module.css";
-  font-size: 12.5px;
+  composes: compactTable from "../../styles/shared.module.css";
   margin-top: 8px;
   max-width: 72ch;
 }

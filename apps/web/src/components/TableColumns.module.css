@@ -6,28 +6,7 @@
 }
 
 .trigger {
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
-  height: var(--control-h);
-  padding: 0 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  font-size: var(--btn-font-size-sm);
-  font-weight: 600;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
-  white-space: nowrap;
-}
-
-.trigger:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
 }
 
 .triggerActive {

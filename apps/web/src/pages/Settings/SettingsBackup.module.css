@@ -92,25 +92,12 @@
   margin: 0;
 }
 
-/* The shared table, sitting inside a settings card rather than in its own
-   panel: no surface of its own, and tighter padding, because the card already
-   provides both. */
+/* A table inside a settings card is the compact table — the variant that
+   exists for living inside a panel. It used to be the full table with its
+   header band stripped and its rows re-padded to ~28px, which is what made
+   this card look squashed beside every other table in the app. */
 .table {
-  composes: table from "../../styles/shared.module.css";
-  background: none;
-  font: var(--t-body-sm);
-}
-
-.table th {
-  height: auto;
-  padding: 6px 8px 6px 0;
-  background: none;
-  color: var(--ink-faint);
-}
-
-.table td {
-  padding: 7px 8px 7px 0;
-  vertical-align: middle;
+  composes: compactTable from "../../styles/shared.module.css";
 }
 
 .kind {

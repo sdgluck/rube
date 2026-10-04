@@ -80,13 +80,7 @@
 }
 
 .linkButton {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: var(--accent-text);
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
+  composes: btnLink from "../../styles/controls.module.css";
 }
 
 .muted {

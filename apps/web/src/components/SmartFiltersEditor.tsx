@@ -309,7 +309,7 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate, onRemo
           <div className={styles.smartCombinator} role="group" aria-label="Combine conditions with">
             <button
               type="button"
-              className={`${styles.smartCombinatorBtn} ${group.combinator === "all" ? styles.smartCombinatorBtnActive : ""}`}
+              className={`${styles.smartCombinatorOption} ${group.combinator === "all" ? styles.smartCombinatorOptionActive : ""}`}
               aria-pressed={group.combinator === "all"}
               onClick={() => setCombinator("all")}
             >
@@ -317,7 +317,7 @@ function GroupBody({ group, path, isRoot, allFields, sectionId, onUpdate, onRemo
             </button>
             <button
               type="button"
-              className={`${styles.smartCombinatorBtn} ${group.combinator !== "all" ? styles.smartCombinatorBtnActive : ""}`}
+              className={`${styles.smartCombinatorOption} ${group.combinator !== "all" ? styles.smartCombinatorOptionActive : ""}`}
               aria-pressed={group.combinator !== "all"}
               onClick={() => setCombinator("any")}
             >

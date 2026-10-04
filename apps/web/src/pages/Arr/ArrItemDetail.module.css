@@ -34,9 +34,9 @@
   overflow-wrap: anywhere;
 }
 
+/* Expands the season's episodes — a disclosure inside a cell, so a link. */
 .seasonBtn {
-  composes: btnGhost btnSm from "../../styles/controls.module.css";
-  padding-inline: 0;
+  composes: btnLink from "../../styles/controls.module.css";
 }
 
 .episodes {

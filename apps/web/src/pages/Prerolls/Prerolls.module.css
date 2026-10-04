@@ -39,24 +39,8 @@
 }
 
 .dropzoneButton {
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
   margin-top: 8px;
-  height: var(--control-h);
-  padding: 0 var(--btn-pad-x-sm);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: var(--btn-font-size-sm);
-  font-weight: var(--btn-font-weight);
-  cursor: pointer;
-}
-
-.dropzoneButton:hover {
-  background: var(--surface-sunken);
 }
 
 .emptyUpload {
@@ -321,34 +305,15 @@
 }
 
 .modeToggle {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sunken);
-  background: var(--surface-sunken);
+  composes: segmented from "../../styles/controls.module.css";
 }
 
-.modeButton,
-.modeButtonActive {
-  padding: 5px 11px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--ink-2);
-  font-family: var(--font-sans);
-  font-size: var(--btn-font-size-sm);
-  font-weight: var(--btn-font-weight);
-  cursor: pointer;
-}
-
-.modeButton:hover {
-  background: var(--surface-sunken);
+.modeButton {
+  composes: segmentedItem from "../../styles/controls.module.css";
 }
 
 .modeButtonActive {
-  background: var(--accent-fill);
-  color: var(--on-accent);
+  composes: segmentedItem segmentedItemActive from "../../styles/controls.module.css";
 }
 
 .syncStatus {

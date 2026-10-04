@@ -50,20 +50,7 @@
 }
 
 .smartSummaryEdit {
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  padding: 5px 10px;
-  border-radius: var(--r-sm);
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.smartSummaryEdit:hover {
-  border-color: var(--line-hover);
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
 }
 
 /* ─── Drawer ─────────────────────────────────────────────────────────────── */
@@ -143,19 +130,7 @@
 }
 
 .drawerClose {
-  background: none;
-  border: none;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--ink-3);
-  padding: 4px 8px;
-  border-radius: var(--r-tag);
-}
-
-.drawerClose:hover {
-  color: var(--ink);
-  background: var(--surface-sunken);
+  composes: btn btnGhost btnIcon from "../styles/controls.module.css";
 }
 
 .drawerBody {
@@ -222,7 +197,7 @@
   box-shadow: var(--e-flat);
 }
 
-.smartCombinatorBtn {
+.smartCombinatorOption {
   appearance: none;
   border: none;
   background: transparent;
@@ -237,11 +212,11 @@
     color 0.15s;
 }
 
-.smartCombinatorBtn:hover:not(.smartCombinatorBtnActive) {
+.smartCombinatorOption:hover:not(.smartCombinatorOptionActive) {
   color: var(--ink);
 }
 
-.smartCombinatorBtnActive {
+.smartCombinatorOptionActive {
   background: var(--accent-fill);
   color: var(--on-accent);
 }
@@ -479,26 +454,15 @@
   min-width: 0;
 }
 
+/* Always visible, not hover-revealed: on a touch screen there is no hover, so
+   a hover-only control simply doesn't exist. Square at the control height, so
+   it lines up with the selects in its row. */
 .smartRemoveBtn {
-  background: none;
-  border: none;
+  composes: btn btnGhost btnIcon from "../styles/controls.module.css";
   color: var(--ink-faint);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--r-tag);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
-  /* Always visible, not hover-revealed: on a touch screen there is no hover,
-     so a hover-only control simply doesn't exist. */
-  transition: color 0.1s;
 }
 
-.smartRemoveBtn:hover {
+.smartRemoveBtn:hover:not(:disabled) {
   background: var(--status-error-bg);
   color: var(--status-error-fg);
 }
@@ -506,21 +470,12 @@
 .smartActions {
   display: flex;
   gap: 16px;
+  font-size: 12px;
   margin-top: 4px;
 }
 
 .smartLinkBtn {
-  background: none;
-  border: none;
-  color: var(--accent-text);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-}
-
-.smartLinkBtn:hover {
-  text-decoration: underline;
+  composes: btnLink from "../styles/controls.module.css";
 }
 
 /* ─── Narrow viewports ───────────────────────────────────────────────────────

@@ -293,21 +293,8 @@
 }
 
 .presetSaveBtn {
+  composes: btn btnSecondary btnSm from "../styles/controls.module.css";
   margin-top: 8px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  border: 1px solid var(--line-accent);
-  border-radius: var(--r-md);
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-}
-
-.presetSaveBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* ─── Canvas (center) ──────────────────────────────────────────── */
@@ -748,25 +735,8 @@
   gap: 2px;
 }
 
-.inspectorHeaderActions .iconBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
 .iconBtn {
-  background: none;
-  border: none;
-  color: var(--ink-3);
-  cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  padding: 4px 8px;
-  border-radius: var(--r-tag);
-}
-
-.iconBtn:hover {
-  color: var(--ink);
-  background: var(--surface-sunken);
+  composes: btn btnGhost btnIcon from "../styles/controls.module.css";
 }
 
 .section {
@@ -813,37 +783,20 @@
   margin: 8px 0 4px;
 }
 
+/* The app's segmented control, stretched to the inspector's width. */
 .modeSwitch {
+  composes: segmented from "../styles/controls.module.css";
   display: flex;
-  gap: 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: 2px;
 }
 
 .modeSwitchBtn {
+  composes: segmentedItem from "../styles/controls.module.css";
   flex: 1;
-  background: none;
-  border: none;
-  padding: 6px 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2);
-  cursor: pointer;
-  border-radius: var(--r-tag);
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.modeSwitchBtn:hover:not(.modeSwitchActive) {
-  color: var(--ink);
+  justify-content: center;
 }
 
 .modeSwitchActive {
-  background: var(--accent);
-  color: var(--on-accent);
+  composes: segmentedItemActive from "../styles/controls.module.css";
 }
 
 .colorGrid {
@@ -957,37 +910,11 @@
 }
 
 .linkBtn {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 0;
-  text-align: left;
-}
-
-.linkBtn:hover {
-  text-decoration: underline;
+  composes: btnLink from "../styles/controls.module.css";
 }
 
 .dangerBtn {
-  background: none;
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  border-radius: var(--r-sm);
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.dangerBtn:hover {
-  background: var(--danger);
-  color: var(--on-accent);
+  composes: btn btnDangerOutline btnSm from "../styles/controls.module.css";
 }
 
 .inspectorFooter {
@@ -1047,53 +974,24 @@
   color: var(--on-accent);
 }
 
-/* One height for every button in the bar, set by the box rather than by what
-   is inside it — the overflow trigger holds a single "⋯" glyph, whose line box
-   is shorter than a word's, so padding alone left it visibly squat. */
-.actionBtnPrimary,
-.actionBtnSecondary,
-.actionBtnDanger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  line-height: 1;
-}
-
+/* The shared buttons, recoloured for the dark floating bar. They used to be
+   three 30px buttons of their own, which sat 2px short of every other control
+   in the app and drifted further each time one of them was touched. */
 .actionBtnPrimary {
-  background: var(--accent-fill);
-  color: var(--on-accent);
-  border: none;
-  border-radius: var(--r-md);
-  padding: 0 13px;
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.actionBtnPrimary:hover:not(:disabled) {
-  background: var(--accent-text);
+  composes: btn btnPrimary from "../styles/controls.module.css";
 }
 
 .actionBtnPrimary:disabled {
   background: var(--on-dark-line);
+  border-color: transparent;
   color: color-mix(in srgb, var(--on-inverse) 50%, transparent);
-  cursor: not-allowed;
 }
 
 .actionBtnSecondary {
+  composes: btn from "../styles/controls.module.css";
   background: var(--on-dark-line);
+  border-color: transparent;
   color: var(--on-accent);
-  border: none;
-  border-radius: var(--r-md);
-  padding: 0 13px;
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
 }
 
 .actionBtnSecondary:hover:not(:disabled) {
@@ -1101,30 +999,13 @@
 }
 
 .actionBtnSecondary:disabled {
+  background: var(--on-dark-line);
+  border-color: transparent;
   color: color-mix(in srgb, var(--on-inverse) 40%, transparent);
-  cursor: not-allowed;
 }
 
 .actionBtnDanger {
-  background: var(--danger);
-  color: var(--on-accent);
-  border: none;
-  border-radius: var(--r-md);
-  padding: 0 13px;
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.actionBtnDanger:hover:not(:disabled) {
-  background: var(--danger-hover);
-  color: var(--on-accent);
-}
-
-.actionBtnDanger:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  composes: btn btnDanger from "../styles/controls.module.css";
 }
 
 /* ─── Modal content ────────────────────────────────────────────────
@@ -1194,30 +1075,7 @@
 /* ─── Icon-only canvas action buttons ──────────────────────────── */
 
 .iconActionBtn {
-  background: var(--surface);
-  color: var(--ink-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-  padding: 0;
-}
-
-.iconActionBtn:hover:not(:disabled) {
-  background: var(--surface-sunken);
-  color: var(--ink);
-}
-
-.iconActionBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  composes: btn btnSecondary btnIcon from "../styles/controls.module.css";
 }
 
 /* ─── Overflow menu in action bar ──────────────────────────────── */
@@ -1230,9 +1088,7 @@
 /* Square, so a one-glyph trigger doesn't read as a clipped word button. */
 .actionBtnOverflow {
   composes: actionBtnSecondary;
-  width: 30px;
-  padding: 0;
-  font-size: 15px;
+  composes: btnIcon from "../styles/controls.module.css";
 }
 
 .overflowMenu {

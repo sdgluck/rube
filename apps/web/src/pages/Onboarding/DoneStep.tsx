@@ -39,7 +39,7 @@ export default function DoneStep() {
       <h3 className={styles.groupHeading}>Where to go next</h3>
       <div className={styles.tileGrid}>
         {NEXT_LINKS.map((link) => (
-          <Link key={link.to} to={link.to} className={`${styles.tile} ${styles.tileButton}`}>
+          <Link key={link.to} to={link.to} className={`${styles.tile} ${styles.tileClickable}`}>
             <span className={styles.tileTitle}>{link.label}</span>
             <span className={styles.tileBlurb}>{link.blurb}</span>
           </Link>

@@ -195,7 +195,7 @@
   max-width: 440px;
 }
 
-.iconBtn {
+.iconOption {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -207,11 +207,11 @@
   cursor: pointer;
 }
 
-.iconBtn:hover {
+.iconOption:hover {
   border-color: var(--ink-3);
 }
 
-.iconBtn.active {
+.iconOption.active {
   border-color: var(--accent);
   box-shadow: var(--input-focus-ring);
 }
@@ -260,7 +260,9 @@
   margin: 8px 0 0;
 }
 
-.previewBtn {
+/* A facsimile of the portal's sign-in button — the portal's design, not the
+   app's, which is why it isn't built from .btn. */
+.previewSignIn {
   margin-top: 14px;
   background: var(--plex);
   color: var(--on-plex);

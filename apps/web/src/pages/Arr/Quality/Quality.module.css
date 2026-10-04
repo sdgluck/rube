@@ -54,7 +54,7 @@
 }
 
 .rowButton {
-  composes: btnGhost btnSm from "../../../styles/controls.module.css";
+  composes: btn btnGhost btnSm from "../../../styles/controls.module.css";
 }
 
 .snapshots {
@@ -230,25 +230,23 @@
   color: var(--ink-3);
 }
 
+/* The preset diff is a table in a modal — the compact one, not a hand-rolled
+   grid with 4px rows of its own. */
 .changes {
-  width: 100%;
-  border-collapse: collapse;
-  font: var(--t-body-sm);
+  composes: compactTable from "../../../styles/shared.module.css";
 }
 
-.changes th,
 .changes td {
-  padding: 4px 12px;
-  border-top: 1px solid var(--line-soft);
-  text-align: left;
-  vertical-align: top;
   overflow-wrap: anywhere;
 }
 
 .changes th {
   width: 30%;
-  font: var(--t-data);
-  color: var(--ink-2);
+}
+
+/* The setting's path names the row; machine-produced, so the data face. */
+.changePath {
+  composes: cellMuted from "../../../styles/shared.module.css";
 }
 
 .before {

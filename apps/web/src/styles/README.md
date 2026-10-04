@@ -34,6 +34,32 @@ height, and nobody noticed for months — you don't open four files at once.
 If your thing genuinely isn't the shared thing, give it a different name. A
 pack card is `.packCard`, a login box is `.loginCard`. Same name, same thing.
 
+### Size is the primitive's
+
+`tinkerbell/primitive-geometry` is the other half. Composing a primitive and
+then overriding its size is how drift came back after `.table` stopped being
+redeclared: Backup and Watchlist composed `.table` and re-padded its cells to
+~28px rows, the Overlays bar built 30px buttons, and new pages looked squashed
+beside old ones. So, in a page module:
+
+- A class composing `btn`, `input`/`select`/`textarea`, `segmented*`, `table`
+  or `compactTable` may not set `height`, `padding`, `font-size`/`font`,
+  `line-height` or `border-radius`. Colour, width, margin and layout are
+  yours. (A field may set a side inset for an adornment; a textarea may set
+  `min-height`.)
+- `th`/`td` geometry belongs to the table primitive, whatever class it hangs
+  off. A table inside a card or modal is `compactTable`; row headers
+  (`<th scope="row">`) are styled by the primitive.
+- A class named like a button (`saveBtn`, `refreshButton`) must be built from
+  one, and composing a colour (`btnGhost`) without `btn` is an error — that is
+  a button with no height.
+- Anything `cursor: pointer` at a literal 24–48px height is a control with a
+  height of its own: use `var(--control-h)` or compose.
+
+Need a different size? Pick a modifier — `btnSm`, `btnIcon` (square, for a
+glyph), `btnLink` (a button that reads as a link), `inputSm`, `compactTable` —
+and if none fits, add one to `styles/` rather than overriding locally.
+
 ## Using a token
 
 ```css
@@ -98,6 +124,7 @@ pnpm lint:css      # just the stylesheets
 pnpm lint:css:report   # find stale/invalid disables
 ```
 
-Config is `stylelint.config.mjs` at the repo root; the primitive rule is
-`stylelint-plugins/no-shadowed-primitive.mjs`. The marketing site and the portal
+Config is `stylelint.config.mjs` at the repo root; the primitive rules are
+`stylelint-plugins/no-shadowed-primitive.mjs` and
+`stylelint-plugins/primitive-geometry.mjs`. The marketing site and the portal
 are exempt — separate products, their own palettes, no path to these tokens.

@@ -14,6 +14,7 @@
    breadcrumb, and the icons carry the meaning on their own once the label is
    on the button as an aria-label. */
 .icons .item {
+  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- icon-only items: the gutter only, the track height is untouched */
   padding: 0 8px;
 }
 

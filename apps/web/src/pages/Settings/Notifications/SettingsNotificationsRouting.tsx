@@ -100,7 +100,7 @@ export default function SettingsNotificationsRouting() {
                     <td key={cell.service} className={styles.cell}>
                       <button
                         type="button"
-                        className={`${styles.cellButton} ${styles[cell.state]}`}
+                        className={`${styles.cellToggle} ${styles[cell.state]}`}
                         disabled={cell.state === "off" || cell.state === "unconfigured" || testEvent.isPending}
                         onClick={() => send(cell.service, row.type, row.label)}
                         title={`${serviceTitle(cell.service)} · ${row.label}. ${CELL_TITLE[cell.state]}.${detail}`}

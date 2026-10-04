@@ -116,6 +116,40 @@
   border-radius: var(--r-sm);
 }
 
+/* Icon-only: square at the shared height, so a "⋯" or "×" trigger lines up
+   with the word buttons beside it instead of being sized by its glyph. Compose
+   with a colour variant: `btn btnSecondary btnIcon`. */
+.btnIcon {
+  width: var(--control-h);
+  padding: 0;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* A button that reads as a link — inline in prose or a hint ("Undo", "Edit",
+   "Retry"). Standalone, not a modifier: it has no box, so none of .btn's
+   geometry applies. Four pages had written their own. */
+.btnLink {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.btnLink:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btnLink:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
 /* Press feedback — overrides global button:active scale, kept consistent. */
 .btn:active:not(:disabled) {
   transform: scale(0.97);

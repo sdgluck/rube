@@ -79,23 +79,17 @@
 /* Floats over the pane rather than taking a toolbar row of its own — in the
    compact variant there is no toolbar to put it in. */
 .copyBtn {
+  composes: btn btnSm from "../styles/controls.module.css";
   position: absolute;
   top: 8px;
   right: 8px;
   background: color-mix(in srgb, var(--on-accent) 10%, transparent);
-  border: 1px solid var(--on-dark-fill-2);
+  border-color: var(--on-dark-fill-2);
   color: var(--on-dark-3);
-  padding: 4px 10px;
-  border-radius: var(--r-tag);
-  font-size: 11px;
-  cursor: pointer;
   z-index: 1;
-  transition:
-    background 0.15s,
-    color 0.15s;
 }
 
-.copyBtn:hover {
+.copyBtn:hover:not(:disabled) {
   background: var(--on-dark-fill-2);
   color: var(--on-accent);
 }

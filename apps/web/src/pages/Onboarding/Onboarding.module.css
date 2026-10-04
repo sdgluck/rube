@@ -265,7 +265,7 @@
 
 /* Also used on `<Link>`, where the global anchor underline would otherwise run
    under every line of the card including the blurb. */
-.tileButton {
+.tileClickable {
   border: 0;
   cursor: pointer;
   font: inherit;
@@ -273,7 +273,7 @@
   text-decoration: none;
 }
 
-.tileButton:hover {
+.tileClickable:hover {
   background: var(--surface-sunken);
 }
 

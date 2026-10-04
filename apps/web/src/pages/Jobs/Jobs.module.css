@@ -579,12 +579,14 @@
   border-collapse: collapse;
 }
 
+/* stylelint-disable tinkerbell/primitive-geometry -- a form laid out in a table, not a list: rows are as tall as their controls */
 .configTable td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
   font-size: 12.5px;
 }
+/* stylelint-enable tinkerbell/primitive-geometry */
 
 .configTable td:first-child {
   width: 1%;
@@ -756,11 +758,10 @@
 }
 
 .splitCaret {
-  composes: btn btnPrimary btnSm from "../../styles/controls.module.css";
+  composes: btn btnPrimary btnIcon from "../../styles/controls.module.css";
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   border-left: 1px solid var(--line-soft);
-  padding: 0 6px;
 }
 
 /* ─── Readiness ("What this needs") ──────────────────────────────────────── */

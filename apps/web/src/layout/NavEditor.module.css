@@ -34,30 +34,24 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The shared small button, coloured from currentColor so it reads on the
+   sidebar in either theme. */
 .headerButton,
 .headerDone {
+  composes: btn btnSm from "../styles/controls.module.css";
   background: none;
-  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-  border-radius: var(--r-md);
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
   color: inherit;
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    opacity 0.15s;
 }
 
 .headerButton:hover:not(:disabled),
-.headerDone:hover {
+.headerDone:hover:not(:disabled) {
   background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .headerButton:disabled {
+  background: none;
   opacity: 0.35;
-  cursor: default;
 }
 
 .headerDone {

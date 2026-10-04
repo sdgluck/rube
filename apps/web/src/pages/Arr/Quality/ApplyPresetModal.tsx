@@ -308,7 +308,9 @@ function PlanPreview({ result }: { result: PlanResult }) {
                 <tbody>
                   {step.changes.map((c) => (
                     <tr key={c.path}>
-                      <th scope="row">{c.path}</th>
+                      <th scope="row">
+                        <span className={styles.changePath}>{c.path}</span>
+                      </th>
                       <td className={styles.before}>{formatChangeValue(c.before)}</td>
                       <td>{formatChangeValue(c.after)}</td>
                     </tr>

@@ -78,15 +78,8 @@
   composes: segmentedItem from "../styles/controls.module.css";
 }
 
-.segmentedBtn:hover:not(.segmentedBtnActive) {
-  color: var(--ink);
-  background: var(--surface-sunken);
-}
-
 .segmentedBtnActive {
-  font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent-fill);
+  composes: segmentedItemActive from "../styles/controls.module.css";
 }
 
 .holdPicker {

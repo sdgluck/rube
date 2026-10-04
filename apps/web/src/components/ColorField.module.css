@@ -6,7 +6,9 @@
 
 .swatch {
   width: 44px;
-  height: 30px;
+  /* Beside the hex input, so the same height as it. */
+  height: var(--control-h);
+  box-sizing: border-box;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);

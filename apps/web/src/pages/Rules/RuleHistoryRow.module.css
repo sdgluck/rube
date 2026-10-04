@@ -49,27 +49,8 @@
 }
 
 .restoreBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
   margin-left: auto;
-  padding: 3px 9px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink-2);
-  font: var(--t-meta);
-  cursor: pointer;
-}
-
-.restoreBtn:hover:not(:disabled) {
-  border-color: var(--line-hover);
-  color: var(--ink);
-}
-
-.restoreBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .fields {

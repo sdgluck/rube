@@ -5,37 +5,13 @@
   margin-bottom: 18px;
 }
 
+/* The page's one action, so the primary button. */
 .runBtn {
-  background: var(--surface);
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  padding: 8px 16px;
-  border-radius: var(--r-sm);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.runBtn:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.runBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  composes: btn btnPrimary from "../../styles/controls.module.css";
 }
 
 .cancelBtn {
-  background: none;
-  color: var(--status-error-fg);
-  border: 1px solid var(--status-error-fg);
-  padding: 5px 12px;
-  border-radius: var(--r-tag);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
+  composes: btn btnDangerOutline btnSm from "../../styles/controls.module.css";
 }
 
 .warning {

@@ -111,7 +111,7 @@ export default function SettingsPortal() {
                   key={name}
                   type="button"
                   title={name}
-                  className={`${styles.iconBtn} ${form.icon === name ? styles.active : ""}`}
+                  className={`${styles.iconOption} ${form.icon === name ? styles.active : ""}`}
                   onClick={() => setForm({ ...form, icon: name })}
                 >
                   <Icon size={20} color={form.icon === name ? form.iconColor : undefined} />
@@ -198,7 +198,7 @@ export default function SettingsPortal() {
               {title}
             </div>
             <p className={styles.previewLede}>Sign in with your Plex account to personalize your home screen.</p>
-            <button type="button" className={styles.previewBtn} disabled>
+            <button type="button" className={styles.previewSignIn} disabled>
               Sign in with Plex
             </button>
           </div>

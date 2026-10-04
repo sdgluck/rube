@@ -673,20 +673,9 @@
 }
 
 .iconButton {
+  composes: btn btnGhost btnIcon from "../../../styles/controls.module.css";
   grid-area: revert;
   align-self: center;
-  display: inline-flex;
-  padding: 4px;
-  border: none;
-  border-radius: var(--r-sm);
-  background: none;
-  color: var(--ink-3);
-  cursor: pointer;
-}
-
-.iconButton:hover {
-  background: var(--fill-hover);
-  color: var(--ink);
 }
 
 /* ─── Timezone & holding back ───────────────────────────────────────────── */

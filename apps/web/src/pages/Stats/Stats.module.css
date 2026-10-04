@@ -114,10 +114,6 @@
   width: 100px;
 }
 
-.mostWatchedRow td {
-  height: 34px;
-}
-
 .playsBar {
   display: flex;
   align-items: center;
@@ -572,6 +568,7 @@
   margin-right: auto;
 }
 
+/* stylelint-disable tinkerbell/primitive-geometry -- sized to the pager's 11px line on purpose, see above */
 .pageSizeSelect {
   composes: select from "../../styles/controls.module.css";
   height: 24px;
@@ -581,6 +578,7 @@
     calc(100% - 12px) 50%,
     calc(100% - 8px) 50%;
 }
+/* stylelint-enable tinkerbell/primitive-geometry */
 
 /* Backfilled rows carry no completion or watch-time data, so the cell shows a
    dash. The tooltip is what explains why, rather than leaving it looking broken. */

@@ -199,7 +199,7 @@ export default function KometaImport({ providerId, onFallbackToScan }: KometaImp
           <li key={s.id} className={i === stepIdx ? local.stepActive : i < stepIdx ? local.stepDone : undefined}>
             <button
               type="button"
-              className={local.stepButton}
+              className={local.stepTab}
               // Only backwards: a later step's data doesn't exist yet.
               disabled={i >= stepIdx}
               onClick={() => setStep(s.id)}

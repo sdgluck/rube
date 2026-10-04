@@ -66,7 +66,7 @@ export default function Sessions() {
                       so the button says why rather than failing on click. */}
                   <button
                     type="button"
-                    className={shared.buttonSmall}
+                    className={shared.buttonDanger}
                     disabled={!session.sessionId}
                     title={session.sessionId ? "Stop this stream" : "This Plex server didn't report a session id"}
                     onClick={() => {

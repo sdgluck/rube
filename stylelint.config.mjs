@@ -32,6 +32,7 @@ import strictValue from "stylelint-declaration-strict-value";
 import unknownCustomProperties from "stylelint-value-no-unknown-custom-properties";
 import noShadowedPrimitive from "./stylelint-plugins/no-shadowed-primitive.mjs";
 import breakpointScale from "./stylelint-plugins/breakpoint-scale.mjs";
+import primitiveGeometry from "./stylelint-plugins/primitive-geometry.mjs";
 
 /** Where the vocabulary is defined, for the token-exists rule. */
 const TOKEN_FILES = ["apps/web/src/App.css"];
@@ -47,7 +48,7 @@ const TOKEN_FILES = ["apps/web/src/App.css"];
 const PORTAL_TOKEN_FILES = ["apps/portal/src/tokens.css"];
 
 export default {
-  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale],
+  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale, primitiveGeometry],
 
   reportDescriptionlessDisables: true,
   reportInvalidScopeDisables: true,
@@ -99,6 +100,10 @@ export default {
 
     "tinkerbell/no-shadowed-primitive": true,
 
+    /* Composing a primitive and then re-sizing it is how the squashed tables
+       and 30px buttons got in. Sizes live in styles/; pages pick a modifier. */
+    "tinkerbell/primitive-geometry": true,
+
     /* One responsive scale rather than a breakpoint per panel. */
     "tinkerbell/breakpoint-scale": true,
   },
@@ -133,6 +138,7 @@ export default {
         "csstools/value-no-unknown-custom-properties": null,
         "tinkerbell/no-shadowed-primitive": null,
         "tinkerbell/breakpoint-scale": null,
+        "tinkerbell/primitive-geometry": null,
       },
     },
     {
@@ -151,6 +157,7 @@ export default {
         "csstools/value-no-unknown-custom-properties": [true, { importFrom: PORTAL_TOKEN_FILES }],
         "scale-unlimited/declaration-strict-value": null,
         "tinkerbell/no-shadowed-primitive": null,
+        "tinkerbell/primitive-geometry": null,
       },
     },
   ],

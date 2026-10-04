@@ -184,7 +184,34 @@
   color: var(--ink);
 }
 
-.table tbody tr:last-child td {
+/* A row header (`<th scope="row">`) is a body cell that names its row — it
+   gets the row's geometry and type, not the header band's uppercase label.
+   Without this, a page wanting row headers either lost the semantics or
+   re-styled the cell, and both happened. */
+.table tbody th,
+.compactTable tbody th {
+  background: none;
+  border-bottom: 1px solid var(--line-soft);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  white-space: normal;
+}
+
+.table tbody th {
+  height: 38px;
+  font-size: 13px;
+}
+
+.compactTable tbody th {
+  height: 34px;
+  font-size: 12.5px;
+}
+
+.table tbody tr:last-child td,
+.table tbody tr:last-child th {
   border-bottom: none;
 }
 
@@ -283,7 +310,8 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.compactTable tbody tr:last-child td {
+.compactTable tbody tr:last-child td,
+.compactTable tbody tr:last-child th {
   border-bottom: none;
 }
 

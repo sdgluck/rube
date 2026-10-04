@@ -267,7 +267,12 @@ one:
 
 So: no hex or named colours, no `rgb()`/`hsl()`, no literal `border-radius` /
 `font-family` / `*color` — use a token. An unknown `var(--x)` fails. Class names
-that shadow a primitive fail. Breakpoints must be on the shared scale. Escape
+that shadow a primitive fail. **Size belongs to the primitive**
+(`tinkerbell/primitive-geometry`): a class composing a button, field or table
+may not override its height/padding/font-size/radius, `th`/`td` geometry is the
+table's, a `*Btn`/`*Button` class must compose `btn`, and a clickable thing at a
+literal 24–48px height fails. Use a modifier (`btnSm`, `btnIcon`, `btnLink`,
+`compactTable` for a table inside a card or modal) or add one to `styles/`. Breakpoints must be on the shared scale. Escape
 hatches need a reason comment (`reportDescriptionlessDisables`);
 `pnpm lint:css:report` finds stale ones. `apps/tinkerbell.dev` is exempt — it is
 a separate product with its own palette.

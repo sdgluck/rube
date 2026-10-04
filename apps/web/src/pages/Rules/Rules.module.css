@@ -83,50 +83,6 @@
   align-items: center;
 }
 
-.actionBtn {
-  appearance: none;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--ink-2);
-  padding: 4px 9px;
-  border-radius: var(--r-sm);
-  font-size: 11.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    color 0.12s,
-    border-color 0.12s;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-.actionBtn:hover:not(:disabled) {
-  background: var(--fill-quiet);
-  color: var(--ink);
-}
-
-.actionBtn:disabled {
-  color: var(--ink-faint);
-  cursor: not-allowed;
-}
-
-.actionBtnPrimary {
-  color: var(--accent-text);
-  font-weight: 600;
-}
-
-.actionBtnPrimary:hover:not(:disabled) {
-  background: var(--accent-fill);
-  color: var(--on-accent);
-  border-color: transparent;
-}
-
-.actionBtnActive {
-  background: var(--fill-quiet);
-  color: var(--ink);
-}
-
 /* ─── Rule preview canvas ─────────────────────────────────────────────────
  *
  * Just the dark surrounding box; the hub rows themselves render via
@@ -138,6 +94,7 @@
 /* Compound selector beats `.detailRow td` (specificity 0,1,1) so the dark
    Plex canvas wins over the generic detail-row background. */
 td.previewBlockCell {
+  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- an expansion row: the cell is a frame for the canvas, not a data cell */
   padding: 0 !important;
   background: var(--sidebar);
   color: var(--on-dark);
@@ -261,23 +218,6 @@ td.previewBlockCell {
   text-transform: uppercase;
 }
 
-.actionBtnDanger {
-  color: var(--danger);
-}
-
-.actionBtnDanger:hover:not(:disabled) {
-  background: var(--danger);
-  color: var(--on-accent);
-  border-color: var(--danger);
-}
-
-.actionsDivider {
-  width: 1px;
-  height: 16px;
-  background: var(--line-soft);
-  margin: 0 2px;
-}
-
 /* ─── Checkboxes ─────────────────────────────────────────────────────────── */
 
 .checkboxCell {
@@ -317,17 +257,7 @@ td.previewBlockCell {
 }
 
 .testPreviewCloseBtn {
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: 4px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--ink-2);
-}
-
-.testPreviewCloseBtn:hover {
-  background: var(--surface-sunken);
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
 }
 
 .testPreviewCollection {
@@ -410,15 +340,8 @@ td.previewBlockCell {
   composes: segmentedItem from "../../styles/controls.module.css";
 }
 
-.segmentedBtn:hover:not(.segmentedBtnActive) {
-  background: var(--surface-sunken);
-  color: var(--ink);
-}
-
 .segmentedBtnActive {
-  background: var(--accent-fill);
-  color: var(--on-accent);
-  font-weight: 600;
+  composes: segmentedItemActive from "../../styles/controls.module.css";
 }
 
 .filterChip:hover:not(.filterChipActive) {
@@ -814,6 +737,7 @@ td.previewBlockCell {
 
 .detailRow td {
   background: var(--surface, transparent);
+  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- an expansion row: the panel inside sets its own padding */
   padding: 0;
 }
 
@@ -945,6 +869,7 @@ td.previewBlockCell {
 @media (min-width: 769px) {
   .tableBleedRight th,
   .tableBleedRight td {
+    /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the gutter only, row height untouched; eleven columns don't fit at 16px */
     padding: 0 10px;
   }
 

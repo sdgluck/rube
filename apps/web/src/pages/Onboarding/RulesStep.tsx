@@ -63,7 +63,7 @@ export default function RulesStep() {
               <button
                 key={pack.slug}
                 type="button"
-                className={`${styles.tile} ${styles.tileButton} ${recommended ? styles.tilePrimary : ""}`}
+                className={`${styles.tile} ${styles.tileClickable} ${recommended ? styles.tilePrimary : ""}`}
                 onClick={() => setOpenPack(pack.slug)}
               >
                 <span className={styles.tileHeadStatic}>

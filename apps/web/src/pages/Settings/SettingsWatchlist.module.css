@@ -66,22 +66,10 @@
   margin: 0 0 10px;
 }
 
+/* The compact table — see SettingsBackup.module.css for why not a re-padded
+   `.table`. */
 .table {
-  composes: table from "../../styles/shared.module.css";
-  background: none;
-  font: var(--t-body-sm);
-}
-
-.table th {
-  background: none;
-  color: var(--ink-faint);
-  height: auto;
-  padding: 6px 8px 6px 0;
-}
-
-.table td {
-  padding: 7px 8px 7px 0;
-  vertical-align: middle;
+  composes: compactTable from "../../styles/shared.module.css";
 }
 
 .itemTitle {

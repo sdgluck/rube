@@ -17,10 +17,7 @@
 }
 
 .textarea {
-  composes: input from "../../../styles/controls.module.css";
-  min-height: 72px;
-  resize: vertical;
-  font: inherit;
+  composes: textarea from "../../../styles/controls.module.css";
 }
 
 .numberInput {

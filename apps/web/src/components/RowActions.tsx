@@ -111,9 +111,9 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
         const Icon = action.icon;
         const classes = [
           styles.trigger,
-          action.primary ? styles.btnPrimary : "",
-          action.active ? styles.btnActive : "",
-          action.danger ? styles.btnDanger : "",
+          action.primary ? styles.triggerPrimary : "",
+          action.active ? styles.triggerActive : "",
+          action.danger ? styles.triggerDanger : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -137,7 +137,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
           <button
             ref={buttonRef}
             type="button"
-            className={`${styles.trigger} ${open ? styles.btnActive : ""}`}
+            className={`${styles.trigger} ${open ? styles.triggerActive : ""}`}
             aria-label={label}
             aria-haspopup="menu"
             aria-expanded={open}

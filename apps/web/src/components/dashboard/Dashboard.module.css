@@ -241,7 +241,7 @@
    phone. The negative left margin keeps the text where it was — the chevron
    hangs into the header's padding rather than shifting every panel title 17px
    right of where the collapsed and non-collapsible ones sit. */
-.panelTitleButton {
+.panelTitleToggle {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -258,11 +258,11 @@
   flex-shrink: 0;
 }
 
-.panelTitleButton:hover .panelChevron {
+.panelTitleToggle:hover .panelChevron {
   color: var(--ink-2);
 }
 
-.panelTitleButton:focus-visible {
+.panelTitleToggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--r-sm);
@@ -314,23 +314,7 @@
 }
 
 .tilePickerButton {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--ink-2);
-  width: 28px;
-  height: 28px;
-  border-radius: var(--r-md);
-  cursor: pointer;
-  font-size: 25px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tilePickerButton:hover {
-  background: var(--fill-quiet);
-  color: var(--ink);
+  composes: btn btnGhost btnIcon from "../../styles/controls.module.css";
 }
 
 .tilePickerPopover {
@@ -506,24 +490,7 @@
 }
 
 .tilePickerSave {
-  background: var(--accent-fill);
-  color: var(--on-accent);
-  border: none;
-  border-radius: var(--r-sm);
-  padding: 5px 12px;
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.tilePickerSave:hover:not(:disabled) {
-  filter: brightness(0.95);
-}
-
-.tilePickerSave:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  composes: btn btnPrimary btnSm from "../../styles/controls.module.css";
 }
 
 /* ─── Responsive ────────────────────────────────────────────────────────── */
