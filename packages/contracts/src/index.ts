@@ -269,8 +269,15 @@ export type {
   OverlaysJobConfig,
   PersonalizeJobConfig,
 } from "./job-config.ts";
-export { FEATURE_IDS, isFeatureId, JOB_PRESENTATION, jobPresentation } from "./job-presentation.ts";
-export type { FeatureId, JobKind, JobPresentation } from "./job-presentation.ts";
+export {
+  FEATURE_IDS,
+  isFeatureId,
+  JOB_PRESENTATION,
+  jobPresentation,
+  SYSTEM_GROUPS,
+  systemGroupOf,
+} from "./job-presentation.ts";
+export type { FeatureId, JobKind, JobPresentation, SystemGroup } from "./job-presentation.ts";
 export {
   allVariants,
   BYW_DEFAULTS,

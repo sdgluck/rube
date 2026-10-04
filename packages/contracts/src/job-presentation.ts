@@ -11,6 +11,24 @@
 
 export type JobKind = "system" | "feature" | "hidden";
 
+/**
+ * The sections of System Tasks, in display order. Twenty-four tasks in one
+ * alphabetical list put "Back Up Database" between two metadata jobs and made
+ * a failure one row among many; grouped by what they look after, a healthy
+ * group collapses to one line and a failing one is the thing you see.
+ *
+ * `background` is everything that runs every few seconds to minutes — pollers
+ * and watchers. They are plumbing, they are almost always fine, and they made
+ * up a third of the list.
+ */
+export const SYSTEM_GROUPS = [
+  { id: "library", label: "Library sync" },
+  { id: "automation", label: "Automation" },
+  { id: "maintenance", label: "Maintenance" },
+  { id: "background", label: "Background" },
+] as const;
+export type SystemGroup = (typeof SYSTEM_GROUPS)[number]["id"];
+
 export interface JobPresentation {
   /**
    * - `system` — always installed; listed under System Tasks.
@@ -18,6 +36,8 @@ export interface JobPresentation {
    * - `hidden` — one-shot actions driven from another page; reachable by URL.
    */
   kind: JobKind;
+  /** System tasks only: which System Tasks section it is listed under. */
+  group?: SystemGroup;
   /** `hidden` when the schedule has no meaning (a one-shot import). */
   schedule?: "editable" | "hidden";
   description: string;
@@ -40,20 +60,24 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   // ── System ──────────────────────────────────────────────────────────────
   "sync-media": {
     kind: "system",
+    group: "library",
     description: "Pulls movies and shows from Plex into the local database so other jobs can act on them.",
   },
   "sync-collections": {
     kind: "system",
+    group: "library",
     description: "Mirrors existing Plex collections into the database and keeps their items in sync.",
   },
   "sync-arr": {
     kind: "system",
+    group: "library",
     description: "Pulls movies and series from Radarr and Sonarr and links them to the matching Plex items.",
     settingsHref: "/settings/arrs",
     settingsLabel: "Media Managers",
   },
   "check-arr-quality": {
     kind: "system",
+    group: "library",
     description:
       "Compares the quality profiles Tinkerbell manages with their presets, and reports any changed outside Tinkerbell. It never changes them.",
     settingsHref: "/arrs",
@@ -61,10 +85,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   generate: {
     kind: "system",
+    group: "automation",
     description: "Builds and updates rule-based collections in Plex from the rules you've defined.",
   },
   cleanup: {
     kind: "system",
+    group: "automation",
     description:
       "Runs your cleanup rules: tracks what matches across runs and deletes or unmonitors it once it has matched enough times in a row.",
     settingsHref: "/settings/cleanup",
@@ -72,12 +98,14 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   metadata: {
     kind: "system",
+    group: "automation",
     description: "Runs your metadata rules, writing titles, summaries, labels and other fields onto matching items.",
     settingsHref: "/settings/metadata",
     settingsLabel: "Metadata",
   },
   "metadata-overrides": {
     kind: "system",
+    group: "automation",
     description:
       "Writes per-item metadata edits — such as those imported from Kometa — onto the matching items in Plex. Edits that can't be matched to exactly one item are left alone.",
     settingsHref: "/settings/metadata",
@@ -85,34 +113,41 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   "purge-runs": {
     kind: "system",
+    group: "maintenance",
     description:
       "Deletes job run records older than 7 days, and prunes health-check entries and bandwidth test results past their retention.",
   },
   backup: {
     kind: "system",
+    group: "maintenance",
     description: "Snapshots the database to the backup folder and keeps the most recent copies.",
     settingsHref: "/settings/backup",
     settingsLabel: "Backup & Restore",
   },
   "sync-recently-added": {
     kind: "system",
+    group: "background",
     description: "Refreshes the cached “Recently Added” stats shown on the dashboard.",
   },
   "sync-users": {
     kind: "system",
+    group: "library",
     description: "Pulls the list of Plex users and their library access into the local database.",
   },
   "seerr-poll": {
     kind: "system",
+    group: "background",
     description:
       "Checks Overseerr for requests that have become available, which is what fires the “request fulfilled” rule trigger. Does nothing when Overseerr isn't configured.",
   },
   "arr-poll": {
     kind: "system",
+    group: "background",
     description: "Polls Radarr and Sonarr download queues so the dashboard shows what is downloading.",
   },
   "watchlist-sync": {
     kind: "system",
+    group: "background",
     description:
       "Checks your Plex watchlist and sends anything not already in your library to Radarr or Sonarr. Each item is only ever acted on once, so a failed request is retried rather than repeated.",
     settingsHref: "/settings/watchlist",
@@ -120,20 +155,24 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   "rule-schedules": {
     kind: "system",
+    group: "background",
     description: "Starts rules that have their own schedule when it comes due.",
   },
   healthcheck: {
     kind: "system",
+    group: "background",
     description: "Pings every configured external service and records its current health status.",
     settingsHref: "/settings/health",
     settingsLabel: "Health",
   },
   "playback-poll": {
     kind: "system",
+    group: "background",
     description: "Records what is playing right now. Every watch statistic is derived from these samples.",
   },
   "bandwidth-test": {
     kind: "system",
+    group: "maintenance",
     description:
       "Measures this server's internet download and upload speed against Cloudflare, and records the result. Moves up to 200 MB per run, and only on a link fast enough to do so in seconds.",
     settingsHref: "/settings/bandwidth",
@@ -141,26 +180,31 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   "collections-sweep": {
     kind: "system",
+    group: "automation",
     description:
       "Finds collections Tinkerbell made that no rule produces any more — and duplicates of ones it does — and deletes them from Plex.",
   },
   "registry-updates": {
     kind: "system",
+    group: "maintenance",
     description:
       "Checks the public rule registry for newer versions of the rules you've imported, and raises an event the first time each one appears. Never applies an update on its own.",
   },
   "posters-refresh": {
     kind: "system",
+    group: "library",
     description: "Re-fetches cached poster images and detects when artwork has changed in Plex.",
   },
   "collection-art": {
     kind: "system",
+    group: "automation",
     description: "Renders and uploads generated artwork for collections whose rules ask for it.",
     settingsHref: "/settings/appearance",
     settingsLabel: "Appearance",
   },
   "playback-backfill": {
     kind: "system",
+    group: "library",
     schedule: "hidden",
     description: "Imports Plex's own watch history once, so statistics start with your past viewing.",
   },
@@ -239,7 +283,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
 };
 
-const UNKNOWN: Required<Omit<JobPresentation, "settingsHref" | "settingsLabel" | "requires">> = {
+const UNKNOWN: Required<Omit<JobPresentation, "settingsHref" | "settingsLabel" | "requires" | "group">> = {
   kind: "system",
   schedule: "editable",
   description: "",
@@ -248,4 +292,9 @@ const UNKNOWN: Required<Omit<JobPresentation, "settingsHref" | "settingsLabel" |
 export function jobPresentation(id: string): JobPresentation & { schedule: "editable" | "hidden" } {
   const entry = JOB_PRESENTATION[id];
   return entry ? { ...UNKNOWN, ...entry, schedule: entry.schedule ?? "editable" } : UNKNOWN;
+}
+
+/** An id nothing lists still gets a section — the last real one, not a gap. */
+export function systemGroupOf(id: string): SystemGroup {
+  return JOB_PRESENTATION[id]?.group ?? "maintenance";
 }

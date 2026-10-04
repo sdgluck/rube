@@ -814,3 +814,71 @@
   font-size: 12.5px;
   color: var(--ink-3);
 }
+
+/* ─── System Tasks sections ──────────────────────────────────────────────── */
+
+/* A section's heading row: the header band's colour, so a collapsed panel
+   reads as four headings rather than four odd rows. Scoped under the table so
+   it outranks the primitive's row-header rule, which clears the background. */
+.compactTable .groupRow th {
+  background: var(--surface-header);
+  font-weight: 400;
+}
+
+/* Each section ends on a row the primitive leaves without a bottom rule, so
+   the next section draws the seam. */
+.compactTable tbody + tbody .groupRow th {
+  border-top: 1px solid var(--line);
+}
+
+/* The whole heading is the disclosure target, not just the chevron. */
+.groupToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.groupToggle:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.groupLabel {
+  font-weight: 600;
+}
+
+.groupSummary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  margin-left: auto;
+  font: var(--t-data);
+  color: var(--ink-3);
+}
+
+.groupSummary > * + *::before {
+  content: "·";
+  margin-right: 6px;
+}
+
+.groupFailed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--status-error-fg);
+}
+
+/* Jobs the server keeps on: a quiet lock where a switch would be. */
+.alwaysOn {
+  display: inline-flex;
+  color: var(--ink-faint);
+}
