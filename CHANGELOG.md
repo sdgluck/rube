@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-10-04
+
+### Changed
+
+- Overlays, Backup, Watchlist, Arr, Health, Bandwidth and the session Stop button now share one button, field and table size across the admin app. Tables in Backup and Watchlist are taller than before, so rows will look more spacious. Table rows and buttons inside cards and modals use a more compact size.
+
+### Fixed
+
+- Arr preset diff, Health and Bandwidth buttons, and Arr row buttons now get the same base button styling as the rest of the app, so they no longer render with colour but no button shape.
+
 ## [0.31.0] - 2026-10-04
 
 ### Added
