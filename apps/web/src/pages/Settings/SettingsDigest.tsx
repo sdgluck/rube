@@ -167,7 +167,7 @@ export default function SettingsDigest() {
         {subscribers.length === 0 ? (
           <span className={styles.hint}>Nobody yet — portal users subscribe themselves.</span>
         ) : (
-          <table className={`${shared.table} ${styles.table}`}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 <th>User</th>
@@ -192,7 +192,7 @@ export default function SettingsDigest() {
         {deliveries.length === 0 ? (
           <span className={styles.hint}>Nothing has been sent yet.</span>
         ) : (
-          <table className={`${shared.table} ${styles.table}`}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 <th>When</th>

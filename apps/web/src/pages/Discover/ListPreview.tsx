@@ -43,10 +43,10 @@ export default function ListPreview({
       size="md"
       footer={
         <div className={styles.footer}>
-          <button type="button" className={controls.btnGhost} onClick={onClose}>
+          <button type="button" className={`${controls.btn} ${controls.btnSecondary}`} onClick={onClose}>
             Close
           </button>
-          <button type="button" className={controls.btnPrimary} onClick={onCreateRule}>
+          <button type="button" className={`${controls.btn} ${controls.btnPrimary}`} onClick={onCreateRule}>
             Create rule
           </button>
         </div>

@@ -56,6 +56,11 @@ beside old ones. So, in a page module:
 - Anything `cursor: pointer` at a literal 24–48px height is a control with a
   height of its own: use `var(--control-h)` or compose.
 
+The same holds in JSX: `className={controls.btnPrimary}` on its own is a
+button with no height, and `scripts/check-button-classes.mjs` (part of
+`pnpm lint`) fails on it. A page-level list is `shared.table` inside
+`<div className="table-scroll">`, which is the card around it.
+
 Need a different size? Pick a modifier — `btnSm`, `btnIcon` (square, for a
 glyph), `btnLink` (a button that reads as a link), `inputSm`, `compactTable` —
 and if none fits, add one to `styles/` rather than overriding locally.

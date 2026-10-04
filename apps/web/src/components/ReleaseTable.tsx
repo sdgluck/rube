@@ -62,7 +62,7 @@ export default function ReleaseTable({
       <header className={styles.head}>
         <button
           type="button"
-          className={controls.btnSecondary}
+          className={`${controls.btn} ${controls.btnSecondary}`}
           onClick={() => search.mutate({ service, instanceId, arrId, seasonNumber })}
           disabled={search.isPending}
         >
@@ -85,7 +85,7 @@ export default function ReleaseTable({
               <>
                 <button
                   type="button"
-                  className={controls.btnSecondary}
+                  className={`${controls.btn} ${controls.btnSecondary}`}
                   onClick={() => search.mutate({ service, instanceId, arrId, seasonNumber })}
                 >
                   Retry
@@ -95,68 +95,70 @@ export default function ReleaseTable({
             }
           />
         ) : (
-          <table className={shared.compactTable}>
-            <thead>
-              <tr>
-                <th>Release</th>
-                <th>Indexer</th>
-                <th>Age</th>
-                <th>Size</th>
-                <th>Peers</th>
-                <th>Quality</th>
-                <th>Score</th>
-                <th aria-label="Grab" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const rejection = row.rejected ? rejectionSummary(row.rejections) : null;
-                return (
-                  <tr key={row.guid} className={row.rejected ? styles.rejected : undefined}>
-                    <td>
-                      <span className={styles.title} title={row.title}>
-                        {row.title}
-                      </span>
-                      {rejection && (
-                        <div className={styles.rejection}>
-                          <StatusChip tone="error">{rejection}</StatusChip>
-                        </div>
-                      )}
-                    </td>
-                    <td className={shared.cellMuted}>
-                      {row.indexer ?? "—"}
-                      <span className={styles.protocol}>{protocolLabel(row.protocol)}</span>
-                    </td>
-                    <td className={shared.cellNum}>{releaseAge(row.ageHours)}</td>
-                    <td className={shared.cellNum}>{formatBytes(row.size)}</td>
-                    <td className={shared.cellNum}>
-                      {row.seeders === undefined ? "—" : `${row.seeders}/${row.leechers ?? 0}`}
-                    </td>
-                    <td className={shared.cellMuted}>{qualityLabel(row)}</td>
-                    <td className={shared.cellNum}>{formatCustomFormatScore(row.customFormatScore)}</td>
-                    <td>
-                      {/* A rejected release stays grabbable. Overriding the
+          <div className="table-scroll">
+            <table className={shared.table}>
+              <thead>
+                <tr>
+                  <th>Release</th>
+                  <th>Indexer</th>
+                  <th>Age</th>
+                  <th>Size</th>
+                  <th>Peers</th>
+                  <th>Quality</th>
+                  <th>Score</th>
+                  <th aria-label="Grab" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const rejection = row.rejected ? rejectionSummary(row.rejections) : null;
+                  return (
+                    <tr key={row.guid} className={row.rejected ? styles.rejected : undefined}>
+                      <td>
+                        <span className={styles.title} title={row.title}>
+                          {row.title}
+                        </span>
+                        {rejection && (
+                          <div className={styles.rejection}>
+                            <StatusChip tone="error">{rejection}</StatusChip>
+                          </div>
+                        )}
+                      </td>
+                      <td className={shared.cellMuted}>
+                        {row.indexer ?? "—"}
+                        <span className={styles.protocol}>{protocolLabel(row.protocol)}</span>
+                      </td>
+                      <td className={shared.cellNum}>{releaseAge(row.ageHours)}</td>
+                      <td className={shared.cellNum}>{formatBytes(row.size)}</td>
+                      <td className={shared.cellNum}>
+                        {row.seeders === undefined ? "—" : `${row.seeders}/${row.leechers ?? 0}`}
+                      </td>
+                      <td className={shared.cellMuted}>{qualityLabel(row)}</td>
+                      <td className={shared.cellNum}>{formatCustomFormatScore(row.customFormatScore)}</td>
+                      <td>
+                        {/* A rejected release stays grabbable. Overriding the
                           *Arr's refusal is the reason to run an interactive
                           search at all — it will usually still take it. */}
-                      <button
-                        type="button"
-                        className={controls.btnSm}
-                        onClick={() => grab.mutate({ service, instanceId, release: row })}
-                        disabled={grab.isPending}
-                        title={
-                          rejection
-                            ? `${service === "radarr" ? "Radarr" : "Sonarr"} rejected this: ${rejection}`
-                            : undefined
-                        }
-                      >
-                        Grab
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        <button
+                          type="button"
+                          className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+                          onClick={() => grab.mutate({ service, instanceId, release: row })}
+                          disabled={grab.isPending}
+                          title={
+                            rejection
+                              ? `${service === "radarr" ? "Radarr" : "Sonarr"} rejected this: ${rejection}`
+                              : undefined
+                          }
+                        >
+                          Grab
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ))}
     </section>
   );

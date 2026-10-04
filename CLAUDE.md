@@ -348,6 +348,10 @@ two thirds of that wave's runtime.
 - `scripts/check-nul.mjs` — no raw NUL byte in a source file; write the
   `\u0000` escape instead. A literal NUL makes `grep` and `file(1)` treat the
   whole file as binary and skip it silently.
+- `scripts/check-button-classes.mjs` — a JSX `className` using a button
+  variant from `controls.module.css` (`btnPrimary`, `btnGhost`, `btnSm`, …)
+  must also use `controls.btn`. The variant is only the colour; without the
+  base it renders as tinted text with no box. Stylelint can't see JSX.
 - oxlint `no-restricted-imports` — the app/package layering above.
 - Pre-commit runs `lint-staged`: oxlint + oxfmt + `pnpm typecheck` for
   `.ts`/`.tsx`, stylelint-then-oxfmt for `.css`. It stays affordable because

@@ -48,56 +48,58 @@ function QueueForInstance({ service, instanceId, name }: { service: ArrService; 
         <span className={styles.groupCount}>{records.length}</span>
       </header>
 
-      <table className={shared.compactTable}>
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Progress</th>
-            <th>Size</th>
-            <th>Left</th>
-            <th>Client</th>
-            <th>State</th>
-          </tr>
-        </thead>
-        <tbody>
-          {records.map((item) => {
-            const pct = progress(item.size, item.sizeleft);
-            const blocked = BLOCKED.has(item.trackedDownloadState ?? "") || item.trackedDownloadStatus === "error";
-            return (
-              <tr key={item.id}>
-                <td>{item.title ?? "—"}</td>
-                <td>
-                  {pct === null ? (
-                    "—"
-                  ) : (
-                    <span className={styles.progress}>
-                      <span className={styles.progressBar}>
-                        <span className={styles.progressFill} style={{ width: `${Math.round(pct * 100)}%` }} />
+      <div className="table-scroll">
+        <table className={shared.table}>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Progress</th>
+              <th>Size</th>
+              <th>Left</th>
+              <th>Client</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((item) => {
+              const pct = progress(item.size, item.sizeleft);
+              const blocked = BLOCKED.has(item.trackedDownloadState ?? "") || item.trackedDownloadStatus === "error";
+              return (
+                <tr key={item.id}>
+                  <td>{item.title ?? "—"}</td>
+                  <td>
+                    {pct === null ? (
+                      "—"
+                    ) : (
+                      <span className={styles.progress}>
+                        <span className={styles.progressBar}>
+                          <span className={styles.progressFill} style={{ width: `${Math.round(pct * 100)}%` }} />
+                        </span>
+                        <span className={shared.cellNum}>{Math.round(pct * 100)}%</span>
                       </span>
-                      <span className={shared.cellNum}>{Math.round(pct * 100)}%</span>
-                    </span>
-                  )}
-                </td>
-                <td className={shared.cellNum}>{formatBytes(item.size)}</td>
-                <td className={shared.cellMuted}>{item.timeleft ?? "—"}</td>
-                <td className={shared.cellMuted}>{item.downloadClient ?? "—"}</td>
-                <td>
-                  {blocked ? (
-                    // `errorMessage` and the status messages are where the
-                    // actual diagnosis lives — "importBlocked" alone tells
-                    // nobody why.
-                    <StatusChip tone="error">
-                      {item.errorMessage ?? item.statusMessages?.[0]?.title ?? item.trackedDownloadState ?? "Blocked"}
-                    </StatusChip>
-                  ) : (
-                    <span className={shared.cellMuted}>{item.trackedDownloadState ?? item.status ?? "—"}</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    )}
+                  </td>
+                  <td className={shared.cellNum}>{formatBytes(item.size)}</td>
+                  <td className={shared.cellMuted}>{item.timeleft ?? "—"}</td>
+                  <td className={shared.cellMuted}>{item.downloadClient ?? "—"}</td>
+                  <td>
+                    {blocked ? (
+                      // `errorMessage` and the status messages are where the
+                      // actual diagnosis lives — "importBlocked" alone tells
+                      // nobody why.
+                      <StatusChip tone="error">
+                        {item.errorMessage ?? item.statusMessages?.[0]?.title ?? item.trackedDownloadState ?? "Blocked"}
+                      </StatusChip>
+                    ) : (
+                      <span className={shared.cellMuted}>{item.trackedDownloadState ?? item.status ?? "—"}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -165,30 +167,32 @@ export default function ArrDownloads() {
           ))
         )
       ) : (
-        <table className={shared.table}>
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Event</th>
-              <th>Title</th>
-              <th>Release</th>
-              <th>Indexer</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(activityQuery.data ?? []).map((row) => (
-              <tr key={row.id}>
-                <td className={shared.cellMuted}>
-                  <RelativeTime timestamp={row.date} />
-                </td>
-                <td>{row.eventType}</td>
-                <td>{row.title || "—"}</td>
-                <td className={shared.cellMuted}>{row.sourceTitle || "—"}</td>
-                <td className={shared.cellMuted}>{row.indexer || "—"}</td>
+        <div className="table-scroll">
+          <table className={shared.table}>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Event</th>
+                <th>Title</th>
+                <th>Release</th>
+                <th>Indexer</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(activityQuery.data ?? []).map((row) => (
+                <tr key={row.id}>
+                  <td className={shared.cellMuted}>
+                    <RelativeTime timestamp={row.date} />
+                  </td>
+                  <td>{row.eventType}</td>
+                  <td>{row.title || "—"}</td>
+                  <td className={shared.cellMuted}>{row.sourceTitle || "—"}</td>
+                  <td className={shared.cellMuted}>{row.indexer || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </PageShell>
   );

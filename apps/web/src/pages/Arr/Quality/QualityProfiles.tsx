@@ -94,7 +94,7 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
           {managedCount > 0 && (
             <button
               type="button"
-              className={controls.btnGhost}
+              className={`${controls.btn} ${controls.btnSecondary}`}
               disabled={check.isPending}
               onClick={() => check.mutate({ instanceId })}
             >
@@ -103,7 +103,7 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
           )}
           <button
             type="button"
-            className={controls.btnPrimary}
+            className={`${controls.btn} ${controls.btnPrimary}`}
             disabled={noneAvailable}
             onClick={() => setOpening({ target: { name: "" } })}
           >
@@ -118,120 +118,124 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
         </p>
       )}
 
-      <table className={shared.compactTable}>
-        <thead>
-          <tr>
-            <th>Profile</th>
-            <th>Preset</th>
-            <th title="Edits made elsewhere are flagged, never reverted">Status</th>
-            <th aria-label="Actions" />
-          </tr>
-        </thead>
-        <tbody>
-          {profiles.data.profiles.map((p) => {
-            const status = p.managed ? asStatus(p.managed.status) : null;
-            return (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td className={shared.cellMuted}>{p.managed ? presetName(p.managed.presetId) : "Not managed"}</td>
-                <td>
-                  {status && (
-                    <span className={styles.statusCell}>
-                      <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
-                      {p.managed?.checkedAt && (
-                        <span className={shared.cellMuted}>
-                          <RelativeTime timestamp={p.managed.checkedAt} />
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {p.managed?.lastError && <span className={styles.fieldError}>{p.managed.lastError}</span>}
-                </td>
-                <td className={styles.rowActions}>
-                  <button
-                    type="button"
-                    className={styles.rowButton}
-                    disabled={noneAvailable}
-                    onClick={() =>
-                      setOpening({
-                        target: { profileId: p.id, profileName: p.name },
-                        presetId: p.managed?.presetId,
-                        limits: p.managed?.limits,
-                      })
-                    }
-                  >
-                    {!p.managed ? "Apply preset" : status === "in_sync" ? "Change preset" : "Review & re-apply"}
-                  </button>
-                  {p.managed && (
-                    <button
-                      type="button"
-                      className={styles.rowButton}
-                      onClick={() => setDetaching({ id: p.managed!.id, name: p.name })}
-                    >
-                      Stop managing
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-          {profiles.data.orphans.map((row) => (
-            <tr key={row.id}>
-              <td>{row.profileName}</td>
-              <td className={shared.cellMuted}>{presetName(row.presetId)}</td>
-              <td>
-                <StatusChip tone="error">{row.arrProfileId === null ? "Not created yet" : "Missing"}</StatusChip>
-              </td>
-              <td className={styles.rowActions}>
-                <button
-                  type="button"
-                  className={styles.rowButton}
-                  onClick={() =>
-                    setOpening({ target: { name: row.profileName }, presetId: row.presetId, limits: row.limits })
-                  }
-                >
-                  Create
-                </button>
-                <button
-                  type="button"
-                  className={styles.rowButton}
-                  onClick={() => setDetaching({ id: row.id, name: row.profileName })}
-                >
-                  Forget
-                </button>
-              </td>
+      <div className="table-scroll">
+        <table className={shared.table}>
+          <thead>
+            <tr>
+              <th>Profile</th>
+              <th>Preset</th>
+              <th title="Edits made elsewhere are flagged, never reverted">Status</th>
+              <th aria-label="Actions" />
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {(snapshots.data?.length ?? 0) > 0 && (
-        <details className={styles.snapshots}>
-          <summary className={styles.stepSummary}>Undo history</summary>
-          <p className={styles.hint}>Taken before every apply; restoring undoes exactly that apply.</p>
-          <table className={shared.compactTable}>
-            <tbody>
-              {snapshots.data!.map((s) => (
-                <tr key={s.id}>
-                  <td>{s.reason}</td>
-                  <td className={shared.cellMuted}>
-                    <RelativeTime timestamp={s.createdAt} />
-                    {s.createdBy ? ` by ${s.createdBy}` : ""}
+          </thead>
+          <tbody>
+            {profiles.data.profiles.map((p) => {
+              const status = p.managed ? asStatus(p.managed.status) : null;
+              return (
+                <tr key={p.id}>
+                  <td>{p.name}</td>
+                  <td className={shared.cellMuted}>{p.managed ? presetName(p.managed.presetId) : "Not managed"}</td>
+                  <td>
+                    {status && (
+                      <span className={styles.statusCell}>
+                        <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
+                        {p.managed?.checkedAt && (
+                          <span className={shared.cellMuted}>
+                            <RelativeTime timestamp={p.managed.checkedAt} />
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {p.managed?.lastError && <span className={styles.fieldError}>{p.managed.lastError}</span>}
                   </td>
                   <td className={styles.rowActions}>
                     <button
                       type="button"
                       className={styles.rowButton}
-                      disabled={restore.isPending}
-                      onClick={() => setRestoring({ id: s.id, reason: s.reason })}
+                      disabled={noneAvailable}
+                      onClick={() =>
+                        setOpening({
+                          target: { profileId: p.id, profileName: p.name },
+                          presetId: p.managed?.presetId,
+                          limits: p.managed?.limits,
+                        })
+                      }
                     >
-                      Restore
+                      {!p.managed ? "Apply preset" : status === "in_sync" ? "Change preset" : "Review & re-apply"}
                     </button>
+                    {p.managed && (
+                      <button
+                        type="button"
+                        className={styles.rowButton}
+                        onClick={() => setDetaching({ id: p.managed!.id, name: p.name })}
+                      >
+                        Stop managing
+                      </button>
+                    )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              );
+            })}
+            {profiles.data.orphans.map((row) => (
+              <tr key={row.id}>
+                <td>{row.profileName}</td>
+                <td className={shared.cellMuted}>{presetName(row.presetId)}</td>
+                <td>
+                  <StatusChip tone="error">{row.arrProfileId === null ? "Not created yet" : "Missing"}</StatusChip>
+                </td>
+                <td className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.rowButton}
+                    onClick={() =>
+                      setOpening({ target: { name: row.profileName }, presetId: row.presetId, limits: row.limits })
+                    }
+                  >
+                    Create
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.rowButton}
+                    onClick={() => setDetaching({ id: row.id, name: row.profileName })}
+                  >
+                    Forget
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {(snapshots.data?.length ?? 0) > 0 && (
+        <details className={styles.snapshots}>
+          <summary className={styles.stepSummary}>Undo history</summary>
+          <p className={styles.hint}>Taken before every apply; restoring undoes exactly that apply.</p>
+          <div className="table-scroll">
+            <table className={shared.table}>
+              <tbody>
+                {snapshots.data!.map((s) => (
+                  <tr key={s.id}>
+                    <td>{s.reason}</td>
+                    <td className={shared.cellMuted}>
+                      <RelativeTime timestamp={s.createdAt} />
+                      {s.createdBy ? ` by ${s.createdBy}` : ""}
+                    </td>
+                    <td className={styles.rowActions}>
+                      <button
+                        type="button"
+                        className={styles.rowButton}
+                        disabled={restore.isPending}
+                        onClick={() => setRestoring({ id: s.id, reason: s.reason })}
+                      >
+                        Restore
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </details>
       )}
 

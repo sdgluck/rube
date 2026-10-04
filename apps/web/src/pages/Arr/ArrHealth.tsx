@@ -86,30 +86,32 @@ export default function ArrHealth() {
           </header>
           <p className={styles.explanation}>{EXPLANATIONS[kind]}</p>
 
-          <table className={shared.compactTable}>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((issue, i) => (
-                <tr key={`${kind}-${issue.instanceId}-${issue.arrId ?? issue.ratingKey ?? i}`}>
-                  <td>
-                    {issue.ratingKey ? (
-                      <Link className={shared.cellLink} to={`/media/${issue.ratingKey}`}>
-                        {issue.title}
-                      </Link>
-                    ) : (
-                      issue.title
-                    )}
-                  </td>
-                  <td className={shared.cellMuted}>{issue.detail}</td>
+          <div className="table-scroll">
+            <table className={shared.table}>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Detail</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((issue, i) => (
+                  <tr key={`${kind}-${issue.instanceId}-${issue.arrId ?? issue.ratingKey ?? i}`}>
+                    <td>
+                      {issue.ratingKey ? (
+                        <Link className={shared.cellLink} to={`/media/${issue.ratingKey}`}>
+                          {issue.title}
+                        </Link>
+                      ) : (
+                        issue.title
+                      )}
+                    </td>
+                    <td className={shared.cellMuted}>{issue.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
     </PageShell>

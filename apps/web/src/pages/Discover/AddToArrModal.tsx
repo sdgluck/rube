@@ -166,10 +166,15 @@ export default function AddToArrModal({
       size="md"
       footer={
         <div className={styles.footer}>
-          <button type="button" className={controls.btnGhost} onClick={onClose}>
+          <button type="button" className={`${controls.btn} ${controls.btnSecondary}`} onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className={controls.btnPrimary} onClick={submit} disabled={!ready || add.isPending}>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnPrimary}`}
+            onClick={submit}
+            disabled={!ready || add.isPending}
+          >
             {add.isPending && <Spinner size="sm" />}
             {searchOnAdd ? "Add and search" : "Add"}
           </button>

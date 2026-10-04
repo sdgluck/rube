@@ -105,12 +105,17 @@ export default function ApplyPresetModal({
 
   const footer = preview ? (
     <div className={styles.modalActions}>
-      <button type="button" className={controls.btnGhost} onClick={() => setPreview(null)} disabled={apply.isPending}>
+      <button
+        type="button"
+        className={`${controls.btn} ${controls.btnSecondary}`}
+        onClick={() => setPreview(null)}
+        disabled={apply.isPending}
+      >
         Back
       </button>
       <button
         type="button"
-        className={controls.btnPrimary}
+        className={`${controls.btn} ${controls.btnPrimary}`}
         disabled={apply.isPending}
         onClick={() => apply.mutate({ ...request(), fingerprint: preview.fingerprint })}
       >
@@ -121,12 +126,12 @@ export default function ApplyPresetModal({
     </div>
   ) : (
     <div className={styles.modalActions}>
-      <button type="button" className={controls.btnGhost} onClick={onClose}>
+      <button type="button" className={`${controls.btn} ${controls.btnSecondary}`} onClick={onClose}>
         Cancel
       </button>
       <button
         type="button"
-        className={controls.btnPrimary}
+        className={`${controls.btn} ${controls.btnPrimary}`}
         disabled={!canPreview}
         onClick={() => plan.mutate(request())}
       >

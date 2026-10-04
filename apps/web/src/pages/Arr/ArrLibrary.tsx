@@ -144,88 +144,90 @@ export default function ArrLibrary({ service }: { service: ArrService }) {
         )
       ) : (
         <>
-          <table className={shared.table}>
-            <thead>
-              <tr>
-                <th className={styles.posterCol} aria-label="Poster" />
-                <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                  Title
-                </SortableTh>
-                <SortableTh sortKey="year" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                  Year
-                </SortableTh>
-                {showInstance && <th>Instance</th>}
-                <th>{isMovies ? "Quality" : "Episodes"}</th>
-                <SortableTh sortKey="size" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
-                  Size
-                </SortableTh>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const r = row as Record<string, never> & {
-                  instanceId: string;
-                  arrId: number;
-                  title: string;
-                  year: number | null;
-                  posterUrl: string;
-                  monitored: boolean;
-                  hasFile?: boolean;
-                  episodeCount?: number;
-                  episodeFileCount?: number;
-                  sizeOnDisk: number | null;
-                  fileQuality?: string;
-                  plexRatingKey: string | null;
-                };
-                const present = isMovies ? r.hasFile === true : (r.episodeFileCount ?? 0) > 0;
-                const progress = isMovies ? null : seriesProgress(r.episodeFileCount ?? 0, r.episodeCount ?? 0);
-                return (
-                  <tr key={`${r.instanceId}:${r.arrId}`}>
-                    <td className={styles.posterCol}>
-                      {r.posterUrl ? (
-                        <FadeImage src={r.posterUrl} alt="" className={styles.poster} />
-                      ) : (
-                        <div className={styles.posterPlaceholder} aria-hidden="true" />
-                      )}
-                    </td>
-                    <td>
-                      <Link
-                        className={shared.cellLink}
-                        to={`/arrs/${r.instanceId}/${isMovies ? "movies" : "series"}/${r.arrId}`}
-                      >
-                        {r.title}
-                      </Link>
-                    </td>
-                    <td className={shared.cellNum}>{r.year ?? "—"}</td>
-                    {showInstance && (
-                      <td className={shared.cellMuted}>{instanceNames.get(r.instanceId) ?? r.instanceId}</td>
-                    )}
-                    <td className={shared.cellMuted}>
-                      {isMovies
-                        ? r.fileQuality || "—"
-                        : progress === null
-                          ? "—"
-                          : `${r.episodeFileCount}/${r.episodeCount}`}
-                    </td>
-                    <td className={shared.cellNum}>{formatBytes(r.sizeOnDisk)}</td>
-                    <td>
-                      {!r.monitored && <StatusChip tone="advisory">Unmonitored</StatusChip>}
-                      {r.monitored && !present && <StatusChip tone="advisory">Missing</StatusChip>}
-                      {/* The whole point of the cross-app link: on disk per the
-                       *Arr, but Plex has never seen it. */}
-                      {present && !r.plexRatingKey && <StatusChip tone="error">Not in Plex</StatusChip>}
-                      {present && r.plexRatingKey && (
-                        <Link className={shared.cellLink} to={`/media/${r.plexRatingKey}`}>
-                          In Plex
+          <div className="table-scroll">
+            <table className={shared.table}>
+              <thead>
+                <tr>
+                  <th className={styles.posterCol} aria-label="Poster" />
+                  <SortableTh sortKey="title" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                    Title
+                  </SortableTh>
+                  <SortableTh sortKey="year" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                    Year
+                  </SortableTh>
+                  {showInstance && <th>Instance</th>}
+                  <th>{isMovies ? "Quality" : "Episodes"}</th>
+                  <SortableTh sortKey="size" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort}>
+                    Size
+                  </SortableTh>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const r = row as Record<string, never> & {
+                    instanceId: string;
+                    arrId: number;
+                    title: string;
+                    year: number | null;
+                    posterUrl: string;
+                    monitored: boolean;
+                    hasFile?: boolean;
+                    episodeCount?: number;
+                    episodeFileCount?: number;
+                    sizeOnDisk: number | null;
+                    fileQuality?: string;
+                    plexRatingKey: string | null;
+                  };
+                  const present = isMovies ? r.hasFile === true : (r.episodeFileCount ?? 0) > 0;
+                  const progress = isMovies ? null : seriesProgress(r.episodeFileCount ?? 0, r.episodeCount ?? 0);
+                  return (
+                    <tr key={`${r.instanceId}:${r.arrId}`}>
+                      <td className={styles.posterCol}>
+                        {r.posterUrl ? (
+                          <FadeImage src={r.posterUrl} alt="" className={styles.poster} />
+                        ) : (
+                          <div className={styles.posterPlaceholder} aria-hidden="true" />
+                        )}
+                      </td>
+                      <td>
+                        <Link
+                          className={shared.cellLink}
+                          to={`/arrs/${r.instanceId}/${isMovies ? "movies" : "series"}/${r.arrId}`}
+                        >
+                          {r.title}
                         </Link>
+                      </td>
+                      <td className={shared.cellNum}>{r.year ?? "—"}</td>
+                      {showInstance && (
+                        <td className={shared.cellMuted}>{instanceNames.get(r.instanceId) ?? r.instanceId}</td>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <td className={shared.cellMuted}>
+                        {isMovies
+                          ? r.fileQuality || "—"
+                          : progress === null
+                            ? "—"
+                            : `${r.episodeFileCount}/${r.episodeCount}`}
+                      </td>
+                      <td className={shared.cellNum}>{formatBytes(r.sizeOnDisk)}</td>
+                      <td>
+                        {!r.monitored && <StatusChip tone="advisory">Unmonitored</StatusChip>}
+                        {r.monitored && !present && <StatusChip tone="advisory">Missing</StatusChip>}
+                        {/* The whole point of the cross-app link: on disk per the
+                         *Arr, but Plex has never seen it. */}
+                        {present && !r.plexRatingKey && <StatusChip tone="error">Not in Plex</StatusChip>}
+                        {present && r.plexRatingKey && (
+                          <Link className={shared.cellLink} to={`/media/${r.plexRatingKey}`}>
+                            In Plex
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           <Pagination
             page={page}
             totalPages={Math.ceil(total / 50)}

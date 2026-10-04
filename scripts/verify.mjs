@@ -30,6 +30,7 @@ const LINT = [
   "git ls-files -z '*.css' | xargs -0 stylelint",
   "node scripts/check-fetch.mjs",
   "node scripts/check-nul.mjs",
+  "node scripts/check-button-classes.mjs",
 ].join(" && ");
 
 const CHECKS = [

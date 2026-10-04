@@ -313,6 +313,10 @@
 
 .segmented {
   display: inline-flex;
+  /* `inline-flex` still stretches as the child of a flex column — a settings
+     field is one — so a three-option switch ran the width of the card beside
+     siblings that hugged their options. Same fix as .pageTabs. */
+  align-self: flex-start;
   gap: 2px;
   padding: 2px;
   height: var(--control-h);

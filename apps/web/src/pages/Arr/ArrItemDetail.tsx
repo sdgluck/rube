@@ -164,18 +164,22 @@ export default function ArrItemDetail({ service }: { service: ArrService }) {
         <>
           <button
             type="button"
-            className={controls.btnGhost}
+            className={`${controls.btn} ${controls.btnSecondary}`}
             onClick={() => refresh.mutate({ service, instanceId, arrId })}
             disabled={refresh.isPending}
           >
             Refresh
           </button>
-          <button type="button" className={controls.btnDangerOutline} onClick={() => setRemoving(true)}>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnDangerOutline}`}
+            onClick={() => setRemoving(true)}
+          >
             Remove
           </button>
           <button
             type="button"
-            className={controls.btnPrimary}
+            className={`${controls.btn} ${controls.btnPrimary}`}
             onClick={() => search.mutate({ service, instanceId, arrId })}
             disabled={search.isPending}
           >
@@ -301,68 +305,70 @@ export default function ArrItemDetail({ service }: { service: ArrService }) {
 
           {tab === "seasons" && !isMovie && (
             <section className={shared.detailSection}>
-              <table className={shared.compactTable}>
-                <thead>
-                  <tr>
-                    <th>Season</th>
-                    <th>Episodes</th>
-                    <th>Size</th>
-                    <th>Monitored</th>
-                    <th aria-label="Actions" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {seasons.map((season) => (
-                    <tr key={season.seasonNumber}>
-                      <td>
-                        <button
-                          type="button"
-                          className={styles.seasonBtn}
-                          onClick={() =>
-                            setSelectedSeason((current) =>
-                              current === season.seasonNumber ? undefined : season.seasonNumber,
-                            )
-                          }
-                          aria-expanded={selectedSeason === season.seasonNumber}
-                        >
-                          Season {season.seasonNumber}
-                        </button>
-                      </td>
-                      <td className={shared.cellNum}>
-                        {season.episodeFileCount}/{season.episodeCount}
-                      </td>
-                      <td className={shared.cellNum}>{formatBytes(season.sizeOnDisk)}</td>
-                      <td>
-                        <ToggleSwitch
-                          checked={season.monitored}
-                          onChange={(monitored) =>
-                            setSeasonMonitored.mutate({
-                              instanceId,
-                              arrId,
-                              seasonNumber: season.seasonNumber,
-                              monitored,
-                            })
-                          }
-                          size="xs"
-                          disabled={setSeasonMonitored.isPending}
-                        />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className={controls.btnSm}
-                          onClick={() =>
-                            search.mutate({ service, instanceId, arrId, seasonNumber: season.seasonNumber })
-                          }
-                          disabled={search.isPending}
-                        >
-                          Search
-                        </button>
-                      </td>
+              <div className="table-scroll">
+                <table className={shared.compactTable}>
+                  <thead>
+                    <tr>
+                      <th>Season</th>
+                      <th>Episodes</th>
+                      <th>Size</th>
+                      <th>Monitored</th>
+                      <th aria-label="Actions" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {seasons.map((season) => (
+                      <tr key={season.seasonNumber}>
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.seasonBtn}
+                            onClick={() =>
+                              setSelectedSeason((current) =>
+                                current === season.seasonNumber ? undefined : season.seasonNumber,
+                              )
+                            }
+                            aria-expanded={selectedSeason === season.seasonNumber}
+                          >
+                            Season {season.seasonNumber}
+                          </button>
+                        </td>
+                        <td className={shared.cellNum}>
+                          {season.episodeFileCount}/{season.episodeCount}
+                        </td>
+                        <td className={shared.cellNum}>{formatBytes(season.sizeOnDisk)}</td>
+                        <td>
+                          <ToggleSwitch
+                            checked={season.monitored}
+                            onChange={(monitored) =>
+                              setSeasonMonitored.mutate({
+                                instanceId,
+                                arrId,
+                                seasonNumber: season.seasonNumber,
+                                monitored,
+                              })
+                            }
+                            size="xs"
+                            disabled={setSeasonMonitored.isPending}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+                            onClick={() =>
+                              search.mutate({ service, instanceId, arrId, seasonNumber: season.seasonNumber })
+                            }
+                            disabled={search.isPending}
+                          >
+                            Search
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Episodes are proxied, never mirrored — five hundred shows is
                   fifty thousand rows, and this is the one season somebody
@@ -378,32 +384,34 @@ export default function ArrItemDetail({ service }: { service: ArrService }) {
                       inline
                     />
                   ) : (
-                    <table className={shared.compactTable}>
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Title</th>
-                          <th>Aired</th>
-                          <th>File</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(episodesQuery.data ?? []).map((episode) => (
-                          <tr key={episode.id}>
-                            <td className={shared.cellNum}>{episode.episodeNumber}</td>
-                            <td>{episode.title ?? "—"}</td>
-                            <td className={shared.cellMuted}>{episode.airDate ?? "—"}</td>
-                            <td>
-                              {episode.hasFile ? (
-                                <StatusChip tone="ok">On disk</StatusChip>
-                              ) : (
-                                <span className={shared.cellMuted}>—</span>
-                              )}
-                            </td>
+                    <div className="table-scroll">
+                      <table className={shared.compactTable}>
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Title</th>
+                            <th>Aired</th>
+                            <th>File</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {(episodesQuery.data ?? []).map((episode) => (
+                            <tr key={episode.id}>
+                              <td className={shared.cellNum}>{episode.episodeNumber}</td>
+                              <td>{episode.title ?? "—"}</td>
+                              <td className={shared.cellMuted}>{episode.airDate ?? "—"}</td>
+                              <td>
+                                {episode.hasFile ? (
+                                  <StatusChip tone="ok">On disk</StatusChip>
+                                ) : (
+                                  <span className={shared.cellMuted}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               )}
@@ -475,12 +483,12 @@ function RemoveModal({
       dismissOnBackdrop={false}
       footer={
         <div className={styles.removeFooter}>
-          <button type="button" className={controls.btnGhost} onClick={onCancel}>
+          <button type="button" className={`${controls.btn} ${controls.btnSecondary}`} onClick={onCancel}>
             Cancel
           </button>
           <button
             type="button"
-            className={controls.btnDanger}
+            className={`${controls.btn} ${controls.btnDanger}`}
             onClick={() => onConfirm({ deleteFiles, addImportExclusion })}
             disabled={pending}
           >
