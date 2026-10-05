@@ -13,7 +13,7 @@
  * happens: one request held open for minutes was cut off by reverse proxies,
  * and a spinner that then failed said nothing about which step was slow.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@tinkerbell/trpc";
 import { trpc } from "#/trpc";
@@ -47,6 +47,16 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
   const run = status.data;
   const running = start.isPending || run?.state === "running";
 
+  // A test started before a reload is still running on the server; pick it
+  // back up. Asked once on mount — after that, the test this page starts is
+  // the one it follows.
+  const active = trpc.aiPreview.becauseYouWatched.active.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+
   const sections = useMemo(
     () => (sectionsQuery.data ?? []).filter((s) => s.type === "movie" || s.type === "show"),
     [sectionsQuery.data],
@@ -57,6 +67,18 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
   const [count, setCount] = useState(2);
 
   const effectiveSection = sectionKey || sections[0]?.key || "";
+
+  useEffect(() => {
+    const resumed = active.data;
+    if (!resumed || runId !== null) return;
+    setRunId(resumed.id);
+    setSectionKey(resumed.input.sectionKey);
+    setPlexUsername(resumed.input.plexUsername ?? "");
+    setWatchedTitle(resumed.input.watchedTitle ?? "");
+    if (resumed.input.count) setCount(resumed.input.count);
+    // Only the first answer matters; a later run id is this page's own.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active.data]);
 
   async function handleRun() {
     setRunId(null);

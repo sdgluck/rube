@@ -37,8 +37,11 @@ export function createAiPreviewRouter(deps: Pick<TrpcDeps, "jobs">) {
   const KEEP_FINISHED = 5;
 
   type Result = Awaited<ReturnType<typeof previewBecauseYouWatched>>;
+  type Input = Parameters<typeof previewBecauseYouWatched>[0];
   interface Run {
     id: string;
+    /** What was asked for, so a reloaded page can show the form as it was when the test started. */
+    input: Input;
     startedAt: number;
     finishedAt: number | null;
     state: "running" | "done" | "failed" | "cancelled";
@@ -85,6 +88,7 @@ export function createAiPreviewRouter(deps: Pick<TrpcDeps, "jobs">) {
           const now = Date.now();
           const run: Run = {
             id: randomUUID(),
+            input,
             startedAt: now,
             finishedAt: null,
             state: "running",
@@ -128,6 +132,18 @@ export function createAiPreviewRouter(deps: Pick<TrpcDeps, "jobs">) {
       status: procedure.input(z.object({ id: z.string() })).query(({ input }) => {
         const run = runs.get(input.id);
         if (!run) throw new TRPCError({ code: "NOT_FOUND", message: "That test is no longer held — run it again." });
+        run.lastPolledAt = Date.now();
+        return snapshot(run);
+      }),
+
+      /**
+       * The test still running, if any. A reload — or a second tab — picks it
+       * back up rather than showing an idle form while the server carries on
+       * paying for an answer, and then refusing a new test as "already running".
+       */
+      active: procedure.query(() => {
+        const run = [...runs.values()].find((r) => r.state === "running");
+        if (!run) return null;
         run.lastPolledAt = Date.now();
         return snapshot(run);
       }),

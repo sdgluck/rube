@@ -82,6 +82,28 @@ describe("aiPreview.becauseYouWatched", () => {
     finish();
   });
 
+  test("active hands a reloaded page the running test, with its input, and nothing once it ends", async () => {
+    let finish!: () => void;
+    const api = setup(async () => {
+      await new Promise<void>((r) => (finish = r));
+      return RESULT;
+    });
+    assert.equal(await api.active(), null);
+
+    const input = { sectionKey: "1", plexUsername: "sam", count: 2 };
+    const { id } = await api.start(input);
+    const resumed = await api.active();
+    assert.equal(resumed?.id, id);
+    assert.deepEqual(resumed?.input, input);
+
+    finish();
+    await until(
+      () => api.status({ id }),
+      (s) => s.state !== "running",
+    );
+    assert.equal(await api.active(), null);
+  });
+
   test("a failure is reported on status with its message", async () => {
     const api = setup(async () => {
       throw new Error("No watch history in Films to build from.");
