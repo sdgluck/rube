@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-05
+
+### Added
+
+- Settings → AI has a dry-run tester for the Because you watched row, showing token use per model call.
+- Settings → AI shows AI token usage by window, feature, model and rule, and can cap it with an optional monthly budget. **Once the budget is spent, AI rules, Because you watched and AI summaries are skipped until the 1st of the next month**; health checks and Test connection still run.
+- The job schedule picker's Cron tab is now Custom. You can set times or a repeat within an hour window, pick days of the week, dates (including the last day of the month) or the nth weekday of a month, and months. Schedules it can't show stay as an editable cron expression.
+- System Tasks are grouped into sections (Library sync, Automation, Maintenance, Background). Each heading shows how many tasks it holds, whether any failed, how many are off and when it last ran. A section opens on its own when something in it has failed or a status filter is active.
+
+### Changed
+
+- **Ollama is now called through its native chat API with a context window sized to each prompt**, instead of the OpenAI-compatible route. Check your Ollama AI settings still work after upgrading.
+- Because you watched no longer asks the model to rebuild rows that already exist and are being kept, which cuts AI calls and tokens; the library is sent as a cacheable prefix.
+- The AI health check lists available models instead of generating a response.
+- Jobs the server keeps on show a lock instead of the REQUIRED pill.
+- Weekly schedules are described in words in System Tasks (for example "Sundays at 03:00" rather than `0 3 * * 0`).
+
+### Fixed
+
+- On the \*Arr and Discover pages, buttons that were rendering as bare tinted text (including "New from preset") now have their normal size and padding, and Cancel, Back and Close buttons in modals are secondary buttons as elsewhere.
+- Every \*Arr list is now a table in a scrolling card, matching the rest of the app.
+- The Appearance settings and the poster modal no longer stretch segmented controls to the full width of a flex column.
+
 ## [0.31.1] - 2026-10-04
 
 ### Changed
