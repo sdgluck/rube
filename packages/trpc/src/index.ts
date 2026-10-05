@@ -1,7 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createLlmClient } from "@tinkerbell/llm";
+import { createLlmClient, listModels } from "@tinkerbell/llm";
 import { errorMessage, REDACTED_SECRET, type ConfigKey } from "@tinkerbell/core";
 import { testArrConnection } from "@tinkerbell/domain.health";
 import { EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
@@ -41,6 +41,7 @@ import { createMetadataRouter } from "./metadata.router.ts";
 import { createDigestRouter } from "./digest.router.ts";
 import { createWatchlistRouter } from "./watchlist.router.ts";
 import { createPersonalizationRouter } from "./personalization.router.ts";
+import { createAiPreviewRouter } from "./ai-preview.router.ts";
 
 const appRouterFor = (deps: TrpcDeps) => {
   const { getConfig } = deps.config;
@@ -89,6 +90,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     nav: createNavRouter(deps),
     views: createViewsRouter(deps),
     personalization: createPersonalizationRouter(deps),
+    aiPreview: createAiPreviewRouter(deps),
     notifications: createNotificationsRouter(deps),
     changes: createChangesRouter(deps),
     history: createHistoryRouter(deps),
@@ -352,6 +354,27 @@ const appRouterFor = (deps: TrpcDeps) => {
           const message = errorMessage(err);
           reportHealth("LLM", "error", message);
           throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
+
+    /**
+     * The models the server actually has, for the Settings dropdown. Null
+     * where the curated presets are the better list (hosted providers) or the
+     * server can't be reached yet — the form falls back to presets either way,
+     * so a half-typed URL is not an error to show.
+     */
+    llmModels: procedure
+      .input(
+        z.object({
+          provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),
+          baseUrl: z.string().url().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        try {
+          return await listModels(input);
+        } catch {
+          return null;
         }
       }),
   });

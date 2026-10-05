@@ -1,0 +1,111 @@
+/* "Try it" on Settings → AI: a dry run of an AI feature, its answer, and what
+   each call cost. Everything here is a readout inside the settings card, so it
+   leans on the compact table and the label chips rather than new chrome. */
+
+/* Library and person side by side where there is room, stacked on a phone —
+   by wrapping, so no breakpoint is needed. */
+.pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pickers > * {
+  flex: 1 1 200px;
+  max-width: 360px;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.summary {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* One row per model call. The numbers are the point: tokens in, how many of
+   them came from the cache, out, and the time — so a provider or model change
+   can be judged on one result. */
+.calls {
+  composes: compactTable from "../../styles/shared.module.css";
+}
+
+/* Six columns don't fit a phone; the table scrolls inside the card rather
+   than pushing the page sideways. */
+.callsScroll {
+  overflow-x: auto;
+}
+
+.num {
+  composes: cellNum from "../../styles/shared.module.css";
+}
+
+.muted {
+  composes: cellMuted from "../../styles/shared.module.css";
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.rowTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.item {
+  composes: label from "../../styles/shared.module.css";
+}
+
+/* A title the model named that isn't in the library — dropped by a real run. */
+.itemMissing {
+  composes: label from "../../styles/shared.module.css";
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+  text-decoration: line-through;
+}
+
+.pill {
+  composes: statusPill from "../../styles/shared.module.css";
+}
+
+.pillOk {
+  composes: statusPill from "../../styles/shared.module.css";
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.pillWarn {
+  composes: statusPill from "../../styles/shared.module.css";
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+.error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--status-error-fg);
+}

@@ -3,11 +3,13 @@ import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
 import { errorMessage } from "@tinkerbell/core";
 import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
-import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
+import { createPlexClient, type PlexClient, type PlexItem } from "@tinkerbell/plex";
 
 import { preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
 
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { jobs } from "@tinkerbell/db";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 
 const BYW_LABEL = "BecauseYouWatched";
@@ -19,6 +21,64 @@ const aiCollectionSchema = z.object({
 });
 
 type AiCollection = z.infer<typeof aiCollectionSchema>;
+
+type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined };
+
+/** One model call, as the Settings → AI tester shows it. */
+export interface BywCallUsage {
+  provider: string;
+  model: string;
+  tokensIn: number;
+  tokensInCached: number | null;
+  tokensOut: number;
+  durationMs: number;
+}
+
+export interface BywPreviewRow {
+  watchedTitle: string;
+  rowName: string;
+  /** A nightly run would skip the model call for this row and keep the existing one. */
+  existsAlready: boolean;
+  items: Array<{ title: string; matched: boolean }>;
+  matchedCount: number;
+  /** Whether a real run would create the row: enough items matched the library. */
+  wouldCreate: boolean;
+  error: string | null;
+  usage: BywCallUsage | null;
+}
+
+export interface BywPreviewResult {
+  sectionTitle: string;
+  user: string | null;
+  libraryTitles: number;
+  minItems: number;
+  rows: BywPreviewRow[];
+}
+
+/** The schema above, for a provider that can constrain decoding to it. */
+const BYW_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: { name: { type: "string" }, items: { type: "array", items: { type: "string" } } },
+  required: ["name", "items"],
+};
+
+/** The row's name, fixed by the watched title — which is why it can be checked before any model call. */
+export function bywRowName(watchedTitle: string): string {
+  return `Because you watched ${watchedTitle}`;
+}
+
+/**
+ * The rows this run owns: every because-you-watched row in server mode, only
+ * this person's in per-user mode. The same set decides which calls to skip and
+ * which rows cleanup may delete, so the two can't disagree about a row.
+ */
+export function ownBywRows<T extends { labels: string[] }>(collections: T[], plexUsername: string | undefined): T[] {
+  return collections.filter(
+    (col) =>
+      col.labels.some((tag) => tag.toLowerCase() === BYW_LABEL.toLowerCase()) &&
+      (plexUsername === undefined || col.labels.some((tag) => tag === `User:${plexUsername}`)),
+  );
+}
 
 /**
  * Best-effort JSON extraction for LLM responses. Tries strict parse, then
@@ -63,15 +123,58 @@ function extractJSON(text: string): unknown {
 }
 
 export function createBecauseYouWatchedCommand(
-  deps: Pick<Services, "aiUsage" | "clients" | "collections" | "config" | "health" | "preferences">,
+  deps: Pick<Services, "aiUsage" | "clients" | "collections" | "config" | "db" | "health" | "preferences">,
 ) {
-  const { aiUsage, clients, collections, config, health, preferences } = deps;
+  const { aiUsage, clients, collections, config, db, health, preferences } = deps;
   const { track, budgetExceededReason } = aiUsage;
   const { plexHealthCallback } = clients;
   const { getConfig, getLlmConfig } = config;
   const { getOptedInPreferencesByUsername } = preferences;
   const { reportHealth } = health;
   const { upsertCollectionByKey, forgetCollections } = collections;
+
+  /** Server accounts, named the way per-user rows are labelled. */
+  async function resolveUsers(client: PlexClient, machineId: string): Promise<ResolvedUser[]> {
+    const accounts = await client.getAccounts();
+    const sharings = await client.getSharings(machineId);
+    const idToPlexUsername = new Map<string, string>();
+    for (const s of sharings) {
+      idToPlexUsername.set(String(s.userId), s.username);
+    }
+    const users: ResolvedUser[] = [];
+    for (const account of accounts) {
+      if (account.name) {
+        const plexUsername = idToPlexUsername.get(account.id) || account.name;
+        users.push({ name: account.name, plexUsername, accountID: account.id });
+      }
+    }
+    return users;
+  }
+
+  /** The most recent distinct titles watched in a section, newest first, as the job names them. */
+  async function recentlyWatched(
+    client: PlexClient,
+    accountID: string | undefined,
+    sectionId: string,
+    limit: number,
+  ): Promise<string[]> {
+    const history = await client.getWatchHistory({ accountID, librarySectionID: sectionId, limit: limit * 5 });
+    const seen = new Set<string>();
+    const titles: string[] = [];
+    for (const item of history) {
+      const key =
+        item.type === "episode"
+          ? `show:${item.grandparentRatingKey || item.grandparentTitle}`
+          : `${item.type}:${item.ratingKey}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      titles.push(
+        item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
+      );
+      if (titles.length >= limit) break;
+    }
+    return titles;
+  }
 
   async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
@@ -117,25 +220,12 @@ export function createBecauseYouWatchedCommand(
 
     ctx.log(`Mode: ${MODE}`);
 
-    type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined };
     let resolvedUsers: ResolvedUser[] = [];
 
     if (MODE === "server") {
       resolvedUsers = [{ name: "", plexUsername: "", accountID: undefined }];
     } else {
-      const accounts = await client.getAccounts();
-      const sharings = await client.getSharings(machineId);
-      const idToPlexUsername = new Map<string, string>();
-      for (const s of sharings) {
-        idToPlexUsername.set(String(s.userId), s.username);
-      }
-
-      for (const account of accounts) {
-        if (account.name) {
-          const plexUsername = idToPlexUsername.get(account.id) || account.name;
-          resolvedUsers.push({ name: account.name, plexUsername, accountID: account.id });
-        }
-      }
+      resolvedUsers = await resolveUsers(client, machineId);
       if (userAllowlist.length > 0) {
         resolvedUsers = resolvedUsers.filter(
           (u) => userAllowlist.includes(u.name.toLowerCase()) || userAllowlist.includes(u.plexUsername.toLowerCase()),
@@ -192,32 +282,14 @@ export function createBecauseYouWatchedCommand(
         ctx.log(`"${section.title}"${isPerUser ? ` (${user.name})` : ""} — starting...`);
 
         ctx.log(`Fetching watch history...`);
-        const history = await client.getWatchHistory({
-          accountID: user.accountID,
-          librarySectionID: sectionId,
-          limit: LIMIT * 5,
-        });
+        const watchedTitles = await recentlyWatched(client, user.accountID, sectionId, LIMIT);
 
-        if (history.length === 0) {
+        if (watchedTitles.length === 0) {
           ctx.log(`No watch history found, skipping.`);
           continue;
         }
 
-        // Deduplicate
-        const seen = new Set<string>();
-        const watchedItems = [];
-        for (const item of history) {
-          const key =
-            item.type === "episode"
-              ? `show:${item.grandparentRatingKey || item.grandparentTitle}`
-              : `${item.type}:${item.ratingKey}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          watchedItems.push(item);
-          if (watchedItems.length >= LIMIT) break;
-        }
-
-        ctx.log(`Found ${watchedItems.length} unique recently watched item(s).`);
+        ctx.log(`Found ${watchedTitles.length} unique recently watched item(s).`);
 
         // Fetch all items in section
         ctx.log(`Fetching library items...`);
@@ -229,17 +301,30 @@ export function createBecauseYouWatchedCommand(
           continue;
         }
 
-        const watchedTitles = watchedItems.map((item) =>
-          item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
-        );
+        // This person's rows as they stand, before any model call. A row that
+        // already exists is kept as it is — the creation pass below has always
+        // skipped an existing name — so asking the model to rebuild it bought
+        // an answer that was then thrown away. With the ten most recent titles
+        // mostly unchanged from one night to the next, that was most of the
+        // job's calls, each carrying the whole library.
+        const allCollections = await client.getCollectionsWithLabels(sectionId, { label: BYW_LABEL });
+        const mine = ownBywRows(allCollections, isPerUser ? user.plexUsername : undefined);
+        const existingNames = new Set(mine.map((col) => col.title.toLowerCase()));
+        const keptNames = new Set<string>();
 
         ctx.log(`Asking the LLM for "Because you watched" collections...`);
         const aiCollections: AiCollection[] = [];
         for (let i = 0; i < watchedTitles.length; i++) {
           const title = watchedTitles[i];
+          const rowName = bywRowName(title).toLowerCase();
+          if (existingNames.has(rowName)) {
+            ctx.log(`[${i + 1}/${watchedTitles.length}] "${bywRowName(title)}" already exists, keeping it.`);
+            keptNames.add(rowName);
+            continue;
+          }
           ctx.log(`[${i + 1}/${watchedTitles.length}] Generating collection for "${title}"...`);
           try {
-            const col = await generateBYWCollection(
+            const { collection: col } = await generateBYWCollection(
               llmConfig,
               ctx,
               title,
@@ -282,18 +367,9 @@ export function createBecauseYouWatchedCommand(
         }
 
         ctx.log(`Cleaning up old "because you watched" collections...`);
-        const allCollections = await client.getCollectionsWithLabels(sectionId, { label: BYW_LABEL });
         let deleted = 0;
-        for (const col of allCollections) {
-          const hasByw = col.labels.some((tag) => tag.toLowerCase() === BYW_LABEL.toLowerCase());
-          if (!hasByw) continue;
-
-          if (isPerUser) {
-            const hasUserLabel = col.labels.some((tag) => tag === `User:${user.plexUsername}`);
-            if (!hasUserLabel) continue;
-          }
-
-          if (newCollectionNames.has(col.title.toLowerCase())) {
+        for (const col of mine) {
+          if (newCollectionNames.has(col.title.toLowerCase()) || keptNames.has(col.title.toLowerCase())) {
             ctx.log(`Keeping "${col.title}" (still relevant)`);
             continue;
           }
@@ -313,7 +389,10 @@ export function createBecauseYouWatchedCommand(
             continue;
           }
 
-          const existingCol = allCollections.find((c) => c.title.toLowerCase() === col.name.toLowerCase());
+          // This person's rows only. Matching every row in the section meant
+          // the second person to watch a film never got its row: the first
+          // person's had the same name.
+          const existingCol = mine.find((c) => c.title.toLowerCase() === col.name.toLowerCase());
           if (existingCol) {
             ctx.log(`"${col.name}" already exists, skipping creation.`);
             created++;
@@ -356,23 +435,29 @@ export function createBecauseYouWatchedCommand(
     ctx.log("All done!");
   }
 
+  /**
+   * One row's model call. Returns why there is no collection alongside the
+   * null, and the call's usage, so the Settings → AI tester can show both
+   * without a second code path that could drift from what the job does.
+   */
   async function generateBYWCollection(
     llmConfig: LlmConfig,
-    ctx: JobContext,
+    ctx: Pick<JobContext, "log" | "signal">,
     watchedTitle: string,
     libraryItems: PlexItem[],
     sectionTitle: string,
     minItems: number,
     maxItems: number,
     prefs?: UserPreferences,
-  ): Promise<AiCollection | null> {
+    feature: "because-you-watched" | "because-you-watched-preview" = "because-you-watched",
+  ): Promise<{ collection: AiCollection | null; skipped: string | null; usage: BywCallUsage | null }> {
     // A row this person has already said isn't for them: don't spend a model call
     // rebuilding it. The name is fixed, so it can be checked before anything else.
-    const rowName = `Because you watched ${watchedTitle}`;
+    const rowName = bywRowName(watchedTitle);
     const excludedRows = new Set((prefs?.excludedCollections ?? []).map((t) => t.toLowerCase()));
     if (excludedRows.has(rowName.toLowerCase())) {
       ctx.log(`Skipping "${rowName}" — the user said it wasn't for them.`);
-      return null;
+      return { collection: null, skipped: "the user said this row wasn't for them", usage: null };
     }
 
     // Hard-exclude any titles the user never wants recommended before the
@@ -382,33 +467,62 @@ export function createBecauseYouWatchedCommand(
       excluded.size > 0
         ? libraryItems.filter((i) => !excluded.has(i.title.toLowerCase()) && !excluded.has(watchedTitle.toLowerCase()))
         : libraryItems;
-    const itemList = candidates.map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`).join("\n");
+    // Titles are user-controlled; one containing the fence marker could close
+    // the list early and have what follows read as instructions.
+    const itemList = candidates
+      .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
+      .join("\n")
+      .replace(/<\/?library>/gi, (m) => m.replace(">", "_>"));
     const prefsBlock = prefs ? preferencesPromptBlock(prefs) : "";
 
-    const prompt = `You are a movie/TV curator. Given a recently watched item and a full Plex "${sectionTitle}" library, create a "Because you watched" collection.
+    // The library comes first and the title last. Every call for this person
+    // and section sends the same list, and a provider's prompt cache only
+    // matches from the start of the prompt: with the title ahead of the list,
+    // as it used to be, no two calls shared a prefix and each paid for the
+    // whole library again. Nothing per-call may go in `library`.
+    const library = `You are a movie/TV curator. Below is the full list of titles in a Plex "${sectionTitle}" library.
+
+<library>
+${itemList}
+</library>`;
+
+    const prompt = `Create a "Because you watched" collection from the library above.
 
 Recently watched: ${watchedTitle}
 
 Rules:
-- Name the collection "Because you watched ${watchedTitle}"
+- Name the collection "${rowName}"
 - The collection MUST have between ${minItems} and ${maxItems} items
-- Only use titles that exactly match the library list below
+- Only use titles that exactly match the library list above
 - Do NOT include "${watchedTitle}" in the collection
 - Pick items that are thematically similar: shared vibes, tonal similarities, narrative parallels, genre connections, visual motifs
 - The collection should feel like a genuine recommendation, not just the same genre
 ${prefsBlock}
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
-{"name":"Because you watched ${watchedTitle}","items":["Title (Year)","Title (Year)"]}
+{"name":"${rowName}","items":["Title (Year)","Title (Year)"]}`;
 
-Here is the full library:
-${itemList}`;
-
-    const client = track(createLlmClient(llmConfig), { feature: "because-you-watched" });
+    const client = track(createLlmClient(llmConfig), { feature });
     let text: string;
+    let usage: BywCallUsage;
+    const started = performance.now();
     try {
-      const res = await client.complete({ prompt, maxTokens: 1024, signal: ctx.signal });
+      const res = await client.complete({
+        cacheablePrefix: library,
+        prompt,
+        maxTokens: 1024,
+        jsonSchema: BYW_RESPONSE_SCHEMA,
+        signal: ctx.signal,
+      });
       reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
       text = res.text;
+      usage = {
+        provider: res.provider,
+        model: res.model,
+        tokensIn: res.tokensIn,
+        tokensInCached: res.tokensInCached ?? null,
+        tokensOut: res.tokensOut,
+        durationMs: Math.round(performance.now() - started),
+      };
     } catch (err) {
       if (!(err instanceof LlmBudgetExceededError)) reportHealth("LLM", "error", errorMessage(err));
       throw err;
@@ -419,20 +533,123 @@ ${itemList}`;
     const parsed = extractJSON(text);
     if (parsed === null) {
       ctx.log(`Skipping "${watchedTitle}" — could not extract JSON from AI response`);
-      return null;
+      return { collection: null, skipped: "the answer wasn't parseable JSON", usage };
     }
 
     const obj = Array.isArray(parsed) ? parsed[0] : parsed;
     const result = aiCollectionSchema.safeParse(obj);
     if (!result.success) {
       ctx.log(`Skipping "${watchedTitle}" — invalid AI response: ${result.error.message}`);
-      return null;
+      return { collection: null, skipped: `the answer had the wrong shape: ${result.error.message}`, usage };
     }
 
-    return result.data;
+    return { collection: result.data, skipped: null, usage };
   }
 
-  return { run };
+  /**
+   * A because-you-watched pass for one person and one section that writes
+   * nothing: the same history lookup, prompt and model call as the job, with
+   * the answer matched against the library and returned instead of sent to
+   * Plex.
+   *
+   * Several titles run back to back on purpose. The library is the cached
+   * prefix, so the second and later calls are where caching shows up — or
+   * visibly doesn't — in the numbers.
+   */
+  async function previewBecauseYouWatched(
+    input: { sectionKey: string; plexUsername?: string; watchedTitle?: string; count?: number },
+    signal: AbortSignal,
+  ): Promise<BywPreviewResult> {
+    const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
+    const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+    const llmConfig = getLlmConfig();
+    if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
+    if (!llmConfig) throw new Error("LLM provider is not configured. Set one above.");
+
+    // The job's own settings, so the preview builds the row a run would.
+    const jobConfig = (db.select({ config: jobs.config }).from(jobs).where(eq(jobs.id, "because-you-watched")).get()
+      ?.config ?? {}) as BywJobConfig;
+    const minItems = jobConfig.minItems ?? BYW_DEFAULTS.minItems;
+    const maxItems = jobConfig.maxItems ?? BYW_DEFAULTS.maxItems;
+
+    const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal, onHealth: plexHealthCallback });
+    const sections = await client.getSections();
+    const section = sections.find((s) => s.key === input.sectionKey);
+    if (!section) throw new Error(`No library section with key ${input.sectionKey}.`);
+
+    let user: ResolvedUser | undefined;
+    if (input.plexUsername) {
+      const identity = await client.getIdentity();
+      const wanted = input.plexUsername.toLowerCase();
+      user = (await resolveUsers(client, identity.machineIdentifier)).find(
+        (u) => u.plexUsername.toLowerCase() === wanted || u.name.toLowerCase() === wanted,
+      );
+      if (!user) throw new Error(`No server account for "${input.plexUsername}".`);
+    }
+    const prefs = user ? getOptedInPreferencesByUsername(user.plexUsername) : undefined;
+
+    const count = Math.min(Math.max(input.count ?? 1, 1), 3);
+    const titles = input.watchedTitle?.trim()
+      ? [input.watchedTitle.trim()]
+      : await recentlyWatched(client, user?.accountID, section.key, count);
+    if (titles.length === 0) {
+      throw new Error(`No watch history in "${section.title}"${user ? ` for ${user.name}` : ""} to build from.`);
+    }
+
+    const libraryItems = await client.fetchAllItems(section.key);
+    const existing = ownBywRows(
+      await client.getCollectionsWithLabels(section.key, { label: BYW_LABEL }),
+      user?.plexUsername,
+    );
+    const existingNames = new Set(existing.map((c) => c.title.toLowerCase()));
+    const known = new Set<string>();
+    for (const item of libraryItems) {
+      known.add(`${item.title}${item.year ? ` (${item.year})` : ""}`);
+      known.add(item.title);
+    }
+
+    const log = () => {};
+    const rows: BywPreviewRow[] = [];
+    for (const watchedTitle of titles) {
+      const rowName = bywRowName(watchedTitle);
+      const base = { watchedTitle, rowName, existsAlready: existingNames.has(rowName.toLowerCase()) };
+      try {
+        const { collection, skipped, usage } = await generateBYWCollection(
+          llmConfig,
+          { log, signal },
+          watchedTitle,
+          libraryItems,
+          section.title,
+          minItems,
+          maxItems,
+          prefs,
+          "because-you-watched-preview",
+        );
+        const items = (collection?.items ?? []).map((title) => ({ title, matched: known.has(title) }));
+        const matchedCount = items.filter((i) => i.matched).length;
+        rows.push({
+          ...base,
+          items,
+          matchedCount,
+          wouldCreate: matchedCount >= minItems,
+          error: skipped,
+          usage,
+        });
+      } catch (err) {
+        rows.push({ ...base, items: [], matchedCount: 0, wouldCreate: false, error: errorMessage(err), usage: null });
+      }
+    }
+
+    return {
+      sectionTitle: section.title,
+      user: user?.name ?? null,
+      libraryTitles: libraryItems.length,
+      minItems,
+      rows,
+    };
+  }
+
+  return { run, previewBecauseYouWatched };
 }
 
 /**

@@ -4,6 +4,8 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
+import { useDebouncedValue } from "#hooks/useDebouncedValue";
+import SettingsAiTry from "./SettingsAiTry";
 import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
@@ -41,6 +43,18 @@ export default function SettingsAi() {
   }, [configQuery.data]);
 
   const meta = getProviderMeta(llm.provider);
+
+  // On Ollama the only models that work are the ones pulled on that server,
+  // so list those rather than presets that may not exist there. Debounced so
+  // typing the URL doesn't probe every prefix of it.
+  const debouncedBaseUrl = useDebouncedValue(llm.baseUrl?.trim() || undefined, 500);
+  const listsServerModels = llm.provider === "ollama" && isUrl(debouncedBaseUrl);
+  const serverModelsQuery = trpc.llmModels.useQuery(
+    { provider: llm.provider, baseUrl: debouncedBaseUrl },
+    { enabled: listsServerModels, retry: false, refetchOnWindowFocus: false },
+  );
+  const serverModels = listsServerModels ? (serverModelsQuery.data ?? null) : null;
+  const modelOptions = serverModels ? serverModels.map((id) => ({ id, label: id })) : meta.modelPresets;
 
   const isDirty = useMemo(() => JSON.stringify(llm) !== JSON.stringify(savedLlm), [llm, savedLlm]);
   useUnsavedChanges(isDirty);
@@ -152,14 +166,21 @@ export default function SettingsAi() {
             onChange={(e) => setLlm((s) => ({ ...s, model: e.target.value }))}
             placeholder={meta.defaultModel}
           />
-          {meta.modelPresets.length > 0 && (
+          {modelOptions.length > 0 && (
             <datalist id={`llm-models-${llm.provider}`}>
-              {meta.modelPresets.map((m) => (
+              {modelOptions.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
                 </option>
               ))}
             </datalist>
+          )}
+          {serverModels && (
+            <span className={styles.hint}>
+              {serverModels.length === 0
+                ? "No models are pulled on this server yet."
+                : `${serverModels.length} model${serverModels.length === 1 ? "" : "s"} pulled on this server.`}
+            </span>
           )}
         </label>
 
@@ -173,9 +194,20 @@ export default function SettingsAi() {
           <UnsavedBanner visible={isDirty} />
         </div>
       </CardSection>
+      <SettingsAiTry unsavedChanges={isDirty} />
       <SettingsAiUsage />
     </div>
   );
+}
+
+function isUrl(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function normalize(cfg: LlmConfig): LlmConfig {

@@ -27,6 +27,9 @@ export const LLM_FEATURES = [
   "rule",
   "rule-preview",
   "because-you-watched",
+  // Settings → AI "Try it". Its own line so an evening of experiments isn't
+  // read as the nightly job getting more expensive.
+  "because-you-watched-preview",
   "collection-summary",
   "health-check",
   "test-connection",

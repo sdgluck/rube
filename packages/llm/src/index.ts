@@ -8,5 +8,5 @@ export type {
   ProviderFieldRequirement,
 } from "./types.ts";
 export { LlmConfigError, LlmRequestError } from "./types.ts";
-export { createLlmClient } from "./client.ts";
+export { createLlmClient, listModels } from "./client.ts";
 export { PROVIDERS, getProviderMeta } from "./meta.ts";

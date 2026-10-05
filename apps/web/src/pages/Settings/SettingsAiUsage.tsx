@@ -22,6 +22,7 @@ const FEATURE_LABELS: Record<string, string> = {
   rule: "AI rules",
   "rule-preview": "Rule previews",
   "because-you-watched": "Because you watched",
+  "because-you-watched-preview": "Because you watched (Try it)",
   "collection-summary": "Collection summaries",
   "health-check": "Health checks",
   "test-connection": "Test connection",

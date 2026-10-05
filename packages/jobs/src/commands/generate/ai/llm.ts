@@ -18,6 +18,20 @@ export interface LlmCallResult {
  */
 export const MAX_ITEMS_PER_CALL = 2000;
 
+/**
+ * What `parse.ts` expects back, for a provider that can constrain decoding to
+ * it. Not a cache candidate the way because-you-watched is: the item list is
+ * reshuffled every call on purpose, so no two prompts share a prefix.
+ */
+const AI_COLLECTIONS_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: { name: { type: "string" }, items: { type: "array", items: { type: "string" } } },
+    required: ["name", "items"],
+  },
+};
+
 const FENCE_OPEN = "<media_items>";
 const FENCE_CLOSE = "</media_items>";
 
@@ -100,7 +114,7 @@ export const createLlmCommand = perDeps(function createLlmCommand(
 
     const client = track(createLlmClient(cfg), { feature: opts.feature ?? "rule", ruleId: opts.ruleId });
     try {
-      const res = await client.complete({ prompt: fullPrompt, signal });
+      const res = await client.complete({ prompt: fullPrompt, jsonSchema: AI_COLLECTIONS_SCHEMA, signal });
       reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
       return { text: res.text, tokensIn: res.tokensIn, tokensOut: res.tokensOut };
     } catch (err) {

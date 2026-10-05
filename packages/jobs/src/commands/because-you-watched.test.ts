@@ -1,0 +1,48 @@
+/**
+ * The ownership filter that decides which because-you-watched rows a run may
+ * skip regenerating and which it may delete.
+ *
+ * The job asks the model for nothing when a row with the name already exists
+ * for this person — that answer was always thrown away — so the filter is now
+ * on the path of every model call. Get it too wide and one person's row
+ * suppresses another's; too narrow and the run pays for a row it then
+ * discards, which is what the nightly bill was made of.
+ */
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+
+import { bywRowName, ownBywRows } from "./because-you-watched.ts";
+
+const row = (title: string, ...labels: string[]) => ({ title, labels });
+
+describe("ownBywRows", () => {
+  const rows = [
+    row("Because you watched Alien (1979)", "Tinkerbell", "BecauseYouWatched", "User:ripley"),
+    row("Because you watched Alien (1979)", "Tinkerbell", "BecauseYouWatched", "User:dallas"),
+    row("Because you watched Heat (1995)", "Tinkerbell", "becauseyouwatched"),
+    row("Directors' Cut", "Tinkerbell"),
+  ];
+
+  test("per-user, a row belongs only to the person it is labelled for", () => {
+    // Two people who both watched Alien each get their own row; one existing
+    // must not stop the other being generated.
+    const mine = ownBywRows(rows, "ripley");
+    assert.deepEqual(
+      mine.map((r) => r.labels.at(-1)),
+      ["User:ripley"],
+    );
+  });
+
+  test("server mode owns every because-you-watched row, whatever its case", () => {
+    const mine = ownBywRows(rows, undefined);
+    assert.equal(mine.length, 3);
+    assert.ok(!mine.some((r) => r.title === "Directors' Cut"), "a row without the label is never ours");
+  });
+
+  test("an existing row is found by the name the run would give it", () => {
+    // The skip compares names; this is the name the generation prompt asks for.
+    const existing = new Set(ownBywRows(rows, "ripley").map((r) => r.title.toLowerCase()));
+    assert.ok(existing.has(bywRowName("Alien (1979)").toLowerCase()));
+    assert.ok(!existing.has(bywRowName("Aliens (1986)").toLowerCase()));
+  });
+});

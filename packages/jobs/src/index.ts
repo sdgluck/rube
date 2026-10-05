@@ -30,6 +30,7 @@ import { createCapabilities } from "./capabilities.ts";
 import { createStressTest } from "./stress-test/index.ts";
 import { createGenerateCommand } from "./commands/generate/index.ts";
 import { createDigestCommand } from "./commands/digest.ts";
+import { createBecauseYouWatchedCommand } from "./commands/because-you-watched.ts";
 import { createReconcile } from "./personalize/reconcile.ts";
 import { JobStarterToken } from "./starter.ts";
 import { createFieldOptions } from "./field-options.ts";
@@ -62,6 +63,7 @@ export type { StartResult, JobCommand, JobUpdate } from "./runner.ts";
 export type { CheckpointStatus } from "./checkpoint.ts";
 export type { RuleWorkReason } from "./rule-queue.ts";
 export type { TestRuleResult, TestCollectionPreview } from "./commands/generate/index.ts";
+export type { BywPreviewResult, BywPreviewRow, BywCallUsage } from "./commands/because-you-watched.ts";
 
 /**
  * Everything the job system does, bound to one container.
@@ -90,6 +92,7 @@ export const createJobs = perDeps(function createJobs(deps: Services) {
     runSingleRule: generate.runSingleRule,
     testRule: generate.testRule,
     previewDigest: createDigestCommand(deps).previewDigest,
+    previewBecauseYouWatched: createBecauseYouWatchedCommand(deps).previewBecauseYouWatched,
   };
 });
 
