@@ -24,6 +24,15 @@ type AiCollection = z.infer<typeof aiCollectionSchema>;
 
 type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined };
 
+/** A recently watched title, as the row is named, and the Plex item its synopsis is read from — the show, for an episode. */
+type Watched = { title: string; ratingKey: string | undefined };
+
+/**
+ * Long enough for any real synopsis; a cap only so a pasted essay in an
+ * edited summary can't multiply the cost of every call.
+ */
+const SYNOPSIS_MAX_CHARS = 1500;
+
 /** One model call, as the Settings → AI tester shows it. */
 export interface BywCallUsage {
   provider: string;
@@ -39,6 +48,8 @@ export interface BywPreviewRow {
   rowName: string;
   /** A nightly run would skip the model call for this row and keep the existing one. */
   existsAlready: boolean;
+  /** The synopsis sent with the call, when the setting is on and Plex had one. */
+  synopsis: string | null;
   items: Array<{ title: string; matched: boolean }>;
   matchedCount: number;
   /** Whether a real run would create the row: enough items matched the library. */
@@ -54,6 +65,8 @@ export interface BywPreviewResult {
   user: string | null;
   libraryTitles: number;
   minItems: number;
+  /** Whether each call was asked to send the watched title's synopsis. */
+  includeSynopsis: boolean;
   rows: BywPreviewRow[];
 }
 
@@ -67,6 +80,17 @@ const BYW_RESPONSE_SCHEMA = {
 /** The row's name, fixed by the watched title — which is why it can be checked before any model call. */
 export function bywRowName(watchedTitle: string): string {
   return `Because you watched ${watchedTitle}`;
+}
+
+/**
+ * The watched title's synopsis as the prompt carries it, or nothing. Fenced
+ * like the library: a summary is editable in Plex and must read as data, so a
+ * closing tag inside it is defused rather than allowed to end the fence.
+ */
+export function bywSynopsisBlock(synopsis: string | null): string {
+  if (!synopsis) return "";
+  const fenced = synopsis.replace(/<\/?synopsis>/gi, (m) => m.replace(">", "_>"));
+  return `\nWhat it's about:\n<synopsis>\n${fenced}\n</synopsis>\n`;
 }
 
 /**
@@ -159,10 +183,10 @@ export function createBecauseYouWatchedCommand(
     accountID: string | undefined,
     sectionId: string,
     limit: number,
-  ): Promise<string[]> {
+  ): Promise<Watched[]> {
     const history = await client.getWatchHistory({ accountID, librarySectionID: sectionId, limit: limit * 5 });
     const seen = new Set<string>();
-    const titles: string[] = [];
+    const titles: Watched[] = [];
     for (const item of history) {
       const key =
         item.type === "episode"
@@ -171,11 +195,35 @@ export function createBecauseYouWatchedCommand(
       if (seen.has(key)) continue;
       seen.add(key);
       titles.push(
-        item.type === "episode" ? item.grandparentTitle! : `${item.title}${item.year ? ` (${item.year})` : ""}`,
+        item.type === "episode"
+          ? { title: item.grandparentTitle!, ratingKey: item.grandparentRatingKey || undefined }
+          : { title: `${item.title}${item.year ? ` (${item.year})` : ""}`, ratingKey: item.ratingKey },
       );
       if (titles.length >= limit) break;
     }
     return titles;
+  }
+
+  /**
+   * What the watched title is about, from Plex. A name alone leaves the model
+   * guessing for anything it doesn't know — an obscure film, a remake sharing
+   * an older film's title — and a guess about the wrong film is a row of the
+   * wrong recommendations. Best effort: no synopsis is the same call as
+   * before the setting existed, not a reason to lose the row.
+   */
+  async function synopsisOf(
+    client: PlexClient,
+    ratingKey: string | undefined,
+    log: (msg: string) => void,
+  ): Promise<string | null> {
+    if (!ratingKey) return null;
+    try {
+      const summary = (await client.getItemDetail(ratingKey)).summary.trim();
+      return summary ? summary.slice(0, SYNOPSIS_MAX_CHARS) : null;
+    } catch (err) {
+      log(`Couldn't read the synopsis (${errorMessage(err)}); asking without it.`);
+      return null;
+    }
   }
 
   async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
@@ -190,6 +238,7 @@ export function createBecauseYouWatchedCommand(
     const MIN_ITEMS = config.minItems ?? BYW_DEFAULTS.minItems;
     const MAX_ITEMS = config.maxItems ?? BYW_DEFAULTS.maxItems;
     const MIN_LIBRARY_SIZE = config.minLibrarySize ?? BYW_DEFAULTS.minLibrarySize;
+    const INCLUDE_SYNOPSIS = config.includeSynopsis ?? BYW_DEFAULTS.includeSynopsis;
     const userAllowlist = (config.users ?? []).map((u) => u.toLowerCase());
 
     if (!PLEX_TOKEN) {
@@ -317,7 +366,7 @@ export function createBecauseYouWatchedCommand(
         ctx.log(`Asking the LLM for "Because you watched" collections...`);
         const aiCollections: AiCollection[] = [];
         for (let i = 0; i < watchedTitles.length; i++) {
-          const title = watchedTitles[i];
+          const { title, ratingKey } = watchedTitles[i];
           const rowName = bywRowName(title).toLowerCase();
           if (existingNames.has(rowName)) {
             ctx.log(`[${i + 1}/${watchedTitles.length}] "${bywRowName(title)}" already exists, keeping it.`);
@@ -326,10 +375,12 @@ export function createBecauseYouWatchedCommand(
           }
           ctx.log(`[${i + 1}/${watchedTitles.length}] Generating collection for "${title}"...`);
           try {
+            const synopsis = INCLUDE_SYNOPSIS ? await synopsisOf(client, ratingKey, ctx.log) : null;
             const { collection: col } = await generateBYWCollection(
               llmConfig,
               ctx,
               title,
+              synopsis,
               libraryItems,
               section.title,
               MIN_ITEMS,
@@ -446,6 +497,7 @@ export function createBecauseYouWatchedCommand(
     llmConfig: LlmConfig,
     ctx: Pick<JobContext, "log" | "signal">,
     watchedTitle: string,
+    synopsis: string | null,
     libraryItems: PlexItem[],
     sectionTitle: string,
     minItems: number,
@@ -481,6 +533,8 @@ export function createBecauseYouWatchedCommand(
       .join("\n")
       .replace(/<\/?library>/gi, (m) => m.replace(">", "_>"));
     const prefsBlock = prefs ? preferencesPromptBlock(prefs) : "";
+    // Per-call, so it goes in `prompt`, never `library`.
+    const synopsisBlock = bywSynopsisBlock(synopsis);
 
     // The library comes first and the title last. Every call for this person
     // and section sends the same list, and a provider's prompt cache only
@@ -496,13 +550,13 @@ ${itemList}
     const prompt = `Create a "Because you watched" collection from the library above.
 
 Recently watched: ${watchedTitle}
-
+${synopsisBlock}
 Rules:
 - Name the collection "${rowName}"
 - The collection MUST have between ${minItems} and ${maxItems} items
 - Only use titles that exactly match the library list above
 - Do NOT include "${watchedTitle}" in the collection
-- Pick items that are thematically similar: shared vibes, tonal similarities, narrative parallels, genre connections, visual motifs
+- Pick items that are thematically similar${synopsis ? " to what it's about" : ""}: shared vibes, tonal similarities, narrative parallels, genre connections, visual motifs
 - The collection should feel like a genuine recommendation, not just the same genre
 ${prefsBlock}
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
@@ -574,7 +628,14 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
    * or a model call — was the slow one.
    */
   async function previewBecauseYouWatched(
-    input: { sectionKey: string; plexUsername?: string; watchedTitle?: string; count?: number },
+    input: {
+      sectionKey: string;
+      plexUsername?: string;
+      watchedTitle?: string;
+      count?: number;
+      /** Overrides the job's setting, so the two can be compared on the same title. */
+      includeSynopsis?: boolean;
+    },
     signal: AbortSignal,
     onStep: (message: string) => void = () => {},
   ): Promise<BywPreviewResult> {
@@ -589,6 +650,7 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
       ?.config ?? {}) as BywJobConfig;
     const minItems = jobConfig.minItems ?? BYW_DEFAULTS.minItems;
     const maxItems = jobConfig.maxItems ?? BYW_DEFAULTS.maxItems;
+    const includeSynopsis = input.includeSynopsis ?? jobConfig.includeSynopsis ?? BYW_DEFAULTS.includeSynopsis;
 
     const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal, onHealth: plexHealthCallback });
     onStep(`Reading libraries from Plex…`);
@@ -611,9 +673,10 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     if (prefs) onStep(`Applying ${user!.name}'s preferences.`);
 
     const count = Math.min(Math.max(input.count ?? 1, 1), 3);
-    let titles: string[];
+    let titles: Watched[];
     if (input.watchedTitle?.trim()) {
-      titles = [input.watchedTitle.trim()];
+      // Its Plex item is looked up in the library below, once that is read.
+      titles = [{ title: input.watchedTitle.trim(), ratingKey: undefined }];
     } else {
       onStep(`Reading ${user ? `${user.name}'s` : "the server's"} watch history in "${section.title}"…`);
       titles = await recentlyWatched(client, user?.accountID, section.key, count);
@@ -621,7 +684,7 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     if (titles.length === 0) {
       throw new Error(`No watch history in "${section.title}"${user ? ` for ${user.name}` : ""} to build from.`);
     }
-    onStep(`Building from: ${titles.join(", ")}.`);
+    onStep(`Building from: ${titles.map((w) => w.title).join(", ")}.`);
 
     onStep(`Reading every title in "${section.title}"…`);
     const libraryItems = await client.fetchAllItems(section.key);
@@ -639,15 +702,39 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 
     const log = () => {};
     const rows: BywPreviewRow[] = [];
-    for (const [i, watchedTitle] of titles.entries()) {
+    for (const [i, watched] of titles.entries()) {
+      const watchedTitle = watched.title;
       const rowName = bywRowName(watchedTitle);
-      const base = { watchedTitle, rowName, existsAlready: existingNames.has(rowName.toLowerCase()) };
-      onStep(`[${i + 1}/${titles.length}] Asking ${llmConfig.provider}:${llmConfig.model} for "${rowName}"…`);
+      const base = { watchedTitle, rowName, existsAlready: existingNames.has(rowName.toLowerCase()), synopsis: null };
       try {
+        let synopsis: string | null = null;
+        if (includeSynopsis) {
+          const wanted = watchedTitle.toLowerCase();
+          const ratingKey =
+            watched.ratingKey ??
+            libraryItems.find(
+              (item) =>
+                item.title.toLowerCase() === wanted ||
+                `${item.title}${item.year ? ` (${item.year})` : ""}`.toLowerCase() === wanted,
+            )?.ratingKey;
+          onStep(`[${i + 1}/${titles.length}] Reading the synopsis of "${watchedTitle}"…`);
+          synopsis = await synopsisOf(client, ratingKey, onStep);
+          if (!synopsis) {
+            onStep(
+              ratingKey
+                ? `[${i + 1}/${titles.length}] Plex has no synopsis for it; asking without one.`
+                : `[${i + 1}/${titles.length}] "${watchedTitle}" isn't in the library, so there's no synopsis to send.`,
+            );
+          }
+        }
+        onStep(
+          `[${i + 1}/${titles.length}] Asking ${llmConfig.provider}:${llmConfig.model} for "${rowName}"${synopsis ? " with its synopsis" : ""}…`,
+        );
         const { collection, skipped, usage, response } = await generateBYWCollection(
           llmConfig,
           { log, signal },
           watchedTitle,
+          synopsis,
           libraryItems,
           section.title,
           minItems,
@@ -664,6 +751,7 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
         );
         rows.push({
           ...base,
+          synopsis,
           items,
           matchedCount,
           wouldCreate: matchedCount >= minItems,
@@ -693,6 +781,7 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
       user: user?.name ?? null,
       libraryTitles: libraryItems.length,
       minItems,
+      includeSynopsis,
       rows,
     };
   }

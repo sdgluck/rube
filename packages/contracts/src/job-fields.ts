@@ -19,6 +19,7 @@ export const BYW_DEFAULTS = {
   minItems: 10,
   maxItems: 30,
   minLibrarySize: 15,
+  includeSynopsis: false,
 } as const;
 
 export const DIGEST_DEFAULTS = {
@@ -105,6 +106,13 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Pin to home screen",
       control: { kind: "boolean" },
       default: BYW_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "includeSynopsis",
+      label: "Send the synopsis",
+      help: "Tells the model what the watched title is about, not just its name — better matches for obscure or ambiguous titles, for a few hundred extra tokens a call.",
+      control: { kind: "boolean" },
+      default: BYW_DEFAULTS.includeSynopsis,
     },
     {
       key: "minItems",

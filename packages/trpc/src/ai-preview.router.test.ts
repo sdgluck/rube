@@ -27,7 +27,7 @@ function setup(preview: Preview) {
   return t.createCallerFactory(router)(ctx).becauseYouWatched;
 }
 
-const RESULT = { sectionTitle: "Films", user: null, libraryTitles: 3, minItems: 2, rows: [] };
+const RESULT = { sectionTitle: "Films", user: null, libraryTitles: 3, minItems: 2, includeSynopsis: false, rows: [] };
 const INPUT = { sectionKey: "1", count: 1 };
 
 async function until<T>(read: () => Promise<T>, done: (v: T) => boolean): Promise<T> {

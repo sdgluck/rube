@@ -75,6 +75,8 @@ export function createAiPreviewRouter(deps: Pick<TrpcDeps, "jobs">) {
             watchedTitle: z.string().min(1).max(300).optional(),
             /** Recent titles to try. More than one shows prompt caching at work. */
             count: z.number().int().min(1).max(3).default(1),
+            /** Send the watched title's synopsis; omitted, whatever the job is set to. */
+            includeSynopsis: z.boolean().optional(),
           }),
         )
         .mutation(({ input }) => {

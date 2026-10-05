@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@tinkerbell/trpc";
+import { BYW_DEFAULTS } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import styles from "./Settings.module.css";
@@ -32,6 +33,7 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
     { limit: 200, offset: 0, sortDir: "asc" },
     { refetchOnWindowFocus: false, retry: false },
   );
+  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchOnWindowFocus: false, retry: false });
   const start = trpc.aiPreview.becauseYouWatched.start.useMutation();
   const cancel = trpc.aiPreview.becauseYouWatched.cancel.useMutation();
   const [runId, setRunId] = useState<string | null>(null);
@@ -65,6 +67,14 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
   const [plexUsername, setPlexUsername] = useState("");
   const [watchedTitle, setWatchedTitle] = useState("");
   const [count, setCount] = useState(2);
+  // Untouched, the box follows the job's setting, so a test builds the row
+  // tonight's run would; ticking it either way compares the two.
+  const [synopsisChoice, setSynopsisChoice] = useState<boolean | null>(null);
+  const jobConfig = jobsQuery.data?.find((j) => j.id === "because-you-watched")?.config as
+    | { includeSynopsis?: boolean }
+    | undefined;
+  const jobSendsSynopsis = jobConfig?.includeSynopsis ?? BYW_DEFAULTS.includeSynopsis;
+  const includeSynopsis = synopsisChoice ?? jobSendsSynopsis;
 
   const effectiveSection = sectionKey || sections[0]?.key || "";
 
@@ -76,6 +86,7 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
     setPlexUsername(resumed.input.plexUsername ?? "");
     setWatchedTitle(resumed.input.watchedTitle ?? "");
     if (resumed.input.count) setCount(resumed.input.count);
+    if (resumed.input.includeSynopsis !== undefined) setSynopsisChoice(resumed.input.includeSynopsis);
     // Only the first answer matters; a later run id is this page's own.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active.data]);
@@ -88,6 +99,7 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
         plexUsername: plexUsername || undefined,
         watchedTitle: watchedTitle.trim() || undefined,
         count: watchedTitle.trim() ? 1 : count,
+        includeSynopsis,
       });
       setRunId(id);
     } catch {
@@ -153,6 +165,19 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
         </label>
       )}
 
+      <label className={styles.checkRow}>
+        <input type="checkbox" checked={includeSynopsis} onChange={(e) => setSynopsisChoice(e.target.checked)} />
+        <span>
+          Send the synopsis
+          <span className={styles.hint}>
+            Tells the model what the watched title is about, not just its name.{" "}
+            {jobSendsSynopsis
+              ? "The nightly run sends it."
+              : "The nightly run doesn't — turn it on in the job's settings."}
+          </span>
+        </span>
+      </label>
+
       <div className={styles.buttons}>
         <button type="button" className={styles.button} onClick={handleRun} disabled={running || !effectiveSection}>
           {running ? `Running… ${run ? seconds(run.elapsedMs) : ""}` : "Run test"}
@@ -209,6 +234,7 @@ function PreviewResult({ result }: { result: Preview }) {
         {result.sectionTitle}
         {result.user ? ` · ${result.user}` : " · whole server"} · {nf.format(result.libraryTitles)} titles sent as the
         library · rows need {result.minItems}+ matching titles
+        {result.includeSynopsis && " · synopsis sent"}
       </p>
 
       {calls.length > 0 && (
@@ -276,6 +302,12 @@ function PreviewResult({ result }: { result: Preview }) {
             )}
           </div>
           {row.error && <p className={own.error}>{row.error}</p>}
+          {row.synopsis && (
+            <details className={own.response}>
+              <summary>Synopsis sent</summary>
+              <p className={own.responseText}>{row.synopsis}</p>
+            </details>
+          )}
           {row.response !== null && (
             <details className={own.response}>
               <summary>Model&rsquo;s answer, verbatim</summary>

@@ -43,6 +43,8 @@ export const bywJobConfigSchema = commonJobConfigSchema.extend({
   minItems: z.number().int().min(5).max(50).optional(),
   maxItems: z.number().int().min(10).max(100).optional(),
   minLibrarySize: z.number().int().min(1).optional(),
+  /** Send the watched title's synopsis with each call, so the model matches on the story and not only the name. */
+  includeSynopsis: z.boolean().optional(),
 });
 export type BywJobConfig = z.infer<typeof bywJobConfigSchema>;
 
