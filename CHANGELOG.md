@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.32.1] - 2026-10-05
+
+### Fixed
+
+- The AI "Try it" test now runs in the background and shows each step as it completes, so a reverse proxy timeout no longer cuts the test off before it finishes.
+
 ## [0.32.0] - 2026-10-05
 
 ### Added
