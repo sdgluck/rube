@@ -10,6 +10,7 @@ import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 import CardSection from "#components/CardSection";
+import Combobox from "#components/Combobox";
 import SettingsAiUsage from "./SettingsAiUsage";
 
 const DEFAULT_LLM: LlmConfig = {
@@ -156,25 +157,20 @@ export default function SettingsAi() {
           </label>
         )}
 
-        <label className={styles.field}>
-          <span className={styles.label}>Model</span>
-          <input
-            type="text"
-            className={styles.input}
-            list={`llm-models-${llm.provider}`}
+        {/* A div, not a label: a label forwards clicks inside it to the input,
+            and the suggestion list lives inside it too. */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="llm-model">
+            Model
+          </label>
+          <Combobox
+            id="llm-model"
             value={llm.model}
-            onChange={(e) => setLlm((s) => ({ ...s, model: e.target.value }))}
+            onChange={(model) => setLlm((s) => ({ ...s, model }))}
+            options={modelOptions.map((m) => ({ value: m.id, label: m.label }))}
             placeholder={meta.defaultModel}
+            noun="models"
           />
-          {modelOptions.length > 0 && (
-            <datalist id={`llm-models-${llm.provider}`}>
-              {modelOptions.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </datalist>
-          )}
           {serverModels && (
             <span className={styles.hint}>
               {serverModels.length === 0
@@ -182,7 +178,7 @@ export default function SettingsAi() {
                 : `${serverModels.length} model${serverModels.length === 1 ? "" : "s"} pulled on this server.`}
             </span>
           )}
-        </label>
+        </div>
 
         <div className={styles.buttons}>
           <button type="button" className={styles.button} onClick={handleSave} disabled={saving}>
