@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-05
+
+### Added
+
+- Because-you-watched rows can now match on plot synopsis as well as title. When enabled, the watched title's synopsis is sent with each AI call, so recommendations line up on the story rather than only the name. This is optional.
+
 ## [0.32.2] - 2026-10-05
 
 ### Fixed
