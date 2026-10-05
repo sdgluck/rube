@@ -20,6 +20,7 @@ import {
   NotifierToken,
   PostCollectionSyncToken,
 } from "@tinkerbell/ports";
+import { AiUsageToken, createAiUsage } from "@tinkerbell/domain.ai-usage";
 import { BackupsToken, createBackups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, createBandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, createChanges } from "@tinkerbell/domain.changes";
@@ -100,6 +101,9 @@ export function registerDomains(r: Registry): void {
     }),
   );
   r.register(ArrLibraryToken, (c) => createArrLibrary({ db: c.resolve(DbToken) }));
+  r.register(AiUsageToken, (c) =>
+    createAiUsage({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken), now: c.resolve(ClockToken) }),
+  );
   r.register(ArrActivityToken, (c) => createArrActivity({ db: c.resolve(DbToken) }));
   r.register(ArrSettingsToken, (c) =>
     createArrSettings({
@@ -138,6 +142,7 @@ export function registerDomains(r: Registry): void {
       emitEvent: c.resolve(EventBusToken),
       arr: c.resolve(ArrInstancesToken),
       prerolls: c.resolve(PrerollsToken),
+      aiUsage: c.resolve(AiUsageToken),
     }),
   );
   r.register(MediaToken, (c) => createMedia({ db: c.resolve(DbToken), emitEvent: c.resolve(EventBusToken) }));

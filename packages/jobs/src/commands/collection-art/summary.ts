@@ -12,6 +12,7 @@ import { type Services } from "@tinkerbell/composition";
  * regenerated on every nightly run.
  */
 import { createLlmClient } from "@tinkerbell/llm";
+import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
 import { errorMessage } from "@tinkerbell/core";
 
 import { describeSmartFilter, type RuleConfig, type TagResolver } from "@tinkerbell/contracts";
@@ -26,6 +27,8 @@ const FENCE_OPEN = "<collection_items>";
 const FENCE_CLOSE = "</collection_items>";
 
 export interface LlmSummaryRequest {
+  /** Attributes the request's tokens to the rule in Settings → AI. */
+  ruleId?: string;
   ruleName: string;
   ruleType: string;
   collectionName: string;
@@ -99,8 +102,9 @@ export function cleanSummary(raw: string): string {
   return text.slice(0, MAX_SUMMARY_CHARS).trim();
 }
 
-export function createSummaryCommand(deps: Pick<Services, "config" | "health">) {
-  const { config, health } = deps;
+export function createSummaryCommand(deps: Pick<Services, "aiUsage" | "config" | "health">) {
+  const { aiUsage, config, health } = deps;
+  const { track, budgetExceededReason } = aiUsage;
   const { getLlmConfig } = config;
   const { reportHealth } = health;
 
@@ -110,10 +114,10 @@ export function createSummaryCommand(deps: Pick<Services, "config" | "health">) 
     if (!cfg) return "no LLM provider is configured (Settings → AI)";
     try {
       createLlmClient(cfg);
-      return null;
     } catch (err) {
       return errorMessage(err);
     }
+    return budgetExceededReason();
   }
 
   /** Ask the configured provider for a summary. Throws on a provider failure. */
@@ -122,13 +126,13 @@ export function createSummaryCommand(deps: Pick<Services, "config" | "health">) 
     if (!cfg) throw new Error("LLM provider is not configured. Set one in Settings → AI.");
 
     req.signal?.throwIfAborted();
-    const client = createLlmClient(cfg);
+    const client = track(createLlmClient(cfg), { feature: "collection-summary", ruleId: req.ruleId });
     try {
       const res = await client.complete({ prompt: buildPrompt(req), maxTokens: 200, signal: req.signal });
       reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
       return cleanSummary(res.text);
     } catch (err) {
-      reportHealth("LLM", "error", errorMessage(err));
+      if (!(err instanceof LlmBudgetExceededError)) reportHealth("LLM", "error", errorMessage(err));
       throw err;
     }
   }

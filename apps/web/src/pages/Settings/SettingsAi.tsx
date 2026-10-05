@@ -8,6 +8,7 @@ import { FormSkeleton } from "#components/Skeleton";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 import CardSection from "#components/CardSection";
+import SettingsAiUsage from "./SettingsAiUsage";
 
 const DEFAULT_LLM: LlmConfig = {
   provider: "anthropic",
@@ -172,6 +173,7 @@ export default function SettingsAi() {
           <UnsavedBanner visible={isDirty} />
         </div>
       </CardSection>
+      <SettingsAiUsage />
     </div>
   );
 }

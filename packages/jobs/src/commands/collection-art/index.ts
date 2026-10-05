@@ -347,6 +347,7 @@ export function createCollectionArtCommand(deps: Services) {
     let text: string;
     try {
       text = await writeLlmSummary({
+        ruleId: work.rule.id,
         ruleName: work.rule.name,
         ruleType: work.rule.type,
         collectionName: work.name,

@@ -38,6 +38,12 @@ export interface HandlerDeps {
    */
   onAiUsage?: (tokensIn: number, tokensOut: number) => void;
   /**
+   * Set by the Test/preview path. Only read to attribute LLM usage: a preview
+   * spends real tokens, but "what did testing cost" and "what does the nightly
+   * run cost" are different questions in Settings → AI.
+   */
+  preview?: true;
+  /**
    * Set only during a per-user personalize run — the preferences of the user
    * this generation pass is for. Handlers use it to steer/filter output.
    */

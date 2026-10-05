@@ -162,6 +162,14 @@ export const configSchema = z.object({
     maxTokens: z.number().int().positive().optional(),
     temperature: z.number().min(0).max(2).optional(),
   }),
+  /**
+   * Monthly cap on LLM tokens (in + out), counted per calendar month in the
+   * configured timezone. 0 or unset is no cap. Once reached, AI rules and the
+   * other AI features skip as if no provider were configured until the month
+   * rolls over; health checks and Test connection still run so the provider
+   * can be diagnosed. Usage itself lives in `llm_usage`.
+   */
+  ai_monthly_token_budget: z.number().int().min(0),
   global_radarr_url: z.string(),
   global_radarr_api_key: z.string(),
   global_sonarr_url: z.string(),

@@ -272,6 +272,7 @@ export function createPreviewCommand(deps: Services) {
       sections,
       rule,
       ruleConfig,
+      preview: true,
       onAiUsage: (i, o) => {
         tokensIn += i;
         tokensOut += o;

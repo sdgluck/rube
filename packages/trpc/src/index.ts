@@ -26,6 +26,7 @@ import { createNotificationsRouter } from "./notifications.router.ts";
 import { createChangesRouter } from "./changes.router.ts";
 import { createHistoryRouter } from "./history.router.ts";
 import { createBackupsRouter } from "./backups.router.ts";
+import { createAiUsageRouter } from "./ai-usage.router.ts";
 import { createArrRouter } from "./arr.router.ts";
 import { createDiscoverRouter } from "./discover.router.ts";
 import { createPostersRouter } from "./posters.router.ts";
@@ -45,6 +46,7 @@ const appRouterFor = (deps: TrpcDeps) => {
   const { getConfig } = deps.config;
   const { syncSections, getLocalSections } = deps.sections;
   const { reportHealth } = deps.health;
+  const { track } = deps.aiUsage;
   const { sendNotification } = deps.notifications;
   const getPlexClient = mapNotConfiguredClient(deps.clients);
 
@@ -91,6 +93,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     changes: createChangesRouter(deps),
     history: createHistoryRouter(deps),
     backups: createBackupsRouter(deps),
+    aiUsage: createAiUsageRouter(deps),
 
     /**
      * The server's machine identifier, which is what an `app.plex.tv` deep link
@@ -341,7 +344,7 @@ const appRouterFor = (deps: TrpcDeps) => {
         }
         const cfg = { ...input, apiKey };
         try {
-          const client = createLlmClient(cfg);
+          const client = track(createLlmClient(cfg), { feature: "test-connection" });
           const res = await client.ping();
           reportHealth("LLM", "ok", `${res.provider}:${res.model} — test ok`);
           return { model: res.model, provider: res.provider };

@@ -143,6 +143,24 @@ describe("llmUnavailableReason", () => {
     setConfig("global_llm", { provider: "anthropic", model: "claude-sonnet-4-5-20250929", apiKey: "sk-test" });
     assert.equal(llmUnavailableReason(), null);
   });
+
+  it("reports a spent monthly token budget like any other gap", () => {
+    setConfig("global_llm", { provider: "anthropic", model: "claude-sonnet-4-5-20250929", apiKey: "sk-test" });
+    services.aiUsage.record({
+      feature: "rule",
+      provider: "anthropic",
+      model: "claude-sonnet-4-5-20250929",
+      tokensIn: 600,
+      tokensOut: 400,
+      ok: true,
+      durationMs: 1,
+    });
+    setConfig("ai_monthly_token_budget", 1_000);
+    assert.match(llmUnavailableReason() ?? "", /monthly AI token budget is spent/);
+    // Cleared so the batch tests below see a usable provider budget-wise.
+    setConfig("ai_monthly_token_budget", 0);
+    assert.equal(llmUnavailableReason(), null);
+  });
 });
 
 describe("generate: one bad rule", () => {

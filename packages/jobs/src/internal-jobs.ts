@@ -55,6 +55,7 @@ export type InternalJobName = keyof InternalJobs;
 
 export const createInternalJobs = perDeps(function createInternalJobs(deps: Services) {
   const {
+    aiUsage,
     backups,
     bandwidth,
     config,
@@ -71,6 +72,7 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
   const { getConfig } = config;
   const { pruneBandwidthSamples, pruneBandwidthTests, runBandwidthTest } = bandwidth;
   const { pruneOlderThan } = metadata;
+  const { pruneLlmUsage } = aiUsage;
   const { runBackup, backupsEnabled } = backups;
   const { pruneChangeLog } = configHistory;
   const { pruneHealthChecks, checkAllConfiguredServices } = health;
@@ -103,6 +105,9 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
         // The usage samples are the fastest-growing table here: one row per
         // 30-second poll, whether or not anything was streaming.
         pruneBandwidthSamples();
+        // Kept for 13 months rather than the week the runs get: the question
+        // it answers is "how does this month compare", not "what just ran".
+        pruneLlmUsage();
         // Undo has a window; past it the tombstone is just a copy of a rule
         // nobody can reach.
         const tombstones = pruneDeletedRules();

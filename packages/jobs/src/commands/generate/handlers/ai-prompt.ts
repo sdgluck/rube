@@ -17,7 +17,7 @@ export function createAiPromptCommand(deps: Services) {
   const { askLlm } = createLlmCommand(deps);
 
   async function* aiPromptHandler(deps: HandlerDeps): AsyncGenerator<PendingCollection> {
-    const { ctx, client, sections, rule, ruleConfig, onAiUsage, userPrefs } = deps;
+    const { ctx, client, sections, rule, ruleConfig, onAiUsage, userPrefs, preview } = deps;
 
     const maxCollections = ruleConfig.limit ?? 8;
     const minItems = ruleConfig.minItems ?? 15;
@@ -75,7 +75,11 @@ export function createAiPromptCommand(deps: Services) {
         .join("\n");
 
       ctx.log(`Asking the LLM for curated collections...`);
-      const { text, tokensIn, tokensOut } = await askLlm(prompt, itemList, ctx.signal);
+      const { text, tokensIn, tokensOut } = await askLlm(prompt, itemList, {
+        signal: ctx.signal,
+        ruleId: rule.id,
+        feature: preview ? "rule-preview" : "rule",
+      });
       onAiUsage?.(tokensIn, tokensOut);
       ctx.log("AI response:", text);
 

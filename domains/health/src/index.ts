@@ -5,6 +5,7 @@ import { events, healthChecks, type Db } from "@tinkerbell/db";
 import { configSchema, WEEK_MS } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
 import { createLlmClient } from "@tinkerbell/llm";
+import type { AiUsage } from "@tinkerbell/domain.ai-usage";
 import { z } from "zod";
 import { type EventBus } from "@tinkerbell/ports";
 import { type Prerolls } from "@tinkerbell/domain.prerolls";
@@ -121,6 +122,7 @@ export interface HealthDeps {
   emitEvent: EventBus;
   arr: ArrInstances;
   prerolls: Prerolls;
+  aiUsage: AiUsage;
 }
 export function createHealth(deps: HealthDeps) {
   const { db, emitEvent } = deps;
@@ -228,7 +230,7 @@ export function createHealth(deps: HealthDeps) {
       case "LLM": {
         const llm = getLlmConfig();
         if (!llm) throw new Error("Not configured");
-        const client = createLlmClient(llm);
+        const client = deps.aiUsage.track(createLlmClient(llm), { feature: "health-check" });
         const res = await client.ping();
         reportHealth("LLM", "ok", `${res.provider}:${res.model} — health check OK`);
         break;

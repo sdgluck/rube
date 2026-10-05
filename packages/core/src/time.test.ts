@@ -6,6 +6,7 @@ import {
   localDayKey,
   parseClock,
   startOfLocalDay,
+  startOfLocalMonth,
   MINUTE_MS,
   SECOND_MS,
 } from "./time.ts";
@@ -119,5 +120,25 @@ describe("localDayKey", () => {
     assert.equal(localDayKey(at, "UTC"), "2027-01-15");
     assert.equal(localDayKey(at, "America/Los_Angeles"), "2027-01-14");
     assert.equal(localDayKey(at, "Asia/Tokyo"), "2027-01-15");
+  });
+});
+
+describe("startOfLocalMonth", () => {
+  it("is midnight on the 1st in the zone", () => {
+    const at = Date.parse("2027-03-15T13:45:00Z");
+    assert.equal(new Date(startOfLocalMonth(at, "UTC")).toISOString(), "2027-03-01T00:00:00.000Z");
+    // 1st of March in New York is still EST (UTC-5); DST starts on the 14th.
+    assert.equal(new Date(startOfLocalMonth(at, "America/New_York")).toISOString(), "2027-03-01T05:00:00.000Z");
+  });
+
+  it("uses the zone's date, not UTC's, near the boundary", () => {
+    // 02:00 UTC on 1 April is still 31 March in Los Angeles.
+    const at = Date.parse("2027-04-01T02:00:00Z");
+    assert.equal(new Date(startOfLocalMonth(at, "America/Los_Angeles")).toISOString(), "2027-03-01T08:00:00.000Z");
+  });
+
+  it("is itself on the 1st", () => {
+    const first = Date.parse("2027-11-01T04:00:00Z");
+    assert.equal(startOfLocalMonth(first, "America/New_York"), first);
   });
 });

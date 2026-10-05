@@ -2,6 +2,7 @@ import { BYW_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
 import { errorMessage } from "@tinkerbell/core";
+import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
 import { createPlexClient, type PlexItem } from "@tinkerbell/plex";
 
 import { preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
@@ -62,9 +63,10 @@ function extractJSON(text: string): unknown {
 }
 
 export function createBecauseYouWatchedCommand(
-  deps: Pick<Services, "clients" | "collections" | "config" | "health" | "preferences">,
+  deps: Pick<Services, "aiUsage" | "clients" | "collections" | "config" | "health" | "preferences">,
 ) {
-  const { clients, collections, config, health, preferences } = deps;
+  const { aiUsage, clients, collections, config, health, preferences } = deps;
+  const { track, budgetExceededReason } = aiUsage;
   const { plexHealthCallback } = clients;
   const { getConfig, getLlmConfig } = config;
   const { getOptedInPreferencesByUsername } = preferences;
@@ -91,6 +93,12 @@ export function createBecauseYouWatchedCommand(
 
     if (!llmConfig) {
       throw new Error("LLM provider is not configured. Set one in Settings → AI.");
+    }
+
+    const budgetSpent = budgetExceededReason();
+    if (budgetSpent) {
+      ctx.log(`Skipping — ${budgetSpent}. Existing collections are left as they are.`);
+      return;
     }
 
     const client = createPlexClient({
@@ -245,6 +253,14 @@ export function createBecauseYouWatchedCommand(
               aiCollections.push(col);
             }
           } catch (err) {
+            // Stop outright rather than carry on with what was generated so
+            // far: the cleanup below deletes every collection not regenerated
+            // this run, so a budget that ran out half-way would tear down the
+            // rest of this user's collections and replace them with nothing.
+            if (err instanceof LlmBudgetExceededError) {
+              ctx.log(`Stopping — ${errorMessage(err)}. Existing collections are left as they are.`);
+              return;
+            }
             ctx.log(`Failed to generate collection for "${title}": ${errorMessage(err)}`);
           }
         }
@@ -387,14 +403,14 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 Here is the full library:
 ${itemList}`;
 
-    const client = createLlmClient(llmConfig);
+    const client = track(createLlmClient(llmConfig), { feature: "because-you-watched" });
     let text: string;
     try {
       const res = await client.complete({ prompt, maxTokens: 1024, signal: ctx.signal });
       reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
       text = res.text;
     } catch (err) {
-      reportHealth("LLM", "error", errorMessage(err));
+      if (!(err instanceof LlmBudgetExceededError)) reportHealth("LLM", "error", errorMessage(err));
       throw err;
     }
 

@@ -18,6 +18,7 @@
     "@tinkerbell/container": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.ai-usage": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.prerolls": "workspace:*",
     "@tinkerbell/llm": "workspace:*",

@@ -2,6 +2,7 @@ import { perDeps } from "@tinkerbell/container";
 import { type Services } from "@tinkerbell/composition";
 import { createLlmClient } from "@tinkerbell/llm";
 import { errorMessage } from "@tinkerbell/core";
+import { LlmBudgetExceededError, type LlmFeature } from "@tinkerbell/domain.ai-usage";
 
 export interface LlmCallResult {
   text: string;
@@ -42,8 +43,17 @@ export function shuffled<T>(input: readonly T[]): T[] {
   return out;
 }
 
-export const createLlmCommand = perDeps(function createLlmCommand(deps: Pick<Services, "config" | "health">) {
-  const { config, health } = deps;
+export interface AskLlmOptions {
+  signal?: AbortSignal;
+  ruleId?: string;
+  feature?: Extract<LlmFeature, "rule" | "rule-preview">;
+}
+
+export const createLlmCommand = perDeps(function createLlmCommand(
+  deps: Pick<Services, "config" | "health" | "aiUsage">,
+) {
+  const { config, health, aiUsage } = deps;
+  const { track, budgetExceededReason } = aiUsage;
   const { getLlmConfig } = config;
   const { reportHealth } = health;
 
@@ -63,7 +73,8 @@ export const createLlmCommand = perDeps(function createLlmCommand(deps: Pick<Ser
    * titles against the real library, so injected output that names titles
    * the library doesn't contain is dropped on the floor.
    */
-  async function askLlm(prompt: string, itemList: string, signal?: AbortSignal): Promise<LlmCallResult> {
+  async function askLlm(prompt: string, itemList: string, opts: AskLlmOptions = {}): Promise<LlmCallResult> {
+    const { signal } = opts;
     const cfg = getLlmConfig();
     if (!cfg) {
       throw new Error("LLM provider is not configured. Set one in Settings → AI.");
@@ -87,13 +98,15 @@ export const createLlmCommand = perDeps(function createLlmCommand(deps: Pick<Ser
 
     signal?.throwIfAborted();
 
-    const client = createLlmClient(cfg);
+    const client = track(createLlmClient(cfg), { feature: opts.feature ?? "rule", ruleId: opts.ruleId });
     try {
       const res = await client.complete({ prompt: fullPrompt, signal });
       reportHealth("LLM", "ok", `${res.provider}:${res.model} — ${res.tokensIn} in, ${res.tokensOut} out`);
       return { text: res.text, tokensIn: res.tokensIn, tokensOut: res.tokensOut };
     } catch (err) {
-      reportHealth("LLM", "error", errorMessage(err));
+      // A spent budget is a setting, not a provider fault; the LLM health
+      // check stays green.
+      if (!(err instanceof LlmBudgetExceededError)) reportHealth("LLM", "error", errorMessage(err));
       throw err;
     }
   }
@@ -112,10 +125,12 @@ export const createLlmCommand = perDeps(function createLlmCommand(deps: Pick<Ser
     if (!cfg) return "no LLM provider is configured (Settings → AI)";
     try {
       createLlmClient(cfg);
-      return null;
     } catch (err) {
       return errorMessage(err);
     }
+    // A spent budget is the same kind of gap as a missing key: skip the AI
+    // rules, keep the rest of the batch.
+    return budgetExceededReason();
   }
 
   return { askLlm, llmUnavailableReason };

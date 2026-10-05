@@ -2150,3 +2150,34 @@ export const arrSettingsSnapshots = sqliteTable(
   },
   (table) => [index("idx_arr_settings_snapshots_instance").on(table.instanceId, table.createdAt)],
 );
+
+/**
+ * One row per LLM request: AI-prompt rules, their previews, Because you
+ * watched, collection summaries, health checks and Test connection.
+ *
+ * Counted per call, not per job run, because the budget is a calendar-month
+ * total and a run can straddle midnight on the 1st. Failed calls are kept too
+ * (with zero tokens unless the provider reported some): "why did the rule stop
+ * working" and "how much did that misconfigured week cost" both need them.
+ *
+ * `ruleId` is not a foreign key. Usage outlives the rule; a deleted rule's
+ * tokens still count toward the month it spent them in.
+ */
+export const llmUsage = sqliteTable(
+  "llm_usage",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    at: integer("at").notNull(),
+    /** Which caller made the request — see `LLM_FEATURES` in `@tinkerbell/domain.ai-usage`. */
+    feature: text("feature").notNull(),
+    ruleId: text("rule_id"),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    tokensIn: integer("tokens_in").notNull().default(0),
+    tokensOut: integer("tokens_out").notNull().default(0),
+    ok: integer("ok", { mode: "boolean" }).notNull(),
+    error: text("error"),
+    durationMs: integer("duration_ms").notNull().default(0),
+  },
+  (table) => [index("idx_llm_usage_at").on(table.at)],
+);

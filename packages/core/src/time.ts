@@ -59,6 +59,25 @@ export function startOfLocalDay(now: number, timezone?: string): number {
 }
 
 /**
+ * Midnight on the 1st of `now`'s month in `timezone`, as a timestamp.
+ *
+ * Steps back whole days from local midnight and re-snaps, rather than
+ * subtracting `(day - 1) * DAY_MS` and trusting the result: across a DST change
+ * that lands an hour either side of midnight, and an hour early is the last day
+ * of the previous month. The half-day nudge keeps the re-snap inside the 1st.
+ */
+export function startOfLocalMonth(now: number, timezone?: string): number {
+  const today = startOfLocalDay(now, timezone);
+  let dayOfMonth: number;
+  try {
+    dayOfMonth = Number(new Intl.DateTimeFormat("en-GB", { timeZone: timezone, day: "numeric" }).format(now));
+  } catch {
+    dayOfMonth = new Date(now).getDate();
+  }
+  return startOfLocalDay(today - (dayOfMonth - 1) * DAY_MS + 12 * HOUR_MS, timezone);
+}
+
+/**
  * `YYYY-MM-DD` for `now` in `timezone` — a stable name for "which day is it",
  * for anything that needs to happen at most once a day.
  */
