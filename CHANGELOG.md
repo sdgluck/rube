@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.32.2] - 2026-10-05
+
+### Fixed
+
+- The AI settings page's "Try it" test now keeps running in the background if you navigate away and back, so reloading the Settings → AI page no longer loses track of a test that is still in progress.
+
 ## [0.32.1] - 2026-10-05
 
 ### Fixed
