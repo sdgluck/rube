@@ -59,7 +59,7 @@ export default function TemplateInput({
         onBlur={remember}
       />
       <select
-        className={controls.selectSm}
+        className={`${controls.select} ${controls.selectSm}`}
         value=""
         aria-label="Insert a token"
         onChange={(e) => e.target.value && insert(e.target.value)}

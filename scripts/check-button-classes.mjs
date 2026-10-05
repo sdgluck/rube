@@ -65,6 +65,17 @@ for (const file of files) {
       offenders.push(`${file}:${line}: ${parts.join(" ")} without btn — a button with no height or padding`);
     }
 
+    // Fields have the same split: `inputSm` / `selectSm` are type and padding
+    // only, the border, fill, height and chevron are on `input` / `select`.
+    // Alone they render as the browser's native control, which in the dark
+    // theme is a pale grey box in a page of dark ones.
+    if (fromControls.includes("inputSm") && !fromControls.includes("input")) {
+      offenders.push(`${file}:${line}: inputSm without input — a native, unstyled field`);
+    }
+    if (fromControls.includes("selectSm") && !fromControls.includes("select")) {
+      offenders.push(`${file}:${line}: selectSm without select — a native, unstyled dropdown`);
+    }
+
     const fromShared = used(shared);
     if (fromShared.includes("buttonSmall") && !fromShared.some((c) => SHARED_BUTTONS.test(c)) && !fromControls.includes("btn")) {
       offenders.push(`${file}:${line}: buttonSmall without a button — a size modifier on nothing`);
@@ -73,10 +84,10 @@ for (const file of files) {
 }
 
 if (offenders.length > 0) {
-  console.error("Button classes missing their base:\n");
+  console.error("Control classes missing their base:\n");
   for (const o of offenders) console.error(`  ${o}`);
   console.error(
-    "\nUse `controls.btn` alongside the variant, or better, a class in the page's module that " +
+    "\nUse the base (`controls.btn`, `controls.input`, `controls.select`) alongside the modifier, or better, a class in the page's module that " +
       '`composes: btn btnSecondary from "…/styles/controls.module.css"`.',
   );
   process.exit(1);

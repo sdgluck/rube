@@ -37,7 +37,7 @@ export default function SettingsCard({
       <label className={styles.settingsField}>
         <span className={styles.editorLabel}>Timezone</span>
         <select
-          className={controls.selectSm}
+          className={`${controls.select} ${controls.selectSm}`}
           value={settings.timezone}
           onChange={(e) => onChange({ timezone: e.target.value })}
         >
@@ -70,7 +70,7 @@ export default function SettingsCard({
           <div className={styles.settingsInline}>
             <input
               type="time"
-              className={controls.inputSm}
+              className={`${controls.input} ${controls.inputSm}`}
               value={window.from}
               aria-label="Window start"
               onChange={(e) => onChange({ maintenanceWindow: { ...window, from: e.target.value } })}
@@ -78,7 +78,7 @@ export default function SettingsCard({
             <span>to</span>
             <input
               type="time"
-              className={controls.inputSm}
+              className={`${controls.input} ${controls.inputSm}`}
               value={window.to}
               aria-label="Window end"
               onChange={(e) => onChange({ maintenanceWindow: { ...window, to: e.target.value } })}
@@ -113,7 +113,7 @@ export default function SettingsCard({
             type="number"
             min={1}
             max={1440}
-            className={`${controls.inputSm} ${styles.minuteInput}`}
+            className={`${`${controls.input} ${controls.inputSm}`} ${styles.minuteInput}`}
             disabled={!window.enabled && !defer.enabled}
             value={defer.maxWaitMinutes}
             onChange={(e) =>

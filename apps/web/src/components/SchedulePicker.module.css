@@ -37,3 +37,49 @@
   background: var(--accent-fill);
   color: var(--on-accent);
 }
+
+/* The Custom builder: three questions stacked, each a label + select with its
+   detail (times, day chips, month chips) on the row beneath. */
+.builder {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.timeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* A calendar's shape — seven across — so "the 1st and 15th" is found where
+   it would be on a wall calendar rather than in a 31-long line. */
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 38px));
+  gap: 4px;
+}
+
+.hint {
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.error {
+  font: var(--t-caption);
+  color: var(--status-error-fg);
+}
+
+/* Time / Days / Months share a width so their selects line up as a column. */
+.builderLabel {
+  composes: label;
+  min-width: 52px;
+}
+
+/* Two rows of six: a quarter-per-row year, and narrow enough for a phone. */
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 44px));
+  gap: 4px;
+}

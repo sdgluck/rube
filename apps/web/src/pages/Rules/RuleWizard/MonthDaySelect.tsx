@@ -16,7 +16,7 @@ export default function MonthDaySelect({
   return (
     <span className={styles.monthDay} role="group" aria-label={label}>
       <select
-        className={controls.selectSm}
+        className={`${controls.select} ${controls.selectSm}`}
         value={day}
         aria-label={`${label} day`}
         onChange={(e) => onChange(formatMonthDay({ month, day: Number(e.target.value) }))}
@@ -28,7 +28,7 @@ export default function MonthDaySelect({
         ))}
       </select>
       <select
-        className={controls.selectSm}
+        className={`${controls.select} ${controls.selectSm}`}
         value={month}
         aria-label={`${label} month`}
         onChange={(e) => onChange(formatMonthDay({ month: Number(e.target.value), day }))}

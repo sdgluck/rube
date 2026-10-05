@@ -7,7 +7,7 @@
  * (one change-history row, one validation pass on the server).
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { fieldsFor } from "@tinkerbell/contracts";
+import { fieldsFor, jobScheduleMeta } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import type { Job } from "#pages/Jobs/types";
@@ -84,6 +84,7 @@ export default function JobSettingsPanel({ job, children }: Props) {
       {scheduleEditable && (
         <ScheduleRow
           value={schedule}
+          allowSeconds={jobScheduleMeta(job.id).allowSeconds}
           onChange={(next) => {
             setSchedule(next);
             setServerError(undefined);

@@ -1,3 +1,5 @@
+import { describeBuilder, parseBuilder } from "@tinkerbell/contracts";
+
 export function describeCron(expr: string): string {
   if (!expr) return "";
   const parts = expr.trim().split(/\s+/);
@@ -13,11 +15,15 @@ export function describeCron(expr: string): string {
   const [min, hour, dom, mon, dow] = parts;
 
   if (min === "*" && hour === "*" && dom === "*" && mon === "*" && dow === "*") return "Every minute";
-  if (min.startsWith("*/")) return `Every ${min.slice(2)} minutes`;
+  // Only when nothing else is restricted: `*/15 9-17 * * 1-5` is not
+  // "Every 15 minutes", and the builder below says what it is.
+  if (min.startsWith("*/") && hour === "*" && dom === "*" && mon === "*" && dow === "*") {
+    return `Every ${min.slice(2)} minutes`;
+  }
   if (dom === "*" && mon === "*" && dow === "*") {
     if (hour === "*" && min === "0") return "Every hour";
     if (hour.startsWith("*/") && min === "0") return `Every ${hour.slice(2)} hours`;
-    if (hour !== "*" && !hour.includes("/")) return `Daily at ${hour.padStart(2, "0")}:${min.padStart(2, "0")}`;
+    if (/^\d+$/.test(hour) && /^\d+$/.test(min)) return `Daily at ${hour.padStart(2, "0")}:${min.padStart(2, "0")}`;
   }
   // Weekly. The poster cache refresh runs Sundays at 03:00 and was the one
   // schedule in System Tasks shown as a raw `0 3 * * 0`.
@@ -25,7 +31,10 @@ export function describeCron(expr: string): string {
     const days = weekdays(dow);
     if (days) return `${days} at ${hour.padStart(2, "0")}:${min.padStart(2, "0")}`;
   }
-  return expr;
+  // Everything else the schedule builder can say in words — dates, "the last
+  // Friday", windows, months — rather than echoing the expression back.
+  const built = parseBuilder(expr);
+  return built ? describeBuilder(built) : expr;
 }
 
 const DAY_NAMES = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];

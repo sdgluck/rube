@@ -239,10 +239,14 @@
 
 /* ─── Cron input (JobDetail) ─────────────────────────────────────────────── */
 
-.cronInput {
-  composes: input inputSm from "../../styles/controls.module.css";
-  font-family: var(--font-mono);
-  width: 140px;
+/* The schedule picker stacks its own rows; this just spaces it from the
+   preview line beneath. */
+.schedulePicker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .cronHint {

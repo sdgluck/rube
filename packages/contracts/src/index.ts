@@ -310,6 +310,21 @@ export {
 } from "./job-schedule.ts";
 export type { DstShift, IntervalUnit, JobSchedule } from "./job-schedule.ts";
 export {
+  ALL_MONTHS,
+  builderError,
+  DEFAULT_BUILDER,
+  describeBuilder,
+  formatBuilder,
+  MONTH_NAMES,
+  NTH_OPTIONS,
+  parseBuilder,
+  REPEAT_HOUR_STEPS,
+  REPEAT_MINUTE_STEPS,
+  timesError,
+  WEEKDAY_NAMES,
+} from "./schedule-builder.ts";
+export type { BuilderDays, BuilderSchedule, BuilderTime, Nth } from "./schedule-builder.ts";
+export {
   canDisableJob,
   HEAVY_JOB_IDS,
   isSchedulableJob,

@@ -188,7 +188,7 @@ export default function StressTest() {
             <label htmlFor="stress-mode">Mode</label>
             <select
               id="stress-mode"
-              className={controls.selectSm}
+              className={`${controls.select} ${controls.selectSm}`}
               value={mode}
               onChange={(e) => setMode(e.target.value as typeof mode)}
             >
@@ -202,7 +202,7 @@ export default function StressTest() {
               <label htmlFor="stress-pct">Transcode %</label>
               <input
                 id="stress-pct"
-                className={`${controls.inputSm} ${styles.numberInput}`}
+                className={`${`${controls.input} ${controls.inputSm}`} ${styles.numberInput}`}
                 type="number"
                 min={0}
                 max={100}
@@ -215,7 +215,7 @@ export default function StressTest() {
             <label htmlFor="stress-max">Max Sessions</label>
             <input
               id="stress-max"
-              className={`${controls.inputSm} ${styles.numberInput}`}
+              className={`${`${controls.input} ${controls.inputSm}`} ${styles.numberInput}`}
               type="number"
               min={1}
               max={50}

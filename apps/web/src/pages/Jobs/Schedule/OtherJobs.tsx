@@ -93,7 +93,7 @@ export default function OtherJobs({
                 <span className={styles.muted}>{describeSchedule(schedule)}</span>
               ) : (
                 <select
-                  className={controls.selectSm}
+                  className={`${controls.select} ${controls.selectSm}`}
                   value={entry.schedule}
                   aria-label={`How often ${job.name} runs`}
                   onChange={(e) => onChange(job.id, { schedule: e.target.value })}
