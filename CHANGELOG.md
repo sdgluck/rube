@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-10-05
+
+### Fixed
+
+- The AI model field in Settings is now a typeahead, so every available model is always shown when you open it, rather than a dropdown that hid all but the one you had chosen.
+
 ## [0.33.0] - 2026-10-05
 
 ### Added
