@@ -15,8 +15,26 @@ export const UNAUTHORIZED_EVENT = "tinkerbell:unauthorized";
 const authAwareFetch: typeof fetch = async (input, init) => {
   const res = await fetch(input, init);
   if (res.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+  if (!res.ok && !res.headers.get("content-type")?.includes("json")) throw new Error(notTinkerbellMessage(res));
   return res;
 };
+
+/**
+ * Tinkerbell always answers tRPC in JSON, so an error that isn't JSON came from
+ * something in front of it — a reverse proxy's 502/504 page, typically. Left
+ * to tRPC that surfaced as `Unexpected token '<', "<html>"… is not valid JSON`,
+ * which names neither the status nor who sent it.
+ */
+function notTinkerbellMessage(res: Pick<Response, "status" | "statusText">): string {
+  const status = `${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+  const why =
+    res.status === 504 || res.status === 524
+      ? "a proxy in front of Tinkerbell gave up waiting for it"
+      : res.status === 502 || res.status === 503
+        ? "a proxy in front of Tinkerbell couldn't reach it — is the server running?"
+        : "the reply came from something other than Tinkerbell";
+  return `The server answered ${status} — ${why}.`;
+}
 
 export const trpcClient = trpc.createClient({
   links: [

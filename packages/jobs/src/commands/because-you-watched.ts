@@ -45,6 +45,8 @@ export interface BywPreviewRow {
   wouldCreate: boolean;
   error: string | null;
   usage: BywCallUsage | null;
+  /** The model's answer verbatim, so an unparseable or off-library reply can be read rather than guessed at. */
+  response: string | null;
 }
 
 export interface BywPreviewResult {
@@ -450,14 +452,19 @@ export function createBecauseYouWatchedCommand(
     maxItems: number,
     prefs?: UserPreferences,
     feature: "because-you-watched" | "because-you-watched-preview" = "because-you-watched",
-  ): Promise<{ collection: AiCollection | null; skipped: string | null; usage: BywCallUsage | null }> {
+  ): Promise<{
+    collection: AiCollection | null;
+    skipped: string | null;
+    usage: BywCallUsage | null;
+    response: string | null;
+  }> {
     // A row this person has already said isn't for them: don't spend a model call
     // rebuilding it. The name is fixed, so it can be checked before anything else.
     const rowName = bywRowName(watchedTitle);
     const excludedRows = new Set((prefs?.excludedCollections ?? []).map((t) => t.toLowerCase()));
     if (excludedRows.has(rowName.toLowerCase())) {
       ctx.log(`Skipping "${rowName}" — the user said it wasn't for them.`);
-      return { collection: null, skipped: "the user said this row wasn't for them", usage: null };
+      return { collection: null, skipped: "the user said this row wasn't for them", usage: null, response: null };
     }
 
     // Hard-exclude any titles the user never wants recommended before the
@@ -533,17 +540,22 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     const parsed = extractJSON(text);
     if (parsed === null) {
       ctx.log(`Skipping "${watchedTitle}" — could not extract JSON from AI response`);
-      return { collection: null, skipped: "the answer wasn't parseable JSON", usage };
+      return { collection: null, skipped: "the answer wasn't parseable JSON", usage, response: text };
     }
 
     const obj = Array.isArray(parsed) ? parsed[0] : parsed;
     const result = aiCollectionSchema.safeParse(obj);
     if (!result.success) {
       ctx.log(`Skipping "${watchedTitle}" — invalid AI response: ${result.error.message}`);
-      return { collection: null, skipped: `the answer had the wrong shape: ${result.error.message}`, usage };
+      return {
+        collection: null,
+        skipped: `the answer had the wrong shape: ${result.error.message}`,
+        usage,
+        response: text,
+      };
     }
 
-    return { collection: result.data, skipped: null, usage };
+    return { collection: result.data, skipped: null, usage, response: text };
   }
 
   /**
@@ -555,10 +567,16 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
    * Several titles run back to back on purpose. The library is the cached
    * prefix, so the second and later calls are where caching shows up — or
    * visibly doesn't — in the numbers.
+   *
+   * `onStep` narrates the run as it goes. A test against a whole library and a
+   * slow or local model is minutes of silence otherwise, and when it dies part
+   * way the last step is the only clue to which part — Plex, the library read
+   * or a model call — was the slow one.
    */
   async function previewBecauseYouWatched(
     input: { sectionKey: string; plexUsername?: string; watchedTitle?: string; count?: number },
     signal: AbortSignal,
+    onStep: (message: string) => void = () => {},
   ): Promise<BywPreviewResult> {
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
     const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
@@ -573,12 +591,14 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     const maxItems = jobConfig.maxItems ?? BYW_DEFAULTS.maxItems;
 
     const client = createPlexClient({ url: PLEX_URL, token: PLEX_TOKEN, signal, onHealth: plexHealthCallback });
+    onStep(`Reading libraries from Plex…`);
     const sections = await client.getSections();
     const section = sections.find((s) => s.key === input.sectionKey);
     if (!section) throw new Error(`No library section with key ${input.sectionKey}.`);
 
     let user: ResolvedUser | undefined;
     if (input.plexUsername) {
+      onStep(`Looking up ${input.plexUsername}'s Plex account…`);
       const identity = await client.getIdentity();
       const wanted = input.plexUsername.toLowerCase();
       user = (await resolveUsers(client, identity.machineIdentifier)).find(
@@ -588,15 +608,24 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     }
     const prefs = user ? getOptedInPreferencesByUsername(user.plexUsername) : undefined;
 
+    if (prefs) onStep(`Applying ${user!.name}'s preferences.`);
+
     const count = Math.min(Math.max(input.count ?? 1, 1), 3);
-    const titles = input.watchedTitle?.trim()
-      ? [input.watchedTitle.trim()]
-      : await recentlyWatched(client, user?.accountID, section.key, count);
+    let titles: string[];
+    if (input.watchedTitle?.trim()) {
+      titles = [input.watchedTitle.trim()];
+    } else {
+      onStep(`Reading ${user ? `${user.name}'s` : "the server's"} watch history in "${section.title}"…`);
+      titles = await recentlyWatched(client, user?.accountID, section.key, count);
+    }
     if (titles.length === 0) {
       throw new Error(`No watch history in "${section.title}"${user ? ` for ${user.name}` : ""} to build from.`);
     }
+    onStep(`Building from: ${titles.join(", ")}.`);
 
+    onStep(`Reading every title in "${section.title}"…`);
     const libraryItems = await client.fetchAllItems(section.key);
+    onStep(`${libraryItems.length} titles read — the whole list goes to the model as the library.`);
     const existing = ownBywRows(
       await client.getCollectionsWithLabels(section.key, { label: BYW_LABEL }),
       user?.plexUsername,
@@ -610,11 +639,12 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 
     const log = () => {};
     const rows: BywPreviewRow[] = [];
-    for (const watchedTitle of titles) {
+    for (const [i, watchedTitle] of titles.entries()) {
       const rowName = bywRowName(watchedTitle);
       const base = { watchedTitle, rowName, existsAlready: existingNames.has(rowName.toLowerCase()) };
+      onStep(`[${i + 1}/${titles.length}] Asking ${llmConfig.provider}:${llmConfig.model} for "${rowName}"…`);
       try {
-        const { collection, skipped, usage } = await generateBYWCollection(
+        const { collection, skipped, usage, response } = await generateBYWCollection(
           llmConfig,
           { log, signal },
           watchedTitle,
@@ -626,7 +656,12 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
           "because-you-watched-preview",
         );
         const items = (collection?.items ?? []).map((title) => ({ title, matched: known.has(title) }));
-        const matchedCount = items.filter((i) => i.matched).length;
+        const matchedCount = items.filter((item) => item.matched).length;
+        onStep(
+          usage
+            ? `[${i + 1}/${titles.length}] Answered in ${(usage.durationMs / 1000).toFixed(1)}s — ${usage.tokensIn} tokens in, ${usage.tokensOut} out; ${matchedCount} of ${items.length} titles in the library.${skipped ? ` Unusable: ${skipped}.` : ""}`
+            : `[${i + 1}/${titles.length}] Skipped: ${skipped}.`,
+        );
         rows.push({
           ...base,
           items,
@@ -634,9 +669,22 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
           wouldCreate: matchedCount >= minItems,
           error: skipped,
           usage,
+          response,
         });
       } catch (err) {
-        rows.push({ ...base, items: [], matchedCount: 0, wouldCreate: false, error: errorMessage(err), usage: null });
+        // Stopped by the caller: no later call would run either, so end here
+        // rather than record the same abort once per remaining title.
+        if (signal.aborted) throw err;
+        onStep(`[${i + 1}/${titles.length}] Failed: ${errorMessage(err)}`);
+        rows.push({
+          ...base,
+          items: [],
+          matchedCount: 0,
+          wouldCreate: false,
+          error: errorMessage(err),
+          usage: null,
+          response: null,
+        });
       }
     }
 

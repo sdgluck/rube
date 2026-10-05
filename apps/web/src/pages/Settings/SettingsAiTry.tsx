@@ -8,14 +8,21 @@
  * before it runs fifty times overnight.
  *
  * Running totals live in the usage panel; this is one experiment's numbers.
+ *
+ * The test runs in the background and this polls it, showing each step as it
+ * happens: one request held open for minutes was cut off by reverse proxies,
+ * and a spinner that then failed said nothing about which step was slow.
  */
 import { useMemo, useState } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@tinkerbell/trpc";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import styles from "./Settings.module.css";
 import own from "./SettingsAiTry.module.css";
 
-type Preview = Awaited<ReturnType<ReturnType<typeof trpc.aiPreview.becauseYouWatched.useMutation>["mutateAsync"]>>;
+type Status = inferRouterOutputs<AppRouter>["aiPreview"]["becauseYouWatched"]["status"];
+type Preview = NonNullable<Status["result"]>;
 
 const nf = new Intl.NumberFormat("en-GB");
 
@@ -25,7 +32,20 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
     { limit: 200, offset: 0, sortDir: "asc" },
     { refetchOnWindowFocus: false, retry: false },
   );
-  const preview = trpc.aiPreview.becauseYouWatched.useMutation();
+  const start = trpc.aiPreview.becauseYouWatched.start.useMutation();
+  const cancel = trpc.aiPreview.becauseYouWatched.cancel.useMutation();
+  const [runId, setRunId] = useState<string | null>(null);
+  const status = trpc.aiPreview.becauseYouWatched.status.useQuery(
+    { id: runId ?? "" },
+    {
+      enabled: runId !== null,
+      retry: false,
+      refetchOnWindowFocus: false,
+      refetchInterval: (q) => (q.state.data && q.state.data.state !== "running" ? false : 1000),
+    },
+  );
+  const run = status.data;
+  const running = start.isPending || run?.state === "running";
 
   const sections = useMemo(
     () => (sectionsQuery.data ?? []).filter((s) => s.type === "movie" || s.type === "show"),
@@ -35,25 +55,25 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
   const [plexUsername, setPlexUsername] = useState("");
   const [watchedTitle, setWatchedTitle] = useState("");
   const [count, setCount] = useState(2);
-  const [result, setResult] = useState<Preview | null>(null);
 
   const effectiveSection = sectionKey || sections[0]?.key || "";
 
   async function handleRun() {
-    setResult(null);
+    setRunId(null);
     try {
-      setResult(
-        await preview.mutateAsync({
-          sectionKey: effectiveSection,
-          plexUsername: plexUsername || undefined,
-          watchedTitle: watchedTitle.trim() || undefined,
-          count: watchedTitle.trim() ? 1 : count,
-        }),
-      );
+      const { id } = await start.mutateAsync({
+        sectionKey: effectiveSection,
+        plexUsername: plexUsername || undefined,
+        watchedTitle: watchedTitle.trim() || undefined,
+        count: watchedTitle.trim() ? 1 : count,
+      });
+      setRunId(id);
     } catch {
       // Shown from the mutation's error below.
     }
   }
+
+  const error = start.error?.message ?? status.error?.message ?? (run?.state !== "done" ? run?.error : null);
 
   return (
     <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Try it: Because you watched">
@@ -112,19 +132,39 @@ export default function SettingsAiTry({ unsavedChanges }: { unsavedChanges: bool
       )}
 
       <div className={styles.buttons}>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={handleRun}
-          disabled={preview.isPending || !effectiveSection}
-        >
-          {preview.isPending ? "Running…" : "Run test"}
+        <button type="button" className={styles.button} onClick={handleRun} disabled={running || !effectiveSection}>
+          {running ? `Running… ${run ? seconds(run.elapsedMs) : ""}` : "Run test"}
         </button>
+        {run?.state === "running" && (
+          <button
+            type="button"
+            className={styles.buttonSecondary}
+            onClick={() => cancel.mutate({ id: run.id })}
+            disabled={cancel.isPending}
+          >
+            Stop
+          </button>
+        )}
       </div>
 
-      {preview.error && <p className={own.error}>{preview.error.message}</p>}
-      {result && <PreviewResult result={result} />}
+      {run && run.steps.length > 0 && <StepLog steps={run.steps} running={run.state === "running"} />}
+      {error && <p className={own.error}>{error}</p>}
+      {run?.result && <PreviewResult result={run.result} />}
     </CardSection>
+  );
+}
+
+/** What the test has done so far, each step stamped with when it began — the gap to the next is how long it took. */
+function StepLog({ steps, running }: { steps: Status["steps"]; running: boolean }) {
+  return (
+    <ol className={own.steps} aria-live="polite">
+      {steps.map((s, i) => (
+        <li key={i} className={running && i === steps.length - 1 ? own.stepCurrent : own.step}>
+          <span className={own.stepAt}>{seconds(s.atMs)}</span>
+          <span>{s.message}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -214,6 +254,12 @@ function PreviewResult({ result }: { result: Preview }) {
             )}
           </div>
           {row.error && <p className={own.error}>{row.error}</p>}
+          {row.response !== null && (
+            <details className={own.response}>
+              <summary>Model&rsquo;s answer, verbatim</summary>
+              <pre className={own.responseText}>{row.response}</pre>
+            </details>
+          )}
           {row.items.length > 0 && (
             <div className={own.items}>
               {row.items.map((item) => (
