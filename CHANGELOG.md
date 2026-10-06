@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-06
+
+### Added
+
+- An MCP server and JSON API on the admin server, so AI clients can query your instance. Both are read-only: AI clients can look at your data but cannot change it.
+- Access requires a named API key, created in the admin app. Requests without a valid key are refused.
+
 ## [0.33.1] - 2026-10-05
 
 ### Fixed
