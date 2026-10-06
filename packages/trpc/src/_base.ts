@@ -26,6 +26,12 @@ export interface AdminContext {
   /** False when auth is switched off in config or bypassed by the env var. */
   authRequired: boolean;
   /**
+   * Set when the caller is the agent API (`/mcp`, `/api/v1`) acting on a
+   * verified key rather than a signed-in admin. Such a caller may run queries
+   * and nothing else — see `refuseWritesFromAgents`.
+   */
+  apiKey?: { id: string; name: string };
+  /**
    * The request's own container scope, disposed once the response is sent.
    *
    * Procedures take their domains from the router factory rather than from
@@ -98,6 +104,9 @@ const mapNotConfigured = t.middleware(async ({ next }) => {
  */
 const requireAdmin = t.middleware(({ ctx, next }) => {
   if (!ctx.authRequired) return next();
+  // The key was checked before a context was ever built for it, and a key that
+  // reaches this far is limited to queries by `refuseWritesFromAgents`.
+  if (ctx.apiKey) return next();
   if (!ctx.session) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in to continue." });
   }
@@ -119,11 +128,42 @@ const requireAdmin = t.middleware(({ ctx, next }) => {
  * history matters most, and they necessarily run before there is a session.
  */
 const attributeToCaller = t.middleware(({ ctx, next }) =>
-  runAsActor({ source: "ui", username: ctx.session?.username ?? "" }, () => next()),
+  runAsActor(
+    ctx.apiKey
+      ? { source: `api:${ctx.apiKey.name}`, username: "" }
+      : { source: "ui", username: ctx.session?.username ?? "" },
+    () => next(),
+  ),
 );
 
+/**
+ * The agent API is read-only, and this is where that is true rather than
+ * merely intended.
+ *
+ * Its tools are hand-written and call only queries today, but "the tools
+ * happen not to call a mutation" is a property of the tool list, and the tool
+ * list will grow. Refusing by procedure type here means a tool that reaches
+ * for `rules.update` fails on its first call instead of shipping — and it
+ * covers `publicProcedure` too, so the auth handshake's mutations are out of
+ * reach of a key as well.
+ *
+ * A query with a side effect (`users.list` filling an empty cache, say) still
+ * runs. That is a cache warm, not a change anybody configured.
+ */
+const refuseWritesFromAgents = t.middleware(({ ctx, type, path, next }) => {
+  if (ctx.apiKey && type !== "query") {
+    throw new TRPCError({ code: "FORBIDDEN", message: `API keys are read-only; ${path} is a ${type}.` });
+  }
+  return next();
+});
+
 /** Authenticated. The default for every router. */
-export const procedure = t.procedure.use(logDuration).use(mapNotConfigured).use(attributeToCaller).use(requireAdmin);
+export const procedure = t.procedure
+  .use(refuseWritesFromAgents)
+  .use(logDuration)
+  .use(mapNotConfigured)
+  .use(attributeToCaller)
+  .use(requireAdmin);
 
 /**
  * Explicitly unauthenticated. Only the auth handshake and the status query
@@ -131,4 +171,8 @@ export const procedure = t.procedure.use(logDuration).use(mapNotConfigured).use(
  * enumeration test in `router-surface.test.ts`, which fails if the list of
  * public paths grows without someone saying so out loud.
  */
-export const publicProcedure = t.procedure.use(logDuration).use(mapNotConfigured).use(attributeToCaller);
+export const publicProcedure = t.procedure
+  .use(refuseWritesFromAgents)
+  .use(logDuration)
+  .use(mapNotConfigured)
+  .use(attributeToCaller);

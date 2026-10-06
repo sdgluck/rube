@@ -1,0 +1,109 @@
+.primary {
+  composes: btn btnPrimary from "../../styles/controls.module.css";
+}
+
+.secondary {
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
+}
+
+.ghost {
+  composes: btn btnGhost btnSm from "../../styles/controls.module.css";
+}
+
+.revoke {
+  composes: btn btnDangerOutline btnSm from "../../styles/controls.module.css";
+}
+
+.copyLink {
+  composes: btnLink from "../../styles/controls.module.css";
+}
+
+/* A table inside a settings card is the compact one — see SettingsBackup. */
+.table {
+  composes: compactTable from "../../styles/shared.module.css";
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.createRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.createRow > input {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+
+/* The one moment the key exists outside a hash — loud enough to notice, and
+   the key itself wraps rather than scrolling so it can be read in full. */
+.reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-sunken);
+  background: var(--status-warn-bg);
+}
+
+.revealTitle {
+  margin: 0;
+  font: var(--t-body-sm);
+  font-weight: 600;
+  color: var(--status-warn-fg);
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.key {
+  flex: 1 1 260px;
+  min-width: 0;
+  font: var(--t-data);
+  color: var(--ink);
+  word-break: break-all;
+  user-select: all;
+}
+
+.prefix,
+.inline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.actionsCell {
+  text-align: right;
+}
+
+.snippetHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Wraps rather than scrolls: a command is copied with the button, and a
+   horizontal scrollbar inside a card at phone width is worse than a wrap. */
+.snippet {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+  font: var(--t-data);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

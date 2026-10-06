@@ -37,6 +37,7 @@ import {
 import type { PosterCache } from "@tinkerbell/posters";
 
 import { AiUsageToken, type AiUsage } from "@tinkerbell/domain.ai-usage";
+import { ApiKeysToken, type ApiKeys } from "@tinkerbell/domain.api-keys";
 import { BackupsToken, type Backups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, type Bandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, type Changes } from "@tinkerbell/domain.changes";
@@ -98,6 +99,7 @@ export interface Services {
   arrLibrary: ArrLibrary;
   arrActivity: ArrActivity;
   aiUsage: AiUsage;
+  apiKeys: ApiKeys;
   arrSettings: ArrSettings;
   configHistory: ConfigHistory;
   cleanup: Cleanup;
@@ -150,6 +152,7 @@ export function registerServices(r: Registry): void {
     arrLibrary: c.resolve(ArrLibraryToken),
     arrActivity: c.resolve(ArrActivityToken),
     aiUsage: c.resolve(AiUsageToken),
+    apiKeys: c.resolve(ApiKeysToken),
     arrSettings: c.resolve(ArrSettingsToken),
     configHistory: c.resolve(ConfigHistoryToken),
     cleanup: c.resolve(CleanupToken),

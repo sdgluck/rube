@@ -151,6 +151,46 @@ describe("admin router surface", () => {
     );
   });
 
+  /**
+   * The agent API's read-only promise, enforced where it can't be forgotten.
+   *
+   * Every mutation and subscription on the router — public ones included — is
+   * called as an API-key caller, and every one must be refused before it
+   * runs. A new mutation inherits this from `procedure`; the test exists so
+   * that one built some other way can't quietly hand a key write access.
+   */
+  test("an API-key caller is refused every mutation, before it runs", async () => {
+    const caller = t.createCallerFactory(appRouter)({
+      ...anonymousContext(),
+      apiKey: { id: "k", name: "test-agent" },
+    });
+    const procedures = appRouter._def.procedures as unknown as Record<string, { _def: { type: string } }>;
+    const writes = Object.entries(procedures).filter(([, p]) => p._def.type !== "query");
+    assert.ok(writes.length > 50, `expected every mutation, got ${writes.length}`);
+
+    const allowed: string[] = [];
+    for (const [path] of writes) {
+      const fn = path.split(".").reduce<never>((acc, key) => (acc as never)[key], caller as never) as unknown as (
+        input?: unknown,
+      ) => Promise<unknown>;
+      await fn(undefined).then(
+        () => allowed.push(`${path} (resolved)`),
+        (err: { code?: string }) => {
+          if (err?.code !== "FORBIDDEN") allowed.push(`${path} (${err?.code ?? "unknown error"})`);
+        },
+      );
+    }
+    assert.deepEqual(allowed, [], `these writes were not refused to an API key:\n  ${allowed.join("\n  ")}`);
+  });
+
+  test("an API-key caller may query even with admin auth on", async () => {
+    const caller = t.createCallerFactory(appRouter)({
+      ...anonymousContext(),
+      apiKey: { id: "k", name: "test-agent" },
+    });
+    assert.ok(Array.isArray(await caller.notificationEventTypes()));
+  });
+
   test("with auth switched off, the gate stands aside", async () => {
     const caller = t.createCallerFactory(appRouter)({ ...anonymousContext(), authRequired: false });
     // `notificationEventTypes` is a pure constant lookup, so it exercises the

@@ -27,6 +27,7 @@ import { createChangesRouter } from "./changes.router.ts";
 import { createHistoryRouter } from "./history.router.ts";
 import { createBackupsRouter } from "./backups.router.ts";
 import { createAiUsageRouter } from "./ai-usage.router.ts";
+import { createApiKeysRouter } from "./api-keys.router.ts";
 import { createArrRouter } from "./arr.router.ts";
 import { createDiscoverRouter } from "./discover.router.ts";
 import { createPostersRouter } from "./posters.router.ts";
@@ -96,6 +97,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     history: createHistoryRouter(deps),
     backups: createBackupsRouter(deps),
     aiUsage: createAiUsageRouter(deps),
+    apiKeys: createApiKeysRouter(deps),
 
     /**
      * The server's machine identifier, which is what an `app.plex.tv` deep link
@@ -395,8 +397,16 @@ const appRouterFor = (deps: TrpcDeps) => {
 export function createTrpc(deps: TrpcDeps) {
   const admin = createAdminAuthRouter(deps);
   const portal = createPortalRouter(deps);
+  const appRouter = appRouterFor(deps);
   return {
-    appRouter: appRouterFor(deps),
+    appRouter,
+    /**
+     * In-process calls through the full middleware chain, for the agent API.
+     * It goes through the procedures rather than the domains so that a tool
+     * answers with exactly what the admin UI would show, and so that the
+     * read-only guard in `_base.ts` applies to it.
+     */
+    createCaller: t.createCallerFactory(appRouter),
     portalRouter: portal.portalRouter,
     createAdminContext: admin.createAdminContext,
     createPortalContext: portal.createPortalContext,

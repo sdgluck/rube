@@ -81,6 +81,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@tinkerbell/agent-api':
+        specifier: workspace:*
+        version: link:../../packages/agent-api
       '@tinkerbell/composition':
         specifier: workspace:*
         version: link:../../packages/composition
@@ -452,6 +455,31 @@ importers:
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  domains/api-keys:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@tinkerbell/ports':
         specifier: workspace:*
         version: link:../../packages/ports
@@ -1550,6 +1578,52 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  packages/agent-api:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tinkerbell/domain.api-keys':
+        specifier: workspace:*
+        version: link:../../domains/api-keys
+      '@tinkerbell/domain.changes':
+        specifier: workspace:*
+        version: link:../../domains/changes
+      '@tinkerbell/domain.search':
+        specifier: workspace:*
+        version: link:../../domains/search
+      '@tinkerbell/trpc':
+        specifier: workspace:*
+        version: link:../trpc
+      '@trpc/server':
+        specifier: ^11.10.0
+        version: 11.17.0(typescript@7.0.2)
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@tinkerbell/jobs':
+        specifier: workspace:*
+        version: link:../jobs
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../test-support
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/composition:
     dependencies:
       '@tinkerbell/container':
@@ -1564,6 +1638,9 @@ importers:
       '@tinkerbell/domain.ai-usage':
         specifier: workspace:*
         version: link:../../domains/ai-usage
+      '@tinkerbell/domain.api-keys':
+        specifier: workspace:*
+        version: link:../../domains/api-keys
       '@tinkerbell/domain.arr-activity':
         specifier: workspace:*
         version: link:../../domains/arr-activity
@@ -2109,6 +2186,9 @@ importers:
       '@tinkerbell/domain.ai-usage':
         specifier: workspace:*
         version: link:../../domains/ai-usage
+      '@tinkerbell/domain.api-keys':
+        specifier: workspace:*
+        version: link:../../domains/api-keys
       '@tinkerbell/domain.arr-activity':
         specifier: workspace:*
         version: link:../../domains/arr-activity

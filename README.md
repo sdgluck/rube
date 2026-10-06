@@ -101,6 +101,26 @@ that, only the Plex account that owns your server can sign in.
   feature is on.
 - Set the portal's public address under **Settings → Portal → Address**.
 
+## API and MCP
+
+AI assistants and scripts can read a Tinkerbell instance through a read-only
+API. Create a key under **Settings → API & MCP**; the page shows the exact
+command to connect.
+
+- **MCP** at `http://<host>:3000/mcp` (Streamable HTTP). For Claude Code:
+  `claude mcp add --transport http tinkerbell http://<host>:3000/mcp --header "Authorization: Bearer <key>"`
+- **JSON over HTTP** at `/api/v1/tools/<tool>` — `GET` with query parameters
+  or `POST` with a JSON body. `/api/v1` lists the tools and
+  `/api/v1/openapi.json` describes them.
+- Send the key as `Authorization: Bearer <key>` or `X-Api-Key: <key>`. A key is
+  always required, even with admin sign-in off.
+- Tools cover rules and their runs (logs, changes, why an item does or doesn't
+  match), jobs, collections, media, cleanup, health, events, library changes,
+  watch statistics, users, AI usage and settings. Secrets stay redacted, and
+  nothing can be changed.
+- Keys are stored hashed and shown once. Revoke one and it stops working
+  immediately. Keys aren't included in an export.
+
 ## Personalized home screens
 
 Each user gets their own recommendation collections, and only they can see them.

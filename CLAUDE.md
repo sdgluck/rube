@@ -151,7 +151,7 @@ builds the routers, and runs **two HTTP servers**:
   Staying public takes an explicit `publicProcedure`. `router-surface.test.ts`
   enumerates the whole surface and fails unless the path is in `PUBLIC_PATHS` —
   adding a public procedure is a reviewable act.
-- Middleware chain: `logDuration` → `mapNotConfigured` (turns
+- Middleware chain: `refuseWritesFromAgents` → `logDuration` → `mapNotConfigured` (turns
   `NotConfiguredError` into 412) → `attributeToCaller` → `requireAdmin`.
 - `attributeToCaller` sets an **ambient actor** (`packages/core/src/actor.ts`)
   so `setConfig` / `updateRule` / `updateJob` three layers down record who did
@@ -159,6 +159,18 @@ builds the routers, and runs **two HTTP servers**:
 - Bind Plex clients through `mapNotConfiguredClient(deps.clients)`.
 
 `portal-isolation.test.ts` / `portal-surface.test.ts` guard the portal boundary.
+
+### Agent API (`packages/agent-api`)
+
+`/mcp` (hand-rolled stateless Streamable-HTTP MCP, tools only) and `/api/v1`
+(the same tools as JSON, plus `openapi.json`) on the admin server, written
+against Fetch `Request`/`Response`. One curated list in `tools.ts`; every tool
+calls the **tRPC caller** (`createTrpc().createCaller`), never a domain, so it
+answers what the UI would. Auth is an API key (`domains/api-keys`, hashed,
+always required), checked before the cookie gate. The key lands in
+`AdminContext.apiKey`, and `refuseWritesFromAgents` in `_base.ts` refuses any
+non-query for such a caller — `router-surface.test.ts` calls every mutation as
+a key holder to prove it. Adding a tool is one entry in `TOOLS`.
 
 ## Jobs
 

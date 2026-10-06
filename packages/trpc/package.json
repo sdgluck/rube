@@ -22,6 +22,7 @@
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
     "@tinkerbell/domain.ai-usage": "workspace:*",
+    "@tinkerbell/domain.api-keys": "workspace:*",
     "@tinkerbell/domain.arr-activity": "workspace:*",
     "@tinkerbell/domain.arr-library": "workspace:*",
     "@tinkerbell/domain.arr-settings": "workspace:*",

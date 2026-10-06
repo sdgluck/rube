@@ -1006,6 +1006,30 @@ export const plexSessions = sqliteTable(
   (table) => [index("idx_plex_sessions_expires").on(table.expiresAt)],
 );
 
+/**
+ * Keys for the read-only agent API (`/mcp` and `/api/v1`).
+ *
+ * A table rather than a config key because each key is revoked on its own: the
+ * point of naming them is that the laptop you lost and the home-automation box
+ * you didn't are separate rows. Only the SHA-256 of the key is stored, exactly
+ * as `plex_sessions` does — a copied database must not be a copied credential.
+ *
+ * Deliberately absent from the portable export: a key is a credential for this
+ * instance, and a restored bundle that carried one would be a second instance
+ * accepting the first one's keys.
+ */
+export const apiKeys = sqliteTable("api_keys", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** SHA-256 hex of the full key. The key itself is shown once and never stored. */
+  keyHash: text("key_hash").notNull().unique(),
+  /** The key's first characters, so the list can say which one is which. */
+  prefix: text("prefix").notNull(),
+  createdAt: integer("created_at").notNull(),
+  /** Written at most once a minute — see `verifyApiKey`. Null until first use. */
+  lastUsedAt: integer("last_used_at"),
+});
+
 export const stressTestRuns = sqliteTable("stress_test_runs", {
   id: text("id").primaryKey(),
   config: text("config", { mode: "json" }).$type<StressTestConfigShape>().notNull(),

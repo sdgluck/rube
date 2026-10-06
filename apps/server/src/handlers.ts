@@ -25,6 +25,7 @@ import { extname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { isAgentApiPath } from "@tinkerbell/agent-api";
 import { errorMessage } from "@tinkerbell/core";
 import type { Services } from "@tinkerbell/composition";
 import type { createTrpc } from "@tinkerbell/trpc";
@@ -99,6 +100,8 @@ export interface AdminHandlerDeps {
   handleCollectionRoute: RouteHandler;
   appRouter: Trpc["appRouter"];
   createAdminContext: Trpc["createAdminContext"];
+  /** `/mcp` and `/api/v1` — see `@tinkerbell/agent-api`. Authenticates by API key, not cookie. */
+  handleAgentRequest: (req: Request) => Promise<Response>;
   distDir: string;
   /** Injectable for tests; defaults to the global. */
   fetchImpl?: typeof fetch;
@@ -113,6 +116,7 @@ export function createAdminHandler(deps: AdminHandlerDeps) {
     handleCollectionRoute,
     appRouter,
     createAdminContext,
+    handleAgentRequest,
     distDir,
     fetchImpl = fetch,
   } = deps;
@@ -207,6 +211,14 @@ export function createAdminHandler(deps: AdminHandlerDeps) {
         res.end(JSON.stringify({ error: errorMessage(err) }));
         return;
       }
+    }
+
+    // The agent API. Not behind `rejectIfNotAdmin`: an AI client has no Plex
+    // session cookie to present, so it carries an API key instead, and the
+    // module checks that itself — on every request, auth on or off.
+    if (isAgentApiPath(path)) {
+      await sendFetchResponse(await handleAgentRequest(toFetchRequest(req)), res);
+      return;
     }
 
     // tRPC API routes

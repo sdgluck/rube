@@ -21,6 +21,7 @@ import {
   PostCollectionSyncToken,
 } from "@tinkerbell/ports";
 import { AiUsageToken, createAiUsage } from "@tinkerbell/domain.ai-usage";
+import { ApiKeysToken, createApiKeys } from "@tinkerbell/domain.api-keys";
 import { BackupsToken, createBackups } from "@tinkerbell/domain.backups";
 import { BandwidthToken, createBandwidth } from "@tinkerbell/domain.bandwidth";
 import { ChangesToken, createChanges } from "@tinkerbell/domain.changes";
@@ -104,6 +105,7 @@ export function registerDomains(r: Registry): void {
   r.register(AiUsageToken, (c) =>
     createAiUsage({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken), now: c.resolve(ClockToken) }),
   );
+  r.register(ApiKeysToken, (c) => createApiKeys({ db: c.resolve(DbToken), now: c.resolve(ClockToken) }));
   r.register(ArrActivityToken, (c) => createArrActivity({ db: c.resolve(DbToken) }));
   r.register(ArrSettingsToken, (c) =>
     createArrSettings({

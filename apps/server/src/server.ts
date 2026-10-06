@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTrpc } from "@tinkerbell/trpc";
+import { createAgentApi } from "@tinkerbell/agent-api";
 import { buildContainer, ServicesToken } from "@tinkerbell/composition";
 import { JobsToken, registerJobs, stopSidequest, stopStressTest } from "@tinkerbell/jobs";
 import { authDisabledByEnv, createLogger, errorMessage, startAuthDisabledWarning } from "@tinkerbell/core";
@@ -36,7 +37,16 @@ const services = container.resolve(ServicesToken);
 const jobs = container.resolve(JobsToken);
 const { initJobs } = jobs;
 
-const { appRouter, portalRouter, createAdminContext, createPortalContext } = createTrpc({ ...services, jobs });
+const { appRouter, portalRouter, createAdminContext, createPortalContext, createCaller } = createTrpc({
+  ...services,
+  jobs,
+});
+const { handleAgentRequest } = createAgentApi({
+  createCaller,
+  verifyApiKey: services.apiKeys.verifyApiKey,
+  scope: services.scope,
+  version: APP_VERSION,
+});
 const { rejectIfNotAdmin } = createAuth(services);
 const { handleCollectionRoute } = createCollectionRoutes(services);
 const { handlePrerollRoute } = createPrerollRoutes({ ...services, jobs });
@@ -82,6 +92,7 @@ const server = createServer(
       handleCollectionRoute,
       appRouter,
       createAdminContext,
+      handleAgentRequest,
       distDir: DIST_DIR,
     }),
   ),

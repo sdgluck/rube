@@ -9,12 +9,13 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/domain.backups": "workspace:*",
+    "@tinkerbell/agent-api": "workspace:*",
     "@tinkerbell/composition": "workspace:*",
     "@tinkerbell/container": "workspace:*",
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/domain.backups": "workspace:*",
     "@tinkerbell/domain.collections": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",

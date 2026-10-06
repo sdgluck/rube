@@ -115,6 +115,12 @@ before(async () => {
         handleCollectionRoute: routeFake("collection", () => collectionBehaviour),
         appRouter: appRouter as never,
         createAdminContext: (() => ({ scope: { dispose: async () => {} } })) as never,
+        handleAgentRequest: async (req) => {
+          calls.push(`agent:${new URL(req.url).pathname}`);
+          return new Response(JSON.stringify({ handled: "agent" }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        },
         distDir: dist,
         fetchImpl: (async () => upstream()) as typeof fetch,
       }),
@@ -189,6 +195,19 @@ describe("the admin gate", () => {
     const res = await get(adminBase, "/api/prerolls/play/abc");
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { handled: "preroll" });
+  });
+
+  test("the agent API is not behind the cookie gate — it authenticates by key", async () => {
+    // An AI client has no Plex session; if the cookie gate ran first, no key
+    // could ever be presented. The module refuses keyless calls itself, which
+    // `@tinkerbell/agent-api`'s own tests cover.
+    admin = false;
+    for (const path of ["/mcp", "/api/v1", "/api/v1/tools/get_overview"]) {
+      const res = await get(adminBase, path);
+      assert.equal(res.status, 200, path);
+      assert.deepEqual(await res.json(), { handled: "agent" });
+    }
+    assert.deepEqual(calls, ["agent:/mcp", "agent:/api/v1", "agent:/api/v1/tools/get_overview"]);
   });
 
   test("the tRPC surface is not gated here — it does its own auth", async () => {
