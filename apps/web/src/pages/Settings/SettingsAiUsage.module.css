@@ -1,12 +1,12 @@
 /* Three windows side by side, wrapping to a column on a phone. */
 .windows {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.2rem;
 }
 
 .window {
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);

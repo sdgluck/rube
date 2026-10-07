@@ -7,23 +7,23 @@
 .pickers {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .pickers > * {
-  flex: 1 1 200px;
-  max-width: 360px;
+  flex: 1 1 20rem;
+  max-width: 36rem;
 }
 
 .results {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 1.4rem;
 }
 
 .summary {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
 }
 
@@ -51,29 +51,29 @@
 .row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
+  gap: 0.8rem;
+  padding-top: 1.2rem;
   border-top: 1px solid var(--line-soft);
 }
 
 .rowTitle {
   margin: 0;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 1.3rem;
   color: var(--ink);
 }
 
 .rowMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.6rem;
   align-items: center;
 }
 
 .items {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .item {
@@ -106,7 +106,7 @@
 
 .error {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--status-error-fg);
 }
 
@@ -125,7 +125,7 @@
 
 .step {
   display: flex;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .stepCurrent {
@@ -135,14 +135,14 @@
 }
 
 .stepAt {
-  flex: 0 0 52px;
+  flex: 0 0 5.2rem;
   text-align: right;
   color: var(--ink-3);
   font-weight: 400;
 }
 
 .response {
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-2);
 }
 
@@ -152,9 +152,9 @@
 
 /* An answer can be one very long line of JSON; wrap it rather than widen the card. */
 .responseText {
-  margin: 6px 0 0;
-  padding: 8px;
-  max-height: 240px;
+  margin: 0.6rem 0 0;
+  padding: 0.8rem;
+  max-height: 24rem;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;

@@ -108,7 +108,7 @@ export function SystemTasksPanel({ dragHandle, dragProps }: DashboardPanelProps)
                       aria-expanded={open}
                       onClick={() => setExpanded((prev) => ({ ...prev, [id]: !open }))}
                     >
-                      {open ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+                      {open ? <ChevronDown size="1.4rem" aria-hidden /> : <ChevronRight size="1.4rem" aria-hidden />}
                       <span className={styles.groupLabel}>{label}</span>
                       <GroupSummary count={jobs.length} summary={summary} />
                     </button>
@@ -175,7 +175,7 @@ function TaskRow({ job, setEnabled }: { job: Job; setEnabled: ReturnType<typeof 
           </span>
         ) : job.enabled ? (
           <span className={styles.alwaysOn} title="Always on — other parts of Tinkerbell depend on it">
-            <Lock size={13} aria-label="Always on" />
+            <Lock size="1.3rem" aria-label="Always on" />
           </span>
         ) : (
           <span className={styles.requiredPill} data-state="off" title="Switched off — this job is not running">

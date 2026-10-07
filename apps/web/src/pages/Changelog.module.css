@@ -5,7 +5,7 @@
    slot, so it has to read the same as every other page's count. */
 .version {
   font: var(--t-data);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
   white-space: nowrap;
   flex-shrink: 0;
@@ -14,29 +14,29 @@
 .releases {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 860px;
+  gap: 1.6rem;
+  max-width: 86rem;
 }
 
 .release {
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
-  padding: 16px 20px 20px;
+  padding: 1.6rem 2rem 2rem;
 }
 
 .releaseHeader {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
+  gap: 1rem;
+  padding-bottom: 1.2rem;
+  margin-bottom: 1.2rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
 .releaseVersion {
   margin: 0;
-  font: 600 16px/1.2 var(--font-mono);
+  font: 600 1.6rem/1.2 var(--font-mono);
   letter-spacing: -0.02em;
   color: var(--ink);
 }
@@ -47,17 +47,17 @@
 
 .releaseDate {
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 .entry {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
 }
 
 .sectionHeading {
-  margin: 14px 0 6px;
+  margin: 1.4rem 0 0.6rem;
   font-size: inherit;
   font-weight: inherit;
 }
@@ -71,10 +71,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 62px;
-  padding: 3px 0;
+  width: 6.2rem;
+  padding: 0.3rem 0;
   border-radius: var(--r-tag);
-  font: 600 9.5px/1.2 var(--font-mono);
+  font: 600 0.95rem/1.2 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -105,27 +105,27 @@
 }
 
 .entry ul {
-  margin: 6px 0;
-  padding-left: 18px;
+  margin: 0.6rem 0;
+  padding-left: 1.8rem;
 }
 
 .entry li {
-  margin: 5px 0;
+  margin: 0.5rem 0;
   line-height: 1.55;
   text-wrap: pretty;
 }
 
 .entry p {
   line-height: 1.55;
-  margin: 6px 0;
+  margin: 0.6rem 0;
 }
 
 .entry code {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 1.1rem;
   background: var(--fill-quiet);
   border-radius: var(--r-tag);
-  padding: 1px 5px;
+  padding: 1px 0.5rem;
 }
 
 .entry strong {

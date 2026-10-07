@@ -1,6 +1,6 @@
 .message {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.55;
   color: var(--ink-2);
 }
@@ -10,8 +10,8 @@
   background: var(--surface-sunken);
   box-shadow: var(--e-flat);
   border-radius: var(--r-sunken);
-  padding: 10px 12px;
-  font-size: 12px;
+  padding: 1rem 1.2rem;
+  font-size: 1.2rem;
   color: var(--ink-2);
 }
 
@@ -23,7 +23,7 @@
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   justify-content: flex-end;
   flex-wrap: wrap;
 }

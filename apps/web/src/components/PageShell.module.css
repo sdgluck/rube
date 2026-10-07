@@ -20,7 +20,7 @@
 
 .count {
   font: var(--t-data);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
   white-space: nowrap;
   flex-shrink: 0;
@@ -28,7 +28,7 @@
 
 .body {
   flex: 1;
-  padding: 20px 28px 40px;
+  padding: 2rem 2.8rem 4rem;
 }
 
 /* Pages whose body is itself a full-height surface (the run log, Overlays)
@@ -37,7 +37,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding-bottom: 20px;
+  padding-bottom: 2rem;
   overflow: hidden;
 }
 
@@ -46,10 +46,10 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
   border-radius: var(--r-tag);
-  font: 600 10px/1.3 var(--font-mono);
+  font: 600 1rem/1.3 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -77,8 +77,8 @@
 }
 
 .chipDot {
-  width: 5px;
-  height: 5px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
@@ -86,10 +86,10 @@
 
 @media (max-width: 768px) {
   .body {
-    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 76px);
+    padding: 1.6rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
   }
 
   .bodyFlush {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
   }
 }

@@ -38,7 +38,7 @@ export default function PresetPicker({
             disabled={already}
           >
             <span className={styles.presetName}>
-              {preset.id === "recommended" && <Sparkles size={13} aria-hidden="true" />}
+              {preset.id === "recommended" && <Sparkles size="1.3rem" aria-hidden="true" />}
               {preset.name}
             </span>
             <span className={styles.presetDescription}>{preset.description}</span>

@@ -3,7 +3,7 @@
    slot it sits in. */
 .frame {
   aspect-ratio: 16 / 9;
-  max-width: 720px;
+  max-width: 72rem;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   overflow: hidden;
@@ -22,19 +22,19 @@
 
 .numberInput {
   composes: input from "../../../styles/controls.module.css";
-  width: 96px;
+  width: 9.6rem;
 }
 
 .toggleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
+  gap: 1rem;
+  font-size: 1.3rem;
   color: var(--ink-2);
 }
 
 .colours {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 1.6rem;
 }

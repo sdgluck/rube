@@ -10,12 +10,12 @@
 .bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
   /* Fixed, not `min-height`: see --appbar-h. The bar must measure the same
      whether or not the page put buttons in it. */
   box-sizing: border-box;
   height: var(--appbar-h);
-  padding: var(--appbar-pad-y) 28px;
+  padding: var(--appbar-pad-y) 2.8rem;
   background: var(--page);
   /* A hairline keeps table headers from appearing to belong to the bar. This
      was a `0 1px 0` box-shadow faking a border — it is a real border now, and
@@ -28,7 +28,7 @@
 .trail {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
   min-width: 0;
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
@@ -73,7 +73,7 @@
 .meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   min-width: 0;
 }
 
@@ -84,7 +84,7 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex-shrink: 0;
 }
 
@@ -92,16 +92,16 @@
    so a page reads at the same offset on a phone as on a desktop. */
 @media (max-width: 768px) {
   .bar {
-    padding: var(--appbar-pad-y) 16px;
+    padding: var(--appbar-pad-y) 1.6rem;
   }
 
   .actions {
-    gap: 6px;
+    gap: 0.6rem;
   }
 }
 
 @media (max-width: 480px) {
   .bar {
-    padding: var(--appbar-pad-y) 12px;
+    padding: var(--appbar-pad-y) 1.2rem;
   }
 }

@@ -1,7 +1,7 @@
 .toast {
-  padding: 9px 13px;
+  padding: 0.9rem 1.3rem;
   border-radius: var(--r-sunken);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 .success {
@@ -16,17 +16,17 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 182px 1fr;
-  gap: 24px;
+  grid-template-columns: 18.2rem 1fr;
+  gap: 2.4rem;
   align-items: start;
 }
 
 .rail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
   position: sticky;
-  top: 20px;
+  top: 2rem;
 }
 
 .railSection {
@@ -37,7 +37,7 @@
 
 /* Full-width in the rail so the box lines up with the links it filters. */
 .railSearch {
-  margin-bottom: 4px;
+  margin-bottom: 0.4rem;
 }
 
 .railEmpty {
@@ -51,13 +51,13 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  padding: 0 10px 5px;
+  padding: 0 1rem 0.5rem;
 }
 
 .railLink {
-  padding: 7px 10px;
+  padding: 0.7rem 1rem;
   border-radius: var(--r-md);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 500;
   color: var(--ink-2);
   text-decoration: none;
@@ -105,24 +105,24 @@
 @media (max-width: 768px) {
   .layout {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 1.6rem;
   }
 
   .rail {
     position: static;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 1.2rem;
   }
 
   .railSection {
-    flex: 1 1 140px;
+    flex: 1 1 14rem;
   }
 }
 
 .subTabs {
   composes: pageTabs from "../../styles/shared.module.css";
-  margin-bottom: 16px;
+  margin-bottom: 1.6rem;
 }
 
 .subTab {
@@ -135,27 +135,27 @@
 
 .enabledDot {
   display: inline-block;
-  width: 5px;
-  height: 5px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   background: var(--accent);
-  margin-right: 6px;
+  margin-right: 0.6rem;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .group {
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
-  padding: 18px 20px 20px;
+  padding: 1.8rem 2rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 1.4rem;
 }
 
 .groupTitle {
@@ -170,12 +170,12 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .label {
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink);
 }
 
@@ -186,7 +186,7 @@
 .checkRow {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 0.8rem;
   cursor: pointer;
   max-width: 72ch;
 }
@@ -198,7 +198,7 @@
 /* Hints under a checkbox line up with its label, not with the box. */
 .checkRow .hint {
   display: block;
-  margin-top: 4px;
+  margin-top: 0.4rem;
 }
 
 .input {
@@ -208,16 +208,16 @@
 .buttons {
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 /* Two controls that are one answer — a from/to pair reads as a range only if
    it sits on one line. */
 .inlineFields {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: center;
-  max-width: 320px;
+  max-width: 32rem;
 }
 
 /* A number input with its unit spelled out beside it ("7 most recent
@@ -226,15 +226,15 @@
 .suffixRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .suffixRow .input {
-  width: 90px;
+  width: 9rem;
 }
 
 .suffix {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
 }
 
@@ -262,7 +262,7 @@
 /* A text input with the button that fills it ("Detect") on the same line. */
 .inputAction {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: center;
 }
 
@@ -274,12 +274,12 @@
 /* A read-only value that is edited elsewhere — the link beside it says where. */
 .readout {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
 }
 
 .sample {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
 }
 
@@ -288,8 +288,8 @@
 }
 
 .sample pre {
-  margin: 6px 0 0;
-  padding: 8px 10px;
+  margin: 0.6rem 0 0;
+  padding: 0.8rem 1rem;
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
   font: var(--t-data);
@@ -308,7 +308,7 @@
 }
 
 .hint {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
   margin: 0;
 }
@@ -316,14 +316,14 @@
 .libraryList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .libraryItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
+  gap: 1rem;
+  font-size: 1.3rem;
   cursor: pointer;
 }
 

@@ -14,15 +14,15 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr));
+  gap: 1.6rem;
 }
 
 .packCard {
   display: flex;
   flex-direction: column;
   text-align: left;
-  padding: 20px;
+  padding: 2rem;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   background: var(--surface);
@@ -43,31 +43,31 @@
 }
 
 .tagline {
-  margin-top: 6px;
+  margin-top: 0.6rem;
   color: var(--accent);
-  font-size: 0.86rem;
+  font-size: 1.4rem;
   font-weight: 500;
 }
 
 .body {
-  margin-top: 10px;
+  margin-top: 1rem;
   color: var(--ink-2);
-  font-size: 0.88rem;
+  font-size: 1.4rem;
   flex: 1;
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 16px;
+  gap: 0.6rem;
+  margin-top: 1.6rem;
 }
 
 .count,
 .req,
 .chip {
-  font-size: 0.74rem;
-  padding: 3px 9px;
+  font-size: 1.2rem;
+  padding: 0.3rem 0.9rem;
   border-radius: var(--r-pill);
   border: 1px solid var(--line);
   color: var(--ink-3);
@@ -83,7 +83,7 @@
 
 .type {
   font: var(--t-data);
-  font-size: 0.72rem;
+  font-size: 1.15rem;
   color: var(--ink-3);
 }
 
@@ -91,22 +91,22 @@
 
 .packBody {
   color: var(--ink-2);
-  font-size: 0.92rem;
-  margin-bottom: 20px;
+  font-size: 1.45rem;
+  margin-bottom: 2rem;
 }
 
 .ruleList {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .ruleRow {
   display: flex;
-  gap: 12px;
+  gap: 1.2rem;
   align-items: flex-start;
-  padding: 14px;
+  padding: 1.4rem;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   cursor: pointer;
@@ -119,64 +119,64 @@
 .ruleText {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .ruleName {
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 1.45rem;
 }
 
 .ruleDesc {
   color: var(--ink-2);
-  font-size: 0.86rem;
+  font-size: 1.4rem;
 }
 
 .ruleChips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.6rem;
   align-items: center;
-  margin-top: 4px;
+  margin-top: 0.4rem;
 }
 
 /* ─── Import modal ───────────────────────────────────────────────────── */
 
 .step + .step {
-  margin-top: 28px;
-  padding-top: 24px;
+  margin-top: 2.8rem;
+  padding-top: 2.4rem;
   border-top: 1px solid var(--line);
 }
 
 .step h3 {
-  font-size: 0.95rem;
-  margin: 0 0 6px;
+  font-size: 1.52rem;
+  margin: 0 0 0.6rem;
 }
 
 .stepHint {
   color: var(--ink-2);
-  font-size: 0.85rem;
-  margin-bottom: 14px;
+  font-size: 1.36rem;
+  margin-bottom: 1.4rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .sections {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .sectionChip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 0.8rem;
+  padding: 0.8rem 1.4rem;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   cursor: pointer;
-  font-size: 0.88rem;
+  font-size: 1.4rem;
 }
 
 .sectionChip[data-on="true"] {
@@ -186,16 +186,16 @@
 
 .sectionType {
   font: var(--t-data);
-  font-size: 0.72rem;
+  font-size: 1.15rem;
   color: var(--ink-3);
 }
 
 .notice {
-  padding: 12px 14px;
+  padding: 1.2rem 1.4rem;
   border-radius: var(--r-card);
   border: 1px solid var(--line);
-  font-size: 0.86rem;
-  margin-bottom: 12px;
+  font-size: 1.4rem;
+  margin-bottom: 1.2rem;
   color: var(--ink-2);
 }
 
@@ -215,36 +215,36 @@
 
 .warnList {
   list-style: none;
-  margin: 8px 0;
+  margin: 0.8rem 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .warnList code {
   font: var(--t-data);
-  font-size: 0.78rem;
+  font-size: 1.25rem;
 }
 
 .warn {
   color: var(--ink-2);
-  font-size: 0.86rem;
+  font-size: 1.4rem;
 }
 
 .planList {
   list-style: none;
-  margin-top: 14px;
+  margin-top: 1.4rem;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .planList li {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 1.2rem;
+  padding: 0.8rem 1.2rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
 }
@@ -255,26 +255,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1.6rem;
   width: 100%;
 }
 
 .footerActions {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .footerCount {
   font: var(--t-data);
-  font-size: 0.8rem;
+  font-size: 1.28rem;
   color: var(--ink-3);
 }
 
 .enableRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.88rem;
+  gap: 1rem;
+  font-size: 1.4rem;
   cursor: pointer;
 }
 
@@ -285,20 +285,20 @@
 
 .enableHint {
   color: var(--ink-3);
-  font-size: 0.78rem;
+  font-size: 1.25rem;
 }
 
 /* Import options: a toggle or number, then a label with a hint under it. */
 .optionRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.88rem;
+  gap: 1rem;
+  font-size: 1.4rem;
   cursor: pointer;
 }
 
 .optionRow + .optionRow {
-  margin-top: 12px;
+  margin-top: 1.2rem;
 }
 
 .optionRow > span {
@@ -307,15 +307,15 @@
 }
 
 .numberInput {
-  width: 84px;
+  width: 8.4rem;
   flex: none;
-  padding: 6px 10px;
+  padding: 0.6rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface, transparent);
   color: inherit;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 1.4rem;
 }
 
 @media (max-width: 640px) {

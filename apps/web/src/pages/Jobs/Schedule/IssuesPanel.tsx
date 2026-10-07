@@ -32,8 +32,8 @@ export default function IssuesPanel({
   if (issues.length === 0) {
     return (
       <p className={styles.allClear}>
-        <CheckCircle2 size={16} aria-hidden="true" /> No problems — every job runs after what it depends on, inside the
-        window, without queueing behind another.
+        <CheckCircle2 size="1.6rem" aria-hidden="true" /> No problems — every job runs after what it depends on, inside
+        the window, without queueing behind another.
       </p>
     );
   }
@@ -43,7 +43,7 @@ export default function IssuesPanel({
         const Icon = ICON[issue.severity];
         return (
           <li key={issue.key} className={`${styles.issue} ${TONE[issue.severity]}`}>
-            <Icon size={15} className={styles.issueIcon} aria-label={issue.severity} />
+            <Icon size="1.5rem" className={styles.issueIcon} aria-label={issue.severity} />
             <div className={styles.issueBody}>
               <button
                 type="button"

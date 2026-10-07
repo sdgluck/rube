@@ -259,7 +259,7 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
               title="Edit menu"
               aria-label="Edit menu"
             >
-              <SlidersHorizontal size={14} strokeWidth={2} />
+              <SlidersHorizontal size="1.4rem" strokeWidth={2} />
             </button>
             {sections.map((section) => (
               <div key={section.id} className="nav-section">

@@ -92,7 +92,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
       >
         {Icon && (
           <span className={styles.itemIcon}>
-            <Icon size={14} strokeWidth={2} />
+            <Icon size="1.4rem" strokeWidth={2} />
           </span>
         )}
         {action.label}
@@ -127,7 +127,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
             aria-label={action.title ?? action.label}
             onClick={action.onSelect}
           >
-            {Icon ? <Icon size={15} strokeWidth={2} /> : action.label}
+            {Icon ? <Icon size="1.5rem" strokeWidth={2} /> : action.label}
           </button>
         );
       })}
@@ -144,7 +144,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
             title={label}
             onClick={() => setOpen((v) => !v)}
           >
-            <MoreHorizontal size={16} strokeWidth={2} />
+            <MoreHorizontal size="1.6rem" strokeWidth={2} />
           </button>
           {open &&
             createPortal(

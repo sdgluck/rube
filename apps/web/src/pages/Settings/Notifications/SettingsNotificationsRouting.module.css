@@ -22,7 +22,7 @@
   text-align: left;
   background: var(--surface);
   border-right: 1px solid var(--line);
-  min-width: 200px;
+  min-width: 20rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -50,7 +50,7 @@ thead .eventHead.eventHead {
   width: 100%;
   border: none;
   background: none;
-  padding: 10px 8px;
+  padding: 1rem 0.8rem;
   cursor: pointer;
   color: var(--ink-3);
   display: flex;
@@ -92,7 +92,7 @@ thead .eventHead.eventHead {
 .suppressedNote {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.4rem;
   font: var(--t-caption);
   color: var(--ink-3);
   margin-top: 2px;
@@ -111,8 +111,8 @@ thead .eventHead.eventHead {
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 12px;
+  gap: 1.6rem;
+  margin-top: 1.2rem;
   font: var(--t-caption);
   color: var(--ink-3);
 }
@@ -120,11 +120,11 @@ thead .eventHead.eventHead {
 .legendItem {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 @media (max-width: 768px) {
   .eventHead {
-    min-width: 150px;
+    min-width: 15rem;
   }
 }

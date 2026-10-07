@@ -135,22 +135,22 @@
      tracking is a landing-page idiom — it makes a headline look designed. On a
      console it costs legibility at a glance, which is the only thing these
      headings are for. */
-  --t-display: 600 27px/1.2 var(--font-sans);
+  --t-display: 600 2.7rem/1.2 var(--font-sans);
   --t-display-tracking: -0.015em;
-  --t-page: 600 18px/1.25 var(--font-sans);
+  --t-page: 600 1.8rem/1.25 var(--font-sans);
   --t-page-tracking: -0.012em;
-  --t-card: 600 15px/1.3 var(--font-sans);
+  --t-card: 600 1.5rem/1.3 var(--font-sans);
   --t-card-tracking: -0.008em;
-  --t-panel: 600 14px/1.3 var(--font-sans);
+  --t-panel: 600 1.4rem/1.3 var(--font-sans);
   --t-panel-tracking: -0.006em;
-  --t-body: 400 13px/1.5 var(--font-sans);
-  --t-body-sm: 400 12.5px/1.45 var(--font-sans);
-  --t-meta: 400 12px/1.4 var(--font-sans);
-  --t-caption: 400 11px/1.4 var(--font-sans);
-  --t-label: 600 9.5px/1.2 var(--font-mono);
+  --t-body: 400 1.3rem/1.5 var(--font-sans);
+  --t-body-sm: 400 1.25rem/1.45 var(--font-sans);
+  --t-meta: 400 1.2rem/1.4 var(--font-sans);
+  --t-caption: 400 1.1rem/1.4 var(--font-sans);
+  --t-label: 600 0.95rem/1.2 var(--font-mono);
   --t-label-tracking: 0.12em;
-  --t-data: 400 11.5px/1.4 var(--font-mono);
-  --t-metric: 600 25px/1.1 var(--font-mono);
+  --t-data: 400 1.15rem/1.4 var(--font-mono);
+  --t-metric: 600 2.5rem/1.1 var(--font-mono);
   --t-metric-tracking: -0.015em;
 
   /* ─── Radius ────────────────────────────────────────────────────────── */
@@ -203,7 +203,7 @@
   /* Focus rings are the one place a box-shadow survives. They are an
      accessibility affordance, not decoration, and with hover lifts gone they
      are now the only non-colour feedback a keyboard user gets. */
-  --focus-ring: 3px solid rgba(18, 134, 124, 0.14);
+  --focus-ring: 0.3rem solid rgba(18, 134, 124, 0.14);
 
   /* ─── Extra surface and line roles ──────────────────────────────────────
    * Values in their own right, not second names for the ones above. The
@@ -248,7 +248,7 @@
 
      Anything single-line sets `height: var(--control-h)` and drops its
      vertical padding. `.textarea` is the one exception — it grows. */
-  --control-h: 32px;
+  --control-h: 3.2rem;
 
   /* The app bar is the one heading every page shares, so its height is fixed
      rather than derived from whatever the page portalled into it: a page with
@@ -258,28 +258,28 @@
      shorter (a count, a chip) just centres in the same box. The trailing 1px
      is the bar's own hairline, which `box-sizing: border-box` would otherwise
      take out of the room the button needs. */
-  --appbar-pad-y: 8px;
+  --appbar-pad-y: 0.8rem;
   --appbar-h: calc(var(--control-h) + var(--appbar-pad-y) * 2 + 1px);
 
   /* The sidebar's metric slot — a count, an error pill, a status dot or the
      placeholder that stands in before `nav.metrics` resolves. One height for
      all four, so a nav row never changes size when its value arrives. 16px is
      the tallest: a count's 10.5px/1.3 line box plus its 1px padding. */
-  --nav-metric-h: 16px;
+  --nav-metric-h: 1.6rem;
 
   --btn-radius: var(--r-md);
-  --btn-pad-x: 13px;
-  --btn-pad-x-sm: 10px;
-  --btn-font-size: 12.5px;
-  --btn-font-size-sm: 11.5px;
+  --btn-pad-x: 1.3rem;
+  --btn-pad-x-sm: 1rem;
+  --btn-font-size: 1.25rem;
+  --btn-font-size-sm: 1.15rem;
   --btn-font-weight: 600;
 
   --input-radius: var(--r-md);
-  --input-pad-x: 11px;
+  --input-pad-x: 1.1rem;
   /* Textareas only — every other input takes its height from --control-h. */
-  --input-pad-y: 8px;
-  --input-font-size: 13px;
-  --input-focus-ring: 0 0 0 3px rgba(18, 134, 124, 0.14);
+  --input-pad-y: 0.8rem;
+  --input-font-size: 1.3rem;
+  --input-focus-ring: 0 0 0 0.3rem rgba(18, 134, 124, 0.14);
 
   --danger: #b0332c;
   --danger-hover: #97241e;
@@ -429,7 +429,7 @@
   --danger-hover: #ec8b84;
   --danger-line: #5a2a26;
 
-  --input-focus-ring: 0 0 0 3px rgba(26, 167, 155, 0.2);
+  --input-focus-ring: 0 0 0 0.3rem rgba(26, 167, 155, 0.2);
 
   /* Tinted translucent fills read as "part of the surface" on dark, where
    * the light palette's solid pastels read as pasted-on light chips. */
@@ -490,9 +490,27 @@ html {
   text-size-adjust: 100%;
 }
 
+/* The one size knob. Every length in the app's stylesheets is a rem (only
+   hairlines of 2px or less and media-query breakpoints stay px), so this
+   declaration scales the whole interface — type, spacing, controls, icons —
+   in step.
+
+   62.5% makes 1rem = 10px at the browser's default 16px, so a stylesheet
+   reads in the pixels it was designed in: 1.3rem is 13px. A percentage rather
+   than 10px so a browser's own default-font-size setting still counts.
+
+   --ui-scale is the user's Interface size (Settings → Appearance), written
+   onto <html> by ui-scale.ts and by the boot script in index.html before first
+   paint. It used to be impossible to offer: with ~3,000 px literals there was
+   no single place a size could be changed from, and a laptop at 1440px wide
+   had no way to fit more on screen short of browser zoom. */
+html {
+  font-size: calc(62.5% * var(--ui-scale, 1));
+}
+
 body {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 1.3rem;
   background: var(--page);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -520,10 +538,10 @@ p {
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 
 .sidebar {
-  width: 206px;
+  width: 20.6rem;
   background: var(--sidebar);
   color: #f2f6f5;
-  padding: 20px 12px 14px;
+  padding: 2rem 1.2rem 1.4rem;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -540,15 +558,15 @@ p {
 .sidebar-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   padding: 0 2px;
-  font: 600 14.5px/1.2 var(--font-sans);
+  font: 600 1.45rem/1.2 var(--font-sans);
   letter-spacing: -0.012em;
 }
 
 .sidebar-mark {
-  width: 22px;
-  height: 22px;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: var(--r-sm);
   flex-shrink: 0;
   display: block;
@@ -556,8 +574,8 @@ p {
 
 .version-pill {
   display: inline-block;
-  padding: 2px 5px;
-  font: 600 9px/1.2 var(--font-mono);
+  padding: 2px 0.5rem;
+  font: 600 0.9rem/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   background: rgba(229, 160, 13, 0.16);
@@ -573,16 +591,16 @@ p {
 .sidebar-search {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   width: 100%;
-  padding: 7px 10px;
-  margin: 14px 0 0;
+  padding: 0.7rem 1rem;
+  margin: 1.4rem 0 0;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-md);
   color: rgba(242, 246, 245, 0.5);
   font-family: var(--font-sans);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   cursor: pointer;
   text-align: left;
   transition:
@@ -598,7 +616,7 @@ p {
 }
 
 .sidebar-search-icon {
-  font-size: 12px;
+  font-size: 1.2rem;
   line-height: 1;
 }
 
@@ -607,9 +625,9 @@ p {
 }
 
 .sidebar-search-kbd {
-  font: 400 10px/1.2 var(--font-mono);
+  font: 400 1rem/1.2 var(--font-mono);
   color: rgba(242, 246, 245, 0.4);
-  padding: 2px 5px;
+  padding: 2px 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--r-tag);
 }
@@ -617,15 +635,15 @@ p {
 .sidebar-search-divider {
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
-  margin: 14px 0;
+  margin: 1.4rem 0;
 }
 
 .nav-section + .nav-section {
-  margin-top: 16px;
+  margin-top: 1.6rem;
 }
 
 .nav-section-title {
-  padding: 0 10px 5px;
+  padding: 0 1rem 0.5rem;
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
@@ -633,7 +651,7 @@ p {
 }
 
 .bottom-sheet-section + .bottom-sheet-section {
-  margin-top: 14px;
+  margin-top: 1.4rem;
 }
 
 /* Pinned, not grown from its contents. The metric slot on the right changes
@@ -646,14 +664,14 @@ p {
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 0.9rem;
   box-sizing: border-box;
-  min-height: calc(var(--nav-metric-h) + 14px);
-  padding: 7px 10px;
+  min-height: calc(var(--nav-metric-h) + 1.4rem);
+  padding: 0.7rem 1rem;
   border-radius: var(--r-md);
   color: rgba(242, 246, 245, 0.6);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 1.3rem;
   transition:
     background 0.15s,
     color 0.15s;
@@ -682,7 +700,7 @@ p {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  padding: 1px 6px;
+  padding: 1px 0.6rem;
 }
 
 /* Reserve space even when there's no value, so labels stay aligned — on both
@@ -691,14 +709,14 @@ p {
    min-height now holds the row regardless, and matching here keeps the
    placeholder honest about what it stands in for. */
 .nav-metric-placeholder {
-  width: 6px;
+  width: 0.6rem;
   height: calc(var(--nav-metric-h) - 2px);
-  padding: 1px 6px;
+  padding: 1px 0.6rem;
   box-sizing: content-box;
 }
 
 .nav-metric-count {
-  font: 400 10.5px/1.3 var(--font-mono);
+  font: 400 1.05rem/1.3 var(--font-mono);
   color: rgba(242, 246, 245, 0.3);
   font-variant-numeric: tabular-nums;
 }
@@ -709,65 +727,65 @@ p {
 }
 
 .nav-metric-error {
-  font: 600 10px/1.3 var(--font-mono);
+  font: 600 1rem/1.3 var(--font-mono);
   background: rgba(176, 51, 44, 0.22);
   color: #f0a9a2;
   border-radius: var(--r-pill);
 }
 
 .nav-metric-status {
-  width: 6px;
-  height: 6px;
+  width: 0.6rem;
+  height: 0.6rem;
   border-radius: 50%;
   padding: 0;
-  margin: 0 6px;
+  margin: 0 0.6rem;
 }
 
 .nav-metric-status-ok {
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(18, 134, 124, 0.18);
+  box-shadow: 0 0 0 0.3rem rgba(18, 134, 124, 0.18);
 }
 
 .nav-metric-status-error {
   background: var(--status-warn-dot);
-  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.18);
+  box-shadow: 0 0 0 0.3rem rgba(240, 180, 41, 0.18);
 }
 
 .stream-badge {
   background: var(--accent-fill);
   color: #fff;
-  font: 600 10px/1.3 var(--font-mono);
+  font: 600 1rem/1.3 var(--font-mono);
   border-radius: var(--r-pill);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 6px;
+  padding: 1px 0.6rem;
 }
 
 /* ─── Sidebar footer: aggregate health ───────────────────────────────────── */
 
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 1.2rem;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .health-dot-link {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex: 1;
   min-width: 0;
   text-decoration: none;
-  padding: 4px 6px;
-  margin: -4px -6px;
+  padding: 0.4rem 0.6rem;
+  margin: -0.4rem -0.6rem;
   border-radius: var(--r-sm);
   color: rgba(242, 246, 245, 0.72);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   transition: background 0.15s;
 }
 
@@ -785,8 +803,8 @@ p {
 }
 
 .health-dot {
-  width: 8px;
-  height: 8px;
+  width: 0.8rem;
+  height: 0.8rem;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
@@ -794,21 +812,21 @@ p {
 
 .health-dot-green {
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(18, 134, 124, 0.18);
+  box-shadow: 0 0 0 0.3rem rgba(18, 134, 124, 0.18);
 }
 
 .health-dot-orange {
   background: var(--status-warn-dot);
-  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.18);
+  box-shadow: 0 0 0 0.3rem rgba(240, 180, 41, 0.18);
 }
 
 .health-dot-red {
   background: #b0332c;
-  box-shadow: 0 0 0 3px rgba(176, 51, 44, 0.22);
+  box-shadow: 0 0 0 0.3rem rgba(176, 51, 44, 0.22);
 }
 
 .sidebar-version {
-  font: 400 10.5px/1.3 var(--font-mono);
+  font: 400 1.05rem/1.3 var(--font-mono);
   color: rgba(242, 246, 245, 0.35);
   text-decoration: none;
   flex-shrink: 0;
@@ -824,12 +842,12 @@ p {
   display: none;
   position: absolute;
   left: 0;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 0.8rem);
   background: var(--inverse);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--r-md);
-  padding: 10px 12px;
-  min-width: 182px;
+  padding: 1rem 1.2rem;
+  min-width: 18.2rem;
   box-shadow: var(--e-inverse);
   z-index: var(--z-tooltip);
   pointer-events: none;
@@ -843,19 +861,19 @@ p {
 .health-tooltip-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .health-tooltip-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
+  gap: 0.8rem;
+  font-size: 1.15rem;
 }
 
 .health-tooltip-dot {
-  width: 5px;
-  height: 5px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   flex-shrink: 0;
   box-shadow: none;
@@ -869,7 +887,7 @@ p {
 
 .health-tooltip-latency {
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: rgba(230, 242, 240, 0.45);
 }
 
@@ -899,7 +917,7 @@ p {
 .content > * {
   flex: 1;
   min-height: auto;
-  padding: 20px 28px 40px;
+  padding: 2rem 2.8rem 4rem;
 }
 
 .content > .page-shell,
@@ -912,7 +930,7 @@ p {
    shrinking it below --appbar-h on a page taller than the viewport. */
 .content > .app-bar {
   flex: 0 0 auto;
-  padding: var(--appbar-pad-y) 28px;
+  padding: var(--appbar-pad-y) 2.8rem;
 }
 
 /* Same for a notice bar. Without the `flex` reset it inherits `flex: 1` from
@@ -921,7 +939,7 @@ p {
    page gutter would indent it out of alignment with the bar beneath it. */
 .content > .app-notice {
   flex: 0 0 auto;
-  padding: 7px 28px;
+  padding: 0.7rem 2.8rem;
 }
 
 .content > .page-shell-flush,
@@ -967,13 +985,13 @@ p {
 .count-badge {
   background: var(--fill-quiet);
   color: var(--ink-2);
-  font: 600 10.5px/1.3 var(--font-mono);
+  font: 600 1.05rem/1.3 var(--font-mono);
   border-radius: var(--r-pill);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 7px;
-  margin-left: 8px;
+  padding: 2px 0.7rem;
+  margin-left: 0.8rem;
   vertical-align: middle;
 }
 
@@ -992,7 +1010,7 @@ p {
   }
 
   .content > * {
-    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 76px);
+    padding: 1.6rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1002,7 +1020,7 @@ p {
   }
 
   .content > .app-bar {
-    padding: var(--appbar-pad-y) 16px;
+    padding: var(--appbar-pad-y) 1.6rem;
   }
 
   /* Rows become their own cards on mobile, so the wrapper stops being one. */
@@ -1035,10 +1053,10 @@ p {
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    padding: 0.6rem 0.6rem calc(env(safe-area-inset-bottom, 0px) + 1.4rem);
     background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(1.2rem);
+    -webkit-backdrop-filter: blur(1.2rem);
     z-index: var(--z-bottom-nav);
     align-items: stretch;
     border-top: 1px solid #e4e9e8;
@@ -1050,11 +1068,11 @@ p {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 0.3rem;
     color: var(--ink-4);
     text-decoration: none;
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: 1rem;
     font-weight: 600;
     background: none;
     border: none;
@@ -1065,7 +1083,7 @@ p {
       color 0.15s,
       background 0.15s;
     -webkit-tap-highlight-color: transparent;
-    padding: 6px 0;
+    padding: 0.6rem 0;
   }
 
   .bottom-nav-item.active {
@@ -1078,8 +1096,8 @@ p {
   }
 
   .bottom-nav-icon {
-    width: 21px;
-    height: 21px;
+    width: 2.1rem;
+    height: 2.1rem;
     flex-shrink: 0;
   }
 
@@ -1098,9 +1116,9 @@ p {
   .bottom-nav-item .stream-badge {
     position: absolute;
     top: 2px;
-    left: calc(50% + 5px);
-    font-size: 9px;
-    padding: 0 4px;
+    left: calc(50% + 0.5rem);
+    font-size: 0.9rem;
+    padding: 0 0.4rem;
     border: 2px solid #fff;
   }
 }
@@ -1179,7 +1197,7 @@ button:active:not(:disabled),
 
 @media (max-width: 480px) {
   .content > * {
-    padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 76px);
+    padding: 1.2rem 1.2rem calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
   }
 
   .content > .page-shell,
@@ -1188,7 +1206,7 @@ button:active:not(:disabled),
   }
 
   .content > .app-bar {
-    padding: var(--appbar-pad-y) 12px;
+    padding: var(--appbar-pad-y) 1.2rem;
   }
 }
 
@@ -1207,8 +1225,8 @@ input[type="checkbox"] {
   appearance: none;
   box-sizing: border-box;
   position: relative;
-  width: 15px;
-  height: 15px;
+  width: 1.5rem;
+  height: 1.5rem;
   border: 1.5px solid var(--fill-inert);
   border-radius: var(--r-sm);
   background: var(--surface);
@@ -1285,10 +1303,10 @@ input[type="checkbox"]:disabled {
    because the sidebar is persistent and the route is what changed. */
 .skip-link {
   position: fixed;
-  top: 8px;
-  left: 8px;
+  top: 0.8rem;
+  left: 0.8rem;
   z-index: var(--z-toast);
-  padding: 10px 14px;
+  padding: 1rem 1.4rem;
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--line-strong);
@@ -1297,7 +1315,7 @@ input[type="checkbox"]:disabled {
   text-decoration: none;
   /* Off-screen rather than `display: none`: a hidden element is not focusable,
      which would make this exactly as useful as not having it. */
-  transform: translateY(calc(-100% - 16px));
+  transform: translateY(calc(-100% - 1.6rem));
   transition: transform 0.15s;
 }
 
@@ -1340,13 +1358,13 @@ input[type="checkbox"]:disabled {
 @media (pointer: coarse) {
   .bottom-nav-item,
   .nav-link {
-    min-height: 44px;
+    min-height: 4.4rem;
   }
 
   button,
   [role="button"],
   summary {
-    min-height: 32px;
+    min-height: 3.2rem;
   }
 }
 

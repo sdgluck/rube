@@ -25,21 +25,21 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 1.6rem;
   flex-wrap: wrap;
 }
 
 .statusBlock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
   min-width: 0;
 }
 
@@ -48,16 +48,16 @@
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
+  gap: 0.6rem;
+  padding: 0.3rem 0.9rem;
   border-radius: var(--r-pill);
-  font: 600 10.5px/1.4 var(--font-mono);
+  font: 600 1.05rem/1.4 var(--font-mono);
   white-space: nowrap;
 }
 
 .pillDot {
-  width: 5px;
-  height: 5px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
@@ -82,20 +82,20 @@
    the "live" one, the other is there so the trade is legible before you act. */
 .consequences {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(32rem, 1fr));
+  gap: 1.6rem;
   align-items: start;
 }
 
 .consequence {
   composes: group from "./Settings.module.css";
-  gap: 10px;
+  gap: 1rem;
 }
 
 .consequenceLive {
   box-shadow:
     var(--e-card),
-    inset 3px 0 0 var(--accent);
+    inset 0.3rem 0 0 var(--accent);
 }
 
 .consequenceTitle {
@@ -104,11 +104,11 @@
 
 .steps {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 1.8rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 12.5px;
+  gap: 0.8rem;
+  font-size: 1.25rem;
   line-height: 1.55;
   color: var(--ink-2);
 }
@@ -120,20 +120,20 @@
 
 .consequenceNote {
   margin: 0;
-  padding-top: 10px;
+  padding-top: 1rem;
   border-top: 1px solid var(--line);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   line-height: 1.55;
   color: var(--ink-3);
 }
 
 .caveats {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 1.8rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 12.5px;
+  gap: 0.8rem;
+  font-size: 1.25rem;
   line-height: 1.55;
   color: var(--ink-2);
 }
@@ -144,13 +144,13 @@
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   flex-shrink: 0;
 }
 
 .field {
   composes: field from "./Settings.module.css";
-  max-width: 440px;
+  max-width: 44rem;
 }
 
 .label {
@@ -168,18 +168,18 @@
 
 .muted {
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 .colorRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .colorRow input[type="color"] {
-  width: 44px;
-  height: 32px;
+  width: 4.4rem;
+  height: 3.2rem;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
@@ -190,9 +190,9 @@
 /* Icon picker */
 .iconGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
-  gap: 8px;
-  max-width: 440px;
+  grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr));
+  gap: 0.8rem;
+  max-width: 44rem;
 }
 
 .iconOption {
@@ -224,24 +224,24 @@
 }
 
 .previewStage {
-  min-height: 240px;
+  min-height: 24rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px;
+  padding: 2.8rem;
   background-color: var(--page);
   background-size: cover;
   background-position: center;
 }
 
 .previewCard {
-  width: 300px;
+  width: 30rem;
   max-width: 100%;
   text-align: center;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  padding: 22px;
+  padding: 2.2rem;
   box-shadow: var(--e-float);
 }
 
@@ -249,42 +249,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-size: 18px;
+  gap: 1rem;
+  font-size: 1.8rem;
   font-weight: 700;
 }
 
 .previewLede {
   color: var(--ink-2);
-  font-size: 12.5px;
-  margin: 8px 0 0;
+  font-size: 1.25rem;
+  margin: 0.8rem 0 0;
 }
 
 /* A facsimile of the portal's sign-in button — the portal's design, not the
    app's, which is why it isn't built from .btn. */
 .previewSignIn {
-  margin-top: 14px;
+  margin-top: 1.4rem;
   background: var(--plex);
   color: var(--on-plex);
   border: none;
   border-radius: var(--r-md);
-  padding: 9px 18px;
+  padding: 0.9rem 1.8rem;
   font-weight: 600;
 }
 
 .statusLine {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex-wrap: wrap;
 }
 
 .colorInput {
-  width: 120px;
+  width: 12rem;
 }
 
 .previewHeading {
-  font-size: 14px;
+  font-size: 1.4rem;
   font-weight: 600;
-  margin: 24px 0 8px;
+  margin: 2.4rem 0 0.8rem;
 }

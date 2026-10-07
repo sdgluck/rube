@@ -10,8 +10,8 @@
    * extra bottom padding for the action bar — the workspace's height already
    * reserves space for it via `calc(100vh - 180px)`.
    */
-  margin: -20px -28px -40px;
-  padding: 20px 28px 40px;
+  margin: -2rem -2.8rem -4rem;
+  padding: 2rem 2.8rem 4rem;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M0 0H40' stroke='rgba(19,28,27,0.07)' stroke-width='1' stroke-dasharray='4 4'/><path d='M0 0V40' stroke='rgba(0,0,0,0.12)' stroke-width='1' stroke-dasharray='4 4'/></svg>");
   background-position: 0 0;
 }
@@ -27,8 +27,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 1.6rem;
+  margin-bottom: 2rem;
 }
 
 .headerMain {
@@ -37,21 +37,21 @@
 }
 
 .title {
-  font-size: 18px;
+  font-size: 1.8rem;
   font-weight: 700;
-  margin: 0 0 4px;
+  margin: 0 0 0.4rem;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   flex-wrap: wrap;
 }
 
 .subtitle {
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 1.3rem;
   margin: 0;
   line-height: 1.5;
-  max-width: 720px;
+  max-width: 72rem;
 }
 
 /*
@@ -65,12 +65,12 @@
   /* The catalog column carries two chip columns plus preset names; at 236px
      that left ~97px a chip, so "Video Codec" and "Content Rating" wrapped and
      every tile grew a second line. The canvas keeps the slack. */
-  grid-template-columns: 288px 1fr 292px;
-  gap: 16px;
+  grid-template-columns: 28.8rem 1fr 29.2rem;
+  gap: 1.6rem;
   align-items: stretch;
   /* Reserve: page header (~90px) + action bar (~64px) + breathing room. */
-  height: calc(100vh - 190px);
-  min-height: 480px;
+  height: calc(100vh - 19rem);
+  min-height: 48rem;
 }
 
 @media (max-width: 1100px) {
@@ -87,7 +87,7 @@
   font: var(--t-panel);
   letter-spacing: var(--t-panel-tracking);
   color: var(--ink);
-  margin: 0 0 12px;
+  margin: 0 0 1.2rem;
 }
 
 /* ─── Catalog (left) ───────────────────────────────────────────── */
@@ -97,7 +97,7 @@
   /* Both panels size to their content; if the combined height exceeds the
      column, each panel scrolls internally via .panelBody overflow. */
   grid-template-rows: minmax(0, max-content) minmax(0, max-content);
-  gap: 12px;
+  gap: 1.2rem;
   min-height: 0;
   align-content: start;
 }
@@ -107,7 +107,7 @@
   border: none;
   border-radius: var(--r-panel);
   box-shadow: var(--e-card);
-  padding: 16px 18px;
+  padding: 1.6rem 1.8rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -124,35 +124,35 @@
   overflow-y: auto;
   /* Bleed scroll area into the panel's padding so the scrollbar sits flush
      with the panel edge; content keeps its own horizontal padding. */
-  margin-right: -16px;
-  padding-right: 16px;
+  margin-right: -1.6rem;
+  padding-right: 1.6rem;
 }
 
 .catalogGroup {
-  margin-bottom: 14px;
+  margin-bottom: 1.4rem;
 }
 
 .catalogGroupLabel {
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  margin-bottom: 6px;
+  margin-bottom: 0.6rem;
 }
 
 .chipList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .catalogChip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 0.8rem;
+  padding: 0.8rem 1.2rem;
   background: var(--surface-sunken);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
@@ -174,13 +174,13 @@
 }
 
 .catalogChipLabel {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
 }
 
 .catalogChipSample {
-  font-size: 11px;
+  font-size: 1.1rem;
   pointer-events: none;
 }
 
@@ -198,12 +198,12 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
   background: none;
   border: none;
   padding: 0;
   margin: 0;
-  font-size: 13px;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
@@ -215,16 +215,16 @@
 }
 
 .collapsibleChevron {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
-  width: 12px;
+  width: 1.2rem;
   display: inline-block;
 }
 
 .collapsibleBody {
   /* Only applies when the section is expanded — keeps the heading flush
      against the panel's own padding when collapsed. */
-  padding-top: 12px;
+  padding-top: 1.2rem;
   padding-bottom: 0;
 }
 
@@ -243,12 +243,12 @@
 }
 
 .presetGroupLabel {
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  padding: 6px 4px 2px;
+  padding: 0.6rem 0.4rem 2px;
 }
 
 .presetItem {
@@ -258,7 +258,7 @@
   background: none;
   border: 1px solid transparent;
   text-align: left;
-  padding: 8px 10px;
+  padding: 0.8rem 1rem;
   border-radius: var(--r-sm);
   cursor: pointer;
   flex: 1;
@@ -275,13 +275,13 @@
 }
 
 .presetItemName {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
 }
 
 .presetItemDesc {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
   margin-top: 2px;
 }
@@ -289,12 +289,12 @@
 .presetRow {
   display: flex;
   align-items: stretch;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .presetSaveBtn {
   composes: btn btnSecondary btnSm from "../styles/controls.module.css";
-  margin-top: 8px;
+  margin-top: 0.8rem;
 }
 
 /* ─── Canvas (center) ──────────────────────────────────────────── */
@@ -304,7 +304,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 1.2rem;
   min-height: 0;
   overflow: hidden;
 }
@@ -312,13 +312,13 @@
 .canvasHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   width: 100%;
-  max-width: 392px;
+  max-width: 39.2rem;
 }
 
 .canvasTitle {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
   flex: 1;
@@ -329,7 +329,7 @@
 
 .canvasActions {
   display: flex;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .smallBtn {
@@ -339,13 +339,13 @@
 .posterFrame {
   /* Width caps at 480px / 60vw, but also derives from available height so
      the poster shrinks to fit within the viewport-constrained workspace. */
-  --poster-width: min(392px, 60vw, calc((100vh - 250px) * 2 / 3));
+  --poster-width: min(39.2rem, 60vw, calc((100vh - 25rem) * 2 / 3));
   position: relative;
   width: var(--poster-width);
   aspect-ratio: 2/3;
   border-radius: var(--r-md);
   overflow: hidden;
-  background: repeating-linear-gradient(135deg, var(--checker-a) 0 8px, var(--checker-b) 8px 16px);
+  background: repeating-linear-gradient(135deg, var(--checker-a) 0 0.8rem, var(--checker-b) 0.8rem 1.6rem);
   box-shadow: var(--e-float);
   flex-shrink: 1;
   min-height: 0;
@@ -365,19 +365,19 @@
   align-items: center;
   justify-content: center;
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: 1.3rem;
 }
 
 .renderingBadge {
   position: absolute;
-  top: 8px;
+  top: 0.8rem;
   right: 50%;
   transform: translateX(50%);
   background: color-mix(in srgb, var(--shade) 72%, transparent);
   color: var(--on-accent);
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 0.4rem 1rem;
   border-radius: var(--r-card);
   z-index: 10;
 }
@@ -386,14 +386,14 @@
 
 .dropZone {
   position: absolute;
-  min-width: 60px;
-  min-height: 28px;
+  min-width: 6rem;
+  min-height: 2.8rem;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--r-tag);
   z-index: 2;
-  padding: 4px;
+  padding: 0.4rem;
 }
 
 .dropZoneEmpty {
@@ -424,24 +424,24 @@
 }
 
 .pos_top_left {
-  top: 10px;
-  left: 10px;
+  top: 1rem;
+  left: 1rem;
 }
 
 .pos_top_center {
-  top: 10px;
+  top: 1rem;
   left: 50%;
   transform: translateX(-50%);
 }
 
 .pos_top_right {
-  top: 10px;
-  right: 10px;
+  top: 1rem;
+  right: 1rem;
 }
 
 .pos_middle_left {
   top: 50%;
-  left: 10px;
+  left: 1rem;
   transform: translateY(-50%);
 }
 
@@ -453,28 +453,28 @@
 
 .pos_middle_right {
   top: 50%;
-  right: 10px;
+  right: 1rem;
   transform: translateY(-50%);
 }
 
 .pos_bottom_left {
-  bottom: 10px;
-  left: 10px;
+  bottom: 1rem;
+  left: 1rem;
 }
 
 .pos_bottom_center {
-  bottom: 10px;
+  bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
 }
 
 .pos_bottom_right {
-  bottom: 10px;
-  right: 10px;
+  bottom: 1rem;
+  right: 1rem;
 }
 
 .dropZonePlaceholder {
-  font: 600 8.5px/1.3 var(--font-mono);
+  font: 600 0.85rem/1.3 var(--font-mono);
   color: color-mix(in srgb, var(--on-accent) 75%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -487,7 +487,7 @@
 .badgeStack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
   align-items: flex-start;
 }
 
@@ -552,15 +552,15 @@
 
 .badgeRemove {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -0.6rem;
+  right: -0.6rem;
   background: color-mix(in srgb, var(--shade) 85%, transparent);
   color: var(--on-accent);
   border: none;
-  width: 16px;
-  height: 16px;
+  width: 1.6rem;
+  height: 1.6rem;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
   display: none;
@@ -577,7 +577,7 @@
 .inspectorColumn {
   display: grid;
   grid-template-rows: 1fr auto;
-  gap: 12px;
+  gap: 1.2rem;
   min-height: 0;
 }
 
@@ -586,7 +586,7 @@
   border: none;
   border-radius: var(--r-panel);
   box-shadow: var(--e-card);
-  padding: 16px 18px;
+  padding: 1.6rem 1.8rem;
   min-height: 0;
   overflow-y: auto;
 }
@@ -595,31 +595,31 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  padding: 12px 16px;
+  padding: 1.2rem 1.6rem;
   flex-shrink: 0;
 }
 
 .shortcutsLabel {
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .shortcutsList {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 11.5px;
+  gap: 1.2rem;
+  font-size: 1.15rem;
   color: var(--ink-2);
 }
 
 .shortcutsList span {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 .shortcutsList kbd {
@@ -627,8 +627,8 @@
   border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: var(--r-tag);
-  padding: 1px 5px;
-  font-size: 11px;
+  padding: 1px 0.5rem;
+  font-size: 1.1rem;
   font-family: var(--font-mono);
   color: var(--ink-2);
 }
@@ -639,30 +639,30 @@
 
 .inspectorEmptyText {
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.5;
-  margin: 0 0 16px;
+  margin: 0 0 1.6rem;
 }
 
 .statusCard {
   background: var(--surface-sunken);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  padding: 12px;
-  margin-bottom: 12px;
+  padding: 1.2rem;
+  margin-bottom: 1.2rem;
 }
 
 .statusCardLabel {
-  font-size: 11px;
+  font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 0.4rem;
 }
 
 .statusCardValue {
-  font-size: 13px;
+  font-size: 1.3rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -671,29 +671,29 @@
   background: var(--accent-soft);
   border: 1px solid var(--line-accent);
   border-radius: var(--r-md);
-  padding: 12px;
+  padding: 1.2rem;
 }
 
 .startCardLabel {
-  font-size: 11px;
+  font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--accent);
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .presetQuickList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .presetQuickItem {
   background: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  padding: 8px 10px;
+  padding: 0.8rem 1rem;
   text-align: left;
   cursor: pointer;
   display: flex;
@@ -706,27 +706,27 @@
 }
 
 .presetQuickName {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
 }
 
 .presetQuickDesc {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 .inspectorBody {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .inspectorHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 0.4rem;
 }
 
 .inspectorHeaderActions {
@@ -740,16 +740,16 @@
 }
 
 .section {
-  margin-bottom: 12px;
+  margin-bottom: 1.2rem;
 }
 
 .sectionTitle {
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  margin-bottom: 6px;
+  margin-bottom: 0.6rem;
 }
 
 .fieldInput {
@@ -758,8 +758,8 @@
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  padding: 6px 10px;
-  font-size: 12.5px;
+  padding: 0.6rem 1rem;
+  font-size: 1.25rem;
   box-sizing: border-box;
 }
 
@@ -770,17 +770,17 @@
 }
 
 .fieldHint {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
-  margin: 4px 0 0;
+  margin: 0.4rem 0 0;
 }
 
 .fieldLabel {
   display: block;
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--ink-2);
-  margin: 8px 0 4px;
+  margin: 0.8rem 0 0.4rem;
 }
 
 /* The app's segmented control, stretched to the inspector's width. */
@@ -803,15 +803,15 @@
 .colorGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
 }
 
 .colorSwatch {
   border: 2px solid transparent;
   border-radius: var(--r-sm);
-  padding: 6px 4px;
-  font-size: 10px;
+  padding: 0.6rem 0.4rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.1s;
@@ -852,18 +852,18 @@
   border-color: var(--accent);
   box-shadow:
     0 0 0 2px var(--surface),
-    0 0 0 4px var(--accent);
+    0 0 0 0.4rem var(--accent);
 }
 
 .customColorRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .customColorRow input[type="color"] {
-  width: 32px;
-  height: 32px;
+  width: 3.2rem;
+  height: 3.2rem;
   border: 1px solid var(--line);
   border-radius: var(--r-tag);
   cursor: pointer;
@@ -878,34 +878,34 @@
 .ruleRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 12.5px;
+  gap: 0.8rem;
+  margin-bottom: 0.6rem;
+  font-size: 1.25rem;
 }
 
 .numberInput {
-  width: 70px;
+  width: 7rem;
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--r-tag);
-  padding: 4px 6px;
-  font-size: 12.5px;
+  padding: 0.4rem 0.6rem;
+  font-size: 1.25rem;
 }
 
 .checkRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 0.6rem;
 }
 
 .checkLabel {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 0.4rem;
+  font-size: 1.2rem;
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -921,10 +921,10 @@
 .inspectorFooter {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: center;
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: 1.6rem;
+  padding-top: 1.2rem;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -934,14 +934,14 @@
    above it, not to the window. */
 .actionBar {
   position: fixed;
-  bottom: 16px;
+  bottom: 1.6rem;
   /* The 206px rail keeps the sidebar's "Running" jobs list visible. */
-  left: calc(206px + 28px);
-  right: 28px;
+  left: calc(20.6rem + 2.8rem);
+  right: 2.8rem;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 14px;
+  gap: 0.8rem;
+  padding: 0.9rem 1.4rem;
   background: var(--inverse);
   border: none;
   border-radius: var(--r-card);
@@ -954,9 +954,9 @@
   /* Mobile uses bottom nav instead of the sidebar — action bar can span
      full width but should sit above the bottom nav. */
   .actionBar {
-    left: 12px;
-    right: 12px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+    left: 1.2rem;
+    right: 1.2rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
     /* Status text plus three nowrap buttons don't fit 351px on one line. */
     flex-wrap: wrap;
   }
@@ -970,7 +970,7 @@
 
 .actionBarStatus {
   flex: 1;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--on-accent);
 }
@@ -1013,10 +1013,10 @@
  * The shell itself is <Modal>; these style what goes inside it. */
 
 .modalHint {
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-3);
   text-align: center;
-  margin: 4px 0 0;
+  margin: 0.4rem 0 0;
 }
 
 .modalHintStart {
@@ -1030,7 +1030,7 @@
 
 .importTextarea {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   resize: vertical;
 }
 
@@ -1041,14 +1041,14 @@
 
 .bulkGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.2rem;
 }
 
 .bulkCell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .bulkCell img {
@@ -1059,7 +1059,7 @@
 }
 
 .bulkCell span {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-2);
   text-align: center;
   overflow: hidden;
@@ -1094,15 +1094,15 @@
 
 .overflowMenu {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 0.8rem);
   right: 0;
-  min-width: 240px;
-  max-width: calc(100vw - 32px);
+  min-width: 24rem;
+  max-width: calc(100vw - 3.2rem);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--e-float);
-  padding: 4px;
+  padding: 0.4rem;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1117,10 +1117,10 @@
   background: none;
   border: none;
   text-align: left;
-  padding: 8px 10px;
+  padding: 0.8rem 1rem;
   border-radius: var(--r-sm);
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -1135,7 +1135,7 @@
 }
 
 .overflowItemHint {
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--ink-3);
 }
@@ -1154,41 +1154,41 @@
 .inspectorColumn {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2rem;
   position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
+  top: 1.6rem;
+  max-height: calc(100vh - 3.2rem);
 }
 
 .shortcutsPanel {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  padding: 12px 16px;
+  padding: 1.2rem 1.6rem;
   flex-shrink: 0;
 }
 
 .shortcutsLabel {
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .shortcutsList {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 11.5px;
+  gap: 1.2rem;
+  font-size: 1.15rem;
   color: var(--ink-2);
 }
 
 .shortcutsList span {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 .shortcutsList kbd {
@@ -1196,8 +1196,8 @@
   border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: var(--r-tag);
-  padding: 1px 5px;
-  font-size: 11px;
+  padding: 1px 0.5rem;
+  font-size: 1.1rem;
   font-family: var(--font-mono);
   color: var(--ink-2);
 }
@@ -1205,12 +1205,12 @@
 /* ─── Color brand label ────────────────────────────────────────── */
 
 .colorBrandLabel {
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  margin: 4px 0 4px;
+  margin: 0.4rem 0 0.4rem;
 }
 
 /* ─── Catalog: chip grid ───────────────────────────────────────── */
@@ -1220,19 +1220,19 @@
    panel's width turns out to be. */
 .chipList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(11.2rem, 1fr));
+  gap: 0.8rem;
 }
 
 .catalogChip {
   flex-direction: column;
   align-items: stretch;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: 0.4rem;
+  padding: 0.8rem 1rem;
 }
 
 .catalogChipLabel {
-  font-size: 11.5px;
+  font-size: 1.15rem;
 }
 
 .catalogChipSample {
@@ -1245,12 +1245,12 @@
    which is narrow enough for the base floor again. */
 @media (max-width: 1100px) {
   .chipList {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .chipList {
-    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(11.2rem, 1fr));
   }
 }

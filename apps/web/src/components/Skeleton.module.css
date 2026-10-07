@@ -3,23 +3,23 @@
 
 @keyframes shimmer {
   0% {
-    background-position: -320px 0;
+    background-position: -32rem 0;
   }
   100% {
-    background-position: 320px 0;
+    background-position: 32rem 0;
   }
 }
 
 .skeleton {
   background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-sheen) 50%, var(--skeleton-base) 75%);
-  background-size: 640px 100%;
+  background-size: 64rem 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: var(--r-tag);
 }
 
 .line {
   composes: skeleton;
-  height: 11px;
+  height: 1.1rem;
 }
 
 .block {
@@ -37,13 +37,13 @@
 
 .tableCell {
   composes: skeleton;
-  height: 11px;
+  height: 1.1rem;
 }
 
 /* Shorter than a body cell: a header is 10px uppercase type, not 13px. */
 .headCell {
   composes: skeleton;
-  height: 8px;
+  height: 0.8rem;
 }
 
 /* Stand-ins for the filter bar's controls, at the one control height. These
@@ -53,7 +53,7 @@
    toolbar reads as a row of controls waiting to be filled in. */
 .searchControl {
   composes: skeleton;
-  width: 236px;
+  width: 23.6rem;
   height: var(--control-h);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -71,34 +71,34 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .formRow {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
 }
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(15.8rem, 1fr));
+  gap: 1.2rem;
 }
 
 /* Page-specific compositions */
 
 .detailLayout {
   display: flex;
-  gap: 20px;
-  margin-top: 16px;
+  gap: 2rem;
+  margin-top: 1.6rem;
 }
 
 .detailPoster {
   composes: skeleton;
-  width: 148px;
-  height: 222px;
+  width: 14.8rem;
+  height: 22.2rem;
   border-radius: var(--r-sunken);
   flex-shrink: 0;
 }
@@ -107,7 +107,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 @media (max-width: 768px) {
@@ -116,7 +116,7 @@
   }
 
   .detailPoster {
-    width: 120px;
-    height: 180px;
+    width: 12rem;
+    height: 18rem;
   }
 }

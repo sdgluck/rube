@@ -1,6 +1,6 @@
 .preview {
-  margin-top: 4px;
-  font-size: 11.5px;
+  margin-top: 0.4rem;
+  font-size: 1.15rem;
   line-height: 1.5;
   color: var(--ink-2);
 }

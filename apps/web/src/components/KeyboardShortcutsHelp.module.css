@@ -1,5 +1,5 @@
 .section + .section {
-  margin-top: 18px;
+  margin-top: 1.8rem;
 }
 
 .sectionTitle {
@@ -7,24 +7,24 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 6px 0;
+  gap: 1.6rem;
+  padding: 0.6rem 0;
 }
 
 .label {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink);
 }
 
 .keys {
   display: flex;
-  gap: 4px;
+  gap: 0.4rem;
   flex-shrink: 0;
 }

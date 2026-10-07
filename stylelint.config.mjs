@@ -33,6 +33,7 @@ import unknownCustomProperties from "stylelint-value-no-unknown-custom-propertie
 import noShadowedPrimitive from "./stylelint-plugins/no-shadowed-primitive.mjs";
 import breakpointScale from "./stylelint-plugins/breakpoint-scale.mjs";
 import primitiveGeometry from "./stylelint-plugins/primitive-geometry.mjs";
+import noPx from "./stylelint-plugins/no-px.mjs";
 
 /** Where the vocabulary is defined, for the token-exists rule. */
 const TOKEN_FILES = ["apps/web/src/App.css"];
@@ -48,7 +49,7 @@ const TOKEN_FILES = ["apps/web/src/App.css"];
 const PORTAL_TOKEN_FILES = ["apps/portal/src/tokens.css"];
 
 export default {
-  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale, primitiveGeometry],
+  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale, primitiveGeometry, noPx],
 
   reportDescriptionlessDisables: true,
   reportInvalidScopeDisables: true,
@@ -106,6 +107,10 @@ export default {
 
     /* One responsive scale rather than a breakpoint per panel. */
     "tinkerbell/breakpoint-scale": true,
+
+    /* Lengths are rem so Settings → Appearance can scale the whole app from
+       the root font size. A px length is one that doesn't move with it. */
+    "tinkerbell/no-px": true,
   },
 
   overrides: [
@@ -139,6 +144,7 @@ export default {
         "tinkerbell/no-shadowed-primitive": null,
         "tinkerbell/breakpoint-scale": null,
         "tinkerbell/primitive-geometry": null,
+        "tinkerbell/no-px": null,
       },
     },
     {
@@ -158,6 +164,9 @@ export default {
         "scale-unlimited/declaration-strict-value": null,
         "tinkerbell/no-shadowed-primitive": null,
         "tinkerbell/primitive-geometry": null,
+        /* The portal has no interface-size setting and no rem root of its
+           own; its px are not opting out of anything. */
+        "tinkerbell/no-px": null,
       },
     },
   ],

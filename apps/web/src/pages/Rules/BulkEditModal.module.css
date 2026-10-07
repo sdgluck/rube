@@ -1,6 +1,6 @@
 .summary {
-  margin: 0 0 16px;
-  font-size: 12.5px;
+  margin: 0 0 1.6rem;
+  font-size: 1.25rem;
   line-height: 1.5;
   color: var(--ink-3);
 }
@@ -8,32 +8,32 @@
 .fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .checkboxRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
+  gap: 1rem;
+  font-size: 1.3rem;
   cursor: pointer;
 }
 
 .limitInput {
-  max-width: 140px;
-  margin-left: 26px;
+  max-width: 14rem;
+  margin-left: 2.6rem;
 }
 
 .personalizableSelect {
-  max-width: 260px;
-  margin-left: 26px;
+  max-width: 26rem;
+  margin-left: 2.6rem;
 }
 
 /* Per option, because the two skip different rules: a smart filter has no
    Max collections, and a cleanup rule can't be personalized. */
 .optionNote {
-  margin: -4px 0 0 26px;
-  font-size: 12px;
+  margin: -0.4rem 0 0 2.6rem;
+  font-size: 1.2rem;
   color: var(--ink-3);
 }
 

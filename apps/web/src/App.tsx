@@ -13,6 +13,7 @@ import useDocumentTitle from "#hooks/useDocumentTitle";
 import useKeyboardShortcuts from "#hooks/useKeyboardShortcuts";
 import useMigrationCompletionInvalidator from "#hooks/useMigrationCompletionInvalidator";
 import useThemeConfigSync from "#hooks/useThemeConfigSync";
+import useUiScaleConfigSync from "#hooks/useUiScaleConfigSync";
 import { NavMenuProvider } from "#hooks/useNavMenu";
 import Settings from "#pages/Settings/Settings";
 import Sidebar from "#layout/Sidebar";
@@ -118,6 +119,7 @@ export default function App() {
   useMigrationCompletionInvalidator();
   useOnboardingRedirect();
   useThemeConfigSync();
+  useUiScaleConfigSync();
 
   /**
    * Setup renders outside the app shell — no sidebar, no bottom nav, no app

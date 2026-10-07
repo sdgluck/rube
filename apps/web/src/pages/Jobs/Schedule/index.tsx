@@ -198,7 +198,7 @@ export default function JobSchedule() {
             aria-label="Undo"
             title="Undo (⌘Z)"
           >
-            <Undo2 size={15} />
+            <Undo2 size="1.5rem" />
           </button>
           <button
             type="button"
@@ -208,7 +208,7 @@ export default function JobSchedule() {
             aria-label="Redo"
             title="Redo (⇧⌘Z)"
           >
-            <Redo2 size={15} />
+            <Redo2 size="1.5rem" />
           </button>
           <button
             type="button"

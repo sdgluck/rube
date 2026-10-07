@@ -8,10 +8,10 @@
 .componentRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 1.2rem;
+  padding: 0.8rem 0;
   border-bottom: 1px solid var(--line-soft);
-  font-size: 13px;
+  font-size: 1.3rem;
 }
 
 .componentRow:last-child {

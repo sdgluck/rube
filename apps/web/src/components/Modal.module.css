@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 2.4rem;
   animation: backdropIn 180ms ease-out;
   overflow-y: auto;
 }
@@ -22,7 +22,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 4.8rem);
   background: var(--surface);
   color: var(--ink);
   border: none;
@@ -37,23 +37,23 @@
 }
 
 .sm {
-  max-width: 400px;
+  max-width: 40rem;
 }
 .md {
-  max-width: 560px;
+  max-width: 56rem;
 }
 .lg {
-  max-width: 760px;
+  max-width: 76rem;
 }
 .xl {
-  max-width: 1040px;
+  max-width: 104rem;
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px 14px;
+  gap: 1.2rem;
+  padding: 1.6rem 2rem 1.4rem;
 }
 
 /* Dialogs whose body provides its own heading still need an accessible name. */
@@ -83,13 +83,13 @@
 
 .close {
   composes: btn btnGhost btnIcon from "../styles/controls.module.css";
-  margin: -4px -6px 0 0;
+  margin: -0.4rem -0.6rem 0 0;
   color: var(--ink-3);
 }
 
 .close svg {
-  width: 18px;
-  height: 18px;
+  width: 1.8rem;
+  height: 1.8rem;
 }
 
 .close:hover:not(:disabled) {
@@ -102,9 +102,9 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 22px 22px;
-  font-size: 12.5px;
+  gap: 1.6rem;
+  padding: 0 2.2rem 2.2rem;
+  font-size: 1.25rem;
 }
 
 /* Back sits left and stays disabled on the first step; the commit pair sits
@@ -113,9 +113,9 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.8rem;
   flex-wrap: wrap;
-  padding: 14px 20px;
+  padding: 1.4rem 2rem;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -125,13 +125,13 @@
 
 @media (max-width: 640px) {
   .backdrop {
-    padding: 12px;
+    padding: 1.2rem;
     /* Clear the bottom nav so the panel and its footer stay reachable. */
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7.2rem);
     align-items: flex-end;
   }
 
   .panel {
-    max-height: calc(100dvh - 140px);
+    max-height: calc(100dvh - 14rem);
   }
 }

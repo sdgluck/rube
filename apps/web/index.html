@@ -22,6 +22,12 @@
         } catch (e) {
           document.documentElement.dataset.theme = "light";
         }
+        // Interface size (src/ui-scale.ts). Unvalidated beyond being a sane
+        // number: ui-scale.ts re-applies a checked value once the bundle loads.
+        try {
+          var scale = Number(localStorage.getItem("tb.scale"));
+          if (scale >= 0.5 && scale <= 2) document.documentElement.style.setProperty("--ui-scale", String(scale));
+        } catch (e) {}
       })();
     </script>
     <!-- Archivo for interface text, IBM Plex Mono for anything the machine

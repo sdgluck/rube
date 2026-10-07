@@ -133,7 +133,7 @@ export default function SettingsPosters() {
             <img
               src={preview.data.url}
               alt={`${previewName} — ${personStyle}`}
-              style={{ width: 160, height: 240, objectFit: "cover", borderRadius: "var(--r-sm)" }}
+              style={{ width: "16rem", height: "24rem", objectFit: "cover", borderRadius: "var(--r-sm)" }}
             />
           ) : (
             <span className={styles.hint}>No preview available</span>

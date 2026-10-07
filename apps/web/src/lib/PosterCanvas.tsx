@@ -181,7 +181,15 @@ export function PosterCanvas({ posterUrl, badges, hideBadges, className, alt, on
     <>
       <canvas ref={canvasRef} className={className} aria-label={alt} role="img" />
       {error && (
-        <div style={{ position: "absolute", bottom: 8, left: 8, color: "var(--status-error-fg)", fontSize: "0.7rem" }}>
+        <div
+          style={{
+            position: "absolute",
+            bottom: "0.8rem",
+            left: "0.8rem",
+            color: "var(--status-error-fg)",
+            fontSize: "1.1rem",
+          }}
+        >
           {error}
         </div>
       )}

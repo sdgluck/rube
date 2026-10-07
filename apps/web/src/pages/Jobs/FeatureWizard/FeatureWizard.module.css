@@ -1,10 +1,10 @@
 .steps {
   display: flex;
-  gap: 12px;
-  font-size: 11px;
+  gap: 1.2rem;
+  font-size: 1.1rem;
   color: var(--ink-3);
-  padding-bottom: 14px;
-  margin-bottom: 14px;
+  padding-bottom: 1.4rem;
+  margin-bottom: 1.4rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -26,7 +26,7 @@
 .catalog {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .wizardCard {
@@ -34,11 +34,11 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  padding: 12px 14px;
+  padding: 1.2rem 1.4rem;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
   transition:
     border-color 0.1s,
     background 0.1s;
@@ -58,28 +58,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .cardDesc {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
   line-height: 1.45;
 }
 
 .cardRequires {
   margin: 0;
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 .installedTag {
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 1px 6px;
+  padding: 1px 0.6rem;
   border-radius: var(--r-tag);
   border: 1px solid var(--line);
   color: var(--ink-2);
@@ -88,13 +88,13 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .input {
@@ -102,7 +102,7 @@
 }
 
 .fieldLabel {
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -110,7 +110,7 @@
 }
 
 .fieldHint {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
@@ -120,8 +120,8 @@
 .markRules {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
+  gap: 0.8rem;
+  font-size: 1.3rem;
 }
 
 .markRules > span {
@@ -132,7 +132,7 @@
 
 .muted {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
   line-height: 1.45;
 }
@@ -140,8 +140,8 @@
 .summary {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 4px 12px;
-  font-size: 12.5px;
+  gap: 0.4rem 1.2rem;
+  font-size: 1.25rem;
 }
 
 .summary dt {

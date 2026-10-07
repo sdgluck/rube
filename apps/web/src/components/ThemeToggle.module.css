@@ -15,11 +15,11 @@
    on the button as an aria-label. */
 .icons .item {
   /* stylelint-disable-next-line tinkerbell/primitive-geometry -- icon-only items: the gutter only, the track height is untouched */
-  padding: 0 8px;
+  padding: 0 0.8rem;
 }
 
 .label {
-  margin-left: 6px;
+  margin-left: 0.6rem;
 }
 
 /* Below the app bar's narrowest gutter the toggle is the first thing to give

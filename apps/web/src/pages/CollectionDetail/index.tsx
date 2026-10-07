@@ -214,7 +214,7 @@ export default function CollectionDetailLayout() {
                 onClick={() => setEditOpen(true)}
                 title="Edit name, summary and labels"
               >
-                <Pencil size={13} />
+                <Pencil size="1.3rem" />
                 Edit
               </button>
               <button
@@ -223,7 +223,7 @@ export default function CollectionDetailLayout() {
                 disabled={pinQuery.isLoading || pinMutation.isPending || unpinMutation.isPending}
                 title={rotatedBy ? "Lasts until the rule's next run" : "Pin to the Plex home screen"}
               >
-                {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+                {pinned ? <PinOff size="1.3rem" /> : <Pin size="1.3rem" />}
                 {pinned ? "Unpin" : "Pin"}
               </button>
               {rotatedBy && (

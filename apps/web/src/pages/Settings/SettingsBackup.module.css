@@ -9,8 +9,8 @@
 .fileList li {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 7px 0;
+  gap: 1.2rem;
+  padding: 0.7rem 0;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -31,7 +31,7 @@
 .downloadLink {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
   margin-left: auto;
   font: var(--t-meta);
   color: var(--accent-text);
@@ -45,7 +45,7 @@
 /* The restore instructions live on the page rather than behind a link: the
    moment somebody needs them is the moment they least want to go looking. */
 .restoreNote {
-  padding: 12px 14px;
+  padding: 1.2rem 1.4rem;
   border: 1px solid var(--line);
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
@@ -54,10 +54,10 @@
 }
 
 .restoreNote ol {
-  margin: 8px 0;
-  padding-left: 20px;
+  margin: 0.8rem 0;
+  padding-left: 2rem;
   display: grid;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .restoreNote code {
@@ -66,8 +66,8 @@
 
 .partGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 6px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.6rem 1.6rem;
 }
 
 /* Driven by the button beside it — a native file input can't be styled to
@@ -83,7 +83,7 @@
 
 .preview {
   display: grid;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .counts {
@@ -102,8 +102,8 @@
 
 .kind {
   display: inline-block;
-  padding: 1px 6px;
-  margin-right: 6px;
+  padding: 1px 0.6rem;
+  margin-right: 0.6rem;
   border-radius: var(--r-pill);
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
@@ -119,13 +119,13 @@
 
 .blocked {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 1.8rem;
   font: var(--t-body-sm);
   color: var(--ink-3);
 }
 
 .warn {
-  padding: 9px 12px;
+  padding: 0.9rem 1.2rem;
   border-radius: var(--r-sunken);
   background: var(--status-warn-bg);
   color: var(--status-warn-fg);
@@ -133,7 +133,7 @@
 }
 
 .error {
-  padding: 9px 12px;
+  padding: 0.9rem 1.2rem;
   border-radius: var(--r-sunken);
   background: var(--status-error-bg);
   color: var(--status-error-fg);
@@ -141,7 +141,7 @@
 }
 
 .summary {
-  padding: 9px 12px;
+  padding: 0.9rem 1.2rem;
   border-radius: var(--r-sunken);
   background: var(--status-ok-bg);
   color: var(--status-ok-fg);
@@ -149,6 +149,6 @@
 }
 
 .summary ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
+  margin: 0.6rem 0 0;
+  padding-left: 1.8rem;
 }

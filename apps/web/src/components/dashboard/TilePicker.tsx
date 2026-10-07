@@ -251,7 +251,7 @@ export function TilePicker({
         title="Customize tiles"
         aria-label="Customize tiles"
       >
-        <LayoutGrid size={16} strokeWidth={2} />
+        <LayoutGrid size="1.6rem" strokeWidth={2} />
       </button>
       {open && (
         <div className={styles.tilePickerPopover}>

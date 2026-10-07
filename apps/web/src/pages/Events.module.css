@@ -74,15 +74,15 @@
 .avgDuration {
   font-family: var(--font-mono);
   color: var(--ink-3);
-  font-size: 11px;
-  margin-left: 4px;
+  font-size: 1.1rem;
+  margin-left: 0.4rem;
 }
 
 /* ─── Timestamp ─────────────────────────────────────────────────────────────── */
 
 .timestamp {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
   white-space: nowrap;
 }
@@ -91,6 +91,6 @@
 
 .empty {
   color: var(--ink-3);
-  padding: 40px 0;
+  padding: 4rem 0;
   text-align: center;
 }

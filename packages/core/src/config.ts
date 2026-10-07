@@ -570,6 +570,17 @@ export const configSchema = z.object({
    */
   ui_theme: z.enum(["system", "light", "dark"]),
   /**
+   * The admin UI's interface size, as a multiplier of the designed size — one
+   * of `UI_SCALES` in contracts. Applied as the root font size, which every
+   * length in the stylesheets is a rem of.
+   *
+   * Same storage story as `ui_theme`: server-side so it follows the admin, a
+   * localStorage mirror for the boot script. A bare number here rather than
+   * the list, because this schema also runs on read; `configRouter.save`
+   * refuses anything off the list.
+   */
+  ui_scale: z.number(),
+  /**
    * Overseerr request ids already seen as available, for the
    * `request-fulfilled` rule trigger.
    *
@@ -953,6 +964,7 @@ export const UNLOGGED_CONFIG_KEYS = new Set<ConfigKey>([
   "nav_section_order",
   "nav_bottom_tabs",
   "ui_theme",
+  "ui_scale",
   // Credential artefacts
   "global_plex_owner_token_hash",
   "global_plex_client_id",

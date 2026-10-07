@@ -1,7 +1,7 @@
 .monitorToggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   font: var(--t-meta);
   color: var(--ink-3);
   white-space: nowrap;
@@ -9,9 +9,9 @@
 
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px 20px;
-  margin: 16px 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.4rem 2rem;
+  margin: 1.6rem 0 0;
 }
 
 .fact dt {
@@ -19,7 +19,7 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 3px;
+  margin-bottom: 0.3rem;
 }
 
 .fact dd {
@@ -40,11 +40,11 @@
 }
 
 .episodes {
-  margin-top: 20px;
+  margin-top: 2rem;
 }
 
 .removeMessage {
-  margin: 0 0 12px;
+  margin: 0 0 1.2rem;
   font: var(--t-body);
   color: var(--ink-2);
 }
@@ -52,8 +52,8 @@
 .checkRow {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 0.8rem;
+  padding: 0.6rem 0;
   font: var(--t-body);
   color: var(--ink);
 }
@@ -72,5 +72,5 @@
 .removeFooter {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.8rem;
 }

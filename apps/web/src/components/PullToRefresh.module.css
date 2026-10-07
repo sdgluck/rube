@@ -8,11 +8,11 @@
 
 .indicator {
   position: absolute;
-  top: -40px;
+  top: -4rem;
   left: 50%;
   transform: translateX(-50%);
-  width: 32px;
-  height: 32px;
+  width: 3.2rem;
+  height: 3.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,8 +21,8 @@
 }
 
 .arrow {
-  width: 20px;
-  height: 20px;
+  width: 2rem;
+  height: 2rem;
   color: var(--ink-3);
   transition: transform 0.2s ease;
 }

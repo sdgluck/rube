@@ -114,7 +114,7 @@ export default function Combobox({ id, value, onChange, options, placeholder, no
             inputRef.current?.focus();
           }}
         >
-          <ChevronDown size={15} aria-hidden="true" />
+          <ChevronDown size="1.5rem" aria-hidden="true" />
         </button>
       </div>
 

@@ -2,12 +2,12 @@
   composes: filters from "../../styles/shared.module.css";
   /* Tighter than the shared default: these are one row of pills inside a card,
      not a page toolbar with a search box in it. */
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
 }
 
 .filter {
-  padding: 4px 10px;
+  padding: 0.4rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface);
@@ -29,7 +29,7 @@
 }
 
 .entry {
-  padding: 9px 0;
+  padding: 0.9rem 0;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -37,13 +37,13 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 0.9rem;
   font: var(--t-meta);
   color: var(--ink-3);
 }
 
 .action {
-  padding: 2px 7px;
+  padding: 2px 0.7rem;
   border-radius: var(--r-pill);
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
@@ -82,24 +82,24 @@
 }
 
 .fields {
-  margin: 6px 0 0;
+  margin: 0.6rem 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 3px;
+  gap: 0.3rem;
 }
 
 .fields li {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.8rem;
   font: var(--t-data);
   color: var(--ink-2);
 }
 
 .fieldName {
   color: var(--ink-faint);
-  min-width: 180px;
+  min-width: 18rem;
 }
 
 .fields del {

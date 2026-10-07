@@ -74,7 +74,7 @@ export function ColumnPicker({
         title="Choose columns"
         aria-label="Choose columns"
       >
-        <Columns3 size={15} strokeWidth={2} />
+        <Columns3 size="1.5rem" strokeWidth={2} />
       </button>
       {open && (
         <div className={styles.tilePickerPopover}>

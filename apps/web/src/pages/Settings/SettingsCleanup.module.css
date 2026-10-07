@@ -5,8 +5,8 @@
   align-items: flex-start;
   cursor: pointer;
   display: flex;
-  font-size: 13px;
-  gap: 10px;
+  font-size: 1.3rem;
+  gap: 1rem;
   max-width: 72ch;
 }
 
@@ -18,9 +18,9 @@
 .switchHint {
   color: var(--ink-3);
   display: block;
-  font-size: 12px;
+  font-size: 1.2rem;
   line-height: 1.5;
-  margin-top: 4px;
+  margin-top: 0.4rem;
 }
 
 /* Shown only while cleanup is armed. Not a warning about a mistake — a
@@ -30,15 +30,15 @@
   background: color-mix(in srgb, var(--danger) 10%, transparent);
   border: 1px solid var(--danger);
   border-radius: var(--r-sm);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.5;
   margin: 0;
   max-width: 72ch;
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
 }
 
 .queueLine {
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   margin: 0;
 }

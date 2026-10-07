@@ -4,8 +4,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 28px 20px;
+  gap: 0.6rem;
+  padding: 2.8rem 2rem;
   border: 1.5px dashed var(--line);
   border-radius: var(--r-card);
   background: var(--surface);
@@ -27,50 +27,50 @@
 
 .dropzoneTitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 1.3rem;
   font-weight: 600;
   color: var(--ink);
 }
 
 .dropzoneHint {
   margin: 0;
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-3);
 }
 
 .dropzoneButton {
   composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
-  margin-top: 8px;
+  margin-top: 0.8rem;
 }
 
 .emptyUpload {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .emptyActions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .uploadList {
-  margin: 12px 0 0;
+  margin: 1.2rem 0 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .uploadRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 160px 44px;
+  grid-template-columns: minmax(0, 1fr) 16rem 4.4rem;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 1.2rem;
+  font-size: 1.2rem;
 }
 
 .uploadName {
@@ -93,7 +93,7 @@
 
 .progressBar {
   display: block;
-  height: 4px;
+  height: 0.4rem;
   border-radius: var(--r-pill);
   background: var(--fill-track);
   overflow: hidden;
@@ -111,9 +111,9 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr));
+  gap: 1.6rem;
+  margin-top: 2rem;
 }
 
 .prerollCard {
@@ -176,37 +176,37 @@
 .cardDuration,
 .cardOrder {
   position: absolute;
-  bottom: 6px;
-  padding: 2px 6px;
+  bottom: 0.6rem;
+  padding: 2px 0.6rem;
   border-radius: var(--r-tag);
   background: color-mix(in srgb, var(--shade) 72%, transparent);
   color: var(--on-accent);
-  font: 600 8.5px/1.4 var(--font-mono);
+  font: 600 0.85rem/1.4 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
 .cardDuration {
-  right: 6px;
+  right: 0.6rem;
 }
 
 .cardOrder {
-  left: 6px;
+  left: 0.6rem;
   bottom: auto;
-  top: 6px;
+  top: 0.6rem;
   background: var(--accent-fill);
 }
 
 .cardBody {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px 12px;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem 1.2rem;
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .cardCheckbox {
@@ -221,7 +221,7 @@
   border: 0;
   background: none;
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   text-align: left;
   overflow: hidden;
@@ -236,7 +236,7 @@
 
 .cardStatus {
   margin: 0;
-  font-size: 11.5px;
+  font-size: 1.15rem;
 }
 
 .cardStatus[data-tone="busy"] {
@@ -256,7 +256,7 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -264,11 +264,11 @@
 
 /* Resolution, codec, size and the transcoder's verdict — all machine output. */
 .chip {
-  padding: 2px 7px;
+  padding: 2px 0.7rem;
   border-radius: var(--r-tag);
   background: var(--fill-quiet);
   color: var(--ink-2);
-  font: 400 11px/1.4 var(--font-mono);
+  font: 400 1.1rem/1.4 var(--font-mono);
 }
 
 .chip[data-variant="muted"] {
@@ -286,9 +286,9 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 11px 14px;
+  gap: 1.2rem;
+  margin-bottom: 1.6rem;
+  padding: 1.1rem 1.4rem;
   /* A full border rather than a shadow: this one overlaps the grid scrolling
      under it, so --line-strong instead of the --line used beside content. */
   border: 1px solid var(--line-strong);
@@ -299,8 +299,8 @@
 .syncSummary {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  font-size: 12.5px;
+  gap: 0.5rem;
+  font-size: 1.25rem;
   color: var(--ink-2);
 }
 
@@ -318,9 +318,9 @@
 
 .syncStatus {
   flex: 1;
-  min-width: 200px;
+  min-width: 20rem;
   margin: 0;
-  font-size: 12px;
+  font-size: 1.2rem;
 }
 
 .syncStatus[data-tone="ok"] {
@@ -343,34 +343,34 @@
   border-radius: var(--r-md);
   /* stylelint-disable-next-line color-no-hex -- letterbox behind a video, black in every theme */
   background: #000;
-  margin-bottom: 16px;
+  margin-bottom: 1.6rem;
 }
 
 .detailNotice {
-  margin: 0 0 16px;
-  padding: 10px 12px;
+  margin: 0 0 1.6rem;
+  padding: 1rem 1.2rem;
   border-radius: var(--r-md);
   background: var(--fill-quiet);
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 .field {
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: 1.6rem;
 }
 
 .fieldLabel {
   display: block;
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--ink-2);
 }
 
 .fieldRow {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .fieldRow > :first-child {
@@ -379,13 +379,13 @@
 
 .metaGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px 20px;
-  margin: 0 0 16px;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.2rem 2rem;
+  margin: 0 0 1.6rem;
 }
 
 .metaGrid dt {
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -394,53 +394,53 @@
 
 .metaGrid dd {
   margin: 2px 0 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink);
   word-break: break-word;
 }
 
 .reasons {
-  margin-bottom: 16px;
-  padding: 10px 12px;
+  margin-bottom: 1.6rem;
+  padding: 1rem 1.2rem;
   border-radius: var(--r-md);
   background: var(--fill-quiet);
 }
 
 .reasonsTitle {
-  margin: 0 0 6px;
-  font-size: 11.5px;
+  margin: 0 0 0.6rem;
+  font-size: 1.15rem;
   font-weight: 600;
   color: var(--ink-2);
 }
 
 .reasons ul {
   margin: 0;
-  padding-left: 18px;
-  font-size: 12px;
+  padding-left: 1.8rem;
+  font-size: 1.2rem;
   color: var(--ink-2);
 }
 
 .detailActions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 /* ── Import existing ─────────────────────────────────────────────────────── */
 
 .scanEmpty {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-3);
 }
 
 .scanAll {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
+  gap: 0.8rem;
+  padding-bottom: 0.8rem;
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--ink-2);
   cursor: pointer;
@@ -449,7 +449,7 @@
 .scanList {
   /* A folder restored from a backup can hold hundreds of clips; scroll the
      list rather than let the dialog outgrow the viewport. */
-  max-height: 320px;
+  max-height: 32rem;
   overflow-y: auto;
   margin: 0;
   padding: 0;
@@ -460,9 +460,9 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 7px 2px;
-  font-size: 12.5px;
+  gap: 1rem;
+  padding: 0.7rem 2px;
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -479,13 +479,13 @@
 
 .scanSize {
   color: var(--ink-3);
-  font: 400 11px/1.4 var(--font-mono);
+  font: 400 1.1rem/1.4 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 640px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   }
 
   .syncBar {
@@ -495,6 +495,6 @@
   }
 
   .uploadRow {
-    grid-template-columns: minmax(0, 1fr) 90px 40px;
+    grid-template-columns: minmax(0, 1fr) 9rem 4rem;
   }
 }

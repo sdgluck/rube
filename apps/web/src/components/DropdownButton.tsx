@@ -50,7 +50,7 @@ export default function DropdownButton({ label, options, className, disabled, ar
         aria-expanded={open}
       >
         {label}
-        <ChevronDown className={label ? styles.caret : undefined} size={13} strokeWidth={2.5} aria-hidden="true" />
+        <ChevronDown className={label ? styles.caret : undefined} size="1.3rem" strokeWidth={2.5} aria-hidden="true" />
       </button>
       {visible && (
         <div className={`${styles.menu} ${!open ? styles.menuExiting : ""}`}>

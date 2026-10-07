@@ -7,16 +7,16 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding-top: 16px;
+  padding-top: 1.6rem;
 }
 
 .layoutTabs {
-  padding: 0 28px;
+  padding: 0 2.8rem;
 }
 
 .headerActions {
   display: flex;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .headerBtn {
@@ -27,21 +27,21 @@
 
 .logTabs {
   display: flex;
-  gap: 4px;
+  gap: 0.4rem;
   flex-wrap: wrap;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: 1rem;
 }
 
 .logTab {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-tag);
   background: none;
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--ink-3);
   cursor: pointer;
@@ -97,12 +97,12 @@
 
 .rollupBadge {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
+  margin-left: 0.6rem;
+  padding: 1px 0.6rem;
   border-radius: var(--r-pill);
   background: var(--fill-quiet);
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   vertical-align: middle;
@@ -118,14 +118,14 @@
 }
 
 .cronText {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-2);
 }
 
 .monoCell {
   white-space: nowrap;
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 1.1rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -136,8 +136,8 @@
 .statusRow {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: 0.5rem;
+  font-size: 1.1rem;
   color: var(--ink-2);
   text-transform: capitalize;
 }
@@ -146,8 +146,8 @@
 
 .statusDot {
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 0.7rem;
+  height: 0.7rem;
   border-radius: 50%;
   background: var(--status-neutral-dot);
   flex-shrink: 0;
@@ -172,11 +172,11 @@
 /* ─── Mini progress bar ─────────────────────────────────────────────────── */
 
 .miniProgress {
-  height: 3px;
+  height: 0.3rem;
   background: var(--line-soft);
   border-radius: var(--r-tag);
   overflow: hidden;
-  margin-top: 3px;
+  margin-top: 0.3rem;
 }
 
 .miniProgressFill {
@@ -189,7 +189,7 @@
 /* ─── Muted text ────────────────────────────────────────────────────────── */
 
 .muted {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
@@ -220,7 +220,7 @@
 /* Neutral, beside the status: how the run was started, not how it went. */
 .badgeVariant {
   composes: runBadgeCancelled from "../../styles/shared.module.css";
-  margin-left: 6px;
+  margin-left: 0.6rem;
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
@@ -245,12 +245,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 0.8rem;
+  margin-bottom: 0.6rem;
 }
 
 .cronHint {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
   margin-top: 2px;
 }
@@ -262,7 +262,7 @@
 /* ─── Run history (JobDetail) ────────────────────────────────────────────── */
 
 .runsContainer {
-  padding: 12px 12px 12px 24px;
+  padding: 1.2rem 1.2rem 1.2rem 2.4rem;
   background: var(--surface-sunken);
 }
 
@@ -270,14 +270,14 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .runItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12.5px;
+  gap: 1rem;
+  font-size: 1.25rem;
 }
 
 .runLink {
@@ -292,14 +292,14 @@
 
 .runMeta {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 1.2rem;
 }
 
 /* ─── Progress bar (JobDetail) ───────────────────────────────────────────── */
 
 .progressBar {
   composes: progressBar from "../../styles/shared.module.css";
-  margin: 8px 0;
+  margin: 0.8rem 0;
 }
 
 .progressFill {
@@ -311,18 +311,18 @@
 .runDetail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .runHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   flex-wrap: wrap;
 }
 
 .runTitle {
-  font-size: 18px;
+  font-size: 1.8rem;
   font-weight: 600;
 }
 
@@ -336,7 +336,7 @@
 
 .noRuns {
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-style: italic;
 }
 
@@ -345,47 +345,47 @@
 .configEditor {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
+  gap: 1.2rem;
+  padding-bottom: 1.6rem;
+  margin-bottom: 1.6rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
 .configField {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .configLabel {
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .configSections {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .configSectionItem {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 0.6rem;
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
 .configNumberInput {
-  width: 60px;
-  padding: 4px 8px;
+  width: 6rem;
+  padding: 0.4rem 0.8rem;
   border: 1px solid var(--line);
   border-radius: var(--r-tag);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 .configNumberInput:focus {
@@ -395,18 +395,18 @@
 }
 
 .configHint {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 .runsSection {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .runsTitle {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink-2);
   margin: 0;
@@ -423,20 +423,20 @@
 .jobDetail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .jobDetailHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   flex-wrap: wrap;
 }
 
 .jobDetailHeading {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   flex-wrap: wrap;
   flex: 1 1 auto;
   min-width: 0;
@@ -445,7 +445,7 @@
 .jobDetailActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -478,9 +478,9 @@
 .alwaysOnPill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 9px;
+  padding: 0.3rem 0.9rem;
   border-radius: var(--r-pill);
-  font: 600 10.5px/1.4 var(--font-mono);
+  font: 600 1.05rem/1.4 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   border: none;
@@ -499,7 +499,7 @@
 .jobDetailColumns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 1.6rem;
   align-items: stretch;
 }
 
@@ -508,18 +508,18 @@
 }
 
 .jobDescription {
-  margin: -12px 0 0;
+  margin: -1.2rem 0 0;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 1.3rem;
   line-height: 1.45;
   max-width: 70ch;
 }
 
 .requiredPill {
   display: inline-block;
-  padding: 1px 8px;
+  padding: 1px 0.8rem;
   border-radius: var(--r-tag);
-  font-size: 10px;
+  font-size: 1rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -558,13 +558,13 @@
 
 .detailSectionFooter {
   flex-shrink: 0;
-  padding-top: 12px;
+  padding-top: 1.2rem;
   border-top: 1px solid var(--line-soft);
 }
 
 .detailSectionTitle {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 1.3rem;
   color: var(--ink-2);
   /* No global heading reset, so clear the UA h3 margin and let the card's
      flex `gap` do the spacing. The 6px inline padding that used to be here
@@ -585,10 +585,10 @@
 
 /* stylelint-disable tinkerbell/primitive-geometry -- a form laid out in a table, not a list: rows are as tall as their controls */
 .configTable td {
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
   border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 /* stylelint-enable tinkerbell/primitive-geometry */
 
@@ -600,51 +600,51 @@
 .fieldLabel {
   font-weight: 600;
   color: var(--ink-2);
-  padding-top: 14px !important;
+  padding-top: 1.4rem !important;
 }
 
 .fieldHelp {
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 0.4rem;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 .fieldHelpError {
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 0.4rem;
+  font-size: 1.1rem;
   color: var(--status-error-fg);
 }
 
 .configSummary {
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 .bywGroups {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .bywGroup {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  padding: 8px 12px;
+  padding: 0.8rem 1.2rem;
 }
 
 .bywGroupHeader {
   cursor: pointer;
   font-weight: 600;
-  font-size: 13px;
-  padding: 4px 0;
+  font-size: 1.3rem;
+  padding: 0.4rem 0;
   user-select: none;
 }
 
 .bywGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.2rem;
+  margin-top: 1.2rem;
 }
 
 .bywCard {
@@ -675,19 +675,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 .bywCardBody {
-  padding: 8px;
+  padding: 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .bywCardTitle {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -695,7 +695,7 @@
 }
 
 .bywCardMeta {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
@@ -716,7 +716,7 @@
 
   .scheduleHintInline {
     display: block;
-    font-size: 11px;
+    font-size: 1.1rem;
     color: var(--ink-3);
     margin-top: 1px;
   }
@@ -738,7 +738,7 @@
 }
 
 .configUnit {
-  margin-left: 6px;
+  margin-left: 0.6rem;
   color: var(--ink-3);
 }
 
@@ -771,7 +771,7 @@
 /* ─── Readiness ("What this needs") ──────────────────────────────────────── */
 
 .readinessCard {
-  margin-bottom: 16px;
+  margin-bottom: 1.6rem;
 }
 
 .readinessList {
@@ -780,14 +780,14 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 12.5px;
+  gap: 0.8rem;
+  font-size: 1.25rem;
 }
 
 .readinessItem {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .readinessDetail {
@@ -796,8 +796,8 @@
 
 .readinessDot {
   flex-shrink: 0;
-  width: 7px;
-  height: 7px;
+  width: 0.7rem;
+  height: 0.7rem;
   border-radius: 50%;
   background: var(--status-error-fg);
 }
@@ -813,9 +813,9 @@
 .readinessAllSet {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 12.5px;
+  gap: 0.8rem;
+  margin: 0 0 1.2rem;
+  font-size: 1.25rem;
   color: var(--ink-3);
 }
 
@@ -839,7 +839,7 @@
 .groupToggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   width: 100%;
   padding: 0;
   border: none;
@@ -863,7 +863,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0 6px;
+  gap: 0 0.6rem;
   margin-left: auto;
   font: var(--t-data);
   color: var(--ink-3);
@@ -871,13 +871,13 @@
 
 .groupSummary > * + *::before {
   content: "·";
-  margin-right: 6px;
+  margin-right: 0.6rem;
 }
 
 .groupFailed {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
   color: var(--status-error-fg);
 }
 

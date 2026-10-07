@@ -69,6 +69,12 @@ test("a clickable thing at a literal control height is reported", async () => {
   assert.deepEqual(await lint(`.chipRemove { height: 16px; cursor: pointer; }`), []);
 });
 
+test("the control-height band is read in rem too", async () => {
+  const warnings = await lint(`.close { width: 2.8rem; height: 2.8rem; cursor: pointer; }`);
+  assert.match(warnings[0]!, /control height of its own/);
+  assert.deepEqual(await lint(`.chipRemove { height: 1.6rem; cursor: pointer; }`), []);
+});
+
 test("a textarea may be taller; a field may inset for an adornment", async () => {
   assert.deepEqual(
     await lint(`

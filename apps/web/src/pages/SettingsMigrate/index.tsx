@@ -47,7 +47,7 @@ export default function SettingsMigrate() {
   }
 
   return (
-    <div className={styles.form} style={{ maxWidth: 880 }}>
+    <div className={styles.form} style={{ maxWidth: "88rem" }}>
       <SettingsPageHeader title="Migrate" />
       {providers.length > 1 && (
         <nav className={styles.subTabs} aria-label="Migration providers">

@@ -82,7 +82,7 @@ export default function SettingsNotificationsRouting() {
                   </span>
                   {row.suppressed && (
                     <span className={styles.suppressedNote}>
-                      <Moon size={11} aria-hidden /> held by {row.suppressed}
+                      <Moon size="1.1rem" aria-hidden /> held by {row.suppressed}
                     </span>
                   )}
                 </th>
@@ -106,7 +106,7 @@ export default function SettingsNotificationsRouting() {
                         title={`${serviceTitle(cell.service)} · ${row.label}. ${CELL_TITLE[cell.state]}.${detail}`}
                         aria-label={`${row.label} to ${serviceTitle(cell.service)}: ${CELL_TITLE[cell.state]}.${detail}`}
                       >
-                        <Icon size={15} aria-hidden />
+                        <Icon size="1.5rem" aria-hidden />
                       </button>
                     </td>
                   );
@@ -119,22 +119,22 @@ export default function SettingsNotificationsRouting() {
 
       <div className={styles.legend}>
         <span className={styles.legendItem}>
-          <Check size={14} className={styles.on} aria-hidden /> subscribed
+          <Check size="1.4rem" className={styles.on} aria-hidden /> subscribed
         </span>
         <span className={styles.legendItem}>
-          <Filter size={14} className={styles.filtered} aria-hidden /> narrowed by an allow-list
+          <Filter size="1.4rem" className={styles.filtered} aria-hidden /> narrowed by an allow-list
         </span>
         <span className={styles.legendItem}>
-          <AlertTriangle size={14} className={styles.unconfigured} aria-hidden /> not configured
+          <AlertTriangle size="1.4rem" className={styles.unconfigured} aria-hidden /> not configured
         </span>
         <span className={styles.legendItem}>
-          <Minus size={14} className={styles.off} aria-hidden /> not subscribed
+          <Minus size="1.4rem" className={styles.off} aria-hidden /> not subscribed
         </span>
         <span
           className={styles.legendItem}
           title="Delivery only — the event is still recorded in Activity, with a Not Notified entry beside it"
         >
-          <Moon size={14} aria-hidden /> held by quiet hours
+          <Moon size="1.4rem" aria-hidden /> held by quiet hours
         </span>
       </div>
     </div>

@@ -103,7 +103,7 @@ export default function RuleHistoryRow({ ruleId }: RuleHistoryRowProps) {
                     disabled={restoreMutation.isPending}
                     onClick={() => setPendingRestore({ id: entry.id, at: entry.timestamp })}
                   >
-                    <RotateCcw size={13} aria-hidden />
+                    <RotateCcw size="1.3rem" aria-hidden />
                     Restore this version
                   </button>
                 )}

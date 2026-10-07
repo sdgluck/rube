@@ -9,8 +9,8 @@
 .container {
   margin: auto;
   width: 100%;
-  max-width: 560px;
-  padding: 28px;
+  max-width: 56rem;
+  padding: 2.8rem;
   border: none;
   border-radius: var(--r-panel);
   background: var(--surface);
@@ -21,25 +21,25 @@
 .title {
   font: var(--t-card);
   letter-spacing: var(--t-card-tracking);
-  margin: 0 0 10px;
+  margin: 0 0 1rem;
 }
 
 .message {
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.55;
-  margin: 0 0 16px;
+  margin: 0 0 1.6rem;
 }
 
 .detail {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 1.1rem;
   text-align: left;
   color: var(--status-error-fg);
   background: var(--status-error-bg);
   border-radius: var(--r-sunken);
-  padding: 10px 12px;
-  margin: 0 0 20px;
+  padding: 1rem 1.2rem;
+  margin: 0 0 2rem;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -47,7 +47,7 @@
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   justify-content: center;
   flex-wrap: wrap;
 }

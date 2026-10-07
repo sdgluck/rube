@@ -81,7 +81,7 @@ export default function MultiSelect({ allLabel, options, selected, onChange, ari
       >
         <span>{label}</span>
         {activeCount > 1 && <span className={styles.count}>{activeCount}</span>}
-        <ChevronDown className={styles.caret} size={13} strokeWidth={2.5} aria-hidden="true" />
+        <ChevronDown className={styles.caret} size="1.3rem" strokeWidth={2.5} aria-hidden="true" />
       </button>
       {open && (
         <div className={styles.menu} id={menuId} role="group" aria-label={ariaLabel ?? allLabel}>

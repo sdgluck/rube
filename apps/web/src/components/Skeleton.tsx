@@ -1,8 +1,14 @@
 import sharedStyles from "#/styles/shared.module.css";
 import styles from "./Skeleton.module.css";
 
+/** A bare number is design pixels and becomes rem, so a skeleton scales with
+    the interface size like the content it stands in for. */
+function len(v: string | number): string {
+  return typeof v === "number" ? `${v / 10}rem` : v;
+}
+
 export function SkeletonLine({ width = "100%" }: { width?: string | number }) {
-  return <div className={styles.line} style={{ width }} />;
+  return <div className={styles.line} style={{ width: len(width) }} />;
 }
 
 /* The `borderRadius` prop is gone. Callers used to pass 6, 8 or 10 to match
@@ -10,7 +16,7 @@ export function SkeletonLine({ width = "100%" }: { width?: string | number }) {
    the same 2px, so the radius belongs in Skeleton.module.css where it can
    follow the token instead of being restated at ten call sites. */
 export function SkeletonBlock({ width, height }: { width: string | number; height: string | number }) {
-  return <div className={styles.block} style={{ width, height }} />;
+  return <div className={styles.block} style={{ width: len(width), height: len(height) }} />;
 }
 
 /**
@@ -24,7 +30,7 @@ export function SkeletonToolbar({ controls = 2 }: { controls?: number }) {
     <div className={sharedStyles.filters} aria-hidden="true">
       <div className={styles.searchControl} />
       {Array.from({ length: controls }, (_, i) => (
-        <div key={i} className={styles.control} style={{ width: 92 + (i % 3) * 26 }} />
+        <div key={i} className={styles.control} style={{ width: len(92 + (i % 3) * 26) }} />
       ))}
     </div>
   );
@@ -110,14 +116,14 @@ export function RulesSkeleton() {
 export function PrerollsSkeleton() {
   return (
     <div className={styles.wrapper}>
-      <SkeletonLine width="150px" />
+      <SkeletonLine width="15rem" />
       <SkeletonBlock width="100%" height={120} />
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-          gap: 16,
-          marginTop: 20,
+          gridTemplateColumns: "repeat(auto-fill, minmax(24rem, 1fr))",
+          gap: "1.6rem",
+          marginTop: "2rem",
         }}
       >
         {Array.from({ length: 6 }).map((_, i) => (
@@ -131,16 +137,16 @@ export function PrerollsSkeleton() {
 export function FormSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className={styles.wrapper}>
-      <SkeletonLine width="180px" />
-      <div style={{ height: 8 }} />
+      <SkeletonLine width="18rem" />
+      <div style={{ height: "0.8rem" }} />
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className={styles.formRow}>
-          <SkeletonLine width="120px" />
+          <SkeletonLine width="12rem" />
           <SkeletonBlock width="100%" height={36} />
         </div>
       ))}
-      <div style={{ height: 8 }} />
-      <SkeletonBlock width="120px" height={36} />
+      <div style={{ height: "0.8rem" }} />
+      <SkeletonBlock width="12rem" height={36} />
     </div>
   );
 }
@@ -148,9 +154,9 @@ export function FormSkeleton({ rows = 5 }: { rows?: number }) {
 export function PageSkeleton() {
   return (
     <div className={styles.wrapper}>
-      <SkeletonLine width="200px" />
+      <SkeletonLine width="20rem" />
       <SkeletonLine width="60%" />
-      <div style={{ height: 8 }} />
+      <div style={{ height: "0.8rem" }} />
       <SkeletonBlock width="100%" height={120} />
       <SkeletonBlock width="100%" height={240} />
     </div>
@@ -160,7 +166,7 @@ export function PageSkeleton() {
 export function StatsSkeleton() {
   return (
     <div className={styles.wrapper}>
-      <SkeletonLine width="160px" />
+      <SkeletonLine width="16rem" />
       <div className={styles.statsGrid}>
         {Array.from({ length: 8 }, (_, i) => (
           <SkeletonBlock key={i} width="100%" height={92} />
@@ -185,7 +191,7 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
 export function DetailSkeleton() {
   return (
     <div className={styles.wrapper}>
-      <SkeletonLine width="80px" />
+      <SkeletonLine width="8rem" />
       <div className={styles.detailLayout}>
         <div className={styles.detailPoster} />
         <div className={styles.detailBody}>

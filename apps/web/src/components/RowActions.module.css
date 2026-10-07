@@ -13,10 +13,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  width: 26px;
+  gap: 0.5rem;
+  width: 2.6rem;
   /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the one row-action size app-wide, inside a 38px row; a 32px target would crowd it */
-  height: 26px;
+  height: 2.6rem;
   padding: 0;
   border: none;
   border-radius: var(--r-sm);
@@ -56,8 +56,8 @@
 .menu {
   position: fixed;
   z-index: var(--z-dropdown);
-  min-width: 168px;
-  padding: 4px;
+  min-width: 16.8rem;
+  padding: 0.4rem;
   background: var(--surface);
   border-radius: var(--r-panel);
   box-shadow: var(--e-float);
@@ -69,15 +69,15 @@
 .item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   width: 100%;
-  padding: 6px 8px;
+  padding: 0.6rem 0.8rem;
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 1.2rem;
   text-align: left;
   cursor: pointer;
 }
@@ -109,6 +109,6 @@
    to make on the item above. */
 .separator {
   height: 1px;
-  margin: 4px 2px;
+  margin: 0.4rem 2px;
   background: var(--line-soft);
 }

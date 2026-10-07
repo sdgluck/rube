@@ -14,7 +14,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 0.6rem;
   box-sizing: border-box;
   height: var(--control-h);
   padding: 0 var(--btn-pad-x);
@@ -122,7 +122,7 @@
 .btnIcon {
   width: var(--control-h);
   padding: 0;
-  font-size: 15px;
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 
@@ -165,8 +165,8 @@
  * cancellable, so this is never a dead end. */
 
 .btnSpinner {
-  width: 11px;
-  height: 11px;
+  width: 1.1rem;
+  height: 1.1rem;
   border: 2px solid color-mix(in srgb, var(--on-accent) 35%, transparent);
   border-top-color: var(--on-accent);
   border-radius: 50%;
@@ -245,13 +245,13 @@
 
 .textarea {
   resize: vertical;
-  min-height: 72px;
+  min-height: 7.2rem;
 }
 
 /* Anything the machine produced — URLs, cron, keys, IDs, numbers. */
 .inputMono {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 /* An input that failed validation states it, and stays stated until fixed. */
@@ -259,23 +259,23 @@
 .inputError:hover:not(:disabled):not(:focus) {
   border-color: var(--danger-line);
   background: color-mix(in srgb, var(--danger) 4%, var(--surface));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 10%, transparent);
+  box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 /* Select chevron */
 
 .select {
   appearance: none;
-  padding-right: 26px;
+  padding-right: 2.6rem;
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
   background-position:
-    calc(100% - 14px) 50%,
-    calc(100% - 9px) 50%;
+    calc(100% - 1.4rem) 50%,
+    calc(100% - 0.9rem) 50%;
   background-size:
-    5px 5px,
-    5px 5px;
+    0.5rem 0.5rem,
+    0.5rem 0.5rem;
   background-repeat: no-repeat;
   cursor: pointer;
 }
@@ -284,16 +284,16 @@
 
 .inputSm,
 .selectSm {
-  padding: 0 10px;
+  padding: 0 1rem;
   font-size: var(--btn-font-size-sm);
   border-radius: var(--r-sm);
 }
 
 .selectSm {
-  padding-right: 26px;
+  padding-right: 2.6rem;
   background-position:
-    calc(100% - 12px) 50%,
-    calc(100% - 7px) 50%;
+    calc(100% - 1.2rem) 50%,
+    calc(100% - 0.7rem) 50%;
 }
 
 /* Search field — the glyph is drawn, not a font character, so it can't drift
@@ -302,11 +302,11 @@
 /* Compound selector so the inset survives whichever size modifier is composed
    alongside it — those set `padding` wholesale. */
 .inputSearch.inputSearch {
-  padding-left: 30px;
+  padding-left: 3rem;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235f6d6b' stroke-width='1.6'%3E%3Ccircle cx='7' cy='7' r='4.4'/%3E%3Cpath d='M10.4 10.4 14 14' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: 10px 50%;
-  background-size: 11px 11px;
+  background-position: 1rem 50%;
+  background-size: 1.1rem 1.1rem;
 }
 
 /* ─── Segmented control ───────────────────────────────────────────────── */
@@ -342,9 +342,9 @@
   background: transparent;
   color: var(--ink-2);
   font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   font-weight: 600;
-  padding: 0 11px;
+  padding: 0 1.1rem;
   border-radius: var(--r-sm);
   cursor: pointer;
   white-space: nowrap;
@@ -390,8 +390,8 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 14px;
-  height: 14px;
+  width: 1.4rem;
+  height: 1.4rem;
   border-radius: var(--r-tag);
   background: var(--on-accent);
   transition: transform 0.15s;
@@ -402,7 +402,7 @@
 }
 
 .toggle:checked::after {
-  transform: translateX(14px);
+  transform: translateX(1.4rem);
 }
 
 .toggle:disabled {
@@ -411,19 +411,19 @@
 }
 
 .toggleSm::after {
-  width: 12px;
-  height: 12px;
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .toggleSm:checked::after {
-  transform: translateX(12px);
+  transform: translateX(1.2rem);
 }
 
 /* ─── Checkbox / radio ────────────────────────────────────────────────── */
 
 .checkbox {
-  width: 15px;
-  height: 15px;
+  width: 1.5rem;
+  height: 1.5rem;
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
@@ -432,8 +432,8 @@
 .radio {
   appearance: none;
   box-sizing: border-box;
-  width: 17px;
-  height: 17px;
+  width: 1.7rem;
+  height: 1.7rem;
   border-radius: 50%;
   border: 1.5px solid var(--fill-inert);
   background: var(--on-accent);
@@ -443,5 +443,5 @@
 }
 
 .radio:checked {
-  border: 5px solid var(--accent);
+  border: 0.5rem solid var(--accent);
 }

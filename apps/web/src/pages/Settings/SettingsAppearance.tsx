@@ -12,6 +12,7 @@ import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import ColorField from "#components/ColorField";
 import controls from "#/styles/controls.module.css";
 import ThemeToggle from "#components/ThemeToggle";
+import UiScalePicker from "#components/UiScalePicker";
 import SettingsPageHeader from "./SettingsPageHeader";
 import styles from "./Settings.module.css";
 import CardSection from "#components/CardSection";
@@ -127,6 +128,12 @@ export default function SettingsAppearance() {
           </div>
         </label>
         <p className={styles.hint}>Seeds new browsers; one already set keeps its own.</p>
+
+        <div className={styles.field}>
+          <span className={styles.label}>Interface size</span>
+          <UiScalePicker />
+        </div>
+        <p className={styles.hint}>Scales text, spacing and controls together. Smaller fits more on a laptop screen.</p>
       </CardSection>
 
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Collection artwork">

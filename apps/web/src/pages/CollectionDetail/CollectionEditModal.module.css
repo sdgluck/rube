@@ -8,15 +8,15 @@
 /* ─── Step rail ───────────────────────────────────────────────────────────── */
 
 .stepsWrap {
-  padding: 0 20px 16px;
-  margin-bottom: 16px;
+  padding: 0 2rem 1.6rem;
+  margin-bottom: 1.6rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
 .steps {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 /* Each step takes an equal share so the rail reads as a fixed-length journey
@@ -28,12 +28,12 @@
 .step {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex: 1;
   min-width: 0;
   background: none;
   border: none;
-  padding: 4px 0;
+  padding: 0.4rem 0;
   font: inherit;
   color: var(--ink-4);
   cursor: pointer;
@@ -44,8 +44,8 @@
 }
 
 .stepDot {
-  width: 20px;
-  height: 20px;
+  width: 2rem;
+  height: 2rem;
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--fill-quiet);
@@ -53,7 +53,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 600 10px/1 var(--font-mono);
+  font: 600 1rem/1 var(--font-mono);
   transition:
     background 0.15s,
     color 0.15s;
@@ -71,7 +71,7 @@
 }
 
 .stepLabel {
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-4);
   white-space: nowrap;
   overflow: hidden;
@@ -87,18 +87,18 @@
   flex: 1;
   height: 1px;
   background: var(--line-soft);
-  min-width: 8px;
+  min-width: 0.8rem;
 }
 
 /* ─── Body ────────────────────────────────────────────────────────────────── */
 
 .body {
-  padding: 0 4px 4px;
+  padding: 0 0.4rem 0.4rem;
   animation: stepIn 180ms ease-out;
 }
 
 .stepHeading {
-  margin: 0 0 4px;
+  margin: 0 0 0.4rem;
   font: var(--t-card);
   letter-spacing: var(--t-card-tracking);
 }
@@ -106,23 +106,23 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
+  gap: 0.6rem;
+  margin-bottom: 1.6rem;
 }
 
 .field label {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
 .hint {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
   margin: 0;
 }
 
 .errorText {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--status-error-fg);
 }
 
@@ -135,7 +135,7 @@
 
 .addRow {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: center;
 }
 
@@ -147,8 +147,8 @@
 .chipList {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 0.6rem;
+  padding: 1.2rem 1.4rem;
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
   box-shadow: var(--e-flat);
@@ -164,21 +164,21 @@
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
   box-shadow: var(--e-flat);
-  padding: 12px 14px;
+  padding: 1.2rem 1.4rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .summaryRow {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  font-size: 12.5px;
+  gap: 1.2rem;
+  font-size: 1.25rem;
 }
 
 .summaryLabel {
-  flex: 0 0 90px;
+  flex: 0 0 9rem;
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
@@ -200,13 +200,13 @@
 .footerLeft,
 .footerRight {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 @keyframes stepIn {
   from {
     opacity: 0;
-    transform: translateX(8px);
+    transform: translateX(0.8rem);
   }
 
   to {

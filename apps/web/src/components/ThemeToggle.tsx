@@ -43,7 +43,7 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
           className={`${styles.item} ${mode === value ? styles.itemActive : ""}`}
           onClick={() => choose(value)}
         >
-          <Icon size={14} aria-hidden />
+          <Icon size="1.4rem" aria-hidden />
           {!compact && <span className={styles.label}>{label}</span>}
         </button>
       ))}

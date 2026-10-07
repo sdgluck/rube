@@ -1,7 +1,7 @@
 .configSummary {
   font: var(--t-data);
   color: var(--ink-3);
-  max-width: 320px;
+  max-width: 32rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -16,10 +16,10 @@
    obvious which rules an update prompt is talking about. */
 .registryBadge {
   display: inline-block;
-  margin-left: 8px;
-  padding: 2px 7px;
+  margin-left: 0.8rem;
+  padding: 2px 0.7rem;
   border-radius: var(--r-pill);
-  font: 600 9.5px/1.4 var(--font-mono);
+  font: 600 0.95rem/1.4 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -30,10 +30,10 @@
 .typeLabel {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
+  gap: 0.6rem;
+  padding: 0.3rem 0.9rem;
   border-radius: var(--r-pill);
-  font: 600 10.5px/1.4 var(--font-mono);
+  font: 600 1.05rem/1.4 var(--font-mono);
   background: var(--status-neutral-bg);
   color: var(--status-neutral-fg);
   border: none;
@@ -42,8 +42,8 @@
 
 .typeLabel::before {
   content: "";
-  width: 5px;
-  height: 5px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   background: currentColor;
   opacity: 0.85;
@@ -78,7 +78,7 @@
 
 .actions {
   display: flex;
-  gap: 4px;
+  gap: 0.4rem;
   justify-content: flex-end;
   align-items: center;
 }
@@ -103,10 +103,10 @@ td.previewBlockCell {
 .previewStack {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 22px 24px;
+  gap: 2.2rem;
+  padding: 2.2rem 2.4rem;
   box-sizing: border-box;
-  max-height: 580px;
+  max-height: 58rem;
   overflow-y: auto;
   background: var(--sidebar);
   position: relative;
@@ -131,7 +131,7 @@ td.previewBlockCell {
     top: 0;
     bottom: 0;
     left: 100%;
-    width: 80px;
+    width: 8rem;
     background: var(--sidebar);
     pointer-events: none;
   }
@@ -191,10 +191,10 @@ td.previewBlockCell {
 .testPreviewStack {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  margin-top: 10px;
-  padding: 18px;
-  max-height: 580px;
+  gap: 2.2rem;
+  margin-top: 1rem;
+  padding: 1.8rem;
+  max-height: 58rem;
   overflow-y: auto;
   box-sizing: border-box;
   background: var(--sidebar);
@@ -205,8 +205,8 @@ td.previewBlockCell {
 
 .previewEmpty {
   color: var(--on-dark-3);
-  font-size: 12.5px;
-  padding: 8px 18px;
+  font-size: 1.25rem;
+  padding: 0.8rem 1.8rem;
 }
 
 /* Small uppercase meta chip rendered next to a hub title (e.g. test-result
@@ -225,8 +225,8 @@ td.previewBlockCell {
 }
 
 .checkboxCell input {
-  width: 14px;
-  height: 14px;
+  width: 1.4rem;
+  height: 1.4rem;
   accent-color: var(--accent);
   cursor: pointer;
 }
@@ -239,15 +239,15 @@ td.previewBlockCell {
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
-  padding: 18px 20px 20px;
-  margin-top: 16px;
+  padding: 1.8rem 2rem 2rem;
+  margin-top: 1.6rem;
 }
 
 .testPreviewHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 1.6rem;
 }
 
 .testPreviewHeader h3 {
@@ -263,8 +263,8 @@ td.previewBlockCell {
 .testPreviewCollection {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  padding: 12px 16px;
-  margin-bottom: 12px;
+  padding: 1.2rem 1.6rem;
+  margin-bottom: 1.2rem;
 }
 
 .testPreviewCollection:last-child {
@@ -274,22 +274,22 @@ td.previewBlockCell {
 .testPreviewCollectionHeader {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
 }
 
 .testPreviewCollectionName {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 1.3rem;
 }
 
 .testPreviewCollectionMeta {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
 }
 
 .testPreviewItems {
-  max-height: 200px;
+  max-height: 20rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -297,7 +297,7 @@ td.previewBlockCell {
 }
 
 .testPreviewItem {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   padding: 2px 0;
   color: var(--ink);
 }
@@ -308,18 +308,18 @@ td.previewBlockCell {
 
 .testPreviewEmpty {
   text-align: center;
-  padding: 24px;
+  padding: 2.4rem;
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: 1.3rem;
 }
 
 .testPreviewError {
-  padding: 12px 16px;
+  padding: 1.2rem 1.6rem;
   background: var(--status-error-bg);
   color: var(--status-error-fg);
   border-radius: var(--r-sm);
-  font-size: 13px;
-  margin-top: 24px;
+  font-size: 1.3rem;
+  margin-top: 2.4rem;
 }
 
 /* ─── Toolbar (search + filters) ─────────────────────────────────────────── */
@@ -359,26 +359,26 @@ td.previewBlockCell {
 
 .filterDivider {
   width: 1px;
-  height: 20px;
+  height: 2rem;
   background: var(--line-soft);
   margin: 0 2px;
 }
 
 .sortSelect {
   height: var(--control-h);
-  padding: 0 26px 0 10px;
+  padding: 0 2.6rem 0 1rem;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
   background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 12px;
+  background-position: right 0.8rem center;
+  background-size: 1.2rem;
 }
 
 .sortSelect:focus {
@@ -419,8 +419,8 @@ td.previewBlockCell {
    stack — history first, since that's what you came in through. */
 .runsLayout {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(28rem, 34rem) minmax(0, 1fr);
+  gap: 1.6rem;
   align-items: start;
 }
 
@@ -433,7 +433,7 @@ td.previewBlockCell {
 .runsDetailStack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
   min-width: 0;
 }
 
@@ -443,7 +443,7 @@ td.previewBlockCell {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 1.2rem;
   width: 100%;
 }
 
@@ -452,7 +452,7 @@ td.previewBlockCell {
 .runsSectionHeadTight {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .runsAction {
@@ -474,7 +474,7 @@ td.previewBlockCell {
 /* A test sits in the same list as a run and reads identically at a glance,
    so it says which it is rather than relying on the duration to hint. */
 .runPhaseTag {
-  margin-left: 6px;
+  margin-left: 0.6rem;
   font: var(--t-data);
   color: var(--ink-3);
   text-transform: uppercase;
@@ -489,9 +489,9 @@ td.previewBlockCell {
    it's a fact about the rule, not a warning about it. */
 .scheduleBadge {
   display: inline-block;
-  padding: 2px 7px;
-  margin-left: 8px;
-  font: 600 9.5px/1.4 var(--font-mono);
+  padding: 2px 0.7rem;
+  margin-left: 0.8rem;
+  font: 600 0.95rem/1.4 var(--font-mono);
   color: var(--ink-3);
   vertical-align: middle;
   background: var(--surface-sunken);
@@ -505,12 +505,12 @@ td.previewBlockCell {
 .funnel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-bottom: 12px;
+  gap: 1.4rem;
+  margin-bottom: 1.2rem;
 }
 
 .funnelSection {
-  padding: 12px;
+  padding: 1.2rem;
   background: var(--surface-sunken);
   border-radius: var(--r-md);
 }
@@ -518,10 +518,10 @@ td.previewBlockCell {
 .funnelHead {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .funnelHeadMeta {
@@ -532,7 +532,7 @@ td.previewBlockCell {
 .funnelSteps {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -540,15 +540,15 @@ td.previewBlockCell {
 
 .funnelStep {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 90px auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 9rem auto;
+  gap: 1rem;
   align-items: center;
   font: var(--t-data);
 }
 
 .funnelLabel {
   display: flex;
-  gap: 6px;
+  gap: 0.6rem;
   align-items: baseline;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -560,7 +560,7 @@ td.previewBlockCell {
 }
 
 .funnelTrack {
-  height: 6px;
+  height: 0.6rem;
   overflow: hidden;
   background: var(--fill-track);
   border-radius: var(--r-pill);
@@ -574,7 +574,7 @@ td.previewBlockCell {
 
 .funnelCount {
   display: flex;
-  gap: 6px;
+  gap: 0.6rem;
   justify-content: flex-end;
   min-width: 9ch;
   font-variant-numeric: tabular-nums;
@@ -585,7 +585,7 @@ td.previewBlockCell {
 }
 
 .funnelVerdict {
-  margin: 8px 0 0;
+  margin: 0.8rem 0 0;
   font: var(--t-data);
   color: var(--ink-2);
 }
@@ -596,7 +596,7 @@ td.previewBlockCell {
 
 .changeCounts {
   display: inline-flex;
-  gap: 8px;
+  gap: 0.8rem;
   font: var(--t-data);
   white-space: nowrap;
 }
@@ -612,14 +612,14 @@ td.previewBlockCell {
 .changeList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .changeGroup {
-  padding-bottom: 12px;
+  padding-bottom: 1.2rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -631,9 +631,9 @@ td.previewBlockCell {
 .changeGroupHead {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.8rem;
   align-items: baseline;
-  margin-bottom: 6px;
+  margin-bottom: 0.6rem;
 }
 
 .changeGroupName {
@@ -645,7 +645,7 @@ td.previewBlockCell {
 .changeItems {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 0.4rem 1rem;
   font: var(--t-data);
 }
 
@@ -659,20 +659,20 @@ td.previewBlockCell {
 
 /* The expanded table row gives the log a slice of the row, not the page. */
 .inlineLog {
-  margin-top: 8px;
+  margin-top: 0.8rem;
 }
 
 .statusInline {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
   font-variant-numeric: tabular-nums;
 }
 
 .statusInline::before {
   content: "";
-  width: 6px;
-  height: 6px;
+  width: 0.6rem;
+  height: 0.6rem;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
@@ -694,7 +694,7 @@ td.previewBlockCell {
 
 .chevron {
   display: inline-block;
-  width: 10px;
+  width: 1rem;
   color: var(--ink-faint);
   transition: transform 120ms;
   margin-left: -2px;
@@ -742,7 +742,7 @@ td.previewBlockCell {
 }
 
 .detailWrap {
-  padding: 14px 18px 18px;
+  padding: 1.4rem 1.8rem 1.8rem;
   border-top: 1px solid var(--line-soft);
   background: var(--surface-sunken);
 }
@@ -751,12 +751,12 @@ td.previewBlockCell {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
 }
 
 .detailTitle {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -776,11 +776,11 @@ td.previewBlockCell {
 
 .progressBar {
   width: 100%;
-  height: 4px;
+  height: 0.4rem;
   background: var(--fill-track);
   border-radius: var(--r-pill);
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .progressBarFill {
@@ -806,27 +806,27 @@ td.previewBlockCell {
 }
 
 .progressMessage {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink);
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .errorBox {
-  padding: 8px 12px;
+  padding: 0.8rem 1.2rem;
   background: var(--status-error-bg);
   color: var(--status-error-fg);
   border-radius: var(--r-sunken);
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 /* ─── Inline test preview (anchored to row) ──────────────────────────────── */
 
 .detailTestSummary {
   display: flex;
-  gap: 14px;
-  font-size: 12px;
+  gap: 1.4rem;
+  font-size: 1.2rem;
   color: var(--ink-3);
-  margin-bottom: 10px;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
@@ -847,18 +847,18 @@ td.previewBlockCell {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 0.8rem;
 }
 
 .titleGroup {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .titleGroup h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.8rem;
   letter-spacing: -0.01em;
 }
 
@@ -870,11 +870,11 @@ td.previewBlockCell {
   .tableBleedRight th,
   .tableBleedRight td {
     /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the gutter only, row height untouched; eleven columns don't fit at 16px */
-    padding: 0 10px;
+    padding: 0 1rem;
   }
 
   .tableBleedRight td[data-cell="title"] {
-    min-width: 160px;
+    min-width: 16rem;
   }
 }
 
@@ -886,23 +886,23 @@ td.previewBlockCell {
   background: color-mix(in srgb, var(--danger) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   border-radius: var(--r-sm);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.55;
-  margin: 0 0 12px;
-  padding: 10px 12px;
+  margin: 0 0 1.2rem;
+  padding: 1rem 1.2rem;
 }
 
 .cleanupPreviewTitles {
   color: var(--ink-3);
-  margin-top: 6px;
+  margin-top: 0.6rem;
 }
 
 /* Pointer to the rules this list doesn't show. Quiet — it is a signpost, not
    a warning. */
 .otherOutcomeHint {
-  margin: 14px 0 0;
+  margin: 1.4rem 0 0;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 1.2rem;
 }
 
 /* The metadata rule's answer to the collection changeset: what it wrote, and
@@ -910,7 +910,7 @@ td.previewBlockCell {
 .metadataBatches {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -921,19 +921,19 @@ td.previewBlockCell {
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   display: flex;
-  gap: 12px;
+  gap: 1.2rem;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
 }
 
 .metadataBatchSummary {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
 .metadataBatchMeta {
   color: var(--ink-3);
-  font-size: 11.5px;
+  font-size: 1.15rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -945,12 +945,12 @@ td.previewBlockCell {
 }
 
 .conflictList {
-  margin: 4px 0 0;
-  padding-left: 18px;
+  margin: 0.4rem 0 0;
+  padding-left: 1.8rem;
 }
 
 .conflictGroup {
-  margin-top: 6px;
+  margin-top: 0.6rem;
 }
 
 /* A rule name in running text that opens the rule — a button, because it
@@ -972,8 +972,8 @@ td.previewBlockCell {
 .conflictNames {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
 }
 
 .conflictName {
@@ -982,7 +982,7 @@ td.previewBlockCell {
 
 .conflictHint {
   display: block;
-  margin-top: 4px;
+  margin-top: 0.4rem;
   opacity: 0.85;
 }
 
@@ -999,7 +999,7 @@ td.previewBlockCell {
   cursor: grab;
   user-select: none;
   color: var(--ink-faint);
-  padding: 0 4px;
+  padding: 0 0.4rem;
 }
 
 .dragHandle:active {

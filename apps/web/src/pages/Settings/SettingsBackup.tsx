@@ -295,7 +295,7 @@ export default function SettingsBackup() {
                   {formatFileSize(file.sizeBytes)} · <RelativeTime timestamp={file.createdAt} />
                 </span>
                 <a className={local.downloadLink} href={`/api/backups/${encodeURIComponent(file.name)}`}>
-                  <Download size={13} aria-hidden /> Download
+                  <Download size="1.3rem" aria-hidden /> Download
                 </a>
               </li>
             ))}
@@ -355,7 +355,7 @@ export default function SettingsBackup() {
         </label>
 
         <button type="button" className={settings.button} disabled={parts.size === 0} onClick={download}>
-          <Download size={14} aria-hidden /> Download export
+          <Download size="1.4rem" aria-hidden /> Download export
         </button>
       </CardSection>
 
@@ -377,7 +377,7 @@ export default function SettingsBackup() {
           }}
         />
         <button type="button" className={settings.buttonSecondary} onClick={() => fileInput.current?.click()}>
-          <Upload size={14} aria-hidden /> Choose a bundle…
+          <Upload size="1.4rem" aria-hidden /> Choose a bundle…
         </button>
 
         {importError && <div className={local.error}>{importError}</div>}

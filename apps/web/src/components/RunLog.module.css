@@ -4,7 +4,7 @@
 .full {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1rem;
   min-height: 0;
 }
 
@@ -22,15 +22,15 @@
   background: var(--sidebar);
   color: var(--on-dark-2);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 1.2rem;
   line-height: 1.5;
-  padding: 16px;
+  padding: 1.6rem;
   border-radius: var(--r-md);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
   flex: 1;
-  min-height: 120px;
+  min-height: 12rem;
   margin: 0;
 }
 
@@ -38,22 +38,22 @@
    several, so it takes a bounded slice rather than all the height going. */
 .viewerCompact {
   composes: viewer;
-  max-height: 260px;
+  max-height: 26rem;
   min-height: 0;
-  font-size: 11.5px;
-  padding: 12px;
+  font-size: 1.15rem;
+  padding: 1.2rem;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .filterInput {
   composes: input inputSm from "../styles/controls.module.css";
-  width: 200px;
+  width: 20rem;
 }
 
 .toolbarBtn {
@@ -63,8 +63,8 @@
 .errorToggle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 0.6rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink-2);
   cursor: pointer;
@@ -81,8 +81,8 @@
 .copyBtn {
   composes: btn btnSm from "../styles/controls.module.css";
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 0.8rem;
+  right: 0.8rem;
   background: color-mix(in srgb, var(--on-accent) 10%, transparent);
   border-color: var(--on-dark-fill-2);
   color: var(--on-dark-3);

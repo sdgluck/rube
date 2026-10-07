@@ -7,7 +7,7 @@
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 /* ─── Summary bar ───────────────────────────────────────────────────────── */
@@ -15,8 +15,8 @@
 /* A responsive row of metric tiles, each its own card. */
 .summaryBar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(15.8rem, 1fr));
+  gap: 1.2rem;
 }
 
 .summaryItem {
@@ -25,7 +25,7 @@
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
-  padding: 12px 14px 13px;
+  padding: 1.2rem 1.4rem 1.3rem;
   min-width: 0;
 }
 
@@ -90,7 +90,7 @@
 
 /* Timestamps and names don't carry a metric's weight at metric size. */
 .summaryValueSmall {
-  font-size: 15px;
+  font-size: 1.5rem;
 }
 
 .summaryValueAccent {
@@ -136,7 +136,7 @@
   margin-top: 2px;
   min-height: 1.4em;
   line-height: 1.4;
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 400;
   font-family: var(--font-sans);
   letter-spacing: 0;
@@ -148,7 +148,7 @@
    linked tile with nothing to say it is the whole of the sub line — which is
    still a line the tile was holding open regardless. */
 .summarySubArrow {
-  margin-left: 4px;
+  margin-left: 0.4rem;
   color: var(--ink-faint);
 }
 
@@ -166,13 +166,13 @@
 .grid {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .gridColumn {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
   flex: 1 1 0;
   min-width: 0;
 }
@@ -224,9 +224,9 @@
 .panelHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   min-height: var(--control-h);
-  padding: 11px 18px 10px;
+  padding: 1.1rem 1.8rem 1rem;
 }
 
 .panelTitle {
@@ -244,8 +244,8 @@
 .panelTitleToggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-left: -17px;
+  gap: 0.4rem;
+  margin-left: -1.7rem;
   padding: 0;
   background: transparent;
   border: none;
@@ -272,7 +272,7 @@
    padding is the whole of the gap to the card's edge — 10px reads as clipped
    against the 16px the grid puts between panels. */
 .panelCollapsed .panelHeader {
-  padding-bottom: 11px;
+  padding-bottom: 1.1rem;
 }
 
 .panelSpacer {
@@ -281,18 +281,18 @@
 
 .panelMeta {
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
 }
 
 /* Buttons that belong to the panel rather than the page. */
 .panelActions {
   display: flex;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .panelBody {
-  padding: 0 18px 16px;
+  padding: 0 1.8rem 1.6rem;
 }
 
 /* An explainer under the header, above the panel's content. */
@@ -300,10 +300,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 7px;
+  padding: 2px 0.7rem;
   background: var(--status-neutral-bg);
   color: var(--status-neutral-fg);
-  font: 600 10.5px/1.4 var(--font-mono);
+  font: 600 1.05rem/1.4 var(--font-mono);
   border-radius: var(--r-pill);
 }
 
@@ -319,28 +319,28 @@
 
 .tilePickerPopover {
   position: absolute;
-  top: 34px;
+  top: 3.4rem;
   right: 0;
   z-index: var(--z-dropdown);
-  min-width: 240px;
+  min-width: 24rem;
   background: var(--surface);
   border: none;
   border-radius: var(--r-panel);
   box-shadow: var(--e-float);
-  padding: 10px;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .tilePickerHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--ink-2);
-  padding: 2px 4px 6px;
+  padding: 2px 0.4rem 0.6rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -351,11 +351,11 @@
 }
 
 .tilePickerList {
-  max-height: 320px;
+  max-height: 32rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .tilePickerGroup {
@@ -369,15 +369,15 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  padding: 4px 4px 2px;
+  padding: 0.4rem 0.4rem 2px;
 }
 
 .tilePickerOption {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
-  font-size: 12px;
+  gap: 0.8rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 1.2rem;
   color: var(--ink);
   cursor: pointer;
   border-radius: var(--r-tag);
@@ -408,7 +408,7 @@
 }
 
 .panelPickerHint {
-  font-size: 10.5px;
+  font-size: 1.05rem;
   line-height: 1.35;
   color: var(--ink-faint);
 }
@@ -417,16 +417,16 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-bottom: 6px;
+  padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
 .tilePickerOrderItem {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  font-size: 12px;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 1.2rem;
   color: var(--ink);
   background: var(--surface-sunken);
   border-radius: var(--r-tag);
@@ -438,7 +438,7 @@
 }
 
 .tilePickerHandle {
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
   letter-spacing: -2px;
   user-select: none;
@@ -456,10 +456,10 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   color: var(--ink-2);
-  width: 22px;
-  height: 22px;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: var(--r-tag);
-  font-size: 11px;
+  font-size: 1.1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -485,7 +485,7 @@
 .tilePickerActions {
   display: flex;
   justify-content: flex-end;
-  padding-top: 4px;
+  padding-top: 0.4rem;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -502,20 +502,20 @@
      than the thing. The metric shrinks with the tile: 20px in a 132px tile was
      sized for a column that no longer exists. */
   .summaryBar {
-    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(10.4rem, 1fr));
+    gap: 0.6rem;
   }
 
   .summaryItem {
-    padding: 9px 10px 10px;
+    padding: 0.9rem 1rem 1rem;
   }
 
   .summaryValue {
-    font-size: 17px;
+    font-size: 1.7rem;
   }
 
   .summaryValueSmall {
-    font-size: 12.5px;
+    font-size: 1.25rem;
   }
 
   /* Most of the tile is spoken for by the metric. The trend is the first thing

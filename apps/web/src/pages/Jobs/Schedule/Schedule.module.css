@@ -8,8 +8,8 @@
 
 .page {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 34rem;
+  gap: 1.6rem;
   align-items: start;
 }
 
@@ -17,23 +17,23 @@
 .side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
   min-width: 0;
 }
 
 .side {
   position: sticky;
-  top: calc(var(--appbar-h) + 12px);
+  top: calc(var(--appbar-h) + 1.2rem);
 }
 
 .section {
   background: var(--surface);
   border-radius: var(--r-panel);
   box-shadow: var(--e-card);
-  padding: 14px 16px 16px;
+  padding: 1.4rem 1.6rem 1.6rem;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1rem;
   min-width: 0;
 }
 
@@ -47,7 +47,7 @@
 .sectionTitleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
@@ -60,7 +60,7 @@
 .columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .muted {
@@ -73,16 +73,16 @@
 
 .presets {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
 }
 
 .preset {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
   text-align: left;
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
@@ -115,7 +115,7 @@
 .presetName {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
   font: var(--t-card);
   letter-spacing: var(--t-card-tracking);
 }
@@ -127,7 +127,7 @@
 
 .presetEffect {
   margin-top: auto;
-  padding-top: 4px;
+  padding-top: 0.4rem;
   font: var(--t-caption);
   color: var(--accent-text);
 }
@@ -144,7 +144,7 @@
 
 /* Below this the blocks get too thin to grab, so the track scrolls instead. */
 .timelineInner {
-  min-width: 640px;
+  min-width: 64rem;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -153,14 +153,14 @@
 .axisRow,
 .row {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  gap: 1rem;
   align-items: center;
 }
 
 .axis {
   position: relative;
-  height: 18px;
+  height: 1.8rem;
 }
 
 .tick {
@@ -178,7 +178,7 @@
 .dropMarker {
   position: absolute;
   transform: translateX(-50%);
-  padding: 0 4px;
+  padding: 0 0.4rem;
   border-radius: var(--r-sm);
   background: var(--accent-fill);
   color: var(--on-accent);
@@ -189,13 +189,13 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 8px;
+  margin-top: 0.8rem;
 }
 
 .laneHeader {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 0.8rem;
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
@@ -230,7 +230,7 @@
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
-  padding: 3px 4px;
+  padding: 0.3rem 0.4rem;
   border: none;
   background: none;
   color: var(--ink);
@@ -247,7 +247,7 @@
 .rowName {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
   max-width: 100%;
   font: var(--t-body-sm);
   font-weight: 500;
@@ -264,7 +264,7 @@
 
 .track {
   position: relative;
-  height: 28px;
+  height: 2.8rem;
   background: var(--surface-sunken);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
@@ -302,10 +302,10 @@
 
 .block {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  min-width: 4px;
-  padding: 0 4px;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  min-width: 0.4rem;
+  padding: 0 0.4rem;
   border: none;
   border-radius: var(--r-sm);
   background: var(--ramp-3);
@@ -334,7 +334,13 @@
 
 /* No runs to measure yet: the width is a guess, and looks like one. */
 .blockEstimate {
-  background: repeating-linear-gradient(45deg, var(--ramp-3), var(--ramp-3) 4px, var(--ramp-2) 4px, var(--ramp-2) 8px);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--ramp-3),
+    var(--ramp-3) 0.4rem,
+    var(--ramp-2) 0.4rem,
+    var(--ramp-2) 0.8rem
+  );
 }
 
 .blockOff {
@@ -357,15 +363,15 @@
 .blockTime {
   pointer-events: none;
   white-space: nowrap;
-  line-height: 20px;
+  line-height: 2rem;
 }
 
 .dotError,
 .dotWarning,
 .dotInfo {
   flex: none;
-  width: 7px;
-  height: 7px;
+  width: 0.7rem;
+  height: 0.7rem;
   border-radius: 50%;
 }
 
@@ -385,7 +391,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   font: var(--t-caption);
   color: var(--ink-3);
 }
@@ -393,7 +399,7 @@
 .legendItem {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 .legendWindow,
@@ -401,8 +407,8 @@
 .legendEstimate,
 .legendNow {
   display: inline-block;
-  width: 12px;
-  height: 10px;
+  width: 1.2rem;
+  height: 1rem;
   border-radius: var(--r-sm);
 }
 
@@ -442,8 +448,8 @@
 .otherRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
+  gap: 0.8rem;
+  padding: 0.4rem 0;
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -463,10 +469,10 @@
 .otherName {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
   flex: 1;
   min-width: 0;
-  padding: 2px 4px;
+  padding: 2px 0.4rem;
   border: none;
   background: none;
   color: var(--ink);
@@ -478,7 +484,7 @@
 .otherActions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .offTag {
@@ -488,7 +494,7 @@
 
 .cronTag {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-3);
 }
 
@@ -497,14 +503,14 @@
 .editor {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .editorHead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .editorTitle {
@@ -532,22 +538,22 @@
 }
 
 .minuteInput {
-  width: 72px;
+  width: 7.2rem;
 }
 
 .editorFooter {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 6px;
+  gap: 0.8rem;
+  padding-top: 0.6rem;
   border-top: 1px solid var(--line-soft);
 }
 
 .enabledToggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
   margin-right: auto;
   font: var(--t-body-sm);
   color: var(--ink-2);
@@ -558,7 +564,7 @@
 .allClear {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 0.6rem;
   margin: 0;
   font: var(--t-body-sm);
   color: var(--status-ok-fg);
@@ -570,15 +576,15 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 420px;
+  gap: 0.8rem;
+  max-height: 42rem;
   overflow-y: auto;
 }
 
 .issue {
   display: flex;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
   border-radius: var(--r-md);
 }
 
@@ -605,7 +611,7 @@
 .issueBody {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
   min-width: 0;
 }
 
@@ -625,8 +631,8 @@
 
 .blockingTag {
   display: inline-block;
-  margin-left: 6px;
-  padding: 0 5px;
+  margin-left: 0.6rem;
+  padding: 0 0.5rem;
   border-radius: var(--r-tag);
   background: var(--status-error-dot);
   color: var(--on-accent);
@@ -636,7 +642,7 @@
 .issueFixes {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 /* ─── Unsaved changes ───────────────────────────────────────────────────── */
@@ -647,7 +653,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .change {
@@ -656,7 +662,7 @@
   grid-template-areas:
     "name revert"
     "diff revert";
-  column-gap: 8px;
+  column-gap: 0.8rem;
   font: var(--t-body-sm);
 }
 
@@ -683,20 +689,20 @@
 .settings {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .settingsField {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .settingsCheck,
 .settingsInline {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   font: var(--t-body-sm);
   color: var(--ink-2);
 }
@@ -704,9 +710,9 @@
 .holdGroup {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
   margin: 0;
-  padding: 8px 0 0;
+  padding: 0.8rem 0 0;
   border: 0;
   border-top: 1px solid var(--line-soft);
   min-width: 0;
@@ -742,7 +748,7 @@
 
   .axisRow,
   .row {
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 12rem minmax(0, 1fr);
   }
 
   /* The track scrolls sideways at this width; the names stay put so a block

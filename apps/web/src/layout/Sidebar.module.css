@@ -3,12 +3,12 @@
  * has no business importing. */
 
 .sidebarJobs {
-  margin-top: 16px;
+  margin-top: 1.6rem;
   border-top: 1px solid color-mix(in srgb, var(--on-accent) 7%, transparent);
-  padding-top: 12px;
+  padding-top: 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .sidebarJobsTitle {
@@ -16,24 +16,24 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--on-dark-4);
-  padding: 0 10px 5px;
+  padding: 0 1rem 0.5rem;
 }
 
 .sidebarJob {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
+  gap: 0.8rem;
+  font-size: 1.25rem;
   color: var(--on-dark-2);
   border-radius: var(--r-md);
-  padding: 6px 10px;
+  padding: 0.6rem 1rem;
   transition: background 0.15s;
 }
 
 .sidebarJobLink {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex: 1;
   min-width: 0;
   color: inherit;
@@ -59,7 +59,7 @@
 }
 
 .sidebarJobProgress {
-  font: 400 10.5px/1.3 var(--font-mono);
+  font: 400 1.05rem/1.3 var(--font-mono);
   color: var(--on-dark-3);
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -70,7 +70,7 @@
   border: none;
   color: var(--on-dark-3);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 1.4rem;
   padding: 0 2px;
   line-height: 1;
   flex-shrink: 0;
@@ -90,7 +90,7 @@
 
 .editMenu {
   position: absolute;
-  top: -22px;
+  top: -2.2rem;
   right: 0;
   display: flex;
   align-items: center;

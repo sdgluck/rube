@@ -1,11 +1,11 @@
 .instanceCards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr));
+  gap: 1.2rem;
 }
 
 .instanceCard {
-  padding: 14px;
+  padding: 1.4rem;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   background: var(--surface);
@@ -15,8 +15,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
 }
 
 .instanceCardTitle {
@@ -33,7 +33,7 @@
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px 12px;
+  gap: 0.8rem 1.2rem;
   margin: 0;
 }
 
@@ -51,8 +51,8 @@
 }
 
 .error {
-  margin: 12px 0 0;
-  padding: 8px 10px;
+  margin: 1.2rem 0 0;
+  padding: 0.8rem 1rem;
   border-radius: var(--r-sm);
   background: var(--status-error-bg);
   color: var(--status-error-fg);

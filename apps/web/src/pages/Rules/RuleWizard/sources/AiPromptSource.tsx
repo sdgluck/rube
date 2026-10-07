@@ -45,7 +45,7 @@ export default function AiPromptSource({ form, setForm }: SourceStepProps) {
       <div className={styles.field}>
         <label>Custom themes (optional)</label>
         {form.customThemes.map((t, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+          <div key={i} style={{ display: "flex", gap: "0.8rem", marginBottom: "0.6rem" }}>
             <input
               className={shared.input}
               value={t}
@@ -102,7 +102,7 @@ export default function AiPromptSource({ form, setForm }: SourceStepProps) {
           id="rule-min-items"
           type="number"
           className={shared.input}
-          style={{ maxWidth: 140 }}
+          style={{ maxWidth: "14rem" }}
           min={1}
           max={100}
           value={form.minItems}

@@ -7,19 +7,19 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding-top: 16px;
+  padding-top: 1.6rem;
 }
 
 .layoutTabs {
-  padding: 0 28px;
+  padding: 0 2.8rem;
 }
 
 .actionedToggle {
   align-items: center;
   color: var(--ink-3);
   display: flex;
-  font-size: 12.5px;
-  gap: 6px;
+  font-size: 1.25rem;
+  gap: 0.6rem;
 }
 
 /* An actioned row is history, not a queue entry — recede it rather than
@@ -84,7 +84,7 @@
 
 .holdPicker {
   display: flex;
-  gap: 6px;
+  gap: 0.6rem;
   align-items: center;
   font: var(--t-data);
   color: var(--ink-2);
@@ -93,13 +93,13 @@
 /* Advisory, so it reads as a note beside the title rather than as a status. */
 .keepVotes {
   composes: label from "../styles/shared.module.css";
-  margin-left: 6px;
+  margin-left: 0.6rem;
 }
 
 /* Matched on the title at run time, so what it covers grows with the collection. */
 .futureMembers {
   composes: label from "../styles/shared.module.css";
-  margin-left: 6px;
+  margin-left: 0.6rem;
 }
 
 .checkboxCell {

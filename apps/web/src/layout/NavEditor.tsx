@@ -91,7 +91,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                 }}
                 aria-hidden="true"
               >
-                <GripVertical size={13} strokeWidth={2} />
+                <GripVertical size="1.3rem" strokeWidth={2} />
               </span>
             )}
             <span className={styles.sectionTitle}>{section.label}</span>
@@ -102,7 +102,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
               disabled={sectionIndex === 0}
               aria-label={`Move ${section.label} up`}
             >
-              <ChevronUp size={13} strokeWidth={2} />
+              <ChevronUp size="1.3rem" strokeWidth={2} />
             </button>
             <button
               type="button"
@@ -111,7 +111,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
               disabled={sectionIndex === sections.length - 1}
               aria-label={`Move ${section.label} down`}
             >
-              <ChevronDown size={13} strokeWidth={2} />
+              <ChevronDown size="1.3rem" strokeWidth={2} />
             </button>
           </div>
 
@@ -164,7 +164,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                     }}
                     aria-hidden="true"
                   >
-                    <GripVertical size={13} strokeWidth={2} />
+                    <GripVertical size="1.3rem" strokeWidth={2} />
                   </span>
                 )}
                 <span className={styles.label}>{item.label}</span>
@@ -186,7 +186,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                   aria-pressed={slot > 0}
                   aria-label={`${item.label} in the mobile tab bar`}
                 >
-                  <Smartphone size={13} strokeWidth={2} />
+                  <Smartphone size="1.3rem" strokeWidth={2} />
                 </button>
                 {menu.canHide(item.to) ? (
                   <button
@@ -197,13 +197,13 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                     aria-pressed={!hidden}
                     aria-label={hidden ? `Show ${item.label}` : `Hide ${item.label}`}
                   >
-                    {hidden ? <EyeOff size={13} strokeWidth={2} /> : <Eye size={13} strokeWidth={2} />}
+                    {hidden ? <EyeOff size="1.3rem" strokeWidth={2} /> : <Eye size="1.3rem" strokeWidth={2} />}
                   </button>
                 ) : (
                   // Not a disabled button: there is nothing to press, and a
                   // greyed control invites a click that will never do anything.
                   <span className={styles.pinned} title="Settings is always in the menu — it's the way back">
-                    <Eye size={13} strokeWidth={2} />
+                    <Eye size="1.3rem" strokeWidth={2} />
                   </span>
                 )}
                 <button
@@ -213,7 +213,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                   disabled={index === 0}
                   aria-label={`Move ${item.label} up`}
                 >
-                  <ChevronUp size={13} strokeWidth={2} />
+                  <ChevronUp size="1.3rem" strokeWidth={2} />
                 </button>
                 <button
                   type="button"
@@ -222,7 +222,7 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                   disabled={index === section.items.length - 1}
                   aria-label={`Move ${item.label} down`}
                 >
-                  <ChevronDown size={13} strokeWidth={2} />
+                  <ChevronDown size="1.3rem" strokeWidth={2} />
                 </button>
               </div>
             );

@@ -1,6 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { TRPCError } from "@trpc/server";
-import { isPortalComponentId, portalPrerollCardInput } from "@tinkerbell/contracts";
+import { isPortalComponentId, isUiScale, portalPrerollCardInput } from "@tinkerbell/contracts";
 import {
   isValidTimezone,
   configSchema,
@@ -112,6 +112,12 @@ export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "j
       const unknownComponent = input.portal_components_hidden?.find((id) => !isPortalComponentId(id));
       if (unknownComponent !== undefined) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `"${unknownComponent}" is not a portal component.` });
+      }
+
+      // Off-list sizes are refused rather than clamped: the picker only offers
+      // the list, so anything else is a stale or hand-rolled client.
+      if (input.ui_scale !== undefined && !isUiScale(input.ui_scale)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.ui_scale} is not an interface size.` });
       }
 
       const timezoneChanged = "global_timezone" in input && input.global_timezone !== getConfig("global_timezone");

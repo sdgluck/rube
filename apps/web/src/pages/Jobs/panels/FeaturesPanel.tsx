@@ -234,7 +234,7 @@ export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
       dragProps={dragProps}
     >
       {featureJobs.length === 0 ? (
-        <p className={styles.muted} style={{ padding: "16px 0" }}>
+        <p className={styles.muted} style={{ padding: "1.6rem 0" }}>
           {/* An empty table under a filter is not an empty installation, and
               telling someone to add their first feature when they have twelve
               is the kind of wrong that makes people distrust the page. */}

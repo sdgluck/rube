@@ -26,18 +26,18 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .createRow {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
   flex-wrap: wrap;
 }
 
 .createRow > input {
-  flex: 1 1 220px;
-  max-width: 360px;
+  flex: 1 1 22rem;
+  max-width: 36rem;
 }
 
 /* The one moment the key exists outside a hash — loud enough to notice, and
@@ -45,8 +45,8 @@
 .reveal {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 0.8rem;
+  padding: 1.2rem 1.4rem;
   border-radius: var(--r-sunken);
   background: var(--status-warn-bg);
 }
@@ -61,12 +61,12 @@
 .keyRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex-wrap: wrap;
 }
 
 .key {
-  flex: 1 1 260px;
+  flex: 1 1 26rem;
   min-width: 0;
   font: var(--t-data);
   color: var(--ink);
@@ -77,7 +77,7 @@
 .prefix,
 .inline {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 1.1rem;
 }
 
 .muted {
@@ -92,14 +92,14 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 /* Wraps rather than scrolls: a command is copied with the button, and a
    horizontal scrollbar inside a card at phone width is worse than a wrap. */
 .snippet {
   margin: 0;
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
   border-radius: var(--r-sunken);
   background: var(--surface-sunken);
   font: var(--t-data);

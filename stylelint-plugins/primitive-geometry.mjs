@@ -99,10 +99,14 @@ function isBuilt(file, cls, index) {
 
 /** 24–48px: the band where a literal height is a control pretending not to be
     one. Smaller is an inline glyph (a chip's ×, a search field's clear), larger
-    is a tile or a card. */
+    is a tile or a card. Read in design pixels: the app's stylesheets are rem
+    at 1rem = 10px (see the root font-size in App.css), so 2.4–4.8rem is the
+    same band. */
 function controlSizedLiteral(value) {
-  const px = value.trim().match(/^(\d+(?:\.\d+)?)px$/)?.[1];
-  return px !== undefined && Number(px) >= 24 && Number(px) <= 48;
+  const m = value.trim().match(/^(\d*\.?\d+)(px|rem)$/);
+  if (!m) return false;
+  const px = m[2] === "rem" ? Number(m[1]) * 10 : Number(m[1]);
+  return px >= 24 && px <= 48;
 }
 
 /** A colour variant is only half a button; the geometry is on `btn`. */

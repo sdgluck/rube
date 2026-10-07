@@ -5,8 +5,8 @@
   align-items: flex-start;
   cursor: pointer;
   display: flex;
-  font-size: 13px;
-  gap: 10px;
+  font-size: 1.3rem;
+  gap: 1rem;
   max-width: 72ch;
 }
 
@@ -18,9 +18,9 @@
 .switchHint {
   color: var(--ink-3);
   display: block;
-  font-size: 12px;
+  font-size: 1.2rem;
   line-height: 1.5;
-  margin-top: 4px;
+  margin-top: 0.4rem;
 }
 
 /* The owner-only caveat. A statement of scope rather than a warning: somebody
@@ -30,11 +30,11 @@
   background: var(--status-info-bg);
   border-radius: var(--r-sm);
   color: var(--status-info-fg);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.5;
   margin: 0;
   max-width: 72ch;
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
 }
 
 /* Shown while dry run is off and the sync is on — the only combination that
@@ -43,16 +43,16 @@
   background: color-mix(in srgb, var(--danger) 10%, transparent);
   border: 1px solid var(--danger);
   border-radius: var(--r-sm);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   line-height: 1.5;
   margin: 0;
   max-width: 72ch;
-  padding: 10px 12px;
+  padding: 1rem 1.2rem;
 }
 
 .target {
   border-top: 1px solid var(--line-soft);
-  padding-top: 14px;
+  padding-top: 1.4rem;
 }
 
 .target:first-of-type {
@@ -61,9 +61,9 @@
 }
 
 .targetTitle {
-  font-size: 13px;
+  font-size: 1.3rem;
   font-weight: 600;
-  margin: 0 0 10px;
+  margin: 0 0 1rem;
 }
 
 /* The compact table — see SettingsBackup.module.css for why not a re-padded
@@ -79,7 +79,7 @@
 .itemYear {
   color: var(--ink-faint);
   font: var(--t-meta);
-  margin-left: 5px;
+  margin-left: 0.5rem;
 }
 
 .pill {
@@ -87,7 +87,7 @@
   display: inline-block;
   font: var(--t-label);
   letter-spacing: var(--t-label-tracking);
-  padding: 1px 6px;
+  padding: 1px 0.6rem;
   text-transform: uppercase;
 }
 
@@ -144,6 +144,6 @@
 
 .empty {
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 1.25rem;
   margin: 0;
 }

@@ -1,9 +1,9 @@
 .kbd {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 1.05rem;
   line-height: 1.5;
-  padding: 1px 5px;
+  padding: 1px 0.5rem;
   min-width: 1.6em;
   text-align: center;
   color: var(--ink-3);

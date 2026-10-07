@@ -50,7 +50,7 @@ export default function RuleDetailRow({
         <div className={styles.detailWrap}>
           {(isTesting || isRunning) && runId && <InlineProgress runId={runId} phase={isTesting ? "test" : "run"} />}
           {!isTesting && !isRunning && errorToShow && (
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: "1.2rem" }}>
               <div className={styles.detailHeader}>
                 <span className={styles.detailTitle}>Last error</span>
               </div>
@@ -87,8 +87,11 @@ function TestResultsBlock({ ruleId, onCleared, wrapperWidth }: TestResultsBlockP
   if (!result) return null;
   const totalItems = result.collections.reduce((sum, c) => sum + c.items.length, 0);
 
-  // Match the .detailWrap inner content area: 18px horizontal padding on each side.
-  const stackWidth = wrapperWidth != null ? wrapperWidth - 36 : null;
+  // Match the .detailWrap inner content area: 1.8rem horizontal padding on each
+  // side. The padding is a rem, so it is read in pixels at the current
+  // interface size rather than assumed to be 18.
+  const rootPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 10;
+  const stackWidth = wrapperWidth != null ? wrapperWidth - 3.6 * rootPx : null;
 
   return (
     <div>

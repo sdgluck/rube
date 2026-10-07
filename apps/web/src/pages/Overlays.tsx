@@ -28,7 +28,7 @@ export default function Overlays() {
   // default 24px offset, so push the toast up while Overlays is mounted.
   // Toasts portal to document.body, so the variable lives there.
   useEffect(() => {
-    document.body.style.setProperty("--toast-bottom", "80px");
+    document.body.style.setProperty("--toast-bottom", "8rem");
     return () => {
       document.body.style.removeProperty("--toast-bottom");
     };

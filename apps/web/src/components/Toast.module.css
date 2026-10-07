@@ -3,12 +3,12 @@
   /* Default sits close to the viewport edge. Pages with sticky bottom UI
      (e.g. Overlays' action bar) override by setting --toast-bottom on a
      wrapping element so the toast clears that UI. */
-  bottom: var(--toast-bottom, 24px);
-  right: 24px;
+  bottom: var(--toast-bottom, 2.4rem);
+  right: 2.4rem;
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column-reverse;
-  gap: 8px;
+  gap: 0.8rem;
   pointer-events: none;
 }
 
@@ -37,30 +37,30 @@
 /* One shell, one colour: the inverse bar. Severity reads off the leading dot
    rather than a full-bleed pastel — a toast is a notification, not a banner. */
 .toast {
-  padding: 11px 14px;
+  padding: 1.1rem 1.4rem;
   border-radius: var(--r-card);
   background: var(--inverse);
   color: var(--on-accent);
   border: none;
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   box-shadow: var(--e-inverse);
   animation: toastSlideIn 250ms ease-out;
   pointer-events: auto;
-  width: 360px;
-  max-width: calc(100vw - 48px);
+  width: 36rem;
+  max-width: calc(100vw - 4.8rem);
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 0.8rem;
   line-height: 1.4;
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 0.6rem;
+  height: 0.6rem;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 5px;
+  margin-top: 0.5rem;
 }
 
 .toast > span:not(.dot) {
@@ -97,9 +97,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: -2px -8px -2px 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: -2px -0.8rem -2px 0;
   padding: 0;
   background: none;
   border: none;
@@ -111,15 +111,15 @@
 }
 
 .dismiss svg {
-  width: 14px;
-  height: 14px;
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 /* Extends the hit area to ~42px without growing the visual button. */
 .dismiss::after {
   content: "";
   position: absolute;
-  inset: -10px;
+  inset: -1rem;
 }
 
 .dismiss:hover {
@@ -148,10 +148,10 @@
 /* Mobile: center above bottom nav */
 @media (max-width: 768px) {
   .container {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, 80px));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, 8rem));
     /* Mobile keeps an 80px default to clear the bottom nav. */
-    right: 16px;
-    left: 16px;
+    right: 1.6rem;
+    left: 1.6rem;
     align-items: center;
   }
 
@@ -164,7 +164,7 @@
    toast, where a button-shaped button would compete with the toast itself. */
 .action {
   padding: 0;
-  margin-left: 4px;
+  margin-left: 0.4rem;
   font: inherit;
   font-weight: 600;
   color: inherit;

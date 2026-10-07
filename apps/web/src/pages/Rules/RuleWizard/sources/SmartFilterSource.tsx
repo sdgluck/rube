@@ -108,12 +108,12 @@ function PresetEditor({
       <WatchHistoryWarning />
       <div className={styles.field}>
         <label htmlFor="cleanup-preset-knob">{preset.knobLabel}</label>
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
           <input
             id="cleanup-preset-knob"
             type="number"
             className={shared.input}
-            style={{ width: 110 }}
+            style={{ width: "11rem" }}
             min={preset.knobMin}
             max={preset.knobMax}
             value={current}
@@ -124,7 +124,7 @@ function PresetEditor({
           </span>
         </span>
         {preset.note && (
-          <p className={styles.hint} style={{ marginTop: 6 }}>
+          <p className={styles.hint} style={{ marginTop: "0.6rem" }}>
             {preset.note}
           </p>
         )}
@@ -257,14 +257,14 @@ function GroupEditor({ group, onChange, depth, sectionId, underOr = false, onRem
   // Visual nesting: alternate left-border tint per depth so deeply-nested
   // groups read as a hierarchy rather than a wall of inputs.
   const borderStyle: React.CSSProperties = {
-    borderLeft: `3px solid ${depth % 2 === 0 ? "var(--accent)" : "var(--line)"}`,
-    paddingLeft: 12,
+    borderLeft: `0.3rem solid ${depth % 2 === 0 ? "var(--accent)" : "var(--line)"}`,
+    paddingLeft: "1.2rem",
     marginLeft: depth === 0 ? 0 : 4,
   };
 
   return (
-    <div style={{ ...borderStyle, display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ ...borderStyle, display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
         <button
           type="button"
           className={styles.summaryEdit}
@@ -307,7 +307,7 @@ function GroupEditor({ group, onChange, depth, sectionId, underOr = false, onRem
           />
         ),
       )}
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: "0.8rem" }}>
         <button type="button" className={styles.summaryEdit} onClick={addClause}>
           + Add clause
         </button>
@@ -349,10 +349,10 @@ function LeafEditor({ leaf, sectionId, underOr, onChange, onRemove }: LeafEditor
   };
 
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: "0.8rem", alignItems: "center", flexWrap: "wrap" }}>
       <select
         className={shared.input}
-        style={{ flex: "0 0 180px" }}
+        style={{ flex: "0 0 18rem" }}
         value={leaf.field}
         onChange={(e) => updateField(e.target.value)}
         aria-label="Field"
@@ -386,7 +386,7 @@ function LeafEditor({ leaf, sectionId, underOr, onChange, onRemove }: LeafEditor
       </select>
       <select
         className={shared.input}
-        style={{ flex: "0 0 140px" }}
+        style={{ flex: "0 0 14rem" }}
         value={leaf.op}
         onChange={(e) => onChange({ ...leaf, op: e.target.value as SmartFilterOp })}
         aria-label="Operator"

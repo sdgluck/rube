@@ -203,11 +203,11 @@ export default function Stats() {
     let to: string | undefined;
     switch (id) {
       case "streams":
-        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : sessions.length;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="4rem" /> : sessions.length;
         if (transcodingCount > 0) sub = `${transcodingCount} transcoding`;
         break;
       case "transcodes":
-        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : transcodingCount;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="4rem" /> : transcodingCount;
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
       case "directPlay": {
@@ -216,13 +216,13 @@ export default function Stats() {
         // transcoding" — a remux is a Direct Stream, which Plex reports
         // separately and the Streams panel labels as such, so counting it here
         // as direct play made the two disagree about the same session.
-        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : directPlayCount;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="4rem" /> : directPlayCount;
         if (sessions.length > 0) sub = `of ${sessions.length}`;
         break;
       }
       case "paused": {
         const paused = sessions.filter((s) => s.state === "paused").length;
-        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : paused;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="4rem" /> : paused;
         // A paused stream still holds a session, which is what makes it worth
         // its own tile: the Streams count includes it and looks like demand.
         if (sessions.length > 0) sub = `of ${sessions.length}`;
@@ -235,7 +235,7 @@ export default function Stats() {
         // leaves the house.
         const remote = sessions.filter((s) => s.local === false).length;
         const relayed = sessions.filter((s) => s.relayed).length;
-        value = sessionsQuery.isLoading ? <SkeletonLine width="40px" /> : remote;
+        value = sessionsQuery.isLoading ? <SkeletonLine width="4rem" /> : remote;
         // Relayed is the subset that goes through Plex's relay rather than a
         // direct connection — capped at 2 Mbps, so it explains a bad stream.
         if (relayed > 0) sub = `${relayed} relayed`;
@@ -256,7 +256,7 @@ export default function Stats() {
         // anything.
         trend = bandwidthUsageQuery.data;
         if (sessionsQuery.isLoading) {
-          value = <SkeletonLine width="40px" />;
+          value = <SkeletonLine width="4rem" />;
         } else if (measured && capacity > 0) {
           // The denominator lives on the sub line — "24.0 Mbps" / "of 860 Mbps"
           // — so the value line stays one number at one size, like every other
@@ -276,13 +276,13 @@ export default function Stats() {
         break;
       }
       case "playsToday":
-        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : (activityQuery.data?.playsToday ?? 0);
+        value = activityQuery.isLoading ? <SkeletonLine width="4rem" /> : (activityQuery.data?.playsToday ?? 0);
         if (activityQuery.data && activityQuery.data.playsWeek > 0) sub = `${activityQuery.data.playsWeek} this week`;
         trend = series;
         break;
       case "playsWeek": {
         const plays = activityQuery.data?.playsWeek ?? 0;
-        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : plays;
+        value = activityQuery.isLoading ? <SkeletonLine width="4rem" /> : plays;
         // The label already says "(7d)", so the sub says the thing seven days
         // of total doesn't: the rate.
         if (plays > 0) sub = `~${Math.round(plays / 7)} a day`;
@@ -299,7 +299,7 @@ export default function Stats() {
       }
       case "library":
         value = overviewQuery.isLoading ? (
-          <SkeletonLine width="40px" />
+          <SkeletonLine width="4rem" />
         ) : (
           formatNumber(overviewQuery.data?.totalItems ?? 0)
         );
@@ -312,7 +312,7 @@ export default function Stats() {
         const bytes = sections.reduce((sum, s) => sum + s.bytes, 0);
         const unsized = sections.reduce((sum, s) => sum + s.unsized, 0);
         const measured = sections.filter((s) => s.bytes > 0);
-        value = storageQuery.isLoading ? <SkeletonLine width="60px" /> : bytes > 0 ? formatFileSize(bytes) : EMPTY;
+        value = storageQuery.isLoading ? <SkeletonLine width="6rem" /> : bytes > 0 ? formatFileSize(bytes) : EMPTY;
         if (bytes === 0) {
           // Nothing measured yet reads as "nothing stored", which is never
           // true. Say where the number comes from instead.
@@ -330,7 +330,7 @@ export default function Stats() {
       case "shows": {
         const shows = overviewQuery.data?.showCount ?? 0;
         const episodes = overviewQuery.data?.episodeCount ?? 0;
-        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : formatNumber(shows);
+        value = overviewQuery.isLoading ? <SkeletonLine width="4rem" /> : formatNumber(shows);
         // Shows alone can't tell a library of long-running series from a shelf
         // of miniseries, and the ratio is the thing you'd work out by hand.
         if (shows > 0) sub = `~${Math.round(episodes / shows)} episodes each`;
@@ -339,7 +339,7 @@ export default function Stats() {
       }
       case "addedThisWeek": {
         const added = overviewQuery.data?.addedThisWeek ?? 0;
-        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : added;
+        value = overviewQuery.isLoading ? <SkeletonLine width="4rem" /> : added;
         if (added > 0) {
           sub = "Newest first";
           to = "/media?sort=added&dir=desc";
@@ -350,7 +350,7 @@ export default function Stats() {
         const total = overviewQuery.data?.totalItems ?? 0;
         const c4k = overviewQuery.data?.count4k ?? 0;
         value = overviewQuery.isLoading ? (
-          <SkeletonLine width="40px" />
+          <SkeletonLine width="4rem" />
         ) : total > 0 ? (
           `${Math.round((c4k / total) * 100)}%`
         ) : (
@@ -365,7 +365,7 @@ export default function Stats() {
       case "librarySplit": {
         const m = overviewQuery.data?.movieCount ?? 0;
         const e = overviewQuery.data?.episodeCount ?? 0;
-        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : `${formatNumber(m)} / ${formatNumber(e)}`;
+        value = overviewQuery.isLoading ? <SkeletonLine width="4rem" /> : `${formatNumber(m)} / ${formatNumber(e)}`;
         // The sub used to repeat the tile's own label back at it. The split
         // itself is the thing two counts side by side don't quite say.
         if (m + e > 0) sub = `${Math.round((m / (m + e)) * 100)}% movies`;
@@ -373,7 +373,7 @@ export default function Stats() {
         break;
       }
       case "users":
-        value = overviewQuery.isLoading ? <SkeletonLine width="40px" /> : (overviewQuery.data?.userCount ?? 0);
+        value = overviewQuery.isLoading ? <SkeletonLine width="4rem" /> : (overviewQuery.data?.userCount ?? 0);
         if (activityQuery.data && activityQuery.data.activeUsersWeek > 0)
           sub = `${activityQuery.data.activeUsersWeek} active`;
         to = "/users";
@@ -381,7 +381,7 @@ export default function Stats() {
       case "activeUsers": {
         const active = activityQuery.data?.activeUsersWeek ?? 0;
         const total = overviewQuery.data?.userCount ?? 0;
-        value = activityQuery.isLoading ? <SkeletonLine width="40px" /> : active;
+        value = activityQuery.isLoading ? <SkeletonLine width="4rem" /> : active;
         // "this week" was already in the label. The denominator isn't.
         if (total > 0) sub = `of ${total}`;
         to = "/users";
@@ -390,7 +390,7 @@ export default function Stats() {
       case "failedJobs": {
         const n = opsQuery.data?.failedJobs24h ?? 0;
         const last = opsQuery.data?.lastFailure;
-        value = opsQuery.isLoading ? <SkeletonLine width="40px" /> : n;
+        value = opsQuery.isLoading ? <SkeletonLine width="4rem" /> : n;
         if (n > 0) {
           tone = "danger";
           // The count is the alarm; the sub says which job, which is what you

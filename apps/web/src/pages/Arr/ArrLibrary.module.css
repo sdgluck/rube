@@ -2,22 +2,22 @@
    The grid view is a separate concern; this is the scannable list. */
 
 .posterCol {
-  width: 34px;
+  width: 3.4rem;
   padding-right: 0;
 }
 
 .poster {
   display: block;
-  width: 30px;
-  height: 45px;
+  width: 3rem;
+  height: 4.5rem;
   object-fit: cover;
   border-radius: var(--r-sm);
   background: var(--surface-poster);
 }
 
 .posterPlaceholder {
-  width: 30px;
-  height: 45px;
+  width: 3rem;
+  height: 4.5rem;
   border-radius: var(--r-sm);
   background: var(--surface-poster);
 }

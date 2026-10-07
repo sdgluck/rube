@@ -1,15 +1,15 @@
 /* Quality profiles on an instance page, and the apply-preset dialog. */
 
 .section {
-  margin-top: 24px;
+  margin-top: 2.4rem;
 }
 
 .sectionHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
 }
 
 .sectionTitle {
@@ -21,19 +21,19 @@
 
 .sectionActions {
   display: flex;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .hint {
-  margin: 8px 0 0;
+  margin: 0.8rem 0 0;
   max-width: 72ch;
   font: var(--t-body-sm);
   color: var(--ink-3);
 }
 
 .warning {
-  margin: 0 0 12px;
-  padding: 8px 12px;
+  margin: 0 0 1.2rem;
+  padding: 0.8rem 1.2rem;
   border-radius: var(--r-md);
   background: var(--status-warn-bg);
   font: var(--t-body-sm);
@@ -44,7 +44,7 @@
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 0.4rem 0.8rem;
 }
 
 /* Wraps rather than widening the table: on a phone the actions stack under
@@ -58,7 +58,7 @@
 }
 
 .snapshots {
-  margin-top: 16px;
+  margin-top: 1.6rem;
 }
 
 /* ── The dialog ─────────────────────────────────────────────────────────── */
@@ -66,19 +66,19 @@
 .modalActions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .chooser {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .fieldLabel {
@@ -96,15 +96,15 @@
 
 .presetGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: 0.8rem;
 }
 
 .presetTile {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px;
+  gap: 0.4rem;
+  padding: 1.2rem;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   background: var(--surface);
@@ -136,7 +136,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.8rem;
   font: var(--t-card);
   letter-spacing: var(--t-card-tracking);
   color: var(--ink);
@@ -164,7 +164,7 @@
 }
 
 .presetDescription {
-  margin: 6px 0 0;
+  margin: 0.6rem 0 0;
   max-width: 72ch;
   font: var(--t-body);
   color: var(--ink-2);
@@ -173,14 +173,14 @@
 .limits {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .inputWithUnit {
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: 180px;
+  gap: 0.8rem;
+  max-width: 18rem;
 }
 
 .unit {
@@ -190,7 +190,7 @@
 
 .createdList {
   margin: 0;
-  padding: 4px 12px 10px;
+  padding: 0.4rem 1.2rem 1rem;
   font: var(--t-body-sm);
   color: var(--ink-2);
 }
@@ -206,7 +206,7 @@
 .preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .step {
@@ -218,8 +218,8 @@
 .stepSummary {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 0.8rem;
+  padding: 0.8rem 1.2rem;
   font: var(--t-body);
   color: var(--ink);
   cursor: pointer;

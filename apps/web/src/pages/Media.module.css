@@ -4,8 +4,8 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0 6px 0 0;
-  font-size: 11px;
+  padding: 0 0.6rem 0 0;
+  font-size: 1.1rem;
   color: var(--ink-3);
   line-height: 1;
   vertical-align: middle;
@@ -25,11 +25,11 @@
 }
 
 .childRowDepth1 {
-  padding-left: 32px;
+  padding-left: 3.2rem;
 }
 
 .childRowDepth2 {
-  padding-left: 56px;
+  padding-left: 5.6rem;
 }
 
 .childRowLoading {
@@ -40,12 +40,12 @@
 .childRowTitle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .childEpisodeCount {
   color: var(--ink-3);
-  margin-left: 6px;
+  margin-left: 0.6rem;
   font-size: 0.85em;
 }
 
@@ -58,11 +58,11 @@
 
 .cardSelect {
   position: absolute;
-  top: 6px;
-  left: 6px;
+  top: 0.6rem;
+  left: 0.6rem;
   z-index: 1;
   display: flex;
-  padding: 3px;
+  padding: 0.3rem;
   border-radius: var(--r-sunken);
   background: var(--surface);
   opacity: 0.85;

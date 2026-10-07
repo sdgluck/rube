@@ -47,7 +47,7 @@ export function DragHandle({ onDragStart, onDragEnd }: DragHandleProps) {
       title="Drag to reorder"
       aria-label="Drag to reorder panel"
     >
-      <GripVertical size={14} strokeWidth={2} />
+      <GripVertical size="1.4rem" strokeWidth={2} />
     </span>
   );
 }
@@ -63,7 +63,7 @@ function PanelTitle({ title, onToggle }: { title: string; onToggle: (() => void)
       aria-expanded={true}
       title="Collapse panel"
     >
-      <ChevronDown size={13} strokeWidth={2.5} className={styles.panelChevron} aria-hidden />
+      <ChevronDown size="1.3rem" strokeWidth={2.5} className={styles.panelChevron} aria-hidden />
       {title}
     </button>
   );
@@ -135,7 +135,7 @@ export function CollapsedPanel({
           aria-expanded={false}
           title="Expand panel"
         >
-          <ChevronRight size={13} strokeWidth={2.5} className={styles.panelChevron} aria-hidden />
+          <ChevronRight size="1.3rem" strokeWidth={2.5} className={styles.panelChevron} aria-hidden />
           {title}
         </button>
         <span className={styles.panelSpacer} />

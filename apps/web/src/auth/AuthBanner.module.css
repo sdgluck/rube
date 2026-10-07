@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1.6rem;
   flex-wrap: wrap;
   background: var(--status-warn-bg);
   color: var(--status-warn-fg);
@@ -20,7 +20,7 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   flex-shrink: 0;
 }
 

@@ -1,11 +1,11 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .swatch {
-  width: 44px;
+  width: 4.4rem;
   /* Beside the hex input, so the same height as it. */
   height: var(--control-h);
   box-sizing: border-box;

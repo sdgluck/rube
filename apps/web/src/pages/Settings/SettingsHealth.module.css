@@ -2,11 +2,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 2rem;
 }
 
 .headerHint {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-3);
 }
 
@@ -17,26 +17,26 @@
 .serviceList {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .serviceCard {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
+  gap: 1.4rem;
+  padding: 1.4rem 1.8rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
 }
 
 .statusDot {
-  width: 10px;
-  height: 10px;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
   flex-shrink: 0;
   align-self: flex-start;
-  margin-top: 4px;
+  margin-top: 0.4rem;
 }
 
 .statusOk {
@@ -56,7 +56,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 /* Wraps: in a three-up grid the uptime and "just now" don't fit beside the
@@ -65,30 +65,30 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 10px;
+  gap: 2px 1rem;
 }
 
 .serviceName {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 1.3rem;
   color: var(--ink);
 }
 
 .serviceUptime {
-  font-size: 12px;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--status-ok-dot);
   white-space: nowrap;
 }
 
 .serviceTime {
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-3);
   white-space: nowrap;
 }
 
 .serviceMessage {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -96,7 +96,7 @@
 }
 
 .sparkline {
-  margin-top: 4px;
+  margin-top: 0.4rem;
   border-radius: var(--r-tag);
   overflow: hidden;
   display: block;
@@ -120,6 +120,6 @@
   }
   .serviceCard {
     flex-wrap: wrap;
-    padding: 12px;
+    padding: 1.2rem;
   }
 }

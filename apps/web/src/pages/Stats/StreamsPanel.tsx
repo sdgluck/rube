@@ -61,7 +61,7 @@ function StateIcon({ state }: { state: string }) {
   const Icon = state === "paused" ? Pause : state === "buffering" ? Loader : state === "playing" ? Play : Square;
   return (
     <span className={styles.stateIcon} data-state={state} title={state}>
-      <Icon size={13} strokeWidth={2} fill={state === "buffering" ? "none" : "currentColor"} aria-label={state} />
+      <Icon size="1.3rem" strokeWidth={2} fill={state === "buffering" ? "none" : "currentColor"} aria-label={state} />
     </span>
   );
 }

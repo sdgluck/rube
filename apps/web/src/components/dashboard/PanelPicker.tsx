@@ -55,7 +55,7 @@ export function PanelPicker({
         title="Choose panels"
         aria-label="Choose panels"
       >
-        <Rows3 size={16} strokeWidth={2} />
+        <Rows3 size="1.6rem" strokeWidth={2} />
       </button>
       {open && (
         <div className={styles.tilePickerPopover}>

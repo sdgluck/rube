@@ -82,14 +82,14 @@ export default function SettingsPortalAddress() {
             the other two have nothing to fall back on, so they are the ones
             that get the warning mark. */}
         <p className={styles.hint}>
-          Used by: <Check size={12} aria-hidden /> Plex sign-in
+          Used by: <Check size="1.2rem" aria-hidden /> Plex sign-in
           {USED_WITHOUT_FALLBACK.map((name) => (
             <span key={name}>
               {" · "}
               {blank ? (
-                <AlertTriangle size={12} className={styles.warnMark} aria-label="needs an address" />
+                <AlertTriangle size="1.2rem" className={styles.warnMark} aria-label="needs an address" />
               ) : (
-                <Check size={12} aria-hidden />
+                <Check size="1.2rem" aria-hidden />
               )}{" "}
               {name}
             </span>

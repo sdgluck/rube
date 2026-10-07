@@ -65,7 +65,7 @@ export default function ChangesPanel({
             aria-label={`Revert ${SETTING_LABEL[key]}`}
             title="Revert"
           >
-            <Undo2 size={14} />
+            <Undo2 size="1.4rem" />
           </button>
         </li>
       ))}
@@ -82,7 +82,7 @@ export default function ChangesPanel({
             aria-label={`Revert ${names.get(jobId) ?? jobId}`}
             title="Revert"
           >
-            <Undo2 size={14} />
+            <Undo2 size="1.4rem" />
           </button>
         </li>
       ))}

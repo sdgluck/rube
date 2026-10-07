@@ -4,7 +4,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -14,8 +14,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 14px;
+  gap: 1.6rem;
+  padding: 1.2rem 1.4rem;
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
@@ -24,14 +24,14 @@
 .cardMain {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0.3rem;
   min-width: 0;
 }
 
 .cardHead {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 0.8rem;
   min-width: 0;
 }
 
@@ -48,7 +48,7 @@
    "create rule" would be the only way to tell them apart. */
 .provider {
   flex: none;
-  padding: 1px 6px;
+  padding: 1px 0.6rem;
   border-radius: var(--r-sm);
   background: var(--surface-sunken);
   font: var(--t-caption);
@@ -67,7 +67,7 @@
 .cardActions {
   display: flex;
   flex: none;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .addBtn {
@@ -81,7 +81,7 @@
 /* A provider that failed or isn't set up. Advisory, above the results, because
    the alternative is a short list that looks complete. */
 .notice {
-  margin: 0 0 10px;
+  margin: 0 0 1rem;
   font: var(--t-caption);
   color: var(--ink-3);
 }

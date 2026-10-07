@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1.6rem;
   flex-wrap: wrap;
   background: var(--status-info-bg);
   color: var(--status-info-fg);
@@ -21,14 +21,14 @@
 .progress {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex-shrink: 0;
   margin-inline-start: auto;
 }
 
 .track {
-  inline-size: 96px;
-  block-size: 4px;
+  inline-size: 9.6rem;
+  block-size: 0.4rem;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--status-info-fg) 16%, transparent);
   overflow: hidden;
@@ -49,7 +49,7 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
   flex-shrink: 0;
 }
 

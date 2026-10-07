@@ -1,19 +1,19 @@
 .footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .loading {
   display: flex;
   justify-content: center;
-  padding: 32px 0;
+  padding: 3.2rem 0;
 }
 
 /* The number that decides whether the list is worth a rule, so it sits above
    the titles rather than being something you count for yourself. */
 .summary {
-  margin: 0 0 10px;
+  margin: 0 0 1rem;
   font: var(--t-panel);
   color: var(--ink);
 }
@@ -31,8 +31,8 @@
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 10px;
-  padding: 5px 0;
+  gap: 1rem;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--line);
 }
 

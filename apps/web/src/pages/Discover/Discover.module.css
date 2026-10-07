@@ -2,7 +2,7 @@
    than restated, so it matches the Settings sub-tabs it borrows the look from. */
 .tabs {
   composes: pageTabs from "../../styles/shared.module.css";
-  margin-bottom: 12px;
+  margin-bottom: 1.2rem;
 }
 
 .tab {
@@ -23,9 +23,9 @@
 }
 
 .cardAction {
-  padding: 6px 2px 0;
+  padding: 0.6rem 2px 0;
   display: flex;
-  min-height: 26px;
+  min-height: 2.6rem;
   align-items: center;
 }
 

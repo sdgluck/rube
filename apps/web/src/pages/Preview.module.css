@@ -13,12 +13,12 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 3rem;
   color: var(--on-dark);
   background: var(--sidebar);
   border-radius: var(--r-panel);
   box-shadow: var(--e-card);
-  padding: 26px 24px;
+  padding: 2.6rem 2.4rem;
   font-family:
     "Plex Sans",
     -apple-system,
@@ -42,37 +42,37 @@
 /* Sized to the selected name rather than a fixed width. */
 .pickerSelect {
   composes: select selectSm from "../styles/controls.module.css";
-  max-width: 220px;
+  max-width: 22rem;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1.6rem;
   flex-wrap: wrap;
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .title {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.8rem;
   font-weight: 700;
   color: var(--on-accent);
   letter-spacing: -0.01em;
 }
 
 .badge {
-  font-size: 9.5px;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 0.3rem 0.8rem;
   border-radius: var(--r-tag);
   background: color-mix(in srgb, var(--plex) 15%, transparent);
   color: var(--plex);
@@ -82,11 +82,11 @@
 .userPicker {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
 }
 
 .userPicker label {
-  font-size: 11px;
+  font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
@@ -103,18 +103,18 @@
 }
 
 .userSelect {
-  padding: 7px 28px 7px 10px;
+  padding: 0.7rem 2.8rem 0.7rem 1rem;
   border: 1px solid var(--on-dark-line);
   border-radius: var(--r-tag);
   background:
-    linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--on-accent) 50%, transparent) 50%) calc(100% - 12px)
-      calc(50% - 2px) / 5px 5px no-repeat,
-    linear-gradient(135deg, color-mix(in srgb, var(--on-accent) 50%, transparent) 50%, transparent 50%) calc(100% - 7px)
-      calc(50% - 2px) / 5px 5px no-repeat,
+    linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--on-accent) 50%, transparent) 50%)
+      calc(100% - 1.2rem) calc(50% - 2px) / 0.5rem 0.5rem no-repeat,
+    linear-gradient(135deg, color-mix(in srgb, var(--on-accent) 50%, transparent) 50%, transparent 50%)
+      calc(100% - 0.7rem) calc(50% - 2px) / 0.5rem 0.5rem no-repeat,
     color-mix(in srgb, var(--on-accent) 4%, transparent);
   color: #eee;
-  font-size: 12.5px;
-  min-width: 200px;
+  font-size: 1.25rem;
+  min-width: 20rem;
   appearance: none;
   cursor: pointer;
   transition:
@@ -141,13 +141,13 @@
 .warnings {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 11px 13px;
+  gap: 0.6rem;
+  padding: 1.1rem 1.3rem;
   border: none;
   border-radius: var(--r-sunken);
   background: color-mix(in srgb, var(--plex) 12%, transparent);
   color: #f0d9a4;
-  font-size: 12.5px;
+  font-size: 1.25rem;
 }
 
 /* ─── Hub rows ────────────────────────────────────────────────────────────── */
@@ -155,18 +155,18 @@
 .hub {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 1.4rem;
 }
 
 .hubTitle {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 1.45rem;
   font-weight: 600;
   color: var(--on-accent);
   letter-spacing: -0.012em;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
@@ -175,20 +175,20 @@
 .hubMeta {
   margin-left: auto;
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: color-mix(in srgb, var(--on-accent) 35%, transparent);
 }
 
 .hubChip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font: 600 9.5px/1.4 var(--font-mono);
+  gap: 0.4rem;
+  font: 600 0.95rem/1.4 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: color-mix(in srgb, var(--on-accent) 55%, transparent);
   text-decoration: none;
-  padding: 3px 8px;
+  padding: 0.3rem 0.8rem;
   border: 1px solid color-mix(in srgb, var(--on-accent) 15%, transparent);
   border-radius: var(--r-tag);
   background: color-mix(in srgb, var(--on-accent) 4%, transparent);
@@ -218,14 +218,14 @@ button.hubChip:hover:not(:disabled) {
 .hubProv {
   display: inline-flex;
   align-items: center;
-  font: 600 9.5px/1.4 var(--font-mono);
+  font: 600 0.95rem/1.4 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: color-mix(in srgb, var(--on-accent) 45%, transparent);
   text-decoration: none;
-  padding: 3px 8px;
+  padding: 0.3rem 0.8rem;
   border: none;
-  border-radius: 999px;
+  border-radius: 99.9rem;
   background: color-mix(in srgb, var(--on-accent) 9%, transparent);
   transition:
     background 0.15s,
@@ -251,7 +251,7 @@ a.hubProv:hover {
 
 .row {
   display: flex;
-  gap: 14px;
+  gap: 1.4rem;
   overflow-x: auto;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
@@ -260,8 +260,8 @@ a.hubProv:hover {
      pixels of bleed at top/bottom; horizontal hover effects use inset
      box-shadow now so no horizontal bleed is needed and cards align cleanly
      with the hub title at the parent's content edge. */
-  padding: 4px 0;
-  margin: -4px 0;
+  padding: 0.4rem 0;
+  margin: -0.4rem 0;
 }
 
 .row::-webkit-scrollbar {
@@ -272,17 +272,17 @@ a.hubProv:hover {
 
 .mediaCard {
   flex: 0 0 auto;
-  width: 116px;
+  width: 11.6rem;
   cursor: pointer;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8rem;
   transition: transform 0.18s ease;
 }
 
 .mediaCard.cardWide {
-  width: 228px;
+  width: 22.8rem;
 }
 
 .mediaCard:hover {
@@ -321,7 +321,7 @@ a.hubProv:hover {
 .poster {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: repeating-linear-gradient(135deg, #222928 0 8px, #1b2221 8px 16px);
+  background: repeating-linear-gradient(135deg, #222928 0 0.8rem, #1b2221 0.8rem 1.6rem);
   object-fit: cover;
   display: block;
 }
@@ -333,12 +333,12 @@ a.hubProv:hover {
 .posterPlaceholder {
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: repeating-linear-gradient(135deg, #222928 0 8px, #1b2221 8px 16px);
+  background: repeating-linear-gradient(135deg, #222928 0 0.8rem, #1b2221 0.8rem 1.6rem);
   display: flex;
   align-items: center;
   justify-content: center;
   color: color-mix(in srgb, var(--on-accent) 30%, transparent);
-  font-size: 11px;
+  font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -352,7 +352,7 @@ a.hubProv:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 3px;
+  height: 0.3rem;
   background: color-mix(in srgb, var(--on-accent) 16%, transparent);
   z-index: 1;
 }
@@ -364,7 +364,7 @@ a.hubProv:hover {
 }
 
 .cardTitle {
-  font-size: 12.5px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--on-dark);
   white-space: nowrap;
@@ -375,7 +375,7 @@ a.hubProv:hover {
 
 .cardMeta {
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: color-mix(in srgb, var(--on-accent) 45%, transparent);
   white-space: nowrap;
   overflow: hidden;
@@ -384,20 +384,20 @@ a.hubProv:hover {
 }
 
 .empty {
-  padding: 48px;
+  padding: 4.8rem;
   text-align: center;
   color: color-mix(in srgb, var(--on-accent) 40%, transparent);
-  font-size: 13px;
+  font-size: 1.3rem;
 }
 
 /* ─── Skeleton (mirrors hub + card layout in Plex tones) ────────────────── */
 
 @keyframes previewShimmer {
   0% {
-    background-position: -400px 0;
+    background-position: -40rem 0;
   }
   100% {
-    background-position: 400px 0;
+    background-position: 40rem 0;
   }
 }
 
@@ -409,7 +409,7 @@ a.hubProv:hover {
         color-mix(in srgb, var(--on-accent) 8%, transparent) 50%,
         color-mix(in srgb, var(--on-accent) 4%, transparent) 75%
       )
-      0 0 / 800px 100% no-repeat,
+      0 0 / 80rem 100% no-repeat,
     color-mix(in srgb, var(--on-accent) 4%, transparent);
   animation: previewShimmer 1.4s infinite linear;
   border-radius: var(--r-tag);
@@ -417,30 +417,30 @@ a.hubProv:hover {
 
 .skeletonHubTitle {
   composes: skeletonShimmer;
-  width: 180px;
-  height: 16px;
+  width: 18rem;
+  height: 1.6rem;
   border-radius: var(--r-tag);
 }
 
 .skeletonCard {
   composes: skeletonShimmer;
   flex: 0 0 auto;
-  width: 116px;
+  width: 11.6rem;
   aspect-ratio: 2 / 3;
   border-radius: var(--r-md);
 }
 
 .skeletonCard.cardWide {
-  width: 228px;
+  width: 22.8rem;
   aspect-ratio: 16 / 9;
 }
 
 @media (max-width: 768px) {
   .skeletonCard {
-    width: 120px;
+    width: 12rem;
   }
   .skeletonCard.cardWide {
-    width: 220px;
+    width: 22rem;
   }
 }
 
@@ -448,13 +448,13 @@ a.hubProv:hover {
 
 @media (max-width: 768px) {
   .page {
-    gap: 24px;
-    padding: 40px 14px 20px;
+    gap: 2.4rem;
+    padding: 4rem 1.4rem 2rem;
   }
   .mediaCard {
-    width: 104px;
+    width: 10.4rem;
   }
   .mediaCard.cardWide {
-    width: 196px;
+    width: 19.6rem;
   }
 }

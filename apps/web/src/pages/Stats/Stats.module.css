@@ -5,8 +5,8 @@
 
 .statusDot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 0.8rem;
+  height: 0.8rem;
   border-radius: 50%;
   background: var(--status-ok-dot);
   flex-shrink: 0;
@@ -79,13 +79,13 @@
 
 .epLabel {
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 1.1rem;
 }
 
 .userCell {
   white-space: nowrap;
   color: var(--ink-2);
-  font-size: 12px;
+  font-size: 1.2rem;
 }
 
 .monoCell {
@@ -96,40 +96,40 @@
 }
 
 .rankCol {
-  width: 32px;
+  width: 3.2rem;
 }
 
 .rankCell {
-  font: 600 11.5px/1.4 var(--font-mono);
+  font: 600 1.15rem/1.4 var(--font-mono);
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
-  width: 32px;
+  width: 3.2rem;
 }
 
 .playsCol {
-  width: 100px;
+  width: 10rem;
 }
 
 .playsCell {
-  width: 100px;
+  width: 10rem;
 }
 
 .playsBar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
   position: relative;
 }
 
 .playsBarFill {
-  height: 8px;
+  height: 0.8rem;
   background: var(--ramp-2);
   border-radius: var(--r-pill);
   min-width: 2px;
 }
 
 .playsCount {
-  font: 600 11px/1.4 var(--font-mono);
+  font: 600 1.1rem/1.4 var(--font-mono);
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
@@ -138,12 +138,12 @@
 /* ─── Mini progress bar ─────────────────────────────────────────────────── */
 
 .progressCell {
-  width: 80px;
-  min-width: 60px;
+  width: 8rem;
+  min-width: 6rem;
 }
 
 .miniProgress {
-  height: 4px;
+  height: 0.4rem;
   background: var(--fill-track);
   border-radius: var(--r-pill);
   overflow: hidden;
@@ -166,28 +166,28 @@
 .healthRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1.2rem;
   border-bottom: 1px solid var(--line-soft);
 }
 
 .healthItem {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
+  gap: 0.6rem;
+  padding: 0.3rem 0.9rem;
   border-radius: var(--r-pill);
   background: var(--status-neutral-bg);
-  font: 600 10.5px/1.4 var(--font-mono);
+  font: 600 1.05rem/1.4 var(--font-mono);
   color: var(--status-neutral-fg);
   white-space: nowrap;
 }
 
 .healthDot {
   display: inline-block;
-  width: 5px;
-  height: 5px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   background: var(--status-neutral-dot);
   flex-shrink: 0;
@@ -204,7 +204,7 @@
 /* ─── Sub sections (jobs, events) ───────────────────────────────────────── */
 
 .subSection {
-  margin-top: 10px;
+  margin-top: 1rem;
 }
 
 .subHeader {
@@ -212,11 +212,11 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 6px;
+  margin-bottom: 0.6rem;
 }
 
 .jobsBody {
-  min-height: 24px;
+  min-height: 2.4rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -229,10 +229,10 @@
 .jobRow {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 0.6rem;
+  font-size: 1.1rem;
   color: var(--ink-2);
-  padding: 3px 0;
+  padding: 0.3rem 0;
 }
 
 .jobName {
@@ -242,7 +242,7 @@
 }
 
 .jobProgress {
-  font: 600 11px/1.4 var(--font-mono);
+  font: 600 1.1rem/1.4 var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--accent-text);
   flex-shrink: 0;
@@ -250,19 +250,19 @@
 
 .eventRow {
   display: flex;
-  gap: 8px;
-  font-size: 11px;
-  padding: 3px 0;
+  gap: 0.8rem;
+  font-size: 1.1rem;
+  padding: 0.3rem 0;
   min-width: 0;
 }
 
 .eventTime {
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
-  min-width: 50px;
+  min-width: 5rem;
 }
 
 .eventMsg {
@@ -288,13 +288,13 @@
 .distRows {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 1.4rem;
 }
 
 .distRow {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .distLabel {
@@ -306,14 +306,14 @@
 
 .distBar {
   display: flex;
-  height: 9px;
+  height: 0.9rem;
   border-radius: var(--r-pill);
   overflow: hidden;
   gap: 1px;
 }
 
 .distSegment {
-  min-width: 3px;
+  min-width: 0.3rem;
   transition: width 0.3s ease;
 }
 
@@ -332,28 +332,28 @@
 .distLegend {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 0.4rem 1rem;
 }
 
 .distLegendItem {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 0.4rem;
+  font-size: 1.1rem;
   color: var(--ink-2);
   white-space: nowrap;
 }
 
 .distLegendDot {
-  width: 6px;
-  height: 6px;
+  width: 0.6rem;
+  height: 0.6rem;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .distLegendCount {
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -363,14 +363,14 @@
 .barChart {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.4rem;
 }
 
 .barChartBars {
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  height: 86px;
+  height: 8.6rem;
 }
 
 /* Each bar gets an equal share of the width and grows from the bottom. The slot
@@ -421,7 +421,7 @@
   min-width: 0;
   text-align: center;
   font: var(--t-data);
-  font-size: 9.5px;
+  font-size: 0.95rem;
   line-height: 1.4;
   color: var(--ink-faint);
   white-space: nowrap;
@@ -434,8 +434,8 @@
 .factRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 18px;
-  margin-top: 10px;
+  gap: 0.4rem 1.8rem;
+  margin-top: 1rem;
 }
 
 .fact {
@@ -453,7 +453,7 @@
 
 .factValue {
   font: var(--t-data);
-  font-size: 13px;
+  font-size: 1.3rem;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -470,10 +470,10 @@
 
 .watchedCol,
 .watchedCell {
-  width: 78px;
+  width: 7.8rem;
   text-align: right;
   font: var(--t-data);
-  font-size: 11px;
+  font-size: 1.1rem;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -482,24 +482,24 @@
 /* ─── States ────────────────────────────────────────────────────────────── */
 
 .muted {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--ink-3);
-  padding: 8px 0;
+  padding: 0.8rem 0;
 }
 
 .error {
-  font-size: 11.5px;
+  font-size: 1.15rem;
   color: var(--status-error-fg);
-  padding: 8px 0;
+  padding: 0.8rem 0;
 }
 
 /* A dashboard with every panel switched off is otherwise a summary bar above
    nothing, which reads as a page that failed to load rather than as a choice
    the reader made and can undo. */
 .emptyPanels {
-  padding: 28px 18px;
+  padding: 2.8rem 1.8rem;
   text-align: center;
-  font-size: 12px;
+  font-size: 1.2rem;
   color: var(--ink-3);
   background: var(--surface);
   border-radius: var(--r-panel);
@@ -519,12 +519,12 @@
 
   .playsCol,
   .playsCell {
-    width: 70px;
+    width: 7rem;
   }
 
   .progressCell {
-    width: 50px;
-    min-width: 40px;
+    width: 5rem;
+    min-width: 4rem;
   }
 }
 
@@ -552,9 +552,9 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  padding-top: 8px;
-  font-size: 11px;
+  gap: 0.8rem;
+  padding-top: 0.8rem;
+  font-size: 1.1rem;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -564,19 +564,19 @@
 .pageSize {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.4rem;
   margin-right: auto;
 }
 
 /* stylelint-disable tinkerbell/primitive-geometry -- sized to the pager's 11px line on purpose, see above */
 .pageSizeSelect {
   composes: select from "../../styles/controls.module.css";
-  height: 24px;
-  padding: 0 22px 0 6px;
-  font-size: 11px;
+  height: 2.4rem;
+  padding: 0 2.2rem 0 0.6rem;
+  font-size: 1.1rem;
   background-position:
-    calc(100% - 12px) 50%,
-    calc(100% - 8px) 50%;
+    calc(100% - 1.2rem) 50%,
+    calc(100% - 0.8rem) 50%;
 }
 /* stylelint-enable tinkerbell/primitive-geometry */
 
@@ -591,14 +591,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .storageGaps {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 /* What the "≥" on the total is short by — counted, never folded in as zero. */

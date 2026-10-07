@@ -61,25 +61,25 @@ export function badgePreviewStyle(
   // too big for that compact context.
   const sizeMul = options?.compact ? baseMul * 0.6 : baseMul;
   const shape = style?.shape ?? "rounded";
-  const radius = shape === "pill" ? "999px" : shape === "rect" ? "0" : "4px";
+  const radius = shape === "pill" ? "999px" : shape === "rect" ? "0" : "0.4rem";
 
   return {
     background: bg,
     color: text,
-    fontSize: `${0.75 * sizeMul}rem`,
-    padding: `${3 * sizeMul}px ${8 * sizeMul}px`,
+    fontSize: `${1.2 * sizeMul}rem`,
+    padding: `${0.3 * sizeMul}rem ${0.8 * sizeMul}rem`,
     borderRadius: radius,
     opacity: style?.opacity ?? 1,
     fontWeight: 700,
     whiteSpace: "nowrap",
     display: "inline-flex",
     alignItems: "center",
-    gap: 4,
+    gap: "0.4rem",
     lineHeight: 1.3,
     ...(shape === "tag"
       ? {
-          clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)",
-          paddingRight: `${(8 + 8) * sizeMul}px`,
+          clipPath: "polygon(0 0, calc(100% - 0.8rem) 0, 100% 50%, calc(100% - 0.8rem) 100%, 0 100%)",
+          paddingRight: `${(0.8 + 0.8) * sizeMul}rem`,
         }
       : {}),
   };

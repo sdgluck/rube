@@ -317,7 +317,7 @@ export default function RuleTableRow({
         <td className={styles.runsCell} data-cell="hide">
           <Link to={runsHref} className={styles.runsLink} title={`Run history for ${rule.name}`}>
             {rule.runCount > 0 ? `${rule.runCount} run${rule.runCount === 1 ? "" : "s"}` : "No runs"}
-            <ChevronRight size={14} aria-hidden />
+            <ChevronRight size="1.4rem" aria-hidden />
           </Link>
         </td>
         <td data-cell="hide">

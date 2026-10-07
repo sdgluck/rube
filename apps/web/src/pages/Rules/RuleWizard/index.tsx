@@ -762,7 +762,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 <input
                   type="number"
                   className={shared.input}
-                  style={{ maxWidth: 140 }}
+                  style={{ maxWidth: "14rem" }}
                   min={1}
                   value={form.limit}
                   onChange={(e) => setForm({ ...form, limit: Math.max(1, parseInt(e.target.value, 10) || 1) })}
@@ -778,7 +778,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 id="rule-limit"
                 type="number"
                 className={shared.input}
-                style={{ maxWidth: 140 }}
+                style={{ maxWidth: "14rem" }}
                 min={1}
                 value={form.limit}
                 onChange={(e) =>
@@ -810,7 +810,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               <input
                 type="number"
                 className={shared.input}
-                style={{ maxWidth: 140 }}
+                style={{ maxWidth: "14rem" }}
                 min={1}
                 value={form.minItems}
                 onChange={(e) => setForm({ ...form, minItems: Math.max(1, parseInt(e.target.value, 10) || 1) })}
@@ -868,7 +868,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   id="rule-pin-rotation"
                   type="number"
                   className={shared.input}
-                  style={{ maxWidth: 140 }}
+                  style={{ maxWidth: "14rem" }}
                   min={1}
                   value={form.pinRotationCount || ""}
                   onChange={(e) =>
@@ -896,7 +896,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   <input
                     type="number"
                     className={shared.input}
-                    style={{ maxWidth: 140 }}
+                    style={{ maxWidth: "14rem" }}
                     min={1}
                     value={form.pinRotationCount}
                     onChange={(e) =>
@@ -925,7 +925,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   <input
                     type="number"
                     className={shared.input}
-                    style={{ maxWidth: 140 }}
+                    style={{ maxWidth: "14rem" }}
                     min={1}
                     value={form.pinMinItems}
                     onChange={(e) => setForm({ ...form, pinMinItems: Math.max(1, parseInt(e.target.value, 10) || 1) })}
@@ -1206,7 +1206,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             id="meta-max-writes"
             type="number"
             className={shared.input}
-            style={{ maxWidth: 140 }}
+            style={{ maxWidth: "14rem" }}
             min={1}
             value={o.maxWritesPerRun}
             onChange={(e) => setOutcome({ maxWritesPerRun: Math.max(1, parseInt(e.target.value, 10) || 1) })}
@@ -1741,7 +1741,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 id="arr-cap"
                 type="number"
                 className={shared.input}
-                style={{ maxWidth: 140 }}
+                style={{ maxWidth: "14rem" }}
                 min={1}
                 max={500}
                 value={form.arr.maxAddsPerRun}

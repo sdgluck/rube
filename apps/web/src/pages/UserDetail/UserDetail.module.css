@@ -10,14 +10,14 @@
 
 .hero {
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 22px;
+  grid-template-columns: 7.2rem 1fr;
+  gap: 2.2rem;
   align-items: start;
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: 2rem;
+  margin-bottom: 1.6rem;
 }
 
 .avatarFrame {
@@ -56,8 +56,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
+  gap: 1.6rem;
+  margin-bottom: 0.8rem;
 }
 
 .heroIdentity {
@@ -69,7 +69,7 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 6px;
+  margin-bottom: 0.6rem;
 }
 
 .heroTitle {
@@ -83,7 +83,7 @@
 .heroActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.8rem;
   flex-shrink: 0;
 }
 
@@ -96,12 +96,12 @@
   font: var(--t-data);
   color: var(--ink-2);
   line-height: 1.5;
-  row-gap: 6px;
+  row-gap: 0.6rem;
 }
 
 .metaDot {
   display: inline-block;
-  margin: 0 8px;
+  margin: 0 0.8rem;
   color: var(--ink-3);
   opacity: 0.6;
 }
@@ -115,20 +115,20 @@
    another fact in the same sentence. */
 .metaRule {
   width: 1px;
-  height: 12px;
+  height: 1.2rem;
   background: var(--line);
-  margin: 0 12px;
+  margin: 0 1.2rem;
 }
 
 .chipGroup {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 0.6rem;
 }
 
 .tabsRow {
-  margin-bottom: 16px;
+  margin-bottom: 1.6rem;
 }
 
 /* ─── Access panels ───────────────────────────────────────────────────────── */
@@ -139,42 +139,42 @@
 .panels {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6rem;
 }
 
 .panel {
   background: var(--surface);
   border-radius: var(--r-card);
   box-shadow: var(--e-card);
-  padding: 18px 20px;
+  padding: 1.8rem 2rem;
 }
 
 .panelTitle {
   font: var(--t-panel);
   letter-spacing: var(--t-panel-tracking);
   color: var(--ink);
-  margin: 0 0 4px;
+  margin: 0 0 0.4rem;
 }
 
 .panelHint {
   font: var(--t-caption);
   color: var(--ink-3);
-  margin: 0 0 10px;
+  margin: 0 0 1rem;
 }
 
 .panelActions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
 }
 
 .ratingRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
 }
 
 .ratingLead {
@@ -182,7 +182,7 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
-  min-width: 52px;
+  min-width: 5.2rem;
 }
 
 .ratingChip {

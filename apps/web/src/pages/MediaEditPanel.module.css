@@ -6,9 +6,9 @@
   border-radius: var(--r-panel);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 20px;
-  padding: 16px;
+  gap: 1.4rem;
+  margin-top: 2rem;
+  padding: 1.6rem;
 }
 
 .header {
@@ -29,14 +29,14 @@
 
 .fields {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 /* The summary is the one field worth a full row of its own. */
@@ -47,7 +47,7 @@
 .fieldHead {
   align-items: baseline;
   display: flex;
-  gap: 10px;
+  gap: 1rem;
   justify-content: space-between;
 }
 
@@ -69,8 +69,8 @@
 }
 
 .lockIcon {
-  width: 11px;
-  height: 11px;
+  width: 1.1rem;
+  height: 1.1rem;
   vertical-align: -1px;
 }
 
@@ -93,7 +93,7 @@
   cursor: pointer;
   display: flex;
   font: var(--t-body);
-  gap: 10px;
+  gap: 1rem;
   max-width: 72ch;
 }
 
@@ -106,14 +106,14 @@
   color: var(--ink-3);
   display: block;
   font: var(--t-meta);
-  margin-top: 4px;
+  margin-top: 0.4rem;
 }
 
 .actions {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 1.2rem;
 }
 
 .save {
