@@ -8,9 +8,10 @@ import { createPlexClient, type PlexClient, type PlexItem } from "@tinkerbell/pl
 import { preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
 
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { jobs } from "@tinkerbell/db";
+import { asc, eq } from "drizzle-orm";
+import { jobs, plexUsers } from "@tinkerbell/db";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
+import type { PlexAccount } from "@tinkerbell/plex";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
@@ -107,6 +108,33 @@ export function ownBywRows<T extends { labels: string[] }>(collections: T[], ple
 }
 
 /**
+ * Pair each user Tinkerbell knows with their server account. The users are
+ * the Users page's list, not the server's `/accounts`: Plex keeps an account
+ * there for anyone who ever played anything, so someone unshared months ago
+ * still got a personal row built from their old history. `/accounts` only
+ * supplies the id history is filed under — a shared user's is their plex.tv
+ * id, but the owner's is a server-local `1`, found by name. A user with no
+ * account has never played anything here; their plex.tv id finds no history,
+ * which is the truth.
+ */
+export function matchKnownUsers(
+  known: Array<{ userId: number; username: string }>,
+  accounts: PlexAccount[],
+): ResolvedUser[] {
+  // String() both sides: Plex sends the id as a number despite the type.
+  const byId = new Map(accounts.map((a) => [String(a.id), a]));
+  const byName = new Map(accounts.filter((a) => a.name).map((a) => [a.name!.toLowerCase(), a]));
+  return known.map((u) => {
+    const account = byId.get(String(u.userId)) ?? byName.get(u.username.toLowerCase());
+    return {
+      name: account?.name || u.username,
+      plexUsername: u.username,
+      accountID: account ? String(account.id) : String(u.userId),
+    };
+  });
+}
+
+/**
  * Best-effort JSON extraction for LLM responses. Tries strict parse, then
  * the first bracketed object, then a cleaned variant (no trailing commas /
  * control chars), then the first bracketed array. Returns null when none
@@ -159,22 +187,18 @@ export function createBecauseYouWatchedCommand(
   const { reportHealth } = health;
   const { upsertCollectionByKey, forgetCollections } = collections;
 
-  /** Server accounts, named the way per-user rows are labelled. */
-  async function resolveUsers(client: PlexClient, machineId: string): Promise<ResolvedUser[]> {
-    const accounts = await client.getAccounts();
-    const sharings = await client.getSharings(machineId);
-    const idToPlexUsername = new Map<string, string>();
-    for (const s of sharings) {
-      idToPlexUsername.set(String(s.userId), s.username);
-    }
-    const users: ResolvedUser[] = [];
-    for (const account of accounts) {
-      if (account.name) {
-        const plexUsername = idToPlexUsername.get(account.id) || account.name;
-        users.push({ name: account.name, plexUsername, accountID: account.id });
-      }
-    }
-    return users;
+  /**
+   * The users Tinkerbell knows — the Users page's `plex_users` — each matched
+   * to the server-local account its watch history is filed under.
+   */
+  async function resolveUsers(client: PlexClient): Promise<ResolvedUser[]> {
+    const known = db
+      .select({ userId: plexUsers.userId, username: plexUsers.username })
+      .from(plexUsers)
+      .orderBy(asc(plexUsers.username))
+      .all();
+    if (known.length === 0) return [];
+    return matchKnownUsers(known, await client.getAccounts());
   }
 
   /** The most recent distinct titles watched in a section, newest first, as the job names them. */
@@ -276,7 +300,7 @@ export function createBecauseYouWatchedCommand(
     if (MODE === "server") {
       resolvedUsers = [{ name: "", plexUsername: "", accountID: undefined }];
     } else {
-      resolvedUsers = await resolveUsers(client, machineId);
+      resolvedUsers = await resolveUsers(client);
       if (userAllowlist.length > 0) {
         resolvedUsers = resolvedUsers.filter(
           (u) => userAllowlist.includes(u.name.toLowerCase()) || userAllowlist.includes(u.plexUsername.toLowerCase()),
@@ -286,7 +310,7 @@ export function createBecauseYouWatchedCommand(
         }
       }
       if (resolvedUsers.length === 0) {
-        throw new Error("No user accounts found.");
+        throw new Error("No users synced yet — run Sync users, or refresh the Users page.");
       }
       ctx.log(`Users: ${resolvedUsers.map((u) => u.name).join(", ")}`);
     }
@@ -661,12 +685,11 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     let user: ResolvedUser | undefined;
     if (input.plexUsername) {
       onStep(`Looking up ${input.plexUsername}'s Plex account…`);
-      const identity = await client.getIdentity();
       const wanted = input.plexUsername.toLowerCase();
-      user = (await resolveUsers(client, identity.machineIdentifier)).find(
+      user = (await resolveUsers(client)).find(
         (u) => u.plexUsername.toLowerCase() === wanted || u.name.toLowerCase() === wanted,
       );
-      if (!user) throw new Error(`No server account for "${input.plexUsername}".`);
+      if (!user) throw new Error(`"${input.plexUsername}" isn't on the Users page.`);
     }
     const prefs = user ? getOptedInPreferencesByUsername(user.plexUsername) : undefined;
 
