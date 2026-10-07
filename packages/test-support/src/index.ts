@@ -7,7 +7,7 @@
  * this codebase lived in exactly those places: a label PUT sent to the wrong
  * path, and a 200 with an empty body parsed as JSON. A stub agreed with both.
  *
- * These are models of Plex and *Arr, not the real things. They cannot tell you
+ * These are models of Plex, *Arr and the download clients, not the real things. They cannot tell you
  * what a real server accepts, only that the client is internally consistent
  * with the shape documented in each file.
  *
@@ -16,5 +16,6 @@
  */
 export * from "./arr-fixtures.ts";
 export * from "./mock-arr-server.ts";
+export * from "./mock-download-clients.ts";
 export * from "./mock-list-server.ts";
 export * from "./mock-plex-server.ts";

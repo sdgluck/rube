@@ -617,6 +617,17 @@ export const TOOLS: AgentTool[] = [
     input: z.object({}),
     run: (_input, { caller }) => caller.aiUsage.summary(),
   }),
+
+  defineTool({
+    name: "get_download_clients",
+    title: "Download clients",
+    description:
+      "Each configured download client (SABnzbd, NZBGet, qBittorrent, Transmission, Deluge): whether it is " +
+      "reachable, whether it is paused, its download speed in bytes per second, and the items still " +
+      "downloading or queued with their state and progress. Finished torrents are left out.",
+    input: z.object({}),
+    run: (_input, { caller }) => caller.downloadClients.overview(),
+  }),
 ];
 
 export const TOOLS_BY_NAME: ReadonlyMap<string, AgentTool> = new Map(TOOLS.map((tool) => [tool.name, tool]));

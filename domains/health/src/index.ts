@@ -10,6 +10,8 @@ import { z } from "zod";
 import { type EventBus } from "@tinkerbell/ports";
 import { type Prerolls } from "@tinkerbell/domain.prerolls";
 import { token } from "@tinkerbell/container";
+import { createDownloadClient } from "@tinkerbell/download-clients";
+import { downloadClientHealthName } from "@tinkerbell/domain.download-clients";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
 
@@ -148,7 +150,18 @@ export function createHealth(deps: HealthDeps) {
         // construction — the check itself is what reports whether it answers.
         configuredFn: () => true,
       }));
-    return [...HEALTH_SERVICES, ...extra];
+    // A download client's name is its display name, as an extra *Arr's is. It
+    // does not yet carry its history across a rename the way
+    // `renameArrHealthServices` does for those — a renamed client starts a new
+    // health row.
+    const clients = downloadClientsForHealth().map((c) => ({ service: c.health, configuredFn: () => true }));
+    return [...HEALTH_SERVICES, ...extra, ...clients];
+  }
+
+  function downloadClientsForHealth() {
+    return (getConfig("global_download_clients") ?? [])
+      .filter((c) => c.url)
+      .map((c) => ({ ...c, health: downloadClientHealthName(c) }));
   }
 
   /** The instance behind a derived `Radarr (4K)` health name, if it is one. */
@@ -205,6 +218,13 @@ export function createHealth(deps: HealthDeps) {
     if (instance) {
       const name = await testArrConnection(instance.url, instance.apiKey);
       reportHealth(service, "ok", `Connected — ${name}`);
+      return;
+    }
+
+    const downloadClient = downloadClientsForHealth().find((c) => c.health === service);
+    if (downloadClient) {
+      const version = await createDownloadClient(downloadClient).test();
+      reportHealth(service, "ok", `Connected — ${version}`);
       return;
     }
 

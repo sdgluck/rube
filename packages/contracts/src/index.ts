@@ -381,3 +381,4 @@ export type {
 } from "./portal-components.ts";
 export { DEFAULT_UI_SCALE, isUiScale, UI_SCALES } from "./ui-scale.ts";
 export type { UiScale } from "./ui-scale.ts";
+export * from "./download-clients.ts";

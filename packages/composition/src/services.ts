@@ -48,6 +48,7 @@ import { ConfigHistoryToken, type ConfigHistory } from "@tinkerbell/domain.confi
 import { CleanupToken, type Cleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, type Collections } from "@tinkerbell/domain.collections";
 import { DigestToken, type Digests } from "@tinkerbell/domain.digest";
+import { DownloadClientsToken, type DownloadClients } from "@tinkerbell/domain.download-clients";
 import { EventsToken, type Events } from "@tinkerbell/domain.events";
 import { HealthToken, type Health } from "@tinkerbell/domain.health";
 import { MediaToken, type Media } from "@tinkerbell/domain.media";
@@ -105,6 +106,7 @@ export interface Services {
   cleanup: Cleanup;
   collections: Collections;
   digest: Digests;
+  downloadClients: DownloadClients;
   events: Events;
   health: Health;
   media: Media;
@@ -158,6 +160,7 @@ export function registerServices(r: Registry): void {
     cleanup: c.resolve(CleanupToken),
     collections: c.resolve(CollectionsToken),
     digest: c.resolve(DigestToken),
+    downloadClients: c.resolve(DownloadClientsToken),
     events: c.resolve(EventsToken),
     health: c.resolve(HealthToken),
     media: c.resolve(MediaToken),

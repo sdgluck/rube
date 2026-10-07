@@ -7,7 +7,18 @@
  * stalled alike. `status` is what the download client itself reports. Showing
  * the first alone put "downloading" beside an item SABnzbd had paused, so while
  * the item is still with the client, the client's word wins.
+ *
+ * Better still is asking the client directly. Where a download client is
+ * configured in Tinkerbell, the row is joined to the client's own item by
+ * download id, and that item's state — fresher than the *Arr's, which polls
+ * its clients on its own schedule — is what the row shows.
  */
+import {
+  normaliseDownloadId,
+  type DownloadClientItem,
+  type DownloadClientOverview,
+  type DownloadItemState,
+} from "@tinkerbell/contracts";
 import type { StatusChipTone } from "#components/PageShell";
 
 export interface QueueStateInput {
@@ -40,4 +51,40 @@ export function queueState(item: QueueStateInput): QueueState {
   if (tracked && tracked !== "downloading") return { label: tracked };
   const client = item.status ? CLIENT_STATES[item.status] : undefined;
   return client ?? { label: item.status || tracked || "—" };
+}
+
+/** The client item a queue row is, and the client it lives in. */
+export interface ClientMatch {
+  clientId: string;
+  clientName: string;
+  item: DownloadClientItem;
+}
+
+/** Every reachable client's items, by each id an *Arr might know them by. */
+export function indexClientItems(overview: DownloadClientOverview[]): Map<string, ClientMatch> {
+  const out = new Map<string, ClientMatch>();
+  for (const client of overview) {
+    if (!client.ok) continue;
+    for (const item of client.items) {
+      for (const id of item.matchIds) out.set(id, { clientId: client.id, clientName: client.name, item });
+    }
+  }
+  return out;
+}
+
+export function findClientItem(index: Map<string, ClientMatch>, downloadId: string | undefined): ClientMatch | null {
+  return downloadId ? (index.get(normaliseDownloadId(downloadId)) ?? null) : null;
+}
+
+const ITEM_TONES: Partial<Record<DownloadItemState, StatusChipTone>> = {
+  paused: "advisory",
+  stalled: "advisory",
+  error: "error",
+};
+
+/** A client item's state, as the State column shows it. */
+export function clientItemState(item: DownloadClientItem): QueueState {
+  const label = item.state === "error" && item.message ? item.message : item.state;
+  const tone = ITEM_TONES[item.state];
+  return tone ? { label, tone } : { label };
 }

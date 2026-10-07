@@ -32,6 +32,7 @@ import { ConfigHistoryToken, createConfigHistory } from "@tinkerbell/domain.conf
 import { CleanupToken, createCleanup } from "@tinkerbell/domain.cleanup";
 import { CollectionsToken, createCollections } from "@tinkerbell/domain.collections";
 import { createDigest, DigestToken } from "@tinkerbell/domain.digest";
+import { DownloadClientsToken, createDownloadClients } from "@tinkerbell/domain.download-clients";
 import { createEvents, EventsToken } from "@tinkerbell/domain.events";
 import { createHealth, HealthToken } from "@tinkerbell/domain.health";
 import { createMedia, MediaToken } from "@tinkerbell/domain.media";
@@ -136,6 +137,7 @@ export function registerDomains(r: Registry): void {
       cleanup: c.resolve(CleanupToken),
     }),
   );
+  r.register(DownloadClientsToken, (c) => createDownloadClients({ config: c.resolve(ConfigStoreToken) }));
   r.register(EventsToken, (c) => createEvents({ db: c.resolve(DbToken), notifyEvent: c.resolve(NotifierToken) }));
   r.register(HealthToken, (c) =>
     createHealth({

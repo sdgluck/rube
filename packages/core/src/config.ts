@@ -21,7 +21,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { token } from "@tinkerbell/container";
-import { portalPrerollCardSchema } from "@tinkerbell/contracts";
+import { DOWNLOAD_CLIENT_KINDS, portalPrerollCardSchema } from "@tinkerbell/contracts";
 import { config, type Db } from "@tinkerbell/db";
 import type { ChangeRecorder } from "@tinkerbell/ports";
 import { createLogger } from "./logger.ts";
@@ -196,6 +196,28 @@ export const configSchema = z.object({
       name: z.string(),
       url: z.string(),
       apiKey: z.string(),
+    }),
+  ),
+  /**
+   * SABnzbd, NZBGet, qBittorrent, Transmission and Deluge, for the Downloads
+   * page's status and pause controls.
+   *
+   * Tinkerbell's own connection rather than one borrowed from Radarr or
+   * Sonarr: the *Arrs mask every download client credential in their API, so
+   * there is nothing to borrow. A list with stable ids, like
+   * `global_arr_instances`, because two of the same client — a SABnzbd per
+   * *Arr — is ordinary.
+   */
+  global_download_clients: z.array(
+    z.object({
+      /** Stable across renames. */
+      id: z.string(),
+      kind: z.enum(DOWNLOAD_CLIENT_KINDS),
+      name: z.string(),
+      url: z.string(),
+      username: z.string().optional(),
+      /** SABnzbd's API key, or the password for everything else. A nested secret. */
+      secret: z.string().optional(),
     }),
   ),
   /**
@@ -899,6 +921,7 @@ export const NESTED_SECRETS: ReadonlyArray<{ key: ConfigKey; field: string; each
   { key: "global_llm", field: "apiKey" },
   { key: "global_smtp", field: "password" },
   { key: "global_arr_instances", field: "apiKey", each: true },
+  { key: "global_download_clients", field: "secret", each: true },
 ];
 
 /** Keys carrying a nested secret, for callers that only need the question answered. */

@@ -33,6 +33,7 @@
     "@tinkerbell/domain.collections": "workspace:*",
     "@tinkerbell/domain.config-history": "workspace:*",
     "@tinkerbell/domain.digest": "workspace:*",
+    "@tinkerbell/domain.download-clients": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",
     "@tinkerbell/domain.media": "workspace:*",

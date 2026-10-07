@@ -40,6 +40,15 @@ export default function SettingsArrs() {
         >
           Instances
         </NavLink>
+        <NavLink
+          to="/settings/arrs/download-clients"
+          className={({ isActive }) => `${styles.subTab} ${isActive ? styles.subTabActive : ""}`}
+        >
+          {Array.isArray(cfg.global_download_clients) && cfg.global_download_clients.length > 0 && (
+            <span className={styles.enabledDot} />
+          )}
+          Download clients
+        </NavLink>
       </nav>
       <Outlet />
     </div>

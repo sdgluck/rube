@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { formatBytes, type ArrService } from "@tinkerbell/contracts";
+import { formatBytes, type ArrService, type DownloadClientOverview } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";
 import RelativeTime from "#components/RelativeTime";
+import { useToast } from "#components/Toast";
+import controls from "#/styles/controls.module.css";
 import shared from "#/styles/shared.module.css";
 import styles from "./ArrDownloads.module.css";
-import { queueState, type QueueState } from "./queue-state.ts";
+import DownloadClientsPanel from "./DownloadClientsPanel";
+import {
+  clientItemState,
+  findClientItem,
+  indexClientItems,
+  queueState,
+  type ClientMatch,
+  type QueueState,
+} from "./queue-state.ts";
 
 /**
  * What is coming.
@@ -31,7 +41,21 @@ function QueueStateCell({ label, tone }: QueueState) {
   return tone ? <StatusChip tone={tone}>{label}</StatusChip> : <span className={shared.cellMuted}>{label}</span>;
 }
 
-function QueueForInstance({ service, instanceId, name }: { service: ArrService; instanceId: string; name: string }) {
+interface ItemControls {
+  clientItems: Map<string, ClientMatch>;
+  /** `clientId:itemId` of an item action in flight. */
+  pendingItem: string | null;
+  onToggleItem: (match: ClientMatch, pause: boolean) => void;
+}
+
+function QueueForInstance({
+  service,
+  instanceId,
+  name,
+  clientItems,
+  pendingItem,
+  onToggleItem,
+}: { service: ArrService; instanceId: string; name: string } & ItemControls) {
   const query = trpc.arr.activity.queue.useQuery(
     { service, instanceId, pageSize: 100 },
     // Five seconds: this is the one screen where somebody is watching a number
@@ -63,11 +87,15 @@ function QueueForInstance({ service, instanceId, name }: { service: ArrService; 
               <th>Left</th>
               <th>Client</th>
               <th>State</th>
+              <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
             {records.map((item) => {
-              const pct = progress(item.size, item.sizeleft);
+              // The client's own item, where Tinkerbell can reach that client:
+              // fresher than the *Arr's copy, and the thing pause acts on.
+              const match = findClientItem(clientItems, item.downloadId);
+              const pct = match?.item.progress ?? progress(item.size, item.sizeleft);
               const blocked = BLOCKED.has(item.trackedDownloadState ?? "") || item.trackedDownloadStatus === "error";
               return (
                 <tr key={item.id}>
@@ -86,7 +114,7 @@ function QueueForInstance({ service, instanceId, name }: { service: ArrService; 
                   </td>
                   <td className={shared.cellNum}>{formatBytes(item.size)}</td>
                   <td className={shared.cellMuted}>{item.timeleft ?? "—"}</td>
-                  <td className={shared.cellMuted}>{item.downloadClient ?? "—"}</td>
+                  <td className={shared.cellMuted}>{match?.clientName ?? item.downloadClient ?? "—"}</td>
                   <td>
                     {blocked ? (
                       // `errorMessage` and the status messages are where the
@@ -96,7 +124,19 @@ function QueueForInstance({ service, instanceId, name }: { service: ArrService; 
                         {item.errorMessage ?? item.statusMessages?.[0]?.title ?? item.trackedDownloadState ?? "Blocked"}
                       </StatusChip>
                     ) : (
-                      <QueueStateCell {...queueState(item)} />
+                      <QueueStateCell {...(match ? clientItemState(match.item) : queueState(item))} />
+                    )}
+                  </td>
+                  <td>
+                    {match && (
+                      <button
+                        type="button"
+                        className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+                        disabled={pendingItem === `${match.clientId}:${match.item.id}`}
+                        onClick={() => onToggleItem(match, !match.item.paused)}
+                      >
+                        {match.item.paused ? "Resume" : "Pause"}
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -114,6 +154,46 @@ export default function ArrDownloads() {
   const stateQuery = trpc.arr.library.instanceState.useQuery({}, { refetchInterval: 15_000 });
   const activityQuery = trpc.arr.activity.recent.useQuery({ limit: 50 });
   const [tab, setTab] = useState<"queue" | "activity">("queue");
+  const clientsQuery = trpc.downloadClients.overview.useQuery(undefined, { refetchInterval: 5_000 });
+  const utils = trpc.useUtils();
+  const { addToast } = useToast();
+  const [pendingClient, setPendingClient] = useState<string | null>(null);
+  const [pendingItem, setPendingItem] = useState<string | null>(null);
+
+  const clients: DownloadClientOverview[] = clientsQuery.data ?? [];
+  const clientItems = indexClientItems(clients);
+
+  // Refetched on settle rather than patched optimistically: the client decides
+  // what a pause did (a torrent client may be mid-check and refuse), and the
+  // next read is the honest answer.
+  const settle = async () => {
+    await Promise.all([utils.downloadClients.overview.invalidate(), utils.arr.activity.queue.invalidate()]);
+  };
+  const fail = (err: { message: string }) => addToast(err.message, "error");
+  const pause = trpc.downloadClients.pause.useMutation({ onError: fail, onSettled: settle });
+  const resume = trpc.downloadClients.resume.useMutation({ onError: fail, onSettled: settle });
+  const pauseItem = trpc.downloadClients.pauseItem.useMutation({ onError: fail, onSettled: settle });
+  const resumeItem = trpc.downloadClients.resumeItem.useMutation({ onError: fail, onSettled: settle });
+
+  const toggleClient = async (id: string, shouldPause: boolean) => {
+    setPendingClient(id);
+    try {
+      await (shouldPause ? pause : resume).mutateAsync({ id }).catch(() => undefined);
+    } finally {
+      setPendingClient(null);
+    }
+  };
+
+  const toggleItem = async (match: ClientMatch, shouldPause: boolean) => {
+    setPendingItem(`${match.clientId}:${match.item.id}`);
+    try {
+      await (shouldPause ? pauseItem : resumeItem)
+        .mutateAsync({ id: match.clientId, itemId: match.item.id })
+        .catch(() => undefined);
+    } finally {
+      setPendingItem(null);
+    }
+  };
 
   const instances = instancesQuery.data ?? [];
   const queued = (stateQuery.data ?? []).reduce((n, s) => n + (s.queueCount ?? 0), 0);
@@ -158,6 +238,10 @@ export default function ArrDownloads() {
         </button>
       </div>
 
+      {tab === "queue" && clientsQuery.data && (
+        <DownloadClientsPanel clients={clients} pending={pendingClient} onToggle={toggleClient} />
+      )}
+
       {tab === "queue" ? (
         queued === 0 ? (
           <EmptyState icon="list" title="Nothing downloading" />
@@ -168,6 +252,9 @@ export default function ArrDownloads() {
               service={instance.service}
               instanceId={instance.id}
               name={instance.name}
+              clientItems={clientItems}
+              pendingItem={pendingItem}
+              onToggleItem={toggleItem}
             />
           ))
         )

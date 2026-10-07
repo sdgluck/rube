@@ -29,6 +29,7 @@ import { createBackupsRouter } from "./backups.router.ts";
 import { createAiUsageRouter } from "./ai-usage.router.ts";
 import { createApiKeysRouter } from "./api-keys.router.ts";
 import { createArrRouter } from "./arr.router.ts";
+import { createDownloadClientsRouter } from "./download-clients.router.ts";
 import { createDiscoverRouter } from "./discover.router.ts";
 import { createPostersRouter } from "./posters.router.ts";
 import { createPrerollsRouter } from "./prerolls.router.ts";
@@ -83,6 +84,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     search: createSearchRouter(deps),
     arr: createArrRouter(deps),
     discover: createDiscoverRouter(deps),
+    downloadClients: createDownloadClientsRouter(deps),
     posters: createPostersRouter(deps),
     prerolls: createPrerollsRouter(deps),
     migration: createMigrationRouter(deps),

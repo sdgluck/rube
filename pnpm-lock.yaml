@@ -278,6 +278,25 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  clients/download-clients:
+    dependencies:
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+    devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   clients/imdb:
     dependencies:
       '@tinkerbell/http':
@@ -834,6 +853,34 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/download-clients:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/download-clients':
+        specifier: workspace:*
+        version: link:../../clients/download-clients
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/events:
     dependencies:
       '@tinkerbell/container':
@@ -876,12 +923,18 @@ importers:
       '@tinkerbell/domain.ai-usage':
         specifier: workspace:*
         version: link:../ai-usage
+      '@tinkerbell/domain.download-clients':
+        specifier: workspace:*
+        version: link:../download-clients
       '@tinkerbell/domain.events':
         specifier: workspace:*
         version: link:../events
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../prerolls
+      '@tinkerbell/download-clients':
+        specifier: workspace:*
+        version: link:../../clients/download-clients
       '@tinkerbell/llm':
         specifier: workspace:*
         version: link:../../packages/llm
@@ -1671,6 +1724,9 @@ importers:
       '@tinkerbell/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
+      '@tinkerbell/domain.download-clients':
+        specifier: workspace:*
+        version: link:../../domains/download-clients
       '@tinkerbell/domain.events':
         specifier: workspace:*
         version: link:../../domains/events
@@ -2219,6 +2275,9 @@ importers:
       '@tinkerbell/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
+      '@tinkerbell/domain.download-clients':
+        specifier: workspace:*
+        version: link:../../domains/download-clients
       '@tinkerbell/domain.events':
         specifier: workspace:*
         version: link:../../domains/events

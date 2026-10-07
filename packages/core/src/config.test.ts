@@ -79,6 +79,22 @@ describe("redactSecrets", () => {
     );
   });
 
+  test("redacts every download client's secret, and leaves its username", () => {
+    const out = redactSecrets({
+      global_download_clients: [
+        { id: "a", kind: "sabnzbd", name: "SAB", url: "http://sab:8080", secret: "sab-key" },
+        { id: "b", kind: "qbittorrent", name: "qBit", url: "http://qbit:8080", username: "admin", secret: "pw" },
+      ],
+    });
+    assert.deepEqual(
+      out.global_download_clients?.map((c) => [c.secret, c.username]),
+      [
+        [REDACTED_SECRET, undefined],
+        [REDACTED_SECRET, "admin"],
+      ],
+    );
+  });
+
   test("every secret-shaped leaf in the schema is covered by one of the two tables", () => {
     // The guard the multi-instance *Arr change needed: a new key whose name
     // says "secret" must be listed somewhere, or it ships to the browser. The
