@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - The \*Arr download queue now shows the download client's own state, so a paused item correctly says "paused" instead of "downloading".
 - Previewing a shared user's home no longer shows empty when that user has a label filter — the preview now reads their home using their share token.
-- The Users page "build your week" rows now only build for users actually shown on the Users page, instead of every account the server remembers.
+- Because You Watched now builds per-user rows only for users on the Users page, instead of every account the Plex server remembers — a user removed from Plex no longer gets rows.
 
 ## [0.34.0] - 2026-10-06
 
