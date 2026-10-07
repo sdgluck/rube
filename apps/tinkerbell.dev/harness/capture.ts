@@ -44,6 +44,8 @@ import { chromium, type Browser, type Page, type BrowserContext } from "playwrig
 import { startMockPlex } from "./mock-plex.ts";
 import { SHOTS, type Shot, type Step, type Viewport } from "./shots.ts";
 import { FIXED_NOW } from "./clock.ts";
+import { poster } from "./posters.ts";
+import { SITE_POSTERS } from "../src/data/posters.ts";
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +54,7 @@ const repoRoot = resolve(appDir, "../..");
 const dataDir = resolve(appDir, ".harness-data");
 const suiteDir = resolve(repoRoot, "screenshots");
 const siteDir = resolve(appDir, "public/screenshots");
+const posterDir = resolve(appDir, "public/posters");
 
 /**
  * High ports, so a capture can run while `pnpm dev` is up. The old harness sat
@@ -582,9 +585,17 @@ async function main() {
   assertHarnessData(dataDir);
   await rm(dataDir, { recursive: true, force: true });
   await mkdir(dataDir, { recursive: true });
-  for (const dir of [join(suiteDir, "desktop"), join(suiteDir, "mobile"), siteDir]) {
+  for (const dir of [join(suiteDir, "desktop"), join(suiteDir, "mobile"), siteDir, posterDir]) {
     await mkdir(dir, { recursive: true });
   }
+
+  // The site's poster strip is the demo library's own artwork. Written here
+  // rather than by a build step so it's committed with the screenshots, from
+  // the same sharp, in the same container.
+  for (const p of SITE_POSTERS) {
+    await writeIfChanged(join(posterDir, `${p.slug}.png`), await poster(p.title, p.hue));
+  }
+  await pruneStale(posterDir, new Set(SITE_POSTERS.map((p) => `${p.slug}.png`)));
 
   // Chromium takes about as long to come up as the whole migrate-seed-boot
   // sequence, and it needs none of it. Start it first and it costs nothing.

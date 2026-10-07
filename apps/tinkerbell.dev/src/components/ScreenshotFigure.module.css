@@ -3,12 +3,12 @@
 }
 
 .caption {
-  margin-top: 14px;
+  margin-top: 12px;
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .caption strong {
-  color: var(--text-primary);
+  color: var(--ink);
   font-weight: 600;
 }

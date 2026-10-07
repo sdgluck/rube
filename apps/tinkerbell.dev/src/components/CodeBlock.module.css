@@ -1,18 +1,19 @@
+/* The app's log viewer: dark in both of its themes, so it reads as a terminal
+   on a light page without inventing a colour. */
 .block {
-  background: #07070d;
-  border: 1px solid var(--border);
+  background: var(--sidebar);
   border-radius: var(--radius);
   padding: 18px 20px;
   overflow-x: auto;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
-  line-height: 1.7;
+  font-size: 0.84rem;
+  line-height: 1.75;
 }
 
 .line {
-  color: #d9def0;
+  color: var(--on-dark);
 }
 
 .comment {
-  color: var(--text-muted);
+  color: var(--on-dark-2);
 }

@@ -1,0 +1,61 @@
+/* `--i` is each poster's distance from the middle of the row, so the fan
+   tilts outwards and dips at the ends without a rule per poster. */
+.strip {
+  display: flex;
+  justify-content: center;
+  padding: 28px 0 40px;
+  overflow: hidden;
+}
+
+.poster {
+  position: relative;
+  flex: none;
+  width: 150px;
+  margin-inline: -10px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 18px 30px -18px rgba(15, 38, 36, 0.55);
+  transform: rotate(calc(var(--i) * 3.5deg)) translateY(calc(var(--i) * var(--i) * 4px));
+  transition: transform 0.25s ease;
+}
+
+.poster:hover {
+  transform: rotate(0deg) translateY(-14px) scale(1.04);
+  z-index: 2;
+}
+
+.poster img {
+  width: 100%;
+  height: auto;
+}
+
+.badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 7px;
+  border-radius: var(--radius);
+  background: var(--sidebar);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster {
+    transition: none;
+  }
+}
+
+/* Seven posters don't fit a phone. Keep the middle five, smaller. */
+@media (max-width: 640px) {
+  .poster {
+    width: 92px;
+    margin-inline: -8px;
+  }
+  .poster:first-child,
+  .poster:last-child {
+    display: none;
+  }
+}

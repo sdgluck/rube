@@ -5,13 +5,11 @@
    literals are inline rather than tokens so a future radius change to the site
    cannot silently un-round the window. */
 .frame {
-  border: 1px solid var(--border-strong);
-  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
   overflow: hidden;
-  background: var(--bg-elevated);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  background: var(--surface);
+  box-shadow: 0 24px 48px -28px rgba(15, 38, 36, 0.35);
 }
 
 .bar {
@@ -19,8 +17,8 @@
   align-items: center;
   gap: 8px;
   padding: 11px 16px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--line);
 }
 
 .dot {
@@ -34,18 +32,18 @@
   margin-left: 12px;
   font-family: var(--font-mono);
   font-size: 0.74rem;
-  color: var(--text-muted);
-  background: var(--bg-page);
+  color: var(--ink-3);
+  background: var(--surface);
   padding: 4px 14px;
   /* Part of the browser chrome above, not the site's own UI — a URL bar is a
      pill everywhere it exists. */
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
 }
 
 .body {
   display: block;
-  background: var(--bg-page);
+  background: var(--page);
 }
 
 .body :global(img) {

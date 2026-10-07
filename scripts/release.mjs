@@ -200,7 +200,11 @@ if (process.env.SKIP_SCREENSHOTS === "1") {
         "  Or release without fresh screenshots:  SKIP_SCREENSHOTS=1 pnpm release <bump>",
     );
   }
-  updated.push(join(ROOT, "screenshots"), join(ROOT, "apps/tinkerbell.dev/public/screenshots"));
+  updated.push(
+    join(ROOT, "screenshots"),
+    join(ROOT, "apps/tinkerbell.dev/public/screenshots"),
+    join(ROOT, "apps/tinkerbell.dev/public/posters"),
+  );
 }
 
 sh("git", ["add", ...updated]);

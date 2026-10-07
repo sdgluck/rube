@@ -15,7 +15,11 @@ The output in `dist/` is a plain static bundle, deployable to any static host.
 
 Marketing copy lives in one place: [`src/data/content.ts`](src/data/content.ts)
 (`FEATURES`, `SHOTS`). Pages (`Home`, `Features`, `Screenshots`) render from it,
-so editing copy or adding a feature is a single-file change.
+so editing copy or adding a feature is a single-file change. Keep it plain:
+what the feature does, with real nouns and numbers, and no slogans.
+
+The look is the admin app's own: its light tokens in `src/styles/theme.css`, and
+Archivo and IBM Plex Mono copied into `public/fonts`.
 
 ## Screenshot harness
 
@@ -41,5 +45,8 @@ The harness (`harness/`) does the following, fully isolated from your real
 
 To add or change a screenshot, edit `harness/shots.ts` (and a matching `SHOTS`
 entry in `src/data/content.ts`) and re-run `capture`.
+
+The same run writes the home page's poster strip to `public/posters/`, from the
+list in `src/data/posters.ts`, using the harness's own poster generator.
 
 First run only, install the browser: `pnpm exec playwright install chromium`.

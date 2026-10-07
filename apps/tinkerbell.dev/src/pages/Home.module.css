@@ -1,196 +1,131 @@
 /* ── Hero ───────────────────────────────────────────────────────────── */
 
 .hero {
-  position: relative;
-  padding-top: 72px;
+  padding-top: 80px;
   text-align: center;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: -40% 0 auto 0;
-  height: 700px;
-  background: radial-gradient(60% 50% at 50% 0%, rgba(74, 108, 247, 0.22), transparent 70%);
-  pointer-events: none;
 }
 
 .title {
-  position: relative;
-  font-size: clamp(2.3rem, 5.5vw, 3.8rem);
-  margin: 18px auto 0;
-  max-width: 16ch;
-}
-
-.titleAccent {
-  color: var(--accent);
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  max-width: 14ch;
+  margin-inline: auto;
 }
 
 .lede {
-  position: relative;
-  max-width: 62ch;
-  margin: 22px auto 0;
-  font-size: 1.12rem;
-  color: var(--text-secondary);
+  max-width: 58ch;
+  margin: 20px auto 0;
+  font-size: 1.1rem;
+  color: var(--ink-2);
 }
 
 .cta {
-  position: relative;
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 28px;
 }
 
-.heroShot {
-  position: relative;
-  margin-top: 56px;
+.shot {
+  margin-top: 8px;
 }
 
 /* ── Sections ───────────────────────────────────────────────────────── */
 
 .section {
-  padding-top: 96px;
+  padding-top: 104px;
 }
 
-.sectionHead {
-  text-align: center;
-  max-width: 60ch;
-  margin: 0 auto 44px;
+.sectionTitle {
+  font-size: clamp(1.7rem, 3.2vw, 2.2rem);
 }
 
-.sectionHead h2 {
-  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
-  margin-top: 12px;
+.group {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-strong);
 }
 
-.sectionHead p {
-  margin-top: 14px;
-  color: var(--text-secondary);
+.groupTitle {
+  font-size: 1.05rem;
+  color: var(--accent-text);
+  letter-spacing: -0.01em;
 }
 
-/* ── Feature grid ───────────────────────────────────────────────────── */
+/* ── Feature list ───────────────────────────────────────────────────── */
 
-.grid {
+.list {
+  list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
-.card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 26px 24px;
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease;
-}
-
-.card:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-3px);
-}
-
-.cardIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-  color: var(--accent);
-  margin-bottom: 18px;
-}
-
-.card h3 {
-  font-size: 1.18rem;
-}
-
-.cardTagline {
-  margin-top: 6px;
-  color: var(--accent);
-  font-size: 0.92rem;
-  font-weight: 500;
-}
-
-.cardBody {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 40px;
   margin-top: 12px;
-  color: var(--text-secondary);
-  font-size: 0.94rem;
 }
 
-.cardLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 16px;
-  font-size: 0.88rem;
+.item {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.itemHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.itemTitle {
   font-weight: 600;
-  color: var(--accent);
 }
 
-.cardLink:hover {
-  gap: 9px;
+.item:hover .itemTitle {
+  color: var(--accent-text);
+}
+
+.itemBody {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.94rem;
+  color: var(--ink-2);
 }
 
 /* ── Install ────────────────────────────────────────────────────────── */
 
-.installWrap {
+.install {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1.15fr;
   gap: 48px;
   align-items: center;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 44px;
-}
-
-.installWrap h2 {
-  font-size: clamp(1.6rem, 3vw, 2.1rem);
-  margin-top: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 40px;
 }
 
 .installLede {
-  margin-top: 14px;
-  color: var(--text-secondary);
+  margin-top: 12px;
+  color: var(--ink-2);
 }
 
-.bullets {
-  list-style: none;
-  margin: 22px 0;
+.facts {
+  margin: 18px 0 24px;
+  padding-left: 18px;
   display: grid;
-  gap: 10px;
-}
-
-.bullets li {
-  position: relative;
-  padding-left: 26px;
-  color: var(--text-secondary);
+  gap: 6px;
+  color: var(--ink-2);
   font-size: 0.94rem;
 }
 
-.bullets li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 14px;
-  height: 9px;
-  border-left: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
-  transform: rotate(-45deg);
+.facts li::marker {
+  color: var(--accent);
 }
 
 @media (max-width: 880px) {
-  .grid {
+  .list {
     grid-template-columns: 1fr;
   }
-  .installWrap {
+  .install {
     grid-template-columns: 1fr;
-    padding: 30px;
+    padding: 24px;
   }
 }

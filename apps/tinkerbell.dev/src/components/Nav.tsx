@@ -9,7 +9,7 @@ export default function Nav() {
       <div className={`container ${styles.inner}`}>
         <Link to="/" className={styles.brand}>
           <img src="/favicon.svg" alt="" width={26} height={26} />
-          <span>Tinkerbell</span>
+          <span className={styles.brandName}>Tinkerbell</span>
         </Link>
         <nav className={styles.links}>
           <NavLink to="/features" className={({ isActive }) => (isActive ? styles.active : undefined)}>
@@ -21,9 +21,9 @@ export default function Nav() {
           <NavLink to="/registry" className={({ isActive }) => (isActive ? styles.active : undefined)}>
             Registry
           </NavLink>
-          <a href={GITHUB_URL} className={styles.github} target="_blank" rel="noreferrer">
+          <a href={GITHUB_URL} className={styles.github} target="_blank" rel="noreferrer" aria-label="GitHub">
             <GithubIcon size={16} />
-            GitHub
+            <span className={styles.githubLabel}>GitHub</span>
           </a>
         </nav>
       </div>

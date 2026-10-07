@@ -335,6 +335,7 @@ export const SHOTS: Shot[] = [
     name: "11-jobs-schedule",
     description: "Jobs → Schedule — the night on a timeline, presets, and what's wrong with it",
     path: "/jobs/schedule",
+    site: "schedule",
     settleMs: 700,
   },
   {
@@ -361,6 +362,7 @@ export const SHOTS: Shot[] = [
     name: "14-users",
     description: "Users — shared users with their personalization status",
     path: "/users",
+    site: "users",
   },
   {
     name: "15-events",
@@ -448,7 +450,7 @@ export const SHOTS: Shot[] = [
   },
   {
     name: "16-settings-stress-test",
-    description: "Settings → Stress Test — the dev-only load harness",
+    description: "Settings → Stress Test — the load harness and its past runs",
     path: "/settings/stress-test",
   },
   {

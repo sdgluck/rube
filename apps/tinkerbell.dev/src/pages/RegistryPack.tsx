@@ -30,14 +30,12 @@ export default function RegistryPack() {
         <Link to="/registry" className={styles.back}>
           ← Registry
         </Link>
-        <span className="eyebrow">Pack</span>
         <h1>{pack.title}</h1>
-        <p className={styles.tagline}>{pack.tagline}</p>
         <p className={styles.body}>{pack.description}</p>
         {requirements.length > 0 && (
           <p className={styles.requires}>
-            Needs {requirements.map((r) => REQUIREMENT_LABELS[r] ?? r).join(", ")} configured on your instance. Rules
-            whose integration is missing still import — they just won't produce anything until it's set up.
+            Needs {requirements.map((r) => REQUIREMENT_LABELS[r] ?? r).join(", ")}. Rules still import without it, but
+            produce nothing until it's set up.
           </p>
         )}
       </header>
@@ -45,9 +43,9 @@ export default function RegistryPack() {
       <div className={styles.howto}>
         <h2>Importing</h2>
         <p>
-          Open <strong>Registry</strong> in your Tinkerbell admin UI, pick this pack, and choose which libraries to
-          import it into. Tinkerbell rewrites each rule for your server — genre and studio filters are matched against
-          your own Plex tags — and creates the rules disabled so you can review them first.
+          Open <strong>Registry</strong> in the admin app, pick this pack, and choose which libraries to import it into.
+          Genre and studio filters are matched to your own Plex tags, and the rules are created switched off so you can
+          check them first.
         </p>
         <p className={styles.direct}>
           Or fetch the pack directly:

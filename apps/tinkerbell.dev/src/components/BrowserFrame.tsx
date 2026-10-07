@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import styles from "./BrowserFrame.module.css";
 
-/** A faux browser chrome wrapper that makes raw screenshots read as a real app. */
+/** Browser chrome around a screenshot, with the route in the address bar. */
 export default function BrowserFrame({ url = "tinkerbell.local", children }: { url?: string; children: ReactNode }) {
   return (
     <div className={styles.frame}>

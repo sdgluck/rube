@@ -148,9 +148,6 @@ importers:
       '@tinkerbell/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
-      lucide-react:
-        specifier: ^1.14.0
-        version: 1.16.0(react@19.2.6)
       react:
         specifier: ^19.0.0
         version: 19.2.6

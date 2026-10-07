@@ -2,16 +2,16 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: color-mix(in srgb, var(--bg-page) 82%, transparent);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
 
 .inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  height: 60px;
 }
 
 .brand {
@@ -26,40 +26,54 @@
 .links {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 24px;
   font-size: 0.92rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .links a:hover {
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .active {
-  color: var(--text-primary) !important;
+  color: var(--ink) !important;
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .github {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 14px;
-  border: 1px solid var(--border-strong);
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  color: var(--text-primary) !important;
+  color: var(--ink) !important;
 }
 
 .github:hover {
-  background: var(--bg-surface);
+  border-color: var(--ink-3);
 }
 
+/* Four links and the brand don't fit a phone with the button's label, so the
+   button drops to its icon rather than pushing the page sideways. */
 @media (max-width: 560px) {
   .links {
-    gap: 16px;
+    gap: 14px;
+    font-size: 0.88rem;
   }
-  .github span,
   .github {
-    gap: 6px;
+    padding: 6px 8px;
+  }
+  .githubLabel {
+    display: none;
+  }
+}
+
+/* Below this the name and three links collide; the logo alone still says home. */
+@media (max-width: 480px) {
+  .brandName {
+    display: none;
   }
 }

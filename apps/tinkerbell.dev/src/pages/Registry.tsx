@@ -7,11 +7,10 @@ export default function Registry() {
   return (
     <section className={`container ${styles.page}`}>
       <header className={styles.head}>
-        <span className="eyebrow">Registry</span>
-        <h1>Rule packs, ready to import</h1>
+        <h1>Registry</h1>
         <p>
-          Curated sets of Tinkerbell rules you can pull straight into your instance — no copying JSON around. Browse
-          here, then import from <strong>Registry</strong> in your Tinkerbell admin UI.
+          Sets of rules to import into Tinkerbell. Browse them here, then import one from <strong>Registry</strong> in
+          the admin app.
         </p>
       </header>
 
@@ -22,7 +21,6 @@ export default function Registry() {
           return (
             <Link key={pack.slug} to={`/registry/${pack.slug}`} className={styles.card}>
               <h2>{pack.title}</h2>
-              <p className={styles.tagline}>{pack.tagline}</p>
               <p className={styles.body}>{pack.description}</p>
               <div className={styles.meta}>
                 <span className={styles.count}>

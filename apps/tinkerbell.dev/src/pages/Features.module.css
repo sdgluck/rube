@@ -3,75 +3,108 @@
 }
 
 .head {
-  text-align: center;
-  max-width: 56ch;
-  margin: 0 auto 64px;
+  max-width: 60ch;
+  margin-bottom: 24px;
 }
 
 .head h1 {
-  font-size: clamp(2rem, 4.5vw, 3rem);
-  margin-top: 14px;
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
 }
 
 .head p {
-  margin-top: 16px;
-  color: var(--text-secondary);
+  margin-top: 12px;
+  color: var(--ink-2);
   font-size: 1.05rem;
+}
+
+/* ── Groups ─────────────────────────────────────────────────────────── */
+
+.group {
+  margin-top: 72px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-strong);
+  scroll-margin-top: 80px;
+}
+
+.groupTitle {
+  font-size: 1.15rem;
+  color: var(--accent-text);
+  letter-spacing: -0.01em;
 }
 
 .rows {
   display: flex;
   flex-direction: column;
-  gap: 88px;
+  gap: 72px;
+  margin-top: 40px;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
+  grid-template-columns: 0.8fr 1.2fr;
   gap: 48px;
   align-items: center;
-  scroll-margin-top: 90px;
+  scroll-margin-top: 80px;
 }
 
 .row[data-flip="true"] .copy {
   order: 2;
 }
 
-.icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-  color: var(--accent);
-  margin-bottom: 18px;
-}
-
-.copy h2 {
-  font-size: clamp(1.5rem, 2.6vw, 2rem);
-}
-
-.tagline {
-  margin-top: 8px;
-  color: var(--accent);
-  font-weight: 500;
+.copy h3 {
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  margin-bottom: 6px;
 }
 
 .body {
-  margin-top: 16px;
-  color: var(--text-secondary);
-  font-size: 1.02rem;
+  margin-top: 12px;
+  color: var(--ink-2);
+  font-size: 1rem;
+}
+
+/* ── Features without a screenshot ──────────────────────────────────── */
+
+.more {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 48px;
+  margin-top: 56px;
+}
+
+.item {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 80px;
+}
+
+.itemHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.itemHead h3 {
+  font-size: 1.15rem;
+}
+
+.item .body {
+  margin-top: 6px;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 880px) {
-  .row,
-  .row[data-flip="true"] .copy {
+  .row {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .row[data-flip="true"] .copy {
     order: 0;
   }
   .rows {
-    gap: 64px;
+    gap: 56px;
+  }
+  .more {
+    grid-template-columns: 1fr;
   }
 }

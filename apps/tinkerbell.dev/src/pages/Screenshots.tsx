@@ -6,11 +6,10 @@ export default function Screenshots() {
   return (
     <section className={`container ${styles.page}`}>
       <header className={styles.head}>
-        <span className="eyebrow">Screenshots</span>
-        <h1>A tour of the admin UI</h1>
+        <h1>Screenshots</h1>
         <p>
-          Every image below is a real capture of the running app, taken by an automated browser harness against
-          synthetic demo data.
+          Captured from the running app by a test harness, against an invented demo library. The titles and posters are
+          made up.
         </p>
       </header>
 

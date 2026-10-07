@@ -4,19 +4,17 @@
 }
 
 .head {
-  text-align: center;
   max-width: 60ch;
-  margin: 0 auto 56px;
+  margin-bottom: 40px;
 }
 
 .head h1 {
-  font-size: clamp(2rem, 4.5vw, 3rem);
-  margin-top: 14px;
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
 }
 
 .head p {
   margin-top: 16px;
-  color: var(--text-secondary);
+  color: var(--ink-2);
   font-size: 1.05rem;
 }
 
@@ -30,33 +28,23 @@
   display: flex;
   flex-direction: column;
   padding: 24px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--bg-elevated);
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease;
+  background: var(--surface);
+  transition: border-color 0.15s ease;
 }
 
 .card:hover {
   border-color: var(--accent);
-  transform: translateY(-2px);
 }
 
 .card h2 {
   font-size: 1.25rem;
 }
 
-.tagline {
-  margin-top: 6px;
-  color: var(--accent);
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
 .body {
-  margin-top: 12px;
-  color: var(--text-secondary);
+  margin-top: 10px;
+  color: var(--ink-2);
   font-size: 0.95rem;
   flex: 1;
 }
@@ -73,13 +61,18 @@
   font-size: 0.78rem;
   padding: 4px 10px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+}
+
+.count,
+.req {
+  font-family: var(--font-mono);
 }
 
 .count {
   background: var(--accent-soft);
   border-color: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }

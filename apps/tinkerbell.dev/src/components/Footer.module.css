@@ -1,7 +1,7 @@
 .footer {
-  border-top: 1px solid var(--border);
-  margin-top: 96px;
-  padding-block: 40px;
+  border-top: 1px solid var(--line);
+  margin-top: 112px;
+  padding-block: 36px;
 }
 
 .inner {
@@ -18,29 +18,20 @@
   font-weight: 700;
 }
 
-.version {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  padding: 2px 7px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-}
-
 .links {
   display: flex;
-  gap: 22px;
+  flex-wrap: wrap;
+  gap: 8px 22px;
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--ink-2);
 }
 
 .links a:hover {
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .note {
   flex-basis: 100%;
   font-size: 0.82rem;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }

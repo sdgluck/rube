@@ -113,6 +113,7 @@ if (build.status !== 0) fail("image build failed");
 const outputs = [
   join(repoRoot, "screenshots"),
   join(repoRoot, "apps/tinkerbell.dev/public/screenshots"),
+  join(repoRoot, "apps/tinkerbell.dev/public/posters"),
 ];
 for (const dir of outputs) mkdirSync(dir, { recursive: true });
 
@@ -145,6 +146,8 @@ const run = spawnSync(
     `${join(repoRoot, "screenshots")}:/repo/screenshots`,
     "-v",
     `${join(repoRoot, "apps/tinkerbell.dev/public/screenshots")}:/repo/apps/tinkerbell.dev/public/screenshots`,
+    "-v",
+    `${join(repoRoot, "apps/tinkerbell.dev/public/posters")}:/repo/apps/tinkerbell.dev/public/posters`,
     image,
   ],
   { cwd: repoRoot, stdio: "inherit" },
