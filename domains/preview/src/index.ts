@@ -1,7 +1,12 @@
 /**
- * Preview module — render an approximation of the Plex home view as a
- * specific shared user would see it, by filtering admin-fetched hubs by
- * the user's library access and label filters.
+ * Preview module — the Plex home view as a specific shared user sees it.
+ *
+ * Asked of Plex with the user's own share token where plex.tv gives us one,
+ * which is every share. It used to be reconstructed from the owner's hubs,
+ * filtered by the share's libraries and label filter — but `/hubs` never
+ * returns `Label` on its items, so any user with a label filter (everyone,
+ * once personalization is on) was shown an empty home. The reconstruction
+ * remains only for a user with no token, and says it is approximate.
  */
 
 import type { PlexClient, PlexHubItem, PlexHomeHub } from "@tinkerbell/plex";
@@ -38,6 +43,8 @@ export interface PreviewHub {
 
 export interface PreviewResult {
   user: { userId: number; username: string } | null;
+  /** Rebuilt from the owner's hubs rather than read as the user. */
+  approximate: boolean;
   hubs: PreviewHub[];
   warnings: string[];
 }
@@ -143,6 +150,15 @@ export function isPersonalProgressHub(hub: PlexHomeHub): boolean {
   );
 }
 
+function sectionHubs(hubs: PlexHomeHub[], sectionId: number | null): PreviewHub[] {
+  const out: PreviewHub[] = [];
+  for (const h of hubs) {
+    const items = filterItemsBySection(h.items, sectionId);
+    if (items.length > 0) out.push(toPreviewHub(h, items));
+  }
+  return out;
+}
+
 export async function getPreviewForUser(
   client: PlexClient,
   userId: number | null,
@@ -153,15 +169,13 @@ export async function getPreviewForUser(
   // Per-hub item count caps Plex's response size. 12 fills the visible row at
   // typical viewport widths and is fast; the page issues a follow-up call with
   // a larger count to fill in items further down each row.
-  const hubs = await client.getHomeHubs({ count });
-
   if (userId == null) {
-    const out: PreviewHub[] = [];
-    for (const h of hubs) {
-      const items = filterItemsBySection(h.items, sectionId);
-      if (items.length > 0) out.push(toPreviewHub(h, items));
-    }
-    return { user: null, hubs: out, warnings };
+    return {
+      user: null,
+      approximate: false,
+      hubs: sectionHubs(await client.getHomeHubs({ count }), sectionId),
+      warnings,
+    };
   }
 
   const identity = await client.getIdentity();
@@ -173,15 +187,24 @@ export async function getPreviewForUser(
   const sharing = sharings.find((s) => s.userId === userId);
   if (!sharing) {
     warnings.push(`User ${userId} not found in sharings; showing unfiltered hubs.`);
-    const out: PreviewHub[] = [];
-    for (const h of hubs) {
-      const items = filterItemsBySection(h.items, sectionId);
-      if (items.length > 0) out.push(toPreviewHub(h, items));
-    }
-    return { user: null, hubs: out, warnings };
+    return {
+      user: null,
+      approximate: true,
+      hubs: sectionHubs(await client.getHomeHubs({ count }), sectionId),
+      warnings,
+    };
   }
+  const user = { userId: sharing.userId, username: sharing.username };
 
   const detail = sharedDetails.find((d) => d.userId === userId);
+  if (detail?.accessToken) {
+    // Plex applies the share's libraries and label filters itself, and the
+    // Continue Watching / On Deck rows are genuinely theirs.
+    const hubs = await client.getHomeHubs({ count, asToken: detail.accessToken });
+    return { user, approximate: false, hubs: sectionHubs(hubs, sectionId), warnings };
+  }
+
+  const hubs = await client.getHomeHubs({ count });
   const allowedSections = detail ? new Set(detail.librarySectionIds) : null;
   const movieClauses = detail ? parseLabelFilter(detail.filterMovies) : [];
   const tvClauses = detail ? parseLabelFilter(detail.filterTelevision) : [];
@@ -215,9 +238,5 @@ export async function getPreviewForUser(
     warnings.push("Hiding Continue Watching / On Deck — those reflect the admin's watch progress, not this user's.");
   }
 
-  return {
-    user: { userId: sharing.userId, username: sharing.username },
-    hubs: filteredHubs,
-    warnings,
-  };
+  return { user, approximate: true, hubs: filteredHubs, warnings };
 }

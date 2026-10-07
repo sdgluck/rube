@@ -1,8 +1,10 @@
 /**
  * "What does this shared user actually see on their Plex home screen?"
  *
- * The answer is reconstructed from the admin's own view plus the user's share
- * record, and the reconstruction has three parts worth pinning:
+ * Where the share carries an access token, Plex answers that directly — the
+ * hubs are read as the user. Without one, the answer is reconstructed from the
+ * admin's own view plus the user's share record, and the reconstruction has
+ * three parts worth pinning:
  *
  * - **`parseLabelFilter`.** Plex's share filter is a small expression language
  *   — `,` is AND, `|` is OR, and each clause may carry a redundant `label=`
@@ -179,6 +181,37 @@ describe("getPreviewForUser", () => {
       ...over,
     } as unknown as PlexClient;
   }
+
+  test("a share with a token is read as the user, unfiltered and exact", async () => {
+    let asToken: string | undefined;
+    const result = await getPreviewForUser(
+      client({
+        getHomeHubs: async (opts: { asToken?: string }) => {
+          asToken = opts.asToken;
+          // Plex omits labels from /hubs, so a label filter applied here would drop all of this.
+          return [
+            hub({ context: "hub.continueWatching", items: [item()] }),
+            hub({ items: [item({ ratingKey: "2" })] }),
+          ];
+        },
+        getSharedServerDetails: async () => [
+          {
+            userId: 7,
+            librarySectionIds: [1],
+            filterMovies: "label=Tinkerbell",
+            filterTelevision: "",
+            accessToken: "t",
+          },
+        ],
+      }),
+      7,
+    );
+
+    assert.equal(asToken, "t");
+    assert.equal(result.approximate, false);
+    assert.equal(result.hubs.length, 2, "their own Continue Watching is kept");
+    assert.deepEqual(result.warnings, []);
+  });
 
   test("with no user, hubs come back unfiltered and unwarned", async () => {
     const result = await getPreviewForUser(client(), null);

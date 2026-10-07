@@ -246,7 +246,7 @@ export default function Preview() {
 
   return (
     <PageShell
-      chip={<StatusChip tone="advisory">Approximate</StatusChip>}
+      chip={previewQuery.data?.approximate ? <StatusChip tone="advisory">Approximate</StatusChip> : undefined}
       actions={
         <>
           <label className={styles.pickerLabel} htmlFor="preview-section">

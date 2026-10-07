@@ -140,6 +140,12 @@ export interface PlexSharedServerDetail {
   filterMovies: string;
   filterTelevision: string;
   librarySectionIds: number[];
+  /**
+   * The server token this share's apps sign in with. Read-only use only: it is
+   * how the preview asks Plex for the user's actual home screen instead of
+   * reconstructing it from the owner's.
+   */
+  accessToken?: string;
 }
 
 /**

@@ -121,6 +121,7 @@ export function createSharingModule(http: PlexHttp) {
       userID?: string | number;
       filterMovies?: string;
       filterTelevision?: string;
+      accessToken?: string;
       Section?: unknown[];
     }>;
 
@@ -148,6 +149,7 @@ export function createSharingModule(http: PlexHttp) {
         filterMovies: parsed.data.filterMovies ?? "",
         filterTelevision: parsed.data.filterTelevision ?? "",
         librarySectionIds: sectionIds,
+        accessToken: node.accessToken || undefined,
       });
     }
     return out;

@@ -114,10 +114,13 @@ export function createHubsModule(http: PlexHttp) {
     return true;
   }
 
-  async function getHomeHubs(opts: { count?: number } = {}): Promise<PlexHomeHub[]> {
-    const { count = 20 } = opts;
+  /** `asToken` reads the home screen as whoever holds that token — a shared user's `accessToken`. */
+  async function getHomeHubs(opts: { count?: number; asToken?: string } = {}): Promise<PlexHomeHub[]> {
+    const { count = 20, asToken } = opts;
     const data = await http.request("/hubs", {
       params: {
+        // Set after the client's own token, so it replaces it.
+        ...(asToken ? { "X-Plex-Token": asToken } : {}),
         count,
         includeFields: "label,librarySectionID,librarySectionTitle,art,thumb",
         excludeFields: "summary",
