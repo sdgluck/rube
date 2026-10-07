@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-07
+
+### Added
+
+- Downloads page now connects to SABnzbd, NZBGet, qBittorrent, Transmission and Deluge, showing each client's real state and letting you pause or resume a whole client or a single item.
+- Added an Interface size setting so you can shrink the admin UI to fit more on a laptop screen.
+
+### Changed
+
+- **The admin UI now sizes itself in rem off one root font size instead of fixed units, so existing custom zoom or browser font-size overrides may render differently than before.**
+
+### Fixed
+
+- The \*Arr download queue now shows the download client's own state, so a paused item correctly says "paused" instead of "downloading".
+- Previewing a shared user's home no longer shows empty when that user has a label filter — the preview now reads their home using their share token.
+- The Users page "build your week" rows now only build for users actually shown on the Users page, instead of every account the server remembers.
+
 ## [0.34.0] - 2026-10-06
 
 ### Added
