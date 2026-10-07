@@ -19,5 +19,5 @@
     },
     "incremental": true
   },
-  "include": ["src"]
+  "include": ["src", "capacitor.config.ts"]
 }

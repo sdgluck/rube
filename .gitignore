@@ -27,3 +27,11 @@ apps/portal/dist
 # from ~25s to ~5s, which is what makes it affordable in the pre-commit hook —
 # but the cache is machine- and version-specific, so it is never committed.
 *.tsbuildinfo
+
+# Native (Capacitor) builds. `dist-native` is the SPA bundled into the apps,
+# rebuilt by `pnpm native:sync`; the platform folders' own build output is
+# ignored by the .gitignore files Capacitor generated inside them. Signing keys
+# never belong in the repo.
+dist-native/
+*.jks
+*.keystore

@@ -22,3 +22,14 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   sharp: true
+
+# One copy of Capacitor across the workspace. The @aparajita plugins list
+# @capacitor/core, /ios and /android as ordinary dependencies rather than peers,
+# so without this pnpm installs them a second, newer copy beside the apps'. Two
+# copies of core means two plugin registries: a plugin registered against one is
+# "not implemented" when called through the other, which fails only on a device.
+overrides:
+  "@capacitor/core": "8.5.2"
+  "@capacitor/ios": "8.5.2"
+  "@capacitor/android": "8.5.2"
+  "@capacitor/cli": "8.5.2"

@@ -150,6 +150,39 @@ pnpm screenshots:local  # faster, for iterating — don't commit the result
 See [screenshots/README.md](screenshots/README.md) for why the Docker run is
 the canonical one.
 
+## Native apps
+
+`apps/web` and `apps/portal` are also Capacitor apps for iOS and Android. Each
+app's `capacitor.config.ts` sits beside its `vite.config.ts`, and its Xcode and
+Gradle projects are in its `ios/` and `android/` folders. The code they share
+is in `packages/native-client`.
+
+```sh
+pnpm native:ios web          # build dist-native, cap sync, open Xcode
+pnpm native:android portal   # the same for the portal app in Android Studio
+pnpm native:sync             # rebuild and sync both apps, without opening anything
+pnpm native:assets           # re-render icons and splashes from resources/icon.svg
+```
+
+- **Separate bundle.** The apps ship their own copy of the SPA. It is built
+  with `vite build --mode native` into `dist-native/`, so the `dist/` the
+  server serves is never touched.
+- **Talking to a server.** On a device, the SPA connects to a server the user
+  picks: a typed address or a `tinkerbell://connect?server=…` link. Every
+  request uses an absolute URL with `Authorization: Bearer <session>`.
+- **CORS.** The server answers CORS only for the apps' fixed origins
+  (`capacitor://app.tinkerbell`, `https://app.tinkerbell`, and the `portal.`
+  equivalents). To run an app against your dev server, point it at
+  `http://<your LAN IP>:3000`. `pnpm dev` binds to loopback, so start the
+  server with `HOST=0.0.0.0`.
+- **Images and video.** `<img>` and `<video>` can't send a header, so they use
+  a short-lived media token in the query string (`auth.mediaToken`). It is
+  accepted only on the plain GET routes.
+- **Versions.** `pnpm release` stamps the native version fields. The build
+  number is the version as one integer: 0.36.1 → 36001.
+- **Toolchains.** Building needs Xcode for iOS, and Android Studio with
+  JDK 21 for Android. Signing keys and store listings stay outside the repo.
+
 ## Release
 
 ```sh

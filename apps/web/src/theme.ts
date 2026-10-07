@@ -17,6 +17,7 @@
  * what colour the page is.
  */
 
+import { setStatusBarTheme } from "@tinkerbell/native-client";
 import { readEnumStorage, readStorage, writeStorage } from "#/storage";
 
 export const THEME_MODES = ["system", "light", "dark"] as const;
@@ -48,6 +49,8 @@ function apply(): void {
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", resolved === "dark" ? "#0a100f" : "#edf1f0");
+  // The native app's status bar is the same chrome, told a different way.
+  setStatusBarTheme(resolved);
 }
 
 export function getThemeMode(): ThemeMode {

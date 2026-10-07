@@ -21,6 +21,13 @@ import { perDeps } from "@tinkerbell/container";
  *
  * In memory on purpose: a handshake is worthless after 15 minutes, and a
  * restart mid-sign-in costs one click to retry.
+ *
+ * A handshake also remembers which kind of client began it. The native apps
+ * can't hold the HttpOnly cookie (the server is another origin), so they are
+ * given the nonce in the response body and, on success, the session token too.
+ * Recording that at `start` is what stops a browser handshake — whose nonce
+ * only ever lived in a cookie — being finished as a native one to pull a raw
+ * session token into page JavaScript.
  */
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
@@ -28,6 +35,9 @@ import type { SessionScope } from "@tinkerbell/core";
 import { HANDSHAKE_MAX_AGE } from "./cookies.ts";
 
 const HANDSHAKE_TTL_MS = HANDSHAKE_MAX_AGE * 1000;
+
+/** Who began the handshake: a browser holding the cookie, or a native app holding the nonce. */
+export type HandshakeClient = "browser" | "native";
 
 function keyFor(scope: SessionScope, nonce: string): string {
   return `${scope}:${nonce}`;
@@ -43,19 +53,26 @@ const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 60;
 
 export const createHandshakes = perDeps(function createHandshakes(_deps: TrpcDeps) {
-  const handshakes = new Map<string, { pinId: number; expiresAt: number }>();
+  const handshakes = new Map<string, { pinId: number; client: HandshakeClient; expiresAt: number }>();
   const attempts = new Map<string, { count: number; resetAt: number }>();
 
-  function createHandshake(scope: SessionScope, pinId: number): string {
+  function createHandshake(scope: SessionScope, pinId: number, client: HandshakeClient = "browser"): string {
     const now = Date.now();
     for (const [key, value] of handshakes) if (value.expiresAt < now) handshakes.delete(key);
     const nonce = randomBytes(32).toString("hex");
-    handshakes.set(keyFor(scope, nonce), { pinId, expiresAt: now + HANDSHAKE_TTL_MS });
+    handshakes.set(keyFor(scope, nonce), { pinId, client, expiresAt: now + HANDSHAKE_TTL_MS });
     return nonce;
   }
 
-  /** Resolve a nonce to its PIN id, or undefined if unknown, expired or foreign. */
-  function readHandshake(scope: SessionScope, nonce: string | undefined): number | undefined {
+  /**
+   * Resolve a nonce to its PIN id, or undefined if unknown, expired, foreign,
+   * or begun by the other kind of client.
+   */
+  function readHandshake(
+    scope: SessionScope,
+    nonce: string | undefined,
+    client: HandshakeClient = "browser",
+  ): number | undefined {
     if (!nonce) return undefined;
     const key = keyFor(scope, nonce);
     const entry = handshakes.get(key);
@@ -64,6 +81,7 @@ export const createHandshakes = perDeps(function createHandshakes(_deps: TrpcDep
       handshakes.delete(key);
       return undefined;
     }
+    if (entry.client !== client) return undefined;
     return entry.pinId;
   }
 

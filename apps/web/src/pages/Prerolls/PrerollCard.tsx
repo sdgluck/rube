@@ -2,6 +2,7 @@ import ToggleSwitch from "#components/ToggleSwitch";
 import type { Preroll } from "./types";
 import { ACTION_LABELS, STATUS_LABELS, formatBytes, formatDuration, formatResolution } from "./utils";
 import styles from "./Prerolls.module.css";
+import { prerollThumbUrl } from "#lib/media";
 
 interface PrerollCardProps {
   preroll: Preroll;
@@ -45,7 +46,7 @@ export default function PrerollCard({
     >
       <div className={styles.cardThumb} onClick={() => onOpen(preroll.id)} role="presentation">
         {isReady ? (
-          <img src={`/api/prerolls/${preroll.id}/thumb`} alt="" loading="lazy" className={styles.cardThumbImg} />
+          <img src={prerollThumbUrl(preroll.id)} alt="" loading="lazy" className={styles.cardThumbImg} />
         ) : (
           <div className={styles.cardThumbPlaceholder} aria-hidden="true" />
         )}

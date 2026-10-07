@@ -31,6 +31,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@tinkerbell/trpc";
 import styles from "#/styles/shared.module.css";
 import collectionStyles from "./Collections.module.css";
+import { plexImageUrl } from "#lib/media";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 
@@ -258,7 +259,7 @@ export default function Collections() {
             {col.thumb && (
               <FadeImage
                 className={collectionStyles.rowPosterImg}
-                src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                src={plexImageUrl(col.thumb)}
                 alt=""
                 loading="lazy"
               />
@@ -653,7 +654,7 @@ export default function Collections() {
                     {col.thumb ? (
                       <FadeImage
                         className={styles.cardPoster}
-                        src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                        src={plexImageUrl(col.thumb)}
                         alt={col.title}
                         loading="lazy"
                       />

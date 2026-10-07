@@ -7,6 +7,7 @@ import controls from "#/styles/controls.module.css";
 import type { Preroll } from "./types";
 import { ACTION_LABELS, formatBytes, formatDuration } from "./utils";
 import styles from "./Prerolls.module.css";
+import { prerollPreviewUrl } from "#lib/media";
 
 interface PrerollDetailModalProps {
   preroll: Preroll;
@@ -54,7 +55,7 @@ export default function PrerollDetailModal({ preroll, onClose, onDelete }: Prero
   return (
     <Modal open onClose={onClose} title={preroll.name} size="lg">
       {isReady ? (
-        <video className={styles.player} src={`/api/prerolls/${preroll.id}/preview`} controls preload="metadata" />
+        <video className={styles.player} src={prerollPreviewUrl(preroll.id)} controls preload="metadata" />
       ) : (
         <p className={styles.detailNotice}>
           {preroll.status === "failed"

@@ -8,6 +8,7 @@ import { useToast } from "#components/Toast";
 import styles from "#/styles/shared.module.css";
 import { uploadCollectionPoster } from "./upload.ts";
 import local from "./CollectionDetail.module.css";
+import { plexImageUrl } from "#lib/media";
 
 const SOURCES = ["generate", "upload", "plex", "url"] as const;
 type Source = (typeof SOURCES)[number];
@@ -260,12 +261,7 @@ export default function PosterStudio({
                       onClick={() => setCandidateKey(candidate.key)}
                       aria-label={candidate.selected ? "Current poster" : "Poster option"}
                     >
-                      <img
-                        className={local.candidateImg}
-                        src={`/api/plex-image?path=${encodeURIComponent(candidate.key)}`}
-                        alt=""
-                        loading="lazy"
-                      />
+                      <img className={local.candidateImg} src={plexImageUrl(candidate.key)} alt="" loading="lazy" />
                     </button>
                   ))}
                 </div>

@@ -37,12 +37,13 @@ body::before {
 }
 
 /* index.html sets `viewport-fit=cover`, so on a notched phone in landscape the
-   page runs under the notch unless the gutters make room for it. */
+   page runs under the notch unless the gutters make room for it — and in the
+   native app it runs under the status bar too, which the top inset clears. */
 .page {
   max-width: 680px;
   margin: 0 auto;
-  padding: 32px max(20px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom))
-    max(20px, env(safe-area-inset-left));
+  padding: calc(32px + env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    calc(64px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
 }
 
 .card {
@@ -211,6 +212,7 @@ button:disabled {
 input[type="text"],
 input[type="email"],
 input[type="number"],
+input[type="url"],
 textarea,
 select {
   font: inherit;
@@ -225,6 +227,7 @@ select {
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="number"]:focus,
+input[type="url"]:focus,
 textarea:focus,
 select:focus {
   outline: none;
@@ -531,7 +534,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
 }
 
 .card-signin {
@@ -766,4 +769,45 @@ textarea {
   .combo-results {
     max-height: 50vh;
   }
+}
+
+/* ── Native app ────────────────────────────────────────────── */
+
+/* The server picker: the address field and the connect button, full width
+   like the sign-in button they precede. */
+.connect-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.connect-form input {
+  width: 100%;
+}
+
+.connect-form .btn-primary {
+  width: 100%;
+}
+
+/* Which server, switching, and the app lock — under the card, quiet. */
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 16px;
+  margin-top: 16px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.app-footer button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  color: var(--text-secondary);
 }

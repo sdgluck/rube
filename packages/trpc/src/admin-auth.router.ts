@@ -10,7 +10,7 @@ import type { TrpcDeps } from "./deps.ts";
  */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { authDisabledByEnv, createLogger, OwnerUnresolvedError } from "@tinkerbell/core";
+import { authDisabledByEnv, createLogger, OwnerUnresolvedError, parseBearerToken } from "@tinkerbell/core";
 import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@tinkerbell/plex";
 
 import { t, publicProcedure, procedure, type AdminContext } from "./_base.ts";
@@ -25,6 +25,15 @@ import {
   setSessionCookie,
 } from "./cookies.ts";
 import { createHandshakes } from "./handshake.ts";
+import { serverInfo } from "./server-info.ts";
+
+/**
+ * Which client is signing in. A browser gets the handshake and the session as
+ * HttpOnly cookies; a native app (which reaches this server cross-origin, where
+ * no cookie survives) gets both in the response body and keeps them itself.
+ */
+const startInput = z.object({ client: z.enum(["browser", "native"]) }).optional();
+const pollInput = z.object({ handshake: z.string().max(128) }).optional();
 
 const log = createLogger("auth");
 
@@ -40,14 +49,18 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
   function createAdminContext(opts: { req: Request; resHeaders: Headers; ip?: string }): AdminContext {
     const secure = isSecureRequest(opts.req);
     const cookies = opts.req.headers.get("cookie") ?? "";
-    const rawToken = parseCookie(cookies, COOKIE_NAMES.admin);
+    const cookieToken = parseCookie(cookies, COOKIE_NAMES.admin);
+    // The native app's session arrives as a bearer token instead. The cookie
+    // wins when both are present, so a browser can't be steered onto some other
+    // session by a header it didn't choose.
+    const rawToken = cookieToken ?? parseBearerToken(opts.req.headers.get("authorization"));
     const session = getPlexSession(rawToken, "admin");
 
     // Sliding expiry only moves the DB row; the browser's copy carries its own
     // Max-Age, so it has to be re-sent or the cookie would still expire on the
-    // original schedule.
-    if (session?.refreshed && rawToken) {
-      setSessionCookie(opts.resHeaders, rawToken, { scope: "admin", secure });
+    // original schedule. A bearer token has no copy to refresh.
+    if (session?.refreshed && cookieToken) {
+      setSessionCookie(opts.resHeaders, cookieToken, { scope: "admin", secure });
     }
 
     // A session that was valid when it was issued but whose account has since
@@ -109,7 +122,7 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
      * the PIN id stays here, bound to a nonce in an HttpOnly cookie, so the
      * handshake can only be completed by the browser that began it.
      */
-    start: publicProcedure.mutation(async ({ ctx }) => {
+    start: publicProcedure.input(startInput).mutation(async ({ ctx, input }) => {
       rateLimit(ctx.ip);
       // Fail before sending anyone to plex.tv if we couldn't tell who the
       // owner is — otherwise they'd complete the whole dance only to be
@@ -117,6 +130,11 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       await requireOwner();
       const clientId = ensureAdminPlexClientId();
       const pin = await createPlexPin(clientId);
+      if (input?.client === "native") {
+        // No `forwardUrl`: the app shows plex.tv in a sheet it closes itself.
+        const handshake = createHandshake("admin", pin.id, "native");
+        return { authUrl: buildPlexAuthUrl({ clientId, code: pin.code }), handshake };
+      }
       const nonce = createHandshake("admin", pin.id);
       setHandshakeCookie(ctx.resHeaders, nonce, { scope: "admin", secure: ctx.secure });
       return {
@@ -127,14 +145,16 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       };
     }),
 
-    poll: publicProcedure.mutation(async ({ ctx }) => {
+    poll: publicProcedure.input(pollInput).mutation(async ({ ctx, input }) => {
       rateLimit(ctx.ip);
-      const pinId = readHandshake("admin", ctx.handshakeNonce);
+      const native = input?.handshake !== undefined;
+      const nonce = native ? input.handshake : ctx.handshakeNonce;
+      const pinId = readHandshake("admin", nonce, native ? "native" : "browser");
       // No cookie, or one this process doesn't recognise: there is nothing to
       // finish. The client starts over rather than being told anything about
       // which PINs exist.
       if (pinId === undefined) {
-        clearHandshakeCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
+        if (!native) clearHandshakeCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
         return { status: "expired" as const };
       }
 
@@ -143,8 +163,8 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       if (!token) return { status: "pending" as const };
 
       // Redeemed — one way or the other this handshake is spent.
-      spendHandshake("admin", ctx.handshakeNonce);
-      clearHandshakeCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
+      spendHandshake("admin", nonce);
+      if (!native) clearHandshakeCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
 
       const account = await getPlexAccount(token, clientId);
       await requireOwner();
@@ -166,17 +186,47 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       }
 
       const raw = createPlexSession(account.id, account.username, "admin");
-      setSessionCookie(ctx.resHeaders, raw, { scope: "admin", secure: ctx.secure });
       // Recorded with the address that completed the handshake so an unexpected
       // sign-in is visible in the activity feed.
-      emitEvent("auth.signin", `${account.username} signed in`, { userId: account.id, ip: ctx.ip });
+      emitEvent("auth.signin", `${account.username} signed in${native ? " in the app" : ""}`, {
+        userId: account.id,
+        ip: ctx.ip,
+      });
+      // Only a handshake the native app began hands the token back in the body —
+      // a browser's session stays in an HttpOnly cookie, out of reach of script.
+      if (native) return { status: "ok" as const, username: account.username, token: raw };
+      setSessionCookie(ctx.resHeaders, raw, { scope: "admin", secure: ctx.secure });
       return { status: "ok" as const, username: account.username };
     }),
 
-    logout: publicProcedure.mutation(({ ctx }) => {
-      deletePlexSession(ctx.rawToken);
-      clearSessionCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
-      return { ok: true };
+    logout: publicProcedure
+      .input(z.object({ mediaToken: z.string().max(128).optional() }).optional())
+      .mutation(({ ctx, input }) => {
+        deletePlexSession(ctx.rawToken);
+        // The app's media token outlives nothing it was minted from.
+        if (input?.mediaToken && getPlexSession(input.mediaToken, "admin-media")) deletePlexSession(input.mediaToken);
+        clearSessionCookie(ctx.resHeaders, { scope: "admin", secure: ctx.secure });
+        return { ok: true };
+      }),
+
+    /**
+     * "Is this a Tinkerbell admin server, and which release?" — the native
+     * app's server picker asks before anything else. See `server-info.ts`.
+     */
+    server: publicProcedure.query(() => serverInfo("tinkerbell-admin")),
+
+    /**
+     * A short-lived credential for the native app's images and video, which
+     * an `<img>` can't attach a header to. Accepted only as `?access_token=` on
+     * the plain GET routes (`apps/server/src/auth.ts`), never by tRPC — so a
+     * leaked one shows posters for a day and does nothing else.
+     *
+     * Null with auth off: those routes are open then, and there is no session
+     * to mint one from.
+     */
+    mediaToken: procedure.mutation(({ ctx }) => {
+      if (!ctx.session) return { token: null };
+      return { token: createPlexSession(ctx.session.userId, ctx.session.username, "admin-media") };
     }),
 
     /**
@@ -197,6 +247,7 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       // until this moment the API answered to anyone who could reach the port.
       // Sessions were minted while nothing was checked…
       deletePlexSessionsInScope("admin");
+      deletePlexSessionsInScope("admin-media");
       // …and the allow-list is a standing grant of admin to arbitrary Plex
       // accounts, so it must not survive the switch either. Adding a second
       // admin afterwards is one call for the signed-in owner; inheriting one

@@ -121,6 +121,32 @@ command to connect.
 - Keys are stored hashed and shown once. Revoke one and it stops working
   immediately. Keys aren't included in an export.
 
+## Mobile apps
+
+Tinkerbell has two phone apps, for iOS and Android. **Tinkerbell** is the admin
+app, and **Tinkerbell Portal** is for the people you share your server with.
+Both run on your phone and connect to your own server.
+
+- **Connecting.** Open **Settings → Mobile app** in a browser and scan the code
+  with your phone. You can also type the server's address into the app.
+- **Portal app.** To share the portal app, save the portal's address under
+  **Settings → Portal → Address**. A code for the portal app then appears
+  there.
+- **Signing in.** You sign in with Plex inside the app. The app stores your
+  session in the phone's keychain.
+- **App lock.** You can turn on Face ID, Touch ID or fingerprint unlock in the
+  app's settings.
+- **At home and away.** On your home network, a plain address like
+  `http://192.168.1.10:3000` works. Away from home, your phone needs an address
+  that reaches the server from outside, served over HTTPS by a reverse proxy.
+- **Admin sign-in.** Turn on admin sign-in before you make the admin app
+  reachable from outside. The admin app still works with sign-in off, but it
+  shows a warning that anyone who can reach the server can change it.
+
+The apps only accept requests from their own built-in origins, and only with a
+bearer token. Exposing the server to the apps doesn't open it to other
+websites.
+
 ## Personalized home screens
 
 Each user gets their own recommendation collections, and only they can see them.

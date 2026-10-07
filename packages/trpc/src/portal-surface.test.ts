@@ -29,10 +29,18 @@ const { createHandshake } = createHandshakes(trpcDeps);
 /**
  * The complete public surface of the portal API. `personalizationStatus` and
  * `branding` are what the login screen renders itself from, and the three
- * handshake procedures are unauthenticated by definition. A shared user's own
- * data is never in here.
+ * handshake procedures are unauthenticated by definition, as is `auth.server`,
+ * which the native app asks before sign-in. A shared user's own data is never
+ * in here.
  */
-const PUBLIC_PATHS = new Set(["personalizationStatus", "branding", "auth.start", "auth.poll", "auth.logout"]);
+const PUBLIC_PATHS = new Set([
+  "personalizationStatus",
+  "branding",
+  "auth.start",
+  "auth.poll",
+  "auth.logout",
+  "auth.server",
+]);
 
 type PortalContext = import("./portal.router.ts").PortalContext;
 
@@ -97,19 +105,29 @@ describe("portal router surface", () => {
     }
   });
 
+  /** What the procedure's input schema makes of a hostile payload. */
+  function parsedInput(path: string, raw: unknown): unknown {
+    const inputs = procedures()[path]._def.inputs as { parse(v: unknown): unknown }[];
+    assert.equal(inputs.length, 1, `${path} should have exactly one input schema`);
+    return inputs[0].parse(raw);
+  }
+
   test("poll accepts no PIN id from the caller", () => {
     // The regression this guards: an input schema here means a caller can name
     // the PIN to redeem, and plex.tv's ids are sequential — so polling around
     // the live range while somebody approves theirs collects their session.
-    const proc = procedures()["auth.poll"];
-    assert.deepEqual(proc._def.inputs, [], "auth.poll must take no input; the PIN id comes from the cookie");
+    // The native app sends its handshake nonce, which is as unguessable as the
+    // cookie it stands in for; anything shaped like a PIN id is dropped.
+    assert.deepEqual(parsedInput("auth.poll", { handshake: "n", pinId: 5, id: 5, code: "x" }), { handshake: "n" });
   });
 
   test("start accepts no forwardUrl from the caller", () => {
     // Same shape of bug in the other direction: a caller-chosen return address
-    // makes a genuine app.plex.tv link that lands the user on their page.
-    const proc = procedures()["auth.start"];
-    assert.deepEqual(proc._def.inputs, [], "auth.start must take no input; the return address is the server's");
+    // makes a genuine app.plex.tv link that lands the user on their page. The
+    // only thing a caller says is which kind of client it is.
+    assert.deepEqual(parsedInput("auth.start", { client: "native", forwardUrl: "https://evil.example" }), {
+      client: "native",
+    });
   });
 
   test("poll refuses a caller with no handshake cookie instead of reaching plex.tv", async () => {

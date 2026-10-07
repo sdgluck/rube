@@ -19,6 +19,7 @@ import {
 import mediaStyles from "./MediaDetail.module.css";
 import MediaEditPanel from "./MediaEditPanel";
 import MediaWhyPanel from "./MediaWhyPanel";
+import { plexImageUrl } from "#lib/media";
 
 function fileName(path: string | undefined): string {
   if (!path) return EMPTY;
@@ -141,11 +142,7 @@ export default function MediaDetail() {
       <div className={styles.detailLayout}>
         <div className={styles.detailPoster}>
           {item.thumb ? (
-            <FadeImage
-              className={styles.detailPosterImg}
-              src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
-              alt={item.title}
-            />
+            <FadeImage className={styles.detailPosterImg} src={plexImageUrl(item.thumb)} alt={item.title} />
           ) : (
             <div className={styles.detailPosterPlaceholder}>No poster</div>
           )}

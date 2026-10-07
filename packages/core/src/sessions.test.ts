@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 import { plexSessions } from "@tinkerbell/db";
 import { createTestDb } from "@tinkerbell/db/test-db";
 import { createConfigStore } from "./config.ts";
-import { createSessions, sessionMaxAgeSeconds } from "./sessions.ts";
+import { createSessions, parseBearerToken, sessionMaxAgeSeconds } from "./sessions.ts";
 
 const testDb = createTestDb("tinkerbell-sessions-test-");
 after(testDb.dispose);
@@ -88,5 +88,34 @@ describe("session scopes", () => {
 
     assert.equal(sessions.getPlexSession(admin, "admin"), undefined);
     assert.equal(sessions.getPlexSession(portal, "portal")?.username, "p");
+  });
+});
+
+describe("parseBearerToken", () => {
+  const raw = "ab".repeat(32);
+
+  test("reads a session token from a bearer header", () => {
+    assert.equal(parseBearerToken(`Bearer ${raw}`), raw);
+    assert.equal(parseBearerToken(`bearer ${raw}`), raw);
+  });
+
+  test("refuses an agent API key, so a key can never be looked up as a session", () => {
+    assert.equal(parseBearerToken("Bearer tbk_" + "a".repeat(43)), undefined);
+  });
+
+  test("refuses anything that isn't a bare session-shaped token", () => {
+    for (const header of [undefined, null, "", raw, `Basic ${raw}`, `Bearer ${raw} extra`, `Bearer ${raw.slice(1)}`]) {
+      assert.equal(parseBearerToken(header), undefined, String(header));
+    }
+  });
+});
+
+describe("media tokens", () => {
+  test("are a scope of their own: not an admin session, and an admin session is not one", () => {
+    const media = sessions.createPlexSession(1, "owner", "admin-media");
+    const admin = sessions.createPlexSession(1, "owner", "admin");
+    assert.equal(sessions.getPlexSession(media, "admin"), undefined);
+    assert.equal(sessions.getPlexSession(admin, "admin-media"), undefined);
+    assert.equal(sessions.getPlexSession(media, "admin-media")?.userId, 1);
   });
 });

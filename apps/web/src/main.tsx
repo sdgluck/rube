@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "#/trpc";
 import { ToastProvider } from "#components/Toast";
 import AuthGate from "#/auth/AuthGate";
+import NativeGate from "#/auth/NativeGate";
+import { bootNative } from "@tinkerbell/native-client";
 import App from "#/App";
 import { startThemeWatch } from "#/theme";
 import { startUiScale } from "#/ui-scale";
@@ -58,20 +60,30 @@ const queryClient = new Client({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ToastProvider>
-            {/* Inside the router and the toast provider: the sign-in screen
+// A no-op in a browser. In the native app it loads the stored server and
+// session before the first request is built — see `@tinkerbell/native-client`.
+// Rendered on its settling rather than awaited at the top level, which the
+// build target doesn't allow.
+void bootNative("admin").finally(render);
+
+function render() {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <ToastProvider>
+              {/* Inside the router and the toast provider: the sign-in screen
                 is a route-level swap, not a separate app. */}
-            <AuthGate>
-              <App />
-            </AuthGate>
-          </ToastProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </trpc.Provider>
-  </StrictMode>,
-);
+              <NativeGate>
+                <AuthGate>
+                  <App />
+                </AuthGate>
+              </NativeGate>
+            </ToastProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </trpc.Provider>
+    </StrictMode>,
+  );
+}

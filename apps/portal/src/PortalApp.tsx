@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isNative, nativePlexSignIn, saveSession, SignInCancelled } from "@tinkerbell/native-client";
 import { portalTrpc } from "./trpc.ts";
 import BrandHeader, { type Branding } from "./components/BrandHeader.tsx";
 import SignIn from "./components/SignIn.tsx";
@@ -117,8 +118,27 @@ export default function PortalApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  async function signInNative() {
+    setFinishing(true);
+    try {
+      const { token } = await nativePlexSignIn({
+        start: () => startMutation.mutateAsync({ client: "native" }),
+        poll: (handshake) => pollMutation.mutateAsync({ handshake }),
+      });
+      await saveSession(token);
+      await utils.me.invalidate();
+    } catch (e) {
+      if (!(e instanceof SignInCancelled)) setError(e instanceof Error ? e.message : "Sign-in failed.");
+    } finally {
+      setFinishing(false);
+    }
+  }
+
   function signIn() {
     setError(null);
+    // The app opens Plex in a sheet and keeps the session itself, rather than
+    // leaving for plex.tv and coming back. See `nativePlexSignIn`.
+    if (isNative()) return void signInNative();
     startMutation.mutate(undefined, {
       onSuccess: ({ authUrl }) => {
         localStorage.setItem(PENDING_KEY, "1");
@@ -191,7 +211,15 @@ export default function PortalApp() {
           <button
             type="button"
             className="btn-ghost btn-signout"
-            onClick={() => logoutMutation.mutate(undefined, { onSuccess: () => utils.me.reset() })}
+            onClick={() =>
+              logoutMutation.mutate(undefined, {
+                // The app forgets its stored token too, or the next launch signs it back in.
+                onSuccess: async () => {
+                  await saveSession(null);
+                  await utils.me.reset();
+                },
+              })
+            }
           >
             Sign out <span className="signout-user">({meQuery.data.username})</span>
           </button>

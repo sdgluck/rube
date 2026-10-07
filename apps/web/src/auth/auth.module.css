@@ -4,6 +4,9 @@
   align-items: center;
   justify-content: center;
   padding: 2.4rem;
+  /* Clear of the status bar and home indicator in the native app; zero in a browser. */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 2.4rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
   background: var(--page);
 }
 
@@ -67,4 +70,48 @@
 .hint code {
   font-family: var(--font-mono);
   font-size: 1.05rem;
+}
+
+/* ─── Native app: server picker, lock screen, sign-in-off banner ─────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+}
+
+.serverInput {
+  composes: input inputMono from "../styles/controls.module.css";
+  width: 100%;
+}
+
+.primaryButton {
+  composes: btn btnPrimary from "../styles/controls.module.css";
+  justify-content: center;
+}
+
+.linkButton {
+  composes: btn btnLink from "../styles/controls.module.css";
+  align-self: center;
+}
+
+/* Sits above the app bar, under the status bar the WebView now draws behind. */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: calc(env(safe-area-inset-top, 0px) + 0.8rem) 1.6rem 0.8rem;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+  font: var(--t-body-sm);
+}
+
+.bannerText {
+  flex: 1;
+  margin: 0;
+}
+
+.bannerDismiss {
+  composes: btn btnGhost btnSm from "../styles/controls.module.css";
 }

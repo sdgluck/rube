@@ -6,6 +6,7 @@ import { useToast } from "#components/Toast";
 import { useDebouncedValue } from "#hooks/useDebouncedValue";
 import styles from "#/styles/shared.module.css";
 import local from "./CollectionDetail.module.css";
+import { plexImageUrl } from "#lib/media";
 
 /** Enough to choose from without turning the picker into a second Media page. */
 const RESULT_LIMIT = 50;
@@ -107,14 +108,7 @@ export default function AddItemsModal({
                   disabled={already}
                   onChange={() => toggle(item.ratingKey)}
                 />
-                {item.thumb && (
-                  <img
-                    className={local.pickThumb}
-                    src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
-                    alt=""
-                    loading="lazy"
-                  />
-                )}
+                {item.thumb && <img className={local.pickThumb} src={plexImageUrl(item.thumb)} alt="" loading="lazy" />}
                 <span>{item.title}</span>
                 <span className={local.pickYear}>{already ? "Already in" : item.year}</span>
               </label>

@@ -160,6 +160,28 @@ builds the routers, and runs **two HTTP servers**:
 
 `portal-isolation.test.ts` / `portal-surface.test.ts` guard the portal boundary.
 
+### Native apps (Capacitor)
+
+`apps/web` and `apps/portal` also build into iOS and Android apps
+(`capacitor.config.ts`, `ios/`, `android/`; see `DEVELOPMENT.md`). The UI is
+bundled into the app, so the server is somewhere else, and that changes four
+things:
+
+- **No same-origin assumptions.** Build URLs through
+  `@tinkerbell/native-client`: `apiUrl()`, `authHeaders()`, `mediaUrl()` (or
+  web's `#lib/media`), and `saveFile()` / `downloadFromServer()` for
+  downloads. A hard-coded `/api/...`, `location.href` to a download, or
+  `window.open` works in the browser and silently does nothing in the app.
+- **Bearer sessions.** Both context factories accept `Authorization: Bearer`
+  alongside the cookie. `auth.start({ client: "native" })` and
+  `auth.poll({ handshake })` return the nonce and the session in the response
+  body. The handshake records which kind of client began it, so a browser
+  handshake can never be finished as a native one.
+- **Media tokens.** These are the `admin-media` session scope. They are
+  accepted only as `?access_token=` on GET routes in `apps/server/src/auth.ts`.
+- **CORS.** CORS is `apps/server/src/cors.ts`. It covers only the origins in
+  `NATIVE_APPS` (contracts) and never allows credentials.
+
 ### Agent API (`packages/agent-api`)
 
 `/mcp` (hand-rolled stateless Streamable-HTTP MCP, tools only) and `/api/v1`

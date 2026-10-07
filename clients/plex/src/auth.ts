@@ -37,14 +37,20 @@ export function buildPlexAuthUrl(opts: {
   clientId: string;
   code: string;
   product?: string;
-  forwardUrl: string;
+  /**
+   * Where plex.tv sends the browser after approval. Omitted for the native
+   * apps: they open plex.tv in an in-app browser sheet and close it themselves
+   * once the poll succeeds, so there is nowhere to return to — and a return to
+   * the server's web UI would strand the user outside the app.
+   */
+  forwardUrl?: string;
 }): string {
   const params = new URLSearchParams({
     clientID: opts.clientId,
     code: opts.code,
     "context[device][product]": opts.product ?? "Tinkerbell",
-    forwardUrl: opts.forwardUrl,
   });
+  if (opts.forwardUrl) params.set("forwardUrl", opts.forwardUrl);
   return `https://app.plex.tv/auth#?${params.toString()}`;
 }
 

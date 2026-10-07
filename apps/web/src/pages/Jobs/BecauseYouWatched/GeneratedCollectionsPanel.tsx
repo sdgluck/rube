@@ -10,6 +10,7 @@ import styles from "#pages/Jobs/Jobs.module.css";
 import CardSection from "#components/CardSection";
 import { useToast } from "#components/Toast";
 import controls from "#/styles/controls.module.css";
+import { plexImageUrl } from "#lib/media";
 
 export default function GeneratedCollectionsPanel() {
   const utils = trpc.useUtils();
@@ -77,7 +78,7 @@ export default function GeneratedCollectionsPanel() {
                       {col.thumb ? (
                         <FadeImage
                           className={styles.bywCardPoster}
-                          src={`/api/plex-image?path=${encodeURIComponent(col.thumb)}`}
+                          src={plexImageUrl(col.thumb)}
                           alt={col.title}
                           loading="lazy"
                         />

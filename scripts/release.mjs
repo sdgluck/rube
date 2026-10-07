@@ -173,6 +173,35 @@ for (const group of ["apps", "packages", "clients", "domains"]) {
   }
 }
 
+// ── Native apps ─────────────────────────────────────────────────────────────
+// The iOS and Android projects keep their own version fields, which the stores
+// read, so they move in step with everything else. The build number is the
+// version as one integer (0.36.1 → 36001): both stores require it to rise with
+// every upload, and deriving it means a release never has to remember to bump it.
+const buildNumber = next.split(".").reduce((n, part) => n * 1000 + Number(part), 0);
+for (const app of ["web", "portal"]) {
+  const pbxproj = join(ROOT, "apps", app, "ios/App/App.xcodeproj/project.pbxproj");
+  const gradle = join(ROOT, "apps", app, "android/app/build.gradle");
+  try {
+    statSync(pbxproj);
+  } catch {
+    continue;
+  }
+  writeFileSync(
+    pbxproj,
+    readFileSync(pbxproj, "utf8")
+      .replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${next};`)
+      .replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${buildNumber};`),
+  );
+  writeFileSync(
+    gradle,
+    readFileSync(gradle, "utf8")
+      .replace(/versionCode \d+/, `versionCode ${buildNumber}`)
+      .replace(/versionName "[^"]*"/, `versionName "${next}"`),
+  );
+  updated.push(pbxproj, gradle);
+}
+
 // ── Screenshots ─────────────────────────────────────────────────────────────
 // After the version bump, never before: the sidebar renders a `v0.0.0` pill on
 // every page, so capturing first would bake the *previous* version into all 50-

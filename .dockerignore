@@ -28,3 +28,8 @@ apps/*/dist
 *.db-shm
 *.db-wal
 *.sqlite
+# The native apps' Xcode/Gradle projects and their bundled UI. The image
+# serves `dist`, never these.
+apps/*/ios
+apps/*/android
+apps/*/dist-native

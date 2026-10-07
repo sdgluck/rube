@@ -8,6 +8,7 @@ import { useToast } from "#components/Toast";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import styles from "./SettingsApi.module.css";
+import { getConnection } from "@tinkerbell/native-client";
 
 /**
  * Settings → API & MCP: keys for the read-only agent API.
@@ -27,9 +28,11 @@ export default function SettingsApi() {
   const [created, setCreated] = useState<{ name: string; key: string } | null>(null);
   const [revoking, setRevoking] = useState<{ id: string; name: string } | null>(null);
 
-  // The admin server serves the API, and this page is served by the admin
-  // server, so the browser's own origin is the address to give an agent.
-  const origin = window.location.origin;
+  // The admin server serves the API, and in a browser this page is served by
+  // the admin server, so its own origin is the address to give an agent. In
+  // the native app the page's origin is the app's, so it's the server it's
+  // connected to.
+  const origin = getConnection()?.server ?? window.location.origin;
   const shownKey = created?.key ?? "<your key>";
 
   function create(e: React.FormEvent) {

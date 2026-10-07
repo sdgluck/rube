@@ -1,0 +1,40 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+.connect {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.6rem;
+}
+
+.qr {
+  flex: 0 0 18rem;
+}
+
+.linkColumn {
+  display: flex;
+  flex: 1 1 24rem;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+/* Wraps rather than scrolls, as the API page's snippets do. */
+.link {
+  margin: 0;
+  padding: 1rem 1.2rem;
+  border-radius: var(--r-sunken);
+  background: var(--surface-sunken);
+  font: var(--t-data);
+  color: var(--ink-2);
+  word-break: break-all;
+}
+
+.secondary {
+  composes: btn btnSecondary btnSm from "../../styles/controls.module.css";
+  align-self: flex-start;
+}

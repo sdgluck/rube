@@ -42,6 +42,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       // Beside Security: both are about who can reach this instance, and an API
       // key is the other credential it accepts.
       { to: "/settings/api", label: "API & MCP" },
+      { to: "/settings/mobile", label: "Mobile app" },
       { to: "/settings/migrate", label: "Migrate" },
       { to: "/settings/maintenance", label: "Maintenance" },
       // Adjacent on purpose: the two answers to "something is wrong and I want

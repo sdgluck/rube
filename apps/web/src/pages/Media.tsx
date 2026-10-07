@@ -31,6 +31,7 @@ import {
 } from "#components/TableColumns";
 import styles from "#/styles/shared.module.css";
 import mediaStyles from "./Media.module.css";
+import { plexImageUrl } from "#lib/media";
 
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -675,7 +676,7 @@ export default function Media() {
               {item.thumb ? (
                 <FadeImage
                   className={styles.cardPoster}
-                  src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
+                  src={plexImageUrl(item.thumb)}
                   alt={item.title}
                   loading="lazy"
                 />

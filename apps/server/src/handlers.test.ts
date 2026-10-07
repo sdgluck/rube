@@ -396,3 +396,53 @@ describe("the portal server", () => {
     await res.text();
   });
 });
+
+describe("CORS for the native apps", () => {
+  const preflight = (base: string, origin: string) =>
+    get(base, "/api/trpc/ping", {
+      method: "OPTIONS",
+      headers: {
+        Origin: origin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization, content-type",
+      },
+    });
+
+  test("the admin app's preflight is answered before the gate, which it can't pass", async () => {
+    // A preflight carries no credentials by design; one that hit the gate would
+    // 401 and every real request behind it would be blocked.
+    admin = false;
+    for (const origin of ["capacitor://app.tinkerbell", "https://app.tinkerbell"]) {
+      const res = await preflight(adminBase, origin);
+      assert.equal(res.status, 204);
+      assert.equal(res.headers.get("access-control-allow-origin"), origin);
+      assert.match(res.headers.get("access-control-allow-headers") ?? "", /Authorization/);
+      assert.equal(res.headers.get("access-control-allow-credentials"), null, "auth is bearer, never cookies");
+      await res.text();
+    }
+  });
+
+  test("real responses carry the header for an allowed origin", async () => {
+    const res = await get(adminBase, "/api/trpc/ping", { headers: { Origin: "capacitor://app.tinkerbell" } });
+    assert.equal(res.headers.get("access-control-allow-origin"), "capacitor://app.tinkerbell");
+    assert.match(res.headers.get("vary") ?? "", /Origin/);
+    await res.text();
+  });
+
+  test("any other origin gets no CORS headers, including the other app's", async () => {
+    for (const origin of ["https://evil.example", "http://localhost:5173", "capacitor://portal.tinkerbell"]) {
+      const res = await get(adminBase, "/api/trpc/ping", { headers: { Origin: origin } });
+      assert.equal(res.headers.get("access-control-allow-origin"), null, origin);
+      await res.text();
+    }
+  });
+
+  test("the portal admits only the portal app", async () => {
+    const ok = await preflight(portalBase, "https://portal.tinkerbell");
+    assert.equal(ok.headers.get("access-control-allow-origin"), "https://portal.tinkerbell");
+    await ok.text();
+    const res = await get(portalBase, "/api/trpc/ping", { headers: { Origin: "capacitor://app.tinkerbell" } });
+    assert.equal(res.headers.get("access-control-allow-origin"), null);
+    await res.text();
+  });
+});

@@ -13,6 +13,8 @@ import { describeCron } from "#/utils";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import local from "./SettingsBackup.module.css";
+import { apiUrl, authHeaders, isNative } from "@tinkerbell/native-client";
+import { downloadFromServer } from "#lib/download";
 
 const DEFAULT_KEEP = 7;
 
@@ -54,9 +56,9 @@ interface Summary {
 
 /** The routes below aren't tRPC — see `apps/server/src/portability.ts`. */
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(120_000),
   });
@@ -131,10 +133,12 @@ export default function SettingsBackup() {
   function download() {
     const query = new URLSearchParams({ parts: [...parts].join(",") });
     if (includeSecrets) query.set("includeSecrets", "1");
-    // A plain navigation rather than fetch-and-blob: the server sets
-    // `Content-Disposition`, so the browser names the file and the download
-    // shows up in the normal place with normal progress.
-    window.location.href = `/api/portability/export?${query}`;
+    // A plain navigation in the browser (see `downloadFromServer`): the server
+    // sets `Content-Disposition`, so the browser names the file and the
+    // download shows up in the normal place with normal progress.
+    downloadFromServer(`/api/portability/export?${query}`, "tinkerbell-export.json").catch((err: Error) =>
+      addToast(err.message, "error"),
+    );
   }
 
   // ── Import ────────────────────────────────────────────────────────────────
@@ -294,7 +298,18 @@ export default function SettingsBackup() {
                 <span className={local.fileMeta}>
                   {formatFileSize(file.sizeBytes)} · <RelativeTime timestamp={file.createdAt} />
                 </span>
-                <a className={local.downloadLink} href={`/api/backups/${encodeURIComponent(file.name)}`}>
+                <a
+                  className={local.downloadLink}
+                  href={`/api/backups/${encodeURIComponent(file.name)}`}
+                  onClick={(event) => {
+                    // A link to an attachment does nothing in the app's WebView.
+                    if (!isNative()) return;
+                    event.preventDefault();
+                    downloadFromServer(`/api/backups/${encodeURIComponent(file.name)}`, file.name).catch((err: Error) =>
+                      addToast(err.message, "error"),
+                    );
+                  }}
+                >
                   <Download size="1.3rem" aria-hidden /> Download
                 </a>
               </li>

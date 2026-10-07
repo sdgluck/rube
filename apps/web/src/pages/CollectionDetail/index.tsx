@@ -17,6 +17,7 @@ import { CollectionProvider } from "./context.ts";
 import CollectionEditModal from "./CollectionEditModal.tsx";
 import PosterStudio from "./PosterStudio.tsx";
 import local from "./CollectionDetail.module.css";
+import { plexImageUrl } from "#lib/media";
 
 /** Labels Tinkerbell writes itself, which read as provenance rather than tags. */
 const SYSTEM_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
@@ -190,11 +191,7 @@ export default function CollectionDetailLayout() {
       <header className={local.hero}>
         <div className={local.posterFrame}>
           {collection.thumb ? (
-            <FadeImage
-              className={local.posterImg}
-              src={`/api/plex-image?path=${encodeURIComponent(collection.thumb)}`}
-              alt=""
-            />
+            <FadeImage className={local.posterImg} src={plexImageUrl(collection.thumb)} alt="" />
           ) : (
             <div className={local.posterEmpty}>No poster</div>
           )}

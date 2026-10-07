@@ -8,6 +8,7 @@ import { SmartFilterSummary } from "#components/SmartFiltersEditor";
 import styles from "#/styles/shared.module.css";
 import { useCollection } from "./context.ts";
 import local from "./CollectionDetail.module.css";
+import { plexImageUrl } from "#lib/media";
 
 /**
  * Plex's `collectionMode`. `-1` is the library's own default, which is a real
@@ -177,12 +178,7 @@ export default function Details() {
             {related.collections.map((c) => (
               <Link key={c.plexRatingKey} to={`/collections/${c.plexRatingKey}`} className={local.relatedItem}>
                 {c.thumb ? (
-                  <FadeImage
-                    className={local.relatedPoster}
-                    src={`/api/plex-image?path=${encodeURIComponent(c.thumb)}`}
-                    alt={c.title}
-                    loading="lazy"
-                  />
+                  <FadeImage className={local.relatedPoster} src={plexImageUrl(c.thumb)} alt={c.title} loading="lazy" />
                 ) : (
                   <div className={local.relatedEmpty} />
                 )}

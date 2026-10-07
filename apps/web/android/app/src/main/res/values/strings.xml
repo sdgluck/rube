@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tinkerbell</string>
+    <string name="title_activity_main">Tinkerbell</string>
+    <string name="package_name">dev.tinkerbell.admin</string>
+    <string name="custom_url_scheme">dev.tinkerbell.admin</string>
+</resources>

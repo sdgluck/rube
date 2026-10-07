@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import FadeImage from "#components/FadeImage";
 import styles from "#pages/Preview.module.css";
+import { plexImageUrl } from "#lib/media";
 
 /**
  * Shared building block for Plex-style hub rows.
@@ -82,7 +83,7 @@ export function PreviewHubRowSkeleton({ wide = false, cards = 8, showTitle = tru
 
 function Card({ item, wide, onClick }: { item: HubItem; wide: boolean; onClick?: (item: HubItem) => void }) {
   const path = wide ? pickWideArtPath(item) : pickPosterPath(item);
-  const src = path ? `/api/plex-image?path=${encodeURIComponent(path)}` : null;
+  const src = path ? plexImageUrl(path) : null;
   const progress =
     item.viewOffset && item.duration && item.duration > 0 ? Math.min(1, item.viewOffset / item.duration) : 0;
   const displayTitle = item.type === "episode" && item.grandparentTitle ? item.grandparentTitle : item.title;

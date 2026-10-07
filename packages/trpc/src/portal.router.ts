@@ -7,7 +7,7 @@ import type { TrpcDeps } from "./deps.ts";
  */
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { userPreferencesSchema } from "@tinkerbell/core";
+import { parseBearerToken, userPreferencesSchema } from "@tinkerbell/core";
 import { TASTES_PREFERENCE_KEYS, type PortalComponentId } from "@tinkerbell/contracts";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { mapNotConfiguredClient } from "./_base.ts";
@@ -23,6 +23,7 @@ import {
 } from "./cookies.ts";
 import { createHandshakes } from "./handshake.ts";
 import { createPortalComponents } from "./portal-components.ts";
+import { serverInfo } from "./server-info.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 
 export interface PortalContext {
@@ -39,6 +40,10 @@ export interface PortalContext {
 }
 
 const tp = initTRPC.context<PortalContext>().create();
+
+/** Browser or native sign-in — see the same pair in admin-auth.router.ts. */
+const startInput = z.object({ client: z.enum(["browser", "native"]) }).optional();
+const pollInput = z.object({ handshake: z.string().max(128) }).optional();
 const publicProcedure = tp.procedure;
 const userProcedure = tp.procedure.use(({ ctx, next }) => {
   if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in with Plex first." });
@@ -63,14 +68,16 @@ export function createPortalRouter(deps: TrpcDeps) {
   function createPortalContext(opts: { req: Request; resHeaders: Headers; ip?: string }): PortalContext {
     const secure = isSecureRequest(opts.req);
     const cookies = opts.req.headers.get("cookie") ?? "";
-    const rawToken = parseCookie(cookies, COOKIE_NAMES.portal);
+    const cookieToken = parseCookie(cookies, COOKIE_NAMES.portal);
+    // The native app's session arrives as a bearer token — see admin-auth.router.ts.
+    const rawToken = cookieToken ?? parseBearerToken(opts.req.headers.get("authorization"));
     const session = getPlexSession(rawToken, "portal");
 
     // Sliding expiry only moves the DB row; the browser's copy carries its own
     // Max-Age, so it has to be re-sent or a portal user who visits every day
     // would still be logged out on the original schedule.
-    if (session?.refreshed && rawToken) {
-      setSessionCookie(opts.resHeaders, rawToken, { scope: "portal", secure });
+    if (session?.refreshed && cookieToken) {
+      setSessionCookie(opts.resHeaders, cookieToken, { scope: "portal", secure });
     }
 
     // A session that was valid when it was issued but whose account has since
@@ -118,10 +125,14 @@ export function createPortalRouter(deps: TrpcDeps) {
        * anyone choose where the browser landed after approving: a genuine
        * app.plex.tv link that finishes on their page.
        */
-      start: publicProcedure.mutation(async ({ ctx }) => {
+      start: publicProcedure.input(startInput).mutation(async ({ ctx, input }) => {
         rateLimit(ctx.ip);
         const clientId = ensurePlexClientId();
         const pin = await createPlexPin(clientId);
+        if (input?.client === "native") {
+          const handshake = createHandshake("portal", pin.id, "native");
+          return { authUrl: buildPlexAuthUrl({ clientId, code: pin.code }), handshake };
+        }
         const nonce = createHandshake("portal", pin.id);
         setHandshakeCookie(ctx.resHeaders, nonce, { scope: "portal", secure: ctx.secure });
         // The admin-configured public URL wins when it is set — behind a proxy
@@ -132,12 +143,14 @@ export function createPortalRouter(deps: TrpcDeps) {
         return { authUrl: buildPlexAuthUrl({ clientId, code: pin.code, forwardUrl }) };
       }),
 
-      poll: publicProcedure.mutation(async ({ ctx }) => {
+      poll: publicProcedure.input(pollInput).mutation(async ({ ctx, input }) => {
         rateLimit(ctx.ip);
-        const pinId = readHandshake("portal", ctx.handshakeNonce);
+        const native = input?.handshake !== undefined;
+        const nonce = native ? input.handshake : ctx.handshakeNonce;
+        const pinId = readHandshake("portal", nonce, native ? "native" : "browser");
         // No cookie, or one this process doesn't recognise: nothing to finish.
         if (pinId === undefined) {
-          clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
+          if (!native) clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
           return { status: "expired" as const };
         }
 
@@ -146,8 +159,8 @@ export function createPortalRouter(deps: TrpcDeps) {
         if (!token) return { status: "pending" as const };
 
         // Redeemed — one way or the other this handshake is spent.
-        spendHandshake("portal", ctx.handshakeNonce);
-        clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
+        spendHandshake("portal", nonce);
+        if (!native) clearHandshakeCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
 
         const account = await getPlexAccount(token, clientId);
         if (!plexUserExists(account.id)) {
@@ -157,6 +170,8 @@ export function createPortalRouter(deps: TrpcDeps) {
           });
         }
         const raw = createPlexSession(account.id, account.username, "portal");
+        // Only a native handshake gets the token in the body; see admin-auth.router.ts.
+        if (native) return { status: "ok" as const, username: account.username, token: raw };
         setSessionCookie(ctx.resHeaders, raw, { scope: "portal", secure: ctx.secure });
         return { status: "ok" as const, username: account.username };
       }),
@@ -166,6 +181,9 @@ export function createPortalRouter(deps: TrpcDeps) {
         clearSessionCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
         return { ok: true };
       }),
+
+      /** "Is this a Tinkerbell portal, and which release?" — see `server-info.ts`. */
+      server: publicProcedure.query(() => serverInfo("tinkerbell-portal")),
     }),
 
     me: userProcedure.query(({ ctx }) => {

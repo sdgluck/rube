@@ -15,6 +15,7 @@ import styles from "#/styles/shared.module.css";
 import { useCollection } from "./context.ts";
 import AddItemsModal from "./AddItemsModal.tsx";
 import local from "./CollectionDetail.module.css";
+import { plexImageUrl } from "#lib/media";
 
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -187,7 +188,7 @@ export default function Items() {
               {item.thumb ? (
                 <FadeImage
                   className={styles.cardPoster}
-                  src={`/api/plex-image?path=${encodeURIComponent(item.thumb)}`}
+                  src={plexImageUrl(item.thumb)}
                   alt={item.title}
                   loading="lazy"
                 />

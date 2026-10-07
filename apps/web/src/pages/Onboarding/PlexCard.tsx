@@ -3,6 +3,7 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import controls from "#/styles/controls.module.css";
 import styles from "./Onboarding.module.css";
+import { isNative } from "@tinkerbell/native-client";
 
 const SIGN_IN_POLL_MS = 2000;
 const SIGN_IN_POLL_ATTEMPTS = 90; // three minutes, then give up and let them retry
@@ -126,6 +127,13 @@ export default function PlexCard({ cfg, connected }: Props) {
   }
 
   async function handleSignIn() {
+    // The popup handshake is a browser's: in the app the window would open
+    // outside it and the handshake cookie would never come back. Setting up a
+    // server is a once-ever job done at a desk, so the app doesn't replicate it.
+    if (isNative()) {
+      addToast("Sign in with Plex from Tinkerbell in a web browser, or enter the server URL and token below", "info");
+      return;
+    }
     // Opened before the request, while the click still counts as a user
     // gesture — a popup opened after an await is what blockers refuse.
     const popup = window.open("", "plex-sign-in", "width=800,height=720");

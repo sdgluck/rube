@@ -33,10 +33,12 @@ const { getConfig } = c.resolve(ConfigStoreToken);
  * answer to "do I need to log in?"), and the three handshake procedures are
  * unauthenticated by definition. `enable` is public so the feature can be
  * adopted at all — there is no session to authenticate with before auth is
- * on — and re-checks for a session itself once it is. Nothing else belongs
- * here: not health, not nav, not config.
+ * on — and re-checks for a session itself once it is. `server` is the native
+ * app's "is this a Tinkerbell, and which release?", asked before sign-in and
+ * answering only a product name and version. Nothing else belongs here: not
+ * health, not nav, not config.
  */
-const PUBLIC_PATHS = new Set(["auth.status", "auth.start", "auth.poll", "auth.logout", "auth.enable"]);
+const PUBLIC_PATHS = new Set(["auth.status", "auth.start", "auth.poll", "auth.logout", "auth.enable", "auth.server"]);
 
 function anonymousContext() {
   return {

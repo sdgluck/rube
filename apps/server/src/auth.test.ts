@@ -22,9 +22,14 @@ const auth = createAuth(services);
 const core = { ...services.config, ...services.sessions, ...services.adminAuth };
 
 /** The parts of an IncomingMessage the gate actually reads. */
-function request(cookie?: string): IncomingMessage {
+function request(
+  cookie?: string,
+  extra: { authorization?: string; method?: string; url?: string } = {},
+): IncomingMessage {
   return {
-    headers: cookie ? { cookie } : {},
+    headers: { ...(cookie ? { cookie } : {}), ...(extra.authorization ? { authorization: extra.authorization } : {}) },
+    method: extra.method ?? "GET",
+    url: extra.url ?? "/api/plex-image?path=/x",
     socket: { remoteAddress: "10.0.0.1" },
   } as unknown as IncomingMessage;
 }
@@ -116,5 +121,49 @@ describe("clientIp", () => {
 
   test("falls back to the socket address", () => {
     assert.equal(clientIp(request()), "10.0.0.1");
+  });
+});
+
+describe("isAdminRequest for the native app", () => {
+  test("admits the owner's admin session as a bearer token", () => {
+    const raw = core.createPlexSession(42, "owner", "admin");
+    assert.equal(auth.isAdminRequest(request(undefined, { authorization: `Bearer ${raw}` })), true);
+  });
+
+  test("refuses a portal session as a bearer token", () => {
+    const raw = core.createPlexSession(42, "owner", "portal");
+    assert.equal(auth.isAdminRequest(request(undefined, { authorization: `Bearer ${raw}` })), false);
+  });
+
+  test("admits a media token in the query string on a GET", () => {
+    const media = core.createPlexSession(42, "owner", "admin-media");
+    assert.equal(
+      auth.isAdminRequest(request(undefined, { url: `/api/plex-image?path=/x&access_token=${media}` })),
+      true,
+    );
+  });
+
+  test("refuses a media token on a POST — it can show a poster, never upload one", () => {
+    const media = core.createPlexSession(42, "owner", "admin-media");
+    const req = request(undefined, { method: "POST", url: `/api/collections/1/poster?access_token=${media}` });
+    assert.equal(auth.isAdminRequest(req), false);
+  });
+
+  test("refuses a media token presented as a bearer session", () => {
+    const media = core.createPlexSession(42, "owner", "admin-media");
+    assert.equal(
+      auth.isAdminRequest(request(undefined, { authorization: `Bearer ${media}`, url: "/api/backups/x" })),
+      false,
+    );
+  });
+
+  test("refuses the real session token in the query string", () => {
+    const raw = core.createPlexSession(42, "owner", "admin");
+    assert.equal(auth.isAdminRequest(request(undefined, { url: `/api/plex-image?access_token=${raw}` })), false);
+  });
+
+  test("refuses a media token whose account is no longer an admin", () => {
+    const media = core.createPlexSession(999, "someone-else", "admin-media");
+    assert.equal(auth.isAdminRequest(request(undefined, { url: `/api/plex-image?access_token=${media}` })), false);
   });
 });

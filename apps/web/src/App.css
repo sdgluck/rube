@@ -86,6 +86,10 @@
   /* Ink on the Plex gold fill. Gold is a light colour: white text on it fails
      contrast, so this is nearly black. */
   --on-plex: #1b1200;
+  /* A QR code is black on white in both themes: phone cameras read an
+     inverted code unreliably, so it never follows the dark palette. */
+  --qr-ink: #000;
+  --qr-paper: #fff;
   /* Error text on a surface that is dark in both themes — the sidebar's
      failure count. --status-error-fg is unreadable there in light mode. */
   --on-dark-error: #f0a9a2;
@@ -350,6 +354,9 @@
   --z-tooltip: 150;
   --z-bottom-nav: 200;
   --z-modal: 400;
+  /* The page-coloured strip behind the status bar (see `.layout`). Above
+     modals, so a sheet's top edge is never drawn under the clock. */
+  --z-status-strip: 450;
   --z-toast: 500;
 }
 
@@ -533,6 +540,23 @@ p {
   display: flex;
   height: 100vh;
   height: 100dvh;
+  /* The native app draws the page under the status bar — as does an iOS
+     home-screen install, with `viewport-fit=cover` and the translucent status
+     bar index.html asks for — so the layout starts below it. The inset is
+     zero in an ordinary browser tab, where this changes nothing. */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* …and a strip of page colour stays behind the status bar, or content
+   scrolling up runs under the clock and the battery. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--page);
+  z-index: var(--z-status-strip);
+  pointer-events: none;
 }
 
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */

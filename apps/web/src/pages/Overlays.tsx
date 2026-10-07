@@ -21,6 +21,8 @@ import { SavePresetModal } from "./Overlays/SavePresetModal";
 import { ImportLayoutModal } from "./Overlays/ImportLayoutModal";
 import { POSITIONS } from "./Overlays/constants";
 import { getPlaceholderValue } from "./Overlays/helpers";
+import { plexImageUrl } from "#lib/media";
+import { saveFile } from "@tinkerbell/native-client";
 
 export default function Overlays() {
   const toast = useToast();
@@ -179,16 +181,10 @@ export default function Overlays() {
       const data = await utils.overlays.exportSection.fetch({ sectionId });
       const json = JSON.stringify(data, null, 2);
       const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
       const sectionName = sections.find((s) => s.key === sectionId)?.title ?? sectionId;
       const safeName = sectionName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `overlays-${safeName}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // A download in the browser, the share sheet in the app.
+      await saveFile(blob, `overlays-${safeName}.json`);
       toast.addToast(`Exported ${data.configs.length} overlay${data.configs.length === 1 ? "" : "s"}`, "success");
     } catch (err) {
       const msg = (err as { message?: string })?.message ?? "Export failed";
@@ -380,9 +376,7 @@ export default function Overlays() {
     utils.overlays.sampleItem.invalidate({ sectionId });
   };
 
-  const posterUrl = sampleQuery.data?.thumb
-    ? `/api/plex-image?path=${encodeURIComponent(sampleQuery.data.thumb)}`
-    : null;
+  const posterUrl = sampleQuery.data?.thumb ? plexImageUrl(sampleQuery.data.thumb) : null;
 
   // Build canvas badges from configs + resolved values. A null resolved value
   // falls back to the placeholder so the user can still see styling, unless the

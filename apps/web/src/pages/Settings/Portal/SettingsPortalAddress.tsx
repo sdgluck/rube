@@ -12,6 +12,10 @@ import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import ErrorState from "#components/ErrorState";
 import styles from "../Personalization.module.css";
+import local from "./SettingsPortalAddress.module.css";
+import { NATIVE_APPS } from "@tinkerbell/contracts";
+import { connectLink, getConnection } from "@tinkerbell/native-client";
+import QrCode from "#components/QrCode";
 
 const USED_WITHOUT_FALLBACK = ["Cleanup warnings", "Portal preroll"];
 
@@ -37,7 +41,10 @@ export default function SettingsPortalAddress() {
   }
 
   const saved = configQuery.data?.user_app_public_url ?? "";
-  const suggestion = `http://${window.location.hostname}:3100`;
+  // The host the admin server answers on; in the native app that's the
+  // connected server, not the app's own `app.tinkerbell`.
+  const host = new URL(getConnection()?.server ?? window.location.origin).hostname;
+  const suggestion = `http://${host}:3100`;
   const blank = url.trim() === "";
   const dirty = url.trim() !== saved;
 
@@ -102,6 +109,24 @@ export default function SettingsPortalAddress() {
           </button>
         </div>
       </div>
+
+      {/* The portal app's connect code — for the admin to share with the
+          people they share with, so none of them types the address. Only for a
+          saved address: the suggestion may not be one their phones can reach. */}
+      {saved && (
+        <div className={styles.card}>
+          <span className={styles.label}>Portal app</span>
+          <p className={styles.hint}>
+            People with the Tinkerbell Portal app can scan this to connect to the address above.
+          </p>
+          <div className={local.qr}>
+            <QrCode
+              value={connectLink(NATIVE_APPS.portal.scheme, saved)}
+              label="QR code that connects the Tinkerbell Portal app to this server"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

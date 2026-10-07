@@ -6,6 +6,7 @@ import ErrorState from "#components/ErrorState";
 import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
 import styles from "./SettingsSecurity.module.css";
+import { getConnection, saveSession } from "@tinkerbell/native-client";
 
 export default function SettingsSecurity() {
   const { addToast } = useToast();
@@ -59,12 +60,19 @@ export default function SettingsSecurity() {
   }
 
   function signOut() {
-    logoutMutation.mutate(undefined, {
-      // Reload rather than invalidate: the whole cache belongs to a session
-      // that no longer exists, and the gate should re-run from scratch.
-      onSuccess: () => window.location.reload(),
-      onError: (err) => addToast(err.message, "error"),
-    });
+    logoutMutation.mutate(
+      { mediaToken: getConnection()?.mediaToken ?? undefined },
+      {
+        // Reload rather than invalidate: the whole cache belongs to a session
+        // that no longer exists, and the gate should re-run from scratch. The
+        // app forgets its stored token first, or the reload signs it back in.
+        onSuccess: async () => {
+          await saveSession(null);
+          window.location.reload();
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
   }
 
   return (
