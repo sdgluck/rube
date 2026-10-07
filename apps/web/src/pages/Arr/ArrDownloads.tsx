@@ -8,6 +8,7 @@ import ErrorState from "#components/ErrorState";
 import RelativeTime from "#components/RelativeTime";
 import shared from "#/styles/shared.module.css";
 import styles from "./ArrDownloads.module.css";
+import { queueState, type QueueState } from "./queue-state.ts";
 
 /**
  * What is coming.
@@ -24,6 +25,10 @@ const BLOCKED = new Set(["importBlocked", "importPending", "failedPending"]);
 function progress(size: number | undefined, left: number | undefined): number | null {
   if (!size || size <= 0 || left === undefined) return null;
   return Math.min(1, Math.max(0, (size - left) / size));
+}
+
+function QueueStateCell({ label, tone }: QueueState) {
+  return tone ? <StatusChip tone={tone}>{label}</StatusChip> : <span className={shared.cellMuted}>{label}</span>;
 }
 
 function QueueForInstance({ service, instanceId, name }: { service: ArrService; instanceId: string; name: string }) {
@@ -91,7 +96,7 @@ function QueueForInstance({ service, instanceId, name }: { service: ArrService; 
                         {item.errorMessage ?? item.statusMessages?.[0]?.title ?? item.trackedDownloadState ?? "Blocked"}
                       </StatusChip>
                     ) : (
-                      <span className={shared.cellMuted}>{item.trackedDownloadState ?? item.status ?? "—"}</span>
+                      <QueueStateCell {...queueState(item)} />
                     )}
                   </td>
                 </tr>
