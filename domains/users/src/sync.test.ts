@@ -97,6 +97,16 @@ beforeEach(() => {
   collections = [];
 });
 
+/**
+ * The sweep removes rows with `syncedAt < now`, so a second sync inside the
+ * same millisecond as the first removes nothing. Every test that syncs twice
+ * and asserts a removal waits for the clock to move — see `domains/sections`.
+ */
+async function tick(): Promise<void> {
+  const started = Date.now();
+  while (Date.now() === started) await new Promise((r) => setImmediate(r));
+}
+
 describe("membership", () => {
   test("records the shared users and the owner", async () => {
     const stats = await syncUsers(client());
@@ -137,6 +147,7 @@ describe("membership", () => {
       }),
     );
     assert.deepEqual(usernames(), ["kim", "owner", "sam"]);
+    await tick();
 
     const stats = await syncUsers(client({ sharings: [{ userId: 7, username: "sam" }] }));
 
@@ -208,6 +219,7 @@ describe("degrading rather than emptying", () => {
         ],
       }),
     );
+    await tick();
 
     const stats = await syncUsers(client({ sharings: [], owner: null }));
 
@@ -356,6 +368,7 @@ describe("enrichment", () => {
 
   test("an invite that has been accepted since is swept", async () => {
     await syncUsers(client({ invites: [{ id: 1, direction: "outgoing", username: "kim" }] }));
+    await tick();
     await syncUsers(client({ invites: [] }));
     assert.equal(db.select().from(plexInvites).all().length, 0);
   });
