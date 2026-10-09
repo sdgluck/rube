@@ -81,7 +81,10 @@ export function runTransition(direction: NavDirection, update: () => void): void
  * detail page), `fallback` navigates to the parent screen instead.
  */
 export function navigateBack(fallback?: () => void): void {
-  const hasHistory = ((history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+  // React Router keeps an index in history.state; the portal has no router,
+  // so there the browser's own length is the only measure.
+  const idx = (history.state as { idx?: unknown } | null)?.idx;
+  const hasHistory = typeof idx === "number" ? idx > 0 : history.length > 1;
   if (hasHistory) {
     pendingKind = "back";
     history.back();

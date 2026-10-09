@@ -601,6 +601,40 @@
   white-space: nowrap;
 }
 
+/* Phones: each setting stacks — its label over its control — the way a native
+   form row does when the control is wider than a switch. A label column took
+   a third of a 390px screen and pushed the schedule picker off the edge. */
+/* stylelint-disable tinkerbell/primitive-geometry -- the same form-in-a-table, restacked for a phone; rows stay as tall as their controls */
+@media (max-width: 768px) {
+  .configTable,
+  .configTable tbody,
+  .configTable tr,
+  .configTable td {
+    display: block;
+    width: 100%;
+  }
+
+  .configTable td {
+    padding: 0.4rem 0;
+    border-bottom: none;
+  }
+
+  .configTable tr {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .configTable td:first-child {
+    width: auto;
+    white-space: normal;
+  }
+
+  .configTable td:first-child.fieldLabel {
+    padding-top: 0 !important;
+  }
+}
+/* stylelint-enable tinkerbell/primitive-geometry */
+
 .fieldLabel {
   font-weight: 600;
   color: var(--ink-2);

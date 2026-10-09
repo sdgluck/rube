@@ -7,6 +7,7 @@ import {
   hideSplash,
   isNative,
   onDeepLink,
+  onResume,
   probeServer,
   saveServer,
   setLockEnabled,
@@ -25,6 +26,9 @@ import {
  */
 export default function NativeShell({ children }: { children: ReactNode }) {
   useEffect(hideSplash, []);
+  const queryClient = useQueryClient();
+  // Back from the background: what's on screen refetches.
+  useEffect(() => onResume(() => void queryClient.refetchQueries({ type: "active" })), [queryClient]);
   if (!isNative()) return <>{children}</>;
   return <Shell>{children}</Shell>;
 }

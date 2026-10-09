@@ -134,7 +134,8 @@
     align-items: center;
     flex: 0 1 auto;
     min-width: 0;
-    max-width: 40%;
+    /* Stops short of the centred title, which spans the middle half. */
+    max-width: calc(25% - 0.4rem);
     height: 4.4rem;
     padding: 0 0.6rem 0 0;
     margin-left: -0.4rem;
@@ -163,7 +164,7 @@
     position: absolute;
     left: 50%;
     bottom: calc((var(--navbar-h) - 2.2rem) / 2);
-    max-width: 52%;
+    max-width: 50%;
     transform: translateX(-50%);
     font: var(--t-body);
     font-size: 1.7rem;

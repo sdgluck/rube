@@ -14,6 +14,8 @@
  */
 import { useState } from "react";
 import { Ban, Heart, ThumbsUp, type LucideIcon } from "lucide-react";
+import { haptic } from "@tinkerbell/native-client";
+import { useIsPhone } from "../useIsPhone.ts";
 
 export type GenreLevel = "none" | "loved" | "liked" | "hated";
 
@@ -38,9 +40,14 @@ interface Props {
   onChange: (genre: string, level: GenreLevel) => void;
 }
 
+/** A tap on a phone chip moves it one step along this cycle. */
+const CYCLE: GenreLevel[] = ["none", "loved", "liked", "hated"];
+
 export function GenrePicker({ genres, levelOf, onChange }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState("");
+  const isPhone = useIsPhone();
+  if (isPhone) return <GenreChips genres={genres} levelOf={levelOf} onChange={onChange} />;
 
   const picked = genres.filter((g) => levelOf(g) !== "none");
   const counts = CHOICES.map((c) => ({ ...c, n: picked.filter((g) => levelOf(g) === c.level).length })).filter(
@@ -112,6 +119,51 @@ export function GenrePicker({ genres, levelOf, onChange }: Props) {
         </div>
       )}
       {expanded && shown.length === 0 && <div className="genre-empty muted">No genre matches “{filter}”.</div>}
+    </div>
+  );
+}
+
+/**
+ * The phone's genre picker: every genre as a chip, tapped through
+ * Love → Like → Avoid → none. Three buttons per genre stacked thirty rows tall
+ * on a phone; a grid of chips fits the whole library on a screen or two, and
+ * the legend says what the colours mean, since touch never shows a title.
+ */
+function GenreChips({ genres, levelOf, onChange }: Props) {
+  if (genres.length === 0) return <div className="genre-empty muted">No genres available.</div>;
+  return (
+    <div className="genre-chips-wrap">
+      <p className="genre-legend">
+        {CHOICES.map(({ level, label, Icon }) => (
+          <span key={level} className={`genre-legend-item ${level}`}>
+            <Icon size={14} aria-hidden fill={level === "loved" ? "currentColor" : "none"} />
+            {label}
+          </span>
+        ))}
+        <span className="muted">Tap a genre to change it.</span>
+      </p>
+      <div className="genre-chips">
+        {genres.map((g) => {
+          const level = levelOf(g);
+          const choice = CHOICES.find((c) => c.level === level);
+          const next = CYCLE[(CYCLE.indexOf(level) + 1) % CYCLE.length];
+          return (
+            <button
+              key={g}
+              type="button"
+              className={`genre-chip ${level}`}
+              aria-label={`${g}: ${choice ? choice.label : "no preference"}`}
+              onClick={() => {
+                haptic("selection");
+                onChange(g, next);
+              }}
+            >
+              {choice && <choice.Icon size={14} aria-hidden fill={level === "loved" ? "currentColor" : "none"} />}
+              {g}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -186,8 +186,12 @@ async function newContext(browser: Browser, viewport: Viewport, scale: number): 
     // than the platform-less look a desktop Chromium would get.
     ...(viewport === "mobile"
       ? {
+          // `TB_CAPTURE_PLATFORM=android` previews the Material look instead
+          // (not for committing: the suite's phone shots are the iOS ones).
           userAgent:
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+            process.env.TB_CAPTURE_PLATFORM === "android"
+              ? "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36"
+              : "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
         }
       : {}),
     // The redesign is light-first; its dark theme is documented as a starting

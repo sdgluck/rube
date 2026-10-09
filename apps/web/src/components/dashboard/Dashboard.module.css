@@ -549,3 +549,12 @@
     flex-wrap: wrap;
   }
 }
+
+/* Phones: no drag handles. HTML5 drag-and-drop doesn't exist on Android touch
+   and is a long-press gesture on iOS, so the handle was a control that
+   (mostly) did nothing; the tile picker arranges the dashboard instead. */
+@media (max-width: 768px) {
+  .panelDragHandle {
+    display: none;
+  }
+}

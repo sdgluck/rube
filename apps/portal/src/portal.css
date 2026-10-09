@@ -720,9 +720,11 @@ textarea {
  * edge of their box.
  */
 @media (max-width: 480px) {
+  /* The top inset too: in the native app the page runs under the status bar,
+     and this rule used to drop it, putting the header under the notch. */
   .page {
-    padding: 12px max(12px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom))
-      max(12px, env(safe-area-inset-left));
+    padding: calc(12px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      calc(32px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
 
   .card {
@@ -824,4 +826,604 @@ textarea {
   background: transparent;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+/* ─── The phone app ────────────────────────────────────────────────────────
+ *
+ * Below 768px the portal is an app rather than a card on a page: a pinned
+ * navigation bar, full-bleed screens with a large title, native grouped lists
+ * and a bottom tab bar (PortalApp's phone layout). iOS by default; Material in
+ * the [data-platform="android"] rules. Touch never sees hover, so the pressed
+ * states here are :active.
+ */
+@media (pointer: coarse) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  button,
+  [role="button"],
+  [role="switch"],
+  label,
+  nav {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+.phone-app {
+  min-height: 100dvh;
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--tabbar-h) + 24px);
+}
+
+.nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(env(safe-area-inset-top) + var(--navbar-h));
+  padding: env(safe-area-inset-top) 16px 0;
+  background: var(--bar-bg);
+  backdrop-filter: saturate(1.8) blur(20px);
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
+  border-bottom: 1px solid var(--bar-line);
+}
+
+.nav-brand {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.phone-screen {
+  padding: 4px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+}
+
+.large-title {
+  margin: 4px 0 16px;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Rows and states sit on the page colour as native grouped cells, rounded. */
+.phone-app .collection-row,
+.phone-app .state,
+.phone-app .skeleton-row,
+.phone-app .genre-box {
+  border-radius: var(--r-list);
+}
+
+.phone-app .collection-row:active {
+  background: var(--bg-surface-2);
+}
+
+.phone-app .stack {
+  gap: 12px;
+}
+
+/* The tab bar: icons over short labels, translucent like the nav bar. */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  height: calc(env(safe-area-inset-bottom) + var(--tabbar-h));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bar-bg);
+  backdrop-filter: saturate(1.8) blur(20px);
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
+  border-top: 1px solid var(--bar-line);
+}
+
+html[data-keyboard="open"] .tab-bar {
+  display: none;
+}
+
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 0;
+  padding: 5px 0 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.tab-bar-item.on {
+  color: var(--accent);
+}
+
+.tab-bar-item:active {
+  opacity: 0.6;
+}
+
+html[data-platform="android"] .nav-bar {
+  justify-content: flex-start;
+  background: var(--bg-page);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: none;
+}
+
+html[data-platform="android"] .nav-brand {
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+html[data-platform="android"] .tab-bar {
+  background: var(--bg-surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top: none;
+}
+
+html[data-platform="android"] .tab-bar-item {
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+html[data-platform="android"] .tab-bar-icon {
+  box-sizing: content-box;
+  padding: 4px 20px;
+  border-radius: 999px;
+}
+
+html[data-platform="android"] .tab-bar-item.on {
+  color: var(--text-primary);
+}
+
+html[data-platform="android"] .tab-bar-item.on .tab-bar-icon {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+html[data-platform="android"] .tab-bar-item:active {
+  opacity: 1;
+}
+
+/* The native footer's job moves to the Account tab on a phone. */
+@media (max-width: 768px) {
+  .app-footer {
+    display: none;
+  }
+}
+
+/* ─── Native lists (Account) ─────────────────────────────────────────── */
+
+.list-group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--r-list);
+  background: var(--bg-surface);
+}
+
+.list-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 10px 16px;
+  font-size: 1rem;
+}
+
+.list-row + .list-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 1px;
+  background: var(--list-sep);
+}
+
+.list-button {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 400;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.list-button:active {
+  background: var(--pressed);
+}
+
+.list-button.danger {
+  color: var(--hate);
+}
+
+html[data-platform="android"] .list-row + .list-row::before {
+  display: none;
+}
+
+/* ─── Switches ─────────────────────────────────────────────────────────
+   A setting's checkbox, drawn as the platform's switch on a phone — the
+   Tastes toggles and the app lock. */
+@media (max-width: 768px) {
+  .check {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .check input,
+  .switch input {
+    flex: 0 0 auto;
+    position: relative;
+    width: 51px;
+    height: 31px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--border-strong);
+    appearance: none;
+    transition: background 0.2s;
+  }
+
+  .check input::after,
+  .switch input::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    box-shadow: 0 1px 3px var(--pressed);
+    transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .check input:checked,
+  .switch input:checked {
+    background: var(--accent);
+  }
+
+  .check input:checked::after,
+  .switch input:checked::after {
+    transform: translateX(20px);
+  }
+}
+
+/* ─── Stepper, autosave note, undo row ─────────────────────────────────── */
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  overflow: hidden;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+}
+
+.stepper button {
+  min-width: 48px;
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.stepper button:active:not(:disabled) {
+  background: var(--pressed);
+}
+
+.stepper output {
+  min-width: 56px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.autosave {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.undo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn-ghost.voted {
+  color: var(--love);
+}
+
+/* ─── Genre chips (phone) ──────────────────────────────────────────────── */
+
+.genre-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+}
+
+.genre-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.genre-legend-item.loved,
+.genre-chip.loved {
+  color: var(--love);
+}
+
+.genre-legend-item.liked,
+.genre-chip.liked {
+  color: var(--like);
+}
+
+.genre-legend-item.hated,
+.genre-chip.hated {
+  color: var(--hate);
+}
+
+.genre-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.genre-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-input);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.genre-chip.loved,
+.genre-chip.liked,
+.genre-chip.hated {
+  border-color: currentColor;
+  background: var(--accent-soft);
+}
+
+.genre-chip.hated {
+  background: var(--bg-surface-2);
+}
+
+.genre-chip:active {
+  transform: scale(0.96);
+}
+
+/* ─── Swipe rows ───────────────────────────────────────────────────────── */
+
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-list);
+  touch-action: pan-y;
+}
+
+.swipe-content {
+  position: relative;
+  z-index: 1;
+}
+
+.swipe-content.settling {
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.swipe-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.swipe-action.accent {
+  background: var(--accent);
+}
+
+.swipe-action.danger {
+  background: var(--hate);
+}
+
+/* ─── Action sheet ─────────────────────────────────────────────────────── */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  animation: sheet-fade 0.18s ease-out;
+}
+
+.action-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  padding: 0 8px calc(env(safe-area-inset-bottom) + 8px);
+  animation: sheet-up 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sheet-grabber {
+  display: none;
+}
+
+.action-group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--r-alert);
+  background: var(--bg-surface);
+}
+
+.action-title {
+  padding: 14px 16px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+  border-bottom: 1px solid var(--list-sep);
+}
+
+.action-item,
+.action-cancel {
+  min-height: 56px;
+  border: none;
+  border-radius: 0;
+  background: var(--bg-surface);
+  color: var(--accent);
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+
+.action-item + .action-item {
+  border-top: 1px solid var(--list-sep);
+}
+
+.action-item.danger {
+  color: var(--hate);
+}
+
+.action-cancel {
+  border-radius: var(--r-alert);
+  font-weight: 600;
+}
+
+.action-item:active,
+.action-cancel:active {
+  background: var(--bg-surface-2);
+}
+
+html[data-platform="android"] .action-sheet {
+  gap: 0;
+  max-width: 640px;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  background: var(--bg-surface);
+}
+
+html[data-platform="android"] .sheet-grabber {
+  display: block;
+  width: 32px;
+  height: 4px;
+  margin: 16px auto 8px;
+  border-radius: 999px;
+  background: var(--grabber);
+}
+
+html[data-platform="android"] .action-group {
+  border-radius: 0;
+}
+
+html[data-platform="android"] .action-title {
+  text-align: left;
+  border-bottom: none;
+  padding: 4px 24px 12px;
+}
+
+html[data-platform="android"] .action-item {
+  padding: 0 24px;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+html[data-platform="android"] .action-item.danger {
+  color: var(--hate);
+}
+
+html[data-platform="android"] .action-item + .action-item {
+  border-top: none;
+}
+
+html[data-platform="android"] .action-cancel {
+  display: none;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Moods as the same pill chips as genres, not boxes in a box; a row's action
+   as a word in the accent colour, the way a native list offers one (the
+   swipe is the quick way). */
+.phone-app .chips {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.phone-app .chip {
+  min-height: 38px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.phone-app .chip:active {
+  transform: scale(0.96);
+}
+
+.phone-app .collection-row .btn-ghost {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.phone-app .collection-row .btn-ghost.voted {
+  color: var(--love);
 }

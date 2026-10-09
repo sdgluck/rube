@@ -24,6 +24,8 @@ const GO_HINTS: Record<string, string> = {
   "/settings/plex": "g p",
 };
 
+const GO_HINT_VALUES = new Set(Object.values(GO_HINTS));
+
 /**
  * Every navigable destination, derived from the sidebar and settings rail so
  * the palette can't drift out of date. It previously hardcoded 15 entries and
@@ -303,7 +305,16 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
                   >
                     <div className={styles.itemRow}>
                       <span className={styles.itemTitle}>{hit.title}</span>
-                      {hit.subtitle && <span className={styles.itemSubtitle}>{hit.subtitle}</span>}
+                      {hit.subtitle && (
+                        <span
+                          className={styles.itemSubtitle}
+                          // A `g` shortcut is no use without a keyboard; the touch
+                          // stylesheet hides anything marked as a keyboard hint.
+                          data-keyboard-hint={GO_HINT_VALUES.has(hit.subtitle) ? "" : undefined}
+                        >
+                          {hit.subtitle}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

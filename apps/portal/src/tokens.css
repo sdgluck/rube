@@ -55,6 +55,31 @@
   /* The admin's branding background, set on <body> by PortalApp when one is
      configured. */
   --page-image: none;
+
+  /* ─── Native chrome (phones) ──────────────────────────────────────────
+     The phone app's bars, lists and sheets — the same values as the admin
+     app's (apps/web/src/App.css), kept in step by hand like the rest of this
+     file. Rounded where the desktop portal is square: these are the
+     platform's shapes, not the portal's. iOS here; Material below. */
+  --bar-bg: rgba(232, 239, 236, 0.82);
+  --bar-line: rgba(19, 28, 27, 0.12);
+  --list-sep: rgba(19, 28, 27, 0.1);
+  --pressed: rgba(19, 28, 27, 0.07);
+  --grabber: rgba(19, 28, 27, 0.2);
+  --scrim: rgba(15, 22, 21, 0.48);
+  --r-list: 11px;
+  --r-sheet: 12px;
+  --r-alert: 14px;
+  --navbar-h: 44px;
+  --tabbar-h: 49px;
+}
+
+:root[data-platform="android"] {
+  --r-list: 16px;
+  --r-sheet: 28px;
+  --r-alert: 28px;
+  --navbar-h: 64px;
+  --tabbar-h: 80px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -82,5 +107,11 @@
 
     --focus-ring: rgba(26, 167, 155, 0.24);
     --page-lift: #101a19;
+
+    --bar-bg: rgba(13, 20, 19, 0.82);
+    --bar-line: rgba(255, 255, 255, 0.1);
+    --list-sep: rgba(255, 255, 255, 0.08);
+    --pressed: rgba(255, 255, 255, 0.07);
+    --grabber: rgba(255, 255, 255, 0.28);
   }
 }

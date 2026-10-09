@@ -169,10 +169,6 @@
     animation: toastSink 200ms ease-in forwards;
   }
 
-  :global(html[data-platform="android"]) .container {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, 9.2rem));
-  }
-
   :global(html[data-platform="android"]) .toast {
     width: 100%;
     border-radius: var(--r-sm);

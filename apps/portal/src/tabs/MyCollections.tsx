@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
+import SwipeRow from "../components/SwipeRow.tsx";
+
+/** How long "Not for me" can be taken back before it is sent. */
+const UNDO_MS = 4000;
 
 /**
  * What Tinkerbell built for this person, and the one-tap way to say it was
@@ -23,6 +28,10 @@ export default function MyCollections({
   const collectionsQuery = portalTrpc.myCollections.useQuery();
   const notInterested = portalTrpc.notInterested.useMutation();
   const [excluded, setExcluded] = useState<string[]>([]);
+  /** Titles marked "Not for me" whose undo window is still open. */
+  const [pending, setPending] = useState<string[]>([]);
+  const timers = useRef(new Map<string, number>());
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
   if (collectionsQuery.isLoading) return <RowsSkeleton />;
 
@@ -51,37 +60,70 @@ export default function MyCollections({
     );
   }
 
+  /**
+   * Optimistic, and undoable: the row folds away at once and the request goes
+   * a few seconds later, so a slip of the thumb (or of a swipe) is one tap to
+   * take back — native lists do it this way, and the server has no "un-not-
+   * for-me" to call afterwards.
+   */
   const exclude = (title: string) => {
-    // Optimistic, and local: the row is about to disappear from the next run's
-    // output anyway, and waiting on a round-trip to grey out a button makes a
-    // one-tap gesture feel like a form submission.
-    setExcluded((prev) => [...prev, title]);
-    notInterested.mutate({ title }, { onSuccess: () => utils.preferences.get.invalidate() });
+    haptic("light");
+    setPending((prev) => [...prev, title]);
+    timers.current.set(
+      title,
+      window.setTimeout(() => {
+        timers.current.delete(title);
+        setPending((prev) => prev.filter((t) => t !== title));
+        setExcluded((prev) => [...prev, title]);
+        notInterested.mutate({ title }, { onSuccess: () => utils.preferences.get.invalidate() });
+      }, UNDO_MS),
+    );
+  };
+  const undo = (title: string) => {
+    window.clearTimeout(timers.current.get(title));
+    timers.current.delete(title);
+    setPending((prev) => prev.filter((t) => t !== title));
   };
 
   return (
     <div className="stack">
-      {collections.map((collection) => (
-        <div key={collection.ratingKey} className="collection-row">
-          <div className="collection-head">
-            <span className="collection-title">{collection.title}</span>
-            <span className="muted">
-              {collection.itemCount} item{collection.itemCount === 1 ? "" : "s"}
-            </span>
-          </div>
-          {collection.summary && <p className="collection-summary">{collection.summary}</p>}
-          {components["action.notForMe"] && (
-            <button
-              type="button"
-              className="btn-ghost"
-              disabled={excluded.includes(collection.title)}
-              onClick={() => exclude(collection.title)}
-            >
-              {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
+      {collections.map((collection) =>
+        pending.includes(collection.title) ? (
+          <div key={collection.ratingKey} className="collection-row undo-row" role="status">
+            <span className="muted">You won't see “{collection.title}” again.</span>
+            <button type="button" className="btn-ghost" onClick={() => undo(collection.title)}>
+              Undo
             </button>
-          )}
-        </div>
-      ))}
+          </div>
+        ) : (
+          <SwipeRow
+            key={collection.ratingKey}
+            tone="danger"
+            disabled={!components["action.notForMe"] || excluded.includes(collection.title)}
+            action={{ label: "Not for me", onAction: () => exclude(collection.title) }}
+          >
+            <div className="collection-row">
+              <div className="collection-head">
+                <span className="collection-title">{collection.title}</span>
+                <span className="muted">
+                  {collection.itemCount} item{collection.itemCount === 1 ? "" : "s"}
+                </span>
+              </div>
+              {collection.summary && <p className="collection-summary">{collection.summary}</p>}
+              {components["action.notForMe"] && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={excluded.includes(collection.title)}
+                  onClick={() => exclude(collection.title)}
+                >
+                  {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
+                </button>
+              )}
+            </div>
+          </SwipeRow>
+        ),
+      )}
     </div>
   );
 }

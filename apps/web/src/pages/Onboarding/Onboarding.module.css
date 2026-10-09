@@ -570,6 +570,29 @@
   }
 }
 
+/* Phones: setup is a takeover outside the app shell, so it clears the status
+   bar and home indicator itself. The header pins like a navigation bar and
+   the step's footer pins above the home indicator. */
+@media (max-width: 768px) {
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky-bar);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+    background: var(--bar-bg);
+    backdrop-filter: saturate(1.8) blur(2rem);
+    -webkit-backdrop-filter: saturate(1.8) blur(2rem);
+  }
+
+  .footer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.4rem);
+  }
+
+  .rail {
+    scrollbar-width: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stepWrap {
     animation: none;

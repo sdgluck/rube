@@ -553,3 +553,23 @@
   display: inline-flex;
   gap: 0.4rem;
 }
+
+/* Phones: five labels can't share a 390px rail, so every step but the current
+   one is just its numbered dot, and the current one spells itself out. */
+@media (max-width: 768px) {
+  .step {
+    flex: 0 0 auto;
+  }
+
+  .step .stepLabel {
+    display: none;
+  }
+
+  .step.stepActive {
+    flex: 1 1 auto;
+  }
+
+  .step.stepActive .stepLabel {
+    display: block;
+  }
+}

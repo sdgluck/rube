@@ -139,7 +139,10 @@ function AppBar({
   };
 
   const [actionsEl, setActionsEl] = useState<HTMLElement | null>(null);
-  const overflow = useActionsOverflow(actionsEl, isPhone ? (largeTitle ? 2 : 1) : Infinity);
+  // A root screen's bar has room for two actions (its title is either large
+  // and below, or Material's left-aligned one); a pushed screen's back button
+  // and centred title leave room for one.
+  const overflow = useActionsOverflow(actionsEl, isPhone ? (parent ? 1 : 2) : Infinity);
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   return (

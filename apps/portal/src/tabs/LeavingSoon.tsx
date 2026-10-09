@@ -1,5 +1,8 @@
+import { useState } from "react";
+import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
+import SwipeRow from "../components/SwipeRow.tsx";
 
 /**
  * What a cleanup rule is about to remove, and the way to say you would rather
@@ -21,7 +24,25 @@ export default function LeavingSoon({ components }: { components: PortalComponen
   const canVote = components["action.keep"];
   const utils = portalTrpc.useUtils();
   const leavingQuery = portalTrpc.leavingSoon.useQuery();
-  const voteKeep = portalTrpc.voteKeep.useMutation({ onSuccess: () => utils.leavingSoon.invalidate() });
+  const voteKeep = portalTrpc.voteKeep.useMutation({ onSettled: () => utils.leavingSoon.invalidate() });
+  // The vote shows at once, per item. It used to wait on the server and
+  // disable every row's button while one request was in flight.
+  const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
+  const vote = (ratingKey: string, keep: boolean) => {
+    haptic(keep ? "success" : "light");
+    setOptimistic((prev) => ({ ...prev, [ratingKey]: keep }));
+    voteKeep.mutate(
+      { ratingKey, keep },
+      {
+        onError: () =>
+          setOptimistic((prev) => {
+            const next = { ...prev };
+            delete next[ratingKey];
+            return next;
+          }),
+      },
+    );
+  };
 
   const items = leavingQuery.data ?? [];
 
@@ -40,28 +61,36 @@ export default function LeavingSoon({ components }: { components: PortalComponen
           <p className="field-hint">
             {canVote ? "Queued for removal. The server owner sees who asks to keep one." : "Queued for removal."}
           </p>
-          {items.map((item) => (
-            <div key={item.ratingKey} className="collection-row">
-              <div className="collection-head">
-                <span className="collection-title">{item.title}</span>
-                <span className="muted">
-                  {item.runsRemaining === 0
-                    ? "Goes on the next run"
-                    : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
-                </span>
-              </div>
-              {canVote && (
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  disabled={voteKeep.isPending}
-                  onClick={() => voteKeep.mutate({ ratingKey: item.ratingKey, keep: !item.voted })}
-                >
-                  {item.voted ? "Asked to keep \u2713" : "Keep this"}
-                </button>
-              )}
-            </div>
-          ))}
+          {items.map((item) => {
+            const voted = optimistic[item.ratingKey] ?? item.voted;
+            return (
+              <SwipeRow
+                key={item.ratingKey}
+                disabled={!canVote}
+                action={{ label: voted ? "Undo keep" : "Keep", onAction: () => vote(item.ratingKey, !voted) }}
+              >
+                <div className="collection-row">
+                  <div className="collection-head">
+                    <span className="collection-title">{item.title}</span>
+                    <span className="muted">
+                      {item.runsRemaining === 0
+                        ? "Goes on the next run"
+                        : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
+                    </span>
+                  </div>
+                  {canVote && (
+                    <button
+                      type="button"
+                      className={`btn-ghost ${voted ? "voted" : ""}`}
+                      onClick={() => vote(item.ratingKey, !voted)}
+                    >
+                      {voted ? "Asked to keep \u2713" : "Keep this"}
+                    </button>
+                  )}
+                </div>
+              </SwipeRow>
+            );
+          })}
         </>
       )}
     </div>

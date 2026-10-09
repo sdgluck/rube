@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { ErrorState, RowsSkeleton } from "../components/States.tsx";
 import { useDebounced } from "../useDebounced.ts";
@@ -53,6 +54,9 @@ export default function PreferencesForm({ components: show }: { components: Port
   const setMutation = portalTrpc.preferences.set.useMutation();
   const [form, setForm] = useState<FormState | null>(null);
   const [saved, setSaved] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
+  /** The form as last loaded or saved, to tell an edit from a refetch. */
+  const savedKey = useRef<string | null>(null);
 
   // Title search for the "never recommend" picker.
   const [titleQuery, setTitleQuery] = useState("");
@@ -65,7 +69,7 @@ export default function PreferencesForm({ components: show }: { components: Port
   useEffect(() => {
     if (!prefsQuery.data) return;
     const p = prefsQuery.data.preferences;
-    setForm({
+    const next: FormState = {
       loved: p.genres.loved,
       liked: p.genres.liked,
       hated: p.genres.hated,
@@ -78,8 +82,33 @@ export default function PreferencesForm({ components: show }: { components: Port
       optedIn: prefsQuery.data.optedIn,
       digestFrequency: p.digest.frequency,
       digestEmail: p.digest.email,
-    });
+    };
+    savedKey.current = JSON.stringify(next);
+    setForm(next);
   }, [prefsQuery.data]);
+
+  /**
+   * Saves as you go, the way a phone's settings do. There used to be a Save
+   * button in a sticky bar, and an edit made on this tab was lost without a
+   * word when you switched to another before pressing it. Debounced so a run
+   * of taps on genre chips is one request, and skipped while the digest has
+   * no address to send to — that is said beside the field instead.
+   */
+  useEffect(() => {
+    if (!form || savedKey.current === null) return;
+    const key = JSON.stringify(form);
+    if (key === savedKey.current) return;
+    setSaved(false);
+    const missing = show["tastes.digest"] && form.digestFrequency !== "never" && !form.digestEmail.trim();
+    if (missing) return;
+    const timer = window.setTimeout(() => {
+      savedKey.current = key;
+      save();
+    }, 700);
+    return () => window.clearTimeout(timer);
+    // `save` reads the latest form through the closure of this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   if (prefsQuery.error) return <ErrorState message={prefsQuery.error.message} onRetry={() => prefsQuery.refetch()} />;
   if (!form) return <RowsSkeleton rows={5} />;
@@ -143,6 +172,7 @@ export default function PreferencesForm({ components: show }: { components: Port
       {
         onSuccess: () => {
           setSaved(true);
+          haptic("success");
           utils.preferences.get.invalidate();
         },
       },
@@ -156,6 +186,17 @@ export default function PreferencesForm({ components: show }: { components: Port
 
   return (
     <div className="stack">
+      <p className="autosave" aria-live="polite">
+        {setMutation.isPending ? (
+          "Saving…"
+        ) : setMutation.error ? (
+          <span className="err">Couldn't save: {setMutation.error.message}</span>
+        ) : saved ? (
+          "Saved"
+        ) : (
+          "Changes save automatically."
+        )}
+      </p>
       <div className="field">
         <label className="check">
           <input
@@ -211,7 +252,13 @@ export default function PreferencesForm({ components: show }: { components: Port
           <div className="combo">
             <input
               type="text"
+              enterKeyHint="done"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={titleQuery}
+              onFocus={() => setTitleFocused(true)}
+              // After the tap on a suggestion has landed, not before it.
+              onBlur={() => window.setTimeout(() => setTitleFocused(false), 150)}
               onChange={(e) => setTitleQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -221,7 +268,7 @@ export default function PreferencesForm({ components: show }: { components: Port
               }}
               placeholder="Search titles…"
             />
-            {suggestions.length > 0 && (
+            {titleFocused && suggestions.length > 0 && (
               <div className="combo-results">
                 {suggestions.map((t) => (
                   <button key={t} type="button" onClick={() => addExcluded(t)}>
@@ -254,16 +301,32 @@ export default function PreferencesForm({ components: show }: { components: Port
       )}
 
       {show["tastes.rowCount"] && (
-        <label className="field narrow">
-          <span className="field-label">Rows on my home</span>
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={form.rowCount}
-            onChange={(e) => setForm({ ...form, rowCount: e.target.value })}
-          />
-        </label>
+        <div className="field">
+          <span className="field-label" id="rows-label">
+            Rows on my home
+          </span>
+          {/* A stepper, not a number field: on a phone a number field is a
+              keyboard for typing "7", where −/+ is two taps. */}
+          <div className="stepper" role="group" aria-labelledby="rows-label">
+            <button
+              type="button"
+              aria-label="Fewer rows"
+              disabled={!form.rowCount || Number(form.rowCount) <= 1}
+              onClick={() => setForm({ ...form, rowCount: String(Math.max(1, Number(form.rowCount || 1) - 1)) })}
+            >
+              −
+            </button>
+            <output aria-live="polite">{form.rowCount || "Auto"}</output>
+            <button
+              type="button"
+              aria-label="More rows"
+              disabled={Number(form.rowCount) >= 20}
+              onClick={() => setForm({ ...form, rowCount: String(Math.min(20, Number(form.rowCount || 0) + 1)) })}
+            >
+              +
+            </button>
+          </div>
+        </div>
       )}
 
       {show["tastes.watchedBias"] && (
@@ -321,22 +384,9 @@ export default function PreferencesForm({ components: show }: { components: Port
               style={{ marginTop: 8 }}
             />
           )}
+          {emailMissing && <span className="field-hint">Add an address to get the digest, or choose Never.</span>}
         </div>
       )}
-
-      <div className="save-row">
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={save}
-          disabled={setMutation.isPending || emailMissing}
-          title={emailMissing ? "Add an email for the digest, or choose Never" : undefined}
-        >
-          {setMutation.isPending ? "Saving…" : "Save"}
-        </button>
-        {saved && <span className="ok">Saved ✓</span>}
-        {setMutation.error && <span className="err">{setMutation.error.message}</span>}
-      </div>
     </div>
   );
 }

@@ -441,7 +441,7 @@ export default function Overlays() {
             <div className={styles.workspace}>
               {/* ─── Left: catalog + presets (separate panels) ────────── */}
               <div className={styles.catalogColumn}>
-                <Catalog />
+                <Catalog onAdd={handleDropFromCatalog} />
                 <aside className={styles.catalog}>
                   <h3 className={styles.paneTitle}>Presets</h3>
                   <div className={styles.panelBody}>

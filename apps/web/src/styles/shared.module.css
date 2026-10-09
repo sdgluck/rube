@@ -1358,12 +1358,13 @@
     display: block;
   }
 
-  /* Each row is its own card here, so the table is a list of cards rather than
-     a surface with rows on it — and a white table behind them filled the 8px
-     between every card, which turned a stack of cards back into one white
-     slab with faint lines across it. The page shows through instead. */
+  /* A native list: one rounded group with hairlines between the rows — an
+     iOS inset grouped table, a Material list — rather than a stack of
+     separate cards, which is the web's idea of a mobile list. */
   .table {
-    background: transparent;
+    overflow: hidden;
+    background: var(--surface);
+    border-radius: var(--r-list);
   }
 
   .table thead {
@@ -1377,16 +1378,59 @@
      dropped. Gaps have no such edge case: a `display: none` cell simply
      doesn't take part. */
   .table tr {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     column-gap: 1rem;
-    row-gap: 2px;
+    row-gap: 0.3rem;
+    min-height: 5.6rem;
+    padding: 1.1rem 1.6rem;
     background: var(--surface);
-    border-radius: var(--r-sunken);
-    box-shadow: var(--e-flat);
-    margin-bottom: 0.8rem;
-    padding: 1rem 1.2rem;
+  }
+
+  /* The hairline between rows, inset from the leading edge as iOS draws it. */
+  .table tr + tr::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 1.6rem;
+    right: 0;
+    height: 1px;
+    background: var(--list-sep);
+  }
+
+  /* A row that opens something is pressable and says so with a chevron. */
+  .table tr.clickableRow {
+    padding-right: 3.6rem;
+  }
+
+  .table tr.clickableRow:active {
+    background: var(--pressed);
+  }
+
+  .table tr.clickableRow::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 1.6rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-top: 2px solid var(--ink-faint);
+    border-right: 2px solid var(--ink-faint);
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  :global(html[data-platform="android"]) .table tr + tr::before {
+    display: none;
+  }
+
+  :global(html[data-platform="android"]) .table tr.clickableRow::after {
+    display: none;
+  }
+
+  :global(html[data-platform="android"]) .table tr.clickableRow {
+    padding-right: 1.6rem;
   }
 
   .table td {
@@ -1395,6 +1439,7 @@
     height: auto;
     padding: 0;
     font: var(--t-data);
+    font-size: 1.3rem;
     color: var(--ink-3);
   }
 
@@ -1415,8 +1460,8 @@
     order: -1;
     flex-basis: 100%;
     font-family: var(--font-sans);
-    font-size: 1.3rem;
-    font-weight: 600;
+    font-size: 1.6rem;
+    font-weight: 500;
     color: var(--ink);
     margin-bottom: 1px;
   }
@@ -1429,6 +1474,73 @@
 
   .table td[data-cell="hide"] {
     display: none;
+  }
+
+  /* A table nobody has annotated still gets a title: the first real cell. */
+  .table tr:not(:has(td[data-cell="title"])) > td:first-child:not(.checkboxCell),
+  .table tr:not(:has(td[data-cell="title"])) > td.checkboxCell + td {
+    order: -1;
+    flex-basis: 100%;
+    font-family: var(--font-sans);
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* A row's actions sit at its trailing edge, as a native row's accessory. */
+  .table tr:has([data-row-actions]) {
+    padding-right: 6.4rem;
+  }
+
+  .table td:has(> [data-row-actions]) {
+    position: absolute;
+    top: 50%;
+    right: 0.8rem;
+    transform: translateY(-50%);
+  }
+
+  /* Selection: the checkbox leads the row, drawn as the round checkmark
+     native lists use in edit mode, and a selected row is tinted whole. */
+  .table tr:has(> .checkboxCell:not([data-cell="hide"])) {
+    padding-left: 5.6rem;
+  }
+
+  .table tr:has(> .checkboxCell:not([data-cell="hide"])) + tr::before {
+    left: 5.6rem;
+  }
+
+  .table td.checkboxCell:not([data-cell="hide"]) {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 5.6rem;
+    padding: 0 !important;
+    display: flex;
+    justify-content: center;
+    transform: translateY(-50%);
+  }
+
+  .checkbox,
+  .table td.checkboxCell :global(input[type="checkbox"]) {
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 1.5px solid var(--ink-faint);
+    border-radius: 50%;
+    appearance: none;
+    background: none;
+  }
+
+  .checkbox:checked,
+  .table td.checkboxCell :global(input[type="checkbox"]:checked) {
+    border-color: var(--accent-fill);
+    background:
+      center / 1.4rem no-repeat
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E"),
+      var(--accent-fill);
+  }
+
+  .table tr.selectedRow {
+    background: var(--accent-soft);
   }
 
   /* Wraps rather than stacks. One control per row put "All sections", "All
@@ -1447,6 +1559,17 @@
 
   .filtersSpacer {
     display: none;
+  }
+
+  /* The controls beside the search field read as filter chips — filled pills,
+     no outline — the way native lists offer filters, rather than a row of
+     boxed desktop controls. Sizes stay the primitives'; only the shape and
+     fill change. */
+  .filters :global(button[aria-haspopup]),
+  .filters :global(select) {
+    border-color: transparent;
+    border-radius: var(--r-pill);
+    background-color: var(--fill-track);
   }
 
   /* A `.compactTable` in a dashboard panel keeps its columns on a phone — the

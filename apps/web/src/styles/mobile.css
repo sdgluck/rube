@@ -159,7 +159,6 @@
   /* ─── Tab bar: Material navigation bar ─────────────────────────────────── */
 
   html[data-platform="android"] .bottom-nav {
-    height: calc(env(safe-area-inset-bottom, 0px) + 8rem);
     border-top: none;
     background: var(--surface);
     backdrop-filter: none;
@@ -201,10 +200,6 @@
   /* The desktop's route fade would play on top of the native transition. */
   .animated-page {
     animation: none;
-  }
-
-  html[data-platform="android"] .content > * {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8rem + 2.4rem);
   }
 }
 

@@ -1,5 +1,20 @@
-import { useEffect, useState } from "react";
-import { isNative, nativePlexSignIn, saveSession, SignInCancelled } from "@tinkerbell/native-client";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Clock, Heart, LayoutGrid, UserRound, type LucideIcon } from "lucide-react";
+import {
+  biometryAvailable,
+  getConnection,
+  getLockEnabled,
+  haptic,
+  isNative,
+  nativePlexSignIn,
+  saveServer,
+  saveSession,
+  setLockEnabled,
+  SignInCancelled,
+  unlock,
+} from "@tinkerbell/native-client";
+import ActionSheet from "./components/ActionSheet.tsx";
+import { useIsPhone } from "./useIsPhone.ts";
 import { portalTrpc } from "./trpc.ts";
 import BrandHeader, { type Branding } from "./components/BrandHeader.tsx";
 import SignIn from "./components/SignIn.tsx";
@@ -43,7 +58,20 @@ const TABS = [
   { id: "leaving", label: "Leaving soon", component: "tab.leaving" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof TABS)[number]["id"] | "account";
+
+/** The tab bar's icons and short labels, on a phone. */
+const PHONE_TABS: Record<TabId, { label: string; Icon: LucideIcon }> = {
+  collections: { label: "Collections", Icon: LayoutGrid },
+  preferences: { label: "Tastes", Icon: Heart },
+  leaving: { label: "Leaving", Icon: Clock },
+  account: { label: "Account", Icon: UserRound },
+};
+
+function tabFromHash(): TabId | null {
+  const id = location.hash.slice(1);
+  return id in PHONE_TABS ? (id as TabId) : null;
+}
 
 export default function PortalApp() {
   const utils = portalTrpc.useUtils();
@@ -55,7 +83,40 @@ export default function PortalApp() {
   const componentsQuery = portalTrpc.components.useQuery(undefined, { enabled: !!meQuery.data });
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>("collections");
+  const isPhone = useIsPhone();
+  const [tab, setTabState] = useState<TabId>(() => tabFromHash() ?? "collections");
+  const scrollByTab = useRef(new Map<TabId, number>());
+  const [signingOut, setSigningOut] = useState(false);
+
+  /**
+   * On a phone each tab is a history entry, so Back (Android's key, a browser
+   * gesture) goes to the previous tab and, from the first, leaves — and each
+   * tab comes back where it was scrolled to. On a desktop it is plain state,
+   * as it always was.
+   */
+  const setTab = (next: TabId) => {
+    if (next === tab) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    scrollByTab.current.set(tab, window.scrollY);
+    if (isPhone) {
+      haptic("selection");
+      history.pushState({ ...history.state, portalTab: next }, "", `#${next}`);
+    }
+    setTabState(next);
+  };
+  useEffect(() => {
+    const onPop = () => {
+      scrollByTab.current.set(tab, window.scrollY);
+      setTabState(tabFromHash() ?? "collections");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [tab]);
+  useEffect(() => {
+    window.scrollTo(0, scrollByTab.current.get(tab) ?? 0);
+  }, [tab]);
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PENDING_KEY));
 
   // Apply the admin's background image to the page. It is painted by a fixed
@@ -199,7 +260,80 @@ export default function PortalApp() {
   const components = componentsQuery.data!;
   const tabs = TABS.filter((t) => components[t.component]);
   // The remembered tab can be one the admin has since switched off.
-  const current = tabs.find((t) => t.id === tab)?.id ?? tabs[0]?.id;
+  const current: TabId | undefined =
+    tab === "account" && isPhone ? "account" : (tabs.find((t) => t.id === tab)?.id ?? tabs[0]?.id);
+
+  const signOut = () =>
+    logoutMutation.mutate(undefined, {
+      // The app forgets its stored token too, or the next launch signs it back in.
+      onSuccess: async () => {
+        await saveSession(null);
+        await utils.me.reset();
+      },
+    });
+
+  const content: ReactNode =
+    current === "collections" ? (
+      <MyCollections
+        components={components}
+        onSetTastes={components["tab.tastes"] ? () => setTab("preferences") : undefined}
+      />
+    ) : current === "preferences" ? (
+      <PreferencesForm components={components} />
+    ) : current === "leaving" ? (
+      <LeavingSoon components={components} />
+    ) : current === "account" ? (
+      <Account username={meQuery.data.username} onSignOut={() => setSigningOut(true)} />
+    ) : (
+      <EmptyState title="Nothing here yet">The server's owner hasn't turned anything on for you.</EmptyState>
+    );
+
+  /**
+   * The phone app: a pinned navigation bar, the screen, and a tab bar with
+   * icons — Account last, holding what the desktop's header and footer do.
+   * Full-bleed rather than a card floating on a page, which is a website's
+   * shape.
+   */
+  if (isPhone) {
+    const phoneTabs: TabId[] = [...tabs.map((t) => t.id), "account"];
+    return (
+      <div className="phone-app">
+        <header className="nav-bar">
+          <span className="nav-brand">
+            <BrandHeader branding={branding} />
+          </span>
+        </header>
+        <main className="phone-screen">
+          <h1 className="large-title">{PHONE_TABS[current ?? "account"].label}</h1>
+          {content}
+        </main>
+        <nav className="tab-bar" aria-label="Portal sections">
+          {phoneTabs.map((id) => {
+            const { label, Icon } = PHONE_TABS[id];
+            const on = current === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`tab-bar-item ${on ? "on" : ""}`}
+                aria-current={on ? "page" : undefined}
+                onClick={() => setTab(id)}
+              >
+                <Icon className="tab-bar-icon" size={24} strokeWidth={2} aria-hidden />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+        <ActionSheet
+          open={signingOut}
+          onClose={() => setSigningOut(false)}
+          title={`Signed in as ${meQuery.data.username}`}
+          actions={[{ label: "Sign out", danger: true, onSelect: signOut }]}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -208,19 +342,7 @@ export default function PortalApp() {
           <h1 className="title">
             <BrandHeader branding={branding} />
           </h1>
-          <button
-            type="button"
-            className="btn-ghost btn-signout"
-            onClick={() =>
-              logoutMutation.mutate(undefined, {
-                // The app forgets its stored token too, or the next launch signs it back in.
-                onSuccess: async () => {
-                  await saveSession(null);
-                  await utils.me.reset();
-                },
-              })
-            }
-          >
+          <button type="button" className="btn-ghost btn-signout" onClick={signOut}>
             Sign out <span className="signout-user">({meQuery.data.username})</span>
           </button>
         </div>
@@ -248,18 +370,70 @@ export default function PortalApp() {
           </div>
         )}
 
-        {current === "collections" ? (
-          <MyCollections
-            components={components}
-            onSetTastes={components["tab.tastes"] ? () => setTab("preferences") : undefined}
-          />
-        ) : current === "preferences" ? (
-          <PreferencesForm components={components} />
-        ) : current === "leaving" ? (
-          <LeavingSoon components={components} />
-        ) : (
-          <EmptyState title="Nothing here yet">The server's owner hasn't turned anything on for you.</EmptyState>
+        {content}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The phone's Account tab: who you are, which server, the app lock, and
+ * signing out — the things that belong to the person and the phone rather
+ * than to their tastes.
+ */
+function Account({ username, onSignOut }: { username: string; onSignOut: () => void }) {
+  const native = isNative();
+  const [available, setAvailable] = useState(false);
+  const [lock, setLock] = useState(false);
+  useEffect(() => {
+    if (!native) return;
+    void biometryAvailable().then(setAvailable);
+    void getLockEnabled().then(setLock);
+  }, [native]);
+
+  async function toggleLock() {
+    const next = !lock;
+    // Proving it works before relying on it: a lock you can't open is a lockout.
+    if (next && !(await unlock("Turn on the app lock"))) return;
+    await setLockEnabled(next);
+    setLock(next);
+    haptic("selection");
+  }
+
+  const server = getConnection()?.server;
+  return (
+    <div className="stack">
+      <div className="list-group">
+        <div className="list-row">
+          <span>Plex account</span>
+          <span className="muted">{username}</span>
+        </div>
+        {server && (
+          <div className="list-row">
+            <span>Server</span>
+            <span className="muted">{new URL(server).host}</span>
+          </div>
         )}
+      </div>
+      {native && (
+        <div className="list-group">
+          {available && (
+            <label className="list-row">
+              <span>App lock</span>
+              <span className="switch">
+                <input type="checkbox" role="switch" checked={lock} onChange={() => void toggleLock()} />
+              </span>
+            </label>
+          )}
+          <button type="button" className="list-row list-button" onClick={() => void saveServer(null)}>
+            Switch server
+          </button>
+        </div>
+      )}
+      <div className="list-group">
+        <button type="button" className="list-row list-button danger" onClick={onSignOut}>
+          Sign out
+        </button>
       </div>
     </div>
   );

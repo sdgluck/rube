@@ -149,7 +149,7 @@ export const SHOTS: Shot[] = [
     name: "04-collection-smart-filters",
     description: "Collection detail — the Smart Filters drawer with the nesting grammar",
     path: "/collections/5001/details",
-    viewports: DESKTOP,
+    // Both viewports: on a phone this is a sheet, the shape that changed most.
     steps: [{ click: "Edit filters" }, { wait: "text=of the following" }],
   },
   // Both of these address the pencil by its title rather than by the name
@@ -162,7 +162,7 @@ export const SHOTS: Shot[] = [
     name: "04-collection-edit",
     description: "Collection detail — the edit wizard, where the name, summary and labels are written",
     path: "/collections/5001",
-    viewports: DESKTOP,
+    // Both viewports: on a phone this is a sheet, the shape that changed most.
     steps: [{ clickSelector: '[title="Edit name, summary and labels"]' }, { wait: "text=Name and summary" }],
   },
   {
@@ -264,7 +264,7 @@ export const SHOTS: Shot[] = [
     name: "10-rule-wizard-1-type",
     description: "Rule wizard step 1 — the 28 rule types as selectable cards",
     path: "/rules",
-    viewports: DESKTOP,
+    // Both viewports: on a phone this is a sheet, the shape that changed most.
     steps: [{ click: "Add Rule" }, { wait: "text=Choose a rule type" }],
   },
   {

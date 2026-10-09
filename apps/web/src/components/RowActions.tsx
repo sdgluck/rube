@@ -108,6 +108,9 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
   return (
     <div
       className={styles.wrap}
+      // Lets the phone list reflow (shared.module.css) pin a row's actions to
+      // its trailing edge without knowing this module's class names.
+      data-row-actions=""
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
       role="presentation"
