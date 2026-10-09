@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-09
+
+### Added
+
+- Tinkerbell now ships as native iOS and Android apps that bundle the admin and portal UI and connect to your server over a bearer session — set it up from Settings → Mobile app, which shows a QR code to connect a phone.
+- On phones — in the native apps and in mobile browsers alike — the admin app and portal now use a native-style layout: a pinned navigation bar with back button and large titles, sliding/fading page transitions, a tab bar that remembers each tab's scroll position, bottom sheets instead of modals, native alerts and action sheets, and edge-swipe-back on iOS.
+- Admin tables, settings pages, sub-tabs, filters and wizards are redesigned for phones as inset grouped lists, native forms with switches, segmented controls or tab rows, filter chips, and a stacked job config.
+- The portal is now a tabbed phone app with a bottom tab bar, an Account tab (server, app lock, sign out), swipeable lists, tap-to-cycle genre chips, and undo for "Not for me".
+- Every phone screen now supports pull to refresh.
+- The tinkerbell.dev marketing site now covers all nineteen product features (up from six), grouped by area, with real screenshots and a poster strip generated from the demo library instead of placeholder artwork.
+
+### Fixed
+
+- Portal content no longer draws under the status bar on phones.
+
 ## [0.35.0] - 2026-10-07
 
 ### Added
