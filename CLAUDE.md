@@ -182,6 +182,31 @@ things:
 - **CORS.** CORS is `apps/server/src/cors.ts`. It covers only the origins in
   `NATIVE_APPS` (contracts) and never allows credentials.
 
+### The phone layout
+
+Below `--bp-md` (768px) both SPAs behave as native apps, in the Capacitor
+apps and in phone browsers alike. Platform details read `<html data-platform>`
+(`ios` | `android` | `desktop`, set before first paint by each `index.html` and
+confirmed by `bootNative`); iOS is the default look and Material is layered on
+with `[data-platform="android"]` rules. Desktop layouts don't change.
+
+- **Shared primitives carry it.** `Modal` is a draggable bottom sheet
+  (`presentation="alert"` for a native alert), `DropdownButton`/`RowActions`
+  raise an `ActionSheet`, `MultiSelect`/`Combobox` a `PickerSheet`, the `.table`
+  reflow is an inset grouped list, Settings' `.group`/`.field`/`.checkRow` are a
+  native form. Build new UI from these and it is native on a phone for free.
+- **The header** is `AppBar` rendered as a navigation bar: back to the parent
+  crumb, the title (an iOS large title on tab roots), the page's `PageActions`
+  with the rest behind "⋯" (the last action is treated as primary).
+- **Navigation** runs through `layout/TransitionRouter` (View Transitions for
+  push/pop) and `BottomNav` (per-tab memory). Overlays push a history entry
+  (`pushOverlay`) so Back closes them. The document scrolls on a phone, not
+  `.content` — `--sticky-top` is where a sticky bar inside a page should stop.
+- `styles/mobile.css` is the global phone layer; component phone styles live
+  with their components. `:hover` must sit inside `@media (hover: hover)`
+  (`tinkerbell/hover-media`), and anything a hover reveals needs a
+  `@media (hover: none)` fallback.
+
 ### Agent API (`packages/agent-api`)
 
 `/mcp` (hand-rolled stateless Streamable-HTTP MCP, tools only) and `/api/v1`

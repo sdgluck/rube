@@ -10,7 +10,6 @@ import ErrorState from "#components/ErrorState";
 import MultiSelect from "#components/MultiSelect";
 import PageShell, { StatusChip } from "#components/PageShell";
 import Pagination from "#components/Pagination";
-import PullToRefresh from "#components/PullToRefresh";
 import RelativeTime from "#components/RelativeTime";
 import SortableTh from "#components/SortableTh";
 import { formatDuration } from "#/format";
@@ -89,11 +88,7 @@ export default function Events() {
   }
 
   return (
-    <PullToRefresh
-      onRefresh={() => {
-        query.refetch();
-      }}
-    >
+    <>
       <PageShell
         count={total > 0 ? total.toLocaleString() : undefined}
         chip={
@@ -211,6 +206,6 @@ export default function Events() {
           </>
         )}
       </PageShell>
-    </PullToRefresh>
+    </>
   );
 }

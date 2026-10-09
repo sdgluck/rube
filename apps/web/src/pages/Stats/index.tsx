@@ -1,5 +1,4 @@
 import type React from "react";
-import PullToRefresh from "#components/PullToRefresh";
 import { SkeletonLine } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
@@ -451,7 +450,7 @@ export default function Stats() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
+    <>
       <PageShell
         chip={
           sessions.length > 0 ? (
@@ -530,6 +529,6 @@ export default function Stats() {
           )}
         </DashboardLayout>
       </PageShell>
-    </PullToRefresh>
+    </>
   );
 }

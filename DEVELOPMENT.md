@@ -150,6 +150,17 @@ pnpm screenshots:local  # faster, for iterating — don't commit the result
 See [screenshots/README.md](screenshots/README.md) for why the Docker run is
 the canonical one.
 
+The phone screenshots use an iPhone user agent, so they show the iOS design.
+Two switches help when iterating locally (never commit their output):
+
+```sh
+TB_CAPTURE_ONLY=settings,rules pnpm --filter @tinkerbell/tinkerbell.dev capture   # just these shots
+TB_CAPTURE_PLATFORM=android pnpm --filter @tinkerbell/tinkerbell.dev capture      # the Material look
+```
+
+Append `?platform=ios` or `?platform=android` to any URL to preview a phone
+platform's look in a desktop browser's device mode.
+
 ## Native apps
 
 `apps/web` and `apps/portal` are also Capacitor apps for iOS and Android. Each

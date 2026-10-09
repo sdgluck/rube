@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import { JobsSkeleton } from "#components/Skeleton";
-import PullToRefresh from "#components/PullToRefresh";
 import ErrorState from "#components/ErrorState";
 import PageShell, { StatusChip } from "#components/PageShell";
 import {
@@ -194,18 +193,13 @@ export default function Jobs() {
     return <SummaryTile key={id} label={def.label} value={value} sub={sub} tone={tone} to={to} />;
   };
 
-  const handleRefresh = () => {
-    jobsQuery.refetch();
-    recentRunsQuery.refetch();
-  };
-
   if (jobsQuery.isLoading) return <JobsSkeleton />;
   if (jobsQuery.error) {
     return <ErrorState title="Couldn't load jobs" error={jobsQuery.error} onRetry={() => jobsQuery.refetch()} />;
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
+    <>
       <PageShell
         count={rawJobs.length > 0 ? rawJobs.length : undefined}
         chip={
@@ -252,6 +246,6 @@ export default function Jobs() {
           </DashboardGrid>
         </DashboardLayout>
       </PageShell>
-    </PullToRefresh>
+    </>
   );
 }

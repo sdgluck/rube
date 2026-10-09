@@ -19,7 +19,6 @@ import FadeImage from "#components/FadeImage";
 import RelativeTime from "#components/RelativeTime";
 import RowActions from "#components/RowActions";
 import { useToast } from "#components/Toast";
-import PullToRefresh from "#components/PullToRefresh";
 import PageShell from "#components/PageShell";
 import { readEnumStorage, writeStorage } from "#/storage";
 import { errorMessage } from "#/utils";
@@ -555,12 +554,7 @@ export default function Collections() {
   }
 
   return (
-    <PullToRefresh
-      onRefresh={() => {
-        collectionsQuery.refetch();
-        filtersQuery.refetch();
-      }}
-    >
+    <>
       <PageShell count={total > 0 ? total.toLocaleString() : undefined}>
         {(selected.size > 0 || bulkProgress) && (
           <BulkBar
@@ -782,6 +776,6 @@ export default function Collections() {
           />
         )}
       </PageShell>
-    </PullToRefresh>
+    </>
   );
 }
