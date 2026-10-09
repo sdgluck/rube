@@ -31,8 +31,10 @@
    implies a row you can click, and there isn't one yet. The selector carries an
    extra element over `.table tr:hover td` so it wins regardless of the order the
    two modules land in. */
-.table tbody tr:hover td {
-  background: none;
+@media (hover: hover) {
+  .table tbody tr:hover td {
+    background: none;
+  }
 }
 
 .tableCell {

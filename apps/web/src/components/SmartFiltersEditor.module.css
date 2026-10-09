@@ -212,8 +212,10 @@
     color 0.15s;
 }
 
-.smartCombinatorOption:hover:not(.smartCombinatorOptionActive) {
-  color: var(--ink);
+@media (hover: hover) {
+  .smartCombinatorOption:hover:not(.smartCombinatorOptionActive) {
+    color: var(--ink);
+  }
 }
 
 .smartCombinatorOptionActive {
@@ -294,8 +296,10 @@
   min-width: 0;
 }
 
-.smartRow:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .smartRow:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .smartSelect {
@@ -309,9 +313,11 @@
   cursor: pointer;
 }
 
-.smartSelect:hover {
-  border-color: var(--line);
-  background: var(--surface);
+@media (hover: hover) {
+  .smartSelect:hover {
+    border-color: var(--line);
+    background: var(--surface);
+  }
 }
 
 .smartSelect:focus {
@@ -347,9 +353,11 @@
   color: var(--ink);
 }
 
-.smartInput:hover {
-  border-color: var(--line);
-  background: var(--surface);
+@media (hover: hover) {
+  .smartInput:hover {
+    border-color: var(--line);
+    background: var(--surface);
+  }
 }
 
 .smartInput:focus {
@@ -401,9 +409,11 @@
   border-radius: 50%;
 }
 
-.smartChipRemove:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--shade) 8%, transparent);
+@media (hover: hover) {
+  .smartChipRemove:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--shade) 8%, transparent);
+  }
 }
 
 .smartChipAdd {
@@ -421,9 +431,11 @@
   justify-content: center;
 }
 
-.smartChipAdd:hover {
-  border-color: var(--accent);
-  color: var(--accent-text);
+@media (hover: hover) {
+  .smartChipAdd:hover {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
 }
 
 .smartChipPicker {
@@ -462,9 +474,11 @@
   color: var(--ink-faint);
 }
 
-.smartRemoveBtn:hover:not(:disabled) {
-  background: var(--status-error-bg);
-  color: var(--status-error-fg);
+@media (hover: hover) {
+  .smartRemoveBtn:hover:not(:disabled) {
+    background: var(--status-error-bg);
+    color: var(--status-error-fg);
+  }
 }
 
 .smartActions {

@@ -78,8 +78,10 @@
   border-radius: var(--r-sm);
 }
 
-.itemName:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .itemName:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .itemDelete {
@@ -93,9 +95,11 @@
   border-radius: var(--r-sm);
 }
 
-.itemDelete:hover {
-  color: var(--status-error-fg);
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .itemDelete:hover {
+    color: var(--status-error-fg);
+    background: var(--surface-sunken);
+  }
 }
 
 .actions {
@@ -117,8 +121,10 @@
   border-radius: var(--r-sm);
 }
 
-.action:hover:not(:disabled) {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .action:hover:not(:disabled) {
+    background: var(--surface-sunken);
+  }
 }
 
 .action:disabled {

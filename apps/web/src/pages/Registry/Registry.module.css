@@ -32,9 +32,11 @@
     background 0.15s ease;
 }
 
-.packCard:hover {
-  border-color: var(--accent);
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .packCard:hover {
+    border-color: var(--accent);
+    background: var(--surface-sunken);
+  }
 }
 
 .packCard h2 {
@@ -112,8 +114,10 @@
   cursor: pointer;
 }
 
-.ruleRow:hover {
-  border-color: var(--accent);
+@media (hover: hover) {
+  .ruleRow:hover {
+    border-color: var(--accent);
+  }
 }
 
 .ruleText {

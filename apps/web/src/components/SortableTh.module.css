@@ -23,8 +23,10 @@
   user-select: none;
 }
 
-.sortHeader:hover {
-  color: var(--accent-text);
+@media (hover: hover) {
+  .sortHeader:hover {
+    color: var(--accent-text);
+  }
 }
 
 .sortHeader:focus-visible {
@@ -39,8 +41,10 @@
   transition: opacity 0.12s;
 }
 
-.sortHeader:hover .arrow {
-  opacity: 0.45;
+@media (hover: hover) {
+  .sortHeader:hover .arrow {
+    opacity: 0.45;
+  }
 }
 
 .arrowActive {

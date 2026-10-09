@@ -56,8 +56,10 @@
   border-color: transparent;
 }
 
-.btnPrimary:hover:not(:disabled) {
-  background: var(--accent-text);
+@media (hover: hover) {
+  .btnPrimary:hover:not(:disabled) {
+    background: var(--accent-text);
+  }
 }
 
 .btnSecondary {
@@ -66,8 +68,10 @@
   border-color: var(--line);
 }
 
-.btnSecondary:hover:not(:disabled) {
-  border-color: var(--line-hover);
+@media (hover: hover) {
+  .btnSecondary:hover:not(:disabled) {
+    border-color: var(--line-hover);
+  }
 }
 
 .btnGhost {
@@ -76,9 +80,11 @@
   border-color: transparent;
 }
 
-.btnGhost:hover:not(:disabled) {
-  background: var(--fill-quiet);
-  color: var(--ink);
+@media (hover: hover) {
+  .btnGhost:hover:not(:disabled) {
+    background: var(--fill-quiet);
+    color: var(--ink);
+  }
 }
 
 /* Named for what it destroys, and solid — the confirm-dialog commit. */
@@ -88,9 +94,11 @@
   border-color: var(--danger);
 }
 
-.btnDanger:hover:not(:disabled) {
-  background: var(--danger-hover);
-  border-color: var(--danger-hover);
+@media (hover: hover) {
+  .btnDanger:hover:not(:disabled) {
+    background: var(--danger-hover);
+    border-color: var(--danger-hover);
+  }
 }
 
 /* Outlined until hovered, deliberately: a destructive action in a row of
@@ -101,10 +109,12 @@
   border-color: var(--danger-line);
 }
 
-.btnDangerOutline:hover:not(:disabled) {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--on-accent);
+@media (hover: hover) {
+  .btnDangerOutline:hover:not(:disabled) {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: var(--on-accent);
+  }
 }
 
 /* Size modifier — type and horizontal padding only. Height is --control-h for
@@ -141,8 +151,10 @@
   text-align: left;
 }
 
-.btnLink:hover:not(:disabled) {
-  text-decoration: underline;
+@media (hover: hover) {
+  .btnLink:hover:not(:disabled) {
+    text-decoration: underline;
+  }
 }
 
 .btnLink:disabled {
@@ -221,10 +233,12 @@
   color: var(--ink-faint);
 }
 
-.input:hover:not(:disabled):not(:focus),
-.select:hover:not(:disabled):not(:focus),
-.textarea:hover:not(:disabled):not(:focus) {
-  border-color: var(--line-hover);
+@media (hover: hover) {
+  .input:hover:not(:disabled):not(:focus),
+  .select:hover:not(:disabled):not(:focus),
+  .textarea:hover:not(:disabled):not(:focus) {
+    border-color: var(--line-hover);
+  }
 }
 
 .input:focus,
@@ -255,11 +269,17 @@
 }
 
 /* An input that failed validation states it, and stays stated until fixed. */
-.inputError,
-.inputError:hover:not(:disabled):not(:focus) {
+.inputError {
   border-color: var(--danger-line);
   background: color-mix(in srgb, var(--danger) 4%, var(--surface));
   box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--danger) 10%, transparent);
+}
+@media (hover: hover) {
+  .inputError:hover:not(:disabled):not(:focus) {
+    border-color: var(--danger-line);
+    background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+    box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--danger) 10%, transparent);
+  }
 }
 
 /* Select chevron */
@@ -353,8 +373,10 @@
     color 0.15s;
 }
 
-.segmentedItem:hover:not(.segmentedItemActive) {
-  color: var(--ink);
+@media (hover: hover) {
+  .segmentedItem:hover:not(.segmentedItemActive) {
+    color: var(--ink);
+  }
 }
 
 .segmentedItemActive {
@@ -376,6 +398,55 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Phones: iOS's segmented control — a raised white segment in a grey trough —
+   and Material's segmented buttons, outlined with the selection tinted. Taller
+   on both: these are thumbs now, not a cursor. */
+@media (max-width: 768px) {
+  .segmented {
+    height: 3.6rem;
+    border: none;
+    border-radius: var(--r-md);
+    background: var(--fill-track);
+  }
+
+  .segmentedItem {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 0 1.2rem;
+    border-radius: var(--r-sm);
+    font-size: 1.4rem;
+  }
+
+  .segmentedItemActive {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--e-float);
+  }
+
+  :global(html[data-platform="android"]) .segmented {
+    gap: 0;
+    height: 4rem;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-pill);
+    background: none;
+  }
+
+  :global(html[data-platform="android"]) .segmentedItem {
+    border-radius: 0;
+  }
+
+  :global(html[data-platform="android"]) .segmentedItem + .segmentedItem {
+    border-left: 1px solid var(--line-strong);
+  }
+
+  :global(html[data-platform="android"]) .segmentedItemActive {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    box-shadow: none;
+  }
 }
 
 /* ─── Toggle ──────────────────────────────────────────────────────────── */

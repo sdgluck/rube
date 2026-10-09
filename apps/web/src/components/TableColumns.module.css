@@ -15,9 +15,11 @@
   color: var(--on-accent);
 }
 
-.triggerActive:hover {
-  background: var(--accent-text);
-  color: var(--on-accent);
+@media (hover: hover) {
+  .triggerActive:hover {
+    background: var(--accent-text);
+    color: var(--on-accent);
+  }
 }
 
 .dropdown {
@@ -58,8 +60,10 @@
   transition: background 0.1s;
 }
 
-.item:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .item:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .itemDragging {

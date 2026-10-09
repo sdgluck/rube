@@ -181,6 +181,15 @@ async function newContext(browser: Browser, viewport: Viewport, scale: number): 
     deviceScaleFactor: scale,
     isMobile: viewport === "mobile",
     hasTouch: viewport === "mobile",
+    // An iPhone's user agent, so the phone captures show the app's iOS design
+    // (`<html data-platform>`, packages/native-client/src/platform.ts) rather
+    // than the platform-less look a desktop Chromium would get.
+    ...(viewport === "mobile"
+      ? {
+          userAgent:
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+        }
+      : {}),
     // The redesign is light-first; its dark theme is documented as a starting
     // point rather than a finished design, so capturing dark would publish
     // something nobody has drawn.
@@ -686,13 +695,20 @@ async function main() {
   }
 
   const tasks: Task[] = [];
+  // `TB_CAPTURE_ONLY=settings,rules` captures just the shots whose names
+  // contain one of those strings — for iterating on one screen without the
+  // whole suite. Pruning is skipped then, or it would delete everything else.
+  const only = (process.env.TB_CAPTURE_ONLY ?? "").split(",").filter(Boolean);
+  const wanted = (name: string) => only.length === 0 || only.some((o) => name.includes(o));
   for (const viewport of ["desktop", "mobile"] as Viewport[]) {
-    for (const shot of SHOTS.filter((s) => (s.viewports ?? ["desktop", "mobile"]).includes(viewport))) {
+    for (const shot of SHOTS.filter(
+      (s) => (s.viewports ?? ["desktop", "mobile"]).includes(viewport) && wanted(s.name),
+    )) {
       tasks.push({ shot, group: viewport, label: shot.name, path: join(suiteDir, viewport, `${shot.name}.png`) });
     }
   }
   // The marketing site's slugs, at retina, from the same run.
-  for (const shot of SHOTS.filter((s) => s.site)) {
+  for (const shot of SHOTS.filter((s) => s.site && wanted(s.name))) {
     tasks.push({ shot, group: "site", label: shot.site!, path: join(siteDir, `${shot.site}.png`) });
   }
 
@@ -779,10 +795,11 @@ async function main() {
   // Only when the run was clean — otherwise a transient failure would delete a
   // screenshot that is still perfectly good.
   if (failures.length === 0) {
-    for (const viewport of ["desktop", "mobile"] as Viewport[]) {
-      const keep = tasks.filter((t) => t.group === viewport).map((t) => `${t.shot.name}.png`);
-      await pruneStale(join(suiteDir, viewport), new Set(keep));
-    }
+    if (only.length === 0)
+      for (const viewport of ["desktop", "mobile"] as Viewport[]) {
+        const keep = tasks.filter((t) => t.group === viewport).map((t) => `${t.shot.name}.png`);
+        await pruneStale(join(suiteDir, viewport), new Set(keep));
+      }
   }
 
   await browser.close();

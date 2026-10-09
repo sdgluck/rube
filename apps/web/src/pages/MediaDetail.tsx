@@ -4,7 +4,6 @@ import { PageCrumbs } from "#layout/AppBar";
 import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import FadeImage from "#components/FadeImage";
-import useSwipeBack from "#hooks/useSwipeBack";
 import { useToast } from "#components/Toast";
 import styles from "#/styles/shared.module.css";
 import {
@@ -78,7 +77,6 @@ function externalLinksFor(guids: string[], type: string): Array<{ label: string;
 export default function MediaDetail() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
-  const swipeRef = useSwipeBack(navigate);
   const [editOpen, setEditOpen] = useState(false);
 
   const detailQuery = trpc.media.get.useQuery(
@@ -136,7 +134,7 @@ export default function MediaDetail() {
   const externalLinks = externalLinksFor(item.guids ?? [], item.type);
 
   return (
-    <div ref={swipeRef}>
+    <div>
       <PageCrumbs crumbs={[{ label: item.title }]} onBackToParent={() => navigate(-1)} />
 
       <div className={styles.detailLayout}>

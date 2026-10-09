@@ -38,8 +38,10 @@
   text-decoration: none;
 }
 
-.downloadLink:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .downloadLink:hover {
+    text-decoration: underline;
+  }
 }
 
 /* The restore instructions live on the page rather than behind a link: the

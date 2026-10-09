@@ -157,8 +157,10 @@
   font-weight: 500;
 }
 
-.collectionLink:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .collectionLink:hover {
+    text-decoration: underline;
+  }
 }
 
 .collectionSection {

@@ -6,6 +6,7 @@
  * the app the file is written to the cache directory and handed to the share
  * sheet, which is where "save to Files", AirDrop and mail all live on a phone.
  */
+import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -49,6 +50,35 @@ export async function openExternal(url: string): Promise<void> {
     window.open(url, "_blank", "noopener");
     return;
   }
-  const { Browser } = await import("@capacitor/browser");
   await Browser.open({ url });
+}
+
+/**
+ * Inside the app, send every link that leaves it to the in-app browser.
+ *
+ * A WebView navigates itself to an external link — the whole app replaced by
+ * IMDb with no way back — or, for `target="_blank"`, does nothing at all. One
+ * capturing listener covers every such link, including the ones in HTML the
+ * app renders from strings (the changelog), which no component wrapper could.
+ */
+export function interceptExternalLinks(): void {
+  if (!Capacitor.isNativePlatform()) return;
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!anchor || anchor.hasAttribute("download")) return;
+      const url = new URL(anchor.href, location.href);
+      const external = url.origin !== location.origin && /^https?:$/.test(url.protocol);
+      if (!external) {
+        // A same-origin "new tab" has nowhere to open in an app; follow it here.
+        if (anchor.target === "_blank") anchor.removeAttribute("target");
+        return;
+      }
+      event.preventDefault();
+      void openExternal(url.href);
+    },
+    true,
+  );
 }

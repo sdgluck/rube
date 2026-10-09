@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./RunLog.module.css";
+import { saveFile } from "@tinkerbell/native-client";
 
 /**
  * Lines worth pulling out when someone only wants to know what went wrong.
@@ -84,9 +85,8 @@ export default function RunLog({
 
   const handleDownload = () => {
     if (!log || !downloadName) return;
-    const url = URL.createObjectURL(new Blob([log], { type: "text/plain" }));
-    Object.assign(document.createElement("a"), { href: url, download: downloadName }).click();
-    URL.revokeObjectURL(url);
+    // A download in the browser, the share sheet in the app.
+    void saveFile(new Blob([log], { type: "text/plain" }), downloadName);
   };
 
   const pane = (

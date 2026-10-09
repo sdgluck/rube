@@ -163,9 +163,11 @@
     background 0.15s;
 }
 
-.catalogChip:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+@media (hover: hover) {
+  .catalogChip:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
 }
 
 .catalogChip:active {
@@ -210,8 +212,10 @@
   text-align: left;
 }
 
-.collapsibleHeader:hover {
-  color: var(--accent);
+@media (hover: hover) {
+  .collapsibleHeader:hover {
+    color: var(--accent);
+  }
 }
 
 .collapsibleChevron {
@@ -264,9 +268,11 @@
   flex: 1;
 }
 
-.presetItem:hover:not(:disabled) {
-  background: var(--surface-sunken);
-  border-color: var(--line-soft);
+@media (hover: hover) {
+  .presetItem:hover:not(:disabled) {
+    background: var(--surface-sunken);
+    border-color: var(--line-soft);
+  }
 }
 
 .presetItem:disabled {
@@ -411,9 +417,11 @@
   }
 }
 
-.dropZoneEmpty:hover {
-  border-color: color-mix(in srgb, var(--on-accent) 95%, transparent);
-  background: color-mix(in srgb, var(--shade) 24%, transparent);
+@media (hover: hover) {
+  .dropZoneEmpty:hover {
+    border-color: color-mix(in srgb, var(--on-accent) 95%, transparent);
+    background: color-mix(in srgb, var(--shade) 24%, transparent);
+  }
 }
 
 /* The zone you're about to drop on switches to the accent, so the target is
@@ -509,9 +517,11 @@
   background: transparent;
 }
 
-.hitBox:hover {
-  outline: 1px dashed color-mix(in srgb, var(--on-accent) 70%, transparent);
-  outline-offset: 2px;
+@media (hover: hover) {
+  .hitBox:hover {
+    outline: 1px dashed color-mix(in srgb, var(--on-accent) 70%, transparent);
+    outline-offset: 2px;
+  }
 }
 
 .hitBox:active {
@@ -568,8 +578,17 @@
   justify-content: center;
 }
 
-.badgeWrap:hover .badgeRemove {
-  display: flex;
+@media (hover: hover) {
+  .badgeWrap:hover .badgeRemove {
+    display: flex;
+  }
+}
+
+/* No hover on a touch screen, so the remove button is simply always there. */
+@media (hover: none) {
+  .badgeRemove {
+    display: flex;
+  }
 }
 
 /* ─── Inspector (right) ────────────────────────────────────────── */
@@ -701,8 +720,10 @@
   gap: 2px;
 }
 
-.presetQuickItem:hover {
-  border-color: var(--accent);
+@media (hover: hover) {
+  .presetQuickItem:hover {
+    border-color: var(--accent);
+  }
 }
 
 .presetQuickName {
@@ -844,8 +865,10 @@
   z-index: 1;
 }
 
-.colorSwatch:hover {
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .colorSwatch:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .colorSwatchActive {
@@ -995,8 +1018,10 @@
   color: var(--on-accent);
 }
 
-.actionBtnSecondary:hover:not(:disabled) {
-  background: var(--on-dark-fill-2);
+@media (hover: hover) {
+  .actionBtnSecondary:hover:not(:disabled) {
+    background: var(--on-dark-fill-2);
+  }
 }
 
 .actionBtnSecondary:disabled {
@@ -1125,8 +1150,10 @@
   color: var(--ink);
 }
 
-.overflowItem:hover:not(:disabled) {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .overflowItem:hover:not(:disabled) {
+    background: var(--surface-sunken);
+  }
 }
 
 .overflowItem:disabled {

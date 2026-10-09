@@ -207,8 +207,10 @@
   cursor: pointer;
 }
 
-.iconOption:hover {
-  border-color: var(--ink-3);
+@media (hover: hover) {
+  .iconOption:hover {
+    border-color: var(--ink-3);
+  }
 }
 
 .iconOption.active {

@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { trpc } from "#/trpc";
-import useSwipeBack from "#hooks/useSwipeBack";
 import RelativeTime from "#components/RelativeTime";
 import ConfirmModal from "#components/ConfirmModal";
 import { PageCrumbs } from "#layout/AppBar";
@@ -31,7 +30,6 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function JobPageShell({ job, actions, children }: Props) {
   const navigate = useNavigate();
-  const swipeRef = useSwipeBack(navigate);
   const { isRunning, latestRun, start, starting, cancel, cancelling } = actions;
   const fields = jobUi(job);
   const description = fields.description;
@@ -52,7 +50,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
     latestRun && latestRun.status !== "running" ? formatElapsed(latestRun.startedAt, latestRun.finishedAt) : null;
 
   return (
-    <div ref={swipeRef} className={styles.jobDetail}>
+    <div className={styles.jobDetail}>
       <PageCrumbs crumbs={[{ label: job.name }]} />
 
       <div className={styles.jobDetailHeader}>

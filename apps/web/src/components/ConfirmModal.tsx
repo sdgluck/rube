@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 import Modal from "./Modal";
+import { haptic } from "@tinkerbell/native-client";
+import { useIsPhone } from "#hooks/useMediaQuery";
+import alertStyles from "./AlertActions.module.css";
 import styles from "./ConfirmModal.module.css";
 
 interface ConfirmModalProps {
@@ -28,6 +31,7 @@ export default function ConfirmModal({
   onCancel,
 }: ConfirmModalProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const isPhone = useIsPhone();
 
   // Destructive prompts open on Cancel so Enter can't confirm by reflex.
   useEffect(() => {
@@ -35,21 +39,41 @@ export default function ConfirmModal({
   }, [danger]);
 
   return (
-    <Modal open onClose={onCancel} title={title} size="sm" dismissOnBackdrop={!danger}>
+    <Modal open onClose={onCancel} title={title} size="sm" dismissOnBackdrop={!danger} presentation="alert">
       <p className={styles.message}>{message}</p>
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={danger ? styles.confirmDanger : styles.confirm}
-          onClick={onConfirm}
-          autoFocus={!danger}
-        >
-          {confirmLabel}
-        </button>
-        <button type="button" ref={cancelRef} className={styles.cancel} onClick={onCancel}>
-          {cancelLabel}
-        </button>
-      </div>
+      {isPhone ? (
+        // Cancel first on both platforms: iOS puts it on the left, Material
+        // puts the confirming action rightmost.
+        <div className={alertStyles.row}>
+          <button type="button" ref={cancelRef} className={alertStyles.action} onClick={onCancel}>
+            {cancelLabel}
+          </button>
+          <button
+            type="button"
+            className={danger ? alertStyles.actionDanger : alertStyles.actionBold}
+            onClick={() => {
+              if (danger) haptic("warning");
+              onConfirm();
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      ) : (
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={danger ? styles.confirmDanger : styles.confirm}
+            onClick={onConfirm}
+            autoFocus={!danger}
+          >
+            {confirmLabel}
+          </button>
+          <button type="button" ref={cancelRef} className={styles.cancel} onClick={onCancel}>
+            {cancelLabel}
+          </button>
+        </div>
+      )}
     </Modal>
   );
 }

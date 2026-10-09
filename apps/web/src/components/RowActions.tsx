@@ -1,6 +1,8 @@
 import { MoreHorizontal, type LucideIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIsPhone } from "#hooks/useMediaQuery";
+import ActionSheet from "./ActionSheet";
 import styles from "./RowActions.module.css";
 
 export type RowAction = {
@@ -31,6 +33,9 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // A popover pinned to a "…" in a list row is a desktop idiom; a phone gets
+  // an action sheet, which is also the only menu that survives a scroll.
+  const isPhone = useIsPhone();
 
   const inline = actions.filter((a) => a.inline);
   const overflow = actions.filter((a) => !a.inline);
@@ -40,7 +45,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
   // The menu is portalled and fixed: a row lives inside a horizontally
   // scrolling table wrapper, which would clip an absolutely positioned popover.
   useLayoutEffect(() => {
-    if (!open || !buttonRef.current) return;
+    if (!open || isPhone || !buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
     const width = menuRef.current?.offsetWidth ?? 168;
     const height = menuRef.current?.offsetHeight ?? 0;
@@ -49,10 +54,10 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
       top: flipUp ? Math.max(8, rect.top - height - 4) : rect.bottom + 4,
       left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)),
     });
-  }, [open]);
+  }, [open, isPhone]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isPhone) return;
     const close = () => setOpen(false);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
@@ -72,7 +77,7 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
-  }, [open]);
+  }, [open, isPhone]);
 
   if (actions.length === 0) return null;
 
@@ -146,7 +151,20 @@ export default function RowActions({ actions, label = "Row actions" }: { actions
           >
             <MoreHorizontal size="1.6rem" strokeWidth={2} />
           </button>
+          {isPhone && (
+            <ActionSheet
+              open={open}
+              onClose={() => setOpen(false)}
+              actions={overflow.map((a) => ({
+                label: a.label,
+                onSelect: a.onSelect,
+                danger: a.danger,
+                disabled: a.disabled,
+              }))}
+            />
+          )}
           {open &&
+            !isPhone &&
             createPortal(
               <div
                 ref={menuRef}

@@ -1,6 +1,8 @@
-import { lazy, Suspense, useState, useCallback } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "#components/ErrorBoundary";
+import { useIsPhone } from "#hooks/useMediaQuery";
+import { OPEN_SEARCH_EVENT } from "#lib/openSearch";
 import ScrollRestoration from "#layout/ScrollRestoration";
 import { AppBarProvider } from "#layout/AppBar";
 import CommandPalette from "#components/CommandPalette";
@@ -45,6 +47,7 @@ const SettingsHistory = lazy(() => import("#pages/Settings/SettingsHistory"));
 const SettingsSecurity = lazy(() => import("#pages/Settings/SettingsSecurity"));
 const SettingsApi = lazy(() => import("#pages/Settings/SettingsApi"));
 const SettingsMobile = lazy(() => import("#pages/Settings/SettingsMobile"));
+const SettingsIndex = lazy(() => import("#pages/Settings/SettingsIndex"));
 const SettingsPortal = lazy(() => import("#pages/Settings/Portal/SettingsPortal"));
 const SettingsPortalPersonalization = lazy(() => import("#pages/Settings/Portal/SettingsPortalPersonalization"));
 const SettingsPortalComponents = lazy(() => import("#pages/Settings/Portal/SettingsPortalComponents"));
@@ -116,6 +119,20 @@ export default function App() {
     setCommandPaletteOpen(true);
   }, []);
 
+  const isPhone = useIsPhone();
+  const banners = (
+    <>
+      <AuthBanner />
+      <OnboardingBanner />
+    </>
+  );
+
+  useEffect(() => {
+    const onOpen = () => openPalette();
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
+  }, [openPalette]);
+
   useDocumentTitle();
   useKeyboardShortcuts(setShortcutsHelpOpen, openPalette);
   useMigrationCompletionInvalidator();
@@ -160,10 +177,10 @@ export default function App() {
           <ScrollRestoration />
           {/* Above the AppBarProvider, so it sits over the breadcrumb rather than
             between it and the page: this is server-wide chrome, not a message
-            about whatever page you happen to be on. */}
-          <AuthBanner />
-          <OnboardingBanner />
-          <AppBarProvider>
+            about whatever page you happen to be on. On a phone the header is
+            pinned at the top, so the banners go just under it instead. */}
+          {!isPhone && banners}
+          <AppBarProvider notices={isPhone ? banners : undefined}>
             <ErrorBoundary>
               <Suspense fallback={<PageSkeleton />}>
                 <Routes>
@@ -419,7 +436,7 @@ export default function App() {
                     }
                   />
                   <Route path="/settings" element={<Settings />}>
-                    <Route index element={<Navigate to="/settings/plex" replace />} />
+                    <Route index element={<SettingsIndex />} />
                     <Route
                       path="plex"
                       element={

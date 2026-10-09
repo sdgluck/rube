@@ -72,9 +72,11 @@
   overflow: hidden;
 }
 
-.titleLink:hover .titleText {
-  color: var(--accent-text);
-  text-decoration: underline;
+@media (hover: hover) {
+  .titleLink:hover .titleText {
+    color: var(--accent-text);
+    text-decoration: underline;
+  }
 }
 
 .epLabel {
@@ -278,9 +280,11 @@
   text-decoration: none;
 }
 
-.eventLink:hover {
-  color: var(--accent-text);
-  text-decoration: underline;
+@media (hover: hover) {
+  .eventLink:hover {
+    color: var(--accent-text);
+    text-decoration: underline;
+  }
 }
 
 /* ─── Distribution bars ─────────────────────────────────────────────────── */
@@ -393,8 +397,10 @@
   transition: height 0.3s ease;
 }
 
-.barChartSlot:hover .barChartBar {
-  opacity: 0.85;
+@media (hover: hover) {
+  .barChartSlot:hover .barChartBar {
+    opacity: 0.85;
+  }
 }
 
 /* The bucket the reader is standing in — today, this hour. Full strength, so

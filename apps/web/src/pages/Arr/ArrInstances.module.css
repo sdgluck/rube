@@ -26,8 +26,10 @@
   text-decoration: none;
 }
 
-.instanceCardTitle:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .instanceCardTitle:hover {
+    text-decoration: underline;
+  }
 }
 
 .stats {

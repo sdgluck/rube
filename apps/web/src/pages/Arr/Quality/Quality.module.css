@@ -112,8 +112,10 @@
   cursor: pointer;
 }
 
-.presetTile:hover:not(:disabled) {
-  border-color: var(--line-hover);
+@media (hover: hover) {
+  .presetTile:hover:not(:disabled) {
+    border-color: var(--line-hover);
+  }
 }
 
 .presetTile:focus-visible {
@@ -126,10 +128,16 @@
   opacity: 0.6;
 }
 
-.presetTileActive,
-.presetTileActive:hover:not(:disabled) {
+.presetTileActive {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+@media (hover: hover) {
+  .presetTileActive:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
 }
 
 .presetName {

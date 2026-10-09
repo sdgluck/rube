@@ -59,15 +59,22 @@
   transition: background 0.08s;
 }
 
-.item:hover {
-  background: var(--fill-quiet);
+@media (hover: hover) {
+  .item:hover {
+    background: var(--fill-quiet);
+  }
 }
 
 /* The first result is pre-armed: ↵ opens it without touching the arrows. */
-.itemActive,
-.itemActive:hover {
+.itemActive {
   background: var(--accent-soft);
   color: var(--accent-ink);
+}
+@media (hover: hover) {
+  .itemActive:hover {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
 }
 
 .itemRow {
@@ -132,6 +139,66 @@
 
 @media (max-width: 480px) {
   .footerScopes {
+    display: none;
+  }
+}
+
+/* Phone only: the search sheet's Cancel. */
+.cancel {
+  display: none;
+}
+
+/* ─── Phones: the app's search screen ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .panel {
+    align-self: auto;
+    margin-top: 0;
+  }
+
+  .inputWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 1.2rem 0.8rem;
+    border-bottom: none;
+  }
+
+  /* The platform's search field: a filled, rounded well. */
+  .queryInput {
+    flex: 1;
+    padding: 0.9rem 1.2rem;
+    border-radius: var(--r-md);
+    background: var(--fill-quiet);
+    font-size: 1.7rem;
+  }
+
+  .cancel {
+    display: block;
+    flex: 0 0 auto;
+    padding: 0.8rem 0.4rem;
+    border: none;
+    background: none;
+    color: var(--accent-text);
+    font: var(--t-body);
+    font-size: 1.7rem;
+  }
+
+  .results {
+    flex: 1;
+    max-height: none;
+    padding: 0 0.8rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem);
+  }
+
+  .item {
+    min-height: 4.8rem;
+    font-size: 1.6rem;
+  }
+
+  .item:active {
+    background: var(--pressed);
+  }
+
+  .footer {
     display: none;
   }
 }

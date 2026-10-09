@@ -34,6 +34,7 @@ import noShadowedPrimitive from "./stylelint-plugins/no-shadowed-primitive.mjs";
 import breakpointScale from "./stylelint-plugins/breakpoint-scale.mjs";
 import primitiveGeometry from "./stylelint-plugins/primitive-geometry.mjs";
 import noPx from "./stylelint-plugins/no-px.mjs";
+import hoverMedia from "./stylelint-plugins/hover-media.mjs";
 
 /** Where the vocabulary is defined, for the token-exists rule. */
 const TOKEN_FILES = ["apps/web/src/App.css"];
@@ -49,7 +50,15 @@ const TOKEN_FILES = ["apps/web/src/App.css"];
 const PORTAL_TOKEN_FILES = ["apps/portal/src/tokens.css"];
 
 export default {
-  plugins: [strictValue, unknownCustomProperties, noShadowedPrimitive, breakpointScale, primitiveGeometry, noPx],
+  plugins: [
+    strictValue,
+    unknownCustomProperties,
+    noShadowedPrimitive,
+    breakpointScale,
+    primitiveGeometry,
+    noPx,
+    hoverMedia,
+  ],
 
   reportDescriptionlessDisables: true,
   reportInvalidScopeDisables: true,
@@ -111,6 +120,10 @@ export default {
     /* Lengths are rem so Settings → Appearance can scale the whole app from
        the root font size. A px length is one that doesn't move with it. */
     "tinkerbell/no-px": true,
+
+    /* A tap leaves :hover applied on a touchscreen, so hover styles stuck in
+       the phone apps. See stylelint-plugins/hover-media.mjs. */
+    "tinkerbell/hover-media": true,
   },
 
   overrides: [
@@ -145,6 +158,7 @@ export default {
         "tinkerbell/breakpoint-scale": null,
         "tinkerbell/primitive-geometry": null,
         "tinkerbell/no-px": null,
+        "tinkerbell/hover-media": null,
       },
     },
     {

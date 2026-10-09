@@ -4,8 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- viewport-fit=cover is required for env(safe-area-inset-*) to resolve to
-         anything but 0; the bottom nav and content padding both depend on it. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+         anything but 0; the bottom nav and content padding both depend on it.
+         interactive-widget=resizes-content makes the on-screen keyboard shrink
+         the layout viewport, so a pinned footer rises above it rather than
+         being covered. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0f1615" />
     <!-- The stylesheet reads `data-theme` off <html> and has no
@@ -28,6 +34,23 @@
           var scale = Number(localStorage.getItem("tb.scale"));
           if (scale >= 0.5 && scale <= 2) document.documentElement.style.setProperty("--ui-scale", String(scale));
         } catch (e) {}
+        // Platform conventions (see packages/native-client/src/platform.ts,
+        // which this mirrors). Before first paint, so the phone layout never
+        // draws in the wrong platform's style and then flips.
+        try {
+          var p = new URLSearchParams(location.search).get("platform");
+          if (p !== "ios" && p !== "android" && p !== "desktop") {
+            var ua = navigator.userAgent;
+            p = /android/i.test(ua)
+              ? "android"
+              : /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
+                ? "ios"
+                : "desktop";
+          }
+          document.documentElement.dataset.platform = p;
+        } catch (e) {
+          document.documentElement.dataset.platform = "desktop";
+        }
       })();
     </script>
     <!-- Archivo for interface text, IBM Plex Mono for anything the machine

@@ -42,6 +42,36 @@
   white-space: nowrap;
 }
 
-.dismiss:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .dismiss:hover {
+    opacity: 1;
+  }
+}
+
+.textShort {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .text {
+    display: none;
+  }
+
+  .textShort {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* One line under the phone header: the sentence, then its two actions. */
+@media (max-width: 768px) {
+  .banner {
+    flex-wrap: nowrap;
+    gap: 1rem;
+  }
+
+  .actions {
+    gap: 1rem;
+  }
 }

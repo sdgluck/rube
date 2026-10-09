@@ -57,8 +57,10 @@
   font-weight: 600;
 }
 
-.plexButton:hover:not(:disabled) {
-  filter: brightness(1.05);
+@media (hover: hover) {
+  .plexButton:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
 }
 
 .hint {

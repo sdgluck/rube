@@ -19,14 +19,7 @@ import FeatureWizard from "#pages/Jobs/FeatureWizard";
 import { isFeatureId } from "@tinkerbell/contracts";
 import { isRunActive } from "#pages/Jobs/shared/useRunLog";
 import { useJobsData } from "#pages/Jobs/useJobsData";
-
-function downloadJson(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
-  a.click();
-  URL.revokeObjectURL(url);
-}
+import { downloadJson } from "#pages/Rules/utils";
 
 export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
   const navigate = useNavigate();

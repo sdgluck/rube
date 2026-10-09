@@ -47,9 +47,11 @@
   text-decoration: none;
 }
 
-.lastWatchedLink:hover {
-  color: var(--accent-text);
-  text-decoration: underline;
+@media (hover: hover) {
+  .lastWatchedLink:hover {
+    color: var(--accent-text);
+    text-decoration: underline;
+  }
 }
 
 /* ─── Inline name editing ───────────────────────────────────────────────── */
@@ -62,8 +64,10 @@
   transition: background 0.15s;
 }
 
-.nameCell:hover {
-  background: var(--fill-quiet);
+@media (hover: hover) {
+  .nameCell:hover {
+    background: var(--fill-quiet);
+  }
 }
 
 .namePlaceholder {

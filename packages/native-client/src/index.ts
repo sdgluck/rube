@@ -16,9 +16,22 @@ export {
   subscribeConnection,
   type Connection,
 } from "./connection.ts";
-export { bootNative, hideSplash, isNative, onDeepLink, setStatusBarTheme } from "./boot.ts";
+export { bootNative, hideSplash, isNative, onDeepLink, onResume, setStatusBarTheme } from "./boot.ts";
 export { connectLink, isInAppPath, parseDeepLink, type DeepLink } from "./deep-links.ts";
 export { openExternal, saveFile } from "./files.ts";
+export { haptic, type HapticKind } from "./haptics.ts";
+export { watchKeyboard } from "./keyboard.ts";
+export { pushOverlay } from "./overlay-history.ts";
+export { applyPlatform, detectPlatform, getPlatform, type Platform } from "./platform.ts";
+export {
+  markTabNavigation,
+  navigateBack,
+  runTransition,
+  takeNavigationHint,
+  transitionFor,
+  transitionsEnabled,
+  type NavDirection,
+} from "./transitions.ts";
 export { biometryAvailable, unlock, watchLock } from "./lock.ts";
 export { nativePlexSignIn, SignInCancelled, type NativeSignInCalls } from "./plex-sign-in.ts";
 export { probeServer } from "./probe.ts";

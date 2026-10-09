@@ -27,8 +27,10 @@
     color 0.12s;
 }
 
-.trigger:hover {
-  border-color: var(--line-hover);
+@media (hover: hover) {
+  .trigger:hover {
+    border-color: var(--line-hover);
+  }
 }
 
 /* Any active filter is worth seeing from across the page — same treatment the
@@ -105,8 +107,10 @@
   text-overflow: ellipsis;
 }
 
-.option:hover {
-  background: var(--fill-quiet);
+@media (hover: hover) {
+  .option:hover {
+    background: var(--fill-quiet);
+  }
 }
 
 .optionCheck {
@@ -137,9 +141,11 @@
   cursor: pointer;
 }
 
-.clear:hover:not(:disabled) {
-  background: var(--fill-quiet);
-  color: var(--ink);
+@media (hover: hover) {
+  .clear:hover:not(:disabled) {
+    background: var(--fill-quiet);
+    color: var(--ink);
+  }
 }
 
 .clear:disabled {

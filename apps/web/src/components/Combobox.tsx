@@ -2,6 +2,8 @@ import { ChevronDown } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { comboView, type ComboOption } from "#lib/combobox";
 import controls from "#/styles/controls.module.css";
+import { useIsPhone } from "#hooks/useMediaQuery";
+import PickerSheet from "./PickerSheet";
 import styles from "./Combobox.module.css";
 
 interface ComboboxProps {
@@ -33,6 +35,10 @@ export default function Combobox({ id, value, onChange, options, placeholder, no
   const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
+  // On a phone the chevron opens a picker sheet and the field doesn't drop a
+  // list over the keyboard; typing freely still works as before.
+  const isPhone = useIsPhone();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const view = comboView(options, typed ? value : "", showAll);
   // The "Show all" row is the last keyboard stop when the filter hid anything.
@@ -89,8 +95,8 @@ export default function Combobox({ id, value, onChange, options, placeholder, no
           className={styles.input}
           value={value}
           placeholder={placeholder}
-          onFocus={() => openList(false)}
-          onClick={() => !open && openList(false)}
+          onFocus={() => !isPhone && openList(false)}
+          onClick={() => !isPhone && !open && openList(false)}
           onBlur={() => setOpen(false)}
           onKeyDown={onKeyDown}
           onChange={(e) => {
@@ -109,6 +115,7 @@ export default function Combobox({ id, value, onChange, options, placeholder, no
           // Keep focus in the field: a blur would close the list this opens.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
+            if (isPhone) return setSheetOpen(true);
             if (open && (!typed || showAll)) setOpen(false);
             else openList(true);
             inputRef.current?.focus();
@@ -118,7 +125,21 @@ export default function Combobox({ id, value, onChange, options, placeholder, no
         </button>
       </div>
 
-      {open && (options.length > 0 || view.hidden > 0) && (
+      {isPhone && (
+        <PickerSheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          title={placeholder ?? `Choose from ${options.length} ${noun}`}
+          options={options.map((o) => ({
+            value: o.value,
+            label: o.value,
+            detail: o.label !== o.value ? o.label : undefined,
+          }))}
+          selected={value ? [value] : []}
+          onToggle={(v) => onChange(v)}
+        />
+      )}
+      {open && !isPhone && (options.length > 0 || view.hidden > 0) && (
         <div className={styles.menu} id={listId} role="listbox">
           {view.options.length === 0 && (
             <p className={styles.empty}>

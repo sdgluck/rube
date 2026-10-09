@@ -11,8 +11,10 @@
   vertical-align: middle;
 }
 
-.expandToggle:hover {
-  color: var(--accent);
+@media (hover: hover) {
+  .expandToggle:hover {
+    color: var(--accent);
+  }
 }
 
 .childRow {
@@ -20,8 +22,10 @@
   cursor: pointer;
 }
 
-.childRow:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .childRow:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .childRowDepth1 {
@@ -68,6 +72,8 @@
   opacity: 0.85;
 }
 
-.cardSelect:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .cardSelect:hover {
+    opacity: 1;
+  }
 }

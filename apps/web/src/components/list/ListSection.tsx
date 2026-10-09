@@ -1,0 +1,30 @@
+import type { ReactNode } from "react";
+import styles from "./List.module.css";
+
+/**
+ * A group of rows with an optional header and footer — iOS's inset grouped
+ * table section, or a Material list with a subheader. The phone layout's
+ * settings, More screen and detail pages are made of these, the way native
+ * apps' are; on a desktop they render as a plain bordered card.
+ */
+export default function ListSection({
+  title,
+  footer,
+  children,
+  className,
+}: {
+  title?: ReactNode;
+  footer?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`${styles.section} ${className ?? ""}`}>
+      {title && <h2 className={styles.sectionTitle}>{title}</h2>}
+      <div className={styles.group} role="list">
+        {children}
+      </div>
+      {footer && <p className={styles.sectionFooter}>{footer}</p>}
+    </section>
+  );
+}

@@ -89,7 +89,9 @@
   z-index: 1;
 }
 
-.copyBtn:hover:not(:disabled) {
-  background: var(--on-dark-fill-2);
-  color: var(--on-accent);
+@media (hover: hover) {
+  .copyBtn:hover:not(:disabled) {
+    background: var(--on-dark-fill-2);
+    color: var(--on-accent);
+  }
 }

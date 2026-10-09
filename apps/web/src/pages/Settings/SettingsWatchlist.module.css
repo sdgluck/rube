@@ -132,8 +132,10 @@
   padding: 0;
 }
 
-.retry:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .retry:hover {
+    text-decoration: underline;
+  }
 }
 
 .retry:disabled {

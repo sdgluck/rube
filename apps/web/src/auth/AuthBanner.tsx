@@ -31,6 +31,8 @@ export default function AuthBanner() {
         Anyone who can reach this port can change anything here. You can require a Plex sign-in instead — only the
         account that owns this server gets in.
       </span>
+      {/* A phone has a line, not a paragraph, under its header. */}
+      <span className={styles.textShort}>Sign-in is off — anyone who can reach this server can change it.</span>
       <span className={styles.actions}>
         <Link to="/settings/security" className={styles.link}>
           Set it up

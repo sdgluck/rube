@@ -86,8 +86,10 @@
   font: inherit;
 }
 
-.choiceCard:hover {
-  border-color: var(--line-hover);
+@media (hover: hover) {
+  .choiceCard:hover {
+    border-color: var(--line-hover);
+  }
 }
 
 .choiceCard span {

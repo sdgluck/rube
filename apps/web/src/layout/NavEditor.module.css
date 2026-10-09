@@ -44,9 +44,11 @@
   color: inherit;
 }
 
-.headerButton:hover:not(:disabled),
-.headerDone:hover:not(:disabled) {
-  background: color-mix(in srgb, currentColor 10%, transparent);
+@media (hover: hover) {
+  .headerButton:hover:not(:disabled),
+  .headerDone:hover:not(:disabled) {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
 }
 
 .headerButton:disabled {
@@ -90,8 +92,10 @@
   font-size: 1.3rem;
 }
 
-.row:hover {
-  background: color-mix(in srgb, currentColor 7%, transparent);
+@media (hover: hover) {
+  .row:hover {
+    background: color-mix(in srgb, currentColor 7%, transparent);
+  }
 }
 
 /* A hidden row keeps its place in the list rather than disappearing from it:
@@ -151,10 +155,12 @@
     background 0.15s;
 }
 
-.toggle:hover:not(:disabled),
-.arrow:hover:not(:disabled) {
-  opacity: 1;
-  background: color-mix(in srgb, currentColor 12%, transparent);
+@media (hover: hover) {
+  .toggle:hover:not(:disabled),
+  .arrow:hover:not(:disabled) {
+    opacity: 1;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
 }
 
 .toggle:disabled,

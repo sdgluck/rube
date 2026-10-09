@@ -122,8 +122,10 @@
     border-color 0.15s;
 }
 
-.userSelect:hover {
-  border-color: color-mix(in srgb, var(--on-accent) 25%, transparent);
+@media (hover: hover) {
+  .userSelect:hover {
+    border-color: color-mix(in srgb, var(--on-accent) 25%, transparent);
+  }
 }
 
 .userSelect:focus {
@@ -200,11 +202,13 @@
     border-color 0.15s;
 }
 
-a.hubChip:hover,
-button.hubChip:hover:not(:disabled) {
-  color: var(--plex);
-  border-color: color-mix(in srgb, var(--plex) 50%, transparent);
-  background: color-mix(in srgb, var(--plex) 8%, transparent);
+@media (hover: hover) {
+  a.hubChip:hover,
+  button.hubChip:hover:not(:disabled) {
+    color: var(--plex);
+    border-color: color-mix(in srgb, var(--plex) 50%, transparent);
+    background: color-mix(in srgb, var(--plex) 8%, transparent);
+  }
 }
 
 .hubChip:disabled {
@@ -232,19 +236,23 @@ button.hubChip:hover:not(:disabled) {
     color 0.15s;
 }
 
-a.hubProv:hover {
-  color: var(--plex);
-  background: color-mix(in srgb, var(--plex) 14%, transparent);
+@media (hover: hover) {
+  a.hubProv:hover {
+    color: var(--plex);
+    background: color-mix(in srgb, var(--plex) 14%, transparent);
+  }
 }
 
 .hubProvStatic {
   cursor: default;
 }
 
-.hubChipDanger:hover:not(:disabled) {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.08);
+@media (hover: hover) {
+  .hubChipDanger:hover:not(:disabled) {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.08);
+  }
 }
 
 /* ─── Card row ────────────────────────────────────────────────────────────── */
@@ -285,8 +293,10 @@ a.hubProv:hover {
   width: 22.8rem;
 }
 
-.mediaCard:hover {
-  transform: translateY(-2px);
+@media (hover: hover) {
+  .mediaCard:hover {
+    transform: translateY(-2px);
+  }
 }
 
 /* Unshadowed with the rest of the app. The lift on `.mediaCard:hover` stays: the
@@ -314,8 +324,10 @@ a.hubProv:hover {
   transition: border-color 0.18s ease;
 }
 
-.mediaCard:hover .posterWrap::after {
-  border-color: var(--plex);
+@media (hover: hover) {
+  .mediaCard:hover .posterWrap::after {
+    border-color: var(--plex);
+  }
 }
 
 .poster {

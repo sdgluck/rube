@@ -3,12 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="color-scheme" content="light dark" />
     <!-- Archivo, self-hosted from /fonts — see src/fonts.css. -->
     <link rel="preload" href="/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <meta name="theme-color" content="#0f1615" />
+    <!-- One per scheme: a single dark value painted a dark strip over the
+         light theme's page. -->
+    <meta name="theme-color" content="#e8efec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1413" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-title" content="Tinkerbell" />
+    <script>
+      (function () {
+        // Platform conventions (see packages/native-client/src/platform.ts,
+        // which this mirrors). Before first paint, so the phone layout never
+        // draws in the wrong platform's style and then flips.
+        try {
+          var p = new URLSearchParams(location.search).get("platform");
+          if (p !== "ios" && p !== "android" && p !== "desktop") {
+            var ua = navigator.userAgent;
+            p = /android/i.test(ua)
+              ? "android"
+              : /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
+                ? "ios"
+                : "desktop";
+          }
+          document.documentElement.dataset.platform = p;
+        } catch (e) {
+          document.documentElement.dataset.platform = "desktop";
+        }
+      })();
+    </script>
     <title>Tinkerbell</title>
   </head>
   <body>

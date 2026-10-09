@@ -26,8 +26,10 @@
   cursor: pointer;
 }
 
-.step.stepClickable:hover .stepLabel {
-  color: var(--ink);
+@media (hover: hover) {
+  .step.stepClickable:hover .stepLabel {
+    color: var(--ink);
+  }
 }
 
 .stepDot {
@@ -131,8 +133,10 @@
   position: relative;
 }
 
-.typeCard:hover:not(:disabled) {
-  border-color: var(--line-hover);
+@media (hover: hover) {
+  .typeCard:hover:not(:disabled) {
+    border-color: var(--line-hover);
+  }
 }
 
 .typeCard:active:not(:disabled) {
@@ -147,10 +151,15 @@
 /* The 3px accent halo is gone: the border colour and the tinted fill already
    say "selected", and the soft glow was the one thing left on this step still
    reading as depth. */
-.typeCardSelected,
-.typeCardSelected:hover:not(:disabled) {
+.typeCardSelected {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+@media (hover: hover) {
+  .typeCardSelected:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
 }
 
 .typeCardName {
@@ -327,17 +336,27 @@
     border-color 0.15s;
 }
 
-.pill:hover:not(:disabled) {
-  border-color: var(--line-hover);
-  color: var(--ink);
+@media (hover: hover) {
+  .pill:hover:not(:disabled) {
+    border-color: var(--line-hover);
+    color: var(--ink);
+  }
 }
 
-.pillSelected,
-.pillSelected:hover:not(:disabled) {
+.pillSelected {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-ink);
   font-weight: 600;
+}
+
+@media (hover: hover) {
+  .pillSelected:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
 }
 
 /* Section chips */
@@ -369,17 +388,27 @@
     border-color 0.15s;
 }
 
-.chip:hover:not(:disabled) {
-  border-color: var(--line-hover);
-  color: var(--ink);
+@media (hover: hover) {
+  .chip:hover:not(:disabled) {
+    border-color: var(--line-hover);
+    color: var(--ink);
+  }
 }
 
-.chipSelected,
-.chipSelected:hover:not(:disabled) {
+.chipSelected {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-ink);
   font-weight: 600;
+}
+
+@media (hover: hover) {
+  .chipSelected:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
 }
 
 .chip:disabled {

@@ -230,8 +230,10 @@
   cursor: pointer;
 }
 
-.cardTitle:hover {
-  color: var(--accent-text);
+@media (hover: hover) {
+  .cardTitle:hover {
+    color: var(--accent-text);
+  }
 }
 
 .cardStatus {
@@ -281,7 +283,7 @@
 
 .syncBar {
   position: sticky;
-  top: 0;
+  top: var(--sticky-top);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -466,8 +468,10 @@
   cursor: pointer;
 }
 
-.scanRow:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .scanRow:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .scanName {

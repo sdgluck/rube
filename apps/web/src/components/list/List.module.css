@@ -1,0 +1,262 @@
+/* ─── Native lists ──────────────────────────────────────────────────────────
+   ListSection / ListRow / SwipeRow. iOS inset grouped by default: rounded
+   groups on the page colour, hairlines inset past the leading icon, a grey
+   uppercase header. Material in the [data-platform="android"] rules: flat
+   rows, no group card, a coloured subheader. On a desktop a section is a
+   plain card. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.section + .section {
+  margin-top: 2rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  padding: 0 1.6rem;
+  font: var(--t-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+.sectionFooter {
+  margin: 0;
+  padding: 0 1.6rem;
+  font: var(--t-caption);
+  color: var(--ink-3);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--r-list);
+  background: var(--surface);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  width: 100%;
+  min-height: 4.6rem;
+  padding: 0.8rem 1.6rem;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: var(--t-body);
+  font-size: 1.6rem;
+  text-align: left;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* The hairline between rows starts where the text does, past the icon. */
+.row + .row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 1.6rem;
+  right: 0;
+  height: 1px;
+  background: var(--list-sep);
+}
+
+.row:has(.leading) + .row::before,
+.row + .row:has(.leading)::before {
+  left: 5.6rem;
+}
+
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:active {
+  background: var(--pressed);
+}
+
+@media (hover: hover) {
+  .interactive:hover {
+    background: var(--fill-hover);
+  }
+}
+
+.leading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitle {
+  overflow: hidden;
+  font-size: 1.3rem;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.destructive {
+  color: var(--danger);
+}
+
+.value {
+  flex: 0 0 auto;
+  max-width: 45%;
+  overflow: hidden;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  margin-right: -0.4rem;
+  color: var(--ink-faint);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: var(--r-md);
+  color: var(--on-accent);
+}
+
+.icon svg {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.icon_accent {
+  background: var(--accent-fill);
+}
+
+.icon_neutral {
+  background: var(--ink-4);
+}
+
+.icon_warn {
+  background: var(--status-warn-dot);
+}
+
+.icon_danger {
+  background: var(--danger);
+}
+
+/* ─── Swipe rows ─────────────────────────────────────────────────────────── */
+
+.swipe {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.swipeContent {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.swipeSettling {
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.swipeActions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.swipeLeading {
+  justify-content: flex-start;
+}
+
+.swipeTrailing {
+  justify-content: flex-end;
+}
+
+.swipeAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 1.2rem;
+  border: none;
+  color: var(--on-accent);
+  font: var(--t-body);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.swipe_accent {
+  background: var(--accent-fill);
+}
+
+.swipe_danger {
+  background: var(--danger);
+}
+
+.swipe_neutral {
+  background: var(--ink-4);
+}
+
+/* ─── Material ───────────────────────────────────────────────────────────── */
+
+:global(html[data-platform="android"]) .sectionTitle {
+  padding: 0 1.6rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent-text);
+}
+
+:global(html[data-platform="android"]) .row {
+  min-height: 5.6rem;
+  padding: 1.2rem 1.6rem;
+}
+
+:global(html[data-platform="android"]) .row + .row::before {
+  display: none;
+}
+
+:global(html[data-platform="android"]) .chevron {
+  display: none;
+}
+
+:global(html[data-platform="android"]) .icon {
+  background: none;
+  color: var(--ink-2);
+}
+
+/* Desktop: a plain card with dividers, not a phone's inset group. */
+@media (min-width: 769px) {
+  .group {
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+  }
+}

@@ -1,0 +1,296 @@
+/* ─── The phone layer ────────────────────────────────────────────────────────
+ *
+ * Global rules that make the phone layout (≤ --bp-md) behave like a native app
+ * rather than a narrow website, in the native apps and in phone browsers
+ * alike. Loaded after App.css so it can override the shell's responsive block
+ * without editing it piecemeal. Platform details read `<html data-platform>`
+ * (see packages/native-client/src/platform.ts): iOS is the default look and
+ * Material is layered on with `[data-platform="android"]`.
+ *
+ * Component-level phone styles (sheets, alerts, action sheets, the header)
+ * live with their components; this file is only what belongs to the page as
+ * a whole.
+ */
+
+/* ─── Touch baseline ─────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  html {
+    /* The grey box a WebView flashes over anything tapped. Every control here
+       has its own :active state instead. */
+    -webkit-tap-highlight-color: transparent;
+    /* No double-tap-to-zoom delay, no accidental zoom on a fast double tap. */
+    touch-action: manipulation;
+    /* iOS inflates "small" text on rotation; nothing here asks for that. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Chrome doesn't select. A long press on a tab, a button or a list row
+     selecting its label (and on iOS raising the magnifier and the callout) is
+     the surest sign of a web page. Content — descriptions, logs, values —
+     stays selectable, and so does anything you type in. */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  summary,
+  label,
+  nav,
+  th,
+  .app-bar,
+  .bottom-nav {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  a,
+  img {
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* 16px or larger, or iOS zooms the whole page in when a field takes focus
+     and leaves it zoomed. The interface-size setting can shrink rem, so the
+     floor is in px. */
+  :root {
+    /* stylelint-disable-next-line tinkerbell/no-px -- iOS's zoom-on-focus threshold is 16 CSS px exactly, whatever the root size */
+    --input-font-size: max(1.6rem, 16px);
+  }
+
+  /* Hints for keys a phone doesn't have. */
+  kbd,
+  [data-keyboard-hint] {
+    display: none !important;
+  }
+}
+
+/* ─── The shell ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  /* The document scrolls, not an inner column. On a desktop the column has to
+     scroll so the sidebar can stay put; a phone has no sidebar, and only a
+     document scroll gets the platform's own behaviour — iOS's tap-the-status-
+     bar-to-top and rubber band, mobile Safari's collapsing toolbar, and the
+     window-based scroll restoration and pull-to-refresh this app already had
+     but which never fired because the window never moved. */
+  .layout {
+    height: auto;
+    min-height: 100dvh;
+    padding-top: 0;
+  }
+
+  .content {
+    overflow: visible;
+    min-height: 100dvh;
+  }
+
+  /* The pinned header carries its own status-bar padding now. */
+  body::before {
+    display: none;
+  }
+
+  html {
+    background: var(--page);
+  }
+
+  .content > * {
+    padding: 1.2rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + var(--tabbar-h) + 2.4rem);
+  }
+
+  /* An iOS large title sits in the page, above the first content, in the
+     same gutter as the body. */
+  .content > .app-large-title {
+    flex: 0 0 auto;
+    padding: 0.4rem 1.6rem 0;
+  }
+
+  .content > .app-bar {
+    padding: env(safe-area-inset-top, 0px) 0.8rem 0;
+  }
+
+  /* ─── Tab bar: iOS ─────────────────────────────────────────────────────── */
+
+  .bottom-nav {
+    height: calc(env(safe-area-inset-bottom, 0px) + var(--tabbar-h));
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--bar-line);
+    background: var(--bar-bg);
+    backdrop-filter: saturate(1.8) blur(2rem);
+    -webkit-backdrop-filter: saturate(1.8) blur(2rem);
+  }
+
+  .bottom-nav-item {
+    gap: 0.2rem;
+    padding: 0.4rem 0 0;
+    justify-content: flex-start;
+    border-radius: 0;
+    color: var(--ink-4);
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--accent-text);
+    background: none;
+  }
+
+  .bottom-nav-item:active {
+    opacity: 0.6;
+  }
+
+  .bottom-nav-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+
+  /* Typing: the keyboard is the bottom of the screen now, and a tab bar
+     riding on top of it takes a fifth of what's left. */
+  html[data-keyboard="open"] .bottom-nav {
+    display: none;
+  }
+
+  /* ─── Tab bar: Material navigation bar ─────────────────────────────────── */
+
+  html[data-platform="android"] .bottom-nav {
+    height: calc(env(safe-area-inset-bottom, 0px) + 8rem);
+    border-top: none;
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  html[data-platform="android"] .bottom-nav-item {
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0;
+    color: var(--ink-2);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  html[data-platform="android"] .bottom-nav-item:active {
+    opacity: 1;
+  }
+
+  /* The active indicator: a pill behind the icon only, not the whole tab. */
+  html[data-platform="android"] .bottom-nav-icon {
+    box-sizing: content-box;
+    width: 2.4rem;
+    height: 2.4rem;
+    padding: 0.4rem 2rem;
+    border-radius: var(--r-pill);
+    transition: background 0.2s;
+  }
+
+  html[data-platform="android"] .bottom-nav-item.active {
+    color: var(--ink);
+  }
+
+  html[data-platform="android"] .bottom-nav-item.active .bottom-nav-icon {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  /* The desktop's route fade would play on top of the native transition. */
+  .animated-page {
+    animation: none;
+  }
+
+  html[data-platform="android"] .content > * {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8rem + 2.4rem);
+  }
+}
+
+/* ─── Page transitions ───────────────────────────────────────────────────────
+   Driven by TransitionRouter (layout/) through the View Transitions API. The
+   tab bar is lifted out of the page snapshot so it holds still while screens
+   move behind it, as a native tab bar does; the header crossfades. */
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    view-transition-name: tabbar;
+  }
+
+  .app-bar {
+    view-transition-name: navbar;
+  }
+
+  ::view-transition-group(tabbar) {
+    animation: none;
+  }
+
+  /* iOS push: the new screen slides in over the old, which shifts a third of
+     the way left and dims. Pop is the same played backwards. */
+  html[data-nav="push"]::view-transition-old(root) {
+    animation: 420ms cubic-bezier(0.32, 0.72, 0, 1) both tb-recede;
+  }
+
+  html[data-nav="push"]::view-transition-new(root) {
+    animation: 420ms cubic-bezier(0.32, 0.72, 0, 1) both tb-enter;
+  }
+
+  html[data-nav="pop"]::view-transition-old(root) {
+    z-index: 1;
+    animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both tb-leave;
+  }
+
+  html[data-nav="pop"]::view-transition-new(root) {
+    animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both tb-return;
+  }
+
+  /* Material: fade-through in both directions. */
+  html[data-platform="android"][data-nav]::view-transition-old(root) {
+    z-index: auto;
+    animation: 90ms cubic-bezier(0.4, 0, 1, 1) both tb-fade-out;
+  }
+
+  html[data-platform="android"][data-nav]::view-transition-new(root) {
+    animation: 210ms cubic-bezier(0, 0, 0.2, 1) 90ms both tb-fade-through;
+  }
+}
+
+@keyframes tb-enter {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes tb-recede {
+  to {
+    transform: translateX(-30%);
+    filter: brightness(0.92);
+  }
+}
+
+@keyframes tb-leave {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes tb-return {
+  from {
+    transform: translateX(-30%);
+    filter: brightness(0.92);
+  }
+}
+
+@keyframes tb-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tb-fade-through {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}

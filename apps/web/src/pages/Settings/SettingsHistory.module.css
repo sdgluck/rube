@@ -16,9 +16,11 @@
   cursor: pointer;
 }
 
-.filter:hover {
-  border-color: var(--line-hover);
-  color: var(--ink);
+@media (hover: hover) {
+  .filter:hover {
+    border-color: var(--line-hover);
+    color: var(--ink);
+  }
 }
 
 .filterActive {

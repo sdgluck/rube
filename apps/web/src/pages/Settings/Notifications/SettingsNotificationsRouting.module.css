@@ -58,8 +58,10 @@ thead .eventHead.eventHead {
   justify-content: center;
 }
 
-.cellToggle:hover:not(:disabled) {
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .cellToggle:hover:not(:disabled) {
+    background: var(--fill-hover);
+  }
 }
 
 .cellToggle:disabled {

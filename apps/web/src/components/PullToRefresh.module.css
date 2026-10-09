@@ -6,27 +6,56 @@
   min-height: 0;
 }
 
+/* iOS: the content moves down with the finger and the spinner sits in the
+   gap above it. */
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.settling {
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 .indicator {
   position: absolute;
-  top: -4rem;
+  top: calc(var(--pull, 0) / 2 - 1.6rem);
   left: 50%;
-  transform: translateX(-50%);
-  width: 3.2rem;
-  height: 3.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
+  width: 3.2rem;
+  height: 3.2rem;
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
-.arrow {
-  width: 2rem;
-  height: 2rem;
-  color: var(--ink-3);
-  transition: transform 0.2s ease;
+/* The spinner-to-be: a ring that draws itself as the pull approaches the
+   threshold, then becomes the real spinner. */
+.ring {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: conic-gradient(var(--ink-3) calc(var(--progress, 0) * 360deg), transparent 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 0.25rem), var(--ink) calc(100% - 0.2rem));
 }
 
-.arrowReady {
-  transform: rotate(180deg);
+/* Android: content stays still; a Material disc drops in over it. */
+:global(html[data-platform="android"]) .content {
+  transform: none !important;
+}
+
+:global(html[data-platform="android"]) .indicator {
+  z-index: var(--z-dropdown);
+  top: calc(var(--pull, 0) - 3.6rem);
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--e-float);
+}
+
+:global(html[data-platform="android"]) .ring {
+  background: conic-gradient(var(--accent-text) calc(var(--progress, 0) * 360deg), transparent 0);
 }

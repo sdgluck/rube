@@ -1,10 +1,9 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { trpc } from "#/trpc";
 import RelativeTime from "#components/RelativeTime";
 import { DetailSkeleton } from "#components/Skeleton";
 import { PageCrumbs } from "#layout/AppBar";
 import StatusBadge from "./shared/StatusBadge";
-import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "./Jobs.module.css";
 import RunLog from "#components/RunLog";
 import { formatDuration, formatElapsed } from "#/format";
@@ -20,8 +19,6 @@ function formatEta(startMs: number, progress: number): string | null {
 
 export default function JobRun() {
   const { runId } = useParams<{ runId: string }>();
-  const navigate = useNavigate();
-  const swipeRef = useSwipeBack(navigate);
 
   const runQuery = trpc.jobs.run.useQuery(
     { runId: runId! },
@@ -43,7 +40,7 @@ export default function JobRun() {
   if (!run) return <p>Run not found</p>;
 
   return (
-    <div ref={swipeRef} className={styles.runDetail}>
+    <div className={styles.runDetail}>
       <PageCrumbs
         crumbs={[{ label: run.jobName ?? run.jobId, to: `/jobs/${run.jobId}` }, { label: `Run ${run.id}` }]}
       />

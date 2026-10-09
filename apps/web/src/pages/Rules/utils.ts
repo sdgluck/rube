@@ -1,7 +1,5 @@
-export function downloadJson(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
-  a.click();
-  URL.revokeObjectURL(url);
+import { saveFile } from "@tinkerbell/native-client";
+/** A download in the browser, the share sheet in the app — see `saveFile`. */
+export function downloadJson(data: unknown, filename: string): Promise<void> {
+  return saveFile(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), filename);
 }

@@ -124,15 +124,24 @@
     background 0.15s;
 }
 
-.pageTab:hover {
-  color: var(--ink);
+@media (hover: hover) {
+  .pageTab:hover {
+    color: var(--ink);
+  }
 }
 
-.pageTabActive,
-.pageTabActive:hover {
+.pageTabActive {
   background: var(--surface);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--line);
+}
+
+@media (hover: hover) {
+  .pageTabActive:hover {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
 }
 
 /* A count beside a tab label — how many rows the tab would show. */
@@ -144,6 +153,49 @@
 
 .pageTabActive .pageTabCount {
   color: inherit;
+}
+
+/* Phones: a page's sub-tabs are a full-width segmented control on iOS and a
+   Material tab row (labels over an underline indicator) on Android. */
+@media (max-width: 768px) {
+  .pageTabs {
+    display: flex;
+    align-self: stretch;
+    flex-wrap: nowrap;
+    border-radius: var(--r-md);
+    background: var(--fill-track);
+  }
+
+  .pageTab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 3.2rem;
+    font-size: 1.4rem;
+  }
+
+  .pageTabActive {
+    box-shadow: var(--e-float);
+  }
+
+  :global(html[data-platform="android"]) .pageTabs {
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+  }
+
+  :global(html[data-platform="android"]) .pageTab {
+    min-height: 4.8rem;
+    border-radius: 0;
+    color: var(--ink-2);
+  }
+
+  :global(html[data-platform="android"]) .pageTabActive {
+    background: none;
+    box-shadow: inset 0 -0.3rem 0 var(--accent-text);
+    color: var(--accent-text);
+  }
 }
 
 /* ─── Table ───────────────────────────────────────────────────────────────
@@ -215,8 +267,10 @@
   border-bottom: none;
 }
 
-.table tr:hover td {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .table tr:hover td {
+    background: var(--surface-sunken);
+  }
 }
 
 .clickableRow {
@@ -252,8 +306,10 @@
   text-decoration: none;
 }
 
-.cellLink:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .cellLink:hover {
+    text-decoration: underline;
+  }
 }
 
 .tableFooter {
@@ -315,8 +371,10 @@
   border-bottom: none;
 }
 
-.compactTable tbody tr:hover td {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .compactTable tbody tr:hover td {
+    background: var(--surface-sunken);
+  }
 }
 
 /* ─── Chips, pills, tags ──────────────────────────────────────────────── */
@@ -354,8 +412,10 @@
   padding: 0 2px;
 }
 
-.labelRemove:hover {
-  color: inherit;
+@media (hover: hover) {
+  .labelRemove:hover {
+    color: inherit;
+  }
 }
 
 /* Cron expressions, codecs, resolutions, file data. */
@@ -431,8 +491,10 @@
   padding: 0;
 }
 
-.filterChipRemove:hover {
-  color: var(--ink-2);
+@media (hover: hover) {
+  .filterChipRemove:hover {
+    color: var(--ink-2);
+  }
 }
 
 /* ─── Bulk actions ────────────────────────────────────────────────────────
@@ -501,8 +563,10 @@
   border-color: transparent;
 }
 
-.bulkBtn:hover:not(:disabled) {
-  background: var(--on-dark-fill-2);
+@media (hover: hover) {
+  .bulkBtn:hover:not(:disabled) {
+    background: var(--on-dark-fill-2);
+  }
 }
 
 .bulkBtnDanger {
@@ -512,8 +576,10 @@
   border-color: transparent;
 }
 
-.bulkBtnDanger:hover:not(:disabled) {
-  background: var(--danger-hover);
+@media (hover: hover) {
+  .bulkBtnDanger:hover:not(:disabled) {
+    background: var(--danger-hover);
+  }
 }
 
 .bulkBtnClear {
@@ -523,9 +589,11 @@
   border-color: transparent;
 }
 
-.bulkBtnClear:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--on-accent) 8%, transparent);
-  color: var(--on-accent);
+@media (hover: hover) {
+  .bulkBtnClear:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--on-accent) 8%, transparent);
+    color: var(--on-accent);
+  }
 }
 
 .checkboxCell {
@@ -545,8 +613,10 @@
   background: var(--accent-soft);
 }
 
-.table tr.selectedRow:hover td {
-  background: var(--accent-soft);
+@media (hover: hover) {
+  .table tr.selectedRow:hover td {
+    background: var(--accent-soft);
+  }
 }
 
 /* ─── Label editor ────────────────────────────────────────────────────────── */
@@ -649,9 +719,11 @@
   border-radius: var(--r-md);
 }
 
-.card:hover .cardPoster,
-.card:hover .cardPosterPlaceholder {
-  opacity: 0.85;
+@media (hover: hover) {
+  .card:hover .cardPoster,
+  .card:hover .cardPosterPlaceholder {
+    opacity: 0.85;
+  }
 }
 
 .cardPoster {
@@ -818,8 +890,10 @@
   transition: opacity 0.15s;
 }
 
-.cardDense:hover {
-  opacity: 0.85;
+@media (hover: hover) {
+  .cardDense:hover {
+    opacity: 0.85;
+  }
 }
 
 .cardDense .cardPoster,
@@ -845,9 +919,21 @@
   border-radius: var(--r-md);
 }
 
-.cardDense:hover .cardOverlay,
 .cardDense:focus-within .cardOverlay {
   opacity: 1;
+}
+
+@media (hover: hover) {
+  .cardDense:hover .cardOverlay {
+    opacity: 1;
+  }
+}
+
+/* Touch has no hover to reveal the caption with, so it is always shown. */
+@media (hover: none) {
+  .cardOverlay {
+    opacity: 1;
+  }
 }
 
 .cardOverlayTitle {
@@ -1036,9 +1122,11 @@
     color 0.15s;
 }
 
-.metaChipLink:hover {
-  background: var(--accent-fill);
-  color: var(--on-accent);
+@media (hover: hover) {
+  .metaChipLink:hover {
+    background: var(--accent-fill);
+    color: var(--on-accent);
+  }
 }
 
 .ruleLink {
@@ -1048,8 +1136,10 @@
   font-weight: 500;
 }
 
-.ruleLink:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .ruleLink:hover {
+    text-decoration: underline;
+  }
 }
 
 .muted {
@@ -1071,11 +1161,17 @@
 
 /* Active means "filters are hiding rows from you" — it has to be legible at a
    glance, hence the accent fill and the count. */
-.advancedFilterToggleActive,
-.advancedFilterToggleActive:hover:not(:disabled) {
+.advancedFilterToggleActive {
   background: var(--accent-soft);
   border-color: var(--line-accent);
   color: var(--accent-ink);
+}
+@media (hover: hover) {
+  .advancedFilterToggleActive:hover:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: var(--line-accent);
+    color: var(--accent-ink);
+  }
 }
 
 .advancedFilterBadge {
@@ -1112,8 +1208,10 @@
   white-space: nowrap;
 }
 
-.clearFilters:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .clearFilters:hover {
+    text-decoration: underline;
+  }
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
@@ -1291,7 +1389,6 @@
     padding: 1rem 1.2rem;
   }
 
-  .table tr:hover td,
   .table td {
     background: none;
     border: none;
@@ -1299,6 +1396,17 @@
     padding: 0;
     font: var(--t-data);
     color: var(--ink-3);
+  }
+
+  @media (hover: hover) {
+    .table tr:hover td {
+      background: none;
+      border: none;
+      height: auto;
+      padding: 0;
+      font: var(--t-data);
+      color: var(--ink-3);
+    }
   }
 
   /* Roles order themselves, so every card reads title → meta → pill whatever

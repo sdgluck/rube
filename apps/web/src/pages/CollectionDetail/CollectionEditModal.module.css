@@ -39,8 +39,10 @@
   cursor: pointer;
 }
 
-.step:hover .stepLabel {
-  color: var(--ink);
+@media (hover: hover) {
+  .step:hover .stepLabel {
+    color: var(--ink);
+  }
 }
 
 .stepDot {

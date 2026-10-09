@@ -40,9 +40,11 @@
     background 0.12s ease;
 }
 
-.summaryItemLink:hover {
-  background: var(--surface-header);
-  box-shadow: inset 0 0 0 1px var(--line-hover);
+@media (hover: hover) {
+  .summaryItemLink:hover {
+    background: var(--surface-header);
+    box-shadow: inset 0 0 0 1px var(--line-hover);
+  }
 }
 
 .summaryItemLink:focus-visible {
@@ -152,9 +154,11 @@
   color: var(--ink-faint);
 }
 
-.summaryItemLink:hover .summarySub,
-.summaryItemLink:hover .summarySubArrow {
-  color: var(--accent-text);
+@media (hover: hover) {
+  .summaryItemLink:hover .summarySub,
+  .summaryItemLink:hover .summarySubArrow {
+    color: var(--accent-text);
+  }
 }
 
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
@@ -205,8 +209,10 @@
   user-select: none;
 }
 
-.panelDragHandle:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .panelDragHandle:hover {
+    opacity: 1;
+  }
 }
 
 .panelDragHandle:active {
@@ -258,8 +264,10 @@
   flex-shrink: 0;
 }
 
-.panelTitleToggle:hover .panelChevron {
-  color: var(--ink-2);
+@media (hover: hover) {
+  .panelTitleToggle:hover .panelChevron {
+    color: var(--ink-2);
+  }
 }
 
 .panelTitleToggle:focus-visible {
@@ -383,8 +391,10 @@
   border-radius: var(--r-tag);
 }
 
-.tilePickerOption:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .tilePickerOption:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .tilePickerOptionDisabled {
@@ -392,8 +402,10 @@
   opacity: 0.45;
 }
 
-.tilePickerOptionDisabled:hover {
-  background: transparent;
+@media (hover: hover) {
+  .tilePickerOptionDisabled:hover {
+    background: transparent;
+  }
 }
 
 /* A panel's row in the picker: name, and under it what the panel is for. The
@@ -466,10 +478,12 @@
   justify-content: center;
 }
 
-.tilePickerArrow:hover:not(:disabled),
-.tilePickerRemove:hover {
-  background: var(--surface);
-  color: var(--ink);
+@media (hover: hover) {
+  .tilePickerArrow:hover:not(:disabled),
+  .tilePickerRemove:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
 }
 
 .tilePickerArrow:disabled {
@@ -477,9 +491,11 @@
   cursor: not-allowed;
 }
 
-.tilePickerRemove:hover {
-  color: var(--status-error-fg);
-  border-color: var(--status-error-fg);
+@media (hover: hover) {
+  .tilePickerRemove:hover {
+    color: var(--status-error-fg);
+    border-color: var(--status-error-fg);
+  }
 }
 
 .tilePickerActions {

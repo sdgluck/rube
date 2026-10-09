@@ -91,9 +91,11 @@
   font: inherit;
 }
 
-.preset:hover:not(:disabled) {
-  border-color: var(--line-hover);
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .preset:hover:not(:disabled) {
+    border-color: var(--line-hover);
+    background: var(--fill-hover);
+  }
 }
 
 .preset:focus-visible {

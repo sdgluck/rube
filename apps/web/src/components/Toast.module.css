@@ -122,8 +122,10 @@
   inset: -1rem;
 }
 
-.dismiss:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .dismiss:hover {
+    opacity: 1;
+  }
 }
 
 .dismiss:focus-visible {
@@ -145,18 +147,64 @@
   white-space: nowrap;
 }
 
-/* Mobile: center above bottom nav */
+/* Phones: centred just above the tab bar, rising from the bottom edge rather
+   than sliding in from the right, and flickable away (Toast.tsx). Material
+   draws a full-width snackbar with square-ish corners. */
 @media (max-width: 768px) {
   .container {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, 8rem));
-    /* Mobile keeps an 80px default to clear the bottom nav. */
-    right: 1.6rem;
-    left: 1.6rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, calc(var(--tabbar-h) + 1.2rem)));
+    right: 1.2rem;
+    left: 1.2rem;
     align-items: center;
   }
 
   .toast {
     max-width: 100%;
+    font-size: 1.4rem;
+    touch-action: none;
+    animation: toastRise 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .toastExiting {
+    animation: toastSink 200ms ease-in forwards;
+  }
+
+  :global(html[data-platform="android"]) .container {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--toast-bottom-mobile, 9.2rem));
+  }
+
+  :global(html[data-platform="android"]) .toast {
+    width: 100%;
+    border-radius: var(--r-sm);
+  }
+
+  :global(html[data-platform="android"]) .dot {
+    display: none;
+  }
+}
+
+/* With the keyboard up there is no tab bar to clear. */
+@media (max-width: 768px) {
+  :global(html[data-keyboard="open"]) .container {
+    bottom: 1.2rem;
+  }
+}
+
+@keyframes toastRise {
+  from {
+    opacity: 0;
+    transform: translateY(2.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastSink {
+  to {
+    opacity: 0;
+    transform: translateY(2.4rem);
   }
 }
 
@@ -175,6 +223,8 @@
   white-space: nowrap;
 }
 
-.action:hover {
-  opacity: 0.8;
+@media (hover: hover) {
+  .action:hover {
+    opacity: 0.8;
+  }
 }

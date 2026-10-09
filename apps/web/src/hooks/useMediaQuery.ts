@@ -18,3 +18,11 @@ export function useMediaQuery(query: string): boolean {
 
   return matches;
 }
+
+/** The phone layout's breakpoint — `--bp-md` in App.css, the bottom-nav switch. */
+export const PHONE_QUERY = "(max-width: 768px)";
+
+/** True in the phone layout: bottom tabs, sheets, native lists. */
+export function useIsPhone(): boolean {
+  return useMediaQuery(PHONE_QUERY);
+}

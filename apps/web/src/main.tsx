@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import TransitionRouter from "#layout/TransitionRouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "#/trpc";
 import { ToastProvider } from "#components/Toast";
@@ -12,6 +12,8 @@ import { startThemeWatch } from "#/theme";
 import { startUiScale } from "#/ui-scale";
 import "#/styles/fonts.css";
 import "#/App.css";
+// After App.css: the phone layer overrides the shell's responsive block.
+import "#/styles/mobile.css";
 
 // index.html has already painted the resolved theme onto <html>; this takes
 // over from the boot script so that `system` keeps following the OS after load.
@@ -71,7 +73,7 @@ function render() {
     <StrictMode>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
+          <TransitionRouter>
             <ToastProvider>
               {/* Inside the router and the toast provider: the sign-in screen
                 is a route-level swap, not a separate app. */}
@@ -81,7 +83,7 @@ function render() {
                 </AuthGate>
               </NativeGate>
             </ToastProvider>
-          </BrowserRouter>
+          </TransitionRouter>
         </QueryClientProvider>
       </trpc.Provider>
     </StrictMode>,

@@ -5,6 +5,8 @@
   text-underline-offset: 2px;
 }
 
-.link:hover {
-  text-decoration: none;
+@media (hover: hover) {
+  .link:hover {
+    text-decoration: none;
+  }
 }

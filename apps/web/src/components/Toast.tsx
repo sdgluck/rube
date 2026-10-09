@@ -123,6 +123,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <div
                 key={toast.id}
                 className={`${styles.toast} ${styles[toast.type]} ${toast.exiting ? styles.toastExiting : ""}`}
+                {...swipeToDismiss(() => removeToast(toast.id))}
               >
                 <span className={styles.dot} aria-hidden="true" />
                 <span>{toast.message}</span>
@@ -162,4 +163,57 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       )}
     </ToastContext.Provider>
   );
+}
+
+/**
+ * Flick a toast away, sideways or down, as native toasts and snackbars go.
+ * Pointer events on the element itself: it follows the finger, and past a
+ * threshold (or a fast flick) it leaves; otherwise it springs back.
+ */
+function swipeToDismiss(onDismiss: () => void) {
+  let startX = 0;
+  let startY = 0;
+  let startT = 0;
+  let tracking = false;
+  return {
+    onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+      if (e.pointerType !== "touch" || (e.target as Element).closest("button")) return;
+      tracking = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startT = performance.now();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      e.currentTarget.style.transition = "none";
+    },
+    onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+      if (!tracking) return;
+      const dx = e.clientX - startX;
+      const dy = Math.max(0, e.clientY - startY);
+      e.currentTarget.style.transform = `translate(${dx}px, ${dy}px)`;
+      e.currentTarget.style.opacity = String(Math.max(0.2, 1 - Math.hypot(dx, dy) / 240));
+    },
+    onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+      if (!tracking) return;
+      tracking = false;
+      const dx = e.clientX - startX;
+      const dy = Math.max(0, e.clientY - startY);
+      const dist = Math.hypot(dx, dy);
+      const fast = dist / Math.max(1, performance.now() - startT) > 0.5;
+      const el = e.currentTarget;
+      el.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+      if (dist > 80 || (fast && dist > 24)) {
+        el.style.transform = `translate(${dx * 3}px, ${dy * 3}px)`;
+        el.style.opacity = "0";
+        onDismiss();
+      } else {
+        el.style.transform = "";
+        el.style.opacity = "";
+      }
+    },
+    onPointerCancel(e: React.PointerEvent<HTMLDivElement>) {
+      tracking = false;
+      e.currentTarget.style.transform = "";
+      e.currentTarget.style.opacity = "";
+    },
+  };
 }

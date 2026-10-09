@@ -64,9 +64,11 @@
   text-decoration: none;
 }
 
-.messageLink:hover {
-  color: var(--accent-text);
-  text-decoration: underline;
+@media (hover: hover) {
+  .messageLink:hover {
+    color: var(--accent-text);
+    text-decoration: underline;
+  }
 }
 
 /* ─── Avg duration ─────────────────────────────────────────────────────────── */

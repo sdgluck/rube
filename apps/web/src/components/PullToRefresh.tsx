@@ -1,4 +1,5 @@
-import { useRef, useState, useCallback, ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { haptic } from "@tinkerbell/native-client";
 import Spinner from "./Spinner";
 import styles from "./PullToRefresh.module.css";
 
@@ -7,97 +8,124 @@ interface PullToRefreshProps {
   children: ReactNode;
 }
 
-const THRESHOLD = 60;
+/** How far the finger must travel, after damping, to trigger a refresh. */
+const THRESHOLD = 64;
+const MAX = 120;
+/** Where the content rests while the refresh runs. */
+const HOLD = 52;
 
+/**
+ * Pull down at the top of a list to refresh it.
+ *
+ * iOS: the content follows the finger and reveals an activity spinner above
+ * it. Android: a Material disc drops in over the content, which stays put.
+ * A tick of haptic feedback marks the point of no return.
+ *
+ * The listeners are attached by hand because React registers touchmove as
+ * passive, and only a non-passive listener can stop the platform's own
+ * rubber band from playing at the same time as the pull. The phone layout
+ * scrolls the document, so "at the top" is `window.scrollY`.
+ */
 export default function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
-  const [pullDistance, setPullDistance] = useState(0);
+  const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const startY = useRef(0);
-  const pulling = useRef(false);
+  const [dragging, setDragging] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
 
   const isTouchDevice = typeof window !== "undefined" && "ontouchstart" in window;
 
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      if (refreshing) return;
-      if (window.scrollY > 0) return;
-      startY.current = e.touches[0].clientY;
-      pulling.current = true;
-    },
-    [refreshing],
-  );
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || !isTouchDevice) return;
+    let startY = 0;
+    let active = false;
+    let distance = 0;
+    let armed = false;
+    let busy = false;
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      if (!pulling.current || refreshing) return;
-      const deltaY = e.touches[0].clientY - startY.current;
-      if (deltaY < 0) {
-        pulling.current = false;
-        setPullDistance(0);
+    const onStart = (e: TouchEvent) => {
+      if (busy || window.scrollY > 0 || e.touches.length !== 1) return;
+      startY = e.touches[0].clientY;
+      active = true;
+      setDragging(true);
+      distance = 0;
+      armed = false;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!active) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy <= 0 || window.scrollY > 0) {
+        if (distance > 0) setPull(0);
+        active = false;
+        setDragging(false);
         return;
       }
-      // Dampen the pull
-      setPullDistance(Math.min(deltaY * 0.4, 100));
-    },
-    [refreshing],
-  );
-
-  const handleTouchEnd = useCallback(async () => {
-    if (!pulling.current) return;
-    pulling.current = false;
-    if (pullDistance >= THRESHOLD) {
-      setRefreshing(true);
-      setPullDistance(40);
-      try {
-        await onRefresh();
-      } finally {
-        setRefreshing(false);
-        setPullDistance(0);
+      e.preventDefault();
+      // Resistance grows with distance, as a native pull does.
+      distance = Math.min(MAX, dy * 0.45);
+      if (!armed && distance >= THRESHOLD) {
+        armed = true;
+        haptic("light");
+      } else if (armed && distance < THRESHOLD) {
+        armed = false;
       }
-    } else {
-      setPullDistance(0);
-    }
-  }, [pullDistance, onRefresh]);
+      setPull(distance);
+    };
+    const onEnd = async () => {
+      if (!active) return;
+      active = false;
+      setDragging(false);
+      if (!armed) {
+        setPull(0);
+        return;
+      }
+      busy = true;
+      setRefreshing(true);
+      setPull(HOLD);
+      try {
+        await onRefreshRef.current();
+      } finally {
+        busy = false;
+        setRefreshing(false);
+        setPull(0);
+      }
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [isTouchDevice]);
 
   if (!isTouchDevice) {
     return <>{children}</>;
   }
 
+  const progress = Math.min(1, pull / THRESHOLD);
+
   return (
-    <div
-      className={styles.wrapper}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {(pullDistance > 0 || refreshing) && (
-        <div className={styles.indicator} style={{ transform: `translateX(-50%) translateY(${pullDistance}px)` }}>
+    <div ref={wrapRef} className={styles.wrapper} style={{ "--pull": `${pull}px` } as React.CSSProperties}>
+      {(pull > 0 || refreshing) && (
+        <div className={styles.indicator} style={{ opacity: refreshing ? 1 : progress }} aria-hidden={!refreshing}>
           {refreshing ? (
-            <Spinner size="sm" />
+            <Spinner size="sm" label="Refreshing" />
           ) : (
-            <svg
-              className={`${styles.arrow} ${pullDistance >= THRESHOLD ? styles.arrowReady : ""}`}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
+            <span className={styles.ring} style={{ "--progress": progress } as React.CSSProperties} />
           )}
         </div>
       )}
+      {/* Transformed only while pulled: a transform makes this the containing
+          block for any `position: fixed` inside the page (a bulk-action bar). */}
       <div
-        style={
-          pullDistance > 0
-            ? {
-                transform: `translateY(${pullDistance}px)`,
-                transition: pulling.current ? "none" : "transform 0.2s ease",
-              }
-            : undefined
-        }
+        className={`${styles.content} ${dragging ? "" : styles.settling}`}
+        style={pull > 0 ? { transform: `translateY(${pull}px)` } : undefined}
       >
         {children}
       </div>

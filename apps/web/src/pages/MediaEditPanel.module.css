@@ -74,8 +74,10 @@
   vertical-align: -1px;
 }
 
-.unlock:hover:not(:disabled) {
-  text-decoration: underline;
+@media (hover: hover) {
+  .unlock:hover:not(:disabled) {
+    text-decoration: underline;
+  }
 }
 
 .textInput {

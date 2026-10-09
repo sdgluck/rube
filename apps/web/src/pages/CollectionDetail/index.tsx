@@ -9,7 +9,6 @@ import PageTabs from "#components/PageTabs";
 import RelativeTime from "#components/RelativeTime";
 import RowActions, { type RowAction } from "#components/RowActions";
 import { useToast } from "#components/Toast";
-import useSwipeBack from "#hooks/useSwipeBack";
 import styles from "#/styles/shared.module.css";
 import { SmartFiltersDrawer } from "#components/SmartFiltersEditor";
 import { PageCrumbs } from "#layout/AppBar";
@@ -37,7 +36,6 @@ export default function CollectionDetailLayout() {
   const { ratingKey } = useParams<{ ratingKey: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const swipeRef = useSwipeBack(navigate);
   const utils = trpc.useUtils();
   const { addToast } = useToast();
 
@@ -180,7 +178,7 @@ export default function CollectionDetailLayout() {
   ];
 
   return (
-    <div ref={swipeRef}>
+    <div>
       <PageCrumbs crumbs={[{ label: collection.title }]} />
 
       {/* Presentation only. Everything here is read — the pencil opens the

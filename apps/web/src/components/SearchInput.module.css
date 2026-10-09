@@ -51,9 +51,11 @@
   cursor: pointer;
 }
 
-.clear:hover {
-  color: var(--ink);
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .clear:hover {
+    color: var(--ink);
+    background: var(--surface-sunken);
+  }
 }
 
 /* A whole line, above whatever filters follow. `flex: 1` alone let the field

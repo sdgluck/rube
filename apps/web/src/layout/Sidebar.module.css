@@ -46,8 +46,10 @@
   border-radius: var(--r-tag);
 }
 
-.sidebarJob:hover {
-  background: var(--on-dark-fill);
+@media (hover: hover) {
+  .sidebarJob:hover {
+    background: var(--on-dark-fill);
+  }
 }
 
 .sidebarJobName {
@@ -77,8 +79,10 @@
   transition: color 0.15s;
 }
 
-.sidebarCancel:hover {
-  color: var(--on-dark-error);
+@media (hover: hover) {
+  .sidebarCancel:hover {
+    color: var(--on-dark-error);
+  }
 }
 
 /* The nav region is the positioning context for the edit button, which sits in
@@ -110,11 +114,25 @@
     color 0.15s;
 }
 
-:global(.sidebar):hover .editMenu,
 .editMenu:focus-visible {
   opacity: 1;
 }
 
-.editMenu:hover {
-  color: var(--on-dark);
+@media (hover: hover) {
+  :global(.sidebar):hover .editMenu {
+    opacity: 1;
+  }
+}
+
+/* On a touchscreen tablet the sidebar is never hovered; keep the control reachable. */
+@media (hover: none) {
+  .editMenu {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) {
+  .editMenu:hover {
+    color: var(--on-dark);
+  }
 }

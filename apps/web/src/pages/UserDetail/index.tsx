@@ -9,7 +9,6 @@ import PageTabs from "#components/PageTabs";
 import RelativeTime from "#components/RelativeTime";
 import RowActions, { type RowAction } from "#components/RowActions";
 import { useToast } from "#components/Toast";
-import useSwipeBack from "#hooks/useSwipeBack";
 import { PageCrumbs } from "#layout/AppBar";
 import styles from "#/styles/shared.module.css";
 import { UserProvider } from "./context.ts";
@@ -21,7 +20,6 @@ export default function UserDetailLayout() {
   const userId = Number(userIdParam);
   const navigate = useNavigate();
   const location = useLocation();
-  const swipeRef = useSwipeBack(navigate);
   const utils = trpc.useUtils();
   const { addToast } = useToast();
 
@@ -114,7 +112,7 @@ export default function UserDetailLayout() {
   ].filter(Boolean) as string[];
 
   return (
-    <div ref={swipeRef}>
+    <div>
       <PageCrumbs crumbs={[{ label: user.name || user.username }]} />
 
       <header className={local.hero}>

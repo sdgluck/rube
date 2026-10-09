@@ -52,9 +52,11 @@
     color 0.1s;
 }
 
-.logTab:hover {
-  border-color: var(--line);
-  color: var(--ink-2);
+@media (hover: hover) {
+  .logTab:hover {
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
 }
 
 .logTabActive {
@@ -286,8 +288,10 @@
   font-weight: 500;
 }
 
-.runLink:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .runLink:hover {
+    text-decoration: underline;
+  }
 }
 
 .runMeta {

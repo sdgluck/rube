@@ -1,0 +1,175 @@
+/* iOS by default: a floating grouped card of choices over a separate Cancel,
+   inset from the screen edges. Android (below) is a flat bottom sheet of rows. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  animation: scrimIn 180ms ease-out;
+}
+
+.backdropExiting {
+  animation: scrimOut 200ms ease-in forwards;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: 48rem;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 2rem);
+  padding: 0 0.8rem calc(env(safe-area-inset-bottom, 0px) + 0.8rem);
+  animation: sheetUp 360ms cubic-bezier(0.32, 0.72, 0, 1);
+  user-select: none;
+}
+
+.sheetExiting {
+  animation: sheetDown 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.grabber {
+  display: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-radius: var(--r-alert);
+  background: var(--surface);
+}
+
+.title {
+  padding: 1.4rem 1.6rem;
+  font: var(--t-caption);
+  color: var(--ink-3);
+  text-align: center;
+  border-bottom: 1px solid var(--list-sep);
+}
+
+.action,
+.cancel {
+  min-height: 5.6rem;
+  padding: 0 1.6rem;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font: var(--t-body);
+  font-size: 1.8rem;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action + .action {
+  border-top: 1px solid var(--list-sep);
+}
+
+.action:active,
+.cancel:active {
+  background: var(--pressed);
+}
+
+.action:disabled {
+  color: var(--ink-faint);
+}
+
+.actionDanger {
+  color: var(--danger);
+}
+
+.cancel {
+  border-radius: var(--r-alert);
+  background: var(--surface);
+  font-weight: 600;
+}
+
+/* ─── Android: a Material bottom sheet ─────────────────────────────────── */
+
+:global(html[data-platform="android"]) .sheet {
+  gap: 0;
+  max-width: 64rem;
+  padding: 0 0 env(safe-area-inset-bottom, 0px);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  background: var(--surface);
+}
+
+:global(html[data-platform="android"]) .grabber {
+  display: block;
+  width: 3.2rem;
+  height: 0.4rem;
+  margin: 1.6rem auto 0.8rem;
+  border-radius: var(--r-pill);
+  background: var(--grabber);
+}
+
+:global(html[data-platform="android"]) .group {
+  border-radius: 0;
+  background: none;
+}
+
+:global(html[data-platform="android"]) .title {
+  text-align: left;
+  border-bottom: none;
+  padding: 0.4rem 2.4rem 1.2rem;
+}
+
+:global(html[data-platform="android"]) .action {
+  min-height: 5.6rem;
+  padding: 0 2.4rem;
+  color: var(--ink);
+  font-size: 1.6rem;
+  text-align: left;
+}
+
+:global(html[data-platform="android"]) .action + .action {
+  border-top: none;
+}
+
+:global(html[data-platform="android"]) .actionDanger {
+  color: var(--danger);
+}
+
+/* Material sheets dismiss by drag, Back or the scrim; there is no Cancel row. */
+:global(html[data-platform="android"]) .cancel {
+  display: none;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheetDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scrimIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scrimOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

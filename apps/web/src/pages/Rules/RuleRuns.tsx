@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { RULE_RUN_TRIGGER_LABELS } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
@@ -14,7 +14,6 @@ import { SkeletonTable } from "#components/Skeleton";
 import { useToast } from "#components/Toast";
 import { PageCrumbs } from "#layout/AppBar";
 import { useLocalSort } from "#hooks/useLocalSort";
-import useSwipeBack from "#hooks/useSwipeBack";
 import { formatDuration, formatElapsed } from "#/format";
 import { fetchRuleRunLog, isRunActive, useRunLog } from "#pages/Jobs/shared/useRunLog";
 import shared from "#/styles/shared.module.css";
@@ -78,8 +77,6 @@ function formatEta(startMs: number, progress: number): string | null {
  */
 export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOutcome } = {}) {
   const { ruleId } = useParams<{ ruleId: string }>();
-  const navigate = useNavigate();
-  const swipeRef = useSwipeBack(navigate);
   const [params, setParams] = useSearchParams();
   const utils = trpc.useUtils();
   const { addToast } = useToast();
@@ -203,7 +200,7 @@ export default function RuleRuns({ outcome = "collection" }: { outcome?: RulesOu
         ]}
       />
 
-      <div ref={swipeRef} className={styles.runsLayout}>
+      <div className={styles.runsLayout}>
         <CardSection
           className={shared.runCardCapped}
           titleClassName={shared.runCardTitle}

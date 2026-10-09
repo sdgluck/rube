@@ -90,6 +90,29 @@
      inverted code unreliably, so it never follows the dark palette. */
   --qr-ink: #000;
   --qr-paper: #fff;
+
+  /* ─── Native chrome (phones) ────────────────────────────────────────
+     The phone layout's bars, sheets and lists (styles/mobile.css). The bars
+     are the page colour, translucent, over a blur — the way iOS and Material
+     both let content scroll visibly under the chrome rather than behind a
+     wall. The geometry tokens are iOS values here and Material ones in the
+     `[data-platform="android"]` block below; the colours are shared. */
+  --bar-bg: rgba(237, 241, 240, 0.82);
+  --bar-line: rgba(19, 28, 27, 0.12);
+  --grabber: rgba(19, 28, 27, 0.2);
+  /* A row or button held down. Touch has no hover, so this is the only
+     acknowledgement a tap gets before the next screen arrives. */
+  --pressed: rgba(19, 28, 27, 0.07);
+  --list-sep: rgba(19, 28, 27, 0.1);
+  --r-sheet: 1.2rem;
+  --r-list: 1.1rem;
+  --r-alert: 1.4rem;
+  --navbar-h: 4.4rem;
+  --tabbar-h: 4.9rem;
+  /* Where a `position: sticky` bar inside a page should stop: the top of the
+     viewport on desktop, the bottom of the pinned header on a phone (set in
+     the block below). */
+  --sticky-top: 0rem;
   /* Error text on a surface that is dark in both themes — the sidebar's
      failure count. --status-error-fg is unreadable there in light mode. */
   --on-dark-error: #f0a9a2;
@@ -458,6 +481,28 @@
 
   --status-special-bg: rgba(110, 92, 196, 0.2);
   --status-special-fg: #b6abec;
+
+  --bar-bg: rgba(13, 20, 19, 0.82);
+  --bar-line: rgba(255, 255, 255, 0.1);
+  --grabber: rgba(255, 255, 255, 0.28);
+  --pressed: rgba(255, 255, 255, 0.07);
+  --list-sep: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sticky-top: calc(env(safe-area-inset-top, 0px) + var(--navbar-h));
+  }
+}
+
+/* Material geometry: larger sheet and dialog corners, a taller top bar and
+   navigation bar. Colours are shared with iOS — only the shapes differ. */
+:root[data-platform="android"] {
+  --r-sheet: 2.8rem;
+  --r-list: 1.6rem;
+  --r-alert: 2.8rem;
+  --navbar-h: 6.4rem;
+  --tabbar-h: 6.4rem;
 }
 
 *,
@@ -608,8 +653,10 @@ body::before {
   text-decoration: none;
 }
 
-.version-pill:hover {
-  background: rgba(229, 160, 13, 0.26);
+@media (hover: hover) {
+  .version-pill:hover {
+    background: rgba(229, 160, 13, 0.26);
+  }
 }
 
 .sidebar-search {
@@ -633,10 +680,12 @@ body::before {
     border-color 0.15s;
 }
 
-.sidebar-search:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: rgba(242, 246, 245, 0.85);
-  border-color: rgba(255, 255, 255, 0.14);
+@media (hover: hover) {
+  .sidebar-search:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(242, 246, 245, 0.85);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
 }
 
 .sidebar-search-icon {
@@ -701,9 +750,11 @@ body::before {
     color 0.15s;
 }
 
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(242, 246, 245, 0.9);
+@media (hover: hover) {
+  .nav-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(242, 246, 245, 0.9);
+  }
 }
 
 .nav-link.active {
@@ -745,9 +796,14 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 
-.nav-link:hover .nav-metric-count,
 .nav-link.active .nav-metric-count {
   color: rgba(242, 246, 245, 0.6);
+}
+
+@media (hover: hover) {
+  .nav-link:hover .nav-metric-count {
+    color: rgba(242, 246, 245, 0.6);
+  }
 }
 
 .nav-metric-error {
@@ -813,9 +869,11 @@ body::before {
   transition: background 0.15s;
 }
 
-.health-dot-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #f2f6f5;
+@media (hover: hover) {
+  .health-dot-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f2f6f5;
+  }
 }
 
 .health-summary {
@@ -856,8 +914,10 @@ body::before {
   flex-shrink: 0;
 }
 
-.sidebar-version:hover {
-  color: rgba(242, 246, 245, 0.75);
+@media (hover: hover) {
+  .sidebar-version:hover {
+    color: rgba(242, 246, 245, 0.75);
+  }
 }
 
 /* Opens above the footer rather than beside it — there is no room to the
@@ -877,9 +937,14 @@ body::before {
   pointer-events: none;
 }
 
-.health-dot-link:hover .health-tooltip,
 .health-dot-link:focus-visible .health-tooltip {
   display: block;
+}
+
+@media (hover: hover) {
+  .health-dot-link:hover .health-tooltip {
+    display: block;
+  }
 }
 
 .health-tooltip-list {
@@ -1078,12 +1143,13 @@ body::before {
     left: 0;
     right: 0;
     padding: 0.6rem 0.6rem calc(env(safe-area-inset-bottom, 0px) + 1.4rem);
-    background: rgba(255, 255, 255, 0.94);
+    background: var(--bar-bg);
     backdrop-filter: blur(1.2rem);
     -webkit-backdrop-filter: blur(1.2rem);
     z-index: var(--z-bottom-nav);
     align-items: stretch;
-    border-top: 1px solid #e4e9e8;
+    /* Tokens, not the white literals it had: the bar stayed white in dark mode. */
+    border-top: 1px solid var(--bar-line);
   }
 
   .bottom-nav-item {
@@ -1143,7 +1209,7 @@ body::before {
     left: calc(50% + 0.5rem);
     font-size: 0.9rem;
     padding: 0 0.4rem;
-    border: 2px solid #fff;
+    border: 2px solid var(--surface);
   }
 }
 
@@ -1266,8 +1332,10 @@ input[type="checkbox"] {
     border-color 0.15s;
 }
 
-input[type="checkbox"]:hover:not(:disabled) {
-  border-color: var(--accent);
+@media (hover: hover) {
+  input[type="checkbox"]:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
 }
 
 input[type="checkbox"]:checked,

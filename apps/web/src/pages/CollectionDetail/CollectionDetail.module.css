@@ -204,8 +204,10 @@
   cursor: pointer;
 }
 
-.labelChipLink:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .labelChipLink:hover {
+    text-decoration: underline;
+  }
 }
 
 /* ─── Tabs ────────────────────────────────────────────────────────────────── */
@@ -334,8 +336,10 @@
   white-space: nowrap;
 }
 
-.relatedItem:hover .relatedTitle {
-  color: var(--accent-text);
+@media (hover: hover) {
+  .relatedItem:hover .relatedTitle {
+    color: var(--accent-text);
+  }
 }
 
 /* ─── Provenance list ─────────────────────────────────────────────────────── */
@@ -420,8 +424,10 @@
   color: var(--ink);
 }
 
-.choice:hover {
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .choice:hover {
+    background: var(--fill-hover);
+  }
 }
 
 .candidateRow {
@@ -463,9 +469,11 @@
   cursor: pointer;
 }
 
-.dropZone:hover {
-  border-color: var(--line-accent);
-  color: var(--ink-2);
+@media (hover: hover) {
+  .dropZone:hover {
+    border-color: var(--line-accent);
+    color: var(--ink-2);
+  }
 }
 
 /* ─── Add-items picker ────────────────────────────────────────────────────── */
@@ -491,8 +499,10 @@
   color: var(--ink);
 }
 
-.pickItem:hover {
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .pickItem:hover {
+    background: var(--fill-hover);
+  }
 }
 
 .pickThumb {

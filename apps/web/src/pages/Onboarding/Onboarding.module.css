@@ -42,8 +42,10 @@
   cursor: pointer;
 }
 
-.skipAll:hover {
-  color: var(--ink);
+@media (hover: hover) {
+  .skipAll:hover {
+    color: var(--ink);
+  }
 }
 
 .body {
@@ -92,8 +94,10 @@
   color: var(--ink-faint);
 }
 
-.railItem:not(:disabled):hover {
-  background: var(--fill-quiet);
+@media (hover: hover) {
+  .railItem:not(:disabled):hover {
+    background: var(--fill-quiet);
+  }
 }
 
 .railActive {
@@ -273,8 +277,10 @@
   text-decoration: none;
 }
 
-.tileClickable:hover {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .tileClickable:hover {
+    background: var(--surface-sunken);
+  }
 }
 
 .tileHead,

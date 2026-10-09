@@ -1,41 +1,42 @@
-import { NavLink } from "react-router-dom";
+import { Activity, Loader, Search, Sparkles } from "lucide-react";
 import PageShell from "#components/PageShell";
+import ListRow, { RowIcon } from "#components/list/ListRow";
+import ListSection from "#components/list/ListSection";
 import { type NavItem } from "#/nav";
 import { useNavMenu } from "#hooks/useNavMenu";
 import NavEditor from "#layout/NavEditor";
+import { navIcon } from "#layout/navIcons";
+import { openSearch } from "#lib/openSearch";
 import { trpc } from "#/trpc";
 import styles from "./More.module.css";
 
 type NavMetrics = Record<string, number | "ok" | "error" | null>;
-type MetaTone = "ok" | "error";
 
-const TONE_DOT: Record<MetaTone, string> = {
-  ok: styles.dotOk,
-  error: styles.dotError,
-};
-
-/** The row's trailing value: what this page currently holds, in mono. */
-function navMeta(item: NavItem, metrics: NavMetrics | undefined): { tone?: MetaTone; text: string } {
-  if (!item.metric || !metrics) return { text: "" };
-  if (item.metric.kind === "streams") return { text: "" };
+/** The row's trailing value: what this page currently holds. */
+function navMeta(item: NavItem, metrics: NavMetrics | undefined): string {
+  if (!item.metric || !metrics) return "";
+  if (item.metric.kind === "streams") return "";
   const value = metrics[item.metric.key];
   if (item.metric.kind === "status") {
-    if (value === "ok") return { tone: "ok", text: "ok" };
-    if (value === "error") return { tone: "error", text: "failed" };
-    return { text: "never run" };
+    if (value === "ok") return "OK";
+    if (value === "error") return "Failed";
+    return "";
   }
-  if (typeof value !== "number" || value === 0) return { text: "—" };
-  if (item.metric.key === "eventsErrors24h") {
-    return { tone: "error", text: `${value} error${value === 1 ? "" : "s"} 24h` };
-  }
-  return { text: value.toLocaleString() };
+  if (typeof value !== "number" || value === 0) return "";
+  if (item.metric.key === "eventsErrors24h") return `${value} error${value === 1 ? "" : "s"}`;
+  return value.toLocaleString();
 }
 
 /**
  * The mobile "More" tab: everything the sidebar holds that isn't one of the
- * three bottom tabs. A real route rather than a sheet, so back, scroll
- * restoration and deep links work on it the way they do on every other page,
- * and the list isn't capped to a fraction of the viewport.
+ * bottom tabs. A real route rather than a sheet, so back, scroll restoration
+ * and deep links work on it the way they do on every other page, and the list
+ * isn't capped to a fraction of the viewport.
+ *
+ * Laid out as a native grouped list (the iOS Settings app, a Material
+ * settings screen): search first, then what the sidebar shows besides links —
+ * setup progress, running jobs, server health — which a phone otherwise had
+ * no way to see, then every destination with its icon.
  */
 export default function More() {
   const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
@@ -44,6 +45,9 @@ export default function More() {
   });
   const metrics = metricsQuery.data as NavMetrics | undefined;
   const menu = useNavMenu();
+  const onboarding = trpc.onboarding.status.useQuery(undefined, { retry: false }).data;
+  const health = trpc.health.status.useQuery(undefined, { refetchInterval: 30000, refetchOnWindowFocus: false }).data;
+  const activeRuns = trpc.jobs.activeRuns.useQuery(undefined, { refetchInterval: 5000 }).data;
 
   /**
    * The sidebar can't be where a phone edits its menu — it isn't rendered below
@@ -62,6 +66,11 @@ export default function More() {
     );
   }
 
+  const checked = (health ?? []).filter((s) => s.configured && s.status !== null);
+  const failing = checked.filter((s) => s.status === "error").length;
+  const running = activeRuns?.length ?? 0;
+  const setupLeft = onboarding && !onboarding.complete ? onboarding.totalCount - onboarding.completedCount : 0;
+
   return (
     <PageShell
       actions={
@@ -70,42 +79,77 @@ export default function More() {
         </button>
       }
     >
-      <nav aria-label="More pages" className={styles.sections}>
-        {menu.moreSections.map((section) => (
-          <section key={section.id}>
-            <h2 className={styles.sectionTitle}>{section.label}</h2>
-            <div className={styles.list}>
+      <div className={styles.sections}>
+        {/* Looks like the platform's search field; opens the real one. */}
+        <button type="button" className={styles.searchField} onClick={openSearch}>
+          <Search size="1.7rem" strokeWidth={2} aria-hidden />
+          Search
+        </button>
+
+        {(setupLeft > 0 || running > 0 || checked.length > 0) && (
+          <ListSection title="Server">
+            {setupLeft > 0 && (
+              <ListRow
+                to="/onboarding"
+                leading={
+                  <RowIcon tone="warn">
+                    <Sparkles />
+                  </RowIcon>
+                }
+                title="Finish setting up"
+                value={`${onboarding!.completedCount} of ${onboarding!.totalCount}`}
+              />
+            )}
+            {running > 0 && (
+              <ListRow
+                to="/jobs"
+                leading={
+                  <RowIcon>
+                    <Loader />
+                  </RowIcon>
+                }
+                title="Running now"
+                value={`${running} job${running === 1 ? "" : "s"}`}
+              />
+            )}
+            {checked.length > 0 && (
+              <ListRow
+                to="/settings/health"
+                leading={
+                  <RowIcon tone={failing ? "danger" : "accent"}>
+                    <Activity />
+                  </RowIcon>
+                }
+                title="Health"
+                value={failing ? `${failing} failing` : "All OK"}
+              />
+            )}
+          </ListSection>
+        )}
+
+        <nav aria-label="More pages" className={styles.sections}>
+          {menu.moreSections.map((section) => (
+            <ListSection key={section.id} title={section.label}>
               {section.items.map((item) => {
-                const meta = navMeta(item, metrics);
+                const Icon = navIcon(item.to);
                 return (
-                  <NavLink key={item.to} to={item.to} className={styles.row}>
-                    <span className={styles.label}>{item.label}</span>
-                    {meta.text && (
-                      <span className={styles.meta}>
-                        {meta.tone && <span className={`${styles.dot} ${TONE_DOT[meta.tone]}`} />}
-                        {meta.text}
-                      </span>
-                    )}
-                    <svg
-                      className={styles.chevron}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  </NavLink>
+                  <ListRow
+                    key={item.to}
+                    to={item.to}
+                    leading={
+                      <RowIcon tone="neutral">
+                        <Icon />
+                      </RowIcon>
+                    }
+                    title={item.label}
+                    value={navMeta(item, metrics) || undefined}
+                  />
                 );
               })}
-            </div>
-          </section>
-        ))}
-      </nav>
+            </ListSection>
+          ))}
+        </nav>
+      </div>
     </PageShell>
   );
 }

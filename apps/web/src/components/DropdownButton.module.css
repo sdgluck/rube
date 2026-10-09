@@ -71,8 +71,10 @@
   text-overflow: ellipsis;
 }
 
-.menuItem:hover:not(:disabled) {
-  background: var(--fill-quiet);
+@media (hover: hover) {
+  .menuItem:hover:not(:disabled) {
+    background: var(--fill-quiet);
+  }
 }
 
 .menuItem:disabled {
@@ -85,6 +87,8 @@
   color: var(--status-error-fg);
 }
 
-.menuItemDanger:hover:not(:disabled) {
-  background: var(--status-error-bg);
+@media (hover: hover) {
+  .menuItemDanger:hover:not(:disabled) {
+    background: var(--status-error-bg);
+  }
 }

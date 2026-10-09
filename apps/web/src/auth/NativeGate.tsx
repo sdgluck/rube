@@ -2,12 +2,11 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  dismiss,
   getConnection,
   hideSplash,
-  isDismissed,
   isNative,
   onDeepLink,
+  onResume,
   saveMediaToken,
   subscribeConnection,
   watchLock,
@@ -29,7 +28,10 @@ import styles from "./auth.module.css";
  * use the in-app Plex flow.
  */
 export default function NativeGate({ children }: { children: ReactNode }) {
-  useEffect(hideSplash, []);
+  const queryClient = useQueryClient();
+  // Back from the background: whatever is on screen refetches. Phone browsers
+  // too — a tab woken after an hour shows data an hour old otherwise.
+  useEffect(() => onResume(() => void queryClient.refetchQueries({ type: "active" })), [queryClient]);
   if (!isNative()) return <>{children}</>;
   return <NativeShell>{children}</NativeShell>;
 }
@@ -69,6 +71,14 @@ function NativeShell({ children }: { children: ReactNode }) {
     queryClient.clear();
     setOffered(null);
   }, [server, queryClient]);
+
+  // The splash stays up until there is a real screen to show: the server
+  // picker or lock screen at once, the app once its session has settled
+  // (NativeSession). Hiding it on mount showed a blank frame, then a skeleton.
+  const settledScreen = locked || !connection || !!offered;
+  useEffect(() => {
+    if (settledScreen) hideSplash();
+  }, [settledScreen]);
 
   if (locked) return <LockScreen onUnlocked={() => setLocked(false)} />;
   if (!connection || offered) return <ConnectServer key={offered ?? ""} initial={offered ?? ""} />;
@@ -110,41 +120,12 @@ export function NativeSession({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status.data, signedIn]);
 
-  if (!ready) return <div className={styles.page} />;
-  return (
-    <>
-      {status.data && !status.data.required && <SignInOffBanner />}
-      {children}
-    </>
-  );
-}
-
-/**
- * The phone app implies reaching the server from outside the house, and with
- * sign-in off the admin API answers anyone who can reach it. Allowed — the web
- * UI allows it too — but said, once per server until dismissed.
- */
-function SignInOffBanner() {
-  const [hidden, setHidden] = useState(true);
   useEffect(() => {
-    void isDismissed("sign-in-off").then(setHidden);
-  }, []);
-  if (hidden) return null;
-  return (
-    <div className={styles.banner} role="status">
-      <p className={styles.bannerText}>
-        Sign-in is off on this server: anyone who can reach it can change it. Turn it on under Settings → Security.
-      </p>
-      <button
-        type="button"
-        className={styles.bannerDismiss}
-        onClick={() => {
-          setHidden(true);
-          void dismiss("sign-in-off");
-        }}
-      >
-        Dismiss
-      </button>
-    </div>
-  );
+    if (ready || status.isError) hideSplash();
+  }, [ready, status.isError]);
+
+  // An unreachable server still gets past this gate: AuthGate and the app
+  // show the error, which is more useful than an endless blank screen.
+  if (!ready && !status.isError) return <div className={styles.page} />;
+  return <>{children}</>;
 }

@@ -44,9 +44,11 @@
     background 0.1s;
 }
 
-.wizardCard:hover:not(.cardDisabled) {
-  border-color: var(--accent);
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .wizardCard:hover:not(.cardDisabled) {
+    border-color: var(--accent);
+    background: var(--surface-sunken);
+  }
 }
 
 .cardDisabled {

@@ -65,9 +65,15 @@ importers:
       '@capacitor/filesystem':
         specifier: ^8.1.4
         version: 8.1.4(@capacitor/core@8.5.2)
+      '@capacitor/haptics':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.5.2)
       '@capacitor/ios':
         specifier: 8.5.2
         version: 8.5.2(@capacitor/core@8.5.2)
+      '@capacitor/keyboard':
+        specifier: ^8.0.6
+        version: 8.0.6(@capacitor/core@8.5.2)
       '@capacitor/preferences':
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.5.2)
@@ -77,9 +83,6 @@ importers:
       '@capacitor/splash-screen':
         specifier: ^8.0.2
         version: 8.0.2(@capacitor/core@8.5.2)
-      '@capacitor/status-bar':
-        specifier: ^8.0.4
-        version: 8.0.4(@capacitor/core@8.5.2)
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.100.11(react@19.2.6)
@@ -263,9 +266,15 @@ importers:
       '@capacitor/filesystem':
         specifier: ^8.1.4
         version: 8.1.4(@capacitor/core@8.5.2)
+      '@capacitor/haptics':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.5.2)
       '@capacitor/ios':
         specifier: 8.5.2
         version: 8.5.2(@capacitor/core@8.5.2)
+      '@capacitor/keyboard':
+        specifier: ^8.0.6
+        version: 8.0.6(@capacitor/core@8.5.2)
       '@capacitor/preferences':
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.5.2)
@@ -275,9 +284,6 @@ importers:
       '@capacitor/splash-screen':
         specifier: ^8.0.2
         version: 8.0.2(@capacitor/core@8.5.2)
-      '@capacitor/status-bar':
-        specifier: ^8.0.4
-        version: 8.0.4(@capacitor/core@8.5.2)
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.100.11(react@19.2.6)
@@ -2253,6 +2259,12 @@ importers:
       '@capacitor/filesystem':
         specifier: ^8.1.4
         version: 8.1.4(@capacitor/core@8.5.2)
+      '@capacitor/haptics':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.5.2)
+      '@capacitor/keyboard':
+        specifier: ^8.0.6
+        version: 8.0.6(@capacitor/core@8.5.2)
       '@capacitor/preferences':
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.5.2)
@@ -2262,9 +2274,6 @@ importers:
       '@capacitor/splash-screen':
         specifier: ^8.0.2
         version: 8.0.2(@capacitor/core@8.5.2)
-      '@capacitor/status-bar':
-        specifier: ^8.0.4
-        version: 8.0.4(@capacitor/core@8.5.2)
       '@tinkerbell/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -2685,6 +2694,11 @@ packages:
     peerDependencies:
       '@capacitor/core': 8.5.2
 
+  '@capacitor/haptics@8.0.2':
+    resolution: {integrity: sha512-c2hZzRR5Fk1tbTvhG1jhh2XBAf3EhnIerMIb2sl7Mt41Gxx1fhBJFDa0/BI1IbY4loVepyyuqNC9820/GZuoWQ==}
+    peerDependencies:
+      '@capacitor/core': 8.5.2
+
   '@capacitor/ios@8.5.2':
     resolution: {integrity: sha512-eOT2S67AfTFG7KN0T3oxwAajrJz4rSye+ODfvChiwrk0F/+kWufFM1qU6cDjGJUOfwdAoeuEpZyWHSwZlu4GFg==}
     peerDependencies:
@@ -2707,11 +2721,6 @@ packages:
 
   '@capacitor/splash-screen@8.0.2':
     resolution: {integrity: sha512-0C6rYScr13WfAE9nPl4ScOQynmjFv9NT3Th+RZkD4ezYHmER6mcl1/lDYsv7jg3Rj3FOvLrlTlmNkUrr83kZzQ==}
-    peerDependencies:
-      '@capacitor/core': 8.5.2
-
-  '@capacitor/status-bar@8.0.4':
-    resolution: {integrity: sha512-ZMzBUyHBzwDUxcHadEhvOvmoPmMQGMZgaMRJu8ohELeI6IaxoVH9ZhdF/OHnY3/yykv3Glev8Tnbh4aZY/0B0w==}
     peerDependencies:
       '@capacitor/core': 8.5.2
 
@@ -6144,6 +6153,10 @@ snapshots:
       '@capacitor/core': 8.5.2
       '@capacitor/synapse': 1.0.4
 
+  '@capacitor/haptics@8.0.2(@capacitor/core@8.5.2)':
+    dependencies:
+      '@capacitor/core': 8.5.2
+
   '@capacitor/ios@8.5.2(@capacitor/core@8.5.2)':
     dependencies:
       '@capacitor/core': 8.5.2
@@ -6161,10 +6174,6 @@ snapshots:
       '@capacitor/core': 8.5.2
 
   '@capacitor/splash-screen@8.0.2(@capacitor/core@8.5.2)':
-    dependencies:
-      '@capacitor/core': 8.5.2
-
-  '@capacitor/status-bar@8.0.4(@capacitor/core@8.5.2)':
     dependencies:
       '@capacitor/core': 8.5.2
 

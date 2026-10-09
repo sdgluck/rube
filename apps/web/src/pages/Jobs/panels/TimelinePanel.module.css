@@ -49,11 +49,18 @@
   background: var(--ramp-2);
 }
 
-.bar:hover,
 .bar:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
   z-index: 1;
+}
+
+@media (hover: hover) {
+  .bar:hover {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    z-index: 1;
+  }
 }
 
 .completed {

@@ -28,9 +28,11 @@
     color 0.12s;
 }
 
-.trigger:hover:not(:disabled) {
-  background: var(--fill-quiet);
-  color: var(--ink);
+@media (hover: hover) {
+  .trigger:hover:not(:disabled) {
+    background: var(--fill-quiet);
+    color: var(--ink);
+  }
 }
 
 .trigger:disabled {
@@ -47,8 +49,10 @@
   color: var(--ink);
 }
 
-.triggerDanger:hover:not(:disabled) {
-  color: var(--status-error-fg);
+@media (hover: hover) {
+  .triggerDanger:hover:not(:disabled) {
+    color: var(--status-error-fg);
+  }
 }
 
 /* ─── Overflow menu ─────────────────────────────────────────────────────── */
@@ -82,8 +86,10 @@
   cursor: pointer;
 }
 
-.item:hover:not(:disabled) {
-  background: var(--surface-sunken);
+@media (hover: hover) {
+  .item:hover:not(:disabled) {
+    background: var(--surface-sunken);
+  }
 }
 
 .item:disabled {
@@ -111,4 +117,14 @@
   height: 1px;
   margin: 0.4rem 2px;
   background: var(--line-soft);
+}
+
+/* A fingertip, not a cursor: 44px is the smallest target either platform's
+   guidelines allow. The row is taller on a phone anyway. */
+@media (pointer: coarse) {
+  .trigger {
+    width: 4.4rem;
+    /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the touch size of the same control, the platform minimum */
+    height: 4.4rem;
+  }
 }

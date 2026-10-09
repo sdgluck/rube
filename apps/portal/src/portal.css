@@ -137,8 +137,10 @@ button {
     opacity 0.12s ease;
 }
 
-button:hover:not(:disabled) {
-  border-color: var(--accent);
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
 }
 
 button:focus-visible {
@@ -158,9 +160,11 @@ button:disabled {
   color: var(--on-accent);
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
 }
 
 /* Signing in is Plex's action, so the button wears Plex's colour. */
@@ -173,9 +177,11 @@ button:disabled {
   min-height: 48px;
 }
 
-.btn-plex:hover:not(:disabled) {
-  background: var(--plex-hover);
-  border-color: var(--plex-hover);
+@media (hover: hover) {
+  .btn-plex:hover:not(:disabled) {
+    background: var(--plex-hover);
+    border-color: var(--plex-hover);
+  }
 }
 
 .btn-ghost {
@@ -365,8 +371,10 @@ textarea {
   font-weight: 600;
 }
 
-.seg button:hover:not(.on) {
-  background: var(--fill-hover);
+@media (hover: hover) {
+  .seg button:hover:not(.on) {
+    background: var(--fill-hover);
+  }
 }
 
 .seg button.on.loved {
@@ -448,9 +456,11 @@ textarea {
   border-radius: var(--radius-sm);
 }
 
-.pill button:hover:not(:disabled) {
-  color: var(--hate);
-  border-color: transparent;
+@media (hover: hover) {
+  .pill button:hover:not(:disabled) {
+    color: var(--hate);
+    border-color: transparent;
+  }
 }
 
 .combo {
@@ -489,9 +499,11 @@ textarea {
   padding: 10px 14px;
 }
 
-.combo-results button:hover:not(:disabled) {
-  background: var(--bg-surface-2);
-  border-color: transparent;
+@media (hover: hover) {
+  .combo-results button:hover:not(:disabled) {
+    background: var(--bg-surface-2);
+    border-color: transparent;
+  }
 }
 
 /* ── Misc ──────────────────────────────────────────────────── */
@@ -579,9 +591,11 @@ textarea {
   color: var(--on-accent);
 }
 
-.save-row .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: transparent;
+@media (hover: hover) {
+  .save-row .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: transparent;
+  }
 }
 
 .save-row .ok {
