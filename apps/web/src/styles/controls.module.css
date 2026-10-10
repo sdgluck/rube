@@ -430,7 +430,7 @@
     height: 4rem;
     padding: 0;
     border: 1px solid var(--line-strong);
-    border-radius: var(--r-pill);
+    border-radius: var(--r-round);
     background: none;
   }
 

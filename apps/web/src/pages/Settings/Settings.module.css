@@ -411,7 +411,7 @@
     width: 5.1rem;
     height: 3.1rem;
     margin: 0;
-    border-radius: var(--r-pill);
+    border-radius: var(--r-round);
     background: var(--fill-inert);
     appearance: none;
     transition: background 0.2s;

@@ -102,7 +102,7 @@
   width: 3.2rem;
   height: 0.4rem;
   margin: 1.6rem auto 0.8rem;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-round);
   background: var(--grabber);
 }
 

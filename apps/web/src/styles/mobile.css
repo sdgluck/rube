@@ -184,7 +184,7 @@
     width: 2.4rem;
     height: 2.4rem;
     padding: 0.4rem 2rem;
-    border-radius: var(--r-pill);
+    border-radius: var(--r-round);
     transition: background 0.2s;
   }
 

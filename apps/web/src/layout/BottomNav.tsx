@@ -32,6 +32,10 @@ export default function BottomNav() {
   const remembered = useRef(new Map<string, string>());
 
   useEffect(() => {
+    // `/` is only ever on its way to a redirect (and onboarding is outside the
+    // shell); remembering either as More's place made the More tab land on
+    // Stats.
+    if (pathname === "/" || pathname === "/onboarding") return;
     remembered.current.set(currentTab, pathname + search);
   }, [currentTab, pathname, search]);
 

@@ -22,6 +22,12 @@ const config: CapacitorConfig = {
   // page. Keeping the two apart means a native build never ships to Docker.
   webDir: "dist-native",
   server: {
+    // `pnpm native:ios web --live` sets this: the app loads its UI from the
+    // Vite dev server, so edits hot-reload in the simulator. Connect the app
+    // to that same address — Vite proxies /api to the local server, which
+    // keeps every request same-origin, so there is no CORS to configure.
+    // Absent in every real build: a plain `cap sync` writes it back out.
+    ...(process.env.TB_NATIVE_DEV_URL ? { url: process.env.TB_NATIVE_DEV_URL, cleartext: true } : {}),
     hostname: "app.tinkerbell",
     androidScheme: "https",
   },

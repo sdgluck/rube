@@ -104,6 +104,10 @@
      acknowledgement a tap gets before the next screen arrives. */
   --pressed: rgba(19, 28, 27, 0.07);
   --list-sep: rgba(19, 28, 27, 0.1);
+  /* A true pill or circle. --r-pill is this design's 2px "pill"; a phone's
+     switches, grabbers and Material indicators are round on the platform and
+     look broken square. */
+  --r-round: 99.9rem;
   --r-sheet: 1.2rem;
   --r-list: 1.1rem;
   --r-alert: 1.4rem;

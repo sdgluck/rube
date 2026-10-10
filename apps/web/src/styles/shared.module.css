@@ -1568,7 +1568,7 @@
   .filters :global(button[aria-haspopup]),
   .filters :global(select) {
     border-color: transparent;
-    border-radius: var(--r-pill);
+    border-radius: var(--r-round);
     background-color: var(--fill-track);
   }
 

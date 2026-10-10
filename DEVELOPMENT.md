@@ -172,6 +172,7 @@ is in `packages/native-client`.
 pnpm native:ios web          # build dist-native, cap sync, open Xcode
 pnpm native:android portal   # the same for the portal app in Android Studio
 pnpm native:sync             # rebuild and sync both apps, without opening anything
+pnpm native:ios web --live   # hot reload: the app loads its UI from `pnpm dev`
 pnpm native:assets           # re-render icons and splashes from resources/icon.svg
 ```
 

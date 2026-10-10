@@ -276,7 +276,7 @@
     max-width: none;
     margin: 0;
     padding: 0;
-    border-radius: var(--r-pill);
+    border-radius: var(--r-round);
     color: var(--ink);
   }
 
@@ -313,7 +313,7 @@
   :global(html[data-platform="android"]) .overflow {
     width: 4.8rem;
     height: 4.8rem;
-    border-radius: var(--r-pill);
+    border-radius: var(--r-round);
     color: var(--ink);
   }
 
