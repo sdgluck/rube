@@ -244,14 +244,16 @@
 /* The title doubles as the collapse control. A button rather than a chevron
    beside it: the title is already the widest thing in the header and the
    obvious place to aim, and a 13px icon on its own is a poor target on a
-   phone. The negative left margin keeps the text where it was — the chevron
-   hangs into the header's padding rather than shifting every panel title 17px
-   right of where the collapsed and non-collapsible ones sit. */
+   phone. The negative left margin hangs the chevron partly into the header's
+   padding: hung all the way (-1.7rem) it sat 1px off the card's edge, and not
+   at all would push every title 17px right of the body it heads. -0.7rem
+   leaves it inset 11px, matching the header's top padding, and the title 10px
+   right of where it was. */
 .panelTitleToggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-left: -1.7rem;
+  margin-left: -0.7rem;
   padding: 0;
   background: transparent;
   border: none;
