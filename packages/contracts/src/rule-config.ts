@@ -6,6 +6,7 @@ import {
   splitLocalLeaves,
 } from "@tinkerbell/plex-smart-filter";
 import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
+import type { ArrService } from "./arr.ts";
 import { presentationConfigSchema } from "./presentation.ts";
 import { ruleScheduleSchema } from "./rule-schedule.ts";
 import { templateError } from "./metadata-tokens.ts";
@@ -266,6 +267,46 @@ export function metadataActionIsEmpty(action: MetadataActionConfig): boolean {
  * validates published packs against it before they ever reach a Plex server.
  * `@tinkerbell/jobs` re-exports it so server-side call sites are unchanged.
  */
+/** One Radarr or Sonarr a rule sends missing items to, and how it files them. */
+const arrTargetSchema = z.object({
+  /**
+   * Which instance to add to. Absent means the service's default — the server
+   * the original `global_radarr_*` / `global_sonarr_*` keys point at.
+   */
+  instanceId: z.string().optional(),
+  qualityProfileId: z.number(),
+  rootFolderPath: z.string(),
+});
+
+export type ArrTarget = z.infer<typeof arrTargetSchema>;
+
+/**
+ * The target a rule's `arr` block names for `service`, reading the
+ * single-target shape rules were saved in before films and shows were split.
+ *
+ * That old target is only honoured for `legacyService` — the one service the
+ * wizard showed the rule's author — so a mixed list saved back then stops
+ * sending its shows to Sonarr under a Radarr profile id, and adds films only,
+ * until it is re-saved with a Sonarr target of its own.
+ */
+export function arrTargetFor(
+  arr: {
+    radarr?: ArrTarget;
+    sonarr?: ArrTarget;
+    instanceId?: string;
+    qualityProfileId?: number;
+    rootFolderPath?: string;
+  },
+  service: ArrService,
+  legacyService: ArrService,
+): ArrTarget | undefined {
+  const own = arr[service];
+  if (own) return own;
+  if (arr.radarr || arr.sonarr || service !== legacyService) return undefined;
+  if (!arr.qualityProfileId || !arr.rootFolderPath) return undefined;
+  return { instanceId: arr.instanceId, qualityProfileId: arr.qualityProfileId, rootFolderPath: arr.rootFolderPath };
+}
+
 const baseRuleConfigSchema = z.object({
   prompt: z.string().optional(),
   themes: z.array(z.string()).optional(),
@@ -406,20 +447,28 @@ const baseRuleConfigSchema = z.object({
   arr: z
     .object({
       enabled: z.boolean(),
-      /**
-       * Which Radarr/Sonarr to add to.
-       *
-       * Absent means the service's default instance — the server the original
-       * `global_radarr_*` keys point at — so every rule written before split
-       * instances existed keeps targeting exactly what it always did.
-       */
-      instanceId: z.string().optional(),
       monitor: z.boolean(),
       searchOnAdd: z.boolean(),
-      qualityProfileId: z.number(),
-      rootFolderPath: z.string(),
       maxAddsPerRun: z.number(),
       dryRun: z.boolean(),
+      /**
+       * Where films go and where shows go — one target each, because a quality
+       * profile id or a root folder from Radarr means nothing (or something
+       * else entirely) on Sonarr. A rule over a film library alone carries
+       * only `radarr`; a service with no target here is never added to.
+       */
+      radarr: arrTargetSchema.optional(),
+      sonarr: arrTargetSchema.optional(),
+      /**
+       * The single target every rule had before the two above existed. It was
+       * applied to whichever service an item belonged to, so a mixed list sent
+       * its shows to Sonarr with a Radarr profile id. Still read (see
+       * `arrTargetFor`) so an untouched rule keeps running; the wizard rewrites
+       * it into `radarr`/`sonarr` the next time the rule is saved.
+       */
+      instanceId: z.string().optional(),
+      qualityProfileId: z.number().optional(),
+      rootFolderPath: z.string().optional(),
     })
     .optional(),
 });

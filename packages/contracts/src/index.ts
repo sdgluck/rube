@@ -3,6 +3,7 @@
 // or from @tinkerbell/trpc (for AppRouter).
 
 export {
+  arrTargetFor,
   CLEANUP_MODES,
   DEFAULT_CONSECUTIVE_RUNS,
   DEFAULT_MAX_ACTIONS_PER_RUN,
@@ -34,6 +35,7 @@ export {
   TAG_FIELDS,
 } from "./rule-config.ts";
 export type {
+  ArrTarget,
   CleanupActionConfig,
   CleanupMode,
   MetadataActionConfig,

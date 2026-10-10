@@ -13,13 +13,14 @@ import RuleWizard, {
   type AiVibe,
   type RuleFormState,
   type SmartFilterGroup,
-  DEFAULT_ARR_FORM,
+  arrConfigFromForm,
+  arrFormFromConfig,
 } from "#pages/Rules/RuleWizard";
 import { RulesSkeleton } from "#components/Skeleton";
 import SortableTh from "#components/SortableTh";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
-import { isPersonalizableAction, type RuleAction } from "@tinkerbell/contracts";
+import { isPersonalizableAction, type RuleAction, type RuleConfig } from "@tinkerbell/contracts";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
@@ -436,10 +437,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       outcome: outcomeFromConfig(config.action),
       presentation: presentationFromConfig(config.presentation),
       schedule: scheduleFromConfig(config.schedule),
-      arr: {
-        ...DEFAULT_ARR_FORM,
-        ...(config.arr as Partial<typeof DEFAULT_ARR_FORM> | undefined),
-      },
+      arr: arrFormFromConfig(config.arr as RuleConfig["arr"], rule.type, (config.chart as string) || "top_250_movies"),
     });
     setIsEditing(true);
   }
@@ -503,7 +501,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       }
       if (Object.keys(presentation).length > 0) config.presentation = presentation;
     }
-    if (next.arr.enabled) config.arr = next.arr;
+    const arr = arrConfigFromForm(next.arr);
+    if (arr) config.arr = arr;
     // Absent means "build a collection" — the same reading the job takes — so
     // a collection rule writes no action key at all and stays byte-identical
     // to how it was stored before this existed.

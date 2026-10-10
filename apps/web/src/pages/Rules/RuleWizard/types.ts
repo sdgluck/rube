@@ -8,6 +8,7 @@
 
 import { DEFAULT_MAX_WRITES_PER_RUN, METADATA_SETTABLE_FIELDS } from "@tinkerbell/contracts";
 import type {
+  ArrService,
   CleanupMode,
   MetadataSettableField,
   PosterSource,
@@ -89,18 +90,30 @@ export const DEFAULT_PRESENTATION_FORM: PresentationFormState = {
   accentColor: "",
 };
 
-export interface ArrFormState {
-  enabled: boolean;
+export interface ArrTargetForm {
   /**
    * Which instance to add to. Empty means the service's default — the server
    * the Radarr/Sonarr tabs configure, and what every rule written before split
    * instances existed targets.
    */
   instanceId: string;
-  monitor: boolean;
-  searchOnAdd: boolean;
   qualityProfileId: number;
   rootFolderPath: string;
+}
+
+export interface ArrFormState {
+  enabled: boolean;
+  /**
+   * The services this rule's sections can send to — Radarr for a film
+   * library, Sonarr for a TV one. Derived from the Scope step and kept here so
+   * validation and saving see the same answer the Actions step showed; only
+   * these services' targets are required, and only they are saved.
+   */
+  services: ArrService[];
+  radarr: ArrTargetForm;
+  sonarr: ArrTargetForm;
+  monitor: boolean;
+  searchOnAdd: boolean;
   maxAddsPerRun: number;
   dryRun: boolean;
 }
@@ -221,13 +234,15 @@ export const DEFAULT_OUTCOME_FORM: OutcomeFormState = {
   playlistLimit: 0,
 };
 
+export const DEFAULT_ARR_TARGET: ArrTargetForm = { instanceId: "", qualityProfileId: 0, rootFolderPath: "" };
+
 export const DEFAULT_ARR_FORM: ArrFormState = {
   enabled: false,
-  instanceId: "",
+  services: ["radarr"],
+  radarr: { ...DEFAULT_ARR_TARGET },
+  sonarr: { ...DEFAULT_ARR_TARGET },
   monitor: true,
   searchOnAdd: false,
-  qualityProfileId: 0,
-  rootFolderPath: "",
   maxAddsPerRun: 25,
   dryRun: true,
 };

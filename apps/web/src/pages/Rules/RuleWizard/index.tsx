@@ -14,6 +14,7 @@ import {
   templateError,
   templatedCollectionSummary,
   volumeLevel,
+  type ArrService,
   type RuleSchedule,
 } from "@tinkerbell/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
@@ -30,9 +31,10 @@ import Modal from "#components/Modal";
 import styles from "./RuleWizard.module.css";
 import MonthDaySelect from "./MonthDaySelect.tsx";
 import TemplateInput from "./TemplateInput.tsx";
+import ArrTargetFields, { ARR_SERVICE_LABEL } from "./ArrTargetFields.tsx";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
-  arrServiceForType,
+  arrServicesForSections,
   defaultLimitForType,
   defaultMinItemsForType,
   groupNounForType,
@@ -61,6 +63,7 @@ import { buildPresetFilter, CLEANUP_PRESETS, type CleanupPreset } from "./cleanu
 
 import type {
   ArrFormState,
+  ArrTargetForm,
   CleanupMode,
   MetadataSettableField,
   OutcomeFormState,
@@ -247,6 +250,7 @@ const CLEANUP_MODE_HINTS: Record<CleanupMode, string> = {
 
 // Re-export the public types so existing `import { ... } from "#pages/Rules/RuleWizard"`
 // call sites keep working.
+export { arrConfigFromForm, arrFormFromConfig } from "./arr-form.ts";
 export {
   DEFAULT_ARR_FORM,
   PRESET_THEMES,
@@ -328,23 +332,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   const seerrConfigured = !!(configQuery.data?.global_seerr_url && configQuery.data?.global_seerr_api_key);
   const tmdbConfigured = !!configQuery.data?.global_tmdb_api_key;
 
-  // Arr queries — always called (rules of hooks). Only meaningful when the
-  // current rule type has an Actions step.
-  const arrService = arrServiceForType(form.type, form.chart);
+  // Whether any service this rule could send to is set up; the per-service
+  // queries live in `ArrTargetFields`.
   const arrStatusQuery = trpc.arr.status.useQuery(undefined, { staleTime: 60_000 });
-  const arrConfigured = !!arrStatusQuery.data?.[arrService];
-  const arrInstancesQuery = trpc.arr.instances.useQuery(undefined, { staleTime: 60_000 });
-  const arrInstancesForService = (arrInstancesQuery.data ?? []).filter((i) => i.service === arrService);
-  const arrProfilesQuery = trpc.arr.qualityProfiles.useQuery(
-    // Quality profiles and root folders belong to one instance, so switching
-    // instance has to re-ask rather than reuse the other one's answers.
-    { service: arrService, instanceId: form.arr.instanceId || undefined },
-    { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
-  );
-  const arrFoldersQuery = trpc.arr.rootFolders.useQuery(
-    { service: arrService, instanceId: form.arr.instanceId || undefined },
-    { enabled: arrConfigured && form.arr.enabled, staleTime: 60_000 },
-  );
 
   const steps = useMemo(() => stepsFor(form.type, mode, form.outcome.kind), [form.type, mode, form.outcome.kind]);
   const currentStep = steps[Math.min(stepIdx, steps.length - 1)];
@@ -383,6 +373,26 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     [sections, requiredSectionType],
   );
   const sectionsLocked = form.type === "imdb_chart" && !!requiredSectionType;
+  // An empty selection means every available section, which is what the
+  // Sections chips and the job both take it to mean.
+  const scopedSections = useMemo(
+    () =>
+      form.sections.length > 0 ? availableSections.filter((s) => form.sections.includes(s.title)) : availableSections,
+    [form.sections, availableSections],
+  );
+
+  // Films go to Radarr and shows to Sonarr, so the services on offer follow
+  // the libraries in scope. Kept on the form (not just derived here) so
+  // validation and saving see what the Actions step showed. Skipped until the
+  // sections have loaded, or an edited rule would lose its targets to an
+  // empty list on the first render.
+  const arrServices = useMemo(() => arrServicesForSections(scopedSections.map((s) => s.type)), [scopedSections]);
+  useEffect(() => {
+    if (sections.length === 0) return;
+    setForm((prev) =>
+      prev.arr.services.join() === arrServices.join() ? prev : { ...prev, arr: { ...prev.arr, services: arrServices } },
+    );
+  }, [arrServices, sections.length]);
 
   /**
    * Library size behind the current scope, and the collection count it
@@ -401,11 +411,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     if (!volumeMatters) return null;
     const counts = itemCountsQuery.data;
     if (!counts) return null;
-    // An empty selection means every available section, which is what the
-    // Sections chips and the job both take it to mean.
-    const scoped =
-      form.sections.length > 0 ? availableSections.filter((s) => form.sections.includes(s.title)) : availableSections;
-    const libraryItems = scoped.reduce((sum, s) => sum + (counts[s.title] ?? 0), 0);
+    const libraryItems = scopedSections.reduce((sum, s) => sum + (counts[s.title] ?? 0), 0);
     const estimate = estimateCollectionCount({
       type: form.type,
       libraryItems,
@@ -414,7 +420,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
     });
     if (estimate === null) return null;
     return { estimate, libraryItems, level: volumeLevel(estimate) };
-  }, [volumeMatters, itemCountsQuery.data, form.sections, form.type, form.minItems, form.limit, availableSections]);
+  }, [volumeMatters, itemCountsQuery.data, scopedSections, form.type, form.minItems, form.limit]);
 
   /**
    * The section whose tag values populate the smart-filter pickers. A rule
@@ -1614,23 +1620,26 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   }
 
   function renderActionsStep() {
-    const service = arrService;
-    const profilesQuery = arrProfilesQuery;
-    const foldersQuery = arrFoldersQuery;
-    const profiles = profilesQuery.data ?? [];
-    const folders = foldersQuery.data ?? [];
+    const services = form.arr.services;
+    const anyConfigured = services.some((svc) => !!arrStatusQuery.data?.[svc]);
     const setArr = (patch: Partial<ArrFormState>) => setForm({ ...form, arr: { ...form.arr, ...patch } });
+    const setTarget = (svc: ArrService) => (patch: Partial<ArrTargetForm>) =>
+      setForm({ ...form, arr: { ...form.arr, [svc]: { ...form.arr[svc], ...patch } } });
+
+    if (services.length === 0) {
+      return (
+        <>
+          <h3 className={styles.stepHeading}>Send missing items</h3>
+          <span className={styles.hint}>None of the selected libraries hold films or TV.</span>
+        </>
+      );
+    }
 
     return (
       <>
-        <h3 className={styles.stepHeading}>Send missing items to {service === "radarr" ? "Radarr" : "Sonarr"}</h3>
-        {!arrConfigured && (
-          <div className={styles.field}>
-            <span className={styles.typeCardWarn}>
-              Needs {service === "radarr" ? "Radarr" : "Sonarr"} · <SettingsPageLink to="/settings/arrs" />
-            </span>
-          </div>
-        )}
+        <h3 className={styles.stepHeading}>
+          Send missing items to {services.map((svc) => ARR_SERVICE_LABEL[svc]).join(" and ")}
+        </h3>
 
         <div className={styles.field}>
           <label>
@@ -1638,80 +1647,25 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               type="checkbox"
               checked={form.arr.enabled}
               onChange={(e) => setArr({ enabled: e.target.checked })}
-              disabled={!arrConfigured}
+              disabled={!anyConfigured && !form.arr.enabled}
             />{" "}
             Enable
           </label>
         </div>
 
+        {services.map((svc) => (
+          <ArrTargetFields
+            key={svc}
+            service={svc}
+            value={form.arr[svc]}
+            onChange={setTarget(svc)}
+            active={form.arr.enabled}
+            titled={services.length > 1}
+          />
+        ))}
+
         {form.arr.enabled && (
           <>
-            {/* Only shown once there is a choice to make. On the single-instance
-                setup almost everyone has, a picker with one entry is a control
-                that asks a question with one answer. */}
-            {arrInstancesForService.length > 1 && (
-              <div className={styles.field}>
-                <label htmlFor="arr-instance">Instance</label>
-                <select
-                  id="arr-instance"
-                  className={shared.input}
-                  value={form.arr.instanceId ?? ""}
-                  onChange={(e) =>
-                    // Changing instance invalidates both — a profile id from
-                    // one server means something else entirely on another.
-                    setArr({ instanceId: e.target.value, qualityProfileId: 0, rootFolderPath: "" })
-                  }
-                >
-                  {arrInstancesForService.map((i) => (
-                    <option key={i.id} value={i.isDefault ? "" : i.id}>
-                      {i.name}
-                      {i.isDefault ? " (default)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className={styles.field}>
-              <label htmlFor="arr-quality">Quality profile</label>
-              <select
-                id="arr-quality"
-                className={shared.input}
-                value={form.arr.qualityProfileId}
-                onChange={(e) => setArr({ qualityProfileId: parseInt(e.target.value, 10) || 0 })}
-              >
-                <option value={0}>{profilesQuery.isLoading ? "Loading…" : "— pick a profile —"}</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              {profilesQuery.error && (
-                <span className={styles.hint}>Couldn't load profiles: {profilesQuery.error.message}</span>
-              )}
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="arr-root">Root folder</label>
-              <select
-                id="arr-root"
-                className={shared.input}
-                value={form.arr.rootFolderPath}
-                onChange={(e) => setArr({ rootFolderPath: e.target.value })}
-              >
-                <option value="">{foldersQuery.isLoading ? "Loading…" : "— pick a folder —"}</option>
-                {folders.map((f) => (
-                  <option key={f.id} value={f.path}>
-                    {f.path}
-                  </option>
-                ))}
-              </select>
-              {foldersQuery.error && (
-                <span className={styles.hint}>Couldn't load folders: {foldersQuery.error.message}</span>
-              )}
-            </div>
-
             <div className={styles.field}>
               <label>
                 <input
@@ -1934,7 +1888,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               <span className={styles.summaryLabel}>Send to *arr</span>
               <span className={styles.summaryValue}>
                 {form.arr.enabled
-                  ? `${arrServiceForType(form.type, form.chart)}${form.arr.dryRun ? " (dry run)" : ""}, max ${form.arr.maxAddsPerRun}/run`
+                  ? `${form.arr.services.map((svc) => ARR_SERVICE_LABEL[svc]).join(" + ")}${form.arr.dryRun ? " (dry run)" : ""}, max ${form.arr.maxAddsPerRun}/run`
                   : "Off"}
               </span>
               <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("actions")}>

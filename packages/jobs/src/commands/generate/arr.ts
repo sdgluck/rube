@@ -2,6 +2,7 @@ import { type Services } from "@tinkerbell/composition";
 import { createImdbCommand } from "./sources/imdb.ts";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
+import { arrTargetFor, type ArrService, type ArrTarget } from "@tinkerbell/contracts";
 import { errorMessage, imdbId, tmdbId } from "@tinkerbell/core";
 import type { JobContext } from "@tinkerbell/core";
 import type { Rule } from "@tinkerbell/domain.rules";
@@ -33,7 +34,7 @@ interface Franchise {
 /** External item not yet present in the library, queued for radarr/sonarr. */
 interface Unmatched {
   externalId: string;
-  mediaType: "movie" | "tv";
+  mediaType: "movie" | "tv" | "either";
   displayName: string;
 }
 
@@ -80,7 +81,7 @@ export function createArrCommand(deps: Services) {
       return { added: 0, skipped: slice.length, failed: 0 };
     }
 
-    return pushToArr(ctx, slice, arrCfg);
+    return pushToArr(ctx, slice, arrCfg, legacyArrService(rule));
   }
 
   /**
@@ -127,9 +128,12 @@ export function createArrCommand(deps: Services) {
 
     // Build a union of IMDb IDs already present across all selected sections.
     const present = new Set<string>();
-    let mediaTypeHint: "movie" | "tv" = "movie";
+    // An IMDb id doesn't say whether it is a film or a show. One section type
+    // answers that; both leave it to the lookup (`candidateServices`).
+    const hasMovies = sections.some((s) => s.type === "movie");
+    const hasShows = sections.some((s) => s.type === "show");
+    const mediaTypeHint: Unmatched["mediaType"] = hasMovies && hasShows ? "either" : hasShows ? "tv" : "movie";
     for (const section of sections) {
-      if (section.type === "show") mediaTypeHint = "tv";
       const items = await client.allItemsWithGuids(section.key);
       for (const item of items) {
         const id = imdbId(item);
@@ -165,11 +169,15 @@ export function createArrCommand(deps: Services) {
         if (id != null) target.add(id);
       }
     }
+    // A rule over the film library alone must not send TV requests to Sonarr:
+    // an empty `presentTv` would otherwise read as "every show is missing".
+    const sectionMediaTypes = new Set(sections.map((s) => (s.type === "show" ? "tv" : "movie")));
 
     const { iterSeerrRequests } = await import("@tinkerbell/seerr");
     const out: Unmatched[] = [];
     for await (const req of iterSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter })) {
       const mt = req.media.mediaType;
+      if (!sectionMediaTypes.has(mt)) continue;
       const present = mt === "movie" ? presentMovie : presentTv;
       if (present.has(req.media.tmdbId)) continue;
       out.push({
@@ -322,42 +330,54 @@ export function createArrCommand(deps: Services) {
     ctx: JobContext,
     items: Unmatched[],
     arrCfg: NonNullable<RuleConfig["arr"]>,
+    legacyService: ArrService | null,
   ): Promise<ArrResolution> {
     const { lookupByExternalId, addItem } = await import("@tinkerbell/arr");
 
-    const byService: Record<"radarr" | "sonarr", Unmatched[]> = { radarr: [], sonarr: [] };
-    for (const u of items) byService[u.mediaType === "movie" ? "radarr" : "sonarr"].push(u);
+    // Resolved once per service, not per item: a missing target or instance is
+    // one log line, not one per title.
+    const endpoints = new Map<
+      ArrService,
+      { arrConfig: { service: ArrService; url: string; apiKey: string }; target: ArrTarget }
+    >();
+    for (const service of ["radarr", "sonarr"] as const) {
+      if (!items.some((u) => candidateServices(u).includes(service))) continue;
+      const target = arrTargetFor(arrCfg, service, legacyService ?? service);
+      if (!target) {
+        ctx.log(`[arr] No ${service} target on this rule — ${service === "radarr" ? "films" : "shows"} are not sent.`);
+        continue;
+      }
+      // The instance the rule names, or the service's default for every rule
+      // written before split instances existed.
+      const instance = resolveArrInstance(service, target.instanceId);
+      if (!instance) {
+        ctx.log(`[arr] ${service} not configured — skipping its items.`);
+        continue;
+      }
+      if (!instance.isDefault) ctx.log(`[arr] Using ${service} instance "${instance.name}".`);
+      endpoints.set(service, { arrConfig: { service, url: instance.url, apiKey: instance.apiKey }, target });
+    }
 
     let added = 0;
     let skipped = 0;
     let failed = 0;
 
-    for (const service of ["radarr", "sonarr"] as const) {
-      const queue = byService[service];
-      if (queue.length === 0) continue;
-
-      // The instance the rule names, or the service's default for every rule
-      // written before split instances existed.
-      const instance = resolveArrInstance(service, arrCfg.instanceId);
-      if (!instance) {
-        ctx.log(`[arr] ${service} not configured — skipping ${queue.length} item(s).`);
-        skipped += queue.length;
+    for (const u of items) {
+      const services = candidateServices(u).filter((svc) => endpoints.has(svc));
+      if (services.length === 0) {
+        skipped++;
         continue;
       }
-      if (!instance.isDefault) ctx.log(`[arr] Using ${service} instance "${instance.name}".`);
-      const arrConfig = { service, url: instance.url, apiKey: instance.apiKey };
-
-      for (const u of queue) {
+      let found = false;
+      for (const service of services) {
+        const { arrConfig, target } = endpoints.get(service)!;
         try {
           const lookup = await lookupByExternalId(arrConfig, u.externalId);
-          if (!lookup) {
-            ctx.log(`[arr] ${service}: lookup miss for ${u.externalId}`);
-            skipped++;
-            continue;
-          }
+          if (!lookup) continue;
+          found = true;
           const result = await addItem(arrConfig, lookup, {
-            qualityProfileId: arrCfg.qualityProfileId,
-            rootFolderPath: arrCfg.rootFolderPath,
+            qualityProfileId: target.qualityProfileId,
+            rootFolderPath: target.rootFolderPath,
             monitor: arrCfg.monitor,
             searchOnAdd: arrCfg.searchOnAdd,
           });
@@ -372,9 +392,15 @@ export function createArrCommand(deps: Services) {
             ctx.log(`[arr] ${service}: failed — ${result.error}`);
           }
         } catch (err) {
+          found = true;
           failed++;
           ctx.log(`[arr] ${service}: error for ${u.externalId} — ${errorMessage(err)}`);
         }
+        break;
+      }
+      if (!found) {
+        ctx.log(`[arr] ${services.join("/")}: lookup miss for ${u.externalId}`);
+        skipped++;
       }
     }
 
@@ -382,5 +408,29 @@ export function createArrCommand(deps: Services) {
     return { added, skipped, failed };
   }
 
-  return { resolveArrAdds };
+  /**
+   * Which services could hold an item, in the order to ask. An IMDb list over
+   * films and TV can't say which an id is without asking, so it tries Radarr
+   * first — a show id is a lookup miss there — then Sonarr.
+   */
+  function candidateServices(u: Unmatched): ArrService[] {
+    if (u.mediaType === "movie") return ["radarr"];
+    if (u.mediaType === "tv") return ["sonarr"];
+    return ["radarr", "sonarr"];
+  }
+
+  /**
+   * The one service a rule saved in the single-target shape was configured
+   * for — the one the wizard named at the time. An IMDb chart's sections are
+   * locked to the chart's media type, so its items already only go one way;
+   * every other type was shown Radarr.
+   */
+  function legacyArrService(rule: Rule): ArrService | null {
+    return rule.type === "imdb_chart" ? null : "radarr";
+  }
+
+  // `pushToArr` is returned for its test: every source that feeds it needs an
+  // upstream (TMDb, IMDb, Seerr) with no mock server yet, and the routing to
+  // the right service is the part with a history of being wrong.
+  return { resolveArrAdds, pushToArr };
 }

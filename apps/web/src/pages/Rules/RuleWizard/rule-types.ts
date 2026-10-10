@@ -15,6 +15,7 @@ import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR
 // The type list, not the map of components — this module is imported by
 // tests, and the components bring React with them.
 import { hasSourceStep } from "./sources/step-types.ts";
+import type { ArrService } from "@tinkerbell/contracts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
 
 /** First leaf in document order, or null if the tree is empty. Used by the
@@ -319,10 +320,38 @@ export function typeHasActionsStep(type: string): boolean {
   return !!TYPE_BY_VALUE[type]?.producesExternalItems;
 }
 
-export function arrServiceForType(type: string, chart: string): "radarr" | "sonarr" {
+/**
+ * The one service the wizard offered before films and shows had a target
+ * each — what a rule saved in that shape was configured for. Only used to
+ * read such a rule back into the form; see `arrTargetFor`.
+ */
+export function arrServiceForType(type: string, chart: string): ArrService {
   if (type === "imdb_chart") return IMDB_CHART_SECTION_TYPE[chart] === "show" ? "sonarr" : "radarr";
-  // imdb_list and seerr_requests are mixed; default to radarr — user reviews counts before non-dry-run.
   return "radarr";
+}
+
+/**
+ * The services a rule over these section types can send to: Radarr for films,
+ * Sonarr for TV, neither for music or photos. Always Radarr first.
+ */
+export function arrServicesForSections(sectionTypes: readonly string[]): ArrService[] {
+  const out: ArrService[] = [];
+  if (sectionTypes.includes("movie")) out.push("radarr");
+  if (sectionTypes.includes("show")) out.push("sonarr");
+  return out;
+}
+
+/** The first thing wrong with the *Arr action, or null. Only the services in scope need a target. */
+export function arrError(arr: RuleFormState["arr"]): string | null {
+  if (!arr.enabled) return null;
+  if (arr.services.length === 0) return "None of the selected libraries hold films or TV.";
+  const multiple = arr.services.length > 1;
+  for (const svc of arr.services) {
+    const label = svc === "radarr" ? "Radarr" : "Sonarr";
+    if (!arr[svc].qualityProfileId) return multiple ? `Pick a ${label} quality profile.` : "Pick a quality profile.";
+    if (!arr[svc].rootFolderPath) return multiple ? `Pick a ${label} root folder.` : "Pick a root folder.";
+  }
+  return null;
 }
 
 export function limitFieldLabel(type: string): string {
@@ -631,13 +660,7 @@ export function validateStep(step: StepId, form: RuleFormState): string | null {
   if (step === "scope") return pinRotationError(form);
   if (step === "outcome") return outcomeError(form);
   if (step === "presentation") return presentationError(form);
-  if (step === "actions") {
-    if (form.arr.enabled) {
-      if (!form.arr.qualityProfileId) return "Pick a quality profile.";
-      if (!form.arr.rootFolderPath) return "Pick a root folder.";
-    }
-    return null;
-  }
+  if (step === "actions") return arrError(form.arr);
   if (step === "review") return form.name.trim() ? null : "Name is required.";
   return null;
 }
@@ -652,6 +675,6 @@ export function isFormValid(form: RuleFormState): boolean {
     (form.type !== "smart_filter" || smartFilterIsComplete(form.smartFilter)) &&
     !pinRotationError(form) &&
     !presentationError(form) &&
-    (!form.arr.enabled || (!!form.arr.qualityProfileId && !!form.arr.rootFolderPath))
+    !arrError(form.arr)
   );
 }

@@ -18,6 +18,7 @@ import { describe, it } from "node:test";
 
 import {
   arrServiceForType,
+  arrServicesForSections,
   defaultLimitForType,
   isFormValid,
   presentationError,
@@ -57,16 +58,18 @@ const form = (over: Partial<RuleFormState> = {}): RuleFormState =>
     presentation: { ...DEFAULT_PRESENTATION_FORM },
     arr: {
       enabled: false,
-      instanceId: "",
+      services: ["radarr"],
+      radarr: { instanceId: "", qualityProfileId: 0, rootFolderPath: "" },
+      sonarr: { instanceId: "", qualityProfileId: 0, rootFolderPath: "" },
       monitor: true,
       searchOnAdd: true,
-      qualityProfileId: 0,
-      rootFolderPath: "",
       maxAddsPerRun: 10,
       dryRun: true,
     },
     ...over,
   }) as RuleFormState;
+
+const radarr = { instanceId: "", qualityProfileId: 1, rootFolderPath: "/data" };
 
 describe("validateStep — type", () => {
   it("requires a type", () => {
@@ -215,11 +218,26 @@ describe("validateStep — actions and review", () => {
     const enabled = form({ arr: { ...form().arr, enabled: true } });
     assert.match(validateStep("actions", enabled) ?? "", /quality profile/i);
 
-    const withProfile = form({ arr: { ...form().arr, enabled: true, qualityProfileId: 1 } });
+    const withProfile = form({ arr: { ...form().arr, enabled: true, radarr: { ...radarr, rootFolderPath: "" } } });
     assert.match(validateStep("actions", withProfile) ?? "", /root folder/i);
 
-    const complete = form({ arr: { ...form().arr, enabled: true, qualityProfileId: 1, rootFolderPath: "/data" } });
+    const complete = form({ arr: { ...form().arr, enabled: true, radarr } });
     assert.equal(validateStep("actions", complete), null);
+  });
+
+  it("films and TV in scope need a Radarr and a Sonarr target, named apart", () => {
+    // One shared target sent shows to Sonarr under a Radarr profile id.
+    const both = form({ arr: { ...form().arr, enabled: true, services: ["radarr", "sonarr"], radarr } });
+    assert.match(validateStep("actions", both) ?? "", /Sonarr quality profile/);
+    const done = form({ arr: { ...both.arr, sonarr: { instanceId: "", qualityProfileId: 4, rootFolderPath: "/tv" } } });
+    assert.equal(validateStep("actions", done), null);
+  });
+
+  it("only the services in scope are asked for", () => {
+    const tvOnly = form({
+      arr: { ...form().arr, enabled: true, services: ["sonarr"], sonarr: { ...radarr, rootFolderPath: "/tv" } },
+    });
+    assert.equal(validateStep("actions", tvOnly), null, "an empty Radarr target is fine for a TV-only rule");
   });
 
   it("a disabled *Arr action needs nothing", () => {
@@ -266,10 +284,7 @@ describe("isFormValid", () => {
 
   it("refuses a half-configured *Arr action", () => {
     assert.equal(isFormValid(form({ arr: { ...form().arr, enabled: true } })), false);
-    assert.equal(
-      isFormValid(form({ arr: { ...form().arr, enabled: true, qualityProfileId: 1, rootFolderPath: "/d" } })),
-      true,
-    );
+    assert.equal(isFormValid(form({ arr: { ...form().arr, enabled: true, radarr } })), true);
   });
 });
 
@@ -309,6 +324,13 @@ describe("type metadata", () => {
     assert.equal(arrServiceForType("imdb_chart", "top_250_tv"), "sonarr");
     assert.equal(arrServiceForType("imdb_chart", "top_250_movies"), "radarr");
     assert.equal(arrServiceForType("imdb_list", ""), "radarr", "mixed lists default to radarr");
+  });
+
+  it("the *Arr services follow the section types in scope", () => {
+    assert.deepEqual(arrServicesForSections(["movie"]), ["radarr"]);
+    assert.deepEqual(arrServicesForSections(["show"]), ["sonarr"]);
+    assert.deepEqual(arrServicesForSections(["show", "movie", "movie"]), ["radarr", "sonarr"]);
+    assert.deepEqual(arrServicesForSections(["artist"]), []);
   });
 
   it("suggestName produces a non-empty name for every rule type", () => {
