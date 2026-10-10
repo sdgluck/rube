@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-10-10
+
+### Fixed
+
+- A rule covering both films and TV now sends missing films to Radarr and missing shows to Sonarr, each with its own quality profile and root folder, and only offers the services the rule's selected libraries actually need.
+- A rule covering only films or only TV can now request through just Radarr or just Sonarr, leaving the other service's settings blank instead of requiring both.
+- The dashboard's panel collapse chevron is now inset from the card's edge instead of sitting flush against it.
+- On phones, toggle switches are now round and sized to fill their row, matching the native look.
+- On phones, the More tab now opens the More screen instead of jumping to Stats.
+- The native iOS and Android apps now reload live during development instead of requiring a manual rebuild.
+- The native apps now load as soon as the first server connection succeeds instead of showing a blank screen.
+- iOS no longer zooms in when tapping into a text field in the native app.
+
 ## [0.36.0] - 2026-10-09
 
 ### Added
