@@ -225,12 +225,28 @@ describe("validateStep — actions and review", () => {
     assert.equal(validateStep("actions", complete), null);
   });
 
-  it("films and TV in scope need a Radarr and a Sonarr target, named apart", () => {
-    // One shared target sent shows to Sonarr under a Radarr profile id.
-    const both = form({ arr: { ...form().arr, enabled: true, services: ["radarr", "sonarr"], radarr } });
-    assert.match(validateStep("actions", both) ?? "", /Sonarr quality profile/);
-    const done = form({ arr: { ...both.arr, sonarr: { instanceId: "", qualityProfileId: 4, rootFolderPath: "/tv" } } });
+  it("films and TV in scope may leave one service blank, but not both", () => {
+    const both = { ...form().arr, enabled: true, services: ["radarr", "sonarr"] as ("radarr" | "sonarr")[] };
+    assert.match(validateStep("actions", form({ arr: both })) ?? "", /Radarr, Sonarr or both/);
+    assert.equal(validateStep("actions", form({ arr: { ...both, radarr } })), null, "films only");
+    const done = form({
+      arr: { ...both, radarr, sonarr: { instanceId: "", qualityProfileId: 4, rootFolderPath: "/tv" } },
+    });
     assert.equal(validateStep("actions", done), null);
+  });
+
+  it("a half-filled target is named, even beside a complete one", () => {
+    // A profile with no folder reads like a choice and would send nothing.
+    const half = form({
+      arr: {
+        ...form().arr,
+        enabled: true,
+        services: ["radarr", "sonarr"],
+        radarr,
+        sonarr: { instanceId: "", qualityProfileId: 4, rootFolderPath: "" },
+      },
+    });
+    assert.match(validateStep("actions", half) ?? "", /Sonarr root folder/);
   });
 
   it("only the services in scope are asked for", () => {

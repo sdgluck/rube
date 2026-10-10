@@ -8,7 +8,7 @@
  * showed at the time, and saving always writes one target per service.
  */
 import { arrTargetFor, type ArrService, type RuleConfig } from "@tinkerbell/contracts";
-import { arrServiceForType } from "./rule-types.ts";
+import { arrServiceForType, arrTargetComplete } from "./rule-types.ts";
 import { DEFAULT_ARR_FORM, DEFAULT_ARR_TARGET, type ArrFormState, type ArrTargetForm } from "./types.ts";
 
 type ArrConfig = NonNullable<RuleConfig["arr"]>;
@@ -35,7 +35,11 @@ export function arrFormFromConfig(arr: ArrConfig | undefined, type: string, char
   };
 }
 
-/** Only the services in scope are written; a target for a library the rule no longer covers is dropped. */
+/**
+ * Only complete targets for the services in scope are written: one left blank
+ * means that service is not sent to, and a target for a library the rule no
+ * longer covers is dropped.
+ */
 export function arrConfigFromForm(arr: ArrFormState): ArrConfig | undefined {
   if (!arr.enabled) return undefined;
   const out: ArrConfig = {
@@ -46,6 +50,7 @@ export function arrConfigFromForm(arr: ArrFormState): ArrConfig | undefined {
     dryRun: arr.dryRun,
   };
   for (const svc of arr.services) {
+    if (!arrTargetComplete(arr[svc])) continue;
     const { instanceId, qualityProfileId, rootFolderPath } = arr[svc];
     out[svc] = { ...(instanceId ? { instanceId } : {}), qualityProfileId, rootFolderPath };
   }

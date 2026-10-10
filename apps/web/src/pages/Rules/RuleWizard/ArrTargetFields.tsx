@@ -45,6 +45,9 @@ export default function ArrTargetFields({ service, value, onChange, active, titl
   return (
     <>
       {titled && <h4 className={styles.subLabel}>{service === "radarr" ? "Films → Radarr" : "TV → Sonarr"}</h4>}
+      {titled && active && configured && (
+        <span className={styles.hint}>Leave blank to not send {service === "radarr" ? "films" : "shows"}.</span>
+      )}
       {!configured && statusQuery.isSuccess && (
         <div className={styles.field}>
           <span className={styles.typeCardWarn}>

@@ -341,15 +341,32 @@ export function arrServicesForSections(sectionTypes: readonly string[]): ArrServ
   return out;
 }
 
-/** The first thing wrong with the *Arr action, or null. Only the services in scope need a target. */
+/** Whether a service's target is filled in enough to send to. */
+export function arrTargetComplete(t: { qualityProfileId: number; rootFolderPath: string }): boolean {
+  return !!t.qualityProfileId && !!t.rootFolderPath;
+}
+
+/**
+ * The first thing wrong with the *Arr action, or null.
+ *
+ * With films and TV both in scope, either target may be left blank — that
+ * service is simply not sent to — but not both, and not half-filled: a
+ * profile with no folder reads like a choice and would silently send nothing.
+ */
 export function arrError(arr: RuleFormState["arr"]): string | null {
   if (!arr.enabled) return null;
   if (arr.services.length === 0) return "None of the selected libraries hold films or TV.";
   const multiple = arr.services.length > 1;
   for (const svc of arr.services) {
+    const t = arr[svc];
     const label = svc === "radarr" ? "Radarr" : "Sonarr";
-    if (!arr[svc].qualityProfileId) return multiple ? `Pick a ${label} quality profile.` : "Pick a quality profile.";
-    if (!arr[svc].rootFolderPath) return multiple ? `Pick a ${label} root folder.` : "Pick a root folder.";
+    const blank = !t.qualityProfileId && !t.rootFolderPath;
+    if (multiple && blank) continue;
+    if (!t.qualityProfileId) return multiple ? `Pick a ${label} quality profile.` : "Pick a quality profile.";
+    if (!t.rootFolderPath) return multiple ? `Pick a ${label} root folder.` : "Pick a root folder.";
+  }
+  if (!arr.services.some((svc) => arrTargetComplete(arr[svc]))) {
+    return "Pick a quality profile and root folder for Radarr, Sonarr or both.";
   }
   return null;
 }

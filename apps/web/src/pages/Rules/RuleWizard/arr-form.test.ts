@@ -32,6 +32,16 @@ describe("arr form ↔ config", () => {
     });
   });
 
+  it("leaves out a service whose target was left blank", () => {
+    const form = arrFormFromConfig(
+      { ...shared, radarr: { qualityProfileId: 1, rootFolderPath: "/movies" } },
+      "seerr_requests",
+      "",
+    );
+    const saved = arrConfigFromForm({ ...form, services: ["radarr", "sonarr"] });
+    assert.deepEqual(saved, { ...shared, radarr: { qualityProfileId: 1, rootFolderPath: "/movies" } });
+  });
+
   it("writes nothing for a disabled action", () => {
     assert.equal(arrConfigFromForm({ ...arrFormFromConfig(undefined, "imdb_list", ""), enabled: false }), undefined);
   });
