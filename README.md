@@ -17,6 +17,8 @@ and notifications on a schedule.
 - **Because you watched**: recommendation collections for each user.
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
+- **Movie match**: a group swipes through a movie library together until
+  everyone likes the same film. [More](#movie-match)
 - **Prerolls**: upload videos for Plex to play before a movie.
   [More](#prerolls)
 - **Labels**: apply and undo Plex labels in bulk, with a preview.
@@ -163,6 +165,34 @@ Limits:
 - The server owner can't be restricted, so the owner sees everyone's
   collections.
 - Click **Reconcile users** after sharing with someone new.
+
+## Movie match
+
+A group picks a film by swiping through one of your movie libraries in the
+portal. A film everyone in the room likes is a match. Turn it on under
+**Settings → Portal → Movie match**. It is off by default.
+
+- Only users of your Plex server can make a room, and only from a movie library
+  shared with them. They can narrow the films by genre, length and release year,
+  or start from a suggestion such as "hidden gem Thriller of the 90s".
+- Everyone in a room sees the films in the same shuffled order. Swiping right
+  likes a film and swiping left skips it. The arrow keys and the buttons under
+  the card do the same.
+- **Invite link**: anyone with a room's link can join as a guest with just a
+  name. They don't need a Plex account. A guest sees that room's films (titles,
+  posters and synopses) and nothing else in the portal. They can't play
+  anything.
+- **Room code**: typing a room's four-letter code works only for a user of your
+  server who already has the room's library.
+- Matches list the films everyone liked, then the films more than one person
+  liked. Each person can vote for one of them.
+
+Limits:
+
+- Guests open the link in a browser, so the portal must be reachable from where
+  they are. Set its public address under **Settings → Portal → Address**.
+- A room closes after 30 days without a visit. It also closes when whoever made
+  it loses access to its library or leaves your server.
 
 ## Prerolls
 

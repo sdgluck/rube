@@ -85,6 +85,40 @@ export function sendStaleAsset(res: ServerResponse): void {
   res.end(body);
 }
 
+/**
+ * Stream one Plex image to the browser — the admin's `/api/plex-image` and the
+ * portal's movie-match posters both come through here.
+ */
+async function proxyPlexImage(res: ServerResponse, imageUrl: URL, fetchImpl: typeof fetch): Promise<void> {
+  try {
+    const pRes = await fetchImpl(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
+    if (!pRes.ok || !pRes.body) {
+      res.writeHead(pRes.status);
+      res.end();
+      return;
+    }
+    // Don't trust the upstream MIME — a hostile/compromised Plex could
+    // return text/html and turn this same-origin endpoint into an XSS
+    // vector against the SPA. Coerce anything outside the allow-list
+    // to an opaque download so the browser won't parse it.
+    const upstream = pRes.headers.get("Content-Type") ?? "";
+    const mime = ALLOWED_IMAGE_MIME.has(upstream) ? upstream : "application/octet-stream";
+    res.writeHead(200, {
+      "Content-Type": mime,
+      "Content-Disposition": "inline",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "public, max-age=86400",
+    });
+    // `pipeline` propagates backpressure and cancels the upstream reader
+    // on error/abort, so we don't need an explicit reader.cancel().
+    await pipeline(Readable.fromWeb(pRes.body as never), res);
+  } catch {
+    // Headers may already have been sent if the stream broke mid-flight.
+    if (!res.headersSent) res.writeHead(502);
+    res.end();
+  }
+}
+
 /** Each server admits only its own app — the portal app has no business on the admin port. */
 const ADMIN_APP_ORIGINS: ReadonlySet<string> = new Set(nativeOrigins("admin"));
 const PORTAL_APP_ORIGINS: ReadonlySet<string> = new Set(nativeOrigins("portal"));
@@ -150,33 +184,7 @@ export function createAdminHandler(deps: AdminHandlerDeps) {
         res.end();
         return;
       }
-      try {
-        const pRes = await fetchImpl(imageUrl.toString(), { signal: AbortSignal.timeout(10000) });
-        if (!pRes.ok || !pRes.body) {
-          res.writeHead(pRes.status);
-          res.end();
-          return;
-        }
-        // Don't trust the upstream MIME — a hostile/compromised Plex could
-        // return text/html and turn this same-origin endpoint into an XSS
-        // vector against the SPA. Coerce anything outside the allow-list
-        // to an opaque download so the browser won't parse it.
-        const upstream = pRes.headers.get("Content-Type") ?? "";
-        const mime = ALLOWED_IMAGE_MIME.has(upstream) ? upstream : "application/octet-stream";
-        res.writeHead(200, {
-          "Content-Type": mime,
-          "Content-Disposition": "inline",
-          "X-Content-Type-Options": "nosniff",
-          "Cache-Control": "public, max-age=86400",
-        });
-        // `pipeline` propagates backpressure and cancels the upstream reader
-        // on error/abort, so we don't need an explicit reader.cancel().
-        await pipeline(Readable.fromWeb(pRes.body as never), res);
-      } catch {
-        // Headers may already have been sent if the stream broke mid-flight.
-        if (!res.headersSent) res.writeHead(502);
-        res.end();
-      }
+      await proxyPlexImage(res, imageUrl, fetchImpl);
       return;
     }
 
@@ -270,10 +278,17 @@ export interface PortalHandlerDeps {
   portalRouter: Trpc["portalRouter"];
   createPortalContext: Trpc["createPortalContext"];
   portalDistDir: string;
+  getConfig: Services["config"]["getConfig"];
+  /** The Plex thumb behind a signed movie-match poster path, or null. See `@tinkerbell/domain.match`. */
+  posterThumb: Services["match"]["posterThumb"];
+  /** Injectable for tests; defaults to the global. */
+  fetchImpl?: typeof fetch;
 }
 
+const POSTER_PATH = "/api/match/poster/";
+
 export function createPortalHandler(deps: PortalHandlerDeps) {
-  const { portalRouter, createPortalContext, portalDistDir } = deps;
+  const { portalRouter, createPortalContext, portalDistDir, getConfig, posterThumb, fetchImpl = fetch } = deps;
 
   return async function handlePortalRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url!, `http://${req.headers.host}`);
@@ -290,6 +305,35 @@ export function createPortalHandler(deps: PortalHandlerDeps) {
         createContext: ({ req: r, resHeaders }) => createPortalContext({ req: r, resHeaders, ip: clientIp(req) }),
       });
       await sendFetchResponse(fetchRes, res);
+      return;
+    }
+
+    // Movie-match posters. Not session-gated, because guests have no session
+    // and an `<img>` in the native app can't send one: the path is signed
+    // instead, and only ever handed to someone the room let in. The signature
+    // names the rating key and the thumb is looked up from it, so no caller
+    // chooses which Plex path is fetched.
+    if (path.startsWith(POSTER_PATH) && (req.method === "GET" || req.method === "HEAD")) {
+      let ratingKey: string | null;
+      try {
+        ratingKey = decodeURIComponent(path.slice(POSTER_PATH.length));
+      } catch {
+        ratingKey = null; // A malformed escape is a miss, not a 500.
+      }
+      const thumb = ratingKey === null ? null : posterThumb(ratingKey, url.searchParams.get("sig"));
+      const imageUrl =
+        thumb &&
+        buildPlexImageUrl({
+          thumbPath: thumb,
+          plexUrl: getConfig("global_plex_url"),
+          plexToken: getConfig("global_plex_token"),
+        });
+      if (!imageUrl) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not found");
+        return;
+      }
+      await proxyPlexImage(res, imageUrl, fetchImpl);
       return;
     }
 

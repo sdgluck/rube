@@ -25,6 +25,7 @@ beforeEach(() => {
   deleteConfig("global_personalized_sharing");
   deleteConfig("cleanup_enabled");
   deleteConfig("global_smtp");
+  deleteConfig("match_enabled");
 });
 
 describe("portalShouldRun", () => {
@@ -65,5 +66,12 @@ describe("portalShouldRun", () => {
     setConfig("global_smtp", { host: "", port: 587, secure: false, user: "", password: "", from: "", to: "" });
     assert.equal(portalShouldRun(), false);
     assert.ok(getConfig("global_smtp"), "the row still exists — it is the host that decides");
+  });
+
+  test("movie match opens it, since its rooms are the portal's", () => {
+    setConfig("match_enabled", true);
+    assert.equal(portalShouldRun(), true);
+    setConfig("match_enabled", false);
+    assert.equal(portalShouldRun(), false);
   });
 });

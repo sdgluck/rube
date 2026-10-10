@@ -3,6 +3,7 @@ import { httpBatchLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { PortalRouter } from "@tinkerbell/trpc";
 import { apiUrl, authHeaders, getConnection } from "@tinkerbell/native-client";
+import { activeGuestToken } from "./match/link.ts";
 
 export const portalTrpc = createTRPCReact<PortalRouter>();
 
@@ -17,6 +18,9 @@ export const portalTrpcClient = portalTrpc.createClient({
       fetch: (url, opts) => {
         const headers = new Headers(opts?.headers);
         for (const [name, value] of Object.entries(authHeaders())) headers.set(name, value);
+        // A movie-match guest's room token — see match/link.ts.
+        const guest = activeGuestToken();
+        if (guest) headers.set("X-Match-Guest", guest);
         // No cookies cross-origin: asking for them would need the server to
         // send `Access-Control-Allow-Credentials`, which it deliberately never
         // does (see apps/server/src/cors.ts), and the WebView would discard
@@ -27,6 +31,11 @@ export const portalTrpcClient = portalTrpc.createClient({
     }),
   ],
 });
+
+/** One movie-match room, as its poll returns it. */
+export type MatchState = inferRouterOutputs<PortalRouter>["match"]["state"];
+export type MatchCard = inferRouterOutputs<PortalRouter>["match"]["deck"]["films"][number];
+export type MatchFilm = MatchState["matches"][number];
 
 /** Which tabs, sections and actions this server offers, by component id. */
 export type PortalComponents = inferRouterOutputs<PortalRouter>["components"];

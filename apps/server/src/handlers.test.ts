@@ -133,6 +133,13 @@ before(async () => {
         portalRouter: portalRouter as never,
         createPortalContext: (() => ({})) as never,
         portalDistDir: portalDist,
+        getConfig: ((key: string) =>
+          key === "global_plex_url" ? "http://plex.invalid" : key === "global_plex_token" ? "tok" : undefined) as never,
+        posterThumb: (ratingKey, sig) => (ratingKey === "42" && sig === "good" ? "/library/metadata/42/thumb/1" : null),
+        fetchImpl: (async (url: string) => {
+          calls.push(`poster:${url}`);
+          return upstream();
+        }) as typeof fetch,
       }),
     ),
   );
@@ -380,6 +387,26 @@ describe("the portal server", () => {
       const res = await get(portalBase, path);
       assert.equal(res.status, 404, `${path} was not a 404`);
       assert.match(res.headers.get("content-type") ?? "", /text\/plain/);
+      await res.text();
+    }
+  });
+
+  test("serves a movie-match poster only on a valid signature", async () => {
+    const ok = await get(portalBase, "/api/match/poster/42?sig=good");
+    assert.equal(ok.status, 200);
+    assert.equal(ok.headers.get("content-type"), "image/png");
+    await ok.text();
+    // The thumb is looked up from the signed key; the caller never names a Plex path.
+    assert.ok(calls.includes("poster:http://plex.invalid/library/metadata/42/thumb/1?X-Plex-Token=tok"));
+
+    for (const path of [
+      "/api/match/poster/42",
+      "/api/match/poster/42?sig=bad",
+      "/api/match/poster/43?sig=good",
+      "/api/match/poster/%E0%A4%A?sig=good",
+    ]) {
+      const res = await get(portalBase, path);
+      assert.equal(res.status, 404, `${path} was not refused`);
       await res.text();
     }
   });

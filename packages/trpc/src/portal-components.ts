@@ -22,6 +22,7 @@ export function createPortalComponents(deps: Pick<TrpcDeps, "config" | "notifica
     return resolvePortalComponents(getConfig("portal_components_hidden") ?? [], {
       cleanup: getConfig("cleanup_enabled") === true,
       smtp: smtpConfigured(),
+      match: getConfig("match_enabled") === true,
     });
   }
 

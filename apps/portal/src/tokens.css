@@ -45,6 +45,15 @@
   --on-inverse-ok: #9fd8d1;
   --on-inverse-error: #f0a9a2;
 
+  /* ─── On a poster ──────────────────────────────────────────────────────
+   * Movie match lays its text over film posters, which are whatever colour
+   * the film is, in either scheme — so these don't flip either. */
+  --poster-scrim: rgba(0, 0, 0, 0.88);
+  --poster-scrim-soft: rgba(0, 0, 0, 0.45);
+  --on-poster: #fff;
+  --on-poster-muted: rgba(255, 255, 255, 0.78);
+  --on-poster-chip: rgba(255, 255, 255, 0.16);
+
   /* The focus ring, and the quiet hover fill under a segmented control. */
   --focus-ring: rgba(18, 134, 124, 0.14);
   --fill-hover: rgba(127, 127, 127, 0.12);

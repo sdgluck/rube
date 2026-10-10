@@ -102,7 +102,16 @@ const server = createServer(
 // The admin appRouter is intentionally NOT mounted here, so even though it is
 // unauthenticated it stays unreachable on the public port.
 const portalServer = createServer(
-  guarded(portalLog, createPortalHandler({ portalRouter, createPortalContext, portalDistDir: PORTAL_DIST_DIR })),
+  guarded(
+    portalLog,
+    createPortalHandler({
+      portalRouter,
+      createPortalContext,
+      portalDistDir: PORTAL_DIST_DIR,
+      getConfig,
+      posterThumb: services.match.posterThumb,
+    }),
+  ),
 );
 
 // Keep listening even if a bind fails (e.g. port in use) — the reconciler

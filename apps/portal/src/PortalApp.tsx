@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Clock, Heart, LayoutGrid, UserRound, type LucideIcon } from "lucide-react";
+import { Clock, Heart, LayoutGrid, Popcorn, UserRound, type LucideIcon } from "lucide-react";
 import {
   biometryAvailable,
   getConnection,
@@ -22,6 +22,10 @@ import { EmptyState, ErrorState, RowsSkeleton } from "./components/States.tsx";
 import MyCollections from "./tabs/MyCollections.tsx";
 import PreferencesForm from "./tabs/PreferencesForm.tsx";
 import LeavingSoon from "./tabs/LeavingSoon.tsx";
+import MatchTab from "./match/MatchTab.tsx";
+import GuestMatch from "./match/GuestMatch.tsx";
+import { guestToken, rememberLinkAcrossSignIn, setActiveGuest, takePendingLink } from "./match/link.ts";
+import { useMatchRoute } from "./match/route.ts";
 
 /**
  * The portal shell: sign-in, branding, and which tab you are on.
@@ -55,6 +59,7 @@ const TABS = [
   // servers that could never remove anything, saying so forever.
   { id: "collections", label: "Your collections", component: "tab.collections" },
   { id: "preferences", label: "Your tastes", component: "tab.tastes" },
+  { id: "match", label: "Movie match", component: "tab.match" },
   { id: "leaving", label: "Leaving soon", component: "tab.leaving" },
 ] as const;
 
@@ -64,12 +69,14 @@ type TabId = (typeof TABS)[number]["id"] | "account";
 const PHONE_TABS: Record<TabId, { label: string; Icon: LucideIcon }> = {
   collections: { label: "Collections", Icon: LayoutGrid },
   preferences: { label: "Tastes", Icon: Heart },
+  match: { label: "Match", Icon: Popcorn },
   leaving: { label: "Leaving", Icon: Clock },
   account: { label: "Account", Icon: UserRound },
 };
 
 function tabFromHash(): TabId | null {
-  const id = location.hash.slice(1);
+  // `#match/CODE` is still the match tab; see match/link.ts.
+  const id = location.hash.slice(1).split("/")[0] ?? "";
   return id in PHONE_TABS ? (id as TabId) : null;
 }
 
@@ -118,6 +125,21 @@ export default function PortalApp() {
     window.scrollTo(0, scrollByTab.current.get(tab) ?? 0);
   }, [tab]);
   const [finishing, setFinishing] = useState<boolean>(() => !!localStorage.getItem(PENDING_KEY));
+  const matchRoute = useMatchRoute();
+
+  // Back from plex.tv with an invite link that was open when sign-in began:
+  // put it back, so the room it was for opens rather than the default tab.
+  const signedIn = !!meQuery.data;
+  useEffect(() => {
+    if (!signedIn) return;
+    setActiveGuest(null);
+    const pending = takePendingLink();
+    if (pending) {
+      history.replaceState(history.state, "", pending);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      setTabState("match");
+    }
+  }, [signedIn]);
 
   // Apply the admin's background image to the page. It is painted by a fixed
   // `body::before` (portal.css) rather than `background-attachment: fixed` on
@@ -197,6 +219,7 @@ export default function PortalApp() {
 
   function signIn() {
     setError(null);
+    rememberLinkAcrossSignIn();
     // The app opens Plex in a sheet and keeps the session itself, rather than
     // leaving for plex.tv and coming back. See `nativePlexSignIn`.
     if (isNative()) return void signInNative();
@@ -232,6 +255,21 @@ export default function PortalApp() {
           <ErrorState message={meQuery.error.message} onRetry={() => meQuery.refetch()} />
         </div>
       </div>
+    );
+  }
+
+  // A room's invite link, opened by someone who isn't signed in: the room's
+  // guest screen rather than the sign-in one. Most people sent a link like
+  // this have no account on this server to sign in with.
+  if (!meQuery.data && matchRoute?.code && (matchRoute.invite || guestToken(matchRoute.code))) {
+    return (
+      <GuestMatch
+        key={matchRoute.code}
+        code={matchRoute.code}
+        invite={matchRoute.invite}
+        branding={branding}
+        onSignIn={signIn}
+      />
     );
   }
 
@@ -280,6 +318,8 @@ export default function PortalApp() {
       />
     ) : current === "preferences" ? (
       <PreferencesForm components={components} />
+    ) : current === "match" ? (
+      <MatchTab />
     ) : current === "leaving" ? (
       <LeavingSoon components={components} />
     ) : current === "account" ? (

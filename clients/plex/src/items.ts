@@ -666,6 +666,18 @@ export function createItemsModule(http: PlexHttp) {
     return thumbs;
   }
 
+  /** Synopses, which the media mirror doesn't keep. Same batched shape as the thumbs above. */
+  async function getSummariesByRatingKeys(ratingKeys: string[]): Promise<Map<string, string>> {
+    const summaries = new Map<string, string>();
+    for (let i = 0; i < ratingKeys.length; i += 100) {
+      const data = await http.request(`/library/metadata/${ratingKeys.slice(i, i + 100).join(",")}`);
+      for (const m of parseMetadataArray(data?.MediaContainer?.Metadata)) {
+        if (m.ratingKey && m.summary) summaries.set(m.ratingKey, m.summary);
+      }
+    }
+    return summaries;
+  }
+
   return {
     allItems,
     showSizes,
@@ -688,5 +700,6 @@ export function createItemsModule(http: PlexHttp) {
     getMetadataChildren,
     getItemFullDetail,
     getThumbsByRatingKeys,
+    getSummariesByRatingKeys,
   };
 }

@@ -107,6 +107,9 @@ importers:
       lucide-react:
         specifier: ^1.14.0
         version: 1.16.0(react@19.2.6)
+      qrcode.react:
+        specifier: ^4.2.0
+        version: 4.2.0(react@19.2.6)
       react:
         specifier: ^19.0.0
         version: 19.2.6
@@ -1066,6 +1069,37 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/match:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/ports':
+        specifier: workspace:*
+        version: link:../../packages/ports
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
+    devDependencies:
+      '@tinkerbell/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/media:
     dependencies:
       '@tinkerbell/container':
@@ -1832,6 +1866,9 @@ importers:
       '@tinkerbell/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
+      '@tinkerbell/domain.match':
+        specifier: workspace:*
+        version: link:../../domains/match
       '@tinkerbell/domain.media':
         specifier: workspace:*
         version: link:../../domains/media
@@ -2429,6 +2466,9 @@ importers:
       '@tinkerbell/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
+      '@tinkerbell/domain.match':
+        specifier: workspace:*
+        version: link:../../domains/match
       '@tinkerbell/domain.media':
         specifier: workspace:*
         version: link:../../domains/media
@@ -5414,6 +5454,11 @@ packages:
   qrcode-generator@2.0.4:
     resolution: {integrity: sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==}
 
+  qrcode.react@4.2.0:
+    resolution: {integrity: sha512-QpgqWi8rD9DsS9EP3z7BT+5lY5SFhsqGjpgW5DY/i3mK4M9DTBNz3ErMi8BWYEfI3L0d8GIbGmcdFAS1uIRGjA==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   qs@6.15.2:
     resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
     engines: {node: '>=0.6'}
@@ -8303,6 +8348,10 @@ snapshots:
       hookified: 2.2.0
 
   qrcode-generator@2.0.4: {}
+
+  qrcode.react@4.2.0(react@19.2.6):
+    dependencies:
+      react: 19.2.6
 
   qs@6.15.2:
     dependencies:

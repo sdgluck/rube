@@ -28,6 +28,7 @@ const GROUPS: Array<{ id: PortalComponentGroup; title: string }> = [
 const PREREQUISITES: Record<PortalPrerequisite, { label: string; to: string }> = {
   cleanup: { label: "Needs cleanup turned on", to: "/settings/cleanup" },
   smtp: { label: "Needs email (SMTP)", to: "/settings/notifications/smtp" },
+  match: { label: "Needs movie match turned on", to: "/settings/portal/match" },
 };
 
 export default function SettingsPortalComponents() {

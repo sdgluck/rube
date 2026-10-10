@@ -32,6 +32,10 @@ const { createHandshake } = createHandshakes(trpcDeps);
  * handshake procedures are unauthenticated by definition, as is `auth.server`,
  * which the native app asks before sign-in. A shared user's own data is never
  * in here.
+ *
+ * The two `match.guest.*` procedures are the movie-match invite screen: how
+ * somebody with no account on this server joins a room they were sent. Both
+ * need the room's invite secret, and neither touches anything but that room.
  */
 const PUBLIC_PATHS = new Set([
   "personalizationStatus",
@@ -40,6 +44,8 @@ const PUBLIC_PATHS = new Set([
   "auth.poll",
   "auth.logout",
   "auth.server",
+  "match.guest.preview",
+  "match.guest.join",
 ]);
 
 type PortalContext = import("./portal.router.ts").PortalContext;
@@ -95,11 +101,14 @@ describe("portal router surface", () => {
     );
   });
 
-  test("the public list holds only the handshake and the login screen's own two queries", () => {
+  test("the public list holds only the handshake, the login screen's own two queries, and the invite screen", () => {
     for (const path of PUBLIC_PATHS) {
       assert.ok(
-        path.startsWith("auth.") || path === "personalizationStatus" || path === "branding",
-        `${path} is public but isn't part of the sign-in screen`,
+        path.startsWith("auth.") ||
+          path.startsWith("match.guest.") ||
+          path === "personalizationStatus" ||
+          path === "branding",
+        `${path} is public but isn't part of the sign-in or invite screen`,
       );
       assert.ok(path in procedures(), `${path} is listed as public but no longer exists`);
     }

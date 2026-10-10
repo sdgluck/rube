@@ -6,6 +6,7 @@ const TABS = [
   { to: "address", label: "Address" },
   { to: "personalization", label: "Personalization" },
   { to: "components", label: "Components" },
+  { to: "match", label: "Movie match" },
   { to: "appearance", label: "Appearance" },
   { to: "preroll", label: "Preroll" },
 ];

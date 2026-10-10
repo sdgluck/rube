@@ -14,7 +14,7 @@
  */
 
 /** A feature a component is meaningless without. */
-export type PortalPrerequisite = "cleanup" | "smtp";
+export type PortalPrerequisite = "cleanup" | "smtp" | "match";
 
 export type PortalComponentGroup = "tabs" | "tastes" | "actions";
 
@@ -31,6 +31,10 @@ export const PORTAL_COMPONENTS = [
   { id: "tab.collections", group: "tabs", label: "Your collections" },
   { id: "tab.tastes", group: "tabs", label: "Your tastes" },
   { id: "tab.leaving", group: "tabs", label: "Leaving soon", requires: "cleanup" },
+  // Behind its own switch as well as this one: movie match is off until an
+  // admin turns it on (`match_enabled`), unlike the tabs above, which were the
+  // portal's from the start.
+  { id: "tab.match", group: "tabs", label: "Movie match", requires: "match" },
   { id: "tastes.genres", group: "tastes", label: "Genres", parent: "tab.tastes" },
   { id: "tastes.moods", group: "tastes", label: "Moods", parent: "tab.tastes" },
   { id: "tastes.neverRecommend", group: "tastes", label: "Never recommend", parent: "tab.tastes" },

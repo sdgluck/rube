@@ -36,6 +36,7 @@
     "@tinkerbell/domain.download-clients": "workspace:*",
     "@tinkerbell/domain.events": "workspace:*",
     "@tinkerbell/domain.health": "workspace:*",
+    "@tinkerbell/domain.match": "workspace:*",
     "@tinkerbell/domain.media": "workspace:*",
     "@tinkerbell/domain.metadata": "workspace:*",
     "@tinkerbell/domain.migration": "workspace:*",

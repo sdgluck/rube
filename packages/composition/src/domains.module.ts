@@ -35,6 +35,7 @@ import { createDigest, DigestToken } from "@tinkerbell/domain.digest";
 import { DownloadClientsToken, createDownloadClients } from "@tinkerbell/domain.download-clients";
 import { createEvents, EventsToken } from "@tinkerbell/domain.events";
 import { createHealth, HealthToken } from "@tinkerbell/domain.health";
+import { createMatch, MatchToken } from "@tinkerbell/domain.match";
 import { createMedia, MediaToken } from "@tinkerbell/domain.media";
 import { createMetadata, MetadataToken } from "@tinkerbell/domain.metadata";
 import { createMetadataOverrides, MetadataOverridesToken } from "@tinkerbell/domain.metadata-overrides";
@@ -148,6 +149,9 @@ export function registerDomains(r: Registry): void {
       prerolls: c.resolve(PrerollsToken),
       aiUsage: c.resolve(AiUsageToken),
     }),
+  );
+  r.register(MatchToken, (c) =>
+    createMatch({ db: c.resolve(DbToken), now: c.resolve(ClockToken), sharing: c.resolve(SharingToken) }),
   );
   r.register(MediaToken, (c) => createMedia({ db: c.resolve(DbToken), emitEvent: c.resolve(EventBusToken) }));
   r.register(MetadataToken, (c) => createMetadata({ db: c.resolve(DbToken), now: c.resolve(ClockToken) }));

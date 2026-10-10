@@ -23,6 +23,7 @@ import {
 } from "./cookies.ts";
 import { createHandshakes } from "./handshake.ts";
 import { createPortalComponents } from "./portal-components.ts";
+import { createPortalMatchRouter } from "./portal-match.router.ts";
 import { serverInfo } from "./server-info.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
 
@@ -37,6 +38,12 @@ export interface PortalContext {
   /** Where the browser thinks it is, for the plex.tv return trip. */
   origin: string;
   ip: string;
+  /**
+   * A movie-match guest's room token (`X-Match-Guest`). Only the room
+   * procedures in `portal-match.router.ts` read it; to everything else a guest
+   * is a caller with no session.
+   */
+  matchGuest?: string;
 }
 
 const tp = initTRPC.context<PortalContext>().create();
@@ -49,6 +56,14 @@ const userProcedure = tp.procedure.use(({ ctx, next }) => {
   if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in with Plex first." });
   return next({ ctx: { ...ctx, session: ctx.session } });
 });
+
+/** What `portal-match.router.ts` builds its procedures from, so it shares this router's context. */
+export interface PortalProcedures {
+  router: typeof tp.router;
+  publicProcedure: typeof publicProcedure;
+  userProcedure: typeof userProcedure;
+  rateLimit: (ip: string) => void;
+}
 
 export function createPortalRouter(deps: TrpcDeps) {
   const { createHandshake, rateLimit, readHandshake, spendHandshake } = createHandshakes(deps);
@@ -100,6 +115,7 @@ export function createPortalRouter(deps: TrpcDeps) {
       handshakeNonce: parseCookie(cookies, HANDSHAKE_COOKIES.portal),
       origin: `${secure ? "https" : "http"}://${host}`,
       ip: opts.ip ?? "unknown",
+      matchGuest: opts.req.headers.get("x-match-guest")?.slice(0, 128) || undefined,
     };
   }
 
@@ -366,6 +382,16 @@ export function createPortalRouter(deps: TrpcDeps) {
     searchTitles: userProcedure
       .input(z.object({ q: z.string() }))
       .query(({ ctx, input }) => searchMediaTitles(input.q, 15, sharedSectionKeys(ctx.session.userId))),
+
+    /** Movie match — see `portal-match.router.ts`, which is where its guests are let in. */
+    match: createPortalMatchRouter(deps, {
+      router: tp.router,
+      publicProcedure,
+      userProcedure,
+      rateLimit,
+      requireComponent,
+      getPlexClient,
+    }),
 
     availableGenres: userProcedure.query(async () => {
       const client = getPlexClient();

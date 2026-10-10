@@ -153,6 +153,13 @@ export const configSchema = z.object({
    * config read — `configRouter.save` rejects unknown ids on the way in.
    */
   portal_components_hidden: z.array(z.string()).max(40),
+  /**
+   * Movie match: shared users make a room, swipe through a movie library
+   * together, and see what everyone liked. Off by default — it is a new thing
+   * shared users can do on someone's server, so the server's owner opts in —
+   * and turning it on starts the portal if nothing else has (`portalShouldRun`).
+   */
+  match_enabled: z.boolean(),
   global_anthropic_api_key: z.string(),
   global_llm: z.object({
     provider: z.enum(["anthropic", "openai", "gemini", "ollama", "openai-compatible"]),
@@ -1220,12 +1227,14 @@ export function createConfigStore(deps: ConfigStoreDeps) {
    * So: any portal-served feature being on is enough. Personalization mid-flip
    * (`enabling`/`disabling`) counts, so the portal doesn't blink during a
    * transition. Digests are represented by SMTP being configured, because that is
-   * the admin-side half — subscribing is what the portal is for.
+   * the admin-side half — subscribing is what the portal is for. Movie match
+   * lives only in the portal, so its switch opens it too.
    */
   function portalShouldRun(): boolean {
     if (getPersonalizedSharingStatus() !== "disabled") return true;
     if (getConfig("cleanup_enabled") === true) return true;
     if ((getConfig("global_smtp")?.host ?? "") !== "") return true;
+    if (getConfig("match_enabled") === true) return true;
     return false;
   }
 

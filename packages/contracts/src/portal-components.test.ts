@@ -7,7 +7,7 @@ import {
   TASTES_PREFERENCE_KEYS,
 } from "./portal-components.ts";
 
-const ALL_MET = { cleanup: true, smtp: true };
+const ALL_MET = { cleanup: true, smtp: true, match: true };
 
 describe("resolvePortalComponents", () => {
   test("everything is on by default once its features are", () => {
@@ -16,7 +16,7 @@ describe("resolvePortalComponents", () => {
   });
 
   test("a switched-on component still needs its feature", () => {
-    const states = resolvePortalComponents([], { cleanup: false, smtp: true });
+    const states = resolvePortalComponents([], { cleanup: false, smtp: true, match: true });
     assert.deepEqual(states["tab.leaving"], { enabled: true, on: false, unmet: "cleanup" });
   });
 
@@ -29,7 +29,7 @@ describe("resolvePortalComponents", () => {
   });
 
   test("a parent's unmet feature reaches its children", () => {
-    const states = resolvePortalComponents([], { cleanup: false, smtp: true });
+    const states = resolvePortalComponents([], { cleanup: false, smtp: true, match: true });
     assert.equal(states["action.keep"].on, false);
   });
 
@@ -53,6 +53,11 @@ describe("the component list", () => {
     for (const c of PORTAL_COMPONENTS.filter((c) => c.group === "tastes")) {
       assert.ok(TASTES_PREFERENCE_KEYS[c.id]?.length, `${c.id} has no keys, so hiding it hides nothing on save`);
     }
+  });
+
+  test("movie match stays off until it is turned on", () => {
+    const states = resolvePortalComponents([], { cleanup: true, smtp: true, match: false });
+    assert.deepEqual(states["tab.match"], { enabled: true, on: false, unmet: "match" });
   });
 
   test("isPortalComponentId", () => {

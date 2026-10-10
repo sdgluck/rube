@@ -2205,3 +2205,108 @@ export const llmUsage = sqliteTable(
   },
   (table) => [index("idx_llm_usage_at").on(table.at)],
 );
+
+/**
+ * Movie match rooms — a group swiping through one movie library together.
+ *
+ * Kept rather than held in memory, which is what the standalone app did: a
+ * Tinkerbell upgrade restarts the process, and a restart halfway through a
+ * movie night lost every swipe and every member. Rooms that nobody has touched
+ * for `MATCH_ROOM_RETENTION_MS` are swept by `purge-runs`.
+ *
+ * `seed` fixes the deck's order. Everyone in a room sees the films in the
+ * same shuffled order, and deriving it from a seed rather than storing the
+ * list means a film added to the library later slots into the deck instead of
+ * needing the list rewritten.
+ */
+export const matchRooms = sqliteTable(
+  "match_rooms",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /**
+     * What people type or read out. Four characters, so it is guessable — which
+     * is why typing it only admits a user of this server who can already see the
+     * room's library. Anyone else needs `inviteSecret`.
+     */
+    code: text("code").notNull(),
+    /**
+     * The other half of the invite link. Holding it is the creator's say-so, so
+     * it admits anyone — a guest with no Plex account, or a server user whose
+     * share doesn't include this library. Never shown outside the room.
+     */
+    inviteSecret: text("invite_secret").notNull(),
+    /** A `plex_sections.key` — compared against `media_items.sectionId`. */
+    sectionId: text("section_id").notNull(),
+    /** `MatchFilters` from contracts. Fixed at creation: changing them mid-room would invalidate everyone's swipes. */
+    filters: text("filters", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    seed: integer("seed").notNull(),
+    /**
+     * Only a user of this server can create a room, and the room lasts while
+     * they can still see its library: it is their share the room is showing.
+     */
+    createdByUserId: integer("created_by_user_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    /** Any member's swipe, vote or visit. Drives the retention sweep. */
+    lastActiveAt: integer("last_active_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_match_rooms_code").on(table.code),
+    index("idx_match_rooms_last_active").on(table.lastActiveAt),
+  ],
+);
+
+/**
+ * Who is in a room: a user of this server (`userId`) or a guest who came in
+ * on the invite link (`guestTokenHash`) — exactly one of the two.
+ *
+ * A guest's identity is this row. Their token is good for this room and
+ * nothing else, and goes when they leave or the room is swept.
+ *
+ * Leaving deletes the row and, by cascade, its swipes: a match means everyone
+ * *in the room* liked it, so someone who has left can't keep a film from
+ * matching. `name` and `thumb` are copied in at join so the room renders
+ * without a join to `plex_users`, which `sync-users` rewrites.
+ */
+export const matchMembers = sqliteTable(
+  "match_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    roomId: integer("room_id")
+      .notNull()
+      .references(() => matchRooms.id, { onDelete: "cascade" }),
+    userId: integer("user_id"),
+    /** SHA-256 of the guest's bearer token; the token itself is never stored. */
+    guestTokenHash: text("guest_token_hash"),
+    name: text("name").notNull(),
+    thumb: text("thumb"),
+    joinedAt: integer("joined_at").notNull(),
+    /** Bumped by the room's poll. "Online" is a recent value here. */
+    lastSeenAt: integer("last_seen_at").notNull(),
+    /** "Watch this" — one per member, among the room's matches. */
+    voteRatingKey: text("vote_rating_key"),
+  },
+  (table) => [
+    // NULLs are distinct in a SQLite unique index, so guests don't collide here.
+    uniqueIndex("idx_match_members_room_user").on(table.roomId, table.userId),
+    uniqueIndex("idx_match_members_guest").on(table.guestTokenHash),
+    index("idx_match_members_user").on(table.userId),
+  ],
+);
+
+export const matchSwipes = sqliteTable(
+  "match_swipes",
+  {
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => matchMembers.id, { onDelete: "cascade" }),
+    /** Denormalised from the member, for the per-room match count. */
+    roomId: integer("room_id").notNull(),
+    ratingKey: text("rating_key").notNull(),
+    liked: integer("liked", { mode: "boolean" }).notNull(),
+    swipedAt: integer("swiped_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.memberId, table.ratingKey] }),
+    index("idx_match_swipes_room_item").on(table.roomId, table.ratingKey),
+  ],
+);

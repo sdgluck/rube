@@ -57,6 +57,7 @@ import { MetadataOverridesToken, type MetadataOverrides } from "@tinkerbell/doma
 import { PlaylistsToken, type Playlists } from "@tinkerbell/domain.playlists";
 import { PortabilityToken, type Portability } from "@tinkerbell/domain.portability";
 import { MigrationToken, type Migration } from "@tinkerbell/domain.migration";
+import { MatchToken, type Match } from "@tinkerbell/domain.match";
 import { NotificationsToken, type Notifications } from "@tinkerbell/domain.notifications";
 import { OnboardingToken, type Onboarding } from "@tinkerbell/domain.onboarding";
 import { OverlaysToken, type Overlays } from "@tinkerbell/domain.overlays";
@@ -114,6 +115,7 @@ export interface Services {
   metadataOverrides: MetadataOverrides;
   playlists: Playlists;
   portability: Portability;
+  match: Match;
   migration: Migration;
   notifications: Notifications;
   onboarding: Onboarding;
@@ -168,6 +170,7 @@ export function registerServices(r: Registry): void {
     metadataOverrides: c.resolve(MetadataOverridesToken),
     playlists: c.resolve(PlaylistsToken),
     portability: c.resolve(PortabilityToken),
+    match: c.resolve(MatchToken),
     migration: c.resolve(MigrationToken),
     notifications: c.resolve(NotificationsToken),
     onboarding: c.resolve(OnboardingToken),

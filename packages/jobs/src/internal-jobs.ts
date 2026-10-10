@@ -62,6 +62,7 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
     configHistory,
     db,
     health,
+    match,
     metadata,
     playback,
     ruleRuns,
@@ -123,12 +124,16 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
         // small (a row per edit, not per item) and the question it answers —
         // "when did this stop working?" — is usually asked months late.
         const historyPurged = pruneChangeLog(Date.now() - DEFAULT_HISTORY_RETENTION_DAYS * DAY_MS);
+        // Movie-match rooms nobody has opened for a month. They already read as
+        // gone past that point; this is what actually frees the rows.
+        const roomsPurged = match.pruneStaleRooms();
         return (
           `Purged ${result.changes} job run(s) and ${ruleRunsPurged} rule run(s) older than 7 days` +
           `${changesPurged > 0 ? `, ${changesPurged} run change(s)` : ""}` +
           `${tombstones > 0 ? `, ${tombstones} deleted-rule record(s)` : ""}` +
           `${metadataPurged > 0 ? `, ${metadataPurged} metadata snapshot(s) older than ${retentionDays} days` : ""}` +
-          `${historyPurged > 0 ? `, ${historyPurged} settings-history entr${historyPurged === 1 ? "y" : "ies"}` : ""}.`
+          `${historyPurged > 0 ? `, ${historyPurged} settings-history entr${historyPurged === 1 ? "y" : "ies"}` : ""}` +
+          `${roomsPurged > 0 ? `, ${roomsPurged} movie-match room${roomsPurged === 1 ? "" : "s"}` : ""}.`
         );
       },
       timeoutMs: 10 * MINUTE_MS,
