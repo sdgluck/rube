@@ -67,8 +67,18 @@ function NativeShell({ children }: { children: ReactNode }) {
   const previous = useRef(server);
   useEffect(() => {
     if (previous.current === server) return;
+    const switched = previous.current !== undefined;
     previous.current = server;
-    queryClient.clear();
+    // Only a switch from one server to another has a stale cache to drop —
+    // and it is reset (which refetches what's mounted), never cleared: the
+    // new server's screens have already started their queries by the time
+    // this parent effect runs, and `clear()` removed them out from under
+    // their observers, which then waited forever on a blank screen. That was
+    // the first connect, every time.
+    // Disconnecting ("Switch server") is when the old cache goes: only the
+    // server picker is on screen then, so clearing can't strand anything.
+    if (server === undefined) queryClient.clear();
+    else if (switched) void queryClient.resetQueries();
     setOffered(null);
   }, [server, queryClient]);
 

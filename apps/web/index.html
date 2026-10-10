@@ -7,10 +7,12 @@
          anything but 0; the bottom nav and content padding both depend on it.
          interactive-widget=resizes-content makes the on-screen keyboard shrink
          the layout viewport, so a pinned footer rises above it rather than
-         being covered. -->
+         being covered. maximum-scale=1 stops iOS zooming into a field on
+         focus — whatever its font size — which is a web page's behaviour, not
+         an app's; iOS Safari still lets people pinch-zoom for accessibility. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0f1615" />
