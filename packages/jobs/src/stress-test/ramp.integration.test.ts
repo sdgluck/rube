@@ -338,8 +338,16 @@ describe("cancellation", () => {
     const controller = new AbortController();
     const { ctx } = testContext(controller.signal);
     const run = runStressTest(client(), { mode: "transcode", maxSessions: 10 }, ctx, { timings: FAST });
-    setTimeout(() => controller.abort(), 60);
-    await run;
+    // Abort on what the server has seen, not on a timer. A fixed 60ms flaked
+    // on a loaded CI runner: pool selection hadn't finished, so the abort
+    // landed before any session existed and there was nothing to clean up.
+    // Two starts means genuinely mid-ramp, with more than one session to stop.
+    const poll = setInterval(() => {
+      if (plex.journal.transcodeStarts.length >= 2) controller.abort();
+    }, 5);
+    await run.finally(() => clearInterval(poll));
+
+    assert.ok(controller.signal.aborted, "the ramp finished before it could be aborted");
 
     assert.ok(plex.journal.transcodeStarts.length > 0);
     assert.deepEqual([...plex.journal.transcodeStops].sort(), [...plex.journal.transcodeStarts].sort());
