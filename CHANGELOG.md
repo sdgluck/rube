@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-10
+
+### Added
+
+- A new "We Think You'd Like" feature adds a weekly collection for each user in each library, with titles picked by AI from a taste profile of that person's whole recent watch history.
+- The "We Think You'd Like" taste profile comes from the local playback log and weighs what each person finishes, replays and abandons. Anything the person has already played is left out of their collection.
+- Each "We Think You'd Like" collection uses the AI's reason for its picks as the collection summary, so users can see why the titles were chosen.
+- Each week the "We Think You'd Like" collection is edited in place rather than recreated, so it keeps its pinned position in Plex.
+- Removing the "We Think You'd Like" feature deletes the collections it created but does not change any sharing restrictions on your server.
+- A new Problems page finds TV shows whose Plex episode ordering doesn't match Sonarr's files, and lets you fix each one with a click or dismiss it.
+- The Problems page also checks for missing episodes, shows with no size, items using a legacy agent, unmatched items, and rules that are failing, empty or in conflict with each other.
+- A new nightly scan-problems job compares Plex episodes with Sonarr's files so the Problems page stays current without a manual scan.
+- You can now get a notification when new problems are found, so new issues reach you without opening the Problems page.
+- The portal now has movie match, where a group swipes through a movie library until everyone likes the same film. It is off by default and is turned on under Settings → Portal → Movie match.
+- In movie match, server users make rooms from their own libraries. Anyone with a room's invite link can join as a guest by entering a name, and a guest can only reach that one room.
+- Movie match rooms are saved in the database, so they survive restarts, and a room is deleted automatically after 30 days with no activity.
+
+### Changed
+
+- **The \*Arr reconciliation page is now part of the new Problems page**, so its reconciliation work is found there instead of on a separate page.
+
 ## [0.36.1] - 2026-10-10
 
 ### Fixed
