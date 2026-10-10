@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - A rule covering both films and TV now sends missing films to Radarr and missing shows to Sonarr, each with its own quality profile and root folder, and only offers the services the rule's selected libraries actually need.
-- A rule covering only films or only TV can now request through just Radarr or just Sonarr, leaving the other service's settings blank instead of requiring both.
+- A rule covering both films and TV can now send to just Radarr or just Sonarr, leaving the other service's settings blank instead of requiring both.
 - The dashboard's panel collapse chevron is now inset from the card's edge instead of sitting flush against it.
 - On phones, toggle switches are now round and sized to fill their row, matching the native look.
 - On phones, the More tab now opens the More screen instead of jumping to Stats.
