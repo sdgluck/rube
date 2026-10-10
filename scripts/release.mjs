@@ -77,21 +77,27 @@ Rules:
 - One bullet per user-visible change. Say what is different for the user now, not what was refactored. Skip commits with no user-visible effect (build, CI, internal cleanup).
 - Be specific. "Grouped rules now build a collection for every group by default" — not "grouped rule caps are now opt-in". Name the feature, the page, or the rule types involved so a reader can tell whether it affects them.
 - Never merge unrelated changes into one bullet. If a commit did three things, give it three bullets.
+- Describe where the release ends up, not the path it took. A later commit often adjusts an earlier one in the same release — relaxing a requirement it added, fixing a bug in it, renaming what it introduced. Fold the two into one bullet describing the final behaviour; never write a second bullet that restates or contradicts the first. This is the only reason to combine commits — fixes that merely share an area (several phone fixes, say) still get a bullet each.
+- Keep every condition and scope exactly as the commit states it. If a commit says "a rule over films and TV", the bullet is about rules covering both films and TV — not rules covering only one, and not all rules. Never invert, widen or narrow who a change applies to. When a subject has no body and its meaning is not certain, stay close to its own words rather than guessing at a fuller explanation.
+- Every bullet is a full sentence of at least ten words saying what changed, where, and for whom. Splitting a commit into several bullets does not license shorter ones — "The native apps now support live reload" is a label; say what reloads, when, and who it helps. Shorter bullets fail the release.
 - A bullet must be readable on its own by someone who has not seen the commits. No commit hashes, no file or symbol names, no "as described above".
 - When a change alters behaviour for existing installs — different defaults, a migration, something that has to be reconfigured — say so plainly in the bullet and lead the sentence with it. Bold the leading clause with ** for those.
 - Prefer the commit body's own reasoning over inventing new framing. Do not claim anything the commits don't support.
+
+Before answering, check two things. First, each bullet against the commits it came from: would their author agree it says the same thing, for the same users, under the same conditions? Second, that every separate change a subject lists — joined by commas or "and" — has a bullet of its own. Rewrite until both hold.
 
 Output ONLY the section markdown. No preamble, no version header, no closing commentary.
 
 Commits:
 ${commits}`;
 
-// Sonnet, not Haiku: this is the one artefact of a release that users read, and
-// the cost of a bad summary is a changelog nobody trusts. Two dollars of model
-// time is cheaper than the version bump it describes.
+// Opus: this is the one artefact of a release that users read, and the cost of
+// a bad summary is a changelog nobody trusts. Sonnet shipped v0.36.1 with a
+// bullet that inverted who a change applied to; a few dollars of model time is
+// cheaper than a correction commit after the tag.
 const claude = spawnSync(
   "claude",
-  ["-p", "--output-format", "text", "--model", "claude-sonnet-5"],
+  ["-p", "--output-format", "text", "--model", "claude-opus-5-5"],
   {
     cwd: ROOT,
     encoding: "utf8",

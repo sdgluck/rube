@@ -28,7 +28,7 @@ pnpm release <patch|minor|major>
 
 1. Computes the next version from the root `package.json`.
 2. Collects commit **subjects and bodies** since the last tag and pipes them to
-   `claude -p --model claude-sonnet-5` to write Keep a Changelog sections.
+   `claude -p --model claude-opus-5-5` to write Keep a Changelog sections.
 3. Validates the output: must have `### ` sections, must have bullets, and no
    bullet shorter than 8 words. Any of those fail the release before writing.
 4. Prints the entry, then inserts it under `## [Unreleased]` in `CHANGELOG.md`.
