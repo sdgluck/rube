@@ -13,11 +13,19 @@
 
 import { and, eq, gt, isNull, isNotNull, ne, sql } from "drizzle-orm";
 import { arrActivity, arrMovies, arrSeries, mediaItems, type Db } from "@tinkerbell/db";
-import type { ArrIssueKind } from "@tinkerbell/contracts";
+import type { ProblemKind } from "@tinkerbell/contracts";
+
+/** The Problems kinds this module answers. */
+export type ArrIssueKind = Extract<
+  ProblemKind,
+  "inArrNotInPlex" | "inPlexNotInArr" | "duplicateAcrossInstances" | "failedImport"
+>;
 
 export interface ArrIssue {
   kind: ArrIssueKind;
   instanceId: string;
+  /** Which *Arr the mirror row is from, so a caller can link to it. */
+  service?: "radarr" | "sonarr";
   /** The mirror row, where the issue is about one. */
   arrId?: number;
   ratingKey?: string;
@@ -62,9 +70,13 @@ export function createArrReconcile(deps: { db: Db }) {
       .limit(PER_KIND_LIMIT)
       .all();
 
-    return [...movies, ...series].map((r) => ({
+    return [
+      ...movies.map((r) => ({ ...r, service: "radarr" as const })),
+      ...series.map((r) => ({ ...r, service: "sonarr" as const })),
+    ].map((r) => ({
       kind: "inArrNotInPlex" as const,
       instanceId: r.instanceId,
+      service: r.service,
       arrId: r.arrId,
       title: r.title,
       detail: r.path ? `On disk at ${r.path}, but Plex has no matching item` : "On disk, but Plex has no matching item",
@@ -191,10 +203,5 @@ export function createArrReconcile(deps: { db: Db }) {
     }));
   }
 
-  /** Everything at once, for the health page. */
-  function issues(): ArrIssue[] {
-    return [...inArrNotInPlex(), ...inPlexNotInArr(), ...duplicateAcrossInstances(), ...failedImports()];
-  }
-
-  return { issues, inArrNotInPlex, inPlexNotInArr, duplicateAcrossInstances, failedImports };
+  return { inArrNotInPlex, inPlexNotInArr, duplicateAcrossInstances, failedImports };
 }

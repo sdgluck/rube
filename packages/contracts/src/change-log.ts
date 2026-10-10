@@ -27,6 +27,9 @@ export const CHANGE_LOG_ENTITIES = [
   "preroll",
   "schedule",
   "arr_quality_profile",
+  // A dismissal hides a problem from the Problems page — and from the badge and
+  // the notification. Hiding the wrong one is a misconfiguration like any other.
+  "problem_dismissal",
 ] as const;
 
 /**

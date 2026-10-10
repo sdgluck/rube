@@ -68,6 +68,8 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "sync-arr": { requires: "arr", noopWithoutService: true, estimateMs: 5 * MINUTE_MS },
   // A few reads per instance with a managed profile, and nothing at all without one.
   "check-arr-quality": { requires: "arr", noopWithoutService: true, estimateMs: MINUTE_MS },
+  // Not `requires: "arr"`: the rule and library checks run without one.
+  "scan-problems": { estimateMs: 5 * MINUTE_MS },
   generate: { heavy: true, essential: "warning", estimateMs: 30 * MINUTE_MS },
   cleanup: { heavy: true, estimateMs: 15 * MINUTE_MS },
   metadata: { heavy: true, estimateMs: 15 * MINUTE_MS },
@@ -145,6 +147,11 @@ export interface JobOrderEdge {
  */
 export const JOB_ORDER: readonly JobOrderEdge[] = [
   { before: "sync-media", after: "sync-arr", reason: "it links Radarr and Sonarr records using ids Sync Media writes" },
+  {
+    before: "sync-arr",
+    after: "scan-problems",
+    reason: "it compares the Sonarr series Sync Radarr & Sonarr links to Plex shows",
+  },
   { before: "sync-media", after: "generate", reason: "rules select from the library index Sync Media refreshes" },
   {
     before: "sync-collections",

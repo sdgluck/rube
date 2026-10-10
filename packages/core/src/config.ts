@@ -817,6 +817,12 @@ export const configSchema = z.object({
    */
   registry_announced_updates: z.record(z.string(), z.number()),
   /**
+   * The open problems the last scan already announced, as `kind|subject`.
+   * `problems.found` fires only for ones not in here, so a problem that stays
+   * open is one notification rather than one a night.
+   */
+  problems_announced: z.array(z.string()),
+  /**
    * Legacy single-provider slots, kept readable for one release so a
    * one-shot migration in `domains/migration` can fold them into the
    * provider-keyed slots above. Safe to remove once shipped users have
@@ -976,6 +982,7 @@ export const UNLOGGED_CONFIG_KEYS = new Set<ConfigKey>([
   "migration_kometa_completed_at",
   "registry_cache",
   "registry_announced_updates",
+  "problems_announced",
   "seerr_seen_available",
   "seerr_polled",
   "onboarding_state",

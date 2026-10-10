@@ -191,6 +191,36 @@ export const TOOLS: AgentTool[] = [
   }),
 
   defineTool({
+    name: "list_problems",
+    title: "List problems",
+    description:
+      "What the Problems page reports: shows whose Plex episode ordering doesn't match how Sonarr names the " +
+      "files, episodes Plex is missing, items Plex couldn't match or size, failing or empty rules, rule " +
+      "conflicts, and Plex/Radarr/Sonarr disagreements. Each has a kind, a subject, a detail and whether the " +
+      "admin dismissed it. Read-only; fixing happens on the page. Dismissed problems are left out unless asked for.",
+    input: z.object({
+      includeDismissed: z.boolean().optional().describe("Include problems the admin has dismissed."),
+    }),
+    async run({ includeDismissed }, { caller }) {
+      const { problems, lastScannedAt } = await caller.problems.list();
+      return {
+        lastScannedAt,
+        problems: problems
+          .filter((p) => includeDismissed || !p.dismissed)
+          .map(({ kind, subject, title, detail, fixable, dismissed, evidence }) => ({
+            kind,
+            subject,
+            title,
+            detail,
+            fixable,
+            dismissed,
+            ...(evidence ? { evidence } : {}),
+          })),
+      };
+    },
+  }),
+
+  defineTool({
     name: "list_rules",
     title: "List rules",
     description:

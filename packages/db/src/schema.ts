@@ -823,6 +823,17 @@ export const mediaItems = sqliteTable(
      */
     guids: text("guids", { mode: "json" }).$type<string[]>(),
     /**
+     * The agent's own id: `plex://movie/…` on the modern agents,
+     * `com.plexapp.agents.…` on a legacy one, `local://…` when unmatched.
+     *
+     * Kept apart from `guids` because it answers a different question. `guids`
+     * says which providers the item is linked to; this says which *agent* holds
+     * it, and a legacy agent is why per-show episode ordering, and most of
+     * what the modern agents offer, silently does nothing. Null until the
+     * first sync that writes it.
+     */
+    agentGuid: text("agent_guid"),
+    /**
      * The parsed provider ids — the join key to `arr_movies` / `arr_series`.
      *
      * Three columns rather than one canonical `external_id`, because there is
@@ -2309,4 +2320,73 @@ export const matchSwipes = sqliteTable(
     primaryKey({ columns: [table.memberId, table.ratingKey] }),
     index("idx_match_swipes_room_item").on(table.roomId, table.ratingKey),
   ],
+);
+
+/**
+ * What the last problems scan found for one Sonarr series, compared episode by
+ * episode with the Plex show it is linked to.
+ *
+ * The one stored problem source. Every other check on the Problems page is a
+ * query over tables that already exist, and stays stateless so it cannot go
+ * stale; this one needs every episode of a show from both Plex and Sonarr,
+ * which is two requests per show and far too slow to run when a page opens.
+ *
+ * `signature` is what makes the nightly scan incremental: it is built from the
+ * counts both sides report, and a show whose signature hasn't moved is not
+ * fetched again. Applying a fix clears it, so the next scan checks that show
+ * again rather than trusting a result from before the fix.
+ */
+export const showChecks = sqliteTable(
+  "show_checks",
+  {
+    instanceId: text("instance_id").notNull(),
+    arrId: integer("arr_id").notNull(),
+    plexRatingKey: text("plex_rating_key").notNull(),
+    title: text("title").notNull(),
+    /** `leafCount:episodeFileCount:episodeCount` at the time of the check; null forces a recheck. */
+    signature: text("signature"),
+    checkedAt: integer("checked_at").notNull(),
+    /** The ordering in force: the show's own, else its library's. Null when Plex didn't say. */
+    ordering: text("ordering"),
+    /**
+     * Set when Plex's numbering disagrees with Sonarr's. Shape is
+     * `OrderingEvidence` from `domains/problems`: the seasons that disagree and
+     * a few example episodes, so the page can show the reason, not just the verdict.
+     */
+    orderingEvidence: text("ordering_evidence", { mode: "json" }).$type<unknown>(),
+    /** Episodes Sonarr has a file for that Plex doesn't list, as `S01E02` codes. Null when none. */
+    missingEpisodes: text("missing_episodes", { mode: "json" }).$type<string[]>(),
+    /** A folder Plex holds this show's files in, for a targeted scan. */
+    plexFolder: text("plex_folder"),
+    /** When a fix was last applied, so the page can say it is waiting for Plex. */
+    fixedAt: integer("fixed_at"),
+    error: text("error"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.instanceId, table.arrId] }),
+    index("idx_show_checks_plex_rating_key").on(table.plexRatingKey),
+  ],
+);
+
+/**
+ * Problems the admin has said to stop showing.
+ *
+ * Keyed by kind and subject — a show, an item, a rule — so the dismissal
+ * outlives the scan that produced it. `fingerprint` is what lets a problem
+ * come back: it is a digest of the evidence, and a problem whose evidence has
+ * changed since it was dismissed (a second season now disagrees) is a new
+ * problem, not the one somebody already looked at.
+ */
+export const problemDismissals = sqliteTable(
+  "problem_dismissals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind").notNull(),
+    subject: text("subject").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    /** What it looked like when dismissed — for the "show dismissed" view. */
+    title: text("title").notNull().default(""),
+    dismissedAt: integer("dismissed_at").notNull(),
+  },
+  (table) => [uniqueIndex("idx_problem_dismissals_unique").on(table.kind, table.subject)],
 );

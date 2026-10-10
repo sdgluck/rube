@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   CalendarClock,
   Circle,
@@ -46,6 +47,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   // Library
   "/collections": LayoutGrid,
   "/media": Library,
+  "/problems": AlertTriangle,
   "/duplicates": Copy,
   "/overlays": Layers,
   "/prerolls": Film,

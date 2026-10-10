@@ -76,6 +76,10 @@ export const EVENT_TYPES = [
   // Fires on the transition only. A profile that drifted last week and is
   // still drifted is one notification, not seven.
   { id: "arr.quality_drift", label: "Quality Profile Drifted" },
+  // New entries on the Problems page, once per scan and only for ones no
+  // earlier scan announced — a show with the wrong episode ordering is one
+  // message, not one a night until somebody fixes it.
+  { id: "problems.found", label: "New Problems Found" },
   // Not an emitted event, unlike everything above it: nothing ever calls
   // `emitEvent("digest.sent")`. It appears here because per-service event
   // selection is already the UI for "route this to that channel", and a

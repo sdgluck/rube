@@ -37,6 +37,7 @@ import { createMigrationRouter } from "./migration.router.ts";
 import { createRegistryRouter } from "./registry.router.ts";
 import { createOnboardingRouter } from "./onboarding.router.ts";
 import { createNavRouter } from "./nav.router.ts";
+import { createProblemsRouter } from "./problems.router.ts";
 import { createViewsRouter } from "./views.router.ts";
 import { createCleanupRouter } from "./cleanup.router.ts";
 import { createMetadataRouter } from "./metadata.router.ts";
@@ -91,6 +92,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     registry: createRegistryRouter(deps),
     onboarding: createOnboardingRouter(deps),
     nav: createNavRouter(deps),
+    problems: createProblemsRouter(deps),
     views: createViewsRouter(deps),
     personalization: createPersonalizationRouter(deps),
     aiPreview: createAiPreviewRouter(deps),

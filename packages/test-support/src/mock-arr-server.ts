@@ -51,6 +51,19 @@ export interface MockSeries {
 
 export type MockArrRecord = MockMovie | MockSeries;
 
+/** A Sonarr episode, as `GET /episode?seriesId=` serves it. */
+export interface MockEpisode {
+  id: number;
+  seriesId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  title: string;
+  hasFile: boolean;
+  monitored?: boolean;
+  /** Two episodes sharing one is a multi-episode file. */
+  episodeFileId?: number;
+}
+
 export interface ArrJournal {
   /** Full `path?query` of every delete, so flags can be asserted. */
   deletes: string[];
@@ -121,6 +134,8 @@ export interface MockArrExtra {
   version?: string;
   /** Model an install whose custom format schema predates `SizeSpecification`. */
   withoutSizeSpecification?: boolean;
+  /** Sonarr only: the episodes `GET /episode?seriesId=` returns. */
+  episodes?: MockEpisode[];
 }
 
 interface Options extends MockArrExtra {
@@ -206,6 +221,19 @@ function startMockArr(opts: Options): Promise<MockArr> {
     if (path === `/api/v3/${collection}/lookup`) {
       journal.lookups.push(`${path}${url.search}`);
       json(opts.lookupResults ?? []);
+      return;
+    }
+
+    // Never mirrored by the real client, always asked per series — so it is
+    // filtered here the way Sonarr filters it, not returned wholesale.
+    if (service === "sonarr" && path === "/api/v3/episode" && method === "GET") {
+      const seriesId = Number(url.searchParams.get("seriesId"));
+      const season = url.searchParams.get("seasonNumber");
+      json(
+        (opts.episodes ?? [])
+          .filter((e) => e.seriesId === seriesId && (season == null || e.seasonNumber === Number(season)))
+          .map((e) => ({ monitored: true, ...e })),
+      );
       return;
     }
 

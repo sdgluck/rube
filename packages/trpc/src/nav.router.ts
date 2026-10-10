@@ -13,14 +13,23 @@ import { t, procedure } from "./_base.ts";
  */
 const STATUS_FRESHNESS_MS = WEEK_MS;
 
-export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db">) {
-  const { cleanup, db } = deps;
+export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db" | "problems">) {
+  const { cleanup, db, problems } = deps;
   const { dueSoonCount } = cleanup;
 
   /** The sidebar must render even if one metric query throws. */
   function safeDueSoonCount(): number {
     try {
       return dueSoonCount();
+    } catch {
+      return 0;
+    }
+  }
+
+  /** Open faults on the Problems page. Cached for a minute by the domain. */
+  function safeProblemCount(): number {
+    try {
+      return problems.openCount();
     } catch {
       return 0;
     }
@@ -125,6 +134,7 @@ export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db">) {
         // must not be able to make the whole app feel broken.
         arrQueue: arrQueueCount(),
         arrsStatus: arrHealth(),
+        problems: safeProblemCount(),
       };
     }),
   });

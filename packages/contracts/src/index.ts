@@ -207,8 +207,6 @@ export {
   ARR_SETTINGS_AREA_LABELS,
   ARR_CAPABILITIES,
   ARR_ACTIVITY_EVENT_TYPES,
-  ARR_ISSUE_KINDS,
-  ARR_ISSUE_LABELS,
   MINIMUM_AVAILABILITY,
   SERIES_MONITOR_MODES,
   STUCK_QUEUE_STATES,
@@ -220,7 +218,6 @@ export {
   type ArrAddTarget,
   type ArrCapability,
   type ArrInstanceSummary,
-  type ArrIssueKind,
   type ArrService,
   type ArrSettingsArea,
   type MinimumAvailability,
@@ -228,6 +225,15 @@ export {
 } from "./arr.ts";
 
 export * from "./arr-quality/index.ts";
+
+export {
+  PROBLEM_KINDS,
+  PROBLEM_META,
+  isProblemKind,
+  type ProblemKind,
+  type ProblemKindMeta,
+  type ProblemSeverity,
+} from "./problems.ts";
 
 export { TMDB_IMAGE_BASE, tmdbPosterUrl, serviceForMediaType, type TmdbPosterSize } from "./discover.ts";
 export {

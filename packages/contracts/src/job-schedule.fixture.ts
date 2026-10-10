@@ -14,6 +14,7 @@ const ROWS: Array<[id: string, lane: ScheduleLane, timeoutMs: number, schedule: 
   ["sync-collections", "default", 30 * MINUTE_MS, "0 0 * * *"],
   ["sync-arr", "default", HOUR_MS, "30 0 * * *"],
   ["check-arr-quality", "default", 5 * MINUTE_MS, "45 0 * * *"],
+  ["scan-problems", "default", HOUR_MS, "50 0 * * *"],
   ["generate", "default", 4 * HOUR_MS, "0 1 * * *"],
   ["cleanup", "default", 4 * HOUR_MS, "0 4 * * *"],
   ["metadata", "default", 4 * HOUR_MS, "0 2 * * *"],

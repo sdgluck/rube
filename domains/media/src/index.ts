@@ -336,6 +336,7 @@ export function createMedia(deps: MediaDeps) {
           // libraries can only be compared by title and year, which is not
           // something you delete a file on.
           guids: guids.length > 0 ? guids : null,
+          agentGuid: item.guid ?? null,
           tmdbId: tmdbId({ guids }),
           imdbId: imdbId({ guids }),
           tvdbId: tvdbId({ guids }),

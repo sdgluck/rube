@@ -71,9 +71,9 @@ const Registry = lazy(() => import("#pages/Registry"));
 const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
 const Duplicates = lazy(() => import("#pages/Duplicates"));
+const Problems = lazy(() => import("#pages/Problems/Problems"));
 const ArrLibrary = lazy(() => import("#pages/Arr/ArrLibrary"));
 const ArrInstances = lazy(() => import("#pages/Arr/ArrInstances"));
-const ArrHealth = lazy(() => import("#pages/Arr/ArrHealth"));
 const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
 const ArrItemDetail = lazy(() => import("#pages/Arr/ArrItemDetail"));
 const ArrInstanceDetail = lazy(() => import("#pages/Arr/ArrInstanceDetail"));
@@ -271,6 +271,14 @@ export default function App() {
                       }
                     />
                     <Route
+                      path="/problems"
+                      element={
+                        <LazyPage>
+                          <Problems />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
                       path="/media"
                       element={
                         <LazyPage>
@@ -329,14 +337,10 @@ export default function App() {
                         </LazyPage>
                       }
                     />
-                    <Route
-                      path="/arrs/health"
-                      element={
-                        <LazyPage>
-                          <ArrHealth />
-                        </LazyPage>
-                      }
-                    />
+                    {/* Reconciliation moved into Problems. Kept so an old bookmark,
+                    and the literal segment's precedence over `:instanceId`,
+                    still work. */}
+                    <Route path="/arrs/health" element={<Navigate to="/problems" replace />} />
                     <Route
                       path="/arrs/:instanceId"
                       element={

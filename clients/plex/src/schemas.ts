@@ -124,6 +124,10 @@ export const plexMetadataRawSchema = z
     sessionKey: z.string().optional(),
     title: z.string().optional(),
     type: z.string().optional(),
+    /** The agent's own id — `plex://show/…`, or `com.plexapp.agents.…` on a legacy agent. */
+    guid: z.string().optional(),
+    /** A show's own episode ordering; absent when it follows the library's. */
+    showOrdering: z.string().optional(),
     year: z.number().optional(),
     thumb: z.string().optional(),
     art: z.string().optional(),

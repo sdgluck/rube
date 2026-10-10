@@ -10,6 +10,8 @@ export const PLEX_COLLECTION_TYPE = 18;
  * where the files live — a show row carries none.
  */
 export const PLEX_EPISODE_TYPE = 4;
+/** Plex's numeric type for a show, for asking a TV section for its top-level rows explicitly. */
+export const PLEX_SHOW_TYPE = 2;
 
 export type PlexHealthCallback = (service: "Plex" | "Plex.tv", status: "ok" | "error", message: string) => void;
 

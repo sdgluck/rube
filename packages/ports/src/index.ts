@@ -112,7 +112,8 @@ export type ChangeEntity =
   | "overlay_preset"
   | "preroll"
   | "schedule"
-  | "arr_quality_profile";
+  | "arr_quality_profile"
+  | "problem_dismissal";
 
 /**
  * `import` and `restore` are separate from `update` because they answer a

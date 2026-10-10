@@ -19,6 +19,7 @@ const ENTITY_LABELS: Record<Entity, string> = {
   // A whole-page save from Jobs → Schedule: several jobs and the window at once.
   schedule: "Schedule changes",
   arr_quality_profile: "Quality profiles",
+  problem_dismissal: "Dismissed problems",
 };
 
 /** Who did it, in words rather than the raw source token. */

@@ -21,6 +21,9 @@ and notifications on a schedule.
   everyone likes the same film. [More](#movie-match)
 - **Prerolls**: upload videos for Plex to play before a movie.
   [More](#prerolls)
+- **Problems**: one page for what is wrong across Plex, Radarr/Sonarr and your
+  rules, such as a show whose episode ordering doesn't match its files. Fix
+  each in a click or dismiss it. [More](#problems)
 - **Labels**: apply and undo Plex labels in bulk, with a preview.
 - **Discover**: search TMDb, see what Plex and Radarr/Sonarr already have, and
   send the rest to Radarr or Sonarr.
@@ -193,6 +196,39 @@ Limits:
   they are. Set its public address under **Settings → Portal → Address**.
 - A room closes after 30 days without a visit. It also closes when whoever made
   it loses access to its library or leaves your server.
+
+## Problems
+
+**Library → Problems** lists what is wrong across Plex, Radarr/Sonarr and your
+rules. Some problems have a **Fix** button. The rest link to where you can fix
+them. Dismiss anything you mean to leave as it is.
+
+- **Episode ordering doesn't match your files.** Plex numbers some shows from
+  TMDb, and Sonarr names files from TheTVDB. Where they differ, files land on the
+  wrong episodes in Plex. The Office (US) is the usual example: its hour-long
+  episodes are split in two on TheTVDB. Fix sets the show's episode ordering to
+  TheTVDB (Aired) and refreshes it. Shows on a legacy Plex agent can't be fixed
+  this way.
+- **Episodes missing from Plex**: Sonarr has a file that Plex doesn't list.
+  Fix scans the show's folder.
+- **File sizes unknown**: Plex has no size for some of a show's episodes. Fix
+  asks Plex to analyse the show.
+- **Downloaded but not in Plex**, **failed imports**, **rules that failed or
+  stopped matching**, and **rules in conflict**.
+- For information only: items Plex couldn't match, items on a legacy agent,
+  items no Radarr or Sonarr manages, and films held by more than one instance.
+
+Limits:
+
+- Nothing is fixed until you press Fix. Each fix changes Plex.
+- Comparing episodes takes two requests per show. It runs as the **Scan for
+  Problems** job at 00:50 each night, or when you press **Scan now**. After the
+  first run it only rechecks shows that changed. Every other check runs when
+  you open the page.
+- A dismissed problem comes back if its details change, for example if a second
+  season starts to disagree.
+- New problems can be sent as a **New Problems Found** notification. Each one is
+  sent once, not every night.
 
 ## Prerolls
 

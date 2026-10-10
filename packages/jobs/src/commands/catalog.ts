@@ -55,6 +55,9 @@ export const COMMANDS = {
   "sync-arr": { load: () => import("./sync-arr.ts"), lane: "default", timeoutMs: HOUR_MS },
   // A handful of reads per instance. Five minutes means an instance is hung.
   "check-arr-quality": { load: () => import("./check-arr-quality.ts"), lane: "default", timeoutMs: 5 * MINUTE_MS },
+  // Two requests per changed show. The first run on a large library touches
+  // every show; after that it is the handful that changed.
+  "scan-problems": { load: () => import("./scan-problems.ts"), lane: "default", timeoutMs: HOUR_MS },
   "sync-collections": { load: () => import("./sync-collections.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   "sync-users": { load: () => import("./sync-users.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   // Interactive: a human enables it from Settings and watches it fill in. A

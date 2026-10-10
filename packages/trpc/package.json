@@ -45,6 +45,7 @@
     "@tinkerbell/domain.overlays": "workspace:*",
     "@tinkerbell/domain.playback": "workspace:*",
     "@tinkerbell/domain.prerolls": "workspace:*",
+    "@tinkerbell/domain.problems": "workspace:*",
     "@tinkerbell/domain.preview": "workspace:*",
     "@tinkerbell/domain.registry": "workspace:*",
     "@tinkerbell/domain.rule-runs": "workspace:*",

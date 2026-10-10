@@ -43,6 +43,6 @@ export const ArrLibraryToken = token<ArrLibrary>("arrLibrary");
 
 export type { SyncInstanceResult, SyncProgress } from "./sync.ts";
 export type { LibraryQuery, LibraryPage } from "./queries.ts";
-export type { ArrIssue } from "./reconcile.ts";
+export type { ArrIssue, ArrIssueKind } from "./reconcile.ts";
 export { discoverKey } from "./discover.ts";
 export type { DiscoverKey, ExternalKey, DiscoverHolding, DiscoverArrHolding } from "./discover.ts";

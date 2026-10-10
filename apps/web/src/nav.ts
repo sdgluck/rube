@@ -1,7 +1,16 @@
 export type NavMetric =
   | {
       kind: "count";
-      key: "collections" | "media" | "rules" | "users" | "eventsErrors24h" | "prerolls" | "cleanupDueSoon" | "arrQueue";
+      key:
+        | "collections"
+        | "media"
+        | "rules"
+        | "users"
+        | "eventsErrors24h"
+        | "prerolls"
+        | "cleanupDueSoon"
+        | "arrQueue"
+        | "problems";
     }
   | { kind: "status"; key: "overlaysStatus" | "jobsStatus" | "arrsStatus" }
   | { kind: "streams" };
@@ -53,6 +62,9 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/collections", label: "Collections", metric: { kind: "count", key: "collections" } },
       { to: "/media", label: "Media", metric: { kind: "count", key: "media" } },
+      // First in Library: it is the page that says what needs doing about
+      // everything else in this section.
+      { to: "/problems", label: "Problems", metric: { kind: "count", key: "problems" } },
       { to: "/duplicates", label: "Duplicates" },
       { to: "/overlays", label: "Overlays", metric: { kind: "status", key: "overlaysStatus" } },
       { to: "/prerolls", label: "Prerolls", metric: { kind: "count", key: "prerolls" } },

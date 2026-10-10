@@ -111,6 +111,8 @@ export function sampleMessageFor(type: string): RichMessage {
     "watchlist.requested": 'Requested "Sinners" from radarr.',
     "watchlist.failed": 'Couldn\'t request "Sinners" — sonarr returned 401 Unauthorized.',
     "arr.quality_drift": "“HD Bluray + WEB” on Radarr was changed outside Tinkerbell (3 differences).",
+    "problems.found":
+      "2 new problems: The Office (US) (episode ordering doesn't match your files), Severance (episodes missing from plex)",
     "digest.sent": "Your weekly digest — 12 added, 3 leaving soon.",
   };
   return plainMessage(label, `${samples[type] ?? "Test notification from Tinkerbell."} (test)`);

@@ -19,9 +19,18 @@ import { createPostersModule } from "./posters.ts";
 import { createStreamingModule } from "./streaming.ts";
 import { createPrefsModule } from "./prefs.ts";
 import { createPlaylistsModule } from "./playlists.ts";
+import { createShowsModule } from "./shows.ts";
 import type { PlexClientOptions } from "./types.ts";
 
 export { PREROLL_PREF_ID } from "./prefs.ts";
+export {
+  SHOW_ORDERINGS,
+  normaliseOrdering,
+  isTvdbOrdering,
+  type ShowOrdering,
+  type PlexShowSummary,
+  type PlexLeaf,
+} from "./shows.ts";
 export { PlexApiError } from "./http.ts";
 // plex.tv account-level, like `auth.ts` — not part of the server client.
 export { fetchWatchlist, removeFromWatchlist, type WatchlistEntry } from "./watchlist.ts";
@@ -108,6 +117,7 @@ export function createPlexClient(opts: PlexClientOptions) {
     ...createStreamingModule(http),
     ...createPrefsModule(http),
     ...createPlaylistsModule(http),
+    ...createShowsModule(http),
   };
 }
 

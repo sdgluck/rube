@@ -24,6 +24,7 @@ function navMeta(item: NavItem, metrics: NavMetrics | undefined): string {
   }
   if (typeof value !== "number" || value === 0) return "";
   if (item.metric.key === "eventsErrors24h") return `${value} error${value === 1 ? "" : "s"}`;
+  if (item.metric.key === "problems") return `${value} open`;
   return value.toLocaleString();
 }
 

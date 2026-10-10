@@ -301,8 +301,5 @@ export function createArrLibraryRouter(deps: Pick<TrpcDeps, "arr" | "arrLibrary"
     instanceState: procedure
       .input(z.object({ instanceIds: z.array(z.string()).optional() }).optional())
       .query(({ input }) => arrLibrary.instanceState(input?.instanceIds)),
-
-    /** What reconciliation found. Pure local queries. */
-    issues: procedure.query(() => arrLibrary.issues()),
   });
 }

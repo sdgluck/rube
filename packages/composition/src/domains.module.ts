@@ -47,6 +47,7 @@ import { createOnboarding, OnboardingToken } from "@tinkerbell/domain.onboarding
 import { createOverlays, OverlaysToken } from "@tinkerbell/domain.overlays";
 import { createPlayback, PlaybackToken } from "@tinkerbell/domain.playback";
 import { createPrerolls, PrerollsToken } from "@tinkerbell/domain.prerolls";
+import { createProblems, ProblemsToken } from "@tinkerbell/domain.problems";
 import { createRegistry, RegistryToken } from "@tinkerbell/domain.registry";
 import { createRuleHistory, RuleHistoryToken } from "@tinkerbell/domain.rule-history";
 import { createRuleRuns, RuleRunsToken } from "@tinkerbell/domain.rule-runs";
@@ -212,6 +213,21 @@ export function registerDomains(r: Registry): void {
       config: c.resolve(ConfigStoreToken),
       clients: c.resolve(ClientsToken),
       recordChange: c.resolve(ChangeRecorderToken),
+    }),
+  );
+  r.register(ProblemsToken, (c) =>
+    createProblems({
+      db: c.resolve(DbToken),
+      config: c.resolve(ConfigStoreToken),
+      // Resolved per call, as for portability: an unconfigured Plex must fail
+      // the fix or the scan that needs it, not the construction of the page.
+      plex: (opts) => c.resolve(ClientsToken).getPlexClient(opts),
+      arrInstances: () => c.resolve(ArrInstancesToken).arrInstances(),
+      reconcile: c.resolve(ArrLibraryToken),
+      ruleConflicts: () => c.resolve(RulesToken).findRuleConflicts(),
+      recordChange: c.resolve(ChangeRecorderToken),
+      emitEvent: c.resolve(EventBusToken),
+      now: c.resolve(ClockToken),
     }),
   );
   r.register(RegistryToken, (c) =>

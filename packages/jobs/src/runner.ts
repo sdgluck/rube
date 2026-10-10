@@ -90,6 +90,9 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "45 0 * * *",
     enabled: 1,
   },
+  // 00:50: after sync-arr (00:30) has linked series to Plex shows, which is
+  // what the episode comparison walks. A JOB_ORDER edge says so.
+  { id: "scan-problems", name: "Scan for Problems", command: "scan-problems", schedule: "50 0 * * *", enabled: 1 },
   { id: "generate", name: "Generate Collections", command: "generate", schedule: "0 1 * * *", enabled: 1 },
   // 4am: after sync-media (midnight) so the library index the cleanup guards
   // read is fresh, after generate (1am) so a rule's shelf reflects the night's

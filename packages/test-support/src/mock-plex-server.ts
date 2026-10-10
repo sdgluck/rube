@@ -73,6 +73,24 @@ export interface MockItem {
   duration?: number;
 }
 
+/**
+ * A TV show with episodes, for the episode-ordering checks.
+ *
+ * Kept apart from `MockItem` because nothing else here models the show →
+ * episode tree, and the rules tests that use `MockItem` should not have to
+ * know about it.
+ */
+export interface MockShow {
+  ratingKey: string;
+  title: string;
+  sectionId: string;
+  /** The agent's own id. Defaults to a modern-agent `plex://show/…`. */
+  guid?: string;
+  /** The show's own `showOrdering`; absent means it follows the library. */
+  ordering?: string;
+  episodes: Array<{ season: number; episode: number; title: string; file: string }>;
+}
+
 export interface MockCollection {
   ratingKey: string;
   title: string;
@@ -125,6 +143,13 @@ export interface PlexJournal {
   unscrobbled: string[];
   /** Stream/segment fetches, by client. */
   streamFetches: Array<{ clientId: string; path: string }>;
+  /**
+   * Writes to shows, in order: a pref PUT, a metadata refresh, an analysis.
+   * Order is the point — an ordering change is only seen after a refresh.
+   */
+  showWrites: Array<{ ratingKey: string; action: "prefs" | "refresh" | "analyze"; params?: Record<string, string> }>;
+  /** Partial scans, one per `GET /library/sections/:id/refresh?path=`. */
+  pathScans: Array<{ sectionId: string; path: string }>;
   /** Paths that arrived at an endpoint this mock does not implement. */
   unhandled: string[];
 }
@@ -134,6 +159,10 @@ export interface MockPlex {
   journal: PlexJournal;
   items: Map<string, MockItem>;
   collections: Map<string, MockCollection>;
+  /** Shows, mutable by a test to model a refresh that renumbered them. */
+  shows: Map<string, MockShow>;
+  /** Each library's default `showOrdering`, as its prefs report it. Unset reads as `tmdbAiring`. */
+  sectionOrderings: Map<string, string>;
   /**
    * Server preferences, as `/:/prefs` serves them and `PUT /:/prefs?id=value`
    * sets them — which is how the preroll path list reaches Plex. Every write is
@@ -187,12 +216,15 @@ export interface MockPlex {
 export function startMockPlex(opts: {
   sections: MockSection[];
   items: MockItem[];
+  shows?: MockShow[];
   /** What the identity root reports as `myPlexSubscription`. Absent by default, as on a free server. */
   plexPass?: boolean;
 }): Promise<MockPlex> {
   const items = new Map(opts.items.map((i) => [i.ratingKey, { ...i, labels: [...i.labels] }]));
   const collections = new Map<string, MockCollection>();
   const prefs = new Map<string, string>();
+  const shows = new Map((opts.shows ?? []).map((s) => [s.ratingKey, { ...s, episodes: [...s.episodes] }]));
+  const sectionOrderings = new Map<string, string>();
   const journal: PlexJournal = {
     deletedItems: [],
     deletedCollections: [],
@@ -212,6 +244,8 @@ export function startMockPlex(opts: {
     streamFetches: [],
     pinned: [],
     unpinned: [],
+    showWrites: [],
+    pathScans: [],
     unhandled: [],
   };
   /** Which collections are on the homepage, per section. */
@@ -318,6 +352,26 @@ export function startMockPlex(opts: {
         return;
       }
 
+      // type=2 asks a TV section for its shows. Plex carries `showOrdering`
+      // on the row only when the show overrides its library (checked against
+      // 1.42), so the mock leaves it off otherwise.
+      if (q.get("type") === "2") {
+        const rows = [...shows.values()]
+          .filter((s) => s.sectionId === sectionId)
+          .map((s) => ({
+            ratingKey: s.ratingKey,
+            title: s.title,
+            type: "show",
+            guid: s.guid ?? `plex://show/${s.ratingKey}`,
+            leafCount: s.episodes.length,
+            ...(s.ordering ? { showOrdering: s.ordering } : {}),
+          }));
+        const start = Number(q.get("X-Plex-Container-Start") ?? "0");
+        const size = Number(q.get("X-Plex-Container-Size") ?? String(rows.length));
+        json({ size: rows.length, totalSize: rows.length, Metadata: rows.slice(start, start + size) });
+        return;
+      }
+
       // A listing of type=18 is asking for the section's collections.
       if (q.get("type") === String(COLLECTION_TYPE)) {
         // `label=` narrows the listing server-side. Honoured here so the mock
@@ -364,6 +418,23 @@ export function startMockPlex(opts: {
           return row;
         }),
       });
+      return;
+    }
+
+    // A library's own prefs. Only `showOrdering` is modelled, in the library
+    // vocabulary, where TheTVDB's aired order is spelled `aired`.
+    const sectionPrefs = path.match(/^\/library\/sections\/([^/]+)\/prefs$/);
+    if (sectionPrefs) {
+      json({
+        Setting: [{ id: "showOrdering", value: sectionOrderings.get(sectionPrefs[1]) ?? "tmdbAiring" }],
+      });
+      return;
+    }
+
+    const sectionRefresh = path.match(/^\/library\/sections\/([^/]+)\/refresh$/);
+    if (sectionRefresh) {
+      journal.pathScans.push({ sectionId: sectionRefresh[1], path: q.get("path") ?? "" });
+      emptyOk();
       return;
     }
 
@@ -417,6 +488,42 @@ export function startMockPlex(opts: {
         if (collection) collection.thumb = `/library/metadata/${key}/thumb/${nextThumbVersion++}`;
         emptyOk();
       });
+      return;
+    }
+
+    // ── Shows ───────────────────────────────────────────────────────────────
+    const showAction = path.match(/^\/library\/metadata\/([^/]+)\/(allLeaves|prefs|refresh|analyze)$/);
+    if (showAction && shows.has(showAction[1])) {
+      const show = shows.get(showAction[1]) as MockShow;
+      const action = showAction[2];
+      if (action === "allLeaves") {
+        json({
+          size: show.episodes.length,
+          Metadata: show.episodes.map((e, i) => ({
+            ratingKey: `${show.ratingKey}-${i}`,
+            type: "episode",
+            title: e.title,
+            parentIndex: e.season,
+            index: e.episode,
+            Media: [{ Part: [{ key: `/library/parts/${show.ratingKey}-${i}/file.mkv`, file: e.file }] }],
+          })),
+        });
+        return;
+      }
+      // A real server 404s a GET here; only the PUT is meaningful.
+      if (action === "prefs" && method === "PUT") {
+        const params = Object.fromEntries(q);
+        if (params.showOrdering !== undefined) show.ordering = params.showOrdering || undefined;
+        journal.showWrites.push({ ratingKey: show.ratingKey, action: "prefs", params });
+        emptyOk();
+        return;
+      }
+      if ((action === "refresh" || action === "analyze") && method === "PUT") {
+        journal.showWrites.push({ ratingKey: show.ratingKey, action });
+        emptyOk();
+        return;
+      }
+      notFound();
       return;
     }
 
@@ -710,6 +817,8 @@ export function startMockPlex(opts: {
         journal,
         items,
         collections,
+        shows,
+        sectionOrderings,
         prefs,
         playback,
         close: () => closeServer(server),

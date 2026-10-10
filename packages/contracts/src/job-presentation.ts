@@ -83,6 +83,14 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     settingsHref: "/arrs",
     settingsLabel: "Instances",
   },
+  "scan-problems": {
+    kind: "system",
+    group: "library",
+    description:
+      "Compares each Sonarr series with its Plex show episode by episode, and checks your library and rules for problems. It never fixes anything — that is done from the Problems page.",
+    settingsHref: "/problems",
+    settingsLabel: "Problems",
+  },
   generate: {
     kind: "system",
     group: "automation",

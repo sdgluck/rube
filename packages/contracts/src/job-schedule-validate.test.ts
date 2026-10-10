@@ -33,6 +33,7 @@ function tidy(): ScheduleContext {
     "sync-media": "0 1 * * *",
     "sync-collections": "30 1 * * *",
     "sync-arr": "45 1 * * *",
+    "scan-problems": "55 1 * * *",
     generate: "0 2 * * *",
     metadata: "45 2 * * *",
     "metadata-overrides": "15 3 * * *",

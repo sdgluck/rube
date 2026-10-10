@@ -119,26 +119,6 @@ export const arrAddTargetSchema = z.object({
 });
 export type ArrAddTarget = z.infer<typeof arrAddTargetSchema>;
 
-/** What reconciliation can find. Each is one indexed query over the mirror. */
-export const ARR_ISSUE_KINDS = [
-  "inPlexNotInArr",
-  "inArrNotInPlex",
-  "duplicateAcrossInstances",
-  "stuckInQueue",
-  "failedImport",
-  "settingsDrift",
-] as const;
-export type ArrIssueKind = (typeof ARR_ISSUE_KINDS)[number];
-
-export const ARR_ISSUE_LABELS: Record<ArrIssueKind, string> = {
-  inPlexNotInArr: "In Plex, not managed",
-  inArrNotInPlex: "Downloaded, not in Plex",
-  duplicateAcrossInstances: "In more than one instance",
-  stuckInQueue: "Stuck in the queue",
-  failedImport: "Failed to import",
-  settingsDrift: "Instances disagree",
-};
-
 /** Bytes, as the *Arrs report them, to a human string. */
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes == null || !Number.isFinite(bytes)) return "—";

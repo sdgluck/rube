@@ -63,6 +63,7 @@ import { OnboardingToken, type Onboarding } from "@tinkerbell/domain.onboarding"
 import { OverlaysToken, type Overlays } from "@tinkerbell/domain.overlays";
 import { PlaybackToken, type Playback } from "@tinkerbell/domain.playback";
 import { PrerollsToken, type Prerolls } from "@tinkerbell/domain.prerolls";
+import { ProblemsToken, type Problems } from "@tinkerbell/domain.problems";
 import { RegistryToken, type Registry as RuleRegistry } from "@tinkerbell/domain.registry";
 import { RuleHistoryToken, type RuleHistory } from "@tinkerbell/domain.rule-history";
 import { RuleRunsToken, type RuleRuns } from "@tinkerbell/domain.rule-runs";
@@ -122,6 +123,7 @@ export interface Services {
   overlays: Overlays;
   playback: Playback;
   prerolls: Prerolls;
+  problems: Problems;
   registry: RuleRegistry;
   ruleHistory: RuleHistory;
   ruleRuns: RuleRuns;
@@ -177,6 +179,7 @@ export function registerServices(r: Registry): void {
     overlays: c.resolve(OverlaysToken),
     playback: c.resolve(PlaybackToken),
     prerolls: c.resolve(PrerollsToken),
+    problems: c.resolve(ProblemsToken),
     registry: c.resolve(RegistryToken),
     ruleHistory: c.resolve(RuleHistoryToken),
     ruleRuns: c.resolve(RuleRunsToken),
