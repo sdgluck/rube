@@ -33,7 +33,13 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  check:
+  # Format, lint and typecheck in one job, the suite in four beside it. One job
+  # running all of it took 2.5–4 minutes on a 2-vCPU hosted runner — the suite
+  # alone was 100–170s there against ~45s on a 12-core laptop — and since
+  # `docker-publish.yml` gates on this workflow, that was the floor under every
+  # publish. Each job pays ~25s of checkout and install, which is why it is four
+  # shards and not more.
+  static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -58,9 +64,9 @@ jobs:
       # without which pnpm 11 fails the install outright.
       - run: pnpm install --frozen-lockfile
 
-      # Ordered cheapest-first so a formatting slip doesn't cost a full test
-      # run to discover, and each step is `if: always()` so one failure reports
-      # every other problem in the same run rather than one per push.
+      # Ordered cheapest-first so a formatting slip doesn't cost a typecheck to
+      # discover, and each step is `if: always()` so one failure reports every
+      # other problem in the same run rather than one per push.
       - name: Format
         if: always()
         run: pnpm format:check
@@ -73,6 +79,30 @@ jobs:
         if: always()
         run: pnpm typecheck
 
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shard reports, so one push shows every failing test.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11.21.0
+          install: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.2.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Node's own sharding: it deals the file list round-robin, so git's
+      # package-grouped order (see scripts/test.mjs) still spreads the heavy
+      # DB/HTTP files across shards rather than stacking them in one.
       - name: Test
-        if: always()
-        run: pnpm test
+        run: pnpm test --test-shard=${{ matrix.shard }}/4

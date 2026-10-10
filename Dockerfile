@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:26-alpine AS base
 RUN npm install -g pnpm@11.21.0
 WORKDIR /repo
@@ -7,40 +8,41 @@ FROM base AS build
 # still needs a toolchain present if it has to fall back.
 RUN apk add --no-cache python3 make g++
 
-# CHANGELOG.md is here because apps/web/vite.config.ts inlines it into the
-# bundle for the Changelog page, and Vite refuses to start without it.
-#
 # tsconfig.base.json is what every packages/*, clients/*, domains/* and
 # apps/server tsconfig `extends`. Without it at the context root, Vite's esbuild
 # pass fails to resolve the extends chain of the first workspace file it loads.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json CHANGELOG.md tsconfig.base.json tsconfig.node.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json tsconfig.node.json ./
 
 # Every workspace member the server's graph touches has to be present before
-# `--frozen-lockfile` can resolve it. apps/server pulls in six `domains/*`,
-# which in turn reach into `clients/*`; none of that used to be copied, so the
-# install saw 17 of 40 projects and the offline pass had nothing to link.
+# `--frozen-lockfile` can resolve it — but only its manifest. Copying whole
+# source trees here (as this once did) meant any commit invalidated the install
+# layer, so every publish reinstalled and recompiled better-sqlite3 from
+# scratch and re-uploaded the whole store to the GHA cache: ~24s of install and
+# most of a ~60s cache export, on every master push, for a lockfile that had
+# not changed. `--parents` keeps each manifest at its workspace path, which a
+# plain glob COPY would flatten. Nothing in the workspace has an install script
+# that reads source (the root `prepare` is husky, a no-op without .git).
 #
-# These are source-only TypeScript libraries with no build step, so they are
-# copied whole rather than manifest-first: there is no artifact to cache in
-# between, and it keeps this file in step with the capture image, which copies
-# them the same way.
+# The three apps that ship in this image are named. `apps/*` would also drag in
+# apps/tinkerbell.dev — the marketing site — whose devDependencies are
+# playwright and a second sharp. Nothing here serves it, and pulling it in is
+# what made the install reach for a playwright tarball it had no reason to want.
+COPY --parents packages/*/package.json clients/*/package.json domains/*/package.json apps/server/package.json apps/web/package.json apps/portal/package.json ./
+RUN pnpm install --frozen-lockfile
+
+# Source-only TypeScript libraries with no build step, copied whole: it keeps
+# this file in step with the capture image, which copies them the same way.
 COPY packages/ ./packages/
 COPY clients/ ./clients/
 COPY domains/ ./domains/
-
-# The three apps that ship in this image, by name. `COPY apps/` would also
-# drag in apps/tinkerbell.dev — the marketing site — whose devDependencies are
-# playwright and a second sharp. Nothing here serves it, and pulling it in is
-# what made the install reach for a playwright tarball it had no reason to
-# want. Manifests first so a source edit doesn't reinstall the world.
-COPY apps/server/package.json ./apps/server/
-COPY apps/web/package.json ./apps/web/
-COPY apps/portal/package.json ./apps/portal/
-RUN pnpm install --frozen-lockfile
-
 COPY apps/server/ ./apps/server/
 COPY apps/web/ ./apps/web/
 COPY apps/portal/ ./apps/portal/
+# apps/web/vite.config.ts inlines this into the bundle for the Changelog page,
+# and Vite refuses to start without it. After the install, not before: it
+# changes on every release, and a release is exactly the build that should
+# find the dependency layers cached.
+COPY CHANGELOG.md ./
 
 # There is no .git in the build context, so the commit the web bundle reports
 # has to be handed in. Unset just means the UI doesn't name a commit.
@@ -58,11 +60,9 @@ FROM base AS prod-deps
 RUN apk add --no-cache python3 make g++
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json tsconfig.node.json ./
-COPY packages/ ./packages/
-COPY clients/ ./clients/
-COPY domains/ ./domains/
-COPY apps/server/ ./apps/server/
-
+# Manifests first, for the same reason as the build stage: a source edit must
+# not cost a reinstall.
+COPY --parents packages/*/package.json clients/*/package.json domains/*/package.json apps/server/package.json ./
 
 # apps/web and apps/portal are deliberately absent: only their built dist/ ends
 # up in the image, and omitting them here keeps react and lucide-react (~40 MB)
@@ -95,6 +95,11 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
 # full-router smoke tests below.
 RUN find node_modules/.pnpm -maxdepth 1 -name '@img+sharp*' ! -name '*musl*' -exec rm -rf {} + \
   && rm -rf node_modules/.pnpm/typescript@*
+
+COPY packages/ ./packages/
+COPY clients/ ./clients/
+COPY domains/ ./domains/
+COPY apps/server/ ./apps/server/
 
 # A build-time guard on the two removals above: if either one ever takes
 # something the runtime actually needs, fail here rather than in the user's
@@ -141,7 +146,16 @@ RUN mkdir -p /config /prerolls
 # real directories under node_modules, which fails at the first import with
 # ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING. Copying the tree keeps pnpm's
 # relative symlinks, and with them the layout Node needs.
-COPY --from=prod-deps /repo/ ./
+#
+# Two layers, dependencies first. The root node_modules is ~all of the bytes and
+# only changes with the lockfile, so on a source-only commit it is a cache hit
+# in the build, an existing blob in the registry, and nothing to re-download on
+# the user's side. One `COPY /repo/` made it a new layer on every commit.
+# `--exclude=node_modules` is anchored like .dockerignore: it drops the root one
+# only, and the per-package node_modules symlink farms come across with the
+# sources.
+COPY --from=prod-deps /repo/node_modules ./node_modules/
+COPY --from=prod-deps --exclude=node_modules /repo/ ./
 # Only the built front-ends, from the stage that had the toolchain to build them.
 COPY --from=build /repo/apps/web/dist ./apps/web/dist/
 COPY --from=build /repo/apps/portal/dist ./apps/portal/dist/
