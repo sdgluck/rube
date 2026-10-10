@@ -92,6 +92,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "collection-art": { heavy: true, estimateMs: 15 * MINUTE_MS },
   "playback-backfill": { estimateMs: 10 * MINUTE_MS },
   "because-you-watched": { heavy: true, requires: "personalizedSharing", estimateMs: 10 * MINUTE_MS },
+  "we-think-youd-like": { heavy: true, requires: "personalizedSharing", estimateMs: 10 * MINUTE_MS },
   personalize: { heavy: true, requires: "personalizedSharing", estimateMs: 15 * MINUTE_MS },
   shuffle: { estimateMs: 2 * MINUTE_MS },
   overlays: { heavy: true, estimateMs: 30 * MINUTE_MS },
@@ -103,6 +104,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "label-undo": { estimateMs: 10 * MINUTE_MS },
   "metadata-undo": { estimateMs: 10 * MINUTE_MS },
   "byw-remove": { estimateMs: 5 * MINUTE_MS },
+  "wtyl-remove": { estimateMs: 5 * MINUTE_MS },
   "personalize-enable": { estimateMs: 30 * MINUTE_MS },
   "personalize-disable": { estimateMs: 30 * MINUTE_MS },
   "overlays-remove": { estimateMs: 30 * MINUTE_MS },
@@ -181,6 +183,11 @@ export const JOB_ORDER: readonly JobOrderEdge[] = [
     reason: "the backup should be of a database that has already shed expired rows",
   },
   { before: "backup", after: "cleanup", reason: "the backup worth having is the one taken before anything is deleted" },
+  {
+    before: "sync-media",
+    after: "we-think-youd-like",
+    reason: "a taste profile reads genres and ratings from the library index",
+  },
 ];
 
 /**

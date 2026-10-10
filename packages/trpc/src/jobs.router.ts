@@ -32,7 +32,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     updateJob,
   } = deps.jobs;
   const { collections, stats } = deps;
-  const { getBywCollectionsGroupedByUser } = collections;
+  const { getBywCollectionsGroupedByUser, getGeneratedCollectionsGroupedByUser } = collections;
   const { getLastFailedRun } = stats;
 
   const jobsRouter = t.router({
@@ -269,6 +269,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     }),
 
     bywCollections: procedure.query(() => getBywCollectionsGroupedByUser()),
+    wtylCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("WeThinkYoudLike")),
 
     featureCatalog: procedure.query(() => listFeatureCatalog()),
 

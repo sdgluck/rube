@@ -22,6 +22,15 @@ export const BYW_DEFAULTS = {
   includeSynopsis: false,
 } as const;
 
+export const WTYL_DEFAULTS = {
+  historyDays: 365,
+  minHistoryTitles: 5,
+  pinToHomepage: true,
+  minItems: 10,
+  maxItems: 25,
+  minLibrarySize: 15,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -135,6 +144,58 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       help: "Libraries with fewer items than this are skipped.",
       control: { kind: "number", min: 1, unit: "items" },
       default: BYW_DEFAULTS.minLibrarySize,
+      advanced: true,
+    },
+  ],
+  "we-think-youd-like": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "historyDays",
+      label: "History window",
+      help: "How far back each person's taste is read from. Playback retention caps it.",
+      control: { kind: "number", min: 30, max: 3650, unit: "days" },
+      default: WTYL_DEFAULTS.historyDays,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: WTYL_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minHistoryTitles",
+      label: "Least history",
+      help: "People who've watched fewer distinct titles than this in the window are skipped.",
+      control: { kind: "number", min: 1, max: 100, unit: "titles" },
+      default: WTYL_DEFAULTS.minHistoryTitles,
+      advanced: true,
+    },
+    {
+      key: "minItems",
+      label: "Fewest items",
+      help: "With fewer matches than this, the existing collection is left as it is.",
+      control: { kind: "number", min: 5, max: 50 },
+      default: WTYL_DEFAULTS.minItems,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 10, max: 100 },
+      default: WTYL_DEFAULTS.maxItems,
+      advanced: true,
+    },
+    {
+      key: "minLibrarySize",
+      label: "Smallest library",
+      help: "Libraries with fewer items than this are skipped.",
+      control: { kind: "number", min: 1, unit: "items" },
+      default: WTYL_DEFAULTS.minLibrarySize,
       advanced: true,
     },
   ],

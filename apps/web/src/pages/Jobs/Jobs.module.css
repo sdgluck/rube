@@ -737,6 +737,16 @@
   color: var(--ink-3);
 }
 
+/* We Think You'd Like's "why": the taste the picks were made for. */
+.bywCardSummary {
+  font-size: 1.1rem;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .hideOnMobile {
   /* Placeholder for mobile override */
 }

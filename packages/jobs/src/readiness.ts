@@ -26,9 +26,9 @@ export type ReadinessItem = {
 };
 
 export function createReadiness(
-  deps: Pick<Services, "backups" | "config" | "notifications" | "overlays" | "preferences" | "rules">,
+  deps: Pick<Services, "backups" | "config" | "notifications" | "overlays" | "playback" | "preferences" | "rules">,
 ) {
-  const { backups, config, notifications, overlays, preferences, rules } = deps;
+  const { backups, config, notifications, overlays, playback, preferences, rules } = deps;
   const { getConfig, getLlmConfig, getPersonalizedSharingStatus } = config;
 
   function plex(): ReadinessItem {
@@ -64,6 +64,17 @@ export function createReadiness(
     };
   }
 
+  function ai(detail: string): ReadinessItem {
+    return {
+      id: "ai",
+      label: "AI provider configured",
+      met: getLlmConfig() !== undefined,
+      detail,
+      href: "/settings/ai",
+      severity: "required",
+    };
+  }
+
   function itemsFor(job: { id: string; command: string; config: Record<string, unknown> | null }): ReadinessItem[] {
     const items: ReadinessItem[] = [];
     if (isCommandName(job.command)) items.push(plex());
@@ -71,15 +82,26 @@ export function createReadiness(
 
     switch (job.command) {
       case "because-you-watched":
-        items.push(personalization(), {
-          id: "ai",
-          label: "AI provider configured",
-          met: getLlmConfig() !== undefined,
-          detail: "Picks the titles in each collection.",
-          href: "/settings/ai",
+        items.push(personalization(), ai("Picks the titles in each collection."));
+        break;
+      case "we-think-youd-like": {
+        // The taste is read from Tinkerbell's own playback log, not Plex's
+        // history, so a fresh install has nothing to read until the poller has
+        // seen some viewing or the one-off import has run.
+        const { sessions, days } = playback.watchHistoryCoverage();
+        items.push(personalization(), ai("Reads each person's taste and picks the titles."), {
+          id: "watch-history",
+          label: "Watch history recorded",
+          met: sessions > 0,
+          detail:
+            sessions > 0
+              ? `${sessions} play${sessions === 1 ? "" : "s"} over ${days} day${days === 1 ? "" : "s"}.`
+              : "Run Import Plex Watch History to start from your past viewing.",
+          href: "/jobs/playback-backfill",
           severity: "required",
         });
         break;
+      }
       case "personalize": {
         const count = rules.getEnabledRules().filter((r) => parseRuleConfig(r).personalizable).length;
         items.push(personalization(), optedInUsers(), {

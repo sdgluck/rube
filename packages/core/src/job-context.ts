@@ -83,6 +83,7 @@ export function deriveJobContext(
 // importing them from here.
 export {
   bywJobConfigSchema,
+  wtylJobConfigSchema,
   collectionArtJobConfigSchema,
   collectionsSweepJobConfigSchema,
   commonJobConfigSchema,
@@ -93,6 +94,7 @@ export {
 } from "@tinkerbell/contracts";
 export type {
   BywJobConfig,
+  WtylJobConfig,
   CollectionArtJobConfig,
   CollectionsSweepJobConfig,
   CommonJobConfig,

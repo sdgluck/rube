@@ -5,7 +5,7 @@ import RunHistoryPanel from "#pages/Jobs/shared/RunHistoryPanel";
 import LatestRunLogPanel from "#pages/Jobs/shared/LatestRunLogPanel";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { JobPageProps } from "#pages/Jobs/types";
-import GeneratedCollectionsPanel from "./GeneratedCollectionsPanel";
+import GeneratedCollectionsPanel from "#pages/Jobs/shared/GeneratedCollectionsPanel";
 
 export default function BecauseYouWatchedJob({ job }: JobPageProps) {
   const actions = useJobActions(job);
@@ -15,7 +15,7 @@ export default function BecauseYouWatchedJob({ job }: JobPageProps) {
         <JobSettingsPanel job={job} />
         <RunHistoryPanel runsQuery={actions.runsQuery} command={job.command} />
       </div>
-      <GeneratedCollectionsPanel />
+      <GeneratedCollectionsPanel jobId="because-you-watched" />
       <LatestRunLogPanel latestRun={actions.latestRun} />
     </JobPageShell>
   );

@@ -48,6 +48,24 @@ export const bywJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type BywJobConfig = z.infer<typeof bywJobConfigSchema>;
 
+/**
+ * We Think You'd Like: one row per person per library, built from their whole
+ * recent history rather than one title. Per-user only — there is no server-wide
+ * taste to describe, so there is no `mode`.
+ */
+export const wtylJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** How far back the taste profile reads, capped in practice by playback retention. */
+  historyDays: z.number().int().min(30).max(3650).optional(),
+  /** Fewer distinct titles than this is too little history to call a taste. */
+  minHistoryTitles: z.number().int().min(1).max(100).optional(),
+  pinToHomepage: z.boolean().optional(),
+  minItems: z.number().int().min(5).max(50).optional(),
+  maxItems: z.number().int().min(10).max(100).optional(),
+  minLibrarySize: z.number().int().min(1).optional(),
+});
+export type WtylJobConfig = z.infer<typeof wtylJobConfigSchema>;
+
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Report what would be deleted and stop. Off by default — the job's own log
@@ -139,6 +157,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   metadata: generateJobConfigSchema,
   "because-you-watched": bywJobConfigSchema,
   "byw-remove": bywJobConfigSchema,
+  "we-think-youd-like": wtylJobConfigSchema,
+  "wtyl-remove": wtylJobConfigSchema,
   personalize: personalizeJobConfigSchema,
   "collections-sweep": collectionsSweepJobConfigSchema,
   "collection-art": collectionArtJobConfigSchema,
@@ -157,7 +177,7 @@ export function configSchemaFor(command: string): z.ZodObject {
  */
 export function configIssues(command: string, config: Record<string, unknown>): string[] {
   const issues: string[] = [];
-  if (command === "because-you-watched") {
+  if (command === "because-you-watched" || command === "we-think-youd-like") {
     const min = config.minItems;
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {

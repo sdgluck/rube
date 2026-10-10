@@ -252,6 +252,7 @@ export {
   RULE_CONCURRENCY_MAX,
   applyConfigPatch,
   bywJobConfigSchema,
+  wtylJobConfigSchema,
   collectionArtJobConfigSchema,
   collectionsSweepJobConfigSchema,
   commonJobConfigSchema,
@@ -269,6 +270,7 @@ export {
 } from "./job-config.ts";
 export type {
   BywJobConfig,
+  WtylJobConfig,
   CollectionArtJobConfig,
   CollectionsSweepJobConfig,
   CommonJobConfig,
@@ -289,6 +291,7 @@ export type { FeatureId, JobKind, JobPresentation, SystemGroup } from "./job-pre
 export {
   allVariants,
   BYW_DEFAULTS,
+  WTYL_DEFAULTS,
   commandsWithFields,
   DIGEST_DEFAULTS,
   fieldsFor,
@@ -399,3 +402,4 @@ export { DEFAULT_UI_SCALE, isUiScale, UI_SCALES } from "./ui-scale.ts";
 export type { UiScale } from "./ui-scale.ts";
 export * from "./download-clients.ts";
 export { NATIVE_APPS, nativeOrigins, type NativeApp } from "./native-apps.ts";
+export { SYSTEM_COLLECTION_LABELS } from "./system-labels.ts";

@@ -12,7 +12,18 @@ import { useToast } from "#components/Toast";
 import controls from "#/styles/controls.module.css";
 import { plexImageUrl } from "#lib/media";
 
-export default function GeneratedCollectionsPanel() {
+/**
+ * The per-user rows an AI collection job made, grouped by person. One panel for
+ * both jobs: they differ only in which label they own and in whether a row
+ * carries a "why" worth showing.
+ */
+const KINDS = {
+  "because-you-watched": { name: "Because You Watched", showSummary: false },
+  "we-think-youd-like": { name: "We Think You'd Like", showSummary: true },
+} as const;
+
+export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof typeof KINDS }) {
+  const kind = KINDS[jobId];
   const utils = trpc.useUtils();
   const navigate = useNavigate();
   const { addToast } = useToast();
@@ -20,11 +31,22 @@ export default function GeneratedCollectionsPanel() {
     onSuccess: ({ runId }) => navigate(`/jobs/runs/${runId}`),
     onError: (err) => addToast(err.message, "error"),
   });
-  const collectionsQuery = trpc.jobs.bywCollections.useQuery(undefined, { refetchInterval: 10000 });
+  const bywQuery = trpc.jobs.bywCollections.useQuery(undefined, {
+    refetchInterval: 10000,
+    enabled: jobId === "because-you-watched",
+  });
+  const wtylQuery = trpc.jobs.wtylCollections.useQuery(undefined, {
+    refetchInterval: 10000,
+    enabled: jobId === "we-think-youd-like",
+  });
+  const collectionsQuery = jobId === "because-you-watched" ? bywQuery : wtylQuery;
   const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
 
   const deleteMutation = trpc.collections.delete.useMutation({
-    onSuccess: () => utils.jobs.bywCollections.invalidate(),
+    onSuccess: () =>
+      jobId === "because-you-watched"
+        ? utils.jobs.bywCollections.invalidate()
+        : utils.jobs.wtylCollections.invalidate(),
   });
 
   const total = collectionsQuery.data?.reduce((n, g) => n + g.collections.length, 0);
@@ -58,7 +80,7 @@ export default function GeneratedCollectionsPanel() {
               type="button"
               className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
               disabled={startJob.isPending}
-              onClick={() => startJob.mutate({ jobId: "because-you-watched" })}
+              onClick={() => startJob.mutate({ jobId })}
             >
               Run now
             </button>
@@ -99,6 +121,11 @@ export default function GeneratedCollectionsPanel() {
                           </>
                         ) : null}
                       </div>
+                      {kind.showSummary && col.summary ? (
+                        <div className={styles.bywCardSummary} title={col.summary}>
+                          {col.summary}
+                        </div>
+                      ) : null}
                       <button
                         className={`${styles.button} ${styles.buttonSmall} ${styles.buttonDanger}`}
                         onClick={() => setConfirming({ title: col.title, ratingKey: col.plexRatingKey })}
@@ -118,7 +145,7 @@ export default function GeneratedCollectionsPanel() {
         <ConfirmModal
           danger
           title={`Delete "${confirming.title}"?`}
-          message="The collection is removed from Plex. The next Because You Watched run may make it again."
+          message={`The collection is removed from Plex. The next ${kind.name} run may make it again.`}
           confirmLabel="Delete"
           onConfirm={() => {
             deleteMutation.mutate({ ratingKey: confirming.ratingKey });

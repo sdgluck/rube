@@ -1,3 +1,4 @@
+import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -42,8 +43,7 @@ const PAGE_SIZE = 50;
 
 type CollectionRow = RouterOutputs["collections"]["list"]["items"][number];
 
-/** Labels Tinkerbell writes itself, which read as provenance rather than tags. */
-const SYSTEM_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
+const SYSTEM_LABELS = SYSTEM_COLLECTION_LABELS;
 
 /**
  * Column ids in their default order, for the two "is this column on?" checks

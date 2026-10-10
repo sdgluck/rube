@@ -41,6 +41,7 @@ describe("command catalog", () => {
       "label-undo",
       "overlays",
       "byw-remove",
+      "wtyl-remove",
       "personalize-enable",
       "personalize-disable",
       "migrate-collections",

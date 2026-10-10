@@ -30,6 +30,7 @@ export const LLM_FEATURES = [
   // Settings → AI "Try it". Its own line so an evening of experiments isn't
   // read as the nightly job getting more expensive.
   "because-you-watched-preview",
+  "we-think-youd-like",
   "collection-summary",
   "health-check",
   "test-connection",

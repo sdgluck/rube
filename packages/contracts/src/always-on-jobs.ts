@@ -31,6 +31,7 @@ export const ALWAYS_ON_JOB_IDS = [
   "sync-media",
   "sync-recently-added",
   "sync-users",
+  "wtyl-remove",
 ] as const;
 
 export type AlwaysOnJobId = (typeof ALWAYS_ON_JOB_IDS)[number];

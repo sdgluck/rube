@@ -40,6 +40,7 @@ const NIGHTLY = [
   "cleanup",
   "collection-art",
   "because-you-watched",
+  "we-think-youd-like",
   "personalize",
   "posters-refresh",
 ];
@@ -71,7 +72,7 @@ const SPECS: PresetSpec[] = [
     settings: { ...RECOMMENDED_SCHEDULE_SETTINGS },
     start: "01:00",
     padding: 0.25,
-    days: { "posters-refresh": [0] },
+    days: { "posters-refresh": [0], "we-think-youd-like": [0] },
     fixed: {
       "sync-recently-added": "*/15 * * * *",
       "seerr-poll": "*/15 * * * *",
@@ -94,7 +95,7 @@ const SPECS: PresetSpec[] = [
     },
     start: "02:00",
     padding: 0,
-    days: { "posters-refresh": [0] },
+    days: { "posters-refresh": [0], "we-think-youd-like": [0] },
     fixed: {
       "sync-recently-added": "*/15 * * * *",
       "seerr-poll": "*/15 * * * *",
@@ -118,6 +119,9 @@ const SPECS: PresetSpec[] = [
     days: { metadata: [0], "metadata-overrides": [0], "collection-art": [0] },
     monthly: ["posters-refresh"],
     fixed: {
+      // Out of the chain: its slot pushed the nightly jobs past this
+      // preset's window, for a job that only runs once a week anyway.
+      "we-think-youd-like": "15 6 * * 0",
       "sync-recently-added": "*/30 * * * *",
       "seerr-poll": "*/30 * * * *",
       "watchlist-sync": "*/30 * * * *",
@@ -136,7 +140,7 @@ const SPECS: PresetSpec[] = [
     settings: { maintenanceWindow: { enabled: false, from: "01:00", to: "06:00" } },
     start: "02:00",
     padding: 0.25,
-    days: { "posters-refresh": [0] },
+    days: { "posters-refresh": [0], "we-think-youd-like": [0] },
     fixed: {
       "sync-media": "0 */6 * * *",
       "sync-collections": "10 */6 * * *",

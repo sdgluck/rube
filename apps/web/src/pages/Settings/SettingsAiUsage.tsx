@@ -23,6 +23,7 @@ const FEATURE_LABELS: Record<string, string> = {
   "rule-preview": "Rule previews",
   "because-you-watched": "Because you watched",
   "because-you-watched-preview": "Because you watched (Try it)",
+  "we-think-youd-like": "We think you'd like",
   "collection-summary": "Collection summaries",
   "health-check": "Health checks",
   "test-connection": "Test connection",
@@ -146,7 +147,7 @@ export default function SettingsAiUsage() {
               {formatNumber(budget.used)} of {formatNumber(budget.budget)} used since{" "}
               {new Date(budget.monthStart).toLocaleDateString(undefined, { day: "numeric", month: "long" })}.
               {budget.exceeded &&
-                " Spent — AI rules, Because you watched and AI summaries are skipped until the 1st. Health checks and Test connection still run."}
+                " Spent — AI rules, Because you watched, We think you'd like and AI summaries are skipped until the 1st. Health checks and Test connection still run."}
             </span>
           </>
         ) : (

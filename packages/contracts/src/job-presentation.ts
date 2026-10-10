@@ -49,7 +49,14 @@ export interface JobPresentation {
 }
 
 /** The opt-in jobs, in the order the wizard offers them. */
-export const FEATURE_IDS = ["because-you-watched", "personalize", "shuffle", "overlays", "digest"] as const;
+export const FEATURE_IDS = [
+  "because-you-watched",
+  "we-think-youd-like",
+  "personalize",
+  "shuffle",
+  "overlays",
+  "digest",
+] as const;
 export type FeatureId = (typeof FEATURE_IDS)[number];
 
 export function isFeatureId(id: string): id is FeatureId {
@@ -224,6 +231,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Generates personalised “Because You Watched” collections for each Plex user using their recent watch history.",
   },
+  "we-think-youd-like": {
+    kind: "feature",
+    requires: "Personalized Home Screens, an AI provider, and recorded watch history.",
+    description:
+      "Builds one “We Think You'd Like” collection per library for each Plex user, from a taste profile of their whole recent watch history.",
+  },
   personalize: {
     kind: "feature",
     requires: "Personalized Home Screens, and rules marked personalizable.",
@@ -265,6 +278,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Because You Watched: deletes its collections from Plex and clears every shared user's sharing restrictions. Item-level Tinkerbell labels are left intact.",
+  },
+  "wtyl-remove": {
+    kind: "hidden",
+    description:
+      "Tears down We Think You'd Like: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "personalize-enable": {
     kind: "hidden",

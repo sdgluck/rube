@@ -1,3 +1,4 @@
+import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
@@ -5,8 +6,7 @@ import { useToast } from "#components/Toast";
 import shared from "#/styles/shared.module.css";
 import styles from "./CollectionEditModal.module.css";
 
-/** Labels Tinkerbell writes itself, which read as provenance rather than tags. */
-const SYSTEM_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
+const SYSTEM_LABELS = SYSTEM_COLLECTION_LABELS;
 
 /**
  * `Rule:<uuid>` is how a rule finds its own collections again. It is plumbing —

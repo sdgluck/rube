@@ -114,7 +114,7 @@ export const FEATURES: Feature[] = [
     id: "personalized",
     group: "curate",
     title: "Personalized home screens",
-    summary: "Each user gets Because You Watched rows and collections only they can see.",
+    summary: "Each user gets Because You Watched and We Think You'd Like rows, and collections only they can see.",
     body: "Users sign in to a separate portal with their Plex account. There they mark genres they love, like or avoid, hide titles with Not for me, and see what is leaving soon. Turning the feature off restores everyone's previous sharing settings.",
     shot: "preview",
   },

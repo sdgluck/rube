@@ -1,3 +1,4 @@
+import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
 import { useState } from "react";
 import Modal from "./Modal";
 import styles from "./BulkLabelsModal.module.css";
@@ -21,7 +22,7 @@ interface Props {
   freeTextRemove?: boolean;
 }
 
-const MANAGED_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
+const MANAGED_LABELS = SYSTEM_COLLECTION_LABELS;
 
 export default function BulkLabelsModal({
   count,

@@ -1,3 +1,4 @@
+import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
 import { useState, Fragment } from "react";
 import { useParams, useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { Image, Pencil, Pin, PinOff, RefreshCw, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
@@ -18,8 +19,7 @@ import PosterStudio from "./PosterStudio.tsx";
 import local from "./CollectionDetail.module.css";
 import { plexImageUrl } from "#lib/media";
 
-/** Labels Tinkerbell writes itself, which read as provenance rather than tags. */
-const SYSTEM_LABELS = ["tinkerbell", "generated", "becauseyouwatched"];
+const SYSTEM_LABELS = SYSTEM_COLLECTION_LABELS;
 
 /**
  * `Rule:<uuid>` is how a rule finds its own collections again. It is plumbing —

@@ -41,6 +41,7 @@ const ROWS: Array<[id: string, lane: ScheduleLane, timeoutMs: number, schedule: 
 
 const FEATURES: Array<[id: string, lane: ScheduleLane, timeoutMs: number, schedule: string]> = [
   ["because-you-watched", "default", 30 * MINUTE_MS, "0 2 * * *"],
+  ["we-think-youd-like", "default", 30 * MINUTE_MS, "0 3 * * 0"],
   ["personalize", "default", 30 * MINUTE_MS, "0 3 * * *"],
   ["shuffle", "default", 30 * MINUTE_MS, "*/30 * * * *"],
   ["overlays", "interactive", 2 * HOUR_MS, ""],

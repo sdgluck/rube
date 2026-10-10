@@ -41,6 +41,16 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "we-think-youd-like",
+    name: "We Think You'd Like",
+    command: "we-think-youd-like",
+    // Weekly: a taste read from a year of history barely moves overnight, and
+    // every run is a model call per person per library.
+    defaultSchedule: "0 3 * * 0",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "personalize",
     name: "Personalized Collections",
     command: "personalize",
@@ -77,6 +87,12 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     },
   },
 ];
+
+/** The job that undoes what a feature left on the Plex server, started when the feature is removed. */
+const TEARDOWN_JOBS: Record<string, CommandName> = {
+  "because-you-watched": "byw-remove",
+  "we-think-youd-like": "wtyl-remove",
+};
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {
   return FEATURE_TEMPLATES.find((f) => f.id === featureId);
@@ -204,26 +220,28 @@ export function createFeatures(deps: Services) {
     }
 
     // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
-    // collections on the Plex server — fire byw-remove so removing the feature
-    // actually undoes those side-effects. Item-level Tinkerbell labels are NOT
-    // touched here; users can clean those up via Settings → Maintenance.
-    if (featureId === "because-you-watched") {
-      // Cancel any in-flight BYW run first so we don't race with the cleanup.
+    // collections on the Plex server, We Think You'd Like its collections —
+    // fire the teardown job so removing the feature actually undoes those
+    // side-effects. Item-level Tinkerbell labels are NOT touched here; users
+    // can clean those up via Settings → Maintenance.
+    const teardown = TEARDOWN_JOBS[featureId];
+    if (teardown) {
+      // Cancel any in-flight run first so we don't race with the cleanup.
       const active = db
         .select({ id: jobRuns.id })
         .from(jobRuns)
-        .where(and(eq(jobRuns.jobId, "because-you-watched"), inArray(jobRuns.status, ["running", "cancelling"])))
+        .where(and(eq(jobRuns.jobId, featureId), inArray(jobRuns.status, ["running", "cancelling"])))
         .all();
       for (const run of active) {
         cancelRun(run.id);
       }
       try {
-        const result = await startJob("byw-remove");
+        const result = await startJob(teardown);
         if (!result.ok) {
-          log.warn("BYW uninstall: byw-remove did not start", { reason: result.reason });
+          log.warn(`${featureId} uninstall: ${teardown} did not start`, { reason: result.reason });
         }
       } catch (err) {
-        log.error("BYW uninstall: failed to start byw-remove", {
+        log.error(`${featureId} uninstall: failed to start ${teardown}`, {
           err: err instanceof Error ? err.message : String(err),
         });
       }

@@ -3,6 +3,7 @@ import type { JobPageProps } from "./types";
 import DefaultJob from "./DefaultJob";
 import GenerateJob from "./GenerateJob";
 import BecauseYouWatchedJob from "./BecauseYouWatched";
+import WeThinkYoudLikeJob from "./WeThinkYoudLike";
 
 const registry: Record<string, ComponentType<JobPageProps>> = {
   generate: GenerateJob,
@@ -10,6 +11,7 @@ const registry: Record<string, ComponentType<JobPageProps>> = {
   cleanup: GenerateJob,
   metadata: GenerateJob,
   "because-you-watched": BecauseYouWatchedJob,
+  "we-think-youd-like": WeThinkYoudLikeJob,
 };
 
 export function resolveJobComponent(command: string): ComponentType<JobPageProps> {

@@ -15,6 +15,8 @@ and notifications on a schedule.
 - **Collections**: sort order, pinning to the home screen, and shuffled hubs.
 - **Overlays**: draw ratings, badges and labels on posters.
 - **Because you watched**: recommendation collections for each user.
+- **We think you'd like**: one collection per user per library, picked by AI
+  from their whole recent watch history. [More](#we-think-youd-like)
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
 - **Movie match**: a group swipes through a movie library together until
@@ -168,6 +170,29 @@ Limits:
 - The server owner can't be restricted, so the owner sees everyone's
   collections.
 - Click **Reconcile users** after sharing with someone new.
+
+## We think you'd like
+
+Each user gets one "We Think You'd Like" collection in each library. The AI
+picks it from their taste over the whole history window, not from the last few
+things they watched. Install it from **Jobs**. It runs weekly.
+
+- The taste comes from Tinkerbell's own playback history: genres, eras and
+  ratings of what each person watches, weighted toward what they finish and
+  watched recently. A film they gave up on early counts against its genres.
+- Nothing they have already played is picked. A user's portal preferences
+  steer the picks, and **Not for me** on the row removes it.
+- The collection's description in Plex says what the picks have in common.
+- A run updates each collection in place, so it keeps its pin and position. If
+  the AI's answer is unusable, last week's collection is kept.
+
+Limits:
+
+- It needs Personalized Home Screens, an AI provider and recorded watch
+  history. On a new install, run **Import Plex Watch History** first.
+- Users who watched fewer titles than the **Least history** setting in the
+  window are skipped.
+- Playback retention limits how far back it can read.
 
 ## Movie match
 

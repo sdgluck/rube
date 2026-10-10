@@ -2,20 +2,7 @@
  * Collections module — sync Plex collections to local SQLite and manage them.
  */
 
-import {
-  eq,
-  and,
-  or,
-  like,
-  asc,
-  desc,
-  lt,
-  notInArray,
-  sql,
-  inArray,
-  type SQL,
-  type InferSelectModel,
-} from "drizzle-orm";
+import { eq, and, or, asc, desc, lt, notInArray, sql, inArray, type SQL, type InferSelectModel } from "drizzle-orm";
 import { collections, collectionItems, likeContains, type Db } from "@tinkerbell/db";
 
 import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
@@ -523,16 +510,15 @@ export function createCollections(deps: CollectionsDeps) {
   }
 
   /**
-   * Group collections labelled by the Because-You-Watched job by user. Used by
-   * the jobs UI to render BYW output per Plex user. Keeps the LIKE-on-JSON
-   * shape pinned in one place.
+   * Group the collections a per-user AI job labelled (`BecauseYouWatched`,
+   * `WeThinkYoudLike`) by user, for the job pages. Keeps the LIKE-on-JSON
+   * shape pinned in one place; the label is a fixed job label, never input.
    */
-  function getBywCollectionsGroupedByUser(): Array<{ user: string; collections: CollectionRow[] }> {
-    const BYW_LABEL = "BecauseYouWatched";
+  function getGeneratedCollectionsGroupedByUser(label: string): Array<{ user: string; collections: CollectionRow[] }> {
     const rows = db
       .select()
       .from(collections)
-      .where(like(collections.labels, `%"${BYW_LABEL}"%`))
+      .where(likeContains(collections.labels, `"${label}"`))
       .orderBy(desc(collections.addedAt))
       .all();
 
@@ -554,8 +540,13 @@ export function createCollections(deps: CollectionsDeps) {
       });
   }
 
+  function getBywCollectionsGroupedByUser() {
+    return getGeneratedCollectionsGroupedByUser("BecauseYouWatched");
+  }
+
   return {
     ...artwork,
+    getGeneratedCollectionsGroupedByUser,
     ...stats,
     upsertCollectionByKey,
     getCollectionMemberKeys,

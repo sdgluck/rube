@@ -12,6 +12,7 @@ import { asc, eq } from "drizzle-orm";
 import { jobs, plexUsers } from "@tinkerbell/db";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 import type { PlexAccount } from "@tinkerbell/plex";
+import { extractJSON, libraryTitleMap, plexConnection, resolveTargetSections } from "./ai-collection-shared.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
@@ -134,48 +135,6 @@ export function matchKnownUsers(
   });
 }
 
-/**
- * Best-effort JSON extraction for LLM responses. Tries strict parse, then
- * the first bracketed object, then a cleaned variant (no trailing commas /
- * control chars), then the first bracketed array. Returns null when none
- * succeed; each catch is an intentional "try the next fallback".
- */
-function extractJSON(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    // fall through to bracketed-object extraction
-  }
-
-  const objMatch = text.match(/\{[\s\S]*\}/);
-  if (objMatch) {
-    try {
-      return JSON.parse(objMatch[0]);
-    } catch {
-      // fall through to cleaned variant
-    }
-
-    // eslint-disable-next-line no-control-regex
-    const cleaned = objMatch[0].replace(/,\s*([}\]])/g, "$1").replace(/[\u0000-\u001f]/g, " ");
-    try {
-      return JSON.parse(cleaned);
-    } catch {
-      // fall through to bracketed-array extraction
-    }
-  }
-
-  const arrMatch = text.match(/\[[\s\S]*\]/);
-  if (arrMatch) {
-    try {
-      return JSON.parse(arrMatch[0]);
-    } catch {
-      // exhausted fallbacks; caller treats `null` as "couldn't parse"
-    }
-  }
-
-  return null;
-}
-
 export function createBecauseYouWatchedCommand(
   deps: Pick<Services, "aiUsage" | "clients" | "collections" | "config" | "db" | "health" | "preferences">,
 ) {
@@ -251,8 +210,7 @@ export function createBecauseYouWatchedCommand(
   }
 
   async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
-    const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
-    const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+    const { url: PLEX_URL, token: PLEX_TOKEN } = plexConnection(getConfig);
     const llmConfig = getLlmConfig();
     // Defaults shared with the settings form, so what it shows for an unset
     // field is what runs.
@@ -315,24 +273,7 @@ export function createBecauseYouWatchedCommand(
       ctx.log(`Users: ${resolvedUsers.map((u) => u.name).join(", ")}`);
     }
 
-    // Resolve target sections
-    let allSections = await client.getSections();
-
-    const configuredLibraries = getConfig("global_plex_libraries");
-    if (configuredLibraries) {
-      allSections = allSections.filter((s) => configuredLibraries.includes(s.title));
-    }
-
-    let targetSections;
-    if (config.sections && config.sections.length > 0) {
-      const names = config.sections.map((s) => s.trim().toLowerCase());
-      targetSections = allSections.filter((s) => names.includes(s.key) || names.includes(s.title.toLowerCase()));
-      if (targetSections.length === 0) {
-        throw new Error(`No matching sections found for "${config.sections.join(", ")}".`);
-      }
-    } else {
-      targetSections = allSections;
-    }
+    const targetSections = await resolveTargetSections(client, getConfig, config.sections);
 
     ctx.log(`Sections: ${targetSections.map((s) => s.title).join(", ")}`);
 
@@ -428,12 +369,7 @@ export function createBecauseYouWatchedCommand(
         }
         ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
 
-        const titleMap = new Map<string, string>();
-        for (const item of libraryItems) {
-          const key = `${item.title}${item.year ? ` (${item.year})` : ""}`;
-          titleMap.set(key, item.ratingKey);
-          titleMap.set(item.title, item.ratingKey);
-        }
+        const titleMap = libraryTitleMap(libraryItems);
 
         const newCollectionNames = new Set<string>();
         for (const col of aiCollections) {
@@ -663,8 +599,7 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
     signal: AbortSignal,
     onStep: (message: string) => void = () => {},
   ): Promise<BywPreviewResult> {
-    const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
-    const PLEX_TOKEN = getConfig("global_plex_token") || process.env.PLEX_TOKEN;
+    const { url: PLEX_URL, token: PLEX_TOKEN } = plexConnection(getConfig);
     const llmConfig = getLlmConfig();
     if (!PLEX_TOKEN) throw new Error("Plex token is required. Configure it in Settings.");
     if (!llmConfig) throw new Error("LLM provider is not configured. Set one above.");
