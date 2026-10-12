@@ -67,6 +67,25 @@ export function libraryTitleMap(items: PlexItem[]): Map<string, string> {
 }
 
 /**
+ * `libraryTitleMap`, plus one more chance for a title whose year is wrong:
+ * the model names "The Crown (2019)" for a library's "The Crown (2016)", and
+ * sometimes a run of them, one per invented year. Without the year it is
+ * matched, but only to a title the library holds once — a remake sharing the
+ * name must not be picked for a year that belongs to neither.
+ */
+export function libraryTitleMatcher(items: PlexItem[]): (title: string) => string | undefined {
+  const map = libraryTitleMap(items);
+  const byBare = new Map<string, string | null>();
+  for (const item of items) byBare.set(item.title, byBare.has(item.title) ? null : item.ratingKey);
+  return (title) => {
+    const exact = map.get(title);
+    if (exact) return exact;
+    const bare = title.replace(/\s*\(\d{4}\)$/, "");
+    return bare === title ? undefined : (byBare.get(bare) ?? undefined);
+  };
+}
+
+/**
  * Best-effort JSON extraction for LLM responses. Tries strict parse, then
  * the first bracketed object, then a cleaned variant (no trailing commas /
  * control chars), then the first bracketed array. Returns null when none

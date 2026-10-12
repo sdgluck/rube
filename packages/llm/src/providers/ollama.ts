@@ -51,6 +51,9 @@ const HARD_TIMEOUT_MS = 30 * 60_000;
  */
 const MIN_CONTEXT = 8192;
 
+/** A little for the chat template wrapped around the message. */
+const CHAT_TEMPLATE_TOKENS = 64;
+
 /**
  * Bytes, not characters, over three. Latin titles run about four characters
  * to a token, so this overestimates them by a third — which is the safe
@@ -162,15 +165,25 @@ export function createOllamaClient(config: LlmConfig): LlmClient {
     return info;
   }
 
+  /** The answer's share of the window: its budget, plus room to think first. */
+  function predictFor(info: ModelInfo, maxTokens: number | undefined): number {
+    const answerBudget = maxTokens ?? config.maxTokens ?? DEFAULT_MAX_TOKENS;
+    return info.thinking ? answerBudget + REASONING_HEADROOM_TOKENS : answerBudget;
+  }
+
+  async function promptBudget(opts: { maxTokens?: number }, signal?: AbortSignal): Promise<number | undefined> {
+    const info = await modelInfo(signal);
+    if (!info.contextLength) return undefined;
+    return info.contextLength - CHAT_TEMPLATE_TOKENS - predictFor(info, opts.maxTokens);
+  }
+
   async function complete(req: LlmRequest): Promise<LlmResponse> {
     const info = await modelInfo(req.signal);
     // Prefix first: Ollama reuses the KV cache for a prompt that starts the
     // same way as the last one, so the library list is read once per run.
     const content = fullPrompt(req);
-    const answerBudget = req.maxTokens ?? config.maxTokens ?? DEFAULT_MAX_TOKENS;
-    const numPredict = info.thinking ? answerBudget + REASONING_HEADROOM_TOKENS : answerBudget;
-    // A little for the chat template wrapped around the message.
-    const needed = estimateTokens(content) + 64 + numPredict;
+    const numPredict = predictFor(info, req.maxTokens);
+    const needed = estimateTokens(content) + CHAT_TEMPLATE_TOKENS + numPredict;
     if (info.contextLength && needed > info.contextLength) {
       throw new LlmRequestError(
         "ollama",
@@ -272,7 +285,7 @@ export function createOllamaClient(config: LlmConfig): LlmClient {
     return pingResponse("ollama", model);
   }
 
-  return { provider: "ollama", model, complete, ping };
+  return { provider: "ollama", model, complete, ping, promptBudget };
 }
 
 interface OllamaChunk {

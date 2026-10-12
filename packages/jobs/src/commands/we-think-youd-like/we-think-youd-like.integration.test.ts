@@ -39,15 +39,22 @@ const label = (i: number) => `Film ${i} (${2000 + i})`;
 const CONFIG = { minItems: 5, maxItems: 6 };
 
 let plex: MockPlex;
-let llm: { origin: string; calls: string[]; answer: string; close: () => Promise<void> };
+let llm: {
+  origin: string;
+  calls: string[];
+  answer: string;
+  onCall?: () => void;
+  close: () => Promise<void>;
+};
 
 async function startMockLlm(): Promise<typeof llm> {
-  const state = { calls: [] as string[], answer: "" };
+  const state: { calls: string[]; answer: string; onCall?: () => void } = { calls: [], answer: "" };
   const server = createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       state.calls.push(body);
+      state.onCall?.();
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -99,6 +106,7 @@ beforeEach(() => {
   plex.collections.clear();
   for (const list of Object.values(plex.journal)) if (Array.isArray(list)) list.length = 0;
   llm.calls.length = 0;
+  llm.onCall = undefined;
   setConfig("global_plex_url", plex.origin);
   setConfig("global_plex_token", "test-token");
   setConfig("global_llm", { provider: "openai-compatible", model: "test-model", baseUrl: `${llm.origin}/v1` });
@@ -234,6 +242,31 @@ describe("we-think-youd-like", () => {
     assert.deepEqual(after.memberKeys, before.memberKeys);
     assert.equal(after.summary, "Good week.");
     assert.match(log.join("\n"), /only 1 usable pick\(s\), need 5; row left as it is/);
+  });
+
+  it("stops when cancelled, rather than failing every call after and claiming to be done", async () => {
+    db.insert(playbackSessions)
+      .values(
+        [0, 1, 2, 3, 4, 5].map((i) => ({
+          id: `b${i}`,
+          userId: 11,
+          username: "bob",
+          ratingKey: String(100 + i),
+          title: `Film ${i}`,
+          type: "movie",
+          startedAt: Date.now() - i * 86_400_000,
+          lastSeenAt: Date.now(),
+          completionPct: 1,
+        })),
+      )
+      .run();
+    const controller = new AbortController();
+    const { ctx, log } = testContext();
+    llm.answer = answer("Mine.", [10, 11, 12, 13, 14, 15]);
+    llm.onCall = () => controller.abort();
+    await assert.rejects(() => run({ ...ctx, signal: controller.signal }, CONFIG));
+    assert.equal(llm.calls.length, 1, "Bob's call was never made");
+    assert.doesNotMatch(log.join("\n"), /All done!/);
   });
 
   it("makes no call and writes nothing once the token budget is spent", async () => {

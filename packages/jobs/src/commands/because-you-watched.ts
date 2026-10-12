@@ -421,6 +421,9 @@ export function createBecauseYouWatchedCommand(
               ctx.log(`Stopping — ${errorMessage(err)}. Existing collections are left as they are.`);
               return;
             }
+            // Cancelled: the same reasoning, and every later call would fail
+            // anyway. Carrying on reached the cleanup with nothing generated.
+            if (ctx.signal.aborted) throw err;
             ctx.log(`Failed to generate collection for "${title}": ${errorMessage(err)}`);
           }
         }

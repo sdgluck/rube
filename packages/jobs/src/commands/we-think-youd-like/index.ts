@@ -22,7 +22,7 @@
  */
 import { WTYL_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
+import { createLlmClient, estimateTokens, type LlmConfig } from "@tinkerbell/llm";
 import { errorMessage, preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
 import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
 import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "@tinkerbell/plex";
@@ -33,7 +33,7 @@ import type { JobContext, WtylJobConfig } from "@tinkerbell/core";
 import {
   extractJSON,
   itemLabel,
-  libraryTitleMap,
+  libraryTitleMatcher,
   plexConnection,
   resolveTargetSections,
 } from "../ai-collection-shared.ts";
@@ -59,6 +59,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const OVERSHOOT = 10;
 /** Genres per library line: enough for the model to place an unfamiliar title, few enough to keep the prefix small. */
 const LINE_GENRES = 3;
+/** The answer's token budget, which the model's window has to leave room for. */
+const ANSWER_MAX_TOKENS = 2048;
 
 const answerSchema = z.object({
   summary: z.string(),
@@ -84,7 +86,8 @@ interface SectionState {
   items: PlexItem[];
   /** The fenced library, identical for every person — the cacheable prefix. */
   library: string;
-  titleMap: Map<string, string>;
+  genresByKey: Map<string, string[]>;
+  match: (title: string) => string | undefined;
   rows: Array<{ ratingKey: string; title: string; labels: string[] }>;
 }
 
@@ -102,12 +105,14 @@ export function ownWtylRow<T extends { labels: string[] }>(rows: T[], username: 
  * The genres come free from the local index and let the model place a title
  * it doesn't recognise. Fenced like BYW's: titles are user-controlled.
  */
+function libraryLine(item: PlexItem, genresByKey: Map<string, string[]>): string {
+  const genres = (genresByKey.get(item.ratingKey) ?? []).slice(0, LINE_GENRES);
+  return genres.length > 0 ? `${itemLabel(item)} — ${genres.join(", ")}` : itemLabel(item);
+}
+
 export function wtylLibraryBlock(sectionTitle: string, items: PlexItem[], genresByKey: Map<string, string[]>): string {
   const lines = items
-    .map((item) => {
-      const genres = (genresByKey.get(item.ratingKey) ?? []).slice(0, LINE_GENRES);
-      return genres.length > 0 ? `${itemLabel(item)} — ${genres.join(", ")}` : itemLabel(item);
-    })
+    .map((item) => libraryLine(item, genresByKey))
     .join("\n")
     .replace(/<\/?library>/gi, (m) => m.replace(">", "_>"));
   return `You are a movie/TV curator. Below is the full list of titles in a Plex "${sectionTitle}" library, each with its genres.
@@ -115,6 +120,41 @@ export function wtylLibraryBlock(sectionTitle: string, items: PlexItem[], genres
 <library>
 ${lines}
 </library>`;
+}
+
+/**
+ * The part of a library that fits `budget` tokens, for a model whose window
+ * can't hold the whole of it — a local model with 40k of context was refused
+ * every call for a 4,000-film library, which with genres needs nearly 70k.
+ * What they've watched goes first (it is removed from the answer anyway),
+ * then the titles furthest from their taste, scored by their genre shares.
+ * The rest keep the library's order. Everyone shares the whole library as
+ * the cached prefix when it fits; a cut one is per person, so it costs the
+ * cache — but a call that runs beats one that can't.
+ */
+export function fitLibrary(opts: {
+  items: PlexItem[];
+  genresByKey: Map<string, string[]>;
+  genreShares: Array<{ name: string; share: number }>;
+  watched: Set<string>;
+  budget: number;
+}): PlexItem[] {
+  const share = new Map(opts.genreShares.map((g) => [g.name, g.share]));
+  const score = (item: PlexItem) =>
+    (opts.genresByKey.get(item.ratingKey) ?? []).reduce((sum, g) => sum + (share.get(g) ?? 0), 0);
+  const ranked = opts.items
+    .map((item, index) => ({ item, index, score: score(item) }))
+    .filter(({ item }) => !opts.watched.has(item.ratingKey))
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  const kept: typeof ranked = [];
+  let used = 0;
+  for (const entry of ranked) {
+    const cost = estimateTokens(`${libraryLine(entry.item, opts.genresByKey)}\n`);
+    if (used + cost > opts.budget) break;
+    used += cost;
+    kept.push(entry);
+  }
+  return kept.sort((a, b) => a.index - b.index).map(({ item }) => item);
 }
 
 export function wtylPrompt(opts: {
@@ -157,7 +197,7 @@ export function parseWtylAnswer(text: string): { answer: WtylAnswer } | { error:
  */
 export function pickRatingKeys(opts: {
   items: string[];
-  titleMap: Map<string, string>;
+  match: (title: string) => string | undefined;
   watched: Set<string>;
   excludedTitles: string[];
   titleOf: Map<string, string>;
@@ -168,7 +208,7 @@ export function pickRatingKeys(opts: {
   const seen = new Set<string>();
   for (const raw of opts.items) {
     const title = raw.replace(/\s+—\s+.*$/, "").trim();
-    const key = opts.titleMap.get(title);
+    const key = opts.match(title);
     if (!key || seen.has(key) || opts.watched.has(key)) continue;
     if (excluded.has((opts.titleOf.get(key) ?? "").toLowerCase())) continue;
     seen.add(key);
@@ -245,7 +285,7 @@ export function createWeThinkYoudLikeCommand(
       const res = await client.complete({
         cacheablePrefix: library,
         prompt,
-        maxTokens: 2048,
+        maxTokens: ANSWER_MAX_TOKENS,
         jsonSchema: ANSWER_JSON_SCHEMA,
         signal: ctx.signal,
       });
@@ -363,14 +403,16 @@ export function createWeThinkYoudLikeCommand(
         ctx.log(`"${section.title}": too few items (${items.length} < ${minLibrarySize}), skipping.`);
         continue;
       }
+      const genresByKey = sectionGenres(section.key);
       const rows = (await client.getCollectionsWithLabels(section.key, { label: WTYL_LABEL })).filter((row) =>
         row.labels.some((l) => l.toLowerCase() === WTYL_LABEL.toLowerCase()),
       );
       sections.push({
         section,
         items,
-        library: wtylLibraryBlock(section.title, items, sectionGenres(section.key)),
-        titleMap: libraryTitleMap(items),
+        library: wtylLibraryBlock(section.title, items, genresByKey),
+        genresByKey,
+        match: libraryTitleMatcher(items),
         rows,
       });
       ctx.log(`"${section.title}": ${items.length} item(s), ${rows.length} existing row(s).`);
@@ -379,6 +421,13 @@ export function createWeThinkYoudLikeCommand(
       ctx.log("No library to build in.");
       return;
     }
+
+    // How much prompt the model takes, asked once: undefined for a hosted
+    // model, whose window dwarfs any library, and for an Ollama server that
+    // doesn't say — that call is refused with the reason, as before.
+    const promptBudget = await createLlmClient(llmConfig)
+      .promptBudget?.({ maxTokens: ANSWER_MAX_TOKENS }, ctx.signal)
+      .catch(() => undefined);
 
     const now = Date.now();
     const since = historySince(ctx, historyDays, now);
@@ -426,10 +475,34 @@ export function createWeThinkYoudLikeCommand(
           continue;
         }
 
+        let library = state.library;
+        if (promptBudget !== undefined) {
+          const room =
+            promptBudget -
+            estimateTokens(prompt) -
+            estimateTokens(wtylLibraryBlock(state.section.title, [], state.genresByKey));
+          if (estimateTokens(library) > room) {
+            const fitted = fitLibrary({
+              items: state.items,
+              genresByKey: state.genresByKey,
+              genreShares: profile.genres,
+              watched,
+              budget: room,
+            });
+            library = wtylLibraryBlock(state.section.title, fitted, state.genresByKey);
+            ctx.log(
+              `${user.name} — "${state.section.title}": the library is too long for ${llmConfig.model}; sending the ${fitted.length} of ${state.items.length} titles closest to their taste.`,
+            );
+          }
+        }
+
         let text: string;
         try {
-          text = await askModel(llmConfig, ctx, state.library, prompt);
+          text = await askModel(llmConfig, ctx, library, prompt);
         } catch (err) {
+          // Cancelled: every later call would fail the same way, so stop
+          // rather than log one per person and then claim to be done.
+          if (ctx.signal.aborted) throw err;
           if (err instanceof LlmBudgetExceededError) {
             ctx.log(`Stopping — ${errorMessage(err)}. Existing collections are left as they are.`);
             return;
@@ -448,7 +521,7 @@ export function createWeThinkYoudLikeCommand(
         }
         const ratingKeys = pickRatingKeys({
           items: parsed.answer.items,
-          titleMap: state.titleMap,
+          match: state.match,
           watched,
           excludedTitles: prefs?.excludedTitles ?? [],
           titleOf: new Map(state.items.map((i) => [i.ratingKey, i.title])),

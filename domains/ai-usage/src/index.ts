@@ -189,6 +189,8 @@ export function createAiUsage(deps: AiUsageDeps) {
       model: client.model,
       complete: (req: LlmRequest) => call(() => client.complete(req)),
       ping: (signal?: AbortSignal) => call(() => client.ping(signal)),
+      // Not a call to the model — nothing to budget or record.
+      ...(client.promptBudget ? { promptBudget: client.promptBudget.bind(client) } : {}),
     };
   }
 

@@ -9,4 +9,5 @@ export type {
 } from "./types.ts";
 export { LlmConfigError, LlmRequestError } from "./types.ts";
 export { createLlmClient, listModels } from "./client.ts";
+export { estimateTokens } from "./providers/ollama.ts";
 export { PROVIDERS, getProviderMeta } from "./meta.ts";

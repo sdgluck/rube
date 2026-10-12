@@ -59,6 +59,14 @@ export interface LlmClient {
    * on Ollama, kept a multi-gigabyte model resident on the GPU forever.
    */
   ping(signal?: AbortSignal): Promise<LlmResponse>;
+  /**
+   * Roughly how many tokens of prompt the model can take alongside an answer
+   * of `maxTokens`, in `estimateTokens` units; undefined when the provider
+   * doesn't say. Lets a caller with more to send than fits — a whole library
+   * — cut it down rather than have the call refused. Only Ollama reports a
+   * window: hosted models' windows dwarf anything this app sends.
+   */
+  promptBudget?(opts: { maxTokens?: number }, signal?: AbortSignal): Promise<number | undefined>;
 }
 
 export type ProviderFieldRequirement = "required" | "optional" | "hidden";

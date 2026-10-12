@@ -432,6 +432,16 @@ describe("ollama", () => {
     assert.equal(chatBody(), undefined, "nothing was sent to /api/chat");
   });
 
+  test("reports the prompt a model can take, so a caller can trim to fit", async () => {
+    ollama({ contextLength: 40960, capabilities: ["completion", "thinking"] });
+    const c = client(fresh("qwen3-"));
+    const budget = await c.promptBudget!({ maxTokens: 2048 });
+    assert.equal(budget, 40960 - 64 - (2048 + 4096));
+    // A prompt of exactly that size is accepted, not refused.
+    await c.complete({ prompt: "x".repeat(budget! * 3), maxTokens: 2048 });
+    assert.equal(chatBody().options.num_ctx, 40960);
+  });
+
   test("turns thinking off where the model allows it, and budgets for it", async () => {
     ollama({ capabilities: ["completion", "thinking"] });
     await client(fresh("qwen3-")).complete({ prompt: "hi", maxTokens: 200 });
