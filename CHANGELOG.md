@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.38.1] - 2026-10-12
+
+### Fixed
+
+- We Think You'd Like recommendations now work when a library is too large for a local model's context window. The library is cut down to the titles closest to each person's taste. Before this, a 4,262-film library needed about 68k tokens, so a 40k-context Ollama model refused every Films call.
+- We Think You'd Like now matches a title the model returns with the wrong year to the library's only title of that name. For example, "The Crown (2019)" now matches the one The Crown in your library instead of being missed.
+- Cancelling a We Think You'd Like or Because You Watched run now stops the run. Before, the run kept going, failed every remaining model call, and still logged "All done!".
+
 ## [0.38.0] - 2026-10-12
 
 ### Added
