@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-10-12
+
+### Fixed
+
+- Per-user Because You Watched, We Think You'd Like and other personalized rows are now private to the person they were built for. Before this fix they carried the baseline Tinkerbell label, which every shared user's label restriction allows, so all shared users could see them.
+- Per-user Because You Watched, We Think You'd Like and other personalized rows now appear on the Home screen of the shared user they were built for. Before this fix they were pinned with admin-only Home visibility and never reached that user.
+- **Existing per-user personalized rows are repaired on the next run**, so rows that were already built with the shared label and admin-only Home visibility become private and move to their owner's Home without being recreated.
+- **Orphaned per-user personalized rows are deleted on the next run**, so any orphaned Because You Watched, We Think You'd Like or personalized rows on your server will be removed when you upgrade.
+
 ## [0.37.0] - 2026-10-10
 
 ### Added
