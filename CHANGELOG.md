@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-12
+
+### Added
+
+- The rule wizard now tells you up front how many collections each rule type builds. Each type card names its count, such as one collection, one per library, several per library or one per director, and the Scope and Review steps state that count for the libraries you chose.
+
+### Changed
+
+- Rules that build a single collection now word their pin option as pinning "the collection" and no longer offer rotation. Rotating a library's only collection pinned it every time, so the rotation setting is also no longer stored for these rules.
+
+### Fixed
+
+- "Because you watched" rules no longer include the watched title in its own recommendation row. The prompt already told the AI to leave it out, but it sometimes added it anyway. The AI tester now marks that title as unmatched, so its count matches what a real run would build.
+- "Because you watched" rules now add each recommended title once, where the AI could previously list the same title more than once in a row. The AI tester marks the repeats as unmatched, so its count matches what a real run would build.
+
 ## [0.37.2] - 2026-10-12
 
 ### Fixed
