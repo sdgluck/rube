@@ -24,8 +24,7 @@ and notifications on a schedule.
 - **Prerolls**: upload videos for Plex to play before a movie.
   [More](#prerolls)
 - **Problems**: one page for what is wrong across Plex, Radarr/Sonarr and your
-  rules, such as a show whose episode ordering doesn't match its files. Fix
-  each in a click or dismiss it. [More](#problems)
+  rules. [More](#problems)
 - **Labels**: apply and undo Plex labels in bulk, with a preview.
 - **Discover**: search TMDb, see what Plex and Radarr/Sonarr already have, and
   send the rest to Radarr or Sonarr.
