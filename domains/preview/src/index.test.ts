@@ -7,8 +7,8 @@
  * three parts worth pinning:
  *
  * - **`parseLabelFilter`.** Plex's share filter is a small expression language
- *   — `,` is AND, `|` is OR, and each clause may carry a redundant `label=`
- *   prefix. Misreading it shows the admin a preview that does not match what
+ *   — `|` separates clauses (AND), `,` separates a clause's values (OR), and
+ *   only `label=` clauses filter by label. Misreading it shows the admin a preview that does not match what
  *   the user sees, which is worse than showing nothing, because they will act
  *   on it.
  * - **The two fallbacks.** When the user is not in the sharings list, or has no
@@ -58,43 +58,38 @@ describe("parseLabelFilter", () => {
   });
 
   test("a single label is one clause of one option", () => {
-    assert.deepEqual(parseLabelFilter("Kids"), [["Kids"]]);
-  });
-
-  test("a comma is AND — every clause must match", () => {
-    assert.deepEqual(parseLabelFilter("Kids,Family"), [["Kids"], ["Family"]]);
-  });
-
-  test("a pipe is OR — any option within a clause matches", () => {
-    assert.deepEqual(parseLabelFilter("Kids|Family"), [["Kids", "Family"]]);
-  });
-
-  test("the two combine, AND of ORs", () => {
-    assert.deepEqual(parseLabelFilter("Kids|Family,Safe"), [["Kids", "Family"], ["Safe"]]);
-  });
-
-  test("a `label=` prefix is stripped", () => {
     assert.deepEqual(parseLabelFilter("label=Kids"), [["Kids"]]);
-    assert.deepEqual(parseLabelFilter("label=Kids|Family"), [["Kids", "Family"]]);
   });
 
-  test("only the first `=` is treated as the prefix separator", () => {
+  test("a comma is OR — any value within a clause matches", () => {
+    assert.deepEqual(parseLabelFilter("label=Tinkerbell,User:sam"), [["Tinkerbell", "User:sam"]]);
+  });
+
+  test("a pipe separates clauses, and only label clauses filter by label", () => {
+    assert.deepEqual(parseLabelFilter("contentRating=PG,PG-13|label=Kids,Family"), [["Kids", "Family"]]);
+    assert.deepEqual(parseLabelFilter("label=Kids|label=Safe"), [["Kids"], ["Safe"]]);
+  });
+
+  test("the old pipe-separated form admits only its first label, as Plex does", () => {
+    // What Tinkerbell wrote until 2026-10: the user saw `Tinkerbell` only.
+    assert.deepEqual(parseLabelFilter("label=Tinkerbell|User:sam"), [["Tinkerbell"]]);
+  });
+
+  test("only the first `=` is treated as the clause separator", () => {
     // A label may legitimately contain `=`. Splitting on every one would
     // truncate it and quietly widen the filter.
     assert.deepEqual(parseLabelFilter("label=a=b"), [["a=b"]]);
   });
 
   test("whitespace around labels is trimmed", () => {
-    assert.deepEqual(parseLabelFilter(" Kids , Family "), [["Kids"], ["Family"]]);
-    assert.deepEqual(parseLabelFilter("Kids | Family"), [["Kids", "Family"]]);
+    assert.deepEqual(parseLabelFilter(" label=Kids , Family "), [["Kids", "Family"]]);
   });
 
-  test("empty clauses and options are dropped rather than becoming match-nothing", () => {
-    // `a,,b` and `a||b` come from a filter someone edited by hand. An empty
-    // clause that survived would match nothing and hide the whole library.
-    assert.deepEqual(parseLabelFilter("Kids,,Family"), [["Kids"], ["Family"]]);
-    assert.deepEqual(parseLabelFilter("Kids||Family"), [["Kids", "Family"]]);
-    assert.deepEqual(parseLabelFilter(",,,"), []);
+  test("empty values and clauses are dropped rather than becoming match-nothing", () => {
+    // `a,,b` comes from a filter someone edited by hand. An empty clause that
+    // survived would match nothing and hide the whole library.
+    assert.deepEqual(parseLabelFilter("label=Kids,,Family"), [["Kids", "Family"]]);
+    assert.deepEqual(parseLabelFilter("label=,,,"), []);
     assert.deepEqual(parseLabelFilter("label="), []);
   });
 });
@@ -105,27 +100,27 @@ describe("itemPassesLabelFilter", () => {
   });
 
   test("a single clause requires one of its options", () => {
-    const clauses = parseLabelFilter("Kids|Family");
+    const clauses = parseLabelFilter("label=Kids,Family");
     assert.equal(itemPassesLabelFilter(item({ labels: ["Kids"] }), clauses), true);
     assert.equal(itemPassesLabelFilter(item({ labels: ["Family"] }), clauses), true);
     assert.equal(itemPassesLabelFilter(item({ labels: ["Horror"] }), clauses), false);
   });
 
   test("every clause must be satisfied", () => {
-    const clauses = parseLabelFilter("Kids,Safe");
+    const clauses = parseLabelFilter("label=Kids|label=Safe");
     assert.equal(itemPassesLabelFilter(item({ labels: ["Kids", "Safe"] }), clauses), true);
     assert.equal(itemPassesLabelFilter(item({ labels: ["Kids"] }), clauses), false);
   });
 
   test("matching is case-insensitive on both sides", () => {
     // Plex does not normalise label case, and neither do users.
-    const clauses = parseLabelFilter("kids");
+    const clauses = parseLabelFilter("label=kids");
     assert.equal(itemPassesLabelFilter(item({ labels: ["KIDS"] }), clauses), true);
-    assert.equal(itemPassesLabelFilter(item({ labels: ["Kids"] }), parseLabelFilter("KIDS")), true);
+    assert.equal(itemPassesLabelFilter(item({ labels: ["Kids"] }), parseLabelFilter("label=KIDS")), true);
   });
 
   test("an item with no labels fails any real filter", () => {
-    assert.equal(itemPassesLabelFilter(item({ labels: [] }), parseLabelFilter("Kids")), false);
+    assert.equal(itemPassesLabelFilter(item({ labels: [] }), parseLabelFilter("label=Kids")), false);
   });
 });
 

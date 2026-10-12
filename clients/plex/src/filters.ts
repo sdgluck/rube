@@ -1,15 +1,19 @@
 /**
  * plex.tv share filters are a single string per media type holding several
- * independent clauses — `contentRating=PG|PG-13|label=Kids`. Tinkerbell owns
- * the `label=` clause (personalization writes `label=Tinkerbell|User:<name>`
+ * independent clauses — `contentRating=PG,PG-13|label=Kids`. Tinkerbell owns
+ * the `label=` clause (personalization writes `label=Tinkerbell,User:<name>`
  * into it) while an admin owns `contentRating=`, so every write has to edit
  * one clause and leave the other exactly as it found it.
  *
- * The grammar is ambiguous by design on Plex's side: `|` separates clauses
- * *and* values within a clause. Splitting on `|` and treating a token
- * containing `=` as the start of a new clause resolves it, and round-trips
- * both the `label=A|B` form this repo has always written and the
- * multi-clause form the Plex web app produces.
+ * `|` separates clauses and `,` separates a clause's values, which Plex ORs.
+ * This repo used to write `label=Tinkerbell|User:<name>`, reading `|` as
+ * the value separator too. Plex reads that as `label=Tinkerbell` plus a stray
+ * token it ignores (verified on a real server, 2026-10-12: rewriting the same
+ * labels with a comma made the user's own rows appear at once). So from the start
+ * every restricted user saw everything labelled `Tinkerbell` and nothing
+ * labelled for them. A bare token is therefore dropped when parsing, as Plex
+ * drops it: reading the old form as what Plex enforces is what lets
+ * reconcile see the drift and rewrite it.
  */
 
 export interface ShareFilterClauses {
@@ -19,24 +23,16 @@ export interface ShareFilterClauses {
 
 export function parseShareFilter(raw: string | undefined | null): ShareFilterClauses {
   const clauses = new Map<string, string[]>();
-  let current: string[] | undefined;
-
   for (const token of (raw ?? "").split("|")) {
-    if (!token) continue;
     const eq = token.indexOf("=");
-    if (eq === -1) {
-      // A bare value continues the clause before it. A leading one with no
-      // clause to attach to is malformed; dropping it beats guessing.
-      current?.push(token);
-      continue;
-    }
+    if (eq === -1) continue;
     const name = token.slice(0, eq);
-    const first = token.slice(eq + 1);
-    current = clauses.get(name) ?? [];
-    if (first) current.push(first);
-    clauses.set(name, current);
+    const values = token
+      .slice(eq + 1)
+      .split(",")
+      .filter(Boolean);
+    clauses.set(name, [...(clauses.get(name) ?? []), ...values]);
   }
-
   return { clauses };
 }
 
@@ -44,7 +40,7 @@ export function composeShareFilter({ clauses }: ShareFilterClauses): string {
   const parts: string[] = [];
   for (const [name, values] of clauses) {
     if (values.length === 0) continue;
-    parts.push(`${name}=${values.join("|")}`);
+    parts.push(`${name}=${values.join(",")}`);
   }
   return parts.join("|");
 }
@@ -71,7 +67,7 @@ export function shareFiltersEqual(a: string | undefined | null, b: string | unde
   const norm = (raw: string | undefined | null) => {
     const { clauses } = parseShareFilter(raw);
     return [...clauses.entries()]
-      .map(([name, values]) => `${name}=${[...values].sort().join("|")}`)
+      .map(([name, values]) => `${name}=${[...values].sort().join(",")}`)
       .sort()
       .join("&");
   };

@@ -3,9 +3,9 @@
  *
  * The one that matters most is `updateContentRatings`. plex.tv keeps a *single*
  * string per media type holding several independent clauses —
- * `contentRating=PG|PG-13|label=Kids` — and Tinkerbell owns the `label=` clause
+ * `contentRating=PG,PG-13|label=Kids` — and Tinkerbell owns the `label=` clause
  * while the admin owns `contentRating=`. Personalization writes
- * `label=Tinkerbell|User:<name>` there, and that clause is what limits a shared
+ * `label=Tinkerbell,User:<name>` there, and that clause is what limits a shared
  * user to the collections meant for them. A rating change that *replaced* the
  * string instead of composing over it would drop the label clause, and with it
  * every restriction — or, depending on which way Plex resolves an empty
@@ -162,27 +162,27 @@ describe("updateContentRatings", () => {
 
     const write = journal.settingsWrites.at(-1)!;
     assert.equal(write.userId, FRIEND);
-    assert.equal(write.settings.filterMovies, "contentRating=PG|PG-13");
+    assert.equal(write.settings.filterMovies, "contentRating=PG,PG-13");
   });
 
   test("PRESERVES the label clause — the whole reason this composes", async () => {
     // If this ever fails, personalization's per-user restriction has been
     // wiped and the user can see the entire library.
-    shares[0]!.filterMovies = "label=Tinkerbell|User:sam";
+    shares[0]!.filterMovies = "label=Tinkerbell,User:sam";
 
     await users.updateContentRatings(client(), FRIEND, { movies: ["PG"] });
 
     const filter = String(journal.settingsWrites.at(-1)!.settings.filterMovies);
-    assert.match(filter, /label=Tinkerbell\|User:sam/, "the label clause survived");
+    assert.match(filter, /label=Tinkerbell,User:sam/, "the label clause survived");
     assert.match(filter, /contentRating=PG/);
   });
 
   test("preserves an existing label clause on television too", async () => {
-    shares[0]!.filterTelevision = "label=Tinkerbell|User:sam";
+    shares[0]!.filterTelevision = "label=Tinkerbell,User:sam";
     await users.updateContentRatings(client(), FRIEND, { television: ["TV-PG"] });
 
     const filter = String(journal.settingsWrites.at(-1)!.settings.filterTelevision);
-    assert.match(filter, /label=Tinkerbell\|User:sam/);
+    assert.match(filter, /label=Tinkerbell,User:sam/);
     assert.match(filter, /contentRating=TV-PG/);
   });
 
@@ -221,7 +221,7 @@ describe("updateContentRatings", () => {
     // this composed over the cached row it would restore whatever the label
     // clause was at the last sync, undoing a personalization run.
     db.insert(plexUserShares).values({ userId: FRIEND, filterMovies: "label=STALE", syncedAt: 0 }).run();
-    shares[0]!.filterMovies = "label=Tinkerbell|User:fresh";
+    shares[0]!.filterMovies = "label=Tinkerbell,User:fresh";
 
     await users.updateContentRatings(client(), FRIEND, { movies: ["PG"] });
 

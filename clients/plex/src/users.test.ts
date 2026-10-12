@@ -58,7 +58,7 @@ const SHARED_SERVERS_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <MediaContainer size="2">
   <SharedServer id="880" username="sam" email="sam@example.com" userID="42" accepted="1"
                 allowSync="1" allowTuners="0" allowChannels="0" allowCameraUpload="1"
-                filterMovies="contentRating=PG|label=Tinkerbell|User:sam" filterTelevision="" filterMusic="">
+                filterMovies="contentRating=PG|label=Tinkerbell,User:sam" filterTelevision="" filterMusic="">
     <Section id="1" key="1" title="Movies" type="movie" shared="1"/>
     <Section id="2" key="2" title="TV" type="show" shared="0"/>
     <Section id="3" key="3" title="Music" type="artist" shared="1"/>
@@ -122,7 +122,7 @@ describe("plex.tv user management", () => {
     assert.equal(sam.allowSync, true);
     assert.equal(sam.allowTuners, false);
     assert.equal(sam.allowCameraUpload, true);
-    assert.equal(sam.filterMovies, "contentRating=PG|label=Tinkerbell|User:sam");
+    assert.equal(sam.filterMovies, "contentRating=PG|label=Tinkerbell,User:sam");
     assert.equal(sam.accepted, true);
 
     // An outstanding invite is a share that exists but hasn't been taken up.
@@ -194,8 +194,8 @@ describe("plex.tv user management", () => {
     });
 
     const req = plexTv.requests.find((r) => r.method === "PUT" && r.path === "/api/friends/42")!;
-    assert.equal(req.params.filterMovies, "contentRating=PG|label=Tinkerbell|User:sam");
-    assert.equal(req.params.filterTelevision, "label=Tinkerbell|User:sam");
+    assert.equal(req.params.filterMovies, "contentRating=PG|label=Tinkerbell,User:sam");
+    assert.equal(req.params.filterTelevision, "label=Tinkerbell,User:sam");
   });
 
   it("addresses the section update by share id, not user id", async () => {

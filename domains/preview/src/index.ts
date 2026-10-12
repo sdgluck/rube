@@ -50,9 +50,12 @@ export interface PreviewResult {
 }
 
 /**
- * Parse a Plex label-filter expression like `label=Tinkerbell|User:Sam` or
- * `label=A,label=B`. Per plex-api.md: `|` = OR within a value, `,` = AND
- * between filter clauses.
+ * The `label=` clauses of a plex.tv share filter, e.g.
+ * `contentRating=PG|label=Tinkerbell,User:sam`. `|` separates clauses, which
+ * must all match; `,` separates a clause's values, any of which may. A bare
+ * token after a `|` is ignored, as Plex ignores it — this used to read `|` as
+ * OR, so the preview showed the old `label=Tinkerbell|User:sam` restriction
+ * admitting the user's own rows when Plex admitted only `Tinkerbell`.
  *
  * Returns a list of clauses; each clause is a list of accepted label tags
  * (OR within); an item matches if it satisfies ALL clauses (AND across).
@@ -61,18 +64,16 @@ export interface PreviewResult {
 export function parseLabelFilter(expr: string): string[][] {
   if (!expr) return [];
   return expr
-    .split(",")
+    .split("|")
     .map((clause) => clause.trim())
-    .filter(Boolean)
-    .map((clause) => {
-      // Strip leading `label=` if present.
-      const eq = clause.indexOf("=");
-      const value = eq >= 0 ? clause.slice(eq + 1) : clause;
-      return value
-        .split("|")
+    .filter((clause) => clause.slice(0, clause.indexOf("=")).trim() === "label")
+    .map((clause) =>
+      clause
+        .slice(clause.indexOf("=") + 1)
+        .split(",")
         .map((v) => v.trim())
-        .filter(Boolean);
-    })
+        .filter(Boolean),
+    )
     .filter((clause) => clause.length > 0);
 }
 

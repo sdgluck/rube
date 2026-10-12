@@ -4,10 +4,12 @@
  * wrong:
  *
  *  - **Labels.** A shared user sees what passes their restriction,
- *    `label=Tinkerbell|User:<self>`, and Plex reads that `|` as OR. Every
- *    person's row also carried the baseline `Tinkerbell` label, so it passed
- *    every restricted user's filter and everyone could browse everyone's rows.
- *    A person's row carries their `User:` label and never the baseline.
+ *    `label=Tinkerbell,User:<self>` — either label. Every person's row also
+ *    carried the baseline `Tinkerbell` label, so it passed every restricted
+ *    user's filter and everyone could browse everyone's rows. A person's row
+ *    carries their `User:` label and never the baseline. (The restriction
+ *    itself was also miswritten with `|` until 2026-10, which admitted only
+ *    `Tinkerbell` — see `clients/plex/src/filters.ts`.)
  *  - **The pin.** `promotedToSharedHome: 0` is what Plex records as
  *    `homeVisibility: admin` — the owner's Home only. The row never reached the
  *    shared user it was made for, while the owner's Home collected everyone's.

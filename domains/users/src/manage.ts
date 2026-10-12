@@ -124,7 +124,7 @@ export function createManage(deps: ManageDeps) {
   /**
    * Set the content-rating ceiling, preserving the `label=` clause.
    *
-   * Personalization writes `label=Tinkerbell|User:<name>` into the same string;
+   * Personalization writes `label=Tinkerbell,User:<name>` into the same string;
    * composing over the live value rather than replacing it is what stops a
    * rating change from erasing those labels and blanking the user's library.
    * The backup row is updated in step so a later personalization *disable*

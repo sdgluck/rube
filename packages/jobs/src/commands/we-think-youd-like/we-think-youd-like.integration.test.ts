@@ -143,7 +143,7 @@ describe("we-think-youd-like", () => {
     assert.equal(plex.collections.size, 1);
     const [row] = [...plex.collections.values()];
     assert.equal(row.title, "We Think You'd Like");
-    // No baseline label: restrictions are `Tinkerbell|User:<self>`, an OR, so
+    // No baseline label: restrictions are `label=Tinkerbell,User:<self>`, an OR, so
     // carrying it would show Alice's row to everyone.
     assert.deepEqual(row.labels, [WTYL_LABEL, "User:alice"]);
     assert.equal(row.summary, "Quiet dramas with a long fuse.");
