@@ -7,8 +7,9 @@ import { meetsPinFloor } from "./generate/rotation.ts";
 import { parseRuleConfig } from "./generate/config.ts";
 import type { JobContext, PersonalizeJobConfig } from "@tinkerbell/core";
 import { isNarrowed, removeOutOfTarget, selectTargets, type TargetScope } from "../personalize/targets.ts";
-
-const BASELINE_LABEL = "Tinkerbell";
+import { personalRowLabels, personalRowPin } from "../personalize/personal-row.ts";
+import { plexUsers } from "@tinkerbell/db";
+import { eq } from "drizzle-orm";
 
 function filterSectionsForRule(all: PlexSection[], ruleSections: string[] | undefined): PlexSection[] {
   if (!ruleSections?.length) return all;
@@ -17,7 +18,7 @@ function filterSectionsForRule(all: PlexSection[], ruleSections: string[] | unde
 }
 
 export function createPersonalizeCommand(deps: Services) {
-  const { clients, collections, config, preferences, rules } = deps;
+  const { clients, collections, config, db, preferences, rules } = deps;
   const { plexHealthCallback } = clients;
   const { getConfig, getPersonalizedSharingStatus } = config;
   const { listOptedInUserPreferences } = preferences;
@@ -99,6 +100,16 @@ export function createPersonalizeCommand(deps: Services) {
     const total = users.length * rules.length;
     let step = 0;
 
+    // Whose rows go on the owner's own Home rather than the shared one.
+    const owners = new Set(
+      db
+        .select({ username: plexUsers.username })
+        .from(plexUsers)
+        .where(eq(plexUsers.isOwner, 1))
+        .all()
+        .map((u) => u.username),
+    );
+
     for (const user of users) {
       const userLabel = `User:${user.username}`;
       const excluded = new Set(user.preferences.excludedTitles.map((t) => t.toLowerCase()));
@@ -165,15 +176,11 @@ export function createPersonalizeCommand(deps: Services) {
               machineId,
               pending.name,
               matched.map((m) => m.ratingKey),
-              [BASELINE_LABEL, userLabel, ruleLabel],
+              personalRowLabels(user.username, ruleLabel),
             );
             if (!key) continue;
 
-            await client.pinToHomepage(pending.section.key, key, {
-              promotedToOwnHome: 1,
-              promotedToRecommendedHome: 1,
-              promotedToSharedHome: 0,
-            });
+            await client.pinToHomepage(pending.section.key, key, personalRowPin(owners.has(user.username)));
             try {
               await upsertCollectionByKey(client, pending.section, key);
             } catch (err) {

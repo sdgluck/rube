@@ -37,6 +37,7 @@ import {
   plexConnection,
   resolveTargetSections,
 } from "../ai-collection-shared.ts";
+import { personalRowLabels, personalRowPin, repairPersonalRow } from "../../personalize/personal-row.ts";
 import {
   buildTasteProfile,
   everWatchedKeys,
@@ -291,7 +292,7 @@ export function createWeThinkYoudLikeCommand(
         machineId,
         WTYL_ROW_NAME,
         ratingKeys,
-        ["Tinkerbell", WTYL_LABEL, `User:${user.username}`],
+        personalRowLabels(user.username, WTYL_LABEL),
       );
       if (!created) return;
       collectionKey = created;
@@ -299,11 +300,7 @@ export function createWeThinkYoudLikeCommand(
       // Pinned once, on creation. Re-pinning every week would undo wherever
       // the person has since moved or hidden it.
       if (pin) {
-        await client.pinToHomepage(section.key, collectionKey, {
-          promotedToOwnHome: 1,
-          promotedToRecommendedHome: 1,
-          promotedToSharedHome: 0,
-        });
+        await client.pinToHomepage(section.key, collectionKey, personalRowPin(user.isOwner));
       }
       ctx.log(`Created "${WTYL_ROW_NAME}" for ${user.name} (${ratingKeys.length} items).`);
     }
@@ -389,6 +386,13 @@ export function createWeThinkYoudLikeCommand(
     let step = 0;
 
     for (const user of users) {
+      // Before the history check, so a row made before `personal-row.ts` is
+      // repaired even for someone who has watched too little to rebuild it.
+      for (const state of sections) {
+        const existing = ownWtylRow(state.rows, user.username);
+        if (existing && (await repairPersonalRow(client, state.section.key, existing, { isOwner: user.isOwner, pin })))
+          ctx.log(`Made "${WTYL_ROW_NAME}" in "${state.section.title}" visible to ${user.name} only.`);
+      }
       const ids = historyUserIds(user);
       const titles = watchedTitles(db, ids, since);
       if (titles.length < minHistoryTitles) {

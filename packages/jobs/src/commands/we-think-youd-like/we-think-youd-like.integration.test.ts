@@ -143,11 +143,18 @@ describe("we-think-youd-like", () => {
     assert.equal(plex.collections.size, 1);
     const [row] = [...plex.collections.values()];
     assert.equal(row.title, "We Think You'd Like");
-    assert.deepEqual(row.labels, ["Tinkerbell", WTYL_LABEL, "User:alice"]);
+    // No baseline label: restrictions are `Tinkerbell|User:<self>`, an OR, so
+    // carrying it would show Alice's row to everyone.
+    assert.deepEqual(row.labels, [WTYL_LABEL, "User:alice"]);
     assert.equal(row.summary, "Quiet dramas with a long fuse.");
     // Films 0 and 1 are Alice's own; the rest in order, cut to maxItems.
     assert.deepEqual(row.memberKeys, ["110", "111", "112", "113", "114", "115"]);
     assert.deepEqual(plex.journal.pinned, [row.ratingKey]);
+    assert.deepEqual(
+      plex.journal.pinHomes,
+      [{ ratingKey: row.ratingKey, own: false, shared: true }],
+      "on Alice's Home",
+    );
 
     // The library is the cached prefix, and her history is in the prompt.
     const body = JSON.parse(llm.calls[0]);
@@ -171,6 +178,47 @@ describe("we-think-youd-like", () => {
     assert.deepEqual([...second.memberKeys].sort(), ["112", "113", "114", "115", "116", "117"]);
     assert.equal(second.summary, "Second take.");
     assert.deepEqual(plex.journal.pinned, [first.ratingKey], "pinned once, on creation");
+  });
+
+  it("pins the owner's row to their own Home, not every shared user's", async () => {
+    db.update(plexUsers).set({ isOwner: 1 }).run();
+    llm.answer = answer("Mine.", [10, 11, 12, 13, 14, 15]);
+    await run(testContext().ctx, CONFIG);
+    const [row] = [...plex.collections.values()];
+    assert.deepEqual(plex.journal.pinHomes, [{ ratingKey: row.ratingKey, own: true, shared: false }]);
+  });
+
+  it("repairs a row made with the baseline label for someone with too little history to rebuild it", async () => {
+    plex.collections.set("9001", {
+      ratingKey: "9001",
+      title: "We Think You'd Like",
+      sectionId: "1",
+      labels: ["Tinkerbell", WTYL_LABEL, "User:bob"],
+      memberKeys: ["110"],
+    });
+    await run(testContext().ctx, CONFIG);
+    assert.deepEqual(plex.collections.get("9001")?.labels, [WTYL_LABEL, "User:bob"]);
+  });
+
+  it("repairs a row made with the baseline label, even when the answer is unusable", async () => {
+    plex.collections.set("9000", {
+      ratingKey: "9000",
+      title: "We Think You'd Like",
+      sectionId: "1",
+      labels: ["Tinkerbell", WTYL_LABEL, "User:alice"],
+      memberKeys: ["110"],
+    });
+    llm.answer = "not json";
+    const { ctx, log } = testContext();
+    await run(ctx, CONFIG);
+
+    assert.deepEqual(plex.collections.get("9000")?.labels, [WTYL_LABEL, "User:alice"]);
+    assert.deepEqual(plex.journal.pinHomes, [{ ratingKey: "9000", own: false, shared: true }]);
+    assert.match(log.join("\n"), /visible to alice only/);
+
+    // Once: a second run leaves the pin where Alice has since put it.
+    await run(testContext().ctx, CONFIG);
+    assert.equal(plex.journal.pinHomes.length, 1);
   });
 
   it("leaves last week's row alone when an answer has too few usable picks", async () => {

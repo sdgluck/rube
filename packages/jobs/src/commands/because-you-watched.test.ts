@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { bywRowName, bywSynopsisBlock, matchKnownUsers, ownBywRows } from "./because-you-watched.ts";
+import { bywRowName, bywSynopsisBlock, matchKnownUsers, orphanedBywRows, ownBywRows } from "./because-you-watched.ts";
 
 const row = (title: string, ...labels: string[]) => ({ title, labels });
 
@@ -44,6 +44,23 @@ describe("ownBywRows", () => {
     const existing = new Set(ownBywRows(rows, "ripley").map((r) => r.title.toLowerCase()));
     assert.ok(existing.has(bywRowName("Alien (1979)").toLowerCase()));
     assert.ok(!existing.has(bywRowName("Aliens (1986)").toLowerCase()));
+  });
+});
+
+describe("orphanedBywRows", () => {
+  test("a row labelled with a display name, or for someone unshared, belongs to no one", () => {
+    const rows = [
+      row("Because you watched Heat (1995)", "BecauseYouWatched", "User:hughblackwood288"),
+      row("Because you watched Heat (1995)", "Tinkerbell", "BecauseYouWatched", "User:Hugh Blackwood"),
+      row("Because you watched Up (2009)", "BecauseYouWatched", "User:paige.j6"),
+      row("Because you watched Up (2009)", "BecauseYouWatched"),
+      row("Hand made", "User:paige.j6"),
+    ];
+    assert.deepEqual(
+      orphanedBywRows(rows, new Set(["User:hughblackwood288"])).map((r) => r.owner),
+      ["Hugh Blackwood", "paige.j6"],
+      "server-mode rows and anything without the BYW label are left alone",
+    );
   });
 });
 

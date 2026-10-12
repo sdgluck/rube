@@ -131,6 +131,8 @@ export interface PlexJournal {
   /** Collections promoted to the homepage, and demoted from it. */
   pinned: string[];
   unpinned: string[];
+  /** Whose Home each pin promoted to, in order — which person sees the row. */
+  pinHomes: Array<{ ratingKey: string; own: boolean; shared: boolean }>;
   /** Sessions registered through `/video/:/transcode/universal/decision`. */
   transcodeDecisions: string[];
   /** Transcode sessions started and stopped, by session id. */
@@ -244,6 +246,7 @@ export function startMockPlex(opts: {
     streamFetches: [],
     pinned: [],
     unpinned: [],
+    pinHomes: [],
     showWrites: [],
     pathScans: [],
     unhandled: [],
@@ -567,8 +570,13 @@ export function startMockPlex(opts: {
         return;
       }
 
-      // Title/summary edits: `PUT /library/metadata/:key?summary=…`.
+      // Title/summary edits: `PUT /library/metadata/:key?summary=…`. Labels
+      // sent here *replace* the collection's set — unlike the section form
+      // above — as a real server did (2026-10).
       if (method === "PUT" && collection) {
+        const labels: string[] = [];
+        for (const [k, v] of q) if (/^label\[\d+]\.tag\.tag$/.test(k)) labels.push(v);
+        if (labels.length > 0) collection.labels = labels;
         const summary = q.get("summary");
         const title = q.get("title");
         if (summary !== null) {
@@ -656,6 +664,11 @@ export function startMockPlex(opts: {
       } else {
         pinnedHere.add(ratingKey);
         journal.pinned.push(ratingKey);
+        journal.pinHomes.push({
+          ratingKey,
+          own: q.get("promotedToOwnHome") === "1",
+          shared: q.get("promotedToSharedHome") === "1",
+        });
       }
       pinnedBySection.set(sectionId, pinnedHere);
       emptyOk();

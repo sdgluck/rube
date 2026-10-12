@@ -12,7 +12,6 @@
  */
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 import type { JobContext, PersonalizeJobConfig } from "@tinkerbell/core";
-import { BASELINE_LABEL } from "./reconcile.ts";
 
 export type Targets<U, R> = {
   users: U[];
@@ -51,13 +50,14 @@ export type TargetScope = {
 
 /**
  * Is this a collection this job made, for a user and rule it still knows about
- * but no longer targets? Deliberately narrow: it has to carry the baseline
- * label, a `User:` label for an opted-in user and a `Rule:` label for a
- * personalizable rule — so Because You Watched's per-user collections, which
- * carry no rule label, and anything an admin made by hand are never matched.
+ * but no longer targets? Deliberately narrow: it has to carry a `User:` label
+ * for an opted-in user and a `Rule:` label for a personalizable rule — so
+ * Because You Watched's per-user collections, which carry no rule label, and
+ * anything an admin made by hand are never matched. Not the baseline label:
+ * a person's row no longer carries it (`personal-row.ts`), and the rule label
+ * is the stronger proof that the row is ours.
  */
 export function isOutOfTarget(labels: string[], scope: TargetScope): boolean {
-  if (!labels.includes(BASELINE_LABEL)) return false;
   const user = labels
     .find((l) => l.startsWith("User:"))
     ?.slice("User:".length)
@@ -82,7 +82,10 @@ export async function removeOutOfTarget(
 ): Promise<string[]> {
   const removed: string[] = [];
   for (const section of sections) {
-    const collections = await client.getCollectionsWithLabels(section.key, { label: BASELINE_LABEL });
+    // Unfiltered: the rows to find carry no label they all share. The sweep
+    // only runs when the target is narrowed, so the per-collection label
+    // lookups are paid rarely.
+    const collections = await client.getCollectionsWithLabels(section.key);
     for (const col of collections) {
       if (!isOutOfTarget(col.labels, scope)) continue;
       await client.deleteItem(col.ratingKey);

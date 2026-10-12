@@ -13,6 +13,7 @@ import { jobs, plexUsers } from "@tinkerbell/db";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 import type { PlexAccount } from "@tinkerbell/plex";
 import { extractJSON, libraryTitleMap, plexConnection, resolveTargetSections } from "./ai-collection-shared.ts";
+import { personalRowLabels, personalRowPin, repairPersonalRow } from "../personalize/personal-row.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
@@ -24,7 +25,7 @@ const aiCollectionSchema = z.object({
 
 type AiCollection = z.infer<typeof aiCollectionSchema>;
 
-type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined };
+type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined; isOwner?: boolean };
 
 /** A recently watched title, as the row is named, and the Plex item its synopsis is read from — the show, for an episode. */
 type Watched = { title: string; ratingKey: string | undefined };
@@ -108,6 +109,19 @@ export function ownBywRows<T extends { labels: string[] }>(collections: T[], ple
   );
 }
 
+/** Because-you-watched rows labelled for someone outside `known` (a set of `User:<username>` labels). */
+export function orphanedBywRows<T extends { labels: string[] }>(
+  collections: T[],
+  known: Set<string>,
+): Array<T & { owner: string }> {
+  const out: Array<T & { owner: string }> = [];
+  for (const col of ownBywRows(collections, undefined)) {
+    const owner = col.labels.find((l) => l.startsWith("User:"));
+    if (owner && !known.has(owner)) out.push({ ...col, owner: owner.slice("User:".length) });
+  }
+  return out;
+}
+
 /**
  * Pair each user Tinkerbell knows with their server account. The users are
  * the Users page's list, not the server's `/accounts`: Plex keeps an account
@@ -152,12 +166,16 @@ export function createBecauseYouWatchedCommand(
    */
   async function resolveUsers(client: PlexClient): Promise<ResolvedUser[]> {
     const known = db
-      .select({ userId: plexUsers.userId, username: plexUsers.username })
+      .select({ userId: plexUsers.userId, username: plexUsers.username, isOwner: plexUsers.isOwner })
       .from(plexUsers)
       .orderBy(asc(plexUsers.username))
       .all();
     if (known.length === 0) return [];
-    return matchKnownUsers(known, await client.getAccounts());
+    const owners = new Set(known.filter((u) => u.isOwner === 1).map((u) => u.username));
+    return matchKnownUsers(known, await client.getAccounts()).map((u) => ({
+      ...u,
+      isOwner: owners.has(u.plexUsername),
+    }));
   }
 
   /** The most recent distinct titles watched in a section, newest first, as the job names them. */
@@ -286,7 +304,11 @@ export function createBecauseYouWatchedCommand(
         ctx.log(`Processing user: ${user.name}`);
       }
 
-      const collectionLabels = isPerUser ? ["Tinkerbell", BYW_LABEL, `User:${user.plexUsername}`] : BYW_LABELS;
+      const collectionLabels = isPerUser ? personalRowLabels(user.plexUsername, BYW_LABEL) : BYW_LABELS;
+      // A server-wide row is for everyone, so every Home.
+      const pinOptions = isPerUser
+        ? personalRowPin(!!user.isOwner)
+        : { promotedToOwnHome: 1, promotedToRecommendedHome: 1, promotedToSharedHome: 1 };
       const userPrefs = isPerUser ? getOptedInPreferencesByUsername(user.plexUsername) : undefined;
       if (userPrefs) ctx.log(`Applying ${user.name}'s preferences.`);
 
@@ -296,6 +318,18 @@ export function createBecauseYouWatchedCommand(
         const sectionId = section.key;
 
         ctx.log(`"${section.title}"${isPerUser ? ` (${user.name})` : ""} — starting...`);
+
+        // This person's rows as they stand, before any model call — and before
+        // the skips below, so a row made before `personal-row.ts` is repaired
+        // even for someone who has watched nothing here lately.
+        const allCollections = await client.getCollectionsWithLabels(sectionId, { label: BYW_LABEL });
+        const mine = ownBywRows(allCollections, isPerUser ? user.plexUsername : undefined);
+        if (isPerUser) {
+          for (const row of mine) {
+            if (await repairPersonalRow(client, sectionId, row, { isOwner: !!user.isOwner, pin: PIN_TO_HOMEPAGE }))
+              ctx.log(`Made "${row.title}" visible to ${user.name} only.`);
+          }
+        }
 
         ctx.log(`Fetching watch history...`);
         const watchedTitles = await recentlyWatched(client, user.accountID, sectionId, LIMIT);
@@ -317,14 +351,11 @@ export function createBecauseYouWatchedCommand(
           continue;
         }
 
-        // This person's rows as they stand, before any model call. A row that
-        // already exists is kept as it is — the creation pass below has always
-        // skipped an existing name — so asking the model to rebuild it bought
-        // an answer that was then thrown away. With the ten most recent titles
-        // mostly unchanged from one night to the next, that was most of the
-        // job's calls, each carrying the whole library.
-        const allCollections = await client.getCollectionsWithLabels(sectionId, { label: BYW_LABEL });
-        const mine = ownBywRows(allCollections, isPerUser ? user.plexUsername : undefined);
+        // A row that already exists is kept as it is — the creation pass below
+        // has always skipped an existing name — so asking the model to rebuild
+        // it bought an answer that was then thrown away. With the ten most
+        // recent titles mostly unchanged from one night to the next, that was
+        // most of the job's calls, each carrying the whole library.
         const existingNames = new Set(mine.map((col) => col.title.toLowerCase()));
         const keptNames = new Set<string>();
 
@@ -425,11 +456,7 @@ export function createBecauseYouWatchedCommand(
 
           if (collectionKey) {
             if (PIN_TO_HOMEPAGE) {
-              await client.pinToHomepage(sectionId, collectionKey, {
-                promotedToOwnHome: 1,
-                promotedToRecommendedHome: 1,
-                promotedToSharedHome: 0,
-              });
+              await client.pinToHomepage(sectionId, collectionKey, pinOptions);
               ctx.log(`Pinned "${col.name}" to homepage`);
             }
             try {
@@ -442,6 +469,23 @@ export function createBecauseYouWatchedCommand(
         }
 
         ctx.log(`${created} collection(s) for "${section.title}"${isPerUser ? ` (${user.name})` : ""} (new + kept).`);
+      }
+    }
+
+    // Rows no person owns. Each run only ever looks at its users' own rows,
+    // so a row labelled for someone since unshared — or with a display name,
+    // as early versions wrote (`User:Hugh Blackwood`) — was never kept,
+    // replaced or deleted, and sat in the library for good. Not when an
+    // allowlist is set: that narrows who gets rows, not who may keep them.
+    if (MODE === "per-user" && userAllowlist.length === 0) {
+      const known = new Set(resolvedUsers.map((u) => `User:${u.plexUsername}`));
+      for (const section of targetSections) {
+        const rows = await client.getCollectionsWithLabels(section.key, { label: BYW_LABEL });
+        for (const row of orphanedBywRows(rows, known)) {
+          ctx.log(`Deleting "${row.title}" (${row.ratingKey}) — ${row.owner} is not a current user.`);
+          await client.deleteItem(row.ratingKey);
+          forgetCollections([row.ratingKey]);
+        }
       }
     }
 

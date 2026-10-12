@@ -40,13 +40,15 @@ describe("isOutOfTarget", () => {
   it("matches this job's collection for an untargeted user", () => {
     assert.equal(isOutOfTarget(["Tinkerbell", "User:bob", "Rule:r1"], SCOPE), true);
     assert.equal(isOutOfTarget(["Tinkerbell", "User:Alice", "Rule:r1"], SCOPE), false);
+    // A row made since personal rows stopped carrying the baseline label.
+    assert.equal(isOutOfTarget(["User:bob", "Rule:r1"], SCOPE), true);
   });
 
   it("never matches what this job didn't make or doesn't know", () => {
     // Because You Watched: a user label but no rule label.
     assert.equal(isOutOfTarget(["Tinkerbell", "User:bob"], SCOPE), false);
-    // No baseline label: not Tinkerbell's.
-    assert.equal(isOutOfTarget(["User:bob", "Rule:r1"], SCOPE), false);
+    // No rule label: not this job's, whatever else it carries.
+    assert.equal(isOutOfTarget(["User:bob", "Hand made"], SCOPE), false);
     // A user who has opted out is the opt-out's business, not targeting's.
     assert.equal(isOutOfTarget(["Tinkerbell", "User:dave", "Rule:r1"], SCOPE), false);
     // A rule that is no longer personalizable.
@@ -63,6 +65,7 @@ describe("removeOutOfTarget, against the mock Plex", () => {
     add("10", ["Tinkerbell", "User:Alice", "Rule:r1"]);
     add("11", ["Tinkerbell", "User:bob", "Rule:r1"]);
     add("12", ["Tinkerbell", "User:bob"]);
+    add("14", ["User:bob", "Rule:r2"]);
     add("13", ["Hand made"]);
   });
   after(() => plex.close());
@@ -73,8 +76,8 @@ describe("removeOutOfTarget, against the mock Plex", () => {
     const removed = await removeOutOfTarget(client, [{ key: "1", title: "Films", type: "movie" } as never], SCOPE, {
       log: (m: unknown) => log.push(String(m)),
     });
-    assert.deepEqual(removed, ["11"]);
-    assert.deepEqual(plex.journal.deletedCollections.concat(plex.journal.deletedItems), ["11"]);
-    assert.equal(log.length, 1);
+    assert.deepEqual(removed.sort(), ["11", "14"]);
+    assert.deepEqual(plex.journal.deletedCollections.concat(plex.journal.deletedItems).sort(), ["11", "14"]);
+    assert.equal(log.length, 2);
   });
 });

@@ -77,6 +77,7 @@ export type {
   InviteUserOptions,
   PlexHubItem,
   PlexHomeHub,
+  PinOptions,
   PlexSession,
   PlexRecentItem,
   PlexMediaItem,
