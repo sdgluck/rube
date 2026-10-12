@@ -11,7 +11,14 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { bywRowName, bywSynopsisBlock, matchKnownUsers, orphanedBywRows, ownBywRows } from "./because-you-watched.ts";
+import {
+  bywRatingKeys,
+  bywRowName,
+  bywSynopsisBlock,
+  matchKnownUsers,
+  orphanedBywRows,
+  ownBywRows,
+} from "./because-you-watched.ts";
 
 const row = (title: string, ...labels: string[]) => ({ title, labels });
 
@@ -44,6 +51,39 @@ describe("ownBywRows", () => {
     const existing = new Set(ownBywRows(rows, "ripley").map((r) => r.title.toLowerCase()));
     assert.ok(existing.has(bywRowName("Alien (1979)").toLowerCase()));
     assert.ok(!existing.has(bywRowName("Aliens (1986)").toLowerCase()));
+  });
+});
+
+describe("bywRatingKeys", () => {
+  // From a real answer: the watched show came back in its own row, and two
+  // titles three times each.
+  const titleMap = new Map([
+    ["Boardwalk Empire (2010)", "1"],
+    ["Boardwalk Empire", "1"],
+    ["The Sopranos (1999)", "2"],
+    ["The Americans (2013)", "3"],
+    ["The Crown (2016)", "4"],
+  ]);
+  const answer = [
+    "The Sopranos (1999)",
+    "Boardwalk Empire (2010)",
+    "The Americans (2013)",
+    "The Crown (2016)",
+    "The Americans (2013)",
+    "The Westworld (2016)",
+    "The Crown (2016)",
+  ];
+
+  test("drops the watched title, by its history key", () => {
+    assert.deepEqual(bywRatingKeys(answer, titleMap, { title: "Boardwalk Empire", ratingKey: "1" }), ["2", "3", "4"]);
+  });
+
+  test("drops it by title when there is no key, as in a preview", () => {
+    assert.deepEqual(bywRatingKeys(answer, titleMap, { title: "Boardwalk Empire" }), ["2", "3", "4"]);
+  });
+
+  test("keeps each title once, in the model's order, and only what is in the library", () => {
+    assert.deepEqual(bywRatingKeys(answer, titleMap, { title: "Mad Men (2007)" }), ["2", "1", "3", "4"]);
   });
 });
 

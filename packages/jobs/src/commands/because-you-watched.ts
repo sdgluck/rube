@@ -25,6 +25,9 @@ const aiCollectionSchema = z.object({
 
 type AiCollection = z.infer<typeof aiCollectionSchema>;
 
+/** An answer, with the title it answers — which must not end up in it. */
+type BywAnswer = AiCollection & { watched: Watched };
+
 type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined; isOwner?: boolean };
 
 /** A recently watched title, as the row is named, and the Plex item its synopsis is read from — the show, for an episode. */
@@ -79,6 +82,29 @@ const BYW_RESPONSE_SCHEMA = {
   properties: { name: { type: "string" }, items: { type: "array", items: { type: "string" } } },
   required: ["name", "items"],
 };
+
+/**
+ * The answer's titles as the row's rating keys: those in the library, each
+ * once, and never the watched title itself. The prompt says not to include
+ * it, and the model does anyway — "Because you watched Boardwalk Empire" came
+ * back with Boardwalk Empire in it, and The Crown three times. Matched by
+ * rating key, so "Boardwalk Empire (2010)" is caught for a watched show
+ * named "Boardwalk Empire". `watchedKey` is the history's key when there is
+ * one; the title is looked up as well, for a preview that has none.
+ */
+export function bywRatingKeys(
+  items: string[],
+  titleMap: Map<string, string>,
+  watched: { title: string; ratingKey?: string },
+): string[] {
+  const exclude = new Set([watched.ratingKey, titleMap.get(watched.title)].filter(Boolean));
+  const keys: string[] = [];
+  for (const title of items) {
+    const key = titleMap.get(title);
+    if (key && !exclude.has(key) && !keys.includes(key)) keys.push(key);
+  }
+  return keys;
+}
 
 /** The row's name, fixed by the watched title — which is why it can be checked before any model call. */
 export function bywRowName(watchedTitle: string): string {
@@ -360,7 +386,7 @@ export function createBecauseYouWatchedCommand(
         const keptNames = new Set<string>();
 
         ctx.log(`Asking the LLM for "Because you watched" collections...`);
-        const aiCollections: AiCollection[] = [];
+        const aiCollections: BywAnswer[] = [];
         for (let i = 0; i < watchedTitles.length; i++) {
           const { title, ratingKey } = watchedTitles[i];
           const rowName = bywRowName(title).toLowerCase();
@@ -384,7 +410,7 @@ export function createBecauseYouWatchedCommand(
               userPrefs,
             );
             if (col) {
-              aiCollections.push(col);
+              aiCollections.push({ ...col, watched: { title, ratingKey } });
             }
           } catch (err) {
             // Stop outright rather than carry on with what was generated so
@@ -404,7 +430,7 @@ export function createBecauseYouWatchedCommand(
 
         const newCollectionNames = new Set<string>();
         for (const col of aiCollections) {
-          const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
+          const ratingKeys = bywRatingKeys(col.items, titleMap, col.watched);
           if (ratingKeys.length >= MIN_ITEMS) {
             newCollectionNames.add(col.name.toLowerCase());
           }
@@ -426,7 +452,7 @@ export function createBecauseYouWatchedCommand(
 
         let created = 0;
         for (const col of aiCollections) {
-          const ratingKeys = col.items.map((title) => titleMap.get(title)).filter(Boolean) as string[];
+          const ratingKeys = bywRatingKeys(col.items, titleMap, col.watched);
 
           if (ratingKeys.length < MIN_ITEMS) {
             ctx.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least ${MIN_ITEMS}`);
@@ -696,11 +722,7 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
       user?.plexUsername,
     );
     const existingNames = new Set(existing.map((c) => c.title.toLowerCase()));
-    const known = new Set<string>();
-    for (const item of libraryItems) {
-      known.add(`${item.title}${item.year ? ` (${item.year})` : ""}`);
-      known.add(item.title);
-    }
+    const titleMap = libraryTitleMap(libraryItems);
 
     const log = () => {};
     const rows: BywPreviewRow[] = [];
@@ -744,7 +766,15 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
           prefs,
           "because-you-watched-preview",
         );
-        const items = (collection?.items ?? []).map((title) => ({ title, matched: known.has(title) }));
+        // The verbatim answer, each title marked by whether a real run would
+        // keep it — so the watched title and repeats read as unmatched.
+        const answer = collection?.items ?? [];
+        const kept = new Set(bywRatingKeys(answer, titleMap, watched));
+        const items = answer.map((title) => {
+          const key = titleMap.get(title);
+          const matched = !!key && kept.delete(key);
+          return { title, matched };
+        });
         const matchedCount = items.filter((item) => item.matched).length;
         onStep(
           usage
