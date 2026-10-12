@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.37.2] - 2026-10-12
+
+### Fixed
+
+- Shared users now see the rows labelled for them. Tinkerbell used to write each user's share restriction as `label=Tinkerbell|User:<name>`. Plex reads that as allowing only the Tinkerbell label, so no shared user ever saw a row meant for them. The restriction is now written as `label=Tinkerbell,User:<name>`, which Plex accepts.
+- **On existing installs, the next user sync rewrites any share restriction still in the old pipe-separated form.** Tinkerbell now reads that old form the way Plex enforces it, so it can tell that the restriction is wrong and replace it with the corrected one.
+- The admin preview of a user's share restriction used the same wrong format as the old restriction. It now shows the same result that Plex enforces.
+
 ## [0.37.1] - 2026-10-12
 
 ### Fixed
