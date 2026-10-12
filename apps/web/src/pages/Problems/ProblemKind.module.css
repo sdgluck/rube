@@ -1,0 +1,51 @@
+.explanation {
+  margin: 0 0 1rem;
+  max-width: 72ch;
+  font: var(--t-body);
+  color: var(--ink-2);
+}
+
+.segmented {
+  composes: segmented from "../../styles/controls.module.css";
+}
+
+.segmentedBtn {
+  composes: segmentedItem from "../../styles/controls.module.css";
+}
+
+.segmentedBtnActive {
+  composes: segmentedItemActive from "../../styles/controls.module.css";
+}
+
+.pending {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  font: var(--t-body-sm);
+  color: var(--ink-2);
+}
+
+.evidence {
+  margin-top: 0.6rem;
+  font: var(--t-body-sm);
+}
+
+.evidence summary {
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+.evidence table {
+  margin-top: 0.6rem;
+}
+
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* A dismissed row stays readable — it is shown on request — but recedes. */
+.dismissed {
+  opacity: 0.55;
+}

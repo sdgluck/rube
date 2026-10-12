@@ -4,70 +4,18 @@
   color: var(--ink-3);
 }
 
-.group {
-  margin-bottom: 2.4rem;
+/* The two sections cap at a readable width: a label, a one-line explanation
+   and a count don't need the whole of a wide monitor. */
+.sections {
+  max-width: 96rem;
 }
 
-.groupHead {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 0.4rem;
-}
-
-.groupTitle {
-  margin: 0;
-  font: var(--t-panel);
-  letter-spacing: var(--t-panel-tracking);
+.count {
+  font: var(--t-data);
   color: var(--ink);
 }
 
-.groupCount {
-  font: var(--t-data);
-  color: var(--ink-3);
-}
-
-/* Pushed to the end of the heading row, away from the label it acts on. */
-.fixAll {
-  margin-left: auto;
-}
-
-.explanation {
-  margin: 0 0 1rem;
-  max-width: 72ch;
+.dismissedCount {
   font: var(--t-body-sm);
   color: var(--ink-3);
-}
-
-.pending {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-  font: var(--t-body-sm);
-  color: var(--ink-2);
-}
-
-.evidence {
-  margin-top: 0.6rem;
-  font: var(--t-body-sm);
-}
-
-.evidence summary {
-  cursor: pointer;
-  color: var(--ink-2);
-}
-
-.evidence table {
-  margin-top: 0.6rem;
-}
-
-.actionsCell {
-  width: 1%;
-  white-space: nowrap;
-}
-
-/* A dismissed row stays readable — it is shown on request — but recedes. */
-.dismissed {
-  opacity: 0.55;
 }

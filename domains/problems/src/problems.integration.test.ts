@@ -232,6 +232,47 @@ describe("problems", () => {
     assert.equal(changes.at(-1)?.action, "delete");
   });
 
+  it("dismisses and restores a selection in one call, skipping what is no longer reported", async () => {
+    const problems = await setup({ ...OFFICE, guid: "com.plexapp.agents.thetvdb://73244?lang=en" });
+    await problems.scanShows();
+    const result = problems.dismissMany([
+      { kind: "episodeOrdering", subject: "plex:100" },
+      { kind: "legacyAgent", subject: "plex:100" },
+      { kind: "unmatched", subject: "plex:gone" },
+    ]);
+    assert.equal(result.dismissed, 2);
+    assert.deepEqual(result.skipped, [{ kind: "unmatched", subject: "plex:gone" }]);
+    const dismissed = problems
+      .list()
+      .problems.filter((p) => p.dismissed)
+      .map((p) => p.kind)
+      .sort();
+    assert.deepEqual(dismissed, ["episodeOrdering", "legacyAgent"]);
+    assert.equal(changes.filter((c) => c.entity === "problem_dismissal" && c.action === "create").length, 2);
+
+    const restored = problems.undismissMany([
+      { kind: "episodeOrdering", subject: "plex:100" },
+      { kind: "legacyAgent", subject: "plex:100" },
+    ]);
+    assert.equal(restored.restored, 2);
+    assert.equal(
+      problems.list().problems.some((p) => p.dismissed),
+      false,
+    );
+  });
+
+  it("fixes only the selected subjects", async () => {
+    const problems = await setup();
+    await problems.scanShows();
+    const none = await problems.fixAll("episodeOrdering", ["plex:999"]);
+    assert.equal(none.fixed, 0);
+    assert.deepEqual(plex.journal.showWrites, []);
+
+    const one = await problems.fixAll("episodeOrdering", ["plex:100"]);
+    assert.equal(one.fixed, 1);
+    assert.ok(plex.journal.showWrites.length > 0);
+  });
+
   it("announces a problem once, not on every scan", async () => {
     const problems = await setup();
     await problems.scanShows();

@@ -16,7 +16,7 @@
  * "season 4 disagrees" doesn't also silence "season 5 disagrees" next month.
  */
 
-import { and, eq, max } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { token } from "@tinkerbell/container";
 import { mediaItems, problemDismissals, showChecks, type Db } from "@tinkerbell/db";
 import { PROBLEM_META, type ProblemKind } from "@tinkerbell/contracts";
@@ -44,6 +44,11 @@ export interface ProblemsDeps {
 
 export interface ProblemView extends Problem {
   dismissed: boolean;
+}
+
+export interface ProblemTarget {
+  kind: ProblemKind;
+  subject: string;
 }
 
 export interface FixResult {
@@ -190,7 +195,8 @@ export function createProblems(deps: ProblemsDeps) {
   }
 
   /**
-   * Fix every open problem of one kind, one at a time.
+   * Fix every open problem of one kind — or just the `subjects` given, for a
+   * selection on the page — one at a time.
    *
    * Sequential on purpose: each is a Plex write followed by a refresh, and a
    * library's worth in parallel is a good way to make Plex unresponsive for
@@ -198,8 +204,12 @@ export function createProblems(deps: ProblemsDeps) {
    */
   async function fixAll(
     kind: ProblemKind,
+    subjects?: readonly string[],
   ): Promise<{ fixed: number; failed: Array<{ title: string; error: string }> }> {
-    const targets = list().problems.filter((p) => p.kind === kind && p.fixable && !p.dismissed && !p.fixPending);
+    const only = subjects ? new Set(subjects) : null;
+    const targets = list().problems.filter(
+      (p) => p.kind === kind && p.fixable && !p.dismissed && !p.fixPending && (!only || only.has(p.subject)),
+    );
     let fixed = 0;
     const failed: Array<{ title: string; error: string }> = [];
     for (const p of targets) {
@@ -213,37 +223,77 @@ export function createProblems(deps: ProblemsDeps) {
     return { fixed, failed };
   }
 
-  function dismiss(kind: ProblemKind, subject: string): void {
-    const problem = find(kind, subject);
-    const values = { fingerprint: problem.fingerprint, title: problem.title, dismissedAt: deps.now() };
-    db.insert(problemDismissals)
-      .values({ kind, subject, ...values })
-      .onConflictDoUpdate({ target: [problemDismissals.kind, problemDismissals.subject], set: values })
-      .run();
-    cachedCount = null;
-    deps.recordChange({
-      entity: "problem_dismissal",
-      entityId: key(kind, subject),
-      action: "create",
-      after: { kind, subject, title: problem.title, detail: problem.detail },
+  /**
+   * Dismiss several problems at once.
+   *
+   * One `list()` for the whole batch, not one per target: every lookup re-runs
+   * every provider, and the Problems page dismisses a page of advisories at a
+   * time — a hundred lookups was a hundred full detections. A target that is
+   * no longer reported is skipped rather than failing the rest; it has already
+   * gone, which is what dismissing it wanted.
+   */
+  function dismissMany(targets: ProblemTarget[]): { dismissed: number; skipped: ProblemTarget[] } {
+    const current = new Map(list().problems.map((p) => [key(p.kind, p.subject), p]));
+    const found: ProblemView[] = [];
+    const skipped: ProblemTarget[] = [];
+    for (const t of targets) {
+      const problem = current.get(key(t.kind, t.subject));
+      if (problem) found.push(problem);
+      else skipped.push(t);
+    }
+    const at = deps.now();
+    db.transaction((tx) => {
+      for (const p of found) {
+        const values = { fingerprint: p.fingerprint, title: p.title, dismissedAt: at };
+        tx.insert(problemDismissals)
+          .values({ kind: p.kind, subject: p.subject, ...values })
+          .onConflictDoUpdate({ target: [problemDismissals.kind, problemDismissals.subject], set: values })
+          .run();
+      }
     });
+    cachedCount = null;
+    for (const p of found) {
+      deps.recordChange({
+        entity: "problem_dismissal",
+        entityId: key(p.kind, p.subject),
+        action: "create",
+        after: { kind: p.kind, subject: p.subject, title: p.title, detail: p.detail },
+      });
+    }
+    return { dismissed: found.length, skipped };
+  }
+
+  function dismiss(kind: ProblemKind, subject: string): void {
+    if (dismissMany([{ kind, subject }]).dismissed === 0) {
+      throw new ProblemFixError("That problem is no longer reported.");
+    }
+  }
+
+  function undismissMany(targets: ProblemTarget[]): { restored: number } {
+    const wanted = new Set(targets.map((t) => key(t.kind, t.subject)));
+    const rows = db
+      .select()
+      .from(problemDismissals)
+      .all()
+      .filter((d) => wanted.has(key(d.kind, d.subject)));
+    if (rows.length === 0) return { restored: 0 };
+    db.transaction((tx) => {
+      for (const row of rows) tx.delete(problemDismissals).where(eq(problemDismissals.id, row.id)).run();
+    });
+    cachedCount = null;
+    for (const row of rows) {
+      deps.recordChange({
+        entity: "problem_dismissal",
+        entityId: key(row.kind, row.subject),
+        action: "delete",
+        before: { kind: row.kind, subject: row.subject, title: row.title },
+      });
+    }
+    return { restored: rows.length };
   }
 
   function undismiss(kind: ProblemKind, subject: string): void {
-    const row = db
-      .select()
-      .from(problemDismissals)
-      .where(and(eq(problemDismissals.kind, kind), eq(problemDismissals.subject, subject)))
-      .get();
-    if (!row) return;
-    db.delete(problemDismissals).where(eq(problemDismissals.id, row.id)).run();
-    cachedCount = null;
-    deps.recordChange({
-      entity: "problem_dismissal",
-      entityId: key(kind, subject),
-      action: "delete",
-      before: { kind, subject, title: row.title },
-    });
+    undismissMany([{ kind, subject }]);
   }
 
   /**
@@ -278,7 +328,19 @@ export function createProblems(deps: ProblemsDeps) {
     scan.markStale(ratingKeyOf(subject));
   }
 
-  return { list, openCount, fix, fixAll, dismiss, undismiss, announceNew, recheck, scanShows: scan.scanShows };
+  return {
+    list,
+    openCount,
+    fix,
+    fixAll,
+    dismiss,
+    dismissMany,
+    undismiss,
+    undismissMany,
+    announceNew,
+    recheck,
+    scanShows: scan.scanShows,
+  };
 }
 
 export type Problems = ReturnType<typeof createProblems>;

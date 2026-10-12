@@ -33,9 +33,10 @@ export function createProblemsRouter(deps: Pick<TrpcDeps, "problems" | "jobs">) 
 
     fix: procedure.input(target).mutation(({ input }) => mapFixErrors(() => problems.fix(input.kind, input.subject))),
 
+    /** Every open fixable problem of a kind, or only `subjects` — a selection on the page. */
     fixAll: procedure
-      .input(z.object({ kind: z.enum(PROBLEM_KINDS) }))
-      .mutation(({ input }) => mapFixErrors(() => problems.fixAll(input.kind))),
+      .input(z.object({ kind: z.enum(PROBLEM_KINDS), subjects: z.array(z.string().min(1)).max(2000).optional() }))
+      .mutation(({ input }) => mapFixErrors(() => problems.fixAll(input.kind, input.subjects))),
 
     dismiss: procedure.input(target).mutation(({ input }) => {
       try {
@@ -47,6 +48,15 @@ export function createProblemsRouter(deps: Pick<TrpcDeps, "problems" | "jobs">) 
     }),
 
     undismiss: procedure.input(target).mutation(({ input }) => problems.undismiss(input.kind, input.subject)),
+
+    /** A page's selection in one call — one detection pass, not one per row. */
+    dismissMany: procedure
+      .input(z.object({ targets: z.array(target).min(1).max(2000) }))
+      .mutation(({ input }) => problems.dismissMany(input.targets)),
+
+    undismissMany: procedure
+      .input(z.object({ targets: z.array(target).min(1).max(2000) }))
+      .mutation(({ input }) => problems.undismissMany(input.targets)),
 
     /**
      * Run the scan now. With a subject, only that show is re-fetched — the

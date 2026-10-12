@@ -72,6 +72,7 @@ const Media = lazy(() => import("#pages/Media"));
 const MediaDetail = lazy(() => import("#pages/MediaDetail"));
 const Duplicates = lazy(() => import("#pages/Duplicates"));
 const Problems = lazy(() => import("#pages/Problems/Problems"));
+const ProblemKind = lazy(() => import("#pages/Problems/ProblemKind"));
 const ArrLibrary = lazy(() => import("#pages/Arr/ArrLibrary"));
 const ArrInstances = lazy(() => import("#pages/Arr/ArrInstances"));
 const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
@@ -275,6 +276,14 @@ export default function App() {
                       element={
                         <LazyPage>
                           <Problems />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/problems/:kind"
+                      element={
+                        <LazyPage>
+                          <ProblemKind />
                         </LazyPage>
                       }
                     />
