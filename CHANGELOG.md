@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-12
+
+### Added
+
+- Each kind of problem now opens on its own page at `/problems/<kind>`, so one kind no longer pushes the others out of view.
+- Each problem kind's page has a search box, so you can find a specific film, show or item within that kind.
+- Each problem kind's page shows 50 rows at a time with paging, so a kind with hundreds of entries stays manageable.
+- Each problem kind's page has a filter that switches between open problems and the ones you have dismissed.
+- Each problem kind's page lets you sort its rows, and you can select rows to act on them from a selection bar.
+- You can now dismiss many selected problems at once from the selection bar, instead of one at a time.
+- You can now restore many selected dismissed problems at once from the selection bar, putting them back on the open list.
+- You can now fix many selected problems at once from the selection bar, and the fixes still run one after another rather than in parallel.
+
+### Changed
+
+- **The Problems page no longer lists every kind's full table in one long scroll.** It is now an overview with one row per kind, so a few hundred unmanaged films no longer hide every other fault.
+
 ## [0.38.1] - 2026-10-12
 
 ### Fixed
