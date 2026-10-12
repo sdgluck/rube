@@ -196,6 +196,24 @@
   align-self: flex-start;
 }
 
+/* How many collections the type builds — read before choosing it. */
+.typeCardCount {
+  margin-top: 0.6rem;
+  font-size: 1.1rem;
+  color: var(--ink-2);
+  background: var(--surface-sunken);
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--r-tag);
+  align-self: flex-start;
+}
+
+/* The Scope step's statement of what the rule builds, ahead of its options. */
+.collectionCount {
+  margin: 0 0 1.6rem;
+  font-size: 1.25rem;
+  color: var(--ink-2);
+}
+
 /* Generic field */
 
 .field {

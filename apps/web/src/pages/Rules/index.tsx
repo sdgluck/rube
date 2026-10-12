@@ -20,7 +20,13 @@ import { RulesSkeleton } from "#components/Skeleton";
 import SortableTh from "#components/SortableTh";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
-import { isPersonalizableAction, type RuleAction, type RuleConfig } from "@tinkerbell/contracts";
+import {
+  isPersonalizableAction,
+  rotatesPins,
+  ruleCollectionCount,
+  type RuleAction,
+  type RuleConfig,
+} from "@tinkerbell/contracts";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
@@ -479,7 +485,10 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     // starts from the wizard's defaults rather than a stale saved answer.
     if (next.outcome.kind === "collection") {
       if (!next.pinToHomepage) config.pinToHomepage = false;
-      if (next.pinToHomepage && next.pinRotationCount > 0) config.pinRotationCount = next.pinRotationCount;
+      // Not where the wizard hides rotation: on a rule with at most one
+      // collection per library it would change nothing but still be stored.
+      if (next.pinToHomepage && next.pinRotationCount > 0 && rotatesPins(ruleCollectionCount(next.type, next.limit)))
+        config.pinRotationCount = next.pinRotationCount;
       if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
       // Rebuilt from the form like everything else here, so a rule marked by
       // Personalized Collections' install keeps the mark through an edit

@@ -7,6 +7,7 @@ import {
   PLAYLIST_CAPABLE_RULE_TYPES,
   posterUrlError,
   producesManyCollections,
+  ruleCollectionCount,
   templateError,
   type RuleTypeValue,
 } from "@tinkerbell/contracts";
@@ -407,6 +408,63 @@ const GROUPED_NOUNS: Record<string, string> = {
 
 export function groupNounForType(type: string): string {
   return GROUPED_NOUNS[type] ?? "group";
+}
+
+// ─── How many collections a rule builds ─────────────────────────────────
+// Said up front (on the type cards and the Scope step) and used to word the
+// pin options, so a rule that builds one collection never offers to "pin
+// generated collections" or rotate them. The count itself is contracts'
+// `ruleCollectionCount`, shared with what the handlers do.
+
+/** "Films", "Films and TV", "Films, TV and Anime". */
+function joinLibraries(titles: string[]): string {
+  if (titles.length <= 1) return titles[0] ?? "";
+  return `${titles.slice(0, -1).join(", ")} and ${titles.at(-1)}`;
+}
+
+/** The count before any scope is chosen, for a type card. */
+export function collectionCountTag(type: string): string {
+  const count = ruleCollectionCount(type);
+  switch (count.kind) {
+    case "one":
+      return "One collection";
+    case "one-per-library":
+      return "One collection per library";
+    case "up-to-per-library":
+      return "Several collections per library";
+    case "per-group":
+      return `A collection per ${groupNounForType(type)}`;
+  }
+}
+
+/**
+ * The count for the chosen scope, as a sentence. `libraries` is the scope as
+ * it will run — every library when none is picked.
+ */
+export function describeCollectionCount(type: string, limit: number, libraries: string[]): string {
+  const count = ruleCollectionCount(type, limit);
+  const where = libraries.length === 1 ? `, in ${libraries[0]}` : ` in each of ${joinLibraries(libraries)}`;
+  switch (count.kind) {
+    case "one":
+      // Seerr requests builds in the first library of its scope.
+      return libraries.length > 0 ? `Builds one collection, in ${libraries[0]}.` : "Builds one collection.";
+    case "one-per-library":
+      return libraries.length === 0 ? "Builds one collection per library." : `Builds one collection${where}.`;
+    case "up-to-per-library":
+      return libraries.length === 0
+        ? `Builds up to ${count.max} collections per library.`
+        : `Builds up to ${count.max} collections${where}.`;
+    case "per-group":
+      return libraries.length === 0
+        ? `Builds a collection for each ${groupNounForType(type)}.`
+        : `Builds a collection for each ${groupNounForType(type)}${where}.`;
+  }
+}
+
+/** Whether the rule, in this scope, builds at most one collection — so its options say "it", not "them". */
+export function buildsOneCollection(type: string, limit: number, libraryCount: number): boolean {
+  const { kind } = ruleCollectionCount(type, limit);
+  return kind === "one" || (kind === "one-per-library" && libraryCount <= 1);
 }
 
 // ─── Wizard-level helpers ───────────────────────────────────────────────

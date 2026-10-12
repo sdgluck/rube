@@ -27,15 +27,18 @@ export {
   metadataActionIsEmpty,
   NON_PORTABLE_FIELDS,
   producesManyCollections,
+  rotatesPins,
   RULE_TYPE_REQUIRES,
   RULE_TYPE_VALUES,
   ruleAction,
+  ruleCollectionCount,
   ruleConfigSchema,
   ruleCoversSection,
   TAG_FIELDS,
 } from "./rule-config.ts";
 export type {
   ArrTarget,
+  RuleCollectionCount,
   CleanupActionConfig,
   CleanupMode,
   MetadataActionConfig,

@@ -622,6 +622,40 @@ export function producesManyCollections(type: string): boolean {
   return GROUPED.has(type) || EXTERNAL_GROUPED.has(type);
 }
 
+/**
+ * How many collections one run of a rule builds. The wizard states it up
+ * front and words every pin option by it — "Pin generated collections" on a
+ * rule that only ever builds one read as though it built several.
+ *
+ * Per library, except `one`: every handler loops the rule's sections, apart
+ * from Seerr requests, which builds a single collection in the first. An AI
+ * prompt asks for `limit` collections per library (8 when unset, as the
+ * handler defaults it).
+ */
+export type RuleCollectionCount =
+  | { kind: "one" }
+  | { kind: "one-per-library" }
+  | { kind: "up-to-per-library"; max: number }
+  | { kind: "per-group" };
+
+export function ruleCollectionCount(type: string, limit?: number): RuleCollectionCount {
+  if (producesManyCollections(type)) return { kind: "per-group" };
+  if (type === "seerr_requests") return { kind: "one" };
+  if (type === "ai_prompt") {
+    const max = limit || 8;
+    return max > 1 ? { kind: "up-to-per-library", max } : { kind: "one-per-library" };
+  }
+  return { kind: "one-per-library" };
+}
+
+/**
+ * Whether pin rotation means anything: it pins N of a rule's collections per
+ * library, so a rule with at most one per library would pin it every time.
+ */
+export function rotatesPins(count: RuleCollectionCount): boolean {
+  return count.kind === "per-group" || count.kind === "up-to-per-library";
+}
+
 /** Rotation size assumed for a many-collection rule that pins without one. */
 export const DEFAULT_PIN_ROTATION = 10;
 

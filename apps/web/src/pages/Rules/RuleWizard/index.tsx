@@ -13,6 +13,8 @@ import {
   SORT_ARTICLES,
   templateError,
   templatedCollectionSummary,
+  rotatesPins,
+  ruleCollectionCount,
   volumeLevel,
   type ArrService,
   type RuleSchedule,
@@ -35,7 +37,10 @@ import ArrTargetFields, { ARR_SERVICE_LABEL } from "./ArrTargetFields.tsx";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 import {
   arrServicesForSections,
+  buildsOneCollection,
+  collectionCountTag,
   defaultLimitForType,
+  describeCollectionCount,
   defaultMinItemsForType,
   groupNounForType,
   isFormValid,
@@ -599,6 +604,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                 <div key={t.value} className={`${styles.typeCard} ${styles.typeCardUnavailable}`}>
                   <span className={styles.typeCardName}>{t.label}</span>
                   <span className={styles.typeCardDesc}>{t.description}</span>
+                  {kind === "collection" && <span className={styles.typeCardCount}>{collectionCountTag(t.value)}</span>}
                   <RequirementLink requirement={missing} />
                 </div>
               );
@@ -614,6 +620,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               >
                 <span className={styles.typeCardName}>{t.label}</span>
                 <span className={styles.typeCardDesc}>{t.description}</span>
+                {kind === "collection" && <span className={styles.typeCardCount}>{collectionCountTag(t.value)}</span>}
                 {missing && <span className={styles.typeCardWarn}>Needs {REQUIREMENTS[missing].label}</span>}
               </button>
             );
@@ -687,6 +694,11 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
   }
 
   function renderScopeStep() {
+    // The pin options talk about "it" or "them", and rotation only appears
+    // where a library can hold more than one of the rule's collections —
+    // rotating one collection pins it every time.
+    const pinsOne = buildsOneCollection(form.type, form.limit, scopedSections.length);
+    const pinsRotate = rotatesPins(ruleCollectionCount(form.type, form.limit));
     return (
       <>
         <h3 className={styles.stepHeading}>Scope</h3>
@@ -752,6 +764,18 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
             </span>
           </div>
         ) : null}
+
+        {/* Said before any option, and live: picking a second library or
+            raising an AI prompt's count changes the answer as you watch. */}
+        {form.outcome.kind === "collection" && (
+          <p className={styles.collectionCount}>
+            {describeCollectionCount(
+              form.type,
+              form.limit,
+              scopedSections.map((s) => s.title),
+            )}
+          </p>
+        )}
 
         {typeHasLimit(form.type) &&
           (typeHasOptionalLimit(form.type) ? (
@@ -863,7 +887,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                     })
                   }
                 />{" "}
-                Pin generated collections to homepage
+                {pinsOne ? "Pin the collection to the homepage" : "Pin its collections to the homepage"}
               </label>
             </div>
 
@@ -888,7 +912,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </div>
             )}
 
-            {form.pinToHomepage && !typeProducesManyCollections(form.type) && (
+            {form.pinToHomepage && !typeProducesManyCollections(form.type) && pinsRotate && (
               <div className={styles.field}>
                 <label>
                   <input
@@ -925,7 +949,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                     checked={form.pinMinItems > 0}
                     onChange={(e) => setForm({ ...form, pinMinItems: e.target.checked ? 5 : 0 })}
                   />{" "}
-                  Only pin collections with enough items
+                  {pinsOne ? "Only pin it if it has enough items" : "Only pin collections with enough items"}
                 </label>
                 {form.pinMinItems > 0 && (
                   <input
@@ -939,7 +963,9 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   />
                 )}
                 {form.pinMinItems > 0 && (
-                  <span className={styles.hint}>Smaller ones are still built, just not pinned.</span>
+                  <span className={styles.hint}>
+                    {pinsOne ? "It's still built, just not pinned." : "Smaller ones are still built, just not pinned."}
+                  </span>
                 )}
               </div>
             )}
@@ -1824,6 +1850,21 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           {/* The last place the volume is visible before the rule is saved —
               the Scope step is several clicks back by now, and "about 5,000"
               is worth reading twice. */}
+          {!volume && form.outcome.kind === "collection" && (
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryLabel}>Collections</span>
+              <span className={styles.summaryValue}>
+                {describeCollectionCount(
+                  form.type,
+                  form.limit,
+                  scopedSections.map((s) => s.title),
+                )}
+              </span>
+              <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
+                Edit
+              </button>
+            </div>
+          )}
           {volume && (
             <div className={styles.summaryRow} data-tone={volume.level === "ok" ? undefined : volume.level}>
               <span className={styles.summaryLabel}>Collections</span>
