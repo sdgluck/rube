@@ -1,6 +1,8 @@
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createRuleTriggers } from "../rule-triggers.ts";
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
+import { errorMessage } from "@tinkerbell/core";
+import { BASELINE_LABEL } from "../personalize/reconcile.ts";
 
 import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
 
@@ -52,6 +54,41 @@ export function createSyncMediaCommand(deps: Services) {
       total += arrLibrary.library({ service: instance.service, instanceId: instance.id, pageSize: 1 }).total;
     }
     ctx.log(`Relinked ${instances.length} *Arr instance(s) to Plex: ${linked} of ${total} record(s) matched.`);
+  }
+
+  /**
+   * Give new arrivals the personalization label.
+   *
+   * With personalization on, every shared user's filter is
+   * `label=Tinkerbell,User:<them>`, so an item without the baseline label is
+   * invisible to all of them. Only the enable job and its Reconcile button
+   * labelled anything, and neither runs on a schedule — every film and show
+   * added after the last reconcile stayed hidden until someone noticed it was
+   * missing and pressed the button. This job already walks every library on a
+   * schedule, so it closes the gap.
+   *
+   * `addLabelToAllItems` asks Plex for `label!=Tinkerbell` and so touches only
+   * what is missing; on a library that is up to date it costs one listing per
+   * section. Not while enabling (that job is already labelling) or disabling
+   * (this would put back what it is taking off).
+   *
+   * A failure is logged rather than thrown: the sync above has committed, and
+   * failing the run for a straggler label would also skip the relink and the
+   * rule triggers. The next run picks the stragglers up through the filter.
+   */
+  async function labelNewArrivals(ctx: JobContext, client: PlexClient, sections: PlexSection[]): Promise<void> {
+    if (getConfig("global_personalized_sharing")?.status !== "enabled") return;
+
+    let labelled = 0;
+    for (const section of sections) {
+      try {
+        labelled += await client.addLabelToAllItems(section.key, section.type, BASELINE_LABEL);
+      } catch (err) {
+        if (ctx.signal.aborted) throw err;
+        ctx.log(`Failed to label new items in "${section.title}" for personalization: ${errorMessage(err)}`);
+      }
+    }
+    if (labelled > 0) ctx.log(`Labelled ${labelled} new item(s) "${BASELINE_LABEL}" so shared users can see them.`);
   }
 
   async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
@@ -139,6 +176,8 @@ export function createSyncMediaCommand(deps: Services) {
     // The stale sweep has run, so there is nothing left to resume.
     ctx.checkpoint.clear();
     ctx.log(`Done! Synced ${stats.synced} item(s), removed ${stats.removed} stale.`);
+
+    await labelNewArrivals(ctx, client, sections);
 
     // Before the rule triggers below, so a rule that asks "is this in Plex?"
     // sees the freshly-computed answer rather than the previous run's.
