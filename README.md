@@ -166,8 +166,8 @@ Turn it on under **Settings → Personalization**.
 
 Limits:
 
-- The server owner can't be restricted, so the owner sees everyone's
-  collections.
+- The server owner can't be restricted. Your Home shows only your own rows,
+  but each library's Collections list and Recommended tab show everyone's.
 - Click **Reconcile users** after sharing with someone new.
 
 ## We think you'd like
