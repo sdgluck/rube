@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-10-14
+
+### Fixed
+
+- Personalized rows built for shared users no longer show up on the server owner's Recommended tab in Plex. Tinkerbell now sends the visibility flag under the name Plex actually reads, so those rows stay off the owner's Recommended tab.
+
 ## [0.41.0] - 2026-10-14
 
 ### Added
