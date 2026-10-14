@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-14
+
+### Added
+
+- The "Because you watched" and "We think you'd like" rows can now be ranked by a recommendation model that ships inside Tinkerbell, so both rows work even if you have no AI provider configured. Each person's taste is worked out on your server from their own plays, and nothing is sent anywhere else.
+- The bundled recommendation model is off after you upgrade and stays off until you turn it on in Settings → AI, so an upgrade never changes what an existing "Because you watched" or "We think you'd like" row picks.
+
+### Changed
+
+- With the bundled model turned on and an AI provider set up, the AI provider now reranks a 150-title shortlist from the model instead of your whole library. Without an AI provider, that shortlist becomes the row as it is.
+
 ## [0.39.1] - 2026-10-14
 
 ### Fixed
