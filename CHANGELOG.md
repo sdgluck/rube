@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-10-14
+
+### Fixed
+
+- Personalization now labels newly arrived media every 15 minutes, so shared users can see new arrivals without waiting for the nightly sync to label them.
+
 ## [0.39.0] - 2026-10-12
 
 ### Added
