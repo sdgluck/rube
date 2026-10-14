@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-10-14
+
+### Fixed
+
+- **Existing per-person rows are rebuilt the next time each job runs.** Per-person rows now each hold only their own person's items. This covers We Think You'd Like, per-user Because You Watched and personalized rules. Before, Plex pooled every "We Think You'd Like" in a library into one shared list of everyone's picks, and deleting one person's "Because you watched X" emptied every other person's row with that name. Each row's title now ends in invisible per-person marks, so it reads the same as before but keeps its own items.
+- "Not for me" now matches a per-person row by its title as people read it, so the invisible per-person marks added to those titles don't stop it from working.
+- When the recommender is on and the AI model gives a short or unusable answer for We Think You'd Like, the row is now filled from the recommender's ranking. Before, the row was left unchanged, so a small local model repeating one title could cost someone their row.
+
 ## [0.40.0] - 2026-10-14
 
 ### Added
