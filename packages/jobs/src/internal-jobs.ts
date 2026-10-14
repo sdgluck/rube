@@ -5,6 +5,8 @@ import { createRuleSchedules } from "./rule-schedules.ts";
 import { createRuleTriggers } from "./rule-triggers.ts";
 import { createSeerrPoll } from "./seerr-poll.ts";
 import { pollArrQueues } from "./arr-poll.ts";
+import { labelNewArrivals } from "./personalize/label-new-arrivals.ts";
+import { createPlexClient } from "@tinkerbell/plex";
 /**
  * Internal jobs run in-process rather than through the Sidequest command
  * pattern — they are short, purely local, and not worth a worker thread.
@@ -58,6 +60,7 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
     aiUsage,
     backups,
     bandwidth,
+    clients,
     config,
     configHistory,
     db,
@@ -86,6 +89,28 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
   const { runDueRules } = createRuleSchedules(deps);
   const { runTriggeredRules } = createRuleTriggers(deps);
   const { pollSeerrRequests } = createSeerrPoll(deps);
+
+  /**
+   * The personalization label for anything that arrived since the last tick.
+   *
+   * It runs here, and not only in the nightly `sync-media`, because a new title
+   * is invisible to every shared user until it carries the label: nightly meant
+   * up to a day's wait. It labels from Plex's `label!=` filter rather than from
+   * the recently-added list, which holds 20 items and misses the rest of a batch
+   * import. The outcome goes in the summary only when something was labelled,
+   * so the job's message doesn't change every 15 minutes for nothing.
+   */
+  async function labelNewArrivalsNow(ctx: JobContext): Promise<string | undefined> {
+    const url = getConfig("global_plex_url");
+    const token = getConfig("global_plex_token");
+    if (!url || !token) return undefined;
+    const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: clients.plexHealthCallback });
+    const libraries = getConfig("global_plex_libraries");
+    const sections = (await client.getSections()).filter((s) => !libraries || libraries.includes(s.title));
+    const result = await labelNewArrivals(deps, client, sections, ctx.signal);
+    ctx.log(result.message);
+    return result.labelled > 0 || result.failed > 0 ? result.message : undefined;
+  }
 
   const internalJobs = {
     "purge-runs": {
@@ -169,7 +194,8 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
         const summary = await syncRecentlyAdded(ctx.signal);
         const added = getCachedRecentlyAdded().items.filter((i) => i.ratingKey && !before.has(i.ratingKey));
         const triggered = await runTriggeredRules(ctx, "item-added", added.length);
-        return triggered ? `${summary}. ${triggered}` : summary;
+        const labels = await labelNewArrivalsNow(ctx);
+        return [summary, labels, triggered].filter(Boolean).join(". ");
       },
       timeoutMs: 10 * MINUTE_MS,
     },

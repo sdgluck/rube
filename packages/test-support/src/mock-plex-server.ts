@@ -304,6 +304,13 @@ export function startMockPlex(opts: {
       return;
     }
 
+    // Empty is enough: the recently-added job is tested for what it does
+    // besides caching this list (labelling new arrivals), not for the list.
+    if (path === "/library/recentlyAdded") {
+      json({ Metadata: [] });
+      return;
+    }
+
     // ── Tag writes and section listings ─────────────────────────────────────
     const sectionAll = path.match(/^\/library\/sections\/([^/]+)\/all$/);
     if (sectionAll) {
