@@ -1607,6 +1607,9 @@ importers:
       '@tinkerbell/container':
         specifier: workspace:*
         version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tinkerbell/core':
         specifier: workspace:*
         version: link:../../packages/core

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
 import { DbToken, ruleRuns, rules as rulesTable } from "@tinkerbell/db";
+import { parseLogLine } from "@tinkerbell/contracts";
 import { RuleRunsToken } from "./index.ts";
 
 const c = createTestContainer();
@@ -97,12 +98,20 @@ describe("the log", () => {
 
     const whole = runs.getRuleRunLog(handle.runId);
     assert.ok(whole);
-    assert.equal(whole.chunk, "first line\nsecond line\n");
+    const lines = whole.chunk.split("\n").filter(Boolean);
+    assert.deepEqual(
+      lines.map((l) => parseLogLine(l).text),
+      ["first line", "second line"],
+    );
+    assert.ok(
+      lines.every((l) => parseLogLine(l).at),
+      "every line carries the time it was written",
+    );
     assert.equal(whole.size, whole.chunk.length);
 
     // The incremental read the UI does: everything after what it already has.
-    const tail = runs.getRuleRunLog(handle.runId, "first line\n".length);
-    assert.equal(tail?.chunk, "second line\n");
+    const tail = runs.getRuleRunLog(handle.runId, lines[0]!.length + 1);
+    assert.equal(parseLogLine(tail?.chunk.trimEnd() ?? "").text, "second line");
     assert.equal(tail?.nextOffset, whole.nextOffset);
   });
 

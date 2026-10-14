@@ -44,6 +44,11 @@
   padding: 1.2rem;
 }
 
+/* A line's time, when shown: present but quieter than what the line says. */
+.time {
+  color: var(--on-dark-3);
+}
+
 .toolbar {
   display: flex;
   align-items: center;

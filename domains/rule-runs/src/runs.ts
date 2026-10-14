@@ -13,6 +13,7 @@
  * from a process that isn't running it.
  */
 
+import { stampLog } from "@tinkerbell/contracts";
 import { type Scope } from "@tinkerbell/container";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
@@ -308,7 +309,9 @@ export function createRuns(deps: RunsDeps) {
       signal: controller.signal,
       log: (...args: unknown[]) => {
         const line = args.map(formatLogArg).join(" ");
-        const text = line + "\n";
+        // Stamped as written; a buffered block arrives already stamped and
+        // keeps its own times (`stampLog`).
+        const text = stampLog(line, Date.now()) + "\n";
         if (consolePrefix) console.log(consolePrefix, line);
         tee?.(line);
         const trimmed = line.trim();

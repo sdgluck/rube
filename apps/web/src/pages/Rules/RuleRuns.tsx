@@ -395,7 +395,7 @@ function RunDetail({ runId, ruleId, outcome }: { runId: string; ruleId: string; 
         (outcome === "metadata" ? <MetadataWrites ruleId={ruleId} /> : <RunChanges runId={runId} live={live} />)}
 
       <CardSection className={shared.runCard} titleClassName={shared.runCardTitle} title="Log">
-        <RunLog log={log} downloadName={`rule-run-${runId}.txt`} ariaLabel="Rule run log" />
+        <RunLog log={log} live={live} downloadName={`rule-run-${runId}.txt`} ariaLabel="Rule run log" />
       </CardSection>
     </>
   );

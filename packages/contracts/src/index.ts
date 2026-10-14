@@ -404,3 +404,4 @@ export type { UiScale } from "./ui-scale.ts";
 export * from "./download-clients.ts";
 export { NATIVE_APPS, nativeOrigins, type NativeApp } from "./native-apps.ts";
 export { SYSTEM_COLLECTION_LABELS } from "./system-labels.ts";
+export { parseLogLine, stampLog } from "./run-log.ts";

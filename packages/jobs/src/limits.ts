@@ -47,6 +47,10 @@ export const JOB_CANCELLING_GRACE_MS = 2 * MINUTE_MS;
  * Hard cap on a single run's stored log. Past this we stop appending and keep
  * only a bounded tail (flushed when the run ends), because the failure tail is
  * the part anyone actually reads.
+ *
+ * Counted with each line's time (`stampLog`), ~25 bytes a line: at the
+ * typical 60–100-byte line that is a quarter fewer lines before the cap, which
+ * still holds tens of thousands. Raise it if real runs start reaching it.
  */
 export const JOB_LOG_MAX_BYTES = 2 * 1024 * 1024;
 

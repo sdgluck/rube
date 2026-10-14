@@ -30,7 +30,13 @@ export const RULE_RUN_RETENTION_MS = WEEK_MS;
  */
 export const RULE_RUN_HEARTBEAT_TIMEOUT_MS = 5 * MINUTE_MS;
 
-/** Hard cap on a single run's stored log; past it we keep a bounded tail. */
+/**
+ * Hard cap on a single run's stored log; past it we keep a bounded tail.
+ *
+ * Counted with each line's time (`stampLog`), ~25 bytes a line: at the
+ * typical 60–100-byte line that is a quarter fewer lines before the cap, which
+ * still holds tens of thousands. Raise it if real runs start reaching it.
+ */
 export const RULE_RUN_LOG_MAX_BYTES = 2 * 1024 * 1024;
 
 /** Bytes of trailing log retained after the cap is hit. */

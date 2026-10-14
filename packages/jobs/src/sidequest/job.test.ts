@@ -15,6 +15,7 @@ import { ServicesToken } from "@tinkerbell/composition";
 import { EventBusToken } from "@tinkerbell/ports";
 import { DbToken } from "@tinkerbell/db";
 import { events, jobRuns, jobs } from "@tinkerbell/db";
+import { parseLogLine } from "@tinkerbell/contracts";
 import { createRunner } from "../runner.ts";
 import { createCheckpoint } from "../checkpoint.ts";
 
@@ -82,6 +83,13 @@ beforeEach(() => {
 afterEach(() => {
   (COMMANDS[COMMAND] as { load: unknown }).load = realLoad;
 });
+
+/** A stored log with each line's time removed, for comparing text. */
+const unstamped = (log: string | undefined) =>
+  (log ?? "")
+    .split("\n")
+    .map((l) => parseLogLine(l).text)
+    .join("\n");
 
 describe("orphan guard", () => {
   it("does not import the command when the run row is already terminal", async () => {
@@ -171,7 +179,14 @@ describe("log pipeline", () => {
 
     await runCommandJob();
 
-    assert.equal(row()?.log, "first\nsecond\nthird\n");
+    assert.equal(unstamped(row()?.log), "first\nsecond\nthird\n");
+    assert.ok(
+      (row()?.log ?? "")
+        .split("\n")
+        .filter(Boolean)
+        .every((l) => parseLogLine(l).at),
+      "every line carries the time it was written",
+    );
   });
 
   it("preserves a pre-existing log prefix", async () => {
@@ -182,7 +197,7 @@ describe("log pipeline", () => {
 
     await runCommandJob();
 
-    assert.equal(row()?.log, "PREFIX\nappended\n");
+    assert.equal(unstamped(row()?.log), "PREFIX\nappended\n");
   });
 
   it("caps the log but keeps the tail", async () => {

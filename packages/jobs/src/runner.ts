@@ -17,6 +17,7 @@ import {
   validateJobConfig,
   variantFor,
   type VariantSpec,
+  stampLog,
 } from "@tinkerbell/contracts";
 import { buildRunConfig } from "./run-config.ts";
 import { jobs, jobRuns } from "@tinkerbell/db";
@@ -566,7 +567,8 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     let buffer = "";
     const ctx: JobContext = deriveJobContext(deps.scope, {
       log: (...args: unknown[]) => {
-        buffer += args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
+        buffer +=
+          stampLog(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "), Date.now()) + "\n";
       },
       progress: (current: number, total: number, message: string) => {
         db.update(jobRuns)

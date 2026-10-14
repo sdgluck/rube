@@ -118,7 +118,7 @@ export default function JobRun() {
         </div>
       )}
 
-      <RunLog log={log} downloadName={`job-run-${runId}.txt`} />
+      <RunLog log={log} live={isRunActive(run.status)} downloadName={`job-run-${runId}.txt`} />
     </div>
   );
 }

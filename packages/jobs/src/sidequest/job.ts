@@ -4,7 +4,7 @@ import { jobRuns } from "@tinkerbell/db";
 import type { Scope } from "@tinkerbell/container";
 import { buildContainer, ServicesToken, type Services } from "@tinkerbell/composition";
 import { registerJobs } from "../index.ts";
-import { validateJobConfig } from "@tinkerbell/contracts";
+import { validateJobConfig, stampLog } from "@tinkerbell/contracts";
 import {
   createLogger,
   errorMessage,
@@ -137,9 +137,12 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
 
       const ctx: JobContext = {
         log: (...args: unknown[]) => {
-          const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n";
-          const trimmed = text.trim();
+          const line = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+          const trimmed = line.trim();
           if (trimmed) message = trimmed;
+          // Stamped as written — a buffered block arrives already stamped and
+          // keeps its own times (`@tinkerbell/contracts` `stampLog`).
+          const text = stampLog(line, Date.now()) + "\n";
 
           if (capped) {
             // Past the cap we keep a bounded tail only — on a failing run the

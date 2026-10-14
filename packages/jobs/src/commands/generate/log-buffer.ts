@@ -1,3 +1,4 @@
+import { stampLog } from "@tinkerbell/contracts";
 import type { JobContext } from "@tinkerbell/core";
 
 /**
@@ -13,8 +14,10 @@ export function bufferLog(ctx: JobContext): { ctx: JobContext; flush: () => void
   return {
     ctx: {
       ...ctx,
+      // Stamped now, as each line happens: the block is flushed when the unit
+      // of work ends, and the writer that receives it keeps these times.
       log: (...args: unknown[]) =>
-        lines.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")),
+        lines.push(stampLog(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "), Date.now())),
     },
     flush: () => {
       if (lines.length > 0) ctx.log(lines.join("\n"));
