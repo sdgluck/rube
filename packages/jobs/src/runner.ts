@@ -267,7 +267,11 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
 // the activity summary are now derived from playback_sessions at query time
 // rather than cached by a job. Its row must be deleted on upgrade or the
 // scheduler would keep firing a command that no longer exists.
-const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa", "sync-most-watched"];
+//
+// `personalize` retired into `generate`: a personalisable rule now builds each
+// opted-in person's copy in its own run (`commands/generate/personal.ts`). It
+// was an installable feature, so its row is wherever someone installed it.
+const REMOVED_JOBS = ["sync-sections", "stress-test", "migrate-kometa", "sync-most-watched", "personalize"];
 
 /**
  * Sidequest engine configuration. Extracted so it can be asserted in a unit

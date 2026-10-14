@@ -41,7 +41,6 @@ const NIGHTLY = [
   "collection-art",
   "because-you-watched",
   "we-think-youd-like",
-  "personalize",
   "posters-refresh",
 ];
 

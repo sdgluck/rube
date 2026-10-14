@@ -46,9 +46,7 @@ export type FieldControl =
   /** Plex libraries, by title. Empty means all. */
   | { kind: "sections" }
   /** Plex users, by username. `opted-in` lists only users who opted in via the portal. */
-  | { kind: "users"; source: "plex-users" | "opted-in" }
-  /** Rules marked personalizable, by id. */
-  | { kind: "rules" };
+  | { kind: "users"; source: "plex-users" | "opted-in" };
 
 export interface FieldSpec {
   key: string;
@@ -197,20 +195,6 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "number", min: 1, unit: "items" },
       default: WTYL_DEFAULTS.minLibrarySize,
       advanced: true,
-    },
-  ],
-  personalize: [
-    {
-      key: "users",
-      label: "Users",
-      help: "Rows for users you remove are deleted on the next run.",
-      control: { kind: "users", source: "opted-in" },
-    },
-    {
-      key: "ruleIds",
-      label: "Rules",
-      help: "Rows from rules you remove are deleted on the next run.",
-      control: { kind: "rules" },
     },
   ],
   "collections-sweep": [

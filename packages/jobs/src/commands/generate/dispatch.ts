@@ -4,6 +4,7 @@ import { createCleanupCommand } from "./cleanup.ts";
 import { createMetadataCommand } from "./metadata.ts";
 import { createFinalizeCommand } from "./finalize.ts";
 import { createReconcileCommand } from "./reconcile.ts";
+import { createPersonalPass } from "./personal.ts";
 import { createAiPromptCommand } from "./handlers/ai-prompt.ts";
 import { createTmdbGroupedCommand } from "./handlers/tmdb-grouped.ts";
 import { createImdbContentCommand } from "./handlers/imdb-content.ts";
@@ -48,6 +49,7 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
   const { runHandlerWithMetadata } = createMetadataCommand(deps);
   const { commitCollection } = createFinalizeCommand(deps);
   const { removeUnproduced } = createReconcileCommand(deps);
+  const { runPersonalPass } = createPersonalPass(deps);
   const { aiPromptHandler } = createAiPromptCommand(deps);
   const { tmdbGroupedHandler } = createTmdbGroupedCommand(deps);
   const { imdbContentHandler } = createImdbContentCommand(deps);
@@ -224,6 +226,8 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
     // producing hundreds still costs one listing per section.
     const existing = await readExistingCollections(client, deps.sections, rule.id);
     const produced = new Set<string>();
+    // The rows this run yielded, for the personal pass to copy per person.
+    const yielded: PendingCollection[] = [];
     // Every collection this run committed, so the homepage can be reconciled once
     // at the end against the full set rather than guessed at per collection.
     const committed: PinnableCollection[] = [];
@@ -241,6 +245,7 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
         handler(deps),
         COMMIT_CONCURRENCY,
         async (pending) => {
+          yielded.push(pending);
           const ratingKeys = pending.matched.map((m) => m.ratingKey);
           const pinnable = meetsPinFloor(ratingKeys.length, pinMinItems);
           if (!pinnable) belowPinFloor++;
@@ -258,7 +263,7 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
             ruleId: rule.id,
             ruleConfig,
             sourceSummary: pending.sourceSummary,
-            existing: existing.get(pending.section.key)?.get(pending.name.toLowerCase()),
+            existing: existing.shared.get(pending.section.key)?.get(pending.name.toLowerCase()),
           });
           if (!collectionKey) return;
 
@@ -313,7 +318,24 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
     // `produced` set, and sweeping against it would delete collections the rule
     // still makes — the run simply never got as far as saying so.
     if (!ctx.signal?.aborted) {
-      await removeUnproduced(ctx, client, existing, produced);
+      await removeUnproduced(ctx, client, existing.shared, produced);
+    }
+
+    // Each opted-in person's copy, in the same run as the rule's own rows — see
+    // `personal.ts`. A failure here is logged, not thrown: the shared
+    // collections are committed and are what most people see.
+    if (!ctx.signal?.aborted) {
+      try {
+        await runPersonalPass({
+          deps,
+          machineId,
+          shared: yielded,
+          existing: existing.personal,
+          rerun: (prefs) => handler({ ...deps, userPrefs: prefs }),
+        });
+      } catch (err) {
+        ctx.log("[personal] Building personal rows failed:", err);
+      }
     }
 
     // What *should* be on the homepage when this run is done. A rotating rule

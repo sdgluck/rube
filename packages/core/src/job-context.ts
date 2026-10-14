@@ -90,7 +90,6 @@ export {
   digestJobConfigSchema,
   generateJobConfigSchema,
   overlaysJobConfigSchema,
-  personalizeJobConfigSchema,
 } from "@tinkerbell/contracts";
 export type {
   BywJobConfig,
@@ -101,5 +100,4 @@ export type {
   DigestJobConfig,
   GenerateJobConfig,
   OverlaysJobConfig,
-  PersonalizeJobConfig,
 } from "@tinkerbell/contracts";

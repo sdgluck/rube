@@ -285,7 +285,7 @@ export function createRulesRouter(
 
     /**
      * Bulk on/off for `personalizable`. Without `ids`, every rule that builds a
-     * collection — what installing Personalized Collections offers to do.
+     * collection.
      */
     setPersonalizable: procedure
       .input(z.object({ ids: z.array(z.string()).min(1).max(500).optional(), personalizable: z.boolean() }))

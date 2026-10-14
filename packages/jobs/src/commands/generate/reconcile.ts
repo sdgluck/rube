@@ -61,6 +61,30 @@ export interface ExistingCollection {
 /** A rule's current collections in one section, keyed by lowercased title. */
 export type ExistingBySection = Map<string, Map<string, ExistingCollection>>;
 
+/** One person's copy of a rule's row, as Plex has it. */
+export interface PersonalCopy extends ExistingCollection {
+  sectionKey: string;
+  /** Lowercased, from the copy's `User:` label. */
+  username: string;
+}
+
+/**
+ * Everything a rule owns, split by whose it is.
+ *
+ * A rule's shared collections and each opted-in person's copy of them carry the
+ * same `Rule:<id>` label and read the same, and this listing used to make no
+ * distinction. When personal copies were built by a separate job that cost two
+ * things: the rule's run claimed a person's copy as its own collection (the
+ * run's link then died when that job replaced the copy), and once copies got
+ * per-person titles the sweep below deleted every one of them on every run,
+ * because none matched a name the rule produced. The `User:` label is the line.
+ */
+export interface RuleCollections {
+  shared: ExistingBySection;
+  /** Matched by exact title — see `personal.ts` — so not keyed by name. */
+  personal: PersonalCopy[];
+}
+
 /**
  * What this rule currently owns, per section.
  *
@@ -74,10 +98,11 @@ export async function readExistingCollections(
   client: PlexClient,
   sections: PlexSection[],
   ruleId: string,
-): Promise<ExistingBySection> {
+): Promise<RuleCollections> {
   const label = `Rule:${ruleId}`;
   const wanted = label.toLowerCase();
-  const bySection: ExistingBySection = new Map();
+  const shared: ExistingBySection = new Map();
+  const personal: PersonalCopy[] = [];
 
   for (const section of sections) {
     const collections = await client.getCollectionsWithLabels(section.key, { label });
@@ -86,12 +111,22 @@ export async function readExistingCollections(
       // Filtered server-side, then checked again here — the filter is what
       // makes this cheap, the check is what makes it safe to write against.
       if (!col.labels.some((tag) => tag.toLowerCase() === wanted)) continue;
+      const owner = col.labels.find((tag) => tag.toLowerCase().startsWith("user:"));
+      if (owner) {
+        personal.push({
+          ratingKey: col.ratingKey,
+          title: col.title,
+          sectionKey: section.key,
+          username: owner.slice("user:".length).toLowerCase(),
+        });
+        continue;
+      }
       owned.set(col.title.toLowerCase(), { ratingKey: col.ratingKey, title: col.title });
     }
-    bySection.set(section.key, owned);
+    shared.set(section.key, owned);
   }
 
-  return bySection;
+  return { shared, personal };
 }
 
 export interface ReconcileResult {
@@ -268,12 +303,18 @@ export function createReconcileCommand(deps: Pick<Services, "collections">) {
         if (!produced.has(producedKey(sectionKey, name))) stale.push(collection.ratingKey);
       }
     }
-    if (stale.length === 0) return 0;
+    const deleted = await removeCollections(ctx, client, stale);
+    if (deleted > 0) ctx.log(`Removed ${deleted} collection(s) this rule no longer produces.`);
+    return deleted;
+  }
 
+  /** Delete these collections, a few at a time, and drop them from the local index. */
+  async function removeCollections(ctx: JobContext, client: PlexClient, ratingKeys: string[]): Promise<number> {
+    if (ratingKeys.length === 0) return 0;
     const deletes = new PQueue({ concurrency: RECONCILE_CONCURRENCY });
     const deleted: string[] = [];
     await Promise.all(
-      stale.map((ratingKey) =>
+      ratingKeys.map((ratingKey) =>
         deletes.add(async () => {
           try {
             await client.deleteItem(ratingKey);
@@ -288,9 +329,8 @@ export function createReconcileCommand(deps: Pick<Services, "collections">) {
     // Evict the local rows in the same breath, or the Collections page shows them
     // alongside the ones that survived until the next sync notices they're gone.
     forgetCollections(deleted);
-    if (deleted.length > 0) ctx.log(`Removed ${deleted.length} collection(s) this rule no longer produces.`);
     return deleted.length;
   }
 
-  return { removeUnproduced };
+  return { removeUnproduced, removeCollections };
 }

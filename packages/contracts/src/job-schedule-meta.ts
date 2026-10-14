@@ -93,7 +93,6 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "playback-backfill": { estimateMs: 10 * MINUTE_MS },
   "because-you-watched": { heavy: true, requires: "personalizedSharing", estimateMs: 10 * MINUTE_MS },
   "we-think-youd-like": { heavy: true, requires: "personalizedSharing", estimateMs: 10 * MINUTE_MS },
-  personalize: { heavy: true, requires: "personalizedSharing", estimateMs: 15 * MINUTE_MS },
   shuffle: { estimateMs: 2 * MINUTE_MS },
   overlays: { heavy: true, estimateMs: 30 * MINUTE_MS },
   digest: { requires: "notifier", estimateMs: 2 * MINUTE_MS },

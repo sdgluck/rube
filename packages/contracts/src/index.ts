@@ -267,7 +267,6 @@ export {
   lockedConfigFor,
   noJobConfigSchema,
   overlaysJobConfigSchema,
-  personalizeJobConfigSchema,
   validateConfigPatch,
   validateJobConfig,
 } from "./job-config.ts";
@@ -280,7 +279,6 @@ export type {
   DigestJobConfig,
   GenerateJobConfig,
   OverlaysJobConfig,
-  PersonalizeJobConfig,
 } from "./job-config.ts";
 export {
   FEATURE_IDS,

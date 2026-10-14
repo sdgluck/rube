@@ -122,18 +122,6 @@ export const digestJobConfigSchema = z.object({
 });
 export type DigestJobConfig = z.infer<typeof digestJobConfigSchema>;
 
-export const personalizeJobConfigSchema = commonJobConfigSchema.extend({
-  /**
-   * Only these opted-in users (by Plex username). Absent means every opted-in
-   * user. Targeting narrows; it never overrides consent — a named user who
-   * hasn't opted in in the portal is still skipped.
-   */
-  users: z.array(z.string()).optional(),
-  /** Only these personalizable rules, by id. Absent means all of them. */
-  ruleIds: z.array(z.string()).optional(),
-});
-export type PersonalizeJobConfig = z.infer<typeof personalizeJobConfigSchema>;
-
 /** For commands that read no config at all. */
 export const noJobConfigSchema = z.object({});
 
@@ -159,7 +147,6 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "byw-remove": bywJobConfigSchema,
   "we-think-youd-like": wtylJobConfigSchema,
   "wtyl-remove": wtylJobConfigSchema,
-  personalize: personalizeJobConfigSchema,
   "collections-sweep": collectionsSweepJobConfigSchema,
   "collection-art": collectionArtJobConfigSchema,
   overlays: overlaysJobConfigSchema,

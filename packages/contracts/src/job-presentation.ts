@@ -49,14 +49,7 @@ export interface JobPresentation {
 }
 
 /** The opt-in jobs, in the order the wizard offers them. */
-export const FEATURE_IDS = [
-  "because-you-watched",
-  "we-think-youd-like",
-  "personalize",
-  "shuffle",
-  "overlays",
-  "digest",
-] as const;
+export const FEATURE_IDS = ["because-you-watched", "we-think-youd-like", "shuffle", "overlays", "digest"] as const;
 export type FeatureId = (typeof FEATURE_IDS)[number];
 
 export function isFeatureId(id: string): id is FeatureId {
@@ -236,12 +229,6 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     requires: "Personalized Home Screens, an AI provider, and recorded watch history.",
     description:
       "Builds one “We Think You'd Like” collection per library for each Plex user, from a taste profile of their whole recent watch history.",
-  },
-  personalize: {
-    kind: "feature",
-    requires: "Personalized Home Screens, and rules marked personalizable.",
-    description:
-      "For each opted-in user, re-runs the rules you've marked personalizable using their preferences, and pins the results to their own home screen.",
   },
   shuffle: {
     kind: "feature",

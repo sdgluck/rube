@@ -58,6 +58,20 @@ export interface CommitCollectionOptions {
    * every franchise, and it outranks anything a template would assemble.
    */
   sourceSummary?: string;
+  /**
+   * The name people read, when the Plex title differs from it — a person's
+   * copy of a row, whose title carries invisible per-person marks
+   * (`personal-title.ts`). Summaries, sort titles and Kometa posters are looked
+   * up by what the row is called, not by those marks. Defaults to `name`.
+   */
+  displayName?: string;
+  /**
+   * A person's copy rather than the rule's own collection. Its summary is
+   * written when it is created and then left alone: the summary ledger is keyed
+   * by the rule's row name, which the shared collection already answers for, so
+   * consulting it here would skip every copy's summary as "already written".
+   */
+  personalCopy?: boolean;
 }
 
 export function createFinalizeCommand(deps: Services) {
@@ -90,6 +104,7 @@ export function createFinalizeCommand(deps: Services) {
   ): Promise<string | null> {
     const { ctx, flush } = bufferLog(jobCtx);
     const { section, name, ratingKeys } = opts;
+    const shown = opts.displayName ?? name;
     try {
       return await commitQueue.add(async () => {
         // Reconcile if this rule already owns a collection under this name. Only
@@ -99,7 +114,7 @@ export function createFinalizeCommand(deps: Services) {
         if (opts.existing) {
           const reconciled = await reconcileMembership(ctx, client, opts.existing, opts.machineId, ratingKeys);
           if (reconciled) {
-            await applySummary(ctx, client, reconciled.ratingKey, opts);
+            if (!opts.personalCopy) await applySummary(ctx, client, reconciled.ratingKey, opts);
             await applyCollectionPrefs(ctx, client, reconciled.ratingKey, opts);
             await upsertCollectionByKey(client, section, reconciled.ratingKey);
             return reconciled.ratingKey;
@@ -110,7 +125,7 @@ export function createFinalizeCommand(deps: Services) {
           forgetCollections([opts.existing.ratingKey]);
         }
 
-        ctx.log(`Creating "${name}" (${ratingKeys.length} items)...`);
+        ctx.log(`Creating "${shown}" (${ratingKeys.length} items)...`);
 
         const collectionKey = await client.createCollectionWithLabel(
           section.key,
@@ -154,7 +169,7 @@ export function createFinalizeCommand(deps: Services) {
     const resolveTag = await tagResolverFor(client, opts.section.key, opts.ruleConfig?.smartFilter);
     const resolved = resolveCollectionSummary(presentation, {
       ruleType: opts.ruleType,
-      collectionName: opts.name,
+      collectionName: opts.displayName ?? opts.name,
       sectionType: opts.section.type,
       itemCount: opts.ratingKeys.length,
       sourceSummary: opts.sourceSummary,
@@ -162,6 +177,17 @@ export function createFinalizeCommand(deps: Services) {
       resolveTag,
     });
     if (!resolved) return;
+
+    // A person's copy: written on creation only, without the ledger (see
+    // `personalCopy`). Re-writing it every run would also undo a hand edit.
+    if (opts.personalCopy) {
+      try {
+        await client.updateCollection(ratingKey, { summary: resolved.text });
+      } catch (err) {
+        ctx.log(`Summary update failed for "${opts.displayName ?? opts.name}":`, err);
+      }
+      return;
+    }
 
     // A summary somebody edited by hand is theirs. `collection-art` is what
     // notices the edit and sets the lock; this is where the lock is honoured, so
@@ -205,14 +231,14 @@ export function createFinalizeCommand(deps: Services) {
   ): Promise<void> {
     const presentation = resolvePresentation(opts.ruleConfig);
     const prefs = resolveCollectionPrefs(presentation);
-    const sortTitle = resolveSortTitle(presentation, opts.name);
+    const sortTitle = resolveSortTitle(presentation, opts.displayName ?? opts.name);
     if (!prefs && !sortTitle) return;
 
     try {
       if (prefs) await client.setCollectionPrefs(ratingKey, prefs);
       if (sortTitle) await client.updateCollection(ratingKey, { titleSort: sortTitle });
     } catch (err) {
-      ctx.log(`Collection prefs failed for "${opts.name}":`, err);
+      ctx.log(`Collection prefs failed for "${opts.displayName ?? opts.name}":`, err);
     }
   }
 
@@ -232,8 +258,8 @@ export function createFinalizeCommand(deps: Services) {
     // collection per run, the second one silently replacing the first.
     if (resolvePresentation(opts.ruleConfig).poster !== "none") return;
 
-    const result = await fetchAutoPoster({ ruleType: opts.ruleType, collectionName: opts.name });
-    const name = opts.name;
+    const name = opts.displayName ?? opts.name;
+    const result = await fetchAutoPoster({ ruleType: opts.ruleType, collectionName: name });
 
     if ("buffer" in result) {
       try {

@@ -152,7 +152,7 @@ export interface RuleFormState {
   pinRotationCount: number;
   /** Only pin collections with at least this many items. 0 = no floor. */
   pinMinItems: number;
-  /** The personalize job also builds a per-user copy. Collection rules only. */
+  /** Each run also builds a per-user copy. Collection rules only. */
   personalizable: boolean;
   /** Collection (the default, and what every rule did before) or cleanup. */
   outcome: OutcomeFormState;

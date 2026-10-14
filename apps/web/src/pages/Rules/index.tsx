@@ -490,9 +490,9 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       if (next.pinToHomepage && next.pinRotationCount > 0 && rotatesPins(ruleCollectionCount(next.type, next.limit)))
         config.pinRotationCount = next.pinRotationCount;
       if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
-      // Rebuilt from the form like everything else here, so a rule marked by
-      // Personalized Collections' install keeps the mark through an edit
-      // rather than losing it to a config that never mentioned it.
+      // Rebuilt from the form like everything else here, so a rule marked in
+      // bulk keeps the mark through an edit rather than losing it to a config
+      // that never mentioned it.
       if (next.personalizable) config.personalizable = true;
 
       // Written only when it says something other than the default, so a rule

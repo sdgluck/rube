@@ -85,7 +85,6 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
-  personalize: { load: () => import("./personalize.ts"), lane: "default", timeoutMs: DEFAULT_TIMEOUT_MS },
   // Local queries plus one network call per recipient. The default budget is
   // generous for that, and is really bounding a mail server that has stopped
   // answering rather than the work.

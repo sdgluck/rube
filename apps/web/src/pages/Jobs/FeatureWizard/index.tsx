@@ -9,13 +9,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  applyConfigPatch,
-  fieldsFor,
-  isPersonalizableAction,
-  jobPresentation,
-  type RuleAction,
-} from "@tinkerbell/contracts";
+import { applyConfigPatch, fieldsFor, jobPresentation } from "@tinkerbell/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import Modal from "#components/Modal";
@@ -56,23 +50,6 @@ export default function FeatureWizard({ onClose }: Props) {
   const [schedule, setSchedule] = useState("");
   const [draft, setDraft] = useState<Draft>({});
   const [serverError, setServerError] = useState<string>();
-  // Personalized Collections runs only rules marked personalizable, and nothing
-  // in the rule editor used to mark them — so the feature installed and then
-  // did nothing. Offered here, ticked, because that is what almost everyone
-  // installing it wants.
-  const [markRules, setMarkRules] = useState(true);
-  const setPersonalizable = trpc.rules.setPersonalizable.useMutation({
-    onSuccess: () => {
-      utils.rules.list.invalidate();
-      utils.jobs.featureCatalog.invalidate();
-    },
-  });
-  const rulesQuery = trpc.rules.list.useQuery(undefined, { enabled: selectedId === "personalize" });
-  const eligibleRules = (rulesQuery.data ?? []).filter((r) =>
-    isPersonalizableAction(r.config as { action?: RuleAction }),
-  );
-  const alreadyMarked = eligibleRules.filter((r) => (r.config as { personalizable?: boolean }).personalizable).length;
-  const toMark = selectedId === "personalize" && markRules ? eligibleRules.length - alreadyMarked : 0;
 
   const selected = catalogQuery.data?.find((f) => f.id === selectedId) ?? null;
   const fields = useMemo(() => (selected ? fieldsFor(selected.command) : []), [selected]);
@@ -96,7 +73,6 @@ export default function FeatureWizard({ onClose }: Props) {
     setSchedule(entry.defaultSchedule);
     setDraft(draftFromConfig(fieldsFor(entry.command), entry.defaultConfig));
     setServerError(undefined);
-    setMarkRules(true);
     setStep("configure");
   }
 
@@ -110,26 +86,8 @@ export default function FeatureWizard({ onClose }: Props) {
         config: applyConfigPatch(selected.defaultConfig, changes),
       },
       {
-        onSuccess: async () => {
-          // After the install, not as part of it: the feature is usable either
-          // way, and a failure here is one the bulk edit on the rules page can
-          // redo — not a reason to report the install as failed.
-          if (toMark > 0) {
-            try {
-              const { changed } = await setPersonalizable.mutateAsync({ personalizable: true });
-              addToast(
-                `${selected.name} installed — ${changed} rule${changed === 1 ? "" : "s"} made personalizable`,
-                "success",
-              );
-            } catch (err) {
-              addToast(
-                `${selected.name} installed, but marking rules personalizable failed: ${err instanceof Error ? err.message : String(err)}`,
-                "error",
-              );
-            }
-          } else {
-            addToast(`${selected.name} installed`, "success");
-          }
+        onSuccess: () => {
+          addToast(`${selected.name} installed`, "success");
           onClose();
           navigate(`/jobs/${selected.id}`);
         },
@@ -177,10 +135,10 @@ export default function FeatureWizard({ onClose }: Props) {
               <button
                 type="button"
                 className={styles.primaryBtn}
-                disabled={installMutation.isPending || setPersonalizable.isPending}
+                disabled={installMutation.isPending}
                 onClick={install}
               >
-                {installMutation.isPending || setPersonalizable.isPending ? "Installing…" : "Install"}
+                {installMutation.isPending ? "Installing…" : "Install"}
               </button>
             </>
           )}
@@ -243,19 +201,6 @@ export default function FeatureWizard({ onClose }: Props) {
                 <JobSettingsForm fields={fields} draft={draft} onChange={setDraft} errors={errors} />
               </tbody>
             </table>
-            {selected.id === "personalize" && eligibleRules.length > alreadyMarked && (
-              <label className={styles.markRules}>
-                <input type="checkbox" checked={markRules} onChange={(e) => setMarkRules(e.target.checked)} />
-                <span>
-                  Make all {eligibleRules.length} collection rule{eligibleRules.length === 1 ? "" : "s"} personalizable
-                  {alreadyMarked > 0 && ` (${alreadyMarked} already ${alreadyMarked === 1 ? "is" : "are"})`}
-                  <span className={styles.fieldHint}>
-                    Only personalizable rules get a per-user copy. Cleanup, playlist and metadata rules are left alone,
-                    and each change can be undone from the rule's history or Bulk edit.
-                  </span>
-                </span>
-              </label>
-            )}
             {serverError && (
               <p role="alert" className={jobStyles.fieldHelpError}>
                 {serverError}
@@ -280,11 +225,6 @@ export default function FeatureWizard({ onClose }: Props) {
                   </div>
                 ))}
             </dl>
-            {toMark > 0 && (
-              <p className={styles.muted}>
-                Also makes {toMark} collection rule{toMark === 1 ? "" : "s"} personalizable.
-              </p>
-            )}
             {Object.keys(changes).length === 0 && <p className={styles.muted}>Every other setting at its default.</p>}
           </div>
         )}

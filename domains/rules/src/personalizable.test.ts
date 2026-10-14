@@ -1,6 +1,5 @@
 /**
- * `setPersonalizable` is what installing Personalized Collections offers to
- * run across every rule, so the properties that matter are about the rules it
+ * `setPersonalizable` can run across every rule, so the properties that matter are about the rules it
  * must *not* touch — a cleanup rule run once per user would be run per user at
  * all — and about each edit staying individually visible in history.
  */

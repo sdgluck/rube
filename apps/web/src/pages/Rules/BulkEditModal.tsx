@@ -32,8 +32,8 @@ export default function BulkEditModal({
 }: BulkEditModalProps) {
   const [enableLimit, setEnableLimit] = useState(true);
   const [limit, setLimit] = useState<number>(10);
-  // The way back from Personalized Collections' "make every rule
-  // personalizable" — and the way to do it for a handful.
+  // Marking rules personalizable (or not) in bulk — across every rule, or a
+  // handful.
   const [enablePersonalizable, setEnablePersonalizable] = useState(false);
   const [personalizable, setPersonalizable] = useState(true);
 

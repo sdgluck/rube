@@ -33,11 +33,11 @@ export function draftErrors(fields: FieldSpec[], draft: Draft): Record<string, s
   return errors;
 }
 
-type PickerOptions = { users: MultiSelectOption[]; optedInUsers: MultiSelectOption[]; rules: MultiSelectOption[] };
+type PickerOptions = { users: MultiSelectOption[]; optedInUsers: MultiSelectOption[] };
 
 /**
- * A stored selection that no longer resolves — a user who left the server, a
- * rule since deleted — is kept as a visible "not found" option rather than
+ * A stored selection that no longer resolves — a user who left the server — is
+ * kept as a visible "not found" option rather than
  * dropped from the list, so saving can't silently change the target and the
  * admin can see and remove it.
  */
@@ -87,24 +87,12 @@ function Control({
           ))}
         </select>
       );
-    case "users":
-    case "rules": {
+    case "users": {
       const selected = Array.isArray(value) ? (value as string[]) : [];
-      const base =
-        control.kind === "rules"
-          ? (pickers?.rules ?? [])
-          : control.source === "opted-in"
-            ? (pickers?.optedInUsers ?? [])
-            : (pickers?.users ?? []);
+      const base = control.source === "opted-in" ? (pickers?.optedInUsers ?? []) : (pickers?.users ?? []);
       return (
         <MultiSelect
-          allLabel={
-            control.kind === "rules"
-              ? "All personalizable rules"
-              : control.source === "opted-in"
-                ? "All opted-in users"
-                : "All users"
-          }
+          allLabel={control.source === "opted-in" ? "All opted-in users" : "All users"}
           ariaLabel={field.label}
           options={withMissing(base, selected)}
           selected={selected}
@@ -132,12 +120,11 @@ export default function JobSettingsForm({ fields, draft, onChange, errors }: Pro
 
   const set = (key: string, value: unknown) => onChange({ ...draft, [key]: value });
 
-  const needsPickers = fields.some((f) => f.control.kind === "users" || f.control.kind === "rules");
+  const needsPickers = fields.some((f) => f.control.kind === "users");
   const optionsQuery = trpc.jobs.fieldOptions.useQuery(undefined, { enabled: needsPickers });
   const pickers: PickerOptions | undefined = optionsQuery.data && {
     users: optionsQuery.data.users.map((u) => ({ value: u.username, label: u.label })),
     optedInUsers: optionsQuery.data.users.filter((u) => u.optedIn).map((u) => ({ value: u.username, label: u.label })),
-    rules: optionsQuery.data.rules.map((r) => ({ value: r.id, label: r.name })),
   };
 
   const row = (field: FieldSpec) => {

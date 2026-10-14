@@ -116,22 +116,6 @@
   color: var(--ink-3);
 }
 
-/* Personalized Collections' "mark the rules too" — a checkbox with its
-   explanation stacked under the label, so the consequence is read before the
-   box is left ticked. */
-.markRules {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.8rem;
-  font-size: 1.3rem;
-}
-
-.markRules > span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .muted {
   margin: 0;
   font-size: 1.25rem;

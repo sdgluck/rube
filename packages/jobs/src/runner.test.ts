@@ -27,7 +27,7 @@ after(() => c.dispose());
 
 const services = c.resolve(ServicesToken);
 const db = c.resolve(DbToken);
-const { startJob, cancelRun, sweepStuckRuns } = createRunner(services);
+const { startJob, cancelRun, sweepStuckRuns, seedDefaultJobs } = createRunner(services);
 const { internalJobs, isInternalJobName } = createInternalJobs(services);
 
 const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS } = await import("./limits.ts");
@@ -123,6 +123,28 @@ describe("startJob", () => {
     const row = statusOf(result.runId!);
     assert.equal(row?.status, "failed");
     assert.notEqual(row?.finishedAt, null);
+  });
+});
+
+describe("retired jobs", () => {
+  it("removes an installed Personalized Collections job and its runs on boot", () => {
+    // Retired into `generate`. Left in place, its 3am schedule would fail every
+    // night with an unknown command.
+    seedJob("personalize", "personalize");
+    db.insert(jobRuns)
+      .values({
+        id: "old-personalize-run",
+        jobId: "personalize",
+        status: "completed",
+        log: "",
+        progress: 1,
+        message: "",
+        startedAt: 1,
+      })
+      .run();
+    seedDefaultJobs();
+    assert.equal(db.select().from(jobs).where(eq(jobs.id, "personalize")).get(), undefined);
+    assert.equal(db.select().from(jobRuns).where(eq(jobRuns.jobId, "personalize")).get(), undefined);
   });
 });
 

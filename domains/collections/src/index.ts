@@ -402,11 +402,14 @@ export function createCollections(deps: CollectionsDeps) {
     // Same JSON-quote anchoring as the `ruleIds` filter, so `Rule:1` doesn't
     // match `Rule:10`.
     const rows = db
-      .select({ title: collections.title })
+      .select({ title: collections.title, labels: collections.labels })
       .from(collections)
       .where(likeContains(collections.labels, JSON.stringify(`Rule:${ruleId}`)))
       .all();
-    return rows.map((r) => r.title);
+    // The rule's own collections only. A person's copy of one of its rows
+    // carries the same `Rule:` label, but it isn't a new collection of the
+    // rule's — announcing one per opted-in person would bury the real news.
+    return rows.filter((r) => !r.labels.some((l) => l.startsWith("User:"))).map((r) => r.title);
   }
 
   async function updateCollection(

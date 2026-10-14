@@ -981,7 +981,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </label>
               <span className={styles.hint}>
                 {personalizationOn
-                  ? "Personalized Collections also builds a copy for each opted-in user, shaped by their tastes."
+                  ? "Every run of this rule also builds a copy for each opted-in user, shaped by their tastes and pinned to their home screen."
                   : "Takes effect once Personalized Home Screens is on (Settings › Portal › Personalization)."}
               </span>
             </div>

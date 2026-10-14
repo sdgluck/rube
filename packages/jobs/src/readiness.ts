@@ -13,7 +13,6 @@
  */
 import { type Services } from "@tinkerbell/composition";
 import { isCommandName } from "./commands/catalog.ts";
-import { parseRuleConfig } from "./commands/generate/config.ts";
 
 export type ReadinessItem = {
   id: string;
@@ -26,9 +25,9 @@ export type ReadinessItem = {
 };
 
 export function createReadiness(
-  deps: Pick<Services, "backups" | "config" | "notifications" | "overlays" | "playback" | "preferences" | "rules">,
+  deps: Pick<Services, "backups" | "config" | "notifications" | "overlays" | "playback" | "preferences">,
 ) {
-  const { backups, config, notifications, overlays, playback, preferences, rules } = deps;
+  const { backups, config, notifications, overlays, playback, preferences } = deps;
   const { getConfig, getLlmConfig, getPersonalizedSharingStatus } = config;
 
   function plex(): ReadinessItem {
@@ -48,18 +47,6 @@ export function createReadiness(
       met: getPersonalizedSharingStatus() === "enabled",
       detail: "Keeps each user's collections visible only to them.",
       href: "/settings/portal/personalization",
-      severity: "required",
-    };
-  }
-
-  function optedInUsers(): ReadinessItem {
-    const count = preferences.listOptedInUserPreferences().length;
-    return {
-      id: "opted-in",
-      label: "At least one user has opted in",
-      met: count > 0,
-      detail: `${count} user${count === 1 ? "" : "s"} opted in through the portal.`,
-      href: "/settings/portal",
       severity: "required",
     };
   }
@@ -98,18 +85,6 @@ export function createReadiness(
               ? `${sessions} play${sessions === 1 ? "" : "s"} over ${days} day${days === 1 ? "" : "s"}.`
               : "Run Import Plex Watch History to start from your past viewing.",
           href: "/jobs/playback-backfill",
-          severity: "required",
-        });
-        break;
-      }
-      case "personalize": {
-        const count = rules.getEnabledRules().filter((r) => parseRuleConfig(r).personalizable).length;
-        items.push(personalization(), optedInUsers(), {
-          id: "personalizable-rules",
-          label: "At least one rule marked personalizable",
-          met: count > 0,
-          detail: `${count} enabled rule${count === 1 ? "" : "s"} marked personalizable.`,
-          href: "/rules",
           severity: "required",
         });
         break;

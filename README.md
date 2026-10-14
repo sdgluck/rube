@@ -163,6 +163,8 @@ Turn it on under **Settings → Personalization**.
 - **Disable** removes the per-user collections and restores those settings.
 - Users set their tastes in the portal by signing in with Plex. Admins can also
   set them under **Settings → User Preferences**.
+- Mark a rule **Personalizable** and every run of it also builds a copy for each
+  user who opted in, without the titles they excluded, pinned to their Home.
 
 Limits:
 

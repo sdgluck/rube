@@ -201,7 +201,7 @@ export function ruleAction(config: { action?: RuleAction }): RuleAction {
 }
 
 /**
- * Whether the personalize job can make a per-user copy of this rule: only a
+ * Whether a rule run can make a per-user copy of this rule: only a
  * rule that builds a collection produces a row for someone's home screen. A
  * playlist, metadata or cleanup rule marked personalizable would be run per
  * user for nothing — or, for cleanup, run per user at all.
@@ -410,9 +410,10 @@ const baseRuleConfigSchema = z.object({
    */
   pinMinItems: z.number().int().positive().optional(),
   /**
-   * When true, the personalize job also runs this rule per opted-in user,
-   * producing a `User:<name>`-labelled variant on their home shaped by their
-   * preferences (in addition to the shared collection this rule produces).
+   * When true, every run of this rule also builds a copy of its rows for each
+   * opted-in user — `User:<name>`-labelled, under a title of their own, pinned
+   * to their home and shaped by their preferences — alongside the shared
+   * collection (`commands/generate/personal.ts`).
    */
   personalizable: z.boolean().optional(),
   /**
