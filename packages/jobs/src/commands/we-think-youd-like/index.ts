@@ -30,7 +30,13 @@
 import { WTYL_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createLlmClient, estimateTokens, type LlmConfig } from "@tinkerbell/llm";
-import { errorMessage, preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
+import {
+  displayTitle,
+  errorMessage,
+  personalRowTitle,
+  preferencesPromptBlock,
+  type UserPreferences,
+} from "@tinkerbell/core";
 import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
 import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "@tinkerbell/plex";
 import { z } from "zod";
@@ -254,6 +260,24 @@ export function pickRatingKeys(opts: {
   return picked;
 }
 
+/**
+ * The model's picks first, then the recommender's ranking in order, up to
+ * `max`. The shortlist already leaves out what they've seen and what they've
+ * excluded, so anything taken from it is as usable as a pick.
+ */
+export function topUpPicks(picks: string[], shortlist: string[], max: number): string[] {
+  const out = picks.slice(0, max);
+  const have = new Set(out);
+  for (const key of shortlist) {
+    if (out.length >= max) break;
+    if (!have.has(key)) {
+      out.push(key);
+      have.add(key);
+    }
+  }
+  return out;
+}
+
 export function createWeThinkYoudLikeCommand(
   deps: Pick<
     Services,
@@ -351,7 +375,15 @@ export function createWeThinkYoudLikeCommand(
     pin: boolean,
   ): Promise<void> {
     const { section } = state;
-    const existing = ownWtylRow(state.rows, user.username);
+    const title = personalRowTitle(WTYL_ROW_NAME, user.username);
+    let existing = ownWtylRow(state.rows, user.username);
+    // A row from before per-person titles shares its contents with everyone
+    // else's (see `personal-title.ts`). Editing it would edit theirs too, so
+    // it is replaced — once — by one under this person's own title.
+    if (existing && existing.title !== title) {
+      await deleteRow(client, ctx, existing.ratingKey, `rebuilding it under ${user.name}'s own title`);
+      existing = undefined;
+    }
     let collectionKey: string;
     if (existing) {
       collectionKey = existing.ratingKey;
@@ -369,7 +401,7 @@ export function createWeThinkYoudLikeCommand(
         section.key,
         section.type,
         machineId,
-        WTYL_ROW_NAME,
+        title,
         ratingKeys,
         personalRowLabels(user.username, WTYL_LABEL),
       );
@@ -523,7 +555,9 @@ export function createWeThinkYoudLikeCommand(
 
       // "Not for me" in the portal names the row; honour it by taking the row
       // away rather than rebuilding it every week.
-      const declined = (prefs?.excludedCollections ?? []).some((t) => t.toLowerCase() === WTYL_ROW_NAME.toLowerCase());
+      const declined = (prefs?.excludedCollections ?? []).some(
+        (t) => displayTitle(t).toLowerCase() === WTYL_ROW_NAME.toLowerCase(),
+      );
       const prompt = wtylPrompt({ profile, prefs, minItems, maxItems });
 
       for (const state of sections) {
@@ -591,9 +625,19 @@ export function createWeThinkYoudLikeCommand(
           }
         }
 
-        let text: string;
+        // With a shortlist, the model is choosing from titles already ranked
+        // for this person, so a short answer — a small local model repeating
+        // one title eight times, or not answering at all — is filled from the
+        // ranking rather than leaving last week's row. Without one there is
+        // nothing to fill from, and a bad answer still changes nothing.
+        let answer: WtylAnswer | null = null;
+        let failure: string | null = null;
         try {
-          text = await askModel(llm, ctx, library, prompt);
+          const text = await askModel(llm, ctx, library, prompt);
+          ctx.log("AI response:", text);
+          const parsed = parseWtylAnswer(text);
+          if ("error" in parsed) failure = parsed.error;
+          else answer = parsed.answer;
         } catch (err) {
           // Cancelled: every later call would fail the same way, so stop
           // rather than log one per person and then claim to be done.
@@ -602,33 +646,37 @@ export function createWeThinkYoudLikeCommand(
             ctx.log(`Stopping — ${errorMessage(err)}. Existing collections are left as they are.`);
             return;
           }
+          failure = `the model call failed (${errorMessage(err)})`;
+        }
+        if (failure && !shortlist) {
+          ctx.log(`${user.name} — "${state.section.title}": ${failure}; row left as it is.`);
+          continue;
+        }
+        let ratingKeys = answer
+          ? pickRatingKeys({
+              items: answer.items,
+              match: state.match,
+              watched,
+              excludedTitles: prefs?.excludedTitles ?? [],
+              titleOf: new Map(state.items.map((i) => [i.ratingKey, i.title])),
+              maxItems,
+            })
+          : [];
+        if (shortlist && ratingKeys.length < maxItems) {
+          const fromModel = ratingKeys.length;
+          ratingKeys = topUpPicks(ratingKeys, shortlist, maxItems);
           ctx.log(
-            `${user.name} — "${state.section.title}": the model call failed (${errorMessage(err)}); row left as it is.`,
+            `${user.name} — "${state.section.title}": ${failure ? `${failure}; ` : ""}${fromModel} usable pick(s) from the model, filled to ${ratingKeys.length} from the recommender's ranking.`,
           );
-          continue;
         }
-        ctx.log("AI response:", text);
-
-        const parsed = parseWtylAnswer(text);
-        if ("error" in parsed) {
-          ctx.log(`${user.name} — "${state.section.title}": ${parsed.error}; row left as it is.`);
-          continue;
-        }
-        const ratingKeys = pickRatingKeys({
-          items: parsed.answer.items,
-          match: state.match,
-          watched,
-          excludedTitles: prefs?.excludedTitles ?? [],
-          titleOf: new Map(state.items.map((i) => [i.ratingKey, i.title])),
-          maxItems,
-        });
         if (ratingKeys.length < minItems) {
           ctx.log(
             `${user.name} — "${state.section.title}": only ${ratingKeys.length} usable pick(s), need ${minItems}; row left as it is.`,
           );
           continue;
         }
-        await writeRow(client, ctx, machineId, state, user, ratingKeys, parsed.answer.summary.trim(), pin);
+        const summary = answer?.summary.trim() || wtylFallbackSummary(profile);
+        await writeRow(client, ctx, machineId, state, user, ratingKeys, summary, pin);
       }
     }
 

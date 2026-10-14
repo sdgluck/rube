@@ -17,7 +17,7 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import { noopCheckpoint, ConfigStoreToken, type JobContext } from "@tinkerbell/core";
+import { displayTitle, noopCheckpoint, ConfigStoreToken, type JobContext } from "@tinkerbell/core";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
 import { ServicesToken } from "@tinkerbell/composition";
 import { DbToken, llmUsage, mediaItems, playbackSessions, plexUsers } from "@tinkerbell/db";
@@ -225,6 +225,29 @@ describe("we-think-youd-like with the recommender", () => {
     assert.match(log.join("\n"), /couldn't rank enough of this library/);
   });
 
+  it("fills a short answer from the recommender's ranking", async () => {
+    // What a small local model did on a real server: one title, repeated.
+    llm.answer = JSON.stringify({ summary: "Just this one.", items: Array(8).fill(label(9)) });
+    const { ctx, log } = testContext();
+    await wtyl.run(ctx, CONFIG);
+
+    const [row] = [...plex.collections.values()];
+    assert.equal(row.memberKeys.length, 6, "topped up to maxItems");
+    assert.equal(row.memberKeys[0], key(9), "the model's pick first");
+    assert.deepEqual(new Set(row.memberKeys.slice(0, 4)), CLUSTER_A, "then the rest of her cluster");
+    assert.equal(row.summary, "Just this one.", "the model's summary is kept");
+    assert.match(log.join("\n"), /1 usable pick\(s\) from the model, filled to 6/);
+  });
+
+  it("builds the row from the ranking when the model's answer is unusable", async () => {
+    llm.answer = "Sorry, I can't help with that.";
+    await wtyl.run(testContext().ctx, CONFIG);
+
+    const [row] = [...plex.collections.values()];
+    assert.equal(row.memberKeys.length, 6);
+    assert.match(row.summary ?? "", /^Picked from what you've been watching/);
+  });
+
   it("still refuses to run with neither an AI provider nor the recommender", async () => {
     deleteConfig("global_llm");
     setConfig("recommender_enabled", false);
@@ -264,5 +287,40 @@ describe("because-you-watched with the recommender", () => {
       "its own cluster ahead of the other",
     );
     assert.match(JSON.stringify(JSON.parse(llm.calls[0]).messages), /most like the one they watched/);
+  });
+
+  it("gives two people who watched the same film separate rows, and deleting one leaves the other", async () => {
+    // Plex keeps collection membership by title (the mock models it). Two
+    // people's "Because you watched Film 3 (2003)" were one set of films, and
+    // when Alice moved on and her row was deleted, Bob's emptied with it.
+    deleteConfig("global_llm");
+    db.insert(plexUsers).values({ userId: 11, username: "bob", label: "bob", syncedAt: Date.now() }).run();
+    const watch = (accountID: string, i: number) =>
+      ({
+        ratingKey: key(i),
+        title: `Film ${i}`,
+        year: 2000 + i,
+        type: "movie",
+        librarySectionID: "1",
+        accountID,
+      }) as const;
+    plex.history.length = 0;
+    plex.history.push(watch("10", 3), watch("11", 3));
+    const config = { mode: "per-user" as const, limit: 1, minItems: 5, maxItems: 6, minLibrarySize: 1 };
+    await byw.run(testContext().ctx, config);
+
+    const rows = () => [...plex.collections.values()];
+    const bobs = () => rows().find((r) => r.labels.includes("User:bob"))!;
+    assert.equal(rows().length, 2);
+    assert.notEqual(rows()[0].title, rows()[1].title);
+    assert.ok(rows().every((r) => displayTitle(r.title) === "Because you watched Film 3 (2003)"));
+    const bobsFilms = [...bobs().memberKeys];
+    assert.equal(bobsFilms.length, 6);
+
+    // Alice moves on: her Film 3 row is replaced, and Bob's must not notice.
+    plex.history.splice(0, 1, watch("10", 12));
+    await byw.run(testContext().ctx, config);
+    assert.equal(plex.journal.deletedCollections.length, 1, "Alice's old row");
+    assert.deepEqual([...bobs().memberKeys], bobsFilms);
   });
 });

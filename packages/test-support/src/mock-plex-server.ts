@@ -483,10 +483,19 @@ export function startMockPlex(opts: {
       const sectionId = q.get("sectionId") ?? "";
       // The member list rides in the `uri` as a comma-joined key list.
       const uri = q.get("uri") ?? "";
-      const memberKeys = (uri.split("/library/metadata/")[1] ?? "").split(",").filter(Boolean);
+      const added = (uri.split("/library/metadata/")[1] ?? "").split(",").filter(Boolean);
+      // Plex keeps membership as a tag on each item, named by the title: a
+      // second collection with a title already used in this library is a
+      // second view of the *same* items, not a new set. Modelled by sharing
+      // the array itself, so adds, removes and the delete below reach every
+      // collection of that title — the behaviour that pooled twelve people's
+      // "We Think You'd Like" rows into one.
+      const sameTitle = [...collections.values()].find((c) => c.sectionId === sectionId && c.title === title);
+      const memberKeys = sameTitle?.memberKeys ?? [];
+      for (const key of added) if (!memberKeys.includes(key)) memberKeys.push(key);
       const ratingKey = String(nextCollectionKey++);
       collections.set(ratingKey, { ratingKey, title, sectionId, labels: [], memberKeys });
-      journal.createdCollections.push({ title, sectionId, memberKeys });
+      journal.createdCollections.push({ title, sectionId, memberKeys: added });
       json({ Metadata: [{ ratingKey }] });
       return;
     }
@@ -588,6 +597,9 @@ export function startMockPlex(opts: {
           return;
         }
         if (collection) {
+          // Deleting a collection takes its tag off the items, which empties
+          // every other collection sharing the title (see creation above).
+          collection.memberKeys.length = 0;
           collections.delete(key);
           journal.deletedCollections.push(key);
           emptyOk();
@@ -669,7 +681,8 @@ export function startMockPlex(opts: {
         notFound();
         return;
       }
-      collection.memberKeys = collection.memberKeys.filter((k) => k !== itemKey);
+      // In place: the array may be shared with same-titled collections.
+      collection.memberKeys.splice(collection.memberKeys.indexOf(itemKey), 1);
       journal.collectionItemRemoves.push({ ratingKey: collection.ratingKey, itemKey });
       emptyOk();
       return;

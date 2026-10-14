@@ -1,7 +1,7 @@
 import { BYW_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
-import { errorMessage } from "@tinkerbell/core";
+import { displayTitle, errorMessage, personalRowTitle } from "@tinkerbell/core";
 import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
 import { createPlexClient, type PlexClient, type PlexItem } from "@tinkerbell/plex";
 
@@ -369,6 +369,11 @@ export function createBecauseYouWatchedCommand(
       }
 
       const collectionLabels = isPerUser ? personalRowLabels(user.plexUsername, BYW_LABEL) : BYW_LABELS;
+      // Per person, the title is theirs alone, or two people who watched the
+      // same thing share one row's contents — and deleting either empties
+      // both. See `personal-title.ts`. A server-wide row is one row anyway.
+      const rowTitle = (watched: string) =>
+        isPerUser ? personalRowTitle(bywRowName(watched), user.plexUsername) : bywRowName(watched);
       // A server-wide row is for everyone, so every Home.
       const pinOptions = isPerUser
         ? personalRowPin(!!user.isOwner)
@@ -428,12 +433,12 @@ export function createBecauseYouWatchedCommand(
             ? `Asking the LLM for "Because you watched" collections...`
             : `Building "Because you watched" collections with the built-in recommender${budgetSpent ? ` — ${budgetSpent}` : ""}...`,
         );
-        const excludedRows = new Set((userPrefs?.excludedCollections ?? []).map((t) => t.toLowerCase()));
+        const excludedRows = new Set((userPrefs?.excludedCollections ?? []).map((t) => displayTitle(t).toLowerCase()));
         const excludedTitles = new Set((userPrefs?.excludedTitles ?? []).map((t) => t.toLowerCase()));
         const aiCollections: BywAnswer[] = [];
         for (let i = 0; i < watchedTitles.length; i++) {
           const { title, ratingKey } = watchedTitles[i];
-          const rowName = bywRowName(title).toLowerCase();
+          const rowName = rowTitle(title).toLowerCase();
           if (existingNames.has(rowName)) {
             ctx.log(`[${i + 1}/${watchedTitles.length}] "${bywRowName(title)}" already exists, keeping it.`);
             keptNames.add(rowName);
@@ -441,7 +446,7 @@ export function createBecauseYouWatchedCommand(
           }
           ctx.log(`[${i + 1}/${watchedTitles.length}] Generating collection for "${title}"...`);
           if (!llm) {
-            if (excludedRows.has(rowName)) {
+            if (excludedRows.has(bywRowName(title).toLowerCase())) {
               ctx.log(`Skipping "${bywRowName(title)}" — the user said it wasn't for them.`);
               continue;
             }
@@ -452,7 +457,7 @@ export function createBecauseYouWatchedCommand(
             }
             const picks = closest.filter((item) => !excludedTitles.has(item.title.toLowerCase())).slice(0, MAX_ITEMS);
             aiCollections.push({
-              name: bywRowName(title),
+              name: rowTitle(title),
               items: picks.map((item) => item.title),
               watched: { title, ratingKey },
               ratingKeys: picks.map((item) => item.ratingKey),
@@ -476,7 +481,9 @@ export function createBecauseYouWatchedCommand(
               { shortlisted: !!closest },
             );
             if (col) {
-              aiCollections.push({ ...col, watched: { title, ratingKey } });
+              // The model is told the name; the row's real title is the
+              // per-person one, whatever the model wrote.
+              aiCollections.push({ ...col, name: rowTitle(title), watched: { title, ratingKey } });
             }
           } catch (err) {
             // Stop outright rather than carry on with what was generated so
@@ -614,7 +621,7 @@ export function createBecauseYouWatchedCommand(
     // A row this person has already said isn't for them: don't spend a model call
     // rebuilding it. The name is fixed, so it can be checked before anything else.
     const rowName = bywRowName(watchedTitle);
-    const excludedRows = new Set((prefs?.excludedCollections ?? []).map((t) => t.toLowerCase()));
+    const excludedRows = new Set((prefs?.excludedCollections ?? []).map((t) => displayTitle(t).toLowerCase()));
     if (excludedRows.has(rowName.toLowerCase())) {
       ctx.log(`Skipping "${rowName}" — the user said it wasn't for them.`);
       return { collection: null, skipped: "the user said this row wasn't for them", usage: null, response: null };

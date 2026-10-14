@@ -7,7 +7,7 @@ import type { TrpcDeps } from "./deps.ts";
  */
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { parseBearerToken, userPreferencesSchema } from "@tinkerbell/core";
+import { displayTitle, parseBearerToken, userPreferencesSchema } from "@tinkerbell/core";
 import { TASTES_PREFERENCE_KEYS, type PortalComponentId } from "@tinkerbell/contracts";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { mapNotConfiguredClient } from "./_base.ts";
@@ -307,9 +307,12 @@ export function createPortalRouter(deps: TrpcDeps) {
         // The collection's name, not an item's — this button is pressed on a row.
         // It used to be added to `excludedTitles`, which every consumer matches
         // against item titles, so the row came back unchanged on the next run.
-        const excludedCollections = current.preferences.excludedCollections.includes(input.title)
+        // As the person read it: their row's real title ends in invisible
+        // per-person marks (`personal-title.ts`), which the jobs strip too.
+        const title = displayTitle(input.title);
+        const excludedCollections = current.preferences.excludedCollections.includes(title)
           ? current.preferences.excludedCollections
-          : [...current.preferences.excludedCollections, input.title];
+          : [...current.preferences.excludedCollections, title];
         setUserPreferences(
           ctx.session.userId,
           { ...current.preferences, excludedCollections },

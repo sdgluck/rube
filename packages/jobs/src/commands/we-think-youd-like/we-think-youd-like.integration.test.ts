@@ -10,7 +10,7 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { noopCheckpoint, ConfigStoreToken, type JobContext } from "@tinkerbell/core";
+import { displayTitle, noopCheckpoint, personalRowTitle, ConfigStoreToken, type JobContext } from "@tinkerbell/core";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
 import { ServicesToken } from "@tinkerbell/composition";
 import { DbToken, llmUsage, playbackSessions, plexUsers } from "@tinkerbell/db";
@@ -150,7 +150,12 @@ describe("we-think-youd-like", () => {
     assert.match(log.join("\n"), /bob: 0 title\(s\)/);
     assert.equal(plex.collections.size, 1);
     const [row] = [...plex.collections.values()];
-    assert.equal(row.title, "We Think You'd Like");
+    assert.equal(displayTitle(row.title), "We Think You'd Like");
+    assert.equal(
+      row.title,
+      personalRowTitle("We Think You'd Like", "alice"),
+      "her own title, so her row's contents are hers",
+    );
     // No baseline label: restrictions are `label=Tinkerbell,User:<self>`, an OR, so
     // carrying it would show Alice's row to everyone.
     assert.deepEqual(row.labels, [WTYL_LABEL, "User:alice"]);
@@ -169,6 +174,63 @@ describe("we-think-youd-like", () => {
     const sent = JSON.stringify(body.messages);
     assert.match(sent, /<library>/);
     assert.match(sent, /<history>/);
+  });
+
+  it("keeps each person's picks in their own row", async () => {
+    // Plex keeps collection membership by title (the mock models it): with one
+    // shared title, Alice's and Bob's rows were one pooled list of both.
+    db.insert(playbackSessions)
+      .values(
+        [10, 11, 12, 13, 14].map((i) => ({
+          id: `b${i}`,
+          userId: 11,
+          username: "bob",
+          ratingKey: String(100 + i),
+          title: `Film ${i}`,
+          type: "movie",
+          startedAt: Date.now() - (i - 9) * 86_400_000,
+          lastSeenAt: Date.now(),
+          completionPct: 1,
+        })),
+      )
+      .run();
+    let call = 0;
+    llm.onCall = () => {
+      // Alice first (her history is 0–5), then Bob (10–14): different picks.
+      llm.answer = call++ === 0 ? answer("Alice's.", [6, 7, 8, 9, 15, 16]) : answer("Bob's.", [0, 1, 2, 3, 4, 5]);
+    };
+    await run(testContext().ctx, CONFIG);
+
+    const rows = [...plex.collections.values()];
+    assert.equal(rows.length, 2);
+    const alice = rows.find((r) => r.labels.includes("User:alice"))!;
+    const bob = rows.find((r) => r.labels.includes("User:bob"))!;
+    assert.notEqual(alice.title, bob.title);
+    assert.equal(displayTitle(alice.title), displayTitle(bob.title), "and they read the same");
+    assert.deepEqual([...alice.memberKeys].sort(), ["106", "107", "108", "109", "115", "116"]);
+    assert.deepEqual([...bob.memberKeys].sort(), ["100", "101", "102", "103", "104", "105"]);
+  });
+
+  it("replaces a row made under the shared title, once, with one under the person's own", async () => {
+    plex.collections.set("9100", {
+      ratingKey: "9100",
+      title: "We Think You'd Like",
+      sectionId: "1",
+      labels: [WTYL_LABEL, "User:alice"],
+      memberKeys: ["110", "111"],
+    });
+    llm.answer = answer("Fresh.", [10, 11, 12, 13, 14, 15]);
+    await run(testContext().ctx, CONFIG);
+
+    assert.deepEqual(plex.journal.deletedCollections, ["9100"]);
+    const [row] = [...plex.collections.values()];
+    assert.equal(row.title, personalRowTitle("We Think You'd Like", "alice"));
+
+    // And on the run after, it is the row that is kept and edited.
+    llm.answer = answer("Again.", [12, 13, 14, 15, 16, 17]);
+    await run(testContext().ctx, CONFIG);
+    assert.deepEqual(plex.journal.deletedCollections, ["9100"], "not rebuilt a second time");
+    assert.equal([...plex.collections.values()][0].ratingKey, row.ratingKey);
   });
 
   it("edits the row in place on the next run rather than replacing it", async () => {

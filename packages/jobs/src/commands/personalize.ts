@@ -1,7 +1,7 @@
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createDispatchCommand } from "./generate/dispatch.ts";
 import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
+import { displayTitle, errorMessage, personalRowTitle } from "@tinkerbell/core";
 
 import { meetsPinFloor } from "./generate/rotation.ts";
 import { parseRuleConfig } from "./generate/config.ts";
@@ -114,7 +114,7 @@ export function createPersonalizeCommand(deps: Services) {
       const userLabel = `User:${user.username}`;
       const excluded = new Set(user.preferences.excludedTitles.map((t) => t.toLowerCase()));
       // Rows this person has said aren't for them, from the portal's "Not for me".
-      const excludedRows = new Set(user.preferences.excludedCollections.map((t) => t.toLowerCase()));
+      const excludedRows = new Set(user.preferences.excludedCollections.map((t) => displayTitle(t).toLowerCase()));
       const rowCap = user.preferences.rowCount ?? Infinity;
       let rowsCreated = 0;
 
@@ -170,11 +170,15 @@ export function createPersonalizeCommand(deps: Services) {
               continue;
             }
 
+            // This person's own title: the shared rule builds a collection of
+            // the same name, and so does every other person's copy of this
+            // row — the same title would pool all of their contents. See
+            // `personal-title.ts`.
             const key = await client.createCollectionWithLabel(
               pending.section.key,
               pending.section.type,
               machineId,
-              pending.name,
+              personalRowTitle(pending.name, user.username),
               matched.map((m) => m.ratingKey),
               personalRowLabels(user.username, ruleLabel),
             );
