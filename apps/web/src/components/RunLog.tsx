@@ -126,17 +126,20 @@ export default function RunLog({
     }
   }, [log, isFiltering, following, live]);
 
-  // Scrolling the page up while following means "let me read": stop. The
-  // check is where the end of the log is, not which way the wheel went, so the
-  // follow scroll itself — which leaves the end in view — never trips it.
+  // Scrolling up while following means "let me read": stop. Whatever scrolls
+  // — the window on a phone, the app's content area on desktop, the pane when
+  // it's bounded — so the listener captures scrolls from every element rather
+  // than naming one. The check is where the end of the log is, not which way
+  // the wheel went, so the follow scroll itself (which leaves the end in view)
+  // never trips it.
   useEffect(() => {
     if (!following) return;
     const onScroll = () => {
       const end = endRef.current?.getBoundingClientRect();
       if (end && end.bottom > window.innerHeight + 80) setFollow(false);
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true });
   }, [following]);
 
   const handleScroll = () => {
