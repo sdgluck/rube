@@ -2223,6 +2223,9 @@ importers:
       '@tinkerbell/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
+      '@tinkerbell/domain.recommendations':
+        specifier: workspace:*
+        version: link:../../domains/recommendations
       '@tinkerbell/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
@@ -2305,9 +2308,6 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/domain.recommendations':
-        specifier: workspace:*
-        version: link:../../domains/recommendations
       '@tinkerbell/test-support':
         specifier: workspace:*
         version: link:../test-support

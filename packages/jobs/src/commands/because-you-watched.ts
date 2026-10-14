@@ -2,6 +2,8 @@ import { BYW_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
 import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
 import { displayTitle, errorMessage, personalRowTitle } from "@tinkerbell/core";
+import { describeSkip, type RankResult } from "@tinkerbell/domain.recommendations";
+import { createRecommenderLog } from "./recommender-log.ts";
 import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
 import { createPlexClient, type PlexClient, type PlexItem } from "@tinkerbell/plex";
 
@@ -268,20 +270,35 @@ export function createBecauseYouWatchedCommand(
   }
 
   /**
-   * The titles most like `watched` by the recommender, closest first, or null
-   * when it can't say — off, no model, the title has no vector, or too little
-   * of the library does — and the whole library should be used as before.
+   * The titles most like `watched` by the recommender, closest first — or no
+   * items when it can't say (off, no model, the title has no vector, or too
+   * little of the library does) and the whole library should be used as
+   * before. The result says which, for the run log.
    */
-  function closestTo(watched: Watched, libraryItems: PlexItem[], limit: number): PlexItem[] | null {
-    if (!watched.ratingKey) return null;
-    const keys = recommendations.similar({
-      seed: watched.ratingKey,
+  function closestTo(
+    watched: Watched,
+    libraryItems: PlexItem[],
+    limit: number,
+  ): { items: PlexItem[] | null; result: RankResult } {
+    // A title with no history key (a preview naming one by hand that isn't in
+    // the library) has no vector either; asking with an empty seed says so.
+    const result = recommendations.similar({
+      seed: watched.ratingKey ?? "",
       candidates: libraryItems.map((i) => i.ratingKey),
       limit,
     });
-    if (!keys) return null;
+    if (!("ratingKeys" in result)) return { items: null, result };
     const byKey = new Map(libraryItems.map((i) => [i.ratingKey, i]));
-    return keys.map((k) => byKey.get(k)!);
+    return { items: result.ratingKeys.map((k) => byKey.get(k)!), result };
+  }
+
+  /** One line for the run log: what the recommender made of this title. */
+  function describeClosest(title: string, closest: { items: PlexItem[] | null; result: RankResult }): string {
+    if (closest.items) {
+      const names = closest.items.slice(0, 5).map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`);
+      return `"${title}": the ${closest.items.length} closest by the recommender (top: ${names.join(", ")}${closest.items.length > 5 ? ", …" : ""}).`;
+    }
+    return `"${title}": recommender skipped — ${"skipped" in closest.result ? describeSkip(closest.result) : "no ranking"}.`;
   }
 
   async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
@@ -358,6 +375,8 @@ export function createBecauseYouWatchedCommand(
     const targetSections = await resolveTargetSections(client, getConfig, config.sections);
 
     ctx.log(`Sections: ${targetSections.map((s) => s.title).join(", ")}`);
+    const recLog = createRecommenderLog(ctx.log, recommender);
+    if (ranked) recLog.header(targetSections.map((s) => s.title));
 
     const totalSteps = targetSections.length * resolvedUsers.length;
     let step = 0;
@@ -451,11 +470,15 @@ export function createBecauseYouWatchedCommand(
               continue;
             }
             const closest = closestTo({ title, ratingKey }, libraryItems, MAX_ITEMS + excludedTitles.size);
-            if (!closest) {
-              ctx.log(`The recommender can't place "${title}" in this library, and there's no AI to ask; skipping.`);
+            recLog.outcome(closest.result);
+            ctx.log(describeClosest(title, closest));
+            if (!closest.items) {
+              ctx.log(`No AI to ask instead; skipping "${title}".`);
               continue;
             }
-            const picks = closest.filter((item) => !excludedTitles.has(item.title.toLowerCase())).slice(0, MAX_ITEMS);
+            const picks = closest.items
+              .filter((item) => !excludedTitles.has(item.title.toLowerCase()))
+              .slice(0, MAX_ITEMS);
             aiCollections.push({
               name: rowTitle(title),
               items: picks.map((item) => item.title),
@@ -466,19 +489,23 @@ export function createBecauseYouWatchedCommand(
           }
           try {
             const synopsis = INCLUDE_SYNOPSIS ? await synopsisOf(client, ratingKey, ctx.log) : null;
-            const closest = closestTo({ title, ratingKey }, libraryItems, SHORTLIST);
+            const closest = ranked ? closestTo({ title, ratingKey }, libraryItems, SHORTLIST) : null;
+            if (closest) {
+              recLog.outcome(closest.result);
+              ctx.log(describeClosest(title, closest) + (closest.items ? "" : " Sending the whole library."));
+            }
             const { collection: col } = await generateBYWCollection(
               llm,
               ctx,
               title,
               synopsis,
-              closest ?? libraryItems,
+              closest?.items ?? libraryItems,
               section.title,
               MIN_ITEMS,
               MAX_ITEMS,
               userPrefs,
               "because-you-watched",
-              { shortlisted: !!closest },
+              { shortlisted: !!closest?.items },
             );
             if (col) {
               // The model is told the name; the row's real title is the
@@ -592,6 +619,7 @@ export function createBecauseYouWatchedCommand(
       }
     }
 
+    recLog.footer();
     ctx.log("All done!");
   }
 
@@ -848,18 +876,20 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
           libraryItems,
           SHORTLIST,
         );
+        if (ranked.enabled && ranked.available)
+          onStep(`[${i + 1}/${titles.length}] ${describeClosest(watchedTitle, closest)}`);
         const { collection, skipped, usage, response } = await generateBYWCollection(
           llmConfig,
           { log, signal },
           watchedTitle,
           synopsis,
-          closest ?? libraryItems,
+          closest.items ?? libraryItems,
           section.title,
           minItems,
           maxItems,
           prefs,
           "because-you-watched-preview",
-          { shortlisted: !!closest },
+          { shortlisted: !!closest.items },
         );
         // The verbatim answer, each title marked by whether a real run would
         // keep it — so the watched title and repeats read as unmatched.

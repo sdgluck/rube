@@ -14,9 +14,12 @@
  * equations), which is what the offline eval measured as best — a plain
  * weighted mean of watched titles' vectors scored a third lower.
  *
- * Every entry point returns `null` for "can't help, use the old path": the
- * feature is off, the image has no model, or too little of the library has
- * vectors to rank it fairly. Callers must never treat `null` as "no picks".
+ * Every entry point returns a `RankResult`: the ranking, or why there isn't one
+ * — the feature is off, the image has no model, too little of the library has
+ * vectors to rank it fairly, or the person/title has nothing to rank from.
+ * The reason is returned rather than logged here because the logger is the
+ * server's stdout; a run log that said "ranking with the recommender" and then
+ * nothing could not tell anyone whether it had. Callers write it to the run.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -55,12 +58,53 @@ export interface WeightedTitle {
   weight: number;
 }
 
+export interface Coverage {
+  /** Titles the model has a vector for. */
+  withVector: number;
+  total: number;
+}
+
+export type RankSkip = "off" | "no-model" | "coverage" | "no-liked-history" | "seed-has-no-vector";
+
+export type RankResult =
+  | {
+      ratingKeys: string[];
+      coverage: Coverage;
+      /** For a taste ranking: how many of the history's titles had a vector to rank from. */
+      history?: { used: number; total: number };
+    }
+  | { skipped: RankSkip; coverage?: Coverage };
+
+/** A `RankResult`'s skip, as a run log should say it. */
+export function describeSkip(result: Extract<RankResult, { skipped: RankSkip }>): string {
+  const pct = (c: Coverage) => `${Math.round((100 * c.withVector) / Math.max(c.total, 1))}%`;
+  switch (result.skipped) {
+    case "off":
+      return "the built-in recommender is off";
+    case "no-model":
+      return "this build has no recommender model";
+    case "coverage":
+      // Of the titles it was asked to rank — not the library. "Run a media
+      // sync" belongs to the library-wide line, where an index with no TMDb
+      // ids at all is what it would mean.
+      return result.coverage && result.coverage.withVector === 0
+        ? "none of these titles has a vector"
+        : `only ${result.coverage ? pct(result.coverage) : "a few"} of these titles have a vector (needs ${Math.round(MIN_COVERAGE * 100)}%)`;
+    case "no-liked-history":
+      return "nothing they liked has a vector to rank from";
+    case "seed-has-no-vector":
+      return "the model has no vector for it";
+  }
+}
+
 export interface RecommenderStatus {
   enabled: boolean;
   /** The image (or checkout) has a readable model. */
   available: boolean;
   error?: string;
   model?: Pick<ModelHeader, "version" | "count" | "sources" | "attribution">;
+  /** Per library: how much of it the model can rank. */
+  libraries?: Array<{ sectionId: string; sectionTitle: string } & Coverage>;
 }
 
 export interface RecommendationsDeps {
@@ -100,7 +144,38 @@ export function createRecommendations(deps: RecommendationsDeps) {
     const m = model();
     if (!m) return { enabled: enabled(), available: false, error: (loaded as { error: string }).error };
     const { version, count, sources, attribution } = m.header;
-    return { enabled: enabled(), available: true, model: { version, count, sources, attribution } };
+    return {
+      enabled: enabled(),
+      available: true,
+      model: { version, count, sources, attribution },
+      libraries: libraries(m),
+    };
+  }
+
+  /** Every film and show in the index, by library, against what the model knows. */
+  function libraries(m: Model): NonNullable<RecommenderStatus["libraries"]> {
+    const bySection = new Map<string, { sectionId: string; sectionTitle: string } & Coverage>();
+    for (const r of db
+      .select({
+        sectionId: mediaItems.sectionId,
+        sectionTitle: mediaItems.sectionTitle,
+        type: mediaItems.type,
+        tmdbId: mediaItems.tmdbId,
+      })
+      .from(mediaItems)
+      .all()) {
+      if (r.type !== "movie" && r.type !== "show") continue;
+      const entry = bySection.get(r.sectionId) ?? {
+        sectionId: r.sectionId,
+        sectionTitle: r.sectionTitle,
+        withVector: 0,
+        total: 0,
+      };
+      entry.total++;
+      if (r.tmdbId != null && m.rows.has(`${r.type === "show" ? "tv" : "movie"}:${r.tmdbId}`)) entry.withVector++;
+      bySection.set(r.sectionId, entry);
+    }
+    return [...bySection.values()].sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle));
   }
 
   /** ratingKey → model row, for the keys that have a vector. Shows map to their `tv:` id. */
@@ -121,20 +196,18 @@ export function createRecommendations(deps: RecommendationsDeps) {
     return out;
   }
 
-  /** The model and candidate rows, or null — with the reason logged — when the old path should run. */
-  function prepare(candidates: string[], what: string) {
-    if (!enabled()) return null;
+  /** The model and candidate rows, or why the old path should run instead. */
+  function prepare(
+    candidates: string[],
+  ): { m: Model; rows: Map<string, number>; coverage: Coverage } | Extract<RankResult, { skipped: RankSkip }> {
+    if (!enabled()) return { skipped: "off" };
     const m = model();
-    if (!m || candidates.length === 0) return null;
+    if (!m) return { skipped: "no-model" };
     const rows = rowsFor(m, candidates);
-    const coverage = rows.size / candidates.length;
-    if (coverage < MIN_COVERAGE) {
-      log.info(
-        `${what}: only ${Math.round(coverage * 100)}% of ${candidates.length} titles have a vector; falling back to the unranked library`,
-      );
-      return null;
-    }
-    return { m, rows };
+    const coverage = { withVector: rows.size, total: candidates.length };
+    if (candidates.length === 0 || rows.size / candidates.length < MIN_COVERAGE)
+      return { skipped: "coverage", coverage };
+    return { m, rows, coverage };
   }
 
   function topK(scored: Array<[string, number]>, limit: number): string[] {
@@ -173,10 +246,10 @@ export function createRecommendations(deps: RecommendationsDeps) {
    * shortlist. Candidates without a vector can't be scored and are left out;
    * that is what the coverage floor protects.
    */
-  function shortlist(opts: { history: WeightedTitle[]; candidates: string[]; limit: number }): string[] | null {
-    const ready = prepare(opts.candidates, "shortlist");
-    if (!ready) return null;
-    const { m, rows } = ready;
+  function shortlist(opts: { history: WeightedTitle[]; candidates: string[]; limit: number }): RankResult {
+    const ready = prepare(opts.candidates);
+    if ("skipped" in ready) return ready;
+    const { m, rows, coverage } = ready;
     const historyRows = rowsFor(
       m,
       opts.history.map((h) => h.ratingKey),
@@ -187,14 +260,18 @@ export function createRecommendations(deps: RecommendationsDeps) {
     });
     // Nothing they liked has a vector: a fold-in from only negatives (or
     // nothing) is the regulariser talking, not their taste.
-    if (!history.some((h) => h.weight > 0)) return null;
+    if (!history.some((h) => h.weight > 0)) return { skipped: "no-liked-history", coverage };
 
     const u = foldIn(m, history);
     const y = new Float64Array(m.header.dims);
-    return topK(
-      [...rows].map(([key, row]) => [key, dot(m.vector(row, y), u)]),
-      opts.limit,
-    );
+    return {
+      ratingKeys: topK(
+        [...rows].map(([key, row]) => [key, dot(m.vector(row, y), u)]),
+        opts.limit,
+      ),
+      coverage,
+      history: { used: history.length, total: opts.history.length },
+    };
   }
 
   /**
@@ -213,24 +290,27 @@ export function createRecommendations(deps: RecommendationsDeps) {
    *   × √length   hit@20 0.174, tail 0%,                 median popularity 9.2k
    *   dot         hit@20 0.191, tail 0%,                 median popularity 11.9k
    */
-  function similar(opts: { seed: string; candidates: string[]; limit: number }): string[] | null {
-    const ready = prepare(opts.candidates, "similar");
-    if (!ready) return null;
-    const { m, rows } = ready;
+  function similar(opts: { seed: string; candidates: string[]; limit: number }): RankResult {
+    const ready = prepare(opts.candidates);
+    if ("skipped" in ready) return ready;
+    const { m, rows, coverage } = ready;
     const seedRow = rowsFor(m, [opts.seed]).get(opts.seed);
-    if (seedRow === undefined) return null;
+    if (seedRow === undefined) return { skipped: "seed-has-no-vector", coverage };
     const seed = m.vector(seedRow);
     const seedNorm = norm(seed) || 1;
     const y = new Float64Array(m.header.dims);
-    return topK(
-      [...rows]
-        .filter(([key]) => key !== opts.seed)
-        .map(([key, row]) => {
-          m.vector(row, y);
-          return [key, dot(y, seed) / (seedNorm * Math.sqrt(norm(y) || 1))];
-        }),
-      opts.limit,
-    );
+    return {
+      ratingKeys: topK(
+        [...rows]
+          .filter(([key]) => key !== opts.seed)
+          .map(([key, row]) => {
+            m.vector(row, y);
+            return [key, dot(y, seed) / (seedNorm * Math.sqrt(norm(y) || 1))];
+          }),
+        opts.limit,
+      ),
+      coverage,
+    };
   }
 
   return { status, shortlist, similar };

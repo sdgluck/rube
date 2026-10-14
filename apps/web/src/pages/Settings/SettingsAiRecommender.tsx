@@ -69,6 +69,17 @@ export default function SettingsAiRecommender({ enabled, hasProvider }: { enable
             <span className={styles.statusDot} />
             Model v{status.model.version} · {status.model.count.toLocaleString()} films and series
           </span>
+          {status.libraries && status.libraries.length > 0 && (
+            <p className={styles.hint}>
+              {status.libraries
+                .map((lib) =>
+                  lib.withVector === 0
+                    ? `${lib.sectionTitle}: no titles with a TMDb id yet — run a media sync`
+                    : `${lib.sectionTitle}: ${Math.round((100 * lib.withVector) / Math.max(lib.total, 1))}% of ${lib.total.toLocaleString()} titles`,
+                )
+                .join(" · ")}
+            </p>
+          )}
           <p className={styles.hint}>{status.model.attribution}</p>
         </>
       )}

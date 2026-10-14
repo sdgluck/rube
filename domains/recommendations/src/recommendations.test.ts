@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { createConfigStore } from "@tinkerbell/core";
 import { mediaItems } from "@tinkerbell/db";
 import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { createRecommendations, MIN_COVERAGE, parseModel, solveSpd } from "./index.ts";
+import { createRecommendations, describeSkip, MIN_COVERAGE, parseModel, solveSpd, type RankResult } from "./index.ts";
 
 const FIXTURE = join(import.meta.dirname, "__fixtures__", "tiny.bin");
 
@@ -47,6 +47,11 @@ function seed(db: TestDb["db"]) {
     ])
     .run();
 }
+
+/** The ranking, or null when it was skipped — what most assertions care about. */
+const keys = (r: RankResult) => ("ratingKeys" in r ? r.ratingKeys : null);
+/** Why it was skipped, or null when it ranked. */
+const skip = (r: RankResult) => ("skipped" in r ? r.skipped : null);
 
 function build(opts: { enabled?: boolean; modelPath?: string } = {}) {
   t = createTestDb();
@@ -97,12 +102,16 @@ describe("solveSpd", () => {
 describe("shortlist", () => {
   test("ranks what sits nearest the liked history first", () => {
     const recs = build();
-    const picks = recs.shortlist({
+    const result = recs.shortlist({
       history: [{ ratingKey: "m1", weight: 1 }],
       candidates: ["m2", "m3", "m4", "m5", "s10"],
       limit: 3,
     });
-    assert.deepEqual(picks, ["m2", "s10", "m5"]);
+    assert.deepEqual(keys(result), ["m2", "s10", "m5"]);
+    // What the run log reports alongside the ranking.
+    assert.ok("ratingKeys" in result);
+    assert.deepEqual(result.coverage, { withVector: 5, total: 5 });
+    assert.deepEqual(result.history, { used: 1, total: 1 });
   });
 
   test("a title given up on pushes its neighbours down", () => {
@@ -110,50 +119,70 @@ describe("shortlist", () => {
     // tv:10 leans a fifth towards movie:4's axis and movie:2 doesn't, so
     // whether movie:4 was liked or abandoned decides which of the two leads.
     const rank = (weight: number) =>
-      recs.shortlist({
-        history: [
-          { ratingKey: "m1", weight: 1 },
-          { ratingKey: "m4", weight },
-        ],
-        candidates: ["m2", "s10"],
-        limit: 2,
-      });
+      keys(
+        recs.shortlist({
+          history: [
+            { ratingKey: "m1", weight: 1 },
+            { ratingKey: "m4", weight },
+          ],
+          candidates: ["m2", "s10"],
+          limit: 2,
+        }),
+      );
     assert.deepEqual(rank(1), ["s10", "m2"]);
     assert.deepEqual(rank(-0.5), ["m2", "s10"]);
   });
 
   test("leaves out candidates it has no vector for", () => {
     const recs = build();
-    const picks = recs.shortlist({
-      history: [{ ratingKey: "m1", weight: 1 }],
-      candidates: ["m2", "m3", "m4", "x"],
-      limit: 10,
-    });
+    const picks = keys(
+      recs.shortlist({
+        history: [{ ratingKey: "m1", weight: 1 }],
+        candidates: ["m2", "m3", "m4", "x"],
+        limit: 10,
+      }),
+    );
     assert.ok(picks && !picks.includes("x"), `got ${picks}`);
   });
 
-  test("falls back (null) below the coverage floor", () => {
+  test("skips below the coverage floor, and says how far below", () => {
     const recs = build();
     // One of three candidates has a vector: well under MIN_COVERAGE.
     assert.ok(1 / 3 < MIN_COVERAGE);
-    assert.equal(
-      recs.shortlist({ history: [{ ratingKey: "m1", weight: 1 }], candidates: ["m2", "x", "y"], limit: 5 }),
-      null,
-    );
+    const result = recs.shortlist({
+      history: [{ ratingKey: "m1", weight: 1 }],
+      candidates: ["m2", "x", "y"],
+      limit: 5,
+    });
+    assert.equal(skip(result), "coverage");
+    assert.ok("skipped" in result);
+    assert.match(describeSkip(result), /only 33% of these titles have a vector/);
+  });
+
+  test("says when none of the titles has a vector, rather than a percentage", () => {
+    const result = build().shortlist({ history: [{ ratingKey: "m1", weight: 1 }], candidates: ["x", "y"], limit: 5 });
+    assert.ok("skipped" in result);
+    assert.equal(describeSkip(result), "none of these titles has a vector");
   });
 
   test("falls back when nothing they liked has a vector", () => {
     const recs = build();
     const candidates = ["m2", "m3", "m4"];
-    assert.equal(recs.shortlist({ history: [{ ratingKey: "x", weight: 1 }], candidates, limit: 5 }), null);
-    assert.equal(recs.shortlist({ history: [{ ratingKey: "m1", weight: -0.5 }], candidates, limit: 5 }), null);
+    assert.equal(
+      skip(recs.shortlist({ history: [{ ratingKey: "x", weight: 1 }], candidates, limit: 5 })),
+      "no-liked-history",
+    );
+    assert.equal(
+      skip(recs.shortlist({ history: [{ ratingKey: "m1", weight: -0.5 }], candidates, limit: 5 })),
+      "no-liked-history",
+    );
   });
 
   test("does nothing until turned on", () => {
     const recs = build({ enabled: false });
     assert.equal(
-      recs.shortlist({ history: [{ ratingKey: "m1", weight: 1 }], candidates: ["m2", "m3"], limit: 5 }),
-      null,
+      skip(recs.shortlist({ history: [{ ratingKey: "m1", weight: 1 }], candidates: ["m2", "m3"], limit: 5 })),
+      "off",
     );
     assert.equal(recs.status().enabled, false);
   });
@@ -162,7 +191,7 @@ describe("shortlist", () => {
 describe("similar", () => {
   test("ranks by likeness to the seed, never returning the seed", () => {
     const recs = build();
-    assert.deepEqual(recs.similar({ seed: "m1", candidates: ["m1", "m2", "m3", "s10", "m4"], limit: 2 }), [
+    assert.deepEqual(keys(recs.similar({ seed: "m1", candidates: ["m1", "m2", "m3", "s10", "m4"], limit: 2 })), [
       "m2",
       "s10",
     ]);
@@ -172,17 +201,17 @@ describe("similar", () => {
     // movie:6 is movie:1's direction exactly, at a third of the length: a thin,
     // low-confidence projection. Cosine would put it first; it must not be.
     const recs = build();
-    assert.deepEqual(recs.similar({ seed: "m1", candidates: ["m6", "m2"], limit: 2 }), ["m2", "m6"]);
+    assert.deepEqual(keys(recs.similar({ seed: "m1", candidates: ["m6", "m2"], limit: 2 })), ["m2", "m6"]);
   });
 
   test("resolves a show through its tv: id", () => {
     const recs = build();
-    assert.deepEqual(recs.similar({ seed: "s10", candidates: ["m1", "m3", "m4"], limit: 1 }), ["m1"]);
+    assert.deepEqual(keys(recs.similar({ seed: "s10", candidates: ["m1", "m3", "m4"], limit: 1 })), ["m1"]);
   });
 
   test("falls back when the seed has no vector", () => {
     const recs = build();
-    assert.equal(recs.similar({ seed: "x", candidates: ["m1", "m2", "m3"], limit: 2 }), null);
+    assert.equal(skip(recs.similar({ seed: "x", candidates: ["m1", "m2", "m3"], limit: 2 })), "seed-has-no-vector");
   });
 });
 
@@ -194,11 +223,22 @@ describe("status", () => {
     assert.match(status.model?.attribution ?? "", /MovieLens/);
   });
 
+  test("reports how much of each library the model can rank", () => {
+    // Movies 1–6 and the show have vectors; "x" has an unknown id and "y" none.
+    assert.deepEqual(build().status().libraries, [
+      { sectionId: "1", sectionTitle: "Movies", withVector: 6, total: 8 },
+      { sectionId: "2", sectionTitle: "TV", withVector: 1, total: 1 },
+    ]);
+  });
+
   test("a build without the model says so instead of throwing", () => {
     const recs = build({ modelPath: join(import.meta.dirname, "__fixtures__", "missing.bin") });
     const status = recs.status();
     assert.equal(status.available, false);
     assert.match(status.error ?? "", /doesn't include the recommender model/);
-    assert.equal(recs.shortlist({ history: [{ ratingKey: "m1", weight: 1 }], candidates: ["m2"], limit: 1 }), null);
+    assert.equal(
+      skip(recs.shortlist({ history: [{ ratingKey: "m1", weight: 1 }], candidates: ["m2"], limit: 1 })),
+      "no-model",
+    );
   });
 });

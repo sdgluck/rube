@@ -222,7 +222,8 @@ describe("we-think-youd-like with the recommender", () => {
     const { ctx, log } = testContext();
     await wtyl.run(ctx, CONFIG);
     assert.equal(plex.collections.size, 0);
-    assert.match(log.join("\n"), /couldn't rank enough of this library/);
+    assert.match(log.join("\n"), /recommender skipped — none of these titles has a vector/);
+    assert.match(log.join("\n"), /nothing ranked and there's no AI to fall back on; row left as it is/);
   });
 
   it("fills a short answer from the recommender's ranking", async () => {
@@ -248,6 +249,39 @@ describe("we-think-youd-like with the recommender", () => {
     assert.match(row.summary ?? "", /^Picked from what you've been watching/);
   });
 
+  it("says in the run log what the recommender did", async () => {
+    deleteConfig("global_llm");
+    const { ctx, log } = testContext();
+    await wtyl.run(ctx, CONFIG);
+    const text = log.join("\n");
+    assert.match(text, /Built-in recommender: model v0 \(20 titles\)/);
+    assert.match(text, /"Films": 20 of 20 titles have vectors \(100%\)/);
+    assert.match(text, /alice — "Films": ranked from 6 of 6 watched titles; closest: Film \d+ \(20\d\d\)/);
+    assert.match(text, /Recommender ranked 1 of 1 row\(s\)\./);
+  });
+
+  it("says why it fell back, in the run log rather than the server's", async () => {
+    indexLibrary(Array.from({ length: 14 }, (_, i) => i + 6));
+    llm.answer = JSON.stringify({ summary: "Whole library.", items: [6, 7, 8, 9, 10, 11].map(label) });
+    const { ctx, log } = testContext();
+    await wtyl.run(ctx, CONFIG);
+    const text = log.join("\n");
+    assert.match(text, /recommender skipped — none of these titles has a vector; sending the whole library/);
+    assert.match(text, /"Films": 6 of 20 titles have vectors \(30%\)/);
+    assert.match(text, /fell back on 1/);
+  });
+
+  it("reports where the model's picks came from", async () => {
+    llm.answer = JSON.stringify({ summary: "Mixed.", items: [label(6), label(0), "Not A Film (1999)"] });
+    const { ctx, log } = testContext();
+    await wtyl.run(ctx, CONFIG);
+    // Film 0 is hers already, so it is in the library but not the shortlist.
+    assert.match(
+      log.join("\n"),
+      /the model chose 3: 1 from the shortlist, 1 elsewhere in the library, 1 not in the library/,
+    );
+  });
+
   it("still refuses to run with neither an AI provider nor the recommender", async () => {
     deleteConfig("global_llm");
     setConfig("recommender_enabled", false);
@@ -270,6 +304,15 @@ describe("because-you-watched with the recommender", () => {
     assert.equal(row.memberKeys.length, 6);
     assert.ok(!row.memberKeys.includes(key(3)), "never the film it is named for");
     for (const k of row.memberKeys) assert.ok(Number(k) < 110, `${k} is from the other cluster`);
+  });
+
+  it("says in the run log what the recommender made of each title", async () => {
+    deleteConfig("global_llm");
+    const { ctx, log } = testContext();
+    await byw.run(ctx, CONFIG);
+    const text = log.join("\n");
+    assert.match(text, /"Film 3 \(2003\)": the 6 closest by the recommender \(top: Film \d+ \(20\d\d\)/);
+    assert.match(text, /Recommender ranked 1 of 1 row\(s\)\./);
   });
 
   it("sends the model the closest titles, its own cluster first", async () => {

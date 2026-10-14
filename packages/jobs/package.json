@@ -45,6 +45,7 @@
     "@tinkerbell/domain.playback": "workspace:*",
     "@tinkerbell/domain.playlists": "workspace:*",
     "@tinkerbell/domain.prerolls": "workspace:*",
+    "@tinkerbell/domain.recommendations": "workspace:*",
     "@tinkerbell/domain.registry": "workspace:*",
     "@tinkerbell/domain.rule-history": "workspace:*",
     "@tinkerbell/domain.rule-runs": "workspace:*",
@@ -74,7 +75,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tinkerbell/domain.recommendations": "workspace:*",
     "@tinkerbell/test-support": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"

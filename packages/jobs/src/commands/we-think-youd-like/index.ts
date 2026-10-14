@@ -51,6 +51,8 @@ import {
   resolveTargetSections,
 } from "../ai-collection-shared.ts";
 import { personalRowLabels, personalRowPin, repairPersonalRow } from "../../personalize/personal-row.ts";
+import { describeSkip } from "@tinkerbell/domain.recommendations";
+import { createRecommenderLog, topTitles } from "../recommender-log.ts";
 import {
   buildTasteProfile,
   everWatchedKeys,
@@ -109,6 +111,7 @@ interface SectionState {
   genresByKey: Map<string, string[]>;
   match: (title: string) => string | undefined;
   rows: Array<{ ratingKey: string; title: string; labels: string[] }>;
+  titleOf: Map<string, string>;
 }
 
 /** This person's row in a section's WTYL listing, if they have one. */
@@ -502,6 +505,7 @@ export function createWeThinkYoudLikeCommand(
         genresByKey,
         match: libraryTitleMatcher(items),
         rows,
+        titleOf: new Map(items.map((i) => [i.ratingKey, itemLabel(i)])),
       });
       ctx.log(`"${section.title}": ${items.length} item(s), ${rows.length} existing row(s).`);
     }
@@ -509,6 +513,8 @@ export function createWeThinkYoudLikeCommand(
       ctx.log("No library to build in.");
       return;
     }
+    const recLog = createRecommenderLog(ctx.log, recommender);
+    if (ranked) recLog.header(sections.map((s) => s.section.title));
 
     // How much prompt the model takes, asked once: undefined for a hosted
     // model, whose window dwarfs any library, and for an Ollama server that
@@ -569,7 +575,7 @@ export function createWeThinkYoudLikeCommand(
           continue;
         }
 
-        const shortlist = ranked
+        const ranking = ranked
           ? recommendations.shortlist({
               history,
               candidates: state.items
@@ -578,16 +584,28 @@ export function createWeThinkYoudLikeCommand(
               limit: llm ? SHORTLIST : maxItems,
             })
           : null;
+        recLog.outcome(ranking);
+        const shortlist = ranking && "ratingKeys" in ranking ? ranking.ratingKeys : null;
+        const where = `${user.name} — "${state.section.title}"`;
+        if (ranking && "ratingKeys" in ranking) {
+          const used = ranking.history
+            ? ` from ${ranking.history.used} of ${ranking.history.total} watched titles`
+            : "";
+          ctx.log(`${where}: ranked${used}; closest: ${topTitles(ranking.ratingKeys, state.titleOf)}.`);
+        } else if (ranking) {
+          ctx.log(
+            `${where}: recommender skipped — ${describeSkip(ranking)}${llm ? "; sending the whole library" : ""}.`,
+          );
+        }
 
         if (!llm) {
-          // `ranked` is the only way here without a model, so a null
-          // shortlist is the recommender declining this library (too little
-          // of it has vectors) — and with nothing to fall back to, the row
-          // stays as it is rather than being emptied.
+          // `ranked` is the only way here without a model, so no shortlist is
+          // the recommender declining (said just above) — and with nothing to
+          // fall back to, the row stays as it is rather than being emptied.
           if (!shortlist || shortlist.length < minItems) {
             ctx.log(
-              `${user.name} — "${state.section.title}": the recommender couldn't rank enough of this library${
-                shortlist ? ` (${shortlist.length} pick(s), need ${minItems})` : ""
+              `${where}: ${
+                shortlist ? `only ${shortlist.length} pick(s), need ${minItems}` : "nothing ranked"
               } and there's no AI to fall back on; row left as it is.`,
             );
             continue;
@@ -652,6 +670,21 @@ export function createWeThinkYoudLikeCommand(
           ctx.log(`${user.name} — "${state.section.title}": ${failure}; row left as it is.`);
           continue;
         }
+        if (answer && shortlist) {
+          const inShortlist = new Set(shortlist);
+          let fromShortlist = 0;
+          let elsewhere = 0;
+          let unmatched = 0;
+          for (const raw of answer.items) {
+            const key = state.match(raw.replace(/\s+—\s+.*$/, "").trim());
+            if (!key) unmatched++;
+            else if (inShortlist.has(key)) fromShortlist++;
+            else elsewhere++;
+          }
+          ctx.log(
+            `${user.name} — "${state.section.title}": the model chose ${answer.items.length}: ${fromShortlist} from the shortlist, ${elsewhere} elsewhere in the library, ${unmatched} not in the library.`,
+          );
+        }
         let ratingKeys = answer
           ? pickRatingKeys({
               items: answer.items,
@@ -694,6 +727,7 @@ export function createWeThinkYoudLikeCommand(
       }
     }
 
+    recLog.footer();
     ctx.log("All done!");
   }
 
