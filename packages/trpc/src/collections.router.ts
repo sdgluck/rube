@@ -455,7 +455,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
       const client = getPlexClient();
       await client.pinToHomepage(row.sectionId, input.ratingKey, {
         promotedToOwnHome: 1,
-        promotedToRecommendedHome: 1,
+        promotedToRecommended: 1,
         promotedToSharedHome: 1,
       });
       clearPreviewCache();

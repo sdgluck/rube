@@ -15,7 +15,12 @@ import { jobs, plexUsers } from "@tinkerbell/db";
 import type { JobContext, BywJobConfig } from "@tinkerbell/core";
 import type { PlexAccount } from "@tinkerbell/plex";
 import { extractJSON, libraryTitleMap, plexConnection, resolveTargetSections } from "./ai-collection-shared.ts";
-import { personalRowLabels, personalRowPin, repairPersonalRow } from "../personalize/personal-row.ts";
+import {
+  keepOffRecommended,
+  personalRowLabels,
+  personalRowPin,
+  repairPersonalRow,
+} from "../personalize/personal-row.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
@@ -396,7 +401,7 @@ export function createBecauseYouWatchedCommand(
       // A server-wide row is for everyone, so every Home.
       const pinOptions = isPerUser
         ? personalRowPin(!!user.isOwner)
-        : { promotedToOwnHome: 1, promotedToRecommendedHome: 1, promotedToSharedHome: 1 };
+        : { promotedToOwnHome: 1, promotedToRecommended: 1, promotedToSharedHome: 1 };
       const userPrefs = isPerUser ? getOptedInPreferencesByUsername(user.plexUsername) : undefined;
       if (userPrefs) ctx.log(`Applying ${user.name}'s preferences.`);
 
@@ -416,6 +421,10 @@ export function createBecauseYouWatchedCommand(
           for (const row of mine) {
             if (await repairPersonalRow(client, sectionId, row, { isOwner: !!user.isOwner, pin: PIN_TO_HOMEPAGE }))
               ctx.log(`Made "${row.title}" visible to ${user.name} only.`);
+          }
+          if (PIN_TO_HOMEPAGE && !user.isOwner && mine.length > 0) {
+            const moved = await keepOffRecommended(client, sectionId, new Set(mine.map((row) => row.ratingKey)));
+            if (moved > 0) ctx.log(`Took ${moved} of ${user.name}'s row(s) off the library's Recommended tab.`);
           }
         }
 

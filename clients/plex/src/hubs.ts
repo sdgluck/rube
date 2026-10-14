@@ -67,7 +67,7 @@ export function createHubsModule(http: PlexHttp) {
       identifier: h.identifier as string,
       title: h.title as string,
       promotedToOwnHome: h.promotedToOwnHome != null ? Number(h.promotedToOwnHome) : undefined,
-      promotedToRecommendedHome: h.promotedToRecommendedHome != null ? Number(h.promotedToRecommendedHome) : undefined,
+      promotedToRecommended: h.promotedToRecommended != null ? Number(h.promotedToRecommended) : undefined,
       promotedToSharedHome: h.promotedToSharedHome != null ? Number(h.promotedToSharedHome) : undefined,
     }));
   }
@@ -96,7 +96,7 @@ export function createHubsModule(http: PlexHttp) {
     collectionKey: string,
     opts: PinOptions = {
       promotedToOwnHome: 0,
-      promotedToRecommendedHome: 0,
+      promotedToRecommended: 0,
       promotedToSharedHome: 0,
     },
   ): Promise<boolean> {

@@ -17,10 +17,10 @@ describe("personalRowLabels", () => {
 });
 
 describe("personalRowPin", () => {
-  test("a shared user's row goes on the shared Home, not the owner's", () => {
+  test("a shared user's row goes on the shared Home, not the owner's, and stays off Recommended", () => {
     assert.deepEqual(personalRowPin(false), {
       promotedToOwnHome: 0,
-      promotedToRecommendedHome: 1,
+      promotedToRecommended: 0,
       promotedToSharedHome: 1,
     });
   });
@@ -28,7 +28,7 @@ describe("personalRowPin", () => {
   test("the owner's row goes on their own Home", () => {
     assert.deepEqual(personalRowPin(true), {
       promotedToOwnHome: 1,
-      promotedToRecommendedHome: 1,
+      promotedToRecommended: 1,
       promotedToSharedHome: 0,
     });
   });

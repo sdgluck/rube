@@ -259,7 +259,7 @@ export async function reconcilePins(
         if (wanted) {
           await client.pinToHomepage(sectionKey, entry.ratingKey, {
             promotedToOwnHome: 1,
-            promotedToRecommendedHome: 1,
+            promotedToRecommended: 1,
             promotedToSharedHome: 1,
           });
           pinned++;

@@ -50,7 +50,12 @@ import {
   plexConnection,
   resolveTargetSections,
 } from "../ai-collection-shared.ts";
-import { personalRowLabels, personalRowPin, repairPersonalRow } from "../../personalize/personal-row.ts";
+import {
+  keepOffRecommended,
+  personalRowLabels,
+  personalRowPin,
+  repairPersonalRow,
+} from "../../personalize/personal-row.ts";
 import { describeSkip } from "@tinkerbell/domain.recommendations";
 import { createRecommenderLog, topTitles } from "../recommender-log.ts";
 import {
@@ -537,6 +542,15 @@ export function createWeThinkYoudLikeCommand(
         const existing = ownWtylRow(state.rows, user.username);
         if (existing && (await repairPersonalRow(client, state.section.key, existing, { isOwner: user.isOwner, pin })))
           ctx.log(`Made "${WTYL_ROW_NAME}" in "${state.section.title}" visible to ${user.name} only.`);
+        if (
+          existing &&
+          pin &&
+          !user.isOwner &&
+          (await keepOffRecommended(client, state.section.key, new Set([existing.ratingKey])))
+        )
+          ctx.log(
+            `Took ${user.name}'s "${WTYL_ROW_NAME}" in "${state.section.title}" off the library's Recommended tab.`,
+          );
       }
       const ids = historyUserIds(user);
       const titles = watchedTitles(db, ids, since);

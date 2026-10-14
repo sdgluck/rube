@@ -30,7 +30,7 @@ import { like } from "drizzle-orm";
 import { displayTitle, personalRowTitle, type JobContext, type UserPreferences } from "@tinkerbell/core";
 import { collections as collectionsTable, plexUsers } from "@tinkerbell/db";
 import type { Services } from "@tinkerbell/composition";
-import { personalRowLabels, personalRowPin } from "../../personalize/personal-row.ts";
+import { keepOffRecommended, personalRowLabels, personalRowPin } from "../../personalize/personal-row.ts";
 import { createFinalizeCommand } from "./finalize.ts";
 import { createReconcileCommand, type PersonalCopy } from "./reconcile.ts";
 import { meetsPinFloor } from "./rotation.ts";
@@ -119,6 +119,7 @@ export function createPersonalPass(deps: Services) {
     }
 
     const keep = new Set<string>();
+    const sharedUsersCopies = new Map<string, Set<string>>();
     if (ruleConfig.personalizable) {
       const people = listOptedInUserPreferences();
       if (people.length === 0) ctx.log("[personal] Nobody has opted in through the portal yet.");
@@ -126,8 +127,15 @@ export function createPersonalPass(deps: Services) {
       const owners = ownerUsernames();
       for (const person of people) {
         if (ctx.signal?.aborted) return;
-        await buildFor(ctx, input, person.username, person.preferences, elsewhere, owners, keep);
+        await buildFor(ctx, input, person.username, person.preferences, elsewhere, owners, keep, sharedUsersCopies);
       }
+    }
+    for (const [sectionId, keys] of sharedUsersCopies) {
+      const moved = await keepOffRecommended(client, sectionId, keys).catch((err) => {
+        ctx.log(`[personal] Couldn't take shared users' rows off Recommended:`, err);
+        return 0;
+      });
+      if (moved > 0) ctx.log(`[personal] Took ${moved} shared user row(s) off the library's Recommended tab.`);
     }
 
     // Only after every person was built: a pass cut short has an incomplete
@@ -148,6 +156,8 @@ export function createPersonalPass(deps: Services) {
     elsewhere: Map<string, number>,
     owners: Set<string>,
     keep: Set<string>,
+    /** Copies kept as they were, for shared users, by section — see `keepOffRecommended`. */
+    sharedUsersCopies: Map<string, Set<string>>,
   ): Promise<void> {
     const { deps: handlerDeps, machineId, existing } = input;
     const { client, rule, ruleConfig } = handlerDeps;
@@ -212,6 +222,9 @@ export function createPersonalPass(deps: Services) {
           await client.pinToHomepage(pending.section.key, key, personalRowPin(owners.has(lower))).catch((err) => {
             ctx.log(`[personal] Couldn't pin "${pending.name}" for ${username}:`, err);
           });
+        } else if (!owners.has(lower)) {
+          const keys = sharedUsersCopies.get(pending.section.key) ?? new Set<string>();
+          sharedUsersCopies.set(pending.section.key, keys.add(key));
         }
         recordPersonalChanges(input, pending, username, key, ratingKeys);
       }),

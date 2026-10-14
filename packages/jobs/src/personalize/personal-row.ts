@@ -15,6 +15,13 @@
  *    shared user it was made for, while the owner's Home collected everyone's.
  *    The pin follows the person instead: the owner's own Home, or the shared
  *    Home for anyone else, where their restriction keeps it theirs alone.
+ *  - **Recommended.** A library's Recommended tab is one list for everyone,
+ *    and label restrictions never apply to the owner, so every person's row
+ *    showed there for the owner: 116 of 131 rows on one server's Films tab.
+ *    A shared user's row stays off Recommended. They lose it from their own
+ *    Recommended tab too, since Plex has no per-viewer flag, but their Home is
+ *    where the row is meant to be. (Until 2026-10 the flag was sent as
+ *    `promotedToRecommendedHome`, which Plex ignores, so it stayed on.)
  */
 import type { PinOptions, PlexClient } from "@tinkerbell/plex";
 import { BASELINE_LABEL } from "./reconcile.ts";
@@ -28,7 +35,7 @@ export function personalRowLabels(username: string, ...own: string[]): string[] 
 export function personalRowPin(isOwner: boolean): PinOptions {
   return {
     promotedToOwnHome: isOwner ? 1 : 0,
-    promotedToRecommendedHome: 1,
+    promotedToRecommended: isOwner ? 1 : 0,
     promotedToSharedHome: isOwner ? 0 : 1,
   };
 }
@@ -54,4 +61,32 @@ export async function repairPersonalRow(
   row.labels = labels;
   if (opts.pin) await client.pinToHomepage(sectionId, row.ratingKey, personalRowPin(opts.isOwner));
   return true;
+}
+
+/**
+ * Take shared users' rows in `sectionId` off Recommended, leaving their Home
+ * settings as they are. Rows are pinned only when they are made, so this is
+ * what moves the rows that already exist, and the ones pinned before the flag
+ * was spelled right. Only the owner can change the flag, in Plex's Manage
+ * Recommendations, so this never undoes a choice made by the person the row is
+ * for. Returns how many it changed.
+ */
+export async function keepOffRecommended(
+  client: Pick<PlexClient, "getManagedHubs" | "pinToHomepage">,
+  sectionId: string,
+  sharedUsersRows: ReadonlySet<string>,
+): Promise<number> {
+  if (sharedUsersRows.size === 0) return 0;
+  let moved = 0;
+  for (const hub of await client.getManagedHubs(sectionId)) {
+    const ratingKey = hub.identifier.split(".").pop() ?? "";
+    if (!sharedUsersRows.has(ratingKey) || !hub.promotedToRecommended) continue;
+    await client.pinToHomepage(sectionId, ratingKey, {
+      promotedToOwnHome: hub.promotedToOwnHome ?? 0,
+      promotedToRecommended: 0,
+      promotedToSharedHome: hub.promotedToSharedHome ?? 0,
+    });
+    moved++;
+  }
+  return moved;
 }

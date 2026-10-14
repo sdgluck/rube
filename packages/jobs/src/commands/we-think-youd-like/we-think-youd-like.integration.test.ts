@@ -165,8 +165,8 @@ describe("we-think-youd-like", () => {
     assert.deepEqual(plex.journal.pinned, [row.ratingKey]);
     assert.deepEqual(
       plex.journal.pinHomes,
-      [{ ratingKey: row.ratingKey, own: false, shared: true }],
-      "on Alice's Home",
+      [{ ratingKey: row.ratingKey, own: false, shared: true, recommended: false }],
+      "on Alice's Home, and off the owner's Recommended tab",
     );
 
     // The library is the cached prefix, and her history is in the prompt.
@@ -255,7 +255,9 @@ describe("we-think-youd-like", () => {
     llm.answer = answer("Mine.", [10, 11, 12, 13, 14, 15]);
     await run(testContext().ctx, CONFIG);
     const [row] = [...plex.collections.values()];
-    assert.deepEqual(plex.journal.pinHomes, [{ ratingKey: row.ratingKey, own: true, shared: false }]);
+    assert.deepEqual(plex.journal.pinHomes, [
+      { ratingKey: row.ratingKey, own: true, shared: false, recommended: true },
+    ]);
   });
 
   it("repairs a row made with the baseline label for someone with too little history to rebuild it", async () => {
@@ -283,7 +285,7 @@ describe("we-think-youd-like", () => {
     await run(ctx, CONFIG);
 
     assert.deepEqual(plex.collections.get("9000")?.labels, [WTYL_LABEL, "User:alice"]);
-    assert.deepEqual(plex.journal.pinHomes, [{ ratingKey: "9000", own: false, shared: true }]);
+    assert.deepEqual(plex.journal.pinHomes, [{ ratingKey: "9000", own: false, shared: true, recommended: false }]);
     assert.match(log.join("\n"), /visible to alice only/);
 
     // Once: a second run leaves the pin where Alice has since put it.

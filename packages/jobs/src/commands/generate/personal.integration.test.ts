@@ -125,10 +125,21 @@ describe("personal copies in a rule's run", () => {
     assert.ok(!alice.labels.includes("Tinkerbell"), "a copy never carries the baseline label");
     assert.ok(!alice.memberKeys.includes("100"), "her excluded title is left out");
     assert.equal(bob.memberKeys.length, 6);
-    // Each copy on its own person's Home: the owner's own, everyone else's shared.
+    // Each copy on its own person's Home: the owner's own, everyone else's
+    // shared — and off the Recommended tab, which the owner sees unfiltered.
     const homes = new Map(plex.journal.pinHomes.map((p) => [p.ratingKey, p]));
-    assert.deepEqual(homes.get(alice.ratingKey), { ratingKey: alice.ratingKey, own: false, shared: true });
-    assert.deepEqual(homes.get(bob.ratingKey), { ratingKey: bob.ratingKey, own: true, shared: false });
+    assert.deepEqual(homes.get(alice.ratingKey), {
+      ratingKey: alice.ratingKey,
+      own: false,
+      shared: true,
+      recommended: false,
+    });
+    assert.deepEqual(homes.get(bob.ratingKey), {
+      ratingKey: bob.ratingKey,
+      own: true,
+      shared: false,
+      recommended: true,
+    });
   });
 
   it("keeps the copies on the next run rather than deleting them", async () => {
@@ -147,6 +158,30 @@ describe("personal copies in a rule's run", () => {
         .sort(),
       before,
     );
+  });
+
+  it("takes a shared user's existing copy off Recommended, and leaves the owner's", async () => {
+    await run();
+    const alice = copyOf("alice")!;
+    const bob = copyOf("bob")!;
+    // As pinned before the flag was spelled the way Plex reads it.
+    const manage = (key: string, query: string) =>
+      fetch(`${plex.origin}/hubs/sections/1/manage/custom.collection.1.${key}?${query}`, {
+        method: "PUT",
+        signal: AbortSignal.timeout(5000),
+      });
+    await manage(alice.ratingKey, "promotedToOwnHome=0&promotedToRecommended=1&promotedToSharedHome=1");
+    await manage(bob.ratingKey, "promotedToOwnHome=1&promotedToRecommended=1&promotedToSharedHome=0");
+    for (const list of Object.values(plex.journal)) if (Array.isArray(list)) list.length = 0;
+
+    await run();
+    assert.deepEqual(plex.journal.pinHomes, [
+      { ratingKey: alice.ratingKey, own: false, shared: true, recommended: false },
+    ]);
+
+    for (const list of Object.values(plex.journal)) if (Array.isArray(list)) list.length = 0;
+    await run();
+    assert.deepEqual(plex.journal.pinHomes, [], "once it's off, nothing more to do");
   });
 
   it("records the shared collection as the rule's, never a person's copy", async () => {

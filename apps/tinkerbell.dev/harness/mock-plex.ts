@@ -187,7 +187,7 @@ function managedHubs(sectionId: string): Array<Record<string, unknown>> {
     identifier: `custom.collection.${c.sectionId}.${c.ratingKey}`,
     title: c.title,
     promotedToOwnHome: i < 2 ? 1 : 0,
-    promotedToRecommendedHome: i < 2 ? 1 : 0,
+    promotedToRecommended: i < 2 ? 1 : 0,
     promotedToSharedHome: 0,
   }));
 }

@@ -59,7 +59,7 @@ export async function shuffleSectionHubs(
     }
     await client.pinToHomepage(section.key, ratingKey, {
       promotedToOwnHome: hub.promotedToOwnHome ?? 0,
-      promotedToRecommendedHome: hub.promotedToRecommendedHome ?? 0,
+      promotedToRecommended: hub.promotedToRecommended ?? 0,
       promotedToSharedHome: hub.promotedToSharedHome ?? 0,
     });
     return true;

@@ -131,8 +131,8 @@ export interface PlexJournal {
   /** Collections promoted to the homepage, and demoted from it. */
   pinned: string[];
   unpinned: string[];
-  /** Whose Home each pin promoted to, in order — which person sees the row. */
-  pinHomes: Array<{ ratingKey: string; own: boolean; shared: boolean }>;
+  /** Whose Home each pin promoted to, in order — which person sees the row — and whether it went on Recommended. */
+  pinHomes: Array<{ ratingKey: string; own: boolean; shared: boolean; recommended: boolean }>;
   /** Sessions registered through `/video/:/transcode/universal/decision`. */
   transcodeDecisions: string[];
   /** Transcode sessions started and stopped, by session id. */
@@ -273,6 +273,8 @@ export function startMockPlex(opts: {
   };
   /** Which collections are on the homepage, per section. */
   const pinnedBySection = new Map<string, Set<string>>();
+  /** The last promotion each pinned row was given, so the manage listing reports it back. */
+  const hubFlags = new Map<string, { own: boolean; shared: boolean; recommended: boolean }>();
   let nextCollectionKey = 9000;
   let nextThumbVersion = 1;
   const sessions = new Map<string, { ratingKey: string; clientId: string }>();
@@ -704,11 +706,15 @@ export function startMockPlex(opts: {
       } else {
         pinnedHere.add(ratingKey);
         journal.pinned.push(ratingKey);
-        journal.pinHomes.push({
-          ratingKey,
+        // Plex's own spelling only: it ignores `promotedToRecommendedHome`,
+        // which this code sent for years without anything noticing.
+        const flags = {
           own: q.get("promotedToOwnHome") === "1",
           shared: q.get("promotedToSharedHome") === "1",
-        });
+          recommended: q.get("promotedToRecommended") === "1",
+        };
+        hubFlags.set(ratingKey, flags);
+        journal.pinHomes.push({ ratingKey, ...flags });
       }
       pinnedBySection.set(sectionId, pinnedHere);
       emptyOk();
@@ -728,9 +734,9 @@ export function startMockPlex(opts: {
         Hub: keys.map((key) => ({
           identifier: `custom.collection.${sectionId}.${key}`,
           title: collections.get(key)?.title ?? "",
-          promotedToOwnHome: 1,
-          promotedToRecommendedHome: 1,
-          promotedToSharedHome: 1,
+          promotedToOwnHome: hubFlags.get(key)?.own ?? true,
+          promotedToRecommended: hubFlags.get(key)?.recommended ?? true,
+          promotedToSharedHome: hubFlags.get(key)?.shared ?? true,
         })),
       });
       return;

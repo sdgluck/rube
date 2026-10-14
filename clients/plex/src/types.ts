@@ -50,7 +50,7 @@ export interface PlexHub {
   identifier: string;
   title: string;
   promotedToOwnHome?: number;
-  promotedToRecommendedHome?: number;
+  promotedToRecommended?: number;
   promotedToSharedHome?: number;
 }
 
@@ -486,7 +486,7 @@ export interface PlexPref {
 
 export interface PinOptions {
   promotedToOwnHome?: number;
-  promotedToRecommendedHome?: number;
+  promotedToRecommended?: number;
   promotedToSharedHome?: number;
 }
 

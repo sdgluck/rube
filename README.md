@@ -168,8 +168,11 @@ Turn it on under **Settings → Personalization**.
 
 Limits:
 
-- The server owner can't be restricted. Your Home shows only your own rows,
-  but each library's Collections list and Recommended tab show everyone's.
+- The server owner can't be restricted. Your Home and each library's
+  Recommended tab show only your own rows, but each library's Collections list
+  shows everyone's.
+- Plex has one Recommended setting per row for everyone, so a shared user's rows
+  appear on their Home and not on their Recommended tab.
 - Click **Reconcile users** after sharing with someone new.
 
 ## We think you'd like

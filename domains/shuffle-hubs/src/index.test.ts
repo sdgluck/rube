@@ -17,7 +17,7 @@ function hub(id: string) {
     identifier: `custom.collection.${id}.${id}00`,
     title: `Hub ${id}`,
     promotedToOwnHome: 1,
-    promotedToRecommendedHome: 0,
+    promotedToRecommended: 0,
     promotedToSharedHome: 1,
   };
 }
