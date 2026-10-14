@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-14
+
+### Added
+
+- Every job and rule run log line now records the time it was written. A new Timestamps toggle in the log viewer shows those times. Your browser remembers the setting, and filtering the log never matches against the times. Runs from before this release show as they did.
+- While a job or rule run is live, the log viewer has a Follow toggle that keeps the newest line in view by scrolling the page as well as the log pane. It stops following when you scroll up, including on desktop, where the app's content area is what scrolls.
+- The We Think You'd Like and Because You Watched rules now explain their ranking in the run log, so you can tell whether anything was actually ranked. The log shows the model and each library's coverage, then one line per row with what it ranked from and the closest titles. When a row falls back, its line gives the reason: too few titles with a vector, nothing liked to rank from, or no vector for the watched title. The log ends with where the model's picks came from and a closing tally. These reasons used to go only to the server's console output.
+- Settings → AI now shows how much of each library the recommender model is able to rank.
+
+### Changed
+
+- **The per-person copies of a personalizable rule's collections are now built in the rule's own run, alongside the shared collection.** They used to come from a separate job that ran hours after generate. Copies are now updated in place. A copy is removed only when its person opts out, declines the row or runs out of row cap, or when the rule stops being personalizable. Run now and triggers build the per-person copies too.
+- Personalizable rules that are not AI rules now build each person's copy from the rule's shared output instead of querying Plex again for every person.
+
+### Fixed
+
+- Each run of a personalizable rule no longer deletes everyone's per-person copies of its collections.
+- A personalizable rule no longer claims a person's copy as its own collection. Before, the rule's link to that collection broke as soon as the copy was replaced. Per-person copies are also no longer recorded or announced as the rule's own collections.
+
+### Removed
+
+- **The Personalized Collections job has been retired. If you have it installed, it is removed automatically on boot, along with its user and rule targeting.** Each personalizable rule's own run now builds the per-person copies.
+
 ## [0.40.1] - 2026-10-14
 
 ### Fixed
