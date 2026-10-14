@@ -35,7 +35,9 @@ const next =
 
 let prevRef;
 try {
-  prevRef = sh("git", ["describe", "--tags", "--abbrev=0"]);
+  // App releases only: `recs-v*` tags carry recommender model files, and the
+  // nearest one would otherwise become the changelog's starting point.
+  prevRef = sh("git", ["describe", "--tags", "--abbrev=0", "--match", "v[0-9]*"]);
 } catch {
   // No tags yet — use the v-prefixed version commit if present, else root.
   const versionCommit = sh("git", [

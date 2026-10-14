@@ -19,6 +19,13 @@
  *  - **The library is the cached prefix and is the same for everyone.**
  *    Watched titles are removed after the answer, not before the call, because
  *    a per-person candidate list would make every call a cache miss.
+ *
+ * With the built-in recommender on (`domains/recommendations`), the last of
+ * those gives way: the library is ranked for each person locally and only the
+ * closest `SHORTLIST` titles go to the model. That is per person, so it is a
+ * cache miss every time — and still far cheaper, because ~150 lines replace
+ * thousands. Without an AI provider the shortlist *is* the row, which is what
+ * lets this run on a server with no AI at all.
  */
 import { WTYL_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
@@ -43,6 +50,7 @@ import {
   everWatchedKeys,
   historyUserIds,
   tasteProfilePromptBlock,
+  titleWeight,
   watchedTitles,
   type TasteProfile,
 } from "./profile.ts";
@@ -61,6 +69,12 @@ const OVERSHOOT = 10;
 const LINE_GENRES = 3;
 /** The answer's token budget, which the model's window has to leave room for. */
 const ANSWER_MAX_TOKENS = 2048;
+/**
+ * How many of the recommender's best-ranked titles the model reranks. Enough
+ * that the model has real choices to make about tone and theme — the thing it
+ * is better at than the vectors — and few enough to fit any local model.
+ */
+const SHORTLIST = 150;
 
 const answerSchema = z.object({
   summary: z.string(),
@@ -110,12 +124,20 @@ function libraryLine(item: PlexItem, genresByKey: Map<string, string[]>): string
   return genres.length > 0 ? `${itemLabel(item)} — ${genres.join(", ")}` : itemLabel(item);
 }
 
-export function wtylLibraryBlock(sectionTitle: string, items: PlexItem[], genresByKey: Map<string, string[]>): string {
+export function wtylLibraryBlock(
+  sectionTitle: string,
+  items: PlexItem[],
+  genresByKey: Map<string, string[]>,
+  opts: { shortlisted?: boolean } = {},
+): string {
   const lines = items
     .map((item) => libraryLine(item, genresByKey))
     .join("\n")
     .replace(/<\/?library>/gi, (m) => m.replace(">", "_>"));
-  return `You are a movie/TV curator. Below is the full list of titles in a Plex "${sectionTitle}" library, each with its genres.
+  const intro = opts.shortlisted
+    ? `the titles in a Plex "${sectionTitle}" library that best fit this viewer's history, closest first, each with its genres`
+    : `the full list of titles in a Plex "${sectionTitle}" library, each with its genres`;
+  return `You are a movie/TV curator. Below is ${intro}.
 
 <library>
 ${lines}
@@ -181,6 +203,20 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 {"summary":"...","items":["Title (Year)","Title (Year)"]}`;
 }
 
+/**
+ * The row's description when there is no model to write one: what the profile
+ * says they watch, in the shape the prompt asks the model for.
+ */
+export function wtylFallbackSummary(profile: TasteProfile): string {
+  const genres = profile.genres.slice(0, 3).map((g) => g.name);
+  if (genres.length === 0) return "Picked from what you've been watching lately.";
+  const list = genres.length === 1 ? genres[0] : `${genres.slice(0, -1).join(", ")} and ${genres.at(-1)}`;
+  const decade = profile.decades[0];
+  return `Picked from what you've been watching lately: mostly ${list}${
+    decade && decade.share >= 0.4 ? `, often from the ${decade.decade}s` : ""
+  }.`;
+}
+
 /** The model's answer, or why it can't be used. */
 export function parseWtylAnswer(text: string): { answer: WtylAnswer } | { error: string } {
   const parsed = extractJSON(text);
@@ -219,9 +255,12 @@ export function pickRatingKeys(opts: {
 }
 
 export function createWeThinkYoudLikeCommand(
-  deps: Pick<Services, "aiUsage" | "clients" | "collections" | "config" | "db" | "health" | "preferences">,
+  deps: Pick<
+    Services,
+    "aiUsage" | "clients" | "collections" | "config" | "db" | "health" | "preferences" | "recommendations"
+  >,
 ) {
-  const { aiUsage, clients, collections, config, db, health, preferences } = deps;
+  const { aiUsage, clients, collections, config, db, health, preferences, recommendations } = deps;
   const { track, budgetExceededReason } = aiUsage;
   const { plexHealthCallback } = clients;
   const { getConfig, getLlmConfig } = config;
@@ -368,13 +407,30 @@ export function createWeThinkYoudLikeCommand(
     const minLibrarySize = config.minLibrarySize ?? WTYL_DEFAULTS.minLibrarySize;
     const allowlist = config.users ?? [];
 
-    if (!token) throw new Error("Plex token is required. Configure it in Settings.");
-    if (!llmConfig) throw new Error("LLM provider is not configured. Set one in Settings → AI.");
+    const recommender = recommendations.status();
+    const ranked = recommender.enabled && recommender.available;
 
-    const budgetSpent = budgetExceededReason();
-    if (budgetSpent) {
+    if (!token) throw new Error("Plex token is required. Configure it in Settings.");
+    if (!llmConfig && !ranked) {
+      throw new Error(
+        "No AI provider is configured. Set one in Settings → AI, or turn on the built-in recommender there.",
+      );
+    }
+
+    // A spent budget stops the model, not the row: with the recommender on,
+    // the shortlist alone is still a row worth having.
+    const budgetSpent = llmConfig ? budgetExceededReason() : null;
+    if (budgetSpent && !ranked) {
       ctx.log(`Skipping — ${budgetSpent}. Existing collections are left as they are.`);
       return;
+    }
+    const llm = budgetSpent ? null : llmConfig;
+    if (ranked) {
+      ctx.log(
+        llm
+          ? `Ranking with the built-in recommender; ${llm.model} picks from each person's closest ${SHORTLIST}.`
+          : `Ranking with the built-in recommender alone${budgetSpent ? ` — ${budgetSpent}` : ""}.`,
+      );
     }
 
     const users = targetUsers(allowlist);
@@ -425,9 +481,11 @@ export function createWeThinkYoudLikeCommand(
     // How much prompt the model takes, asked once: undefined for a hosted
     // model, whose window dwarfs any library, and for an Ollama server that
     // doesn't say — that call is refused with the reason, as before.
-    const promptBudget = await createLlmClient(llmConfig)
-      .promptBudget?.({ maxTokens: ANSWER_MAX_TOKENS }, ctx.signal)
-      .catch(() => undefined);
+    const promptBudget = llm
+      ? await createLlmClient(llm)
+          .promptBudget?.({ maxTokens: ANSWER_MAX_TOKENS }, ctx.signal)
+          .catch(() => undefined)
+      : undefined;
 
     const now = Date.now();
     const since = historySince(ctx, historyDays, now);
@@ -452,8 +510,10 @@ export function createWeThinkYoudLikeCommand(
         continue;
       }
       const profile = buildTasteProfile(titles, now);
+      const history = titles.map((t) => ({ ratingKey: t.key, weight: titleWeight(t, now) }));
       const watched = everWatchedKeys(db, ids);
       const prefs = getOptedInPreferencesByUsername(user.username);
+      const excludedTitles = new Set((prefs?.excludedTitles ?? []).map((t) => t.toLowerCase()));
       ctx.log(
         `${user.name}: ${titles.length} title(s); top genres ${profile.genres
           .slice(0, 3)
@@ -475,8 +535,43 @@ export function createWeThinkYoudLikeCommand(
           continue;
         }
 
+        const shortlist = ranked
+          ? recommendations.shortlist({
+              history,
+              candidates: state.items
+                .filter((i) => !watched.has(i.ratingKey) && !excludedTitles.has(i.title.toLowerCase()))
+                .map((i) => i.ratingKey),
+              limit: llm ? SHORTLIST : maxItems,
+            })
+          : null;
+
+        if (!llm) {
+          // `ranked` is the only way here without a model, so a null
+          // shortlist is the recommender declining this library (too little
+          // of it has vectors) — and with nothing to fall back to, the row
+          // stays as it is rather than being emptied.
+          if (!shortlist || shortlist.length < minItems) {
+            ctx.log(
+              `${user.name} — "${state.section.title}": the recommender couldn't rank enough of this library${
+                shortlist ? ` (${shortlist.length} pick(s), need ${minItems})` : ""
+              } and there's no AI to fall back on; row left as it is.`,
+            );
+            continue;
+          }
+          await writeRow(client, ctx, machineId, state, user, shortlist, wtylFallbackSummary(profile), pin);
+          continue;
+        }
+
         let library = state.library;
-        if (promptBudget !== undefined) {
+        if (shortlist) {
+          const byKey = new Map(state.items.map((i) => [i.ratingKey, i]));
+          library = wtylLibraryBlock(
+            state.section.title,
+            shortlist.map((k) => byKey.get(k)!),
+            state.genresByKey,
+            { shortlisted: true },
+          );
+        } else if (promptBudget !== undefined) {
           const room =
             promptBudget -
             estimateTokens(prompt) -
@@ -491,14 +586,14 @@ export function createWeThinkYoudLikeCommand(
             });
             library = wtylLibraryBlock(state.section.title, fitted, state.genresByKey);
             ctx.log(
-              `${user.name} — "${state.section.title}": the library is too long for ${llmConfig.model}; sending the ${fitted.length} of ${state.items.length} titles closest to their taste.`,
+              `${user.name} — "${state.section.title}": the library is too long for ${llm.model}; sending the ${fitted.length} of ${state.items.length} titles closest to their taste.`,
             );
           }
         }
 
         let text: string;
         try {
-          text = await askModel(llmConfig, ctx, library, prompt);
+          text = await askModel(llm, ctx, library, prompt);
         } catch (err) {
           // Cancelled: every later call would fail the same way, so stop
           // rather than log one per person and then claim to be done.

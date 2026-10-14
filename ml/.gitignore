@@ -1,0 +1,6 @@
+# Datasets are re-downloaded, models are published as release assets — neither
+# belongs in git (MovieLens alone is ~900MB unpacked).
+/data/
+/out/
+/.venv/
+__pycache__/

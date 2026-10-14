@@ -48,6 +48,7 @@ import { createOverlays, OverlaysToken } from "@tinkerbell/domain.overlays";
 import { createPlayback, PlaybackToken } from "@tinkerbell/domain.playback";
 import { createPrerolls, PrerollsToken } from "@tinkerbell/domain.prerolls";
 import { createProblems, ProblemsToken } from "@tinkerbell/domain.problems";
+import { createRecommendations, RecommendationsToken } from "@tinkerbell/domain.recommendations";
 import { createRegistry, RegistryToken } from "@tinkerbell/domain.registry";
 import { createRuleHistory, RuleHistoryToken } from "@tinkerbell/domain.rule-history";
 import { createRuleRuns, RuleRunsToken } from "@tinkerbell/domain.rule-runs";
@@ -229,6 +230,9 @@ export function registerDomains(r: Registry): void {
       emitEvent: c.resolve(EventBusToken),
       now: c.resolve(ClockToken),
     }),
+  );
+  r.register(RecommendationsToken, (c) =>
+    createRecommendations({ db: c.resolve(DbToken), config: c.resolve(ConfigStoreToken) }),
   );
   r.register(RegistryToken, (c) =>
     createRegistry({ config: c.resolve(ConfigStoreToken), rules: c.resolve(RulesToken) }),

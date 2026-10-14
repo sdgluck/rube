@@ -35,3 +35,8 @@ apps/portal/dist
 dist-native/
 *.jks
 *.keystore
+
+# The recommender model. `models/recs.json` (committed) pins it; the file is a
+# `recs-v*` release asset that `scripts/fetch-recs-model.mjs` downloads, since
+# committing ~25MB per retrain would grow the repo's history forever.
+/models/recs.bin

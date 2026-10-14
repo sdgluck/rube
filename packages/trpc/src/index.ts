@@ -34,6 +34,7 @@ import { createDiscoverRouter } from "./discover.router.ts";
 import { createPostersRouter } from "./posters.router.ts";
 import { createPrerollsRouter } from "./prerolls.router.ts";
 import { createMigrationRouter } from "./migration.router.ts";
+import { createRecommendationsRouter } from "./recommendations.router.ts";
 import { createRegistryRouter } from "./registry.router.ts";
 import { createOnboardingRouter } from "./onboarding.router.ts";
 import { createNavRouter } from "./nav.router.ts";
@@ -101,6 +102,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     history: createHistoryRouter(deps),
     backups: createBackupsRouter(deps),
     aiUsage: createAiUsageRouter(deps),
+    recommendations: createRecommendationsRouter(deps),
     apiKeys: createApiKeysRouter(deps),
 
     /**

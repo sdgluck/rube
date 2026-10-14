@@ -177,6 +177,18 @@ export const configSchema = z.object({
    * can be diagnosed. Usage itself lives in `llm_usage`.
    */
   ai_monthly_token_budget: z.number().int().min(0),
+  /**
+   * Rank Because You Watched and We Think You'd Like with the bundled
+   * recommender model (`domains/recommendations`) instead of handing the model
+   * the whole library. With an AI provider set, the LLM reranks the
+   * recommender's shortlist; without one, the shortlist is the row — which is
+   * what makes both features usable with no AI at all.
+   *
+   * Off until turned on, so an upgrade never changes what an existing row
+   * picks. Nothing leaves the server either way: the model ships in the image
+   * and personalisation happens locally.
+   */
+  recommender_enabled: z.boolean(),
   global_radarr_url: z.string(),
   global_radarr_api_key: z.string(),
   global_sonarr_url: z.string(),

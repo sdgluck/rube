@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "tag": "recs-v1",
+  "asset": "recs-v1.bin",
+  "sha256": "53f8d2306aa135368a5b4eb322ce09569ff767514fa4078005b9e2edaab839ab",
+  "bytes": 28338008,
+  "count": 348363,
+  "license": "MovieLens non-commercial research licence; Wikidata CC0",
+  "attribution": "Collaborative signal derived from the MovieLens 32M dataset (F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM TiiS 5, 4: 19), used under its licence: non-commercial use only, no endorsement by the University of Minnesota or GroupLens implied, redistributed under the same conditions. Content features from Wikidata (CC0)."
+}

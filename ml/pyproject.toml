@@ -1,0 +1,23 @@
+[project]
+name = "tinkerbell-recs"
+version = "0.1.0"
+description = "Offline training for Tinkerbell's shared recommender item vectors"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "implicit==0.7.2",
+  "numpy>=1.26,<3",
+  "pandas>=2.2",
+  "requests>=2.32",
+  "scikit-learn>=1.5",
+  "scipy>=1.13",
+]
+
+[project.scripts]
+recs = "recs.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["recs"]

@@ -6,7 +6,7 @@
   "private": true,
   "packageManager": "pnpm@11.21.0",
   "scripts": {
-    "dev": "pnpm db:migrate && node scripts/dev.mjs",
+    "dev": "pnpm db:migrate && node scripts/fetch-recs-model.mjs && node scripts/dev.mjs",
     "proxy:up": "node scripts/proxy.mjs up",
     "proxy:down": "node scripts/proxy.mjs down",
     "proxy:status": "localias status",
@@ -29,7 +29,8 @@
     "native:assets": "node scripts/native-assets.mjs",
     "native:sync": "pnpm --filter @tinkerbell/web --filter @tinkerbell/portal run native:sync",
     "native:ios": "node scripts/native.mjs ios",
-    "native:android": "node scripts/native.mjs android"
+    "native:android": "node scripts/native.mjs android",
+    "recs:fetch": "node scripts/fetch-recs-model.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7",

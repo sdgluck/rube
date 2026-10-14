@@ -156,6 +156,19 @@ export interface PlexJournal {
   unhandled: string[];
 }
 
+/** One play in `/status/sessions/history/all`. */
+export interface MockHistoryEntry {
+  ratingKey: string;
+  title: string;
+  year?: number;
+  type: "movie" | "episode";
+  librarySectionID: string;
+  /** The server-local account it was played on; unset matches any `accountID` filter's absence only. */
+  accountID?: string;
+  grandparentRatingKey?: string;
+  grandparentTitle?: string;
+}
+
 export interface MockPlex {
   origin: string;
   journal: PlexJournal;
@@ -171,6 +184,12 @@ export interface MockPlex {
    * stored, known id or not, because that is what Plex does too.
    */
   prefs: Map<string, string>;
+  /**
+   * Watch history, newest first, mutable by a test. Served filtered by
+   * `librarySectionID` and `accountID` the way Plex filters it, because
+   * Because You Watched reads history live rather than from the local index.
+   */
+  history: MockHistoryEntry[];
   /**
    * Playback knobs for the stress harness.
    *
@@ -227,6 +246,7 @@ export function startMockPlex(opts: {
   const prefs = new Map<string, string>();
   const shows = new Map((opts.shows ?? []).map((s) => [s.ratingKey, { ...s, episodes: [...s.episodes] }]));
   const sectionOrderings = new Map<string, string>();
+  const history: MockHistoryEntry[] = [];
   const journal: PlexJournal = {
     deletedItems: [],
     deletedCollections: [],
@@ -781,6 +801,17 @@ export function startMockPlex(opts: {
       return;
     }
 
+    if (path === "/status/sessions/history/all") {
+      const section = url.searchParams.get("librarySectionID");
+      const account = url.searchParams.get("accountID");
+      const size = Number(url.searchParams.get("X-Plex-Container-Size") ?? history.length);
+      const rows = history
+        .filter((h) => (!section || h.librarySectionID === section) && (!account || h.accountID === account))
+        .slice(0, size);
+      json({ size: rows.length, Metadata: rows });
+      return;
+    }
+
     if (path === "/status/sessions") {
       if (playback.failSessionsFor > 0) {
         playback.failSessionsFor--;
@@ -840,6 +871,7 @@ export function startMockPlex(opts: {
         shows,
         sectionOrderings,
         prefs,
+        history,
         playback,
         close: () => closeServer(server),
       });

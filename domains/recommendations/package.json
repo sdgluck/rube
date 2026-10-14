@@ -1,0 +1,27 @@
+{
+  "name": "@tinkerbell/domain.recommendations",
+  "version": "0.39.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@tinkerbell/container": "workspace:*",
+    "@tinkerbell/core": "workspace:*",
+    "@tinkerbell/db": "workspace:*",
+    "drizzle-orm": "^0.45.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^7.0.2"
+  }
+}

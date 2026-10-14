@@ -25,8 +25,19 @@ const aiCollectionSchema = z.object({
 
 type AiCollection = z.infer<typeof aiCollectionSchema>;
 
-/** An answer, with the title it answers — which must not end up in it. */
-type BywAnswer = AiCollection & { watched: Watched };
+/**
+ * An answer, with the title it answers — which must not end up in it. A row
+ * the recommender built alone carries its rating keys; a model's answer has
+ * only titles, matched back against the library.
+ */
+type BywAnswer = AiCollection & { watched: Watched; ratingKeys?: string[] };
+
+/**
+ * How many of the recommender's closest titles the model chooses from, when
+ * the recommender is on. The model still decides what "feels like" the
+ * watched title; it just no longer has to find it in the whole library.
+ */
+const SHORTLIST = 150;
 
 type ResolvedUser = { name: string; plexUsername: string; accountID: string | undefined; isOwner?: boolean };
 
@@ -176,9 +187,12 @@ export function matchKnownUsers(
 }
 
 export function createBecauseYouWatchedCommand(
-  deps: Pick<Services, "aiUsage" | "clients" | "collections" | "config" | "db" | "health" | "preferences">,
+  deps: Pick<
+    Services,
+    "aiUsage" | "clients" | "collections" | "config" | "db" | "health" | "preferences" | "recommendations"
+  >,
 ) {
-  const { aiUsage, clients, collections, config, db, health, preferences } = deps;
+  const { aiUsage, clients, collections, config, db, health, preferences, recommendations } = deps;
   const { track, budgetExceededReason } = aiUsage;
   const { plexHealthCallback } = clients;
   const { getConfig, getLlmConfig } = config;
@@ -253,6 +267,23 @@ export function createBecauseYouWatchedCommand(
     }
   }
 
+  /**
+   * The titles most like `watched` by the recommender, closest first, or null
+   * when it can't say — off, no model, the title has no vector, or too little
+   * of the library does — and the whole library should be used as before.
+   */
+  function closestTo(watched: Watched, libraryItems: PlexItem[], limit: number): PlexItem[] | null {
+    if (!watched.ratingKey) return null;
+    const keys = recommendations.similar({
+      seed: watched.ratingKey,
+      candidates: libraryItems.map((i) => i.ratingKey),
+      limit,
+    });
+    if (!keys) return null;
+    const byKey = new Map(libraryItems.map((i) => [i.ratingKey, i]));
+    return keys.map((k) => byKey.get(k)!);
+  }
+
   async function run(ctx: JobContext, config: BywJobConfig): Promise<void> {
     const { url: PLEX_URL, token: PLEX_TOKEN } = plexConnection(getConfig);
     const llmConfig = getLlmConfig();
@@ -271,15 +302,22 @@ export function createBecauseYouWatchedCommand(
       throw new Error("Plex token is required. Configure it in Settings.");
     }
 
-    if (!llmConfig) {
-      throw new Error("LLM provider is not configured. Set one in Settings → AI.");
+    const recommender = recommendations.status();
+    const ranked = recommender.enabled && recommender.available;
+    if (!llmConfig && !ranked) {
+      throw new Error(
+        "No AI provider is configured. Set one in Settings → AI, or turn on the built-in recommender there.",
+      );
     }
 
-    const budgetSpent = budgetExceededReason();
-    if (budgetSpent) {
+    // A spent budget stops the model, not the rows: with the recommender on,
+    // its closest titles alone still make a row.
+    const budgetSpent = llmConfig ? budgetExceededReason() : null;
+    if (budgetSpent && !ranked) {
       ctx.log(`Skipping — ${budgetSpent}. Existing collections are left as they are.`);
       return;
     }
+    const llm = budgetSpent ? null : llmConfig;
 
     const client = createPlexClient({
       url: PLEX_URL,
@@ -385,7 +423,13 @@ export function createBecauseYouWatchedCommand(
         const existingNames = new Set(mine.map((col) => col.title.toLowerCase()));
         const keptNames = new Set<string>();
 
-        ctx.log(`Asking the LLM for "Because you watched" collections...`);
+        ctx.log(
+          llm
+            ? `Asking the LLM for "Because you watched" collections...`
+            : `Building "Because you watched" collections with the built-in recommender${budgetSpent ? ` — ${budgetSpent}` : ""}...`,
+        );
+        const excludedRows = new Set((userPrefs?.excludedCollections ?? []).map((t) => t.toLowerCase()));
+        const excludedTitles = new Set((userPrefs?.excludedTitles ?? []).map((t) => t.toLowerCase()));
         const aiCollections: BywAnswer[] = [];
         for (let i = 0; i < watchedTitles.length; i++) {
           const { title, ratingKey } = watchedTitles[i];
@@ -396,18 +440,40 @@ export function createBecauseYouWatchedCommand(
             continue;
           }
           ctx.log(`[${i + 1}/${watchedTitles.length}] Generating collection for "${title}"...`);
+          if (!llm) {
+            if (excludedRows.has(rowName)) {
+              ctx.log(`Skipping "${bywRowName(title)}" — the user said it wasn't for them.`);
+              continue;
+            }
+            const closest = closestTo({ title, ratingKey }, libraryItems, MAX_ITEMS + excludedTitles.size);
+            if (!closest) {
+              ctx.log(`The recommender can't place "${title}" in this library, and there's no AI to ask; skipping.`);
+              continue;
+            }
+            const picks = closest.filter((item) => !excludedTitles.has(item.title.toLowerCase())).slice(0, MAX_ITEMS);
+            aiCollections.push({
+              name: bywRowName(title),
+              items: picks.map((item) => item.title),
+              watched: { title, ratingKey },
+              ratingKeys: picks.map((item) => item.ratingKey),
+            });
+            continue;
+          }
           try {
             const synopsis = INCLUDE_SYNOPSIS ? await synopsisOf(client, ratingKey, ctx.log) : null;
+            const closest = closestTo({ title, ratingKey }, libraryItems, SHORTLIST);
             const { collection: col } = await generateBYWCollection(
-              llmConfig,
+              llm,
               ctx,
               title,
               synopsis,
-              libraryItems,
+              closest ?? libraryItems,
               section.title,
               MIN_ITEMS,
               MAX_ITEMS,
               userPrefs,
+              "because-you-watched",
+              { shortlisted: !!closest },
             );
             if (col) {
               aiCollections.push({ ...col, watched: { title, ratingKey } });
@@ -427,13 +493,14 @@ export function createBecauseYouWatchedCommand(
             ctx.log(`Failed to generate collection for "${title}": ${errorMessage(err)}`);
           }
         }
-        ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
+        ctx.log(`Got ${aiCollections.length} collection(s)${llm ? " from AI" : ""}.`);
 
         const titleMap = libraryTitleMap(libraryItems);
+        const keysOf = (col: BywAnswer) => col.ratingKeys ?? bywRatingKeys(col.items, titleMap, col.watched);
 
         const newCollectionNames = new Set<string>();
         for (const col of aiCollections) {
-          const ratingKeys = bywRatingKeys(col.items, titleMap, col.watched);
+          const ratingKeys = keysOf(col);
           if (ratingKeys.length >= MIN_ITEMS) {
             newCollectionNames.add(col.name.toLowerCase());
           }
@@ -455,7 +522,7 @@ export function createBecauseYouWatchedCommand(
 
         let created = 0;
         for (const col of aiCollections) {
-          const ratingKeys = bywRatingKeys(col.items, titleMap, col.watched);
+          const ratingKeys = keysOf(col);
 
           if (ratingKeys.length < MIN_ITEMS) {
             ctx.log(`Skipping "${col.name}" — only ${ratingKeys.length} matching item(s), need at least ${MIN_ITEMS}`);
@@ -537,6 +604,7 @@ export function createBecauseYouWatchedCommand(
     maxItems: number,
     prefs?: UserPreferences,
     feature: "because-you-watched" | "because-you-watched-preview" = "because-you-watched",
+    opts: { shortlisted?: boolean } = {},
   ): Promise<{
     collection: AiCollection | null;
     skipped: string | null;
@@ -574,7 +642,13 @@ export function createBecauseYouWatchedCommand(
     // matches from the start of the prompt: with the title ahead of the list,
     // as it used to be, no two calls shared a prefix and each paid for the
     // whole library again. Nothing per-call may go in `library`.
-    const library = `You are a movie/TV curator. Below is the full list of titles in a Plex "${sectionTitle}" library.
+    //
+    // A recommender shortlist breaks that on purpose — it is per title — and
+    // is still the cheaper call by far: ~150 lines instead of the library.
+    const intro = opts.shortlisted
+      ? `the titles in a Plex "${sectionTitle}" library most like the one they watched, closest first`
+      : `the full list of titles in a Plex "${sectionTitle}" library`;
+    const library = `You are a movie/TV curator. Below is ${intro}.
 
 <library>
 ${itemList}
@@ -719,7 +793,12 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
 
     onStep(`Reading every title in "${section.title}"…`);
     const libraryItems = await client.fetchAllItems(section.key);
-    onStep(`${libraryItems.length} titles read — the whole list goes to the model as the library.`);
+    const ranked = recommendations.status();
+    onStep(
+      ranked.enabled && ranked.available
+        ? `${libraryItems.length} titles read — the built-in recommender picks the ${SHORTLIST} closest to each title for the model.`
+        : `${libraryItems.length} titles read — the whole list goes to the model as the library.`,
+    );
     const existing = ownBywRows(
       await client.getCollectionsWithLabels(section.key, { label: BYW_LABEL }),
       user?.plexUsername,
@@ -757,17 +836,23 @@ Return ONLY valid minified JSON on a single line, no markdown fences, no explana
         onStep(
           `[${i + 1}/${titles.length}] Asking ${llmConfig.provider}:${llmConfig.model} for "${rowName}"${synopsis ? " with its synopsis" : ""}…`,
         );
+        const closest = closestTo(
+          { title: watchedTitle, ratingKey: watched.ratingKey ?? titleMap.get(watchedTitle) },
+          libraryItems,
+          SHORTLIST,
+        );
         const { collection, skipped, usage, response } = await generateBYWCollection(
           llmConfig,
           { log, signal },
           watchedTitle,
           synopsis,
-          libraryItems,
+          closest ?? libraryItems,
           section.title,
           minItems,
           maxItems,
           prefs,
           "because-you-watched-preview",
+          { shortlisted: !!closest },
         );
         // The verbatim answer, each title marked by whether a real run would
         // keep it — so the watched title and repeats read as unmatched.

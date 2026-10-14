@@ -155,6 +155,21 @@ RUN mkdir -p /config /prerolls
 # only, and the per-package node_modules symlink farms come across with the
 # sources.
 COPY --from=prod-deps /repo/node_modules ./node_modules/
+# The recommender model, beside the dependencies for the same reason: ~25MB
+# that changes only on a retrain, so it is a layer users already have on every
+# other release. `models/recs.bin` is not in git — CI fetches the release asset
+# `models/recs.json` pins (scripts/fetch-recs-model.mjs) before building, and
+# passes REQUIRE_RECS_MODEL=1 so a published image can't silently lack it or
+# carry the wrong one. A local `docker build` without it still works; the
+# feature reports itself unavailable.
+ARG REQUIRE_RECS_MODEL=0
+COPY models/ ./models/
+RUN if [ "$REQUIRE_RECS_MODEL" = "1" ]; then node --input-type=module -e "\
+import { createHash } from 'node:crypto'; import { readFileSync } from 'node:fs';\
+const pin = JSON.parse(readFileSync('models/recs.json', 'utf8'));\
+const sha = createHash('sha256').update(readFileSync('models/recs.bin')).digest('hex');\
+if (sha !== pin.sha256) throw new Error('models/recs.bin is not the pinned model v' + pin.version);\
+console.log('recommender model v' + pin.version);"; fi
 COPY --from=prod-deps --exclude=node_modules /repo/ ./
 # Only the built front-ends, from the stage that had the toolchain to build them.
 COPY --from=build /repo/apps/web/dist ./apps/web/dist/

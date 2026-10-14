@@ -12,6 +12,7 @@ import styles from "./Settings.module.css";
 import CardSection from "#components/CardSection";
 import Combobox from "#components/Combobox";
 import SettingsAiUsage from "./SettingsAiUsage";
+import SettingsAiRecommender from "./SettingsAiRecommender";
 
 const DEFAULT_LLM: LlmConfig = {
   provider: "anthropic",
@@ -190,6 +191,10 @@ export default function SettingsAi() {
           <UnsavedBanner visible={isDirty} />
         </div>
       </CardSection>
+      <SettingsAiRecommender
+        enabled={configQuery.data?.recommender_enabled === true}
+        hasProvider={!!configQuery.data?.global_llm || !!configQuery.data?.global_anthropic_api_key}
+      />
       <SettingsAiTry unsavedChanges={isDirty} />
       <SettingsAiUsage />
     </div>

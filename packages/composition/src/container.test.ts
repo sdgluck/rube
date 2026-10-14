@@ -62,6 +62,7 @@ describe("the container", () => {
       "downloadClients",
       "match",
       "problems",
+      "recommendations",
     ]) {
       assert.ok(names.includes(expected), `no registration for "${expected}"`);
     }

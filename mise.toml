@@ -10,3 +10,7 @@ node = "26.2.0"
 # darwin/amd64 build for pnpm 11, so `pnpm = "…"` fails to install on an Intel
 # Mac. npm's tarball is platform-independent.
 "npm:pnpm" = "11.21.0"
+# Only for `ml/`, the offline recommender training — never in the image.
+# Kept in step with `requires-python` in ml/pyproject.toml.
+python = "3.11"
+uv = "0.13"
