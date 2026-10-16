@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-16
+
+### Added
+
+- AI prompt rules have a new option that has the AI pick only a theme and a few example titles for each collection. Tinkerbell's built-in recommender then fills the rest of the collection with the closest matching titles in your library. This is aimed at small local models, which choose a coherent 20 titles out of a large library poorly and tend to repeat their own earlier lists. The default is unchanged: the AI still picks every title itself.
+- Each AI prompt rule can now have its own maximum collection size. If you don't set one, the maximum stays at 30 titles, which is what the AI was always asked for before.
+
+### Fixed
+
+- AI prompt rules no longer create several collections that are near-copies of each other, with the same titles repeated across them.
+- When an AI prompt rule checks whether a collection reaches its minimum size, only distinct titles now count, so repeated titles no longer pad a collection past the minimum.
+
 ## [0.41.1] - 2026-10-14
 
 ### Fixed
