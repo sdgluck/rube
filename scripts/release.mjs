@@ -119,12 +119,13 @@ const firstHeading = raw.indexOf("### ");
 // an opening ```markdown fence but leaves its closing one, which is how a bare
 // ``` ended up committed in the middle of CHANGELOG.md for v0.14.1 (and, it
 // turned out, at the end of the file since the very first release).
-const sections = firstHeading === -1
-  ? ""
-  : raw
-      .slice(firstHeading)
-      .replace(/\n\s*```+\s*$/, "")
-      .trim();
+// Cut at the last bullet line itself, not just a trailing fence: v0.42.2
+// shipped with "No follow-up: only the changelog section was asked for." under
+// its last bullet — a closing remark a global Claude Code hook asks for, which
+// `claude -p` inherits.
+const lines = firstHeading === -1 ? [] : raw.slice(firstHeading).split("\n");
+const lastBullet = lines.findLastIndex((l) => l.trimStart().startsWith("- "));
+const sections = lines.slice(0, lastBullet + 1).join("\n").trim();
 
 // The failures worth catching are the quiet ones: a summary that parses as
 // markdown but says nothing. Both of these produced a shipped release before
