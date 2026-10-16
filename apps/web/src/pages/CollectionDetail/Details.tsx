@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import FadeImage from "#components/FadeImage";
+import RelativeTime from "#components/RelativeTime";
 import RunJobButton from "#components/RunJobButton";
 import { useToast } from "#components/Toast";
 import { SmartFilterSummary } from "#components/SmartFiltersEditor";
@@ -116,7 +117,38 @@ export default function Details() {
                 <span className={local.statValue}>{stats.knownItems.toLocaleString()}</span>
                 <span className={local.statLabel}>Synced items</span>
               </div>
+              {stats.performance && stats.performanceWindow.coveredDays > 0 && (
+                <>
+                  <div className={local.statCell}>
+                    <span className={local.statValue}>{stats.performance.plays.toLocaleString()}</span>
+                    <span className={local.statLabel}>Plays, {stats.performanceWindow.coveredDays}d</span>
+                  </div>
+                  <div className={local.statCell}>
+                    <span className={local.statValue}>{stats.performance.viewers.toLocaleString()}</span>
+                    <span className={local.statLabel}>Viewers</span>
+                  </div>
+                  <div className={local.statCell}>
+                    <span className={local.statValue}>
+                      {stats.performance.lastPlayedAt ? (
+                        <RelativeTime timestamp={stats.performance.lastPlayedAt} />
+                      ) : (
+                        "Never"
+                      )}
+                    </span>
+                    <span className={local.statLabel}>Last played</span>
+                  </div>
+                </>
+              )}
             </div>
+            {stats.performance && stats.performanceWindow.coveredDays > 0 && (
+              // Said out loud because the obvious reading — "plays started from
+              // this shelf" — is something Plex never reports.
+              <p className={styles.hint}>
+                Plays of its titles since they joined it, over the last {stats.performanceWindow.coveredDays} days.{" "}
+                {stats.performance.members - stats.performance.playedMembers} of {stats.performance.members} haven't
+                been played in that time.
+              </p>
+            )}
             {stats.topGenres.length > 0 && (
               <div className={local.badgeRow}>
                 {stats.topGenres.map((g) => (

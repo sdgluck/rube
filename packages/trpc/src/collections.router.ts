@@ -108,6 +108,8 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
     getCollectionArtwork,
     getCollectionFilters,
     getCollectionStats,
+    getCollectionPerformance,
+    performanceWindow,
     recordCollectionArtwork,
     updateCollection,
     updateCollectionLabels,
@@ -219,7 +221,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
             if (row.key) ruleLastRatingKeys[row.id] = row.key;
           }
         }
-        return getLocalCollections({
+        const page = getLocalCollections({
           sectionIds: input.sectionIds,
           labels: input.labels,
           ruleIds: input.ruleIds,
@@ -230,6 +232,14 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
           sort: input.sort,
           sortDir: input.sortDir,
         });
+        // Only the page's rows: the figures cost a pass over the play log, and
+        // the other 450 collections aren't on screen.
+        const perf = getCollectionPerformance(page.items.map((c) => c.plexRatingKey));
+        return {
+          ...page,
+          items: page.items.map((c) => ({ ...c, performance: perf.get(c.plexRatingKey) ?? null })),
+          performanceWindow: performanceWindow(),
+        };
       }),
 
     filters: procedure.query(() => {
@@ -338,7 +348,11 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
 
     owningRule: procedure.input(ratingKeyInput).query(({ input }) => owningRuleFor(input.ratingKey)),
 
-    stats: procedure.input(ratingKeyInput).query(({ input }) => getCollectionStats(input.ratingKey)),
+    stats: procedure.input(ratingKeyInput).query(({ input }) => ({
+      ...getCollectionStats(input.ratingKey),
+      performance: getCollectionPerformance([input.ratingKey]).get(input.ratingKey) ?? null,
+      performanceWindow: performanceWindow(),
+    })),
 
     /**
      * The other collections the same rule produced. Sibling shelves are how a

@@ -445,7 +445,9 @@ export const TOOLS: AgentTool[] = [
     title: "List collections",
     description:
       "Plex collections from Tinkerbell's local index, with item counts and labels. A label of the form " +
-      "`Rule:<id>` names the rule that builds the collection. Filter by section, rule or label, or search by title.",
+      "`Rule:<id>` names the rule that builds the collection. Filter by section, rule or label, or search by title. " +
+      "Each row's `performance` counts plays of its titles since they joined it, over `performanceWindow`; " +
+      "sort by `plays` or `lastPlayedAt` to find collections nobody watches.",
     input: z.object({
       search: z.string().optional(),
       sectionIds: z.array(z.string()).optional(),

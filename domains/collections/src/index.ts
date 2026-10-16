@@ -8,6 +8,7 @@ import { collections, collectionItems, likeContains, type Db } from "@tinkerbell
 import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 import { createArtwork } from "./artwork.ts";
 import { createStats } from "./stats.ts";
+import { createPerformance } from "./performance.ts";
 import { type PostCollectionSync } from "@tinkerbell/ports";
 import { token } from "@tinkerbell/container";
 
@@ -16,6 +17,8 @@ export type CollectionRow = InferSelectModel<typeof collections>;
 export { artworkHash } from "./artwork.ts";
 export type { CollectionArtworkRow } from "./artwork.ts";
 export type { CollectionStats } from "./stats.ts";
+export type { CollectionPerformance, PerformanceWindow } from "./performance.ts";
+export { PERFORMANCE_WINDOW_DAYS } from "./performance.ts";
 
 interface SyncStats {
   synced: number;
@@ -74,6 +77,14 @@ const SORT_COLUMNS = {
   addedAt: collections.addedAt,
 } as const;
 
+/**
+ * Sorts on figures computed from the play log rather than stored on the row.
+ * These can't be an `ORDER BY` without a correlated subquery per row, so the
+ * matching rows are ranked in memory — a library has hundreds of collections,
+ * not hundreds of thousands.
+ */
+const PERFORMANCE_SORTS = ["plays", "lastPlayedAt"] as const;
+
 /** `or()` over a list that may hold a single term, where `or()` is a no-op. */
 function orAll(terms: SQL[]): SQL {
   return terms.length === 1 ? terms[0] : or(...terms)!;
@@ -96,6 +107,7 @@ export interface CollectionsDeps {
 export function createCollections(deps: CollectionsDeps) {
   const artwork = createArtwork(deps);
   const stats = createStats(deps);
+  const performance = createPerformance(deps);
   const { db, runPostCollectionSync } = deps;
 
   async function upsertCollectionByKey(client: PlexClient, section: PlexSection, ratingKey: string): Promise<void> {
@@ -346,8 +358,23 @@ export function createCollections(deps: CollectionsDeps) {
       .get();
     const total = countResult?.count ?? 0;
 
-    const sortCol = SORT_COLUMNS[filters?.sort as keyof typeof SORT_COLUMNS] ?? collections.title;
     const orderFn = filters?.sortDir === "desc" ? desc : asc;
+
+    if ((PERFORMANCE_SORTS as readonly string[]).includes(filters?.sort ?? "")) {
+      const rows = db.select().from(collections).where(whereClause).orderBy(asc(collections.title)).all();
+      const perf = performance.getCollectionPerformance(rows.map((r) => r.plexRatingKey));
+      const field = filters!.sort as (typeof PERFORMANCE_SORTS)[number];
+      const dir = filters?.sortDir === "desc" ? -1 : 1;
+      // Title order breaks ties (the sort is stable), so a page of
+      // never-played collections doesn't reshuffle between requests.
+      rows.sort(
+        (a, b) => dir * ((perf.get(a.plexRatingKey)?.[field] ?? 0) - (perf.get(b.plexRatingKey)?.[field] ?? 0)),
+      );
+      const offset = filters?.offset ?? 0;
+      return { items: filters?.limit != null ? rows.slice(offset, offset + filters.limit) : rows, total };
+    }
+
+    const sortCol = SORT_COLUMNS[filters?.sort as keyof typeof SORT_COLUMNS] ?? collections.title;
 
     const query = db.select().from(collections).where(whereClause).orderBy(orderFn(sortCol));
 
@@ -551,6 +578,7 @@ export function createCollections(deps: CollectionsDeps) {
     ...artwork,
     getGeneratedCollectionsGroupedByUser,
     ...stats,
+    ...performance,
     upsertCollectionByKey,
     getCollectionMemberKeys,
     getCollectionsForItem,

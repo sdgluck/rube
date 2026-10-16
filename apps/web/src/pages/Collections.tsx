@@ -35,7 +35,16 @@ import { plexImageUrl } from "#lib/media";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 
-const SORT_KEYS = ["title", "sectionTitle", "childCount", "smart", "labels", "addedAt"] as const;
+const SORT_KEYS = [
+  "title",
+  "sectionTitle",
+  "childCount",
+  "smart",
+  "labels",
+  "addedAt",
+  "plays",
+  "lastPlayedAt",
+] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 const VIEW_MODES = ["table", "grid"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -62,6 +71,8 @@ const COLUMN_IDS = [
   { id: "summary" },
   { id: "artwork" },
   { id: "added" },
+  { id: "plays" },
+  { id: "lastPlayed" },
   { id: "synced" },
   { id: "ratingKey" },
 ] as const;
@@ -71,7 +82,18 @@ const COLUMN_IDS = [
  * already, plus Pinned — the one fact about a collection that was previously
  * only discoverable by opening it.
  */
-const DEFAULT_VISIBLE = ["title", "section", "items", "smart", "pinned", "labels", "rule", "added"];
+const DEFAULT_VISIBLE = [
+  "title",
+  "section",
+  "items",
+  "smart",
+  "pinned",
+  "labels",
+  "rule",
+  "added",
+  "plays",
+  "lastPlayed",
+];
 
 export default function Collections() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,7 +103,7 @@ export default function Collections() {
   const { sortKey, sortDir, listParam, toggleSort, setPage } = useListParams<SortKey>({
     sortKeys: SORT_KEYS,
     defaultSortKey: "title",
-    descFirst: ["addedAt", "childCount"],
+    descFirst: ["addedAt", "childCount", "plays", "lastPlayedAt"],
   });
 
   const sectionFilter = listParam("section");
@@ -171,6 +193,7 @@ export default function Collections() {
     },
     { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   );
+  const playsWindowDays = collectionsQuery.data?.performanceWindow.coveredDays ?? null;
 
   // Lightweight query for populating filter dropdowns
   const filtersQuery = trpc.collections.filters.useQuery(undefined, { refetchOnWindowFocus: false });
@@ -372,6 +395,36 @@ export default function Collections() {
         render: (col) => (col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : EMPTY),
       },
       {
+        id: "plays",
+        // The period is in the header, not every cell, and is what the play log
+        // can actually back — a week-old install says 7d, not 90d.
+        label: playsWindowDays != null ? `Plays, ${playsWindowDays}d` : "Plays",
+        sortKey: "plays",
+        mobile: "hide",
+        mono: true,
+        render: (col) =>
+          col.performance ? (
+            <span title={`${col.performance.playedMembers} of ${col.performance.members} titles played since joining`}>
+              {col.performance.plays.toLocaleString()}
+            </span>
+          ) : (
+            EMPTY
+          ),
+      },
+      {
+        id: "lastPlayed",
+        label: "Last played",
+        sortKey: "lastPlayedAt",
+        mobile: "hide",
+        mono: true,
+        render: (col) =>
+          col.performance?.lastPlayedAt ? (
+            <RelativeTime timestamp={col.performance.lastPlayedAt} />
+          ) : (
+            <span className={styles.muted}>{EMPTY}</span>
+          ),
+      },
+      {
         id: "synced",
         label: "Last synced",
         mobile: "hide",
@@ -380,7 +433,7 @@ export default function Collections() {
       },
       { id: "ratingKey", label: "Rating key", mobile: "hide", mono: true, render: (col) => col.plexRatingKey },
     ],
-    [pinnedSet, pinnedQuery.isLoading, artworkFlags, ruleNameById],
+    [pinnedSet, pinnedQuery.isLoading, artworkFlags, ruleNameById, playsWindowDays],
   );
 
   const columnConfig = reconcileColumns(allColumns, DEFAULT_VISIBLE, columnsQuery.data);
