@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.42.1] - 2026-10-16
+
+### Fixed
+
+- AI rules whose collections are filled by the recommender now drop a theme when its example titles were already used, or when those examples have nothing in common.
+
 ## [0.42.0] - 2026-10-16
 
 ### Added
