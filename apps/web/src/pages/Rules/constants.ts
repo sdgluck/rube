@@ -180,6 +180,8 @@ export const EMPTY_FORM: RuleFormState = {
   nameStyle: "short_punchy",
   limit: 8,
   minItems: 15,
+  maxItems: 30,
+  aiFill: "llm",
   sections: [],
   chart: "top_250_movies",
   listId: "",

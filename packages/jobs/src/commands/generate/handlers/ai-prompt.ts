@@ -1,9 +1,11 @@
 import { type Services } from "@tinkerbell/composition";
+import { describeSkip } from "@tinkerbell/domain.recommendations";
 import { createLlmCommand } from "../ai/llm.ts";
 
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
 import { parseAiCollections } from "#commands/generate/ai/parse.ts";
 import { selectCollections, type MatchedItem } from "#commands/generate/ai/select.ts";
+import { fillFromSeeds } from "#commands/generate/ai/fill.ts";
 import { shuffled, MAX_ITEMS_PER_CALL } from "#commands/generate/ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
@@ -13,7 +15,7 @@ export { parseAiCollections } from "#commands/generate/ai/parse.ts";
 export { buildAiPrompt } from "#commands/generate/ai/prompt.ts";
 
 export function createAiPromptCommand(deps: Services) {
-  const { ruleHistory } = deps;
+  const { ruleHistory, recommendations } = deps;
   const { getRecentHistory } = ruleHistory;
   const { askLlm } = createLlmCommand(deps);
 
@@ -22,6 +24,7 @@ export function createAiPromptCommand(deps: Services) {
 
     const maxCollections = ruleConfig.limit ?? 8;
     const minItems = ruleConfig.minItems ?? 15;
+    const maxItems = Math.max(ruleConfig.maxItems ?? 30, minItems);
     const themes = ruleConfig.themes ?? [];
     const customThemes = ruleConfig.customThemes ?? [];
 
@@ -39,6 +42,21 @@ export function createAiPromptCommand(deps: Services) {
         continue;
       }
 
+      // Checked before the prompt is written: the two modes ask the model for
+      // different things, so finding out after the call would waste it.
+      let fill = ruleConfig.aiFill ?? "llm";
+      if (fill === "recommender") {
+        const coverage = recommendations.coverage(items.map((i) => i.ratingKey));
+        if ("skipped" in coverage) {
+          ctx.log(
+            `The recommender can't fill these collections — ${describeSkip(coverage)}. The AI model picks every title instead.`,
+          );
+          fill = "llm";
+        } else {
+          ctx.log(`The recommender fills each theme (it knows ${coverage.withVector} of ${coverage.total} titles).`);
+        }
+      }
+
       const history = getRecentHistory(rule.id, section.key);
       if (history.length > 0) {
         ctx.log(`Loaded ${history.length} prior collection(s) from history to inform prompt.`);
@@ -48,6 +66,8 @@ export function createAiPromptCommand(deps: Services) {
         sectionTitle: section.title,
         limit: maxCollections,
         minItems,
+        maxItems,
+        fill,
         themes,
         customThemes,
         vibe: ruleConfig.vibe,
@@ -96,12 +116,23 @@ export function createAiPromptCommand(deps: Services) {
         titleMap.set(item.title, info);
       }
 
-      const candidates = aiCollections.map((col) => ({
+      let candidates = aiCollections.map((col) => ({
         name: col.name,
         matched: col.items.map((title) => titleMap.get(title)).filter((m) => m !== undefined),
       }));
+      if (fill === "recommender") {
+        const library = items.map((i) => ({ ratingKey: i.ratingKey, title: i.title, year: i.year }));
+        candidates = fillFromSeeds(candidates, library, maxItems, recommendations.nearest).map((c) => {
+          ctx.log(
+            c.skipped
+              ? `"${c.name}": not filled — ${c.skipped.skipped === "seed-has-no-vector" ? "the recommender knows none of its examples" : describeSkip(c.skipped)}.`
+              : `"${c.name}": ${c.seeds} example(s) from the AI, ${c.matched.length - c.seeds} added by the recommender.`,
+          );
+          return c;
+        });
+      }
 
-      for (const verdict of selectCollections(candidates, minItems)) {
+      for (const verdict of selectCollections(candidates, minItems, maxItems)) {
         if (verdict.kind === "too-few") {
           ctx.log(
             `Skipping "${verdict.name}" — only ${verdict.distinct} distinct matching item(s), need at least ${minItems}`,

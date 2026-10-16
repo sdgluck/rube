@@ -428,6 +428,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       limit: (config.limit as number) ?? defaultLimitForType(rule.type),
       // Absent means "off" for grouped rules; ai_prompt keeps its 15 floor.
       minItems: (config.minItems as number) ?? (rule.type === "ai_prompt" ? 15 : 0),
+      maxItems: (config.maxItems as number | undefined) ?? 30,
+      aiFill: config.aiFill === "recommender" ? "recommender" : "llm",
       sections: (config.sections as string[]) || [],
       chart: (config.chart as string) || "top_250_movies",
       listId: (config.listId as string) || "",
@@ -465,6 +467,9 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       config.vibe = next.vibe;
       config.nameStyle = next.nameStyle;
       config.minItems = next.minItems;
+      config.maxItems = next.maxItems;
+      // Absent is the LLM, so a rule that never chose keeps its behaviour.
+      if (next.aiFill === "recommender") config.aiFill = "recommender";
     }
     if (next.type === "imdb_chart") config.chart = next.chart;
     if (next.type === "imdb_list") config.listId = next.listId;

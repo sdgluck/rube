@@ -34,11 +34,15 @@ export type Verdict<T extends MatchedItem> =
  */
 export const MAX_OVERLAP = 0.5;
 
-export function selectCollections<T extends MatchedItem>(candidates: Candidate<T>[], minItems: number): Verdict<T>[] {
+export function selectCollections<T extends MatchedItem>(
+  candidates: Candidate<T>[],
+  minItems: number,
+  maxItems = Infinity,
+): Verdict<T>[] {
   const kept: { name: string; keys: Set<string> }[] = [];
   return candidates.map(({ name, matched }) => {
     const seen = new Set<string>();
-    const distinct = matched.filter((m) => !seen.has(m.ratingKey) && seen.add(m.ratingKey));
+    const distinct = matched.filter((m) => !seen.has(m.ratingKey) && seen.add(m.ratingKey)).slice(0, maxItems);
     if (distinct.length < minItems) return { kind: "too-few", name, distinct: distinct.length };
 
     for (const prior of kept) {
@@ -47,7 +51,7 @@ export function selectCollections<T extends MatchedItem>(candidates: Candidate<T
         return { kind: "duplicate", name, of: prior.name, shared };
       }
     }
-    kept.push({ name, keys: seen });
+    kept.push({ name, keys: new Set(distinct.map((m) => m.ratingKey)) });
     return { kind: "keep", name, matched: distinct };
   });
 }

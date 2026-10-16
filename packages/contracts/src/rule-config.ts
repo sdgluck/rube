@@ -328,6 +328,19 @@ const baseRuleConfigSchema = z.object({
    */
   minItems: z.number().optional(),
   /**
+   * ai_prompt: largest collection to build. Absent is 30, the ceiling the
+   * prompt always asked for.
+   */
+  maxItems: z.number().int().positive().optional(),
+  /**
+   * ai_prompt: who picks each collection's titles. `llm` (the default) has
+   * the model list them all. `recommender` asks it only for a theme and a few
+   * example titles, and the built-in recommender fills the rest with the
+   * library's nearest titles — for small local models, which pick 20 coherent
+   * titles out of 2,000 badly and copy their own earlier lists when they try.
+   */
+  aiFill: z.enum(["llm", "recommender"]).optional(),
+  /**
    * Restrict a grouped rule to these groups, by name. Absent means every group
    * the library yields, which is the behaviour every rule had before this
    * existed.

@@ -86,6 +86,13 @@ describe("validateStep — source", () => {
     assert.equal(validateStep("source", form({ type: "ai_prompt", customThemes: ["slow cinema"] })), null);
   });
 
+  it("an AI rule's maximum can't be below its minimum", () => {
+    const ai = form({ type: "ai_prompt", themes: ["heist"], minItems: 15, maxItems: 10 });
+    assert.match(validateStep("source", ai) ?? "", /maximum/i);
+    assert.equal(isFormValid({ ...ai, name: "Heists" }), false);
+    assert.equal(validateStep("source", { ...ai, maxItems: 15 }), null);
+  });
+
   it("an IMDb list rule needs a list id", () => {
     assert.match(validateStep("source", form({ type: "imdb_list" })) ?? "", /list ID/i);
     assert.match(validateStep("source", form({ type: "imdb_list", listId: "   " })) ?? "", /list ID/i);

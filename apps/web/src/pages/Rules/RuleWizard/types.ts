@@ -128,6 +128,10 @@ export interface RuleFormState {
   nameStyle: AiNameStyle;
   limit: number;
   minItems: number;
+  /** ai_prompt: largest collection. */
+  maxItems: number;
+  /** ai_prompt: who picks the titles — see `aiFill` in contracts. */
+  aiFill: "llm" | "recommender";
   sections: string[];
   chart: string;
   listId: string;

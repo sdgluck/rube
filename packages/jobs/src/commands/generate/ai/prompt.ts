@@ -6,6 +6,10 @@ export function buildAiPrompt(args: {
   sectionTitle: string;
   limit: number;
   minItems: number;
+  /** Absent is 30, the ceiling the prompt always asked for. */
+  maxItems?: number;
+  /** `recommender`: ask only for each theme's defining examples; the recommender fills the rest. */
+  fill?: RuleConfig["aiFill"];
   themes: string[];
   customThemes: string[];
   vibe?: RuleConfig["vibe"];
@@ -14,6 +18,7 @@ export function buildAiPrompt(args: {
   preferences?: UserPreferences;
 }): string {
   const { sectionTitle, limit, minItems, themes, customThemes, vibe, nameStyle, history, preferences } = args;
+  const maxItems = Math.max(args.maxItems ?? 30, minItems);
   const prefsBlock = preferences ? preferencesPromptBlock(preferences) : "";
 
   const allThemes = [...themes, ...customThemes].filter((t) => t.trim().length > 0);
@@ -39,10 +44,7 @@ export function buildAiPrompt(args: {
 
 Rules:
 - Create exactly ${limit} collections.
-- Each collection MUST have between ${minItems} and 30 items, no fewer than ${minItems}.
-- List each title at most once within a collection.
-- Each collection needs its own theme and its own roster: an item can appear in more than one collection, but no two collections may share more than a few items.
-- Only use titles that exactly match the input list.
+${args.fill === "recommender" ? SEED_RULES : listRules(minItems, maxItems)}- Only use titles that exactly match the input list.
 - Collection names must be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format).
 - Be surprising and inventive — avoid obvious genre or decade groupings.
 ${vibeLine ? `- ${vibeLine}\n` : ""}${nameLine ? `- ${nameLine}\n` : ""}
@@ -56,6 +58,23 @@ ${prefsBlock}
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
 [{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]`;
 }
+
+const listRules = (
+  minItems: number,
+  maxItems: number,
+) => `- Each collection MUST have between ${minItems} and ${maxItems} items, no fewer than ${minItems}.
+- List each title at most once within a collection.
+- Each collection needs its own theme and its own roster: an item can appear in more than one collection, but no two collections may share more than a few items.
+`;
+
+/**
+ * The model names the theme and its clearest examples; a recommender adds the
+ * rest. Distinct examples matter more than anything else here — two themes
+ * seeded alike are filled alike.
+ */
+const SEED_RULES = `- For each collection, list only the 3 to 5 titles that best define its theme. Similar titles from the library are added to it automatically, so pick examples that clearly share the theme.
+- Never use the same title in two collections; each collection needs a theme clearly different from the others.
+`;
 
 /**
  * Sample up to `n` distinct items uniformly without replacement. Used to

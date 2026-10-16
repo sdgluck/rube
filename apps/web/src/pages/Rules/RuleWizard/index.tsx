@@ -1836,8 +1836,14 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
           )}
           {(form.type === "ai_prompt" || typeHasMinItems(form.type)) && (
             <div className={styles.summaryRow}>
-              <span className={styles.summaryLabel}>Min items</span>
-              <span className={styles.summaryValue}>{form.minItems > 0 ? form.minItems : "No minimum"}</span>
+              <span className={styles.summaryLabel}>{form.type === "ai_prompt" ? "Items" : "Min items"}</span>
+              <span className={styles.summaryValue}>
+                {form.type === "ai_prompt"
+                  ? `${form.minItems}–${form.maxItems}, ${form.aiFill === "recommender" ? "filled by the recommender" : "picked by the AI"}`
+                  : form.minItems > 0
+                    ? form.minItems
+                    : "No minimum"}
+              </span>
               <button
                 type="button"
                 className={styles.summaryEdit}

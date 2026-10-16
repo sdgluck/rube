@@ -215,6 +215,42 @@ describe("similar", () => {
   });
 });
 
+describe("nearest", () => {
+  test("ranks by likeness to the seeds together, never returning a seed", () => {
+    // movie:3 and movie:4 are two axes; tv:10 leans toward movie:4's and
+    // movie:2 toward movie:3's, more weakly; movie:1 is on neither.
+    const recs = build();
+    assert.deepEqual(
+      keys(recs.nearest({ seeds: ["m3", "m4"], candidates: ["m1", "m2", "s10", "m3", "m4"], limit: 2 })),
+      ["s10", "m2"],
+    );
+  });
+
+  test("aims with the seeds that have a vector", () => {
+    const recs = build();
+    assert.deepEqual(keys(recs.nearest({ seeds: ["x", "m3"], candidates: ["m1", "m2", "m4"], limit: 1 })), ["m2"]);
+  });
+
+  test("falls back when no seed has a vector", () => {
+    const recs = build();
+    assert.equal(
+      skip(recs.nearest({ seeds: ["x", "y"], candidates: ["m1", "m2", "m3"], limit: 2 })),
+      "seed-has-no-vector",
+    );
+  });
+});
+
+describe("coverage", () => {
+  test("says how much it could rank, or why it can't", () => {
+    assert.deepEqual(build().coverage(["m1", "m2", "x"]), { withVector: 2, total: 3 });
+    assert.deepEqual(build().coverage(["m1", "x", "y"]), {
+      skipped: "coverage",
+      coverage: { withVector: 1, total: 3 },
+    });
+    assert.deepEqual(build({ enabled: false }).coverage(["m1"]), { skipped: "off" });
+  });
+});
+
 describe("status", () => {
   test("reports the model and its attribution", () => {
     const status = build().status();

@@ -313,7 +313,57 @@ export function createRecommendations(deps: RecommendationsDeps) {
     };
   }
 
-  return { status, shortlist, similar };
+  /**
+   * Whether these candidates can be ranked at all, without ranking them — so a
+   * caller can choose its path before spending an LLM call on the wrong one.
+   */
+  function coverage(candidates: string[]): Coverage | Extract<RankResult, { skipped: RankSkip }> {
+    const ready = prepare(candidates);
+    return "skipped" in ready ? ready : ready.coverage;
+  }
+
+  /**
+   * The `limit` candidates nearest a handful of seeds, best first — what an AI
+   * rule's theme is filled from when the model only names the examples.
+   *
+   * The seeds' unit vectors are averaged, so each pulls equally however well
+   * rated it is; scoring against the mean is `similar`'s cosine × √length, for
+   * the reason given there. Seeds without a vector are left out of the mean;
+   * with none left there is nothing to aim at.
+   */
+  function nearest(opts: { seeds: string[]; candidates: string[]; limit: number }): RankResult {
+    const ready = prepare(opts.candidates);
+    if ("skipped" in ready) return ready;
+    const { m, rows, coverage } = ready;
+    const { dims } = m.header;
+    const centre = new Float64Array(dims);
+    const y = new Float64Array(dims);
+    let used = 0;
+    for (const row of rowsFor(m, opts.seeds).values()) {
+      m.vector(row, y);
+      const n = norm(y);
+      if (n === 0) continue;
+      for (let i = 0; i < dims; i++) centre[i]! += y[i]! / n;
+      used++;
+    }
+    if (used === 0) return { skipped: "seed-has-no-vector", coverage };
+    const centreNorm = norm(centre) || 1;
+    const seeds = new Set(opts.seeds);
+    return {
+      ratingKeys: topK(
+        [...rows]
+          .filter(([key]) => !seeds.has(key))
+          .map(([key, row]) => {
+            m.vector(row, y);
+            return [key, dot(y, centre) / (centreNorm * Math.sqrt(norm(y) || 1))];
+          }),
+        opts.limit,
+      ),
+      coverage,
+    };
+  }
+
+  return { status, shortlist, similar, nearest, coverage };
 }
 
 export type Recommendations = ReturnType<typeof createRecommendations>;

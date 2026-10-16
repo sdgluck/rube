@@ -716,10 +716,13 @@ export function presentationError(form: RuleFormState): string | null {
 
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
+const aiSizeError = "Maximum items can't be below the minimum.";
+
 export function validateStep(step: StepId, form: RuleFormState): string | null {
   if (step === "type") return form.type ? null : "Pick a rule type.";
   if (step === "source") {
     if (form.type === "ai_prompt" && !aiHasThemes(form)) return "Pick at least one theme (or add a custom one).";
+    if (form.type === "ai_prompt" && form.maxItems < form.minItems) return aiSizeError;
     if (form.type === "imdb_list" && !form.listId.trim()) return "An IMDb list ID or URL is required.";
     if (form.type === "list_source") {
       if (!form.listProvider) return "Pick a list provider.";
@@ -744,7 +747,7 @@ export function isFormValid(form: RuleFormState): boolean {
   return (
     !!form.name.trim() &&
     !!form.type &&
-    (form.type !== "ai_prompt" || aiHasThemes(form)) &&
+    (form.type !== "ai_prompt" || (aiHasThemes(form) && form.maxItems >= form.minItems)) &&
     (form.type !== "imdb_list" || !!form.listId.trim()) &&
     (form.type !== "list_source" || (!!form.listProvider && !!form.listId.trim())) &&
     (form.type !== "smart_filter" || smartFilterIsComplete(form.smartFilter)) &&
