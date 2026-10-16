@@ -22,6 +22,7 @@
     "@tinkerbell/domain.migration": "workspace:*",
     "@tinkerbell/domain.overlays": "workspace:*",
     "@tinkerbell/domain.prerolls": "workspace:*",
+    "@tinkerbell/home-assistant": "workspace:*",
     "@tinkerbell/jobs": "workspace:*",
     "@tinkerbell/posters": "workspace:*",
     "@tinkerbell/trpc": "workspace:*",

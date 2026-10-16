@@ -29,6 +29,8 @@ and notifications on a schedule.
 - **Discover**: search TMDb, see what Plex and Radarr/Sonarr already have, and
   send the rest to Radarr or Sonarr.
 - **Watchlist sync**: send new Plex watchlist items to Radarr or Sonarr.
+- **Home Assistant**: streams, jobs, failing rules and health as MQTT
+  sensors. [More](#home-assistant)
 - **Notifications**: Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
   LunaSea, email and webhooks.
 - **Backup, export and change history**.
@@ -126,6 +128,24 @@ command to connect.
   nothing can be changed.
 - Keys are stored hashed and shown once. Revoke one and it stops working
   immediately. Keys aren't included in an export.
+
+## Home Assistant
+
+Tinkerbell can publish its state to an MQTT broker with Home Assistant
+discovery. Turn it on under **Settings → Home Assistant** with the broker's
+address (the Mosquitto add-on listens on `mqtt://<ha-host>:1883`).
+
+- A **Tinkerbell** device appears in Home Assistant by itself, with streams,
+  transcodes, stream bandwidth, now playing (each session is an attribute),
+  the current job, a "working" sensor, failing rules, problems, cleanup due
+  soon, services down, library totals and the version.
+- It is publish-only. Tinkerbell never subscribes to anything, so nothing on
+  the broker can make it act.
+- State updates within 30 seconds of a change. Messages are retained, so a
+  restarted Home Assistant gets the current state straight away. While
+  Tinkerbell is stopped, its entities show as unavailable.
+- Change the topic prefix to run a second Tinkerbell against the same broker.
+  The entities under the old prefix are removed.
 
 ## Mobile apps
 

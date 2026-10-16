@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { createLlmClient, listModels } from "@tinkerbell/llm";
 import { errorMessage, REDACTED_SECRET, type ConfigKey } from "@tinkerbell/core";
 import { testArrConnection } from "@tinkerbell/domain.health";
+import { testMqtt } from "@tinkerbell/mqtt";
 import { EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { createAdminAuthRouter } from "./admin-auth.router.ts";
@@ -245,6 +246,23 @@ const appRouterFor = (deps: TrpcDeps) => {
         throw new TRPCError({ code: "BAD_GATEWAY", message });
       }
     }),
+
+    testMqtt: procedure
+      .input(z.object({ url: z.string(), username: z.string().optional(), password: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        // A nested secret, so `unredact` (which reads a top-level key) can't swap it back.
+        const password =
+          input.password === REDACTED_SECRET ? getConfig("global_mqtt")?.password : input.password || undefined;
+        try {
+          const message = await testMqtt({ url: input.url.trim(), username: input.username || undefined, password });
+          reportHealth("MQTT", "ok", message);
+          return { message };
+        } catch (err) {
+          const message = errorMessage(err);
+          reportHealth("MQTT", "error", message);
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
 
     testOmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
       const api_key = unredact(input.api_key, "global_omdb_api_key");

@@ -11,6 +11,7 @@ import { type EventBus } from "@tinkerbell/ports";
 import { type Prerolls } from "@tinkerbell/domain.prerolls";
 import { token } from "@tinkerbell/container";
 import { createDownloadClient } from "@tinkerbell/download-clients";
+import { testMqtt } from "@tinkerbell/mqtt";
 import { downloadClientHealthName } from "@tinkerbell/domain.download-clients";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
@@ -38,6 +39,7 @@ export const HEALTH_SERVICES: Array<{ service: string; configuredFn: (c: ConfigM
   // Only checked once the admin has actually configured prerolls — before
   // that, a missing ffmpeg isn't a fault, it's an unused feature.
   { service: "Prerolls", configuredFn: (c) => !!c.prerolls_plex_path },
+  { service: "MQTT", configuredFn: (c) => !!(c.global_mqtt?.enabled && c.global_mqtt.url) },
 ];
 
 type ArrInstanceLike = { id: string; service: "radarr" | "sonarr"; name: string; isDefault?: boolean };
@@ -410,6 +412,12 @@ export function createHealth(deps: HealthDeps) {
           throw new Error(`Plex's pre-roll setting doesn't match — expected "${sync.expected}", got "${sync.actual}"`);
         }
         reportHealth("Prerolls", "ok", `ffmpeg ${env.ffmpeg}; Plex in sync`);
+        break;
+      }
+      case "MQTT": {
+        const mqtt = cfg.global_mqtt;
+        if (!mqtt?.enabled || !mqtt.url) throw new Error("Not configured");
+        reportHealth("MQTT", "ok", await testMqtt(mqtt));
         break;
       }
       default:

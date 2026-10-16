@@ -340,6 +340,23 @@ export const configSchema = z.object({
     from: z.string(),
     to: z.string().optional(),
   }),
+  /**
+   * Home Assistant over MQTT: Tinkerbell publishes its state (streams, jobs,
+   * failing rules, problems, health) with discovery, so the entities appear in
+   * HA by themselves. Publish-only — see `@tinkerbell/home-assistant`.
+   *
+   * `password` is a nested secret. The prefixes are optional so a save of the
+   * form with them blank means "the defaults" (`tinkerbell`, `homeassistant`)
+   * rather than publishing to the root topic.
+   */
+  global_mqtt: z.object({
+    enabled: z.boolean(),
+    url: z.string(),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    topicPrefix: z.string().optional(),
+    discoveryPrefix: z.string().optional(),
+  }),
   global_smtp_events: z.array(z.string()),
   global_smtp_jobs: z.array(z.string()),
   global_smtp_health_targets: z.array(z.string()),
@@ -945,6 +962,7 @@ export const SECRET_KEYS = new Set<ConfigKey>([
 export const NESTED_SECRETS: ReadonlyArray<{ key: ConfigKey; field: string; each?: boolean }> = [
   { key: "global_llm", field: "apiKey" },
   { key: "global_smtp", field: "password" },
+  { key: "global_mqtt", field: "password" },
   { key: "global_arr_instances", field: "apiKey", each: true },
   { key: "global_download_clients", field: "secret", each: true },
 ];

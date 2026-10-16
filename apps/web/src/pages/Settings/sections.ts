@@ -14,6 +14,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { to: "/settings/ai", label: "AI" },
       { to: "/settings/arrs", label: "Media Managers" },
       { to: "/settings/databases", label: "Databases" },
+      { to: "/settings/home-assistant", label: "Home Assistant" },
     ],
   },
   {

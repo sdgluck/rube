@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTrpc } from "@tinkerbell/trpc";
 import { createAgentApi } from "@tinkerbell/agent-api";
+import { createHomeAssistant, HOME_ASSISTANT_TICK_MS } from "@tinkerbell/home-assistant";
 import { buildContainer, ServicesToken } from "@tinkerbell/composition";
 import { JobsToken, registerJobs, stopSidequest, stopStressTest } from "@tinkerbell/jobs";
 import { authDisabledByEnv, createLogger, errorMessage, startAuthDisabledWarning } from "@tinkerbell/core";
@@ -45,6 +46,13 @@ const { handleAgentRequest } = createAgentApi({
   createCaller,
   verifyApiKey: services.apiKeys.verifyApiKey,
   scope: services.scope,
+  version: APP_VERSION,
+});
+const homeAssistant = createHomeAssistant({
+  createCaller,
+  scope: services.scope,
+  getMqttConfig: () => services.config.getConfig("global_mqtt"),
+  reportHealth: services.health.reportHealth,
   version: APP_VERSION,
 });
 const { rejectIfNotAdmin } = createAuth(services);
@@ -171,6 +179,10 @@ async function main() {
   // in sync with the master switch thereafter.
   syncPortalServer();
   setInterval(syncPortalServer, PORTAL_RECONCILE_MS).unref();
+  // Here rather than in a job: it holds a connection open, and only this
+  // process may — the Sidequest worker builds its own container.
+  void homeAssistant.tick();
+  setInterval(() => void homeAssistant.tick(), HOME_ASSISTANT_TICK_MS).unref();
 }
 
 main().catch((err) => {
@@ -193,6 +205,10 @@ async function shutdown() {
   // leaves a stress test pulling streams off the user's Plex server with
   // nothing left running that knows about it.
   stopStressTest();
+
+  // Says "offline" now, rather than leaving HA to wait out the broker's
+  // keepalive before the will message fires.
+  await homeAssistant.stop();
 
   // Stop accepting new connections, then wait up to SHUTDOWN_GRACE_MS for
   // in-flight requests (streaming Plex images, large tRPC responses) to

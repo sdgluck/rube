@@ -1,0 +1,25 @@
+{
+  "name": "@tinkerbell/mqtt",
+  "version": "0.42.4",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@tinkerbell/core": "workspace:*",
+    "mqtt": "^5.16.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^7.0.2"
+  }
+}

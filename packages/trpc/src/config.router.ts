@@ -11,6 +11,7 @@ import {
   type ConfigValue,
 } from "@tinkerbell/core";
 
+import { validateMqttUrl } from "@tinkerbell/mqtt";
 import { t, procedure } from "./_base.ts";
 import { createPortalComponents } from "./portal-components.ts";
 
@@ -112,6 +113,17 @@ export function createConfigRouter(deps: Pick<TrpcDeps, "config" | "health" | "j
       const unknownComponent = input.portal_components_hidden?.find((id) => !isPortalComponentId(id));
       if (unknownComponent !== undefined) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `"${unknownComponent}" is not a portal component.` });
+      }
+
+      // Checked when switched on, so a half-typed address can still be saved
+      // with the integration off. A bad scheme would otherwise surface only as
+      // a health error thirty seconds later, in a different part of the app.
+      if (input.global_mqtt?.enabled) {
+        try {
+          validateMqttUrl(input.global_mqtt.url.trim());
+        } catch (err) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Broker address: ${(err as Error).message}` });
+        }
       }
 
       // Off-list sizes are refused rather than clamped: the picker only offers
