@@ -64,16 +64,21 @@ setConfig("recommender_enabled", true);
 
 const client = { fetchAllItems: async () => LIBRARY.map(({ ratingKey, title }) => ({ ratingKey, title })) };
 
-/** An OpenAI-compatible provider answering each call with the next scripted reply (the last repeats). */
-async function scriptedLlm(replies: unknown[]) {
+/**
+ * An OpenAI-compatible provider answering each theme call with the next
+ * scripted reply (the last repeats), and the naming call with `names`.
+ */
+async function scriptedLlm(replies: unknown[], names: unknown = []) {
   const prompts: string[] = [];
+  let themeCalls = 0;
   const server = createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       const parsed = JSON.parse(body) as { messages: Array<{ content: string }> };
-      prompts.push(parsed.messages.map((m) => m.content).join("\n"));
-      const reply = replies[Math.min(prompts.length, replies.length) - 1];
+      const prompt = parsed.messages.map((m) => m.content).join("\n");
+      prompts.push(prompt);
+      const reply = prompt.startsWith("You are naming") ? names : replies[Math.min(++themeCalls, replies.length) - 1];
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -130,7 +135,8 @@ describe("ai_prompt, filled by the recommender", () => {
     try {
       const { names, log } = await run({});
       assert.deepEqual(names, ["First", "Second"]);
-      assert.equal(llm.prompts.length, 2);
+      // Two for themes, one to name them.
+      assert.equal(llm.prompts.length, 3);
       assert.match(llm.prompts[1]!, /already taken — do NOT use any of them: Film 1; Film 2/);
       assert.match(llm.prompts[1]!, /Create exactly 1 collections/);
       assert.ok(log.some((l) => l.includes(`"Copy": skipped — 0 usable example(s) (2 already used`)));
@@ -144,7 +150,23 @@ describe("ai_prompt, filled by the recommender", () => {
     try {
       const { names } = await run({});
       assert.deepEqual(names, ["First"]);
-      assert.equal(llm.prompts.length, 3);
+      assert.equal(llm.prompts.length, 4);
+    } finally {
+      await llm.close();
+    }
+  });
+
+  it("renames each collection from its titles, keeping a name the model fumbled", async () => {
+    const llm = await scriptedLlm(
+      [[theme("Seeded", "Film 1", "Film 2"), theme("Other", "Film 4", "Unknown x")]],
+      [{ index: 1, name: "Named From Titles" }],
+    );
+    try {
+      const { names, log } = await run({});
+      assert.deepEqual(names, ["Named From Titles", "Other"]);
+      const naming = llm.prompts.at(-1)!;
+      assert.match(naming, /1\. "Seeded": Film 1; Film 2/);
+      assert.ok(log.includes(`Renamed "Seeded" → "Named From Titles" from its titles.`));
     } finally {
       await llm.close();
     }

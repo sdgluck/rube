@@ -1,6 +1,15 @@
 import { type Services } from "@tinkerbell/composition";
 import { describeSkip } from "@tinkerbell/domain.recommendations";
 import { createLlmCommand } from "../ai/llm.ts";
+import { errorMessage } from "@tinkerbell/core";
+import type { HistoricalCollection } from "@tinkerbell/domain.rule-history";
+import {
+  buildNamingPrompt,
+  namingList,
+  NAMES_REMINDER,
+  NAMES_SCHEMA,
+  parseNames,
+} from "#commands/generate/ai/naming.ts";
 
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
 import { parseAiCollections, type AiCollection } from "#commands/generate/ai/parse.ts";
@@ -20,6 +29,11 @@ export { buildAiPrompt } from "#commands/generate/ai/prompt.ts";
  * run at roughly three times the old one.
  */
 const MAX_TOP_UPS = 2;
+
+/** Titles the model sees in recommender mode, where it only picks examples. */
+const RECOMMENDER_SAMPLE = 500;
+
+const label = (m: MatchedItem) => `${m.title}${m.year ? ` (${m.year})` : ""}`;
 
 export function createAiPromptCommand(deps: Services) {
   const { ruleHistory, recommendations } = deps;
@@ -76,9 +90,17 @@ export function createAiPromptCommand(deps: Services) {
       // with the rule-history mechanism that turns the partial view into
       // variety rather than a blind spot. Matching below still runs against the
       // full library, so the model can name any sampled title.
-      const sample = shuffled(items).slice(0, MAX_ITEMS_PER_CALL);
-      if (items.length > MAX_ITEMS_PER_CALL) {
-        ctx.log(`Library has ${items.length} items; sampling ${MAX_ITEMS_PER_CALL} this run (LLM cap).`);
+      //
+      // Recommender mode samples far fewer: the model only has to find a few
+      // examples per theme, not every member, and 2,000 titles is a ~25k-token
+      // prompt — a 32k window whose KV cache ran a local GPU out of memory,
+      // and which every top-up call re-reads.
+      const sampleSize = fill === "recommender" ? RECOMMENDER_SAMPLE : MAX_ITEMS_PER_CALL;
+      const sample = shuffled(items).slice(0, sampleSize);
+      if (items.length > sampleSize) {
+        ctx.log(
+          `Library has ${items.length} items; sampling ${sampleSize} this run (${fill === "recommender" ? "the AI only picks examples" : "LLM cap"}).`,
+        );
       }
       // Collapse any newlines in a title to a space so each item stays exactly
       // one line: the cap is enforced as a line count, and a title with an
@@ -164,30 +186,76 @@ export function createAiPromptCommand(deps: Services) {
         ctx.log(`${nowKept} of ${maxCollections} theme(s) usable so far.`);
       }
 
-      let yielded = 0;
+      const kept: Array<{ name: string; matched: MatchedItem[] }> = [];
       for (const verdict of verdicts) {
         if (verdict.kind === "too-few") {
           ctx.log(
             `Skipping "${verdict.name}" — only ${verdict.distinct} distinct matching item(s), need at least ${minItems}`,
           );
-          continue;
-        }
-        if (verdict.kind === "duplicate") {
+        } else if (verdict.kind === "duplicate") {
           ctx.log(`Skipping "${verdict.name}" — ${verdict.shared} of its items are already in "${verdict.of}"`);
-          continue;
+        } else if (kept.length < maxCollections) {
+          // A top-up asked for the shortfall, but a model may answer with more.
+          kept.push(verdict);
         }
-        // A top-up asked for the shortfall, but a model may answer with more.
-        if (yielded === maxCollections) break;
-        yielded++;
-        const { matched } = verdict;
-        const matchedTitles = matched.map((m) => `${m.title}${m.year ? ` (${m.year})` : ""}`);
-        yield {
-          name: verdict.name,
-          section,
-          matched,
-          matchedTitles: pickSampleItems(matchedTitles),
-        };
       }
+
+      if (fill === "recommender" && kept.length > 0) {
+        const names = await renameFromTitles(kept, { section, history, ruleConfig, ctx, rule, preview, onAiUsage });
+        kept.forEach((c, i) => {
+          const name = names[i];
+          if (!name || name === c.name) return;
+          ctx.log(`Renamed "${c.name}" → "${name}" from its titles.`);
+          c.name = name;
+        });
+      }
+
+      for (const { name, matched } of kept) {
+        const matchedTitles = matched.map(label);
+        yield { name, section, matched, matchedTitles: pickSampleItems(matchedTitles) };
+      }
+    }
+  }
+
+  /**
+   * One call naming every kept collection from what it holds — see
+   * `naming.ts`. Best effort: a failed call keeps the names the themes came
+   * with, because a collection under its working name beats no collection.
+   */
+  async function renameFromTitles(
+    kept: Array<{ name: string; matched: MatchedItem[] }>,
+    run: Pick<HandlerDeps, "ctx" | "rule" | "ruleConfig" | "preview" | "onAiUsage"> & {
+      section: { title: string };
+      history: HistoricalCollection[];
+    },
+  ): Promise<(string | undefined)[]> {
+    const { ctx, rule, ruleConfig, preview, onAiUsage, section, history } = run;
+    ctx.log(`Asking the LLM to name ${kept.length} collection(s) from their titles...`);
+    try {
+      const { text, tokensIn, tokensOut } = await askLlm(
+        buildNamingPrompt({
+          sectionTitle: section.title,
+          count: kept.length,
+          vibe: ruleConfig.vibe,
+          nameStyle: ruleConfig.nameStyle,
+          history,
+        }),
+        namingList(kept.map((c) => ({ name: c.name, titles: c.matched.map(label) }))),
+        {
+          signal: ctx.signal,
+          ruleId: rule.id,
+          feature: preview ? "rule-preview" : "rule",
+          jsonSchema: NAMES_SCHEMA,
+          reminder: NAMES_REMINDER,
+        },
+      );
+      onAiUsage?.(tokensIn, tokensOut);
+      ctx.log("AI response:", text);
+      return parseNames(text, kept.length);
+    } catch (err) {
+      ctx.signal?.throwIfAborted();
+      ctx.log(`Couldn't rename the collections (${errorMessage(err)}); keeping their working names.`);
+      return [];
     }
   }
 
