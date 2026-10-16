@@ -50,15 +50,15 @@ import { useMatchRoute } from "./match/route.ts";
 const PENDING_KEY = "tb_portal_signin_pending";
 
 const TABS = [
-  // "Your collections" is first on purpose: this was a form you filled in and
-  // never heard back from, so what your answers produced should be the thing
-  // you land on. "Leaving soon" is last because it is the one nobody wants to
-  // be looking at.
+  // "Your tastes" is first: it is the one thing here only you can do, and
+  // your collections are empty until you have done it. "Your collections"
+  // follows so what your answers produced is one tap away. "Leaving soon" is
+  // last because it is the one nobody wants to be looking at.
   // Each behind the admin's switch for it (Settings → Portal → Components),
   // and Leaving soon behind cleanup being on as well — it used to show on
   // servers that could never remove anything, saying so forever.
-  { id: "collections", label: "Your collections", component: "tab.collections" },
   { id: "preferences", label: "Your tastes", component: "tab.tastes" },
+  { id: "collections", label: "Your collections", component: "tab.collections" },
   { id: "match", label: "Movie match", component: "tab.match" },
   { id: "leaving", label: "Leaving soon", component: "tab.leaving" },
 ] as const;
@@ -67,8 +67,8 @@ type TabId = (typeof TABS)[number]["id"] | "account";
 
 /** The tab bar's icons and short labels, on a phone. */
 const PHONE_TABS: Record<TabId, { label: string; Icon: LucideIcon }> = {
-  collections: { label: "Collections", Icon: LayoutGrid },
   preferences: { label: "Tastes", Icon: Heart },
+  collections: { label: "Collections", Icon: LayoutGrid },
   match: { label: "Match", Icon: Popcorn },
   leaving: { label: "Leaving", Icon: Clock },
   account: { label: "Account", Icon: UserRound },
@@ -91,7 +91,7 @@ export default function PortalApp() {
   const branding: Branding = brandingQuery.data ?? {};
   const [error, setError] = useState<string | null>(null);
   const isPhone = useIsPhone();
-  const [tab, setTabState] = useState<TabId>(() => tabFromHash() ?? "collections");
+  const [tab, setTabState] = useState<TabId>(() => tabFromHash() ?? "preferences");
   const scrollByTab = useRef(new Map<TabId, number>());
   const [signingOut, setSigningOut] = useState(false);
 
@@ -116,7 +116,7 @@ export default function PortalApp() {
   useEffect(() => {
     const onPop = () => {
       scrollByTab.current.set(tab, window.scrollY);
-      setTabState(tabFromHash() ?? "collections");
+      setTabState(tabFromHash() ?? "preferences");
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
