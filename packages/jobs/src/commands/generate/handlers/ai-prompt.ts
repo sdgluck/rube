@@ -3,6 +3,7 @@ import { createLlmCommand } from "../ai/llm.ts";
 
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
 import { parseAiCollections } from "#commands/generate/ai/parse.ts";
+import { selectCollections, type MatchedItem } from "#commands/generate/ai/select.ts";
 import { shuffled, MAX_ITEMS_PER_CALL } from "#commands/generate/ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
@@ -88,26 +89,33 @@ export function createAiPromptCommand(deps: Services) {
 
       // Build a title→item map. Both "Title (Year)" and bare "Title" forms
       // map to the same item so we tolerate either shape from the model.
-      const titleMap = new Map<string, { ratingKey: string; title: string; year?: number }>();
+      const titleMap = new Map<string, MatchedItem>();
       for (const item of items) {
         const info = { ratingKey: item.ratingKey, title: item.title, year: item.year };
         titleMap.set(`${item.title}${item.year ? ` (${item.year})` : ""}`, info);
         titleMap.set(item.title, info);
       }
 
-      for (const col of aiCollections) {
-        const matched = col.items
-          .map((title) => titleMap.get(title))
-          .filter((m): m is { ratingKey: string; title: string; year?: number } => m !== undefined);
+      const candidates = aiCollections.map((col) => ({
+        name: col.name,
+        matched: col.items.map((title) => titleMap.get(title)).filter((m) => m !== undefined),
+      }));
 
-        if (matched.length < minItems) {
-          ctx.log(`Skipping "${col.name}" — only ${matched.length} matching item(s), need at least ${minItems}`);
+      for (const verdict of selectCollections(candidates, minItems)) {
+        if (verdict.kind === "too-few") {
+          ctx.log(
+            `Skipping "${verdict.name}" — only ${verdict.distinct} distinct matching item(s), need at least ${minItems}`,
+          );
           continue;
         }
-
+        if (verdict.kind === "duplicate") {
+          ctx.log(`Skipping "${verdict.name}" — ${verdict.shared} of its items are already in "${verdict.of}"`);
+          continue;
+        }
+        const { matched } = verdict;
         const matchedTitles = matched.map((m) => `${m.title}${m.year ? ` (${m.year})` : ""}`);
         yield {
-          name: col.name,
+          name: verdict.name,
           section,
           matched,
           matchedTitles: pickSampleItems(matchedTitles),

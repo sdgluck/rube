@@ -40,7 +40,8 @@ export function buildAiPrompt(args: {
 Rules:
 - Create exactly ${limit} collections.
 - Each collection MUST have between ${minItems} and 30 items, no fewer than ${minItems}.
-- Each item can appear in multiple collections.
+- List each title at most once within a collection.
+- Each collection needs its own theme and its own roster: an item can appear in more than one collection, but no two collections may share more than a few items.
 - Only use titles that exactly match the input list.
 - Collection names must be creative, fun, relatively short, not academic, and NEVER use colons (no "Title: Subtitle" format).
 - Be surprising and inventive — avoid obvious genre or decade groupings.
