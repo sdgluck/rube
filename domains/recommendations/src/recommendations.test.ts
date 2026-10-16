@@ -240,6 +240,22 @@ describe("nearest", () => {
   });
 });
 
+describe("cohesion", () => {
+  test("is the mean cosine over the pairs that have a vector", () => {
+    const recs = build();
+    // movie:1 and movie:6 point the same way; movie:3 is orthogonal to both.
+    const near = (a: number | null, b: number) => assert.ok(a !== null && Math.abs(a - b) < 1e-3, `${a} ≉ ${b}`);
+    near(recs.cohesion(["m1", "m6"]), 1);
+    near(recs.cohesion(["m1", "m3"]), 0);
+    near(recs.cohesion(["m1", "m6", "m3", "x"]), 1 / 3);
+  });
+
+  test("has nothing to say about fewer than two vectors, or when off", () => {
+    assert.equal(build().cohesion(["m1", "x"]), null);
+    assert.equal(build({ enabled: false }).cohesion(["m1", "m6"]), null);
+  });
+});
+
 describe("coverage", () => {
   test("says how much it could rank, or why it can't", () => {
     assert.deepEqual(build().coverage(["m1", "m2", "x"]), { withVector: 2, total: 3 });

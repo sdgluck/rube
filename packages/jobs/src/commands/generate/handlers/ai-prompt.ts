@@ -5,7 +5,7 @@ import { createLlmCommand } from "../ai/llm.ts";
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
 import { parseAiCollections } from "#commands/generate/ai/parse.ts";
 import { selectCollections, type MatchedItem } from "#commands/generate/ai/select.ts";
-import { fillFromSeeds } from "#commands/generate/ai/fill.ts";
+import { fillFromSeeds, MIN_COHESION, MIN_SEEDS, type Filled } from "#commands/generate/ai/fill.ts";
 import { shuffled, MAX_ITEMS_PER_CALL } from "#commands/generate/ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
@@ -122,14 +122,9 @@ export function createAiPromptCommand(deps: Services) {
       }));
       if (fill === "recommender") {
         const library = items.map((i) => ({ ratingKey: i.ratingKey, title: i.title, year: i.year }));
-        candidates = fillFromSeeds(candidates, library, maxItems, recommendations.nearest).map((c) => {
-          ctx.log(
-            c.skipped
-              ? `"${c.name}": not filled — ${c.skipped.skipped === "seed-has-no-vector" ? "the recommender knows none of its examples" : describeSkip(c.skipped)}.`
-              : `"${c.name}": ${c.seeds} example(s) from the AI, ${c.matched.length - c.seeds} added by the recommender.`,
-          );
-          return c;
-        });
+        const filled = fillFromSeeds(candidates, library, maxItems, recommendations.nearest, recommendations.cohesion);
+        for (const c of filled) ctx.log(`"${c.name}": ${describeFill(c)}`);
+        candidates = filled.filter((c) => !c.dropped);
       }
 
       for (const verdict of selectCollections(candidates, minItems, maxItems)) {
@@ -156,4 +151,23 @@ export function createAiPromptCommand(deps: Services) {
   }
 
   return { askLlm, aiPromptHandler };
+}
+
+/** One run-log line per theme in recommender mode: what was filled, or why not. */
+function describeFill(c: Filled<MatchedItem>): string {
+  if (c.dropped?.reason === "examples") {
+    const reused = c.dropped.reused > 0 ? ` (${c.dropped.reused} already used by an earlier theme)` : "";
+    return `skipped — ${c.dropped.fresh} usable example(s)${reused}, needs ${MIN_SEEDS}.`;
+  }
+  if (c.dropped?.reason === "scattered") {
+    return `skipped — its examples have too little in common (${c.dropped.cohesion.toFixed(2)}, needs ${MIN_COHESION}).`;
+  }
+  if (c.skipped) {
+    const why =
+      c.skipped.skipped === "seed-has-no-vector"
+        ? "the recommender knows none of its examples"
+        : describeSkip(c.skipped);
+    return `not filled — ${why}.`;
+  }
+  return `${c.seeds} example(s) from the AI, ${c.matched.length - c.seeds} added by the recommender.`;
 }

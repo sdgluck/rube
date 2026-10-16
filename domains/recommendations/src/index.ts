@@ -363,7 +363,30 @@ export function createRecommendations(deps: RecommendationsDeps) {
     };
   }
 
-  return { status, shortlist, similar, nearest, coverage };
+  /**
+   * How alike these titles are: the mean cosine over every pair that has a
+   * vector, or null with fewer than two. An AI rule asks it of a theme's
+   * examples, because examples with nothing in common average to the middle
+   * of the space — popular, acclaimed, generic — and fill a theme with that.
+   */
+  function cohesion(keys: string[]): number | null {
+    if (!enabled()) return null;
+    const m = model();
+    if (!m) return null;
+    const vectors = [...rowsFor(m, keys).values()].map((row) => m.vector(row));
+    if (vectors.length < 2) return null;
+    let sum = 0;
+    let pairs = 0;
+    for (let i = 0; i < vectors.length; i++) {
+      for (let j = i + 1; j < vectors.length; j++) {
+        sum += dot(vectors[i]!, vectors[j]!) / ((norm(vectors[i]!) || 1) * (norm(vectors[j]!) || 1));
+        pairs++;
+      }
+    }
+    return sum / pairs;
+  }
+
+  return { status, shortlist, similar, nearest, coverage, cohesion };
 }
 
 export type Recommendations = ReturnType<typeof createRecommendations>;
