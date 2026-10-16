@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.42.3] - 2026-10-16
+
+### Fixed
+
+- AI rules that use the recommender to fill their collections now name each collection after the titles it actually holds.
+- AI rules that use the recommender to fill their collections now send the AI 500 titles from your library instead of 2,000.
+
 ## [0.42.2] - 2026-10-16
 
 ### Fixed
