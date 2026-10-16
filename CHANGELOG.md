@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.42.2] - 2026-10-16
+
+### Fixed
+
+- AI rules whose collections are filled by the recommender now make follow-up AI calls to top up the rule when too few of its themes survive, instead of ending up with too few collections.
+- AI rules whose collections are filled by the recommender now include at most two titles from any one series in each collection.
+
+No follow-up: only the changelog section was asked for.
+
 ## [0.42.1] - 2026-10-16
 
 ### Fixed
