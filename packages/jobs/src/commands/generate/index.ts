@@ -320,13 +320,17 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
             // each collection against what this rule already owns and sweeps
             // whatever it no longer produces at the end of the run. See
             // `reconcile.ts` for why that is worth the extra reads.
-            return runHandler(
+            const result = await runHandler(
               { ctx: ruleCtx, client, sections, rule, ruleConfig, ruleRunId: ruleRun.runId },
               machineId,
               labels,
               cleanupBudget,
               metadataBudget,
             );
+            if (!ruleCtx.signal?.aborted) {
+              await removeOutOfScope(ruleCtx, client, allSections, ruleSectionsOrNull, rule.id);
+            }
+            return result;
           },
           { signal: ruleCtx.signal },
         );
@@ -589,13 +593,15 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
       async () => {
         ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
         const labels = ["Tinkerbell", `Rule:${rule.id}`];
-        return runHandler(
+        const result = await runHandler(
           { ctx, client, sections, rule, ruleConfig, ruleRunId },
           machineId,
           labels,
           createCleanupBudget(),
           createMetadataBudget(),
         );
+        if (!signal?.aborted) await removeOutOfScope(ctx, client, allSections, ruleSectionsOrNull, rule.id);
+        return result;
       },
       { waitMs: SINGLE_RUN_LOCK_WAIT_MS, signal },
     );
@@ -707,6 +713,36 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
     // say so rather than keep advertising a set that no longer exists.
     setRuleLastRun(rule.id, { status: "ok", durationMs: 0, collectionCount: 0, itemCount: 0 });
     return { cleared: true };
+  }
+
+  /**
+   * Delete what this rule left in libraries it no longer covers.
+   *
+   * A run only reads and sweeps its own libraries, so narrowing a rule's scope
+   * stranded everything it had made in the ones dropped: an AI rule moved from
+   * Films and TV to Films alone kept "Britcom Chaos Energy" and "Animated
+   * Misfits and Weirdos" in TV for months, under its label, re-pinned by nobody
+   * and swept by nothing — the orphan sweep only acts on deleted rules.
+   *
+   * Only when the rule names its libraries and they matched. A rule with no
+   * list of its own takes the job's scope, which may be narrower than the
+   * server; deleting outside that would take down output the rule still makes.
+   */
+  async function removeOutOfScope(
+    ctx: JobContext,
+    client: PlexClient,
+    allSections: PlexSection[],
+    ruleSections: PlexSection[] | null | undefined,
+    ruleId: string,
+  ): Promise<void> {
+    if (!ruleSections) return;
+    const covered = new Set(ruleSections.map((s) => s.key));
+    await deleteOldCollections(
+      ctx,
+      client,
+      allSections.filter((s) => !covered.has(s.key)),
+      ruleId,
+    );
   }
 
   async function deleteOldCollections(
