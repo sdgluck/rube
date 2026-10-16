@@ -16,6 +16,11 @@ export function buildAiPrompt(args: {
   nameStyle?: RuleConfig["nameStyle"];
   history: HistoricalCollection[];
   preferences?: UserPreferences;
+  /**
+   * A top-up call: themes this run already kept or tried, and every title
+   * already given as an example, so the model looks somewhere else.
+   */
+  taken?: { names: string[]; titles: string[] };
 }): string {
   const { sectionTitle, limit, minItems, themes, customThemes, vibe, nameStyle, history, preferences } = args;
   const maxItems = Math.max(args.maxItems ?? 30, minItems);
@@ -54,10 +59,15 @@ Previously generated collections for this library (DO NOT repeat these themes, n
 ${historyBlock}
 
 Your new collections must explore different angles than anything above.
-${prefsBlock}
+${args.taken ? takenBlock(args.taken) : ""}${prefsBlock}
 Return ONLY valid minified JSON on a single line, no markdown fences, no explanation, no newlines within the JSON. Format:
 [{"name":"Collection Name","items":["Title (Year)","Title (Year)"]}]`;
 }
+
+const takenBlock = (taken: { names: string[]; titles: string[] }) => `
+This run already has these collections; yours must be about something else entirely: ${taken.names.map((n) => `"${n}"`).join(", ")}.
+These titles are already taken — do NOT use any of them: ${taken.titles.join("; ")}.
+`;
 
 const listRules = (
   minItems: number,

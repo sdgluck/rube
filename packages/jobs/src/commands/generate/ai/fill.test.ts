@@ -94,6 +94,19 @@ test("unknown cohesion (too few vectors) doesn't drop a theme", () => {
   assert.equal(one.dropped, undefined);
 });
 
+test("a series takes at most two places in a theme", () => {
+  const potter = (n: number) => ({ ratingKey: `hp${n}`, title: `Harry Potter and the Thing ${n}` });
+  const lib = [...Array.from({ length: 8 }, (_, i) => potter(i)), ...items("x", "y", "z"), ...items("i", "j")];
+  // The recommender ranks the whole franchise first.
+  const nearest: Nearest = (opts) => ({
+    ratingKeys: opts.candidates.filter((k) => k !== "i" && k !== "j"),
+    coverage: { withVector: 1, total: 1 },
+  });
+  const [one] = fillFromSeeds([{ name: "One", matched: items("i", "j") }], lib, 7, nearest);
+  assert.deepEqual(keys(one.matched), ["i", "j", "hp0", "hp1", "x", "y", "z"]);
+  assert.equal(one.capped, 6);
+});
+
 test("a declined fill keeps the examples and says why", () => {
   const [one] = fillFromSeeds([{ name: "One", matched: items("i", "j") }], library, 3, () => ({
     skipped: "seed-has-no-vector",

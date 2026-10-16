@@ -3,8 +3,8 @@ import { describeSkip } from "@tinkerbell/domain.recommendations";
 import { createLlmCommand } from "../ai/llm.ts";
 
 import { buildAiPrompt, pickSampleItems } from "#commands/generate/ai/prompt.ts";
-import { parseAiCollections } from "#commands/generate/ai/parse.ts";
-import { selectCollections, type MatchedItem } from "#commands/generate/ai/select.ts";
+import { parseAiCollections, type AiCollection } from "#commands/generate/ai/parse.ts";
+import { selectCollections, type MatchedItem, type Verdict } from "#commands/generate/ai/select.ts";
 import { fillFromSeeds, MIN_COHESION, MIN_SEEDS, type Filled } from "#commands/generate/ai/fill.ts";
 import { shuffled, MAX_ITEMS_PER_CALL } from "#commands/generate/ai/llm.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
@@ -13,6 +13,13 @@ import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts
 // reads the configured provider, so it is built with the run's dependencies.
 export { parseAiCollections } from "#commands/generate/ai/parse.ts";
 export { buildAiPrompt } from "#commands/generate/ai/prompt.ts";
+
+/**
+ * Extra calls for themes when too few of the first answer survive. Each takes
+ * about as long as the first (it re-reads the library list), so two bound a
+ * run at roughly three times the old one.
+ */
+const MAX_TOP_UPS = 2;
 
 export function createAiPromptCommand(deps: Services) {
   const { ruleHistory, recommendations } = deps;
@@ -62,20 +69,6 @@ export function createAiPromptCommand(deps: Services) {
         ctx.log(`Loaded ${history.length} prior collection(s) from history to inform prompt.`);
       }
 
-      const prompt = buildAiPrompt({
-        sectionTitle: section.title,
-        limit: maxCollections,
-        minItems,
-        maxItems,
-        fill,
-        themes,
-        customThemes,
-        vibe: ruleConfig.vibe,
-        nameStyle: ruleConfig.nameStyle,
-        history,
-        preferences: userPrefs,
-      });
-
       // The LLM call caps its payload at MAX_ITEMS_PER_CALL titles (a security
       // bound on blast radius — see llm.ts). For libraries larger than that we
       // send a random sample rather than failing the whole rule. The shuffle
@@ -95,18 +88,6 @@ export function createAiPromptCommand(deps: Services) {
         .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`.replace(/[\r\n]+/g, " "))
         .join("\n");
 
-      ctx.log(`Asking the LLM for curated collections...`);
-      const { text, tokensIn, tokensOut } = await askLlm(prompt, itemList, {
-        signal: ctx.signal,
-        ruleId: rule.id,
-        feature: preview ? "rule-preview" : "rule",
-      });
-      onAiUsage?.(tokensIn, tokensOut);
-      ctx.log("AI response:", text);
-
-      const aiCollections = parseAiCollections(text);
-      ctx.log(`Got ${aiCollections.length} collection(s) from AI.`);
-
       // Build a title→item map. Both "Title (Year)" and bare "Title" forms
       // map to the same item so we tolerate either shape from the model.
       const titleMap = new Map<string, MatchedItem>();
@@ -115,19 +96,76 @@ export function createAiPromptCommand(deps: Services) {
         titleMap.set(`${item.title}${item.year ? ` (${item.year})` : ""}`, info);
         titleMap.set(item.title, info);
       }
+      const library = items.map((i) => ({ ratingKey: i.ratingKey, title: i.title, year: i.year }));
 
-      let candidates = aiCollections.map((col) => ({
-        name: col.name,
-        matched: col.items.map((title) => titleMap.get(title)).filter((m) => m !== undefined),
-      }));
-      if (fill === "recommender") {
-        const library = items.map((i) => ({ ratingKey: i.ratingKey, title: i.title, year: i.year }));
-        const filled = fillFromSeeds(candidates, library, maxItems, recommendations.nearest, recommendations.cohesion);
-        for (const c of filled) ctx.log(`"${c.name}": ${describeFill(c)}`);
-        candidates = filled.filter((c) => !c.dropped);
+      // Every theme the model has offered this run, across calls. Each call's
+      // themes are judged together with the earlier ones — re-filling from the
+      // start is cheap and keeps "an example counts once" true across calls.
+      const asked: AiCollection[] = [];
+      let verdicts: Verdict<MatchedItem>[] = [];
+      for (let call = 0; ; call++) {
+        const kept = verdicts.filter((v) => v.kind === "keep").length;
+        const want = maxCollections - kept;
+        const prompt = buildAiPrompt({
+          sectionTitle: section.title,
+          limit: want,
+          minItems,
+          maxItems,
+          fill,
+          themes,
+          customThemes,
+          vibe: ruleConfig.vibe,
+          nameStyle: ruleConfig.nameStyle,
+          history,
+          preferences: userPrefs,
+          taken:
+            call === 0
+              ? undefined
+              : { names: asked.map((c) => c.name), titles: [...new Set(asked.flatMap((c) => c.items))] },
+        });
+
+        ctx.log(call === 0 ? `Asking the LLM for curated collections...` : `Asking the LLM for ${want} more...`);
+        const { text, tokensIn, tokensOut } = await askLlm(prompt, itemList, {
+          signal: ctx.signal,
+          ruleId: rule.id,
+          feature: preview ? "rule-preview" : "rule",
+        });
+        onAiUsage?.(tokensIn, tokensOut);
+        ctx.log("AI response:", text);
+
+        const fresh = parseAiCollections(text);
+        ctx.log(`Got ${fresh.length} collection(s) from AI.`);
+        const before = asked.length;
+        asked.push(...fresh);
+
+        let candidates = asked.map((col) => ({
+          name: col.name,
+          matched: col.items.map((title) => titleMap.get(title)).filter((m) => m !== undefined),
+        }));
+        if (fill === "recommender") {
+          const filled = fillFromSeeds(
+            candidates,
+            library,
+            maxItems,
+            recommendations.nearest,
+            recommendations.cohesion,
+          );
+          for (const c of filled.slice(before)) ctx.log(`"${c.name}": ${describeFill(c)}`);
+          candidates = filled.filter((c) => !c.dropped);
+        }
+        verdicts = selectCollections(candidates, minItems, maxItems);
+
+        // Only the recommender mode tops up: its calls ask for a few titles
+        // each and return in a minute or two, where a full LLM-picked list
+        // is the slow, expensive call this mode exists to avoid. And a small
+        // model there gives two or three usable themes in ten.
+        const nowKept = verdicts.filter((v) => v.kind === "keep").length;
+        if (fill !== "recommender" || nowKept >= maxCollections || call >= MAX_TOP_UPS) break;
+        ctx.log(`${nowKept} of ${maxCollections} theme(s) usable so far.`);
       }
 
-      for (const verdict of selectCollections(candidates, minItems, maxItems)) {
+      let yielded = 0;
+      for (const verdict of verdicts) {
         if (verdict.kind === "too-few") {
           ctx.log(
             `Skipping "${verdict.name}" — only ${verdict.distinct} distinct matching item(s), need at least ${minItems}`,
@@ -138,6 +176,9 @@ export function createAiPromptCommand(deps: Services) {
           ctx.log(`Skipping "${verdict.name}" — ${verdict.shared} of its items are already in "${verdict.of}"`);
           continue;
         }
+        // A top-up asked for the shortfall, but a model may answer with more.
+        if (yielded === maxCollections) break;
+        yielded++;
         const { matched } = verdict;
         const matchedTitles = matched.map((m) => `${m.title}${m.year ? ` (${m.year})` : ""}`);
         yield {

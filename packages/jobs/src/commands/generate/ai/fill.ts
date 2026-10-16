@@ -16,9 +16,13 @@
  * one generic point, "popular and acclaimed, 2015–2024", with the two seeds in
  * six collections. So an example counts once per run, and a theme needs
  * examples that resemble each other.
+ *
+ * And no series may hold more than `MAX_PER_SERIES` places in a theme — see
+ * `series.ts` for the eight Harry Potter films that made that necessary.
  */
 import type { RankResult } from "@tinkerbell/domain.recommendations";
 import type { Candidate, MatchedItem } from "./select.ts";
+import { MAX_PER_SERIES, seriesKey } from "./series.ts";
 
 export type Nearest = (opts: { seeds: string[]; candidates: string[]; limit: number }) => RankResult;
 /** Mean pairwise cosine of these titles, or null if under two have a vector. */
@@ -47,6 +51,8 @@ export interface Filled<T extends MatchedItem> extends Candidate<T> {
   skipped?: Extract<RankResult, { skipped: unknown }>;
   /** Why the theme was abandoned before filling. */
   dropped?: Dropped;
+  /** Titles passed over because their series already had its share. */
+  capped?: number;
 }
 
 export function fillFromSeeds<T extends MatchedItem>(
@@ -77,15 +83,33 @@ export function fillFromSeeds<T extends MatchedItem>(
     const room = maxItems - seeds.length;
     if (room <= 0) return { name, matched: seeds, seeds: seeds.length };
 
+    // Over-asked, because the series cap below can pass over a run of them.
     const ranked = nearest({
       seeds: seedKeys,
       candidates: library.map((i) => i.ratingKey).filter((k) => !used.has(k)),
-      limit: room,
+      limit: room * 3,
     });
     if ("skipped" in ranked) return { name, matched: seeds, seeds: seeds.length, skipped: ranked };
 
-    const added = ranked.ratingKeys.flatMap((k) => byKey.get(k) ?? []);
+    const perSeries = new Map<string, number>();
+    const take = (item: T) => {
+      const key = seriesKey(item.title);
+      const n = perSeries.get(key) ?? 0;
+      if (n >= MAX_PER_SERIES) return false;
+      perSeries.set(key, n + 1);
+      return true;
+    };
+    for (const seed of seeds) take(seed);
+    const added: T[] = [];
+    let capped = 0;
+    for (const key of ranked.ratingKeys) {
+      if (added.length === room) break;
+      const item = byKey.get(key);
+      if (!item) continue;
+      if (take(item)) added.push(item);
+      else capped++;
+    }
     for (const item of added) used.add(item.ratingKey);
-    return { name, matched: [...seeds, ...added], seeds: seeds.length };
+    return { name, matched: [...seeds, ...added], seeds: seeds.length, capped };
   });
 }
