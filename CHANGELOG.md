@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.42.4] - 2026-10-16
+
+### Fixed
+
+- When a rule no longer covers a library, it now removes the collections it had made in that library the next time it runs, instead of leaving them behind.
+
 ## [0.42.3] - 2026-10-16
 
 ### Fixed
