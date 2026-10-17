@@ -29,6 +29,8 @@ and notifications on a schedule.
 - **Discover**: search TMDb, see what Plex and Radarr/Sonarr already have, and
   send the rest to Radarr or Sonarr.
 - **Watchlist sync**: send new Plex watchlist items to Radarr or Sonarr.
+- **Unused 4K**: find 4K films nobody watches in 4K and swap them to 1080p
+  without a gap. [More](#unused-4k)
 - **Home Assistant**: streams, jobs, failing rules and health as MQTT
   sensors. [More](#home-assistant)
 - **Notifications**: Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
@@ -128,6 +130,24 @@ command to connect.
   nothing can be changed.
 - Keys are stored hashed and shown once. Revoke one and it stops working
   immediately. Keys aren't included in an export.
+
+## Unused 4K
+
+**Managers → Unused 4K** lists 4K films that nobody has watched in 4K: every
+play was a transcode, or there were none. Films added in the last 30 days are
+left out, and so is any film with a play whose details weren't recorded.
+
+Radarr doesn't downgrade a film by itself, so Tinkerbell runs the swap:
+
+1. Sets the 1080p quality profile you picked.
+2. Searches for a 1080p release, one film at a time.
+3. Grabs Radarr's best acceptable 1080p release.
+4. Once the download finishes, imports it over the 4K file.
+
+The 4K file stays until that import, which deletes it or moves it to Radarr's
+recycle bin. If a swap fails or you cancel it, the original profile is put
+back. Each swap's progress is on the page. "4K Replaced With 1080p" and "4K
+Replacement Failed" are available as notifications.
 
 ## Home Assistant
 

@@ -153,6 +153,14 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     group: "background",
     description: "Polls Radarr and Sonarr download queues so the dashboard shows what is downloading.",
   },
+  "quality-swaps": {
+    kind: "system",
+    group: "background",
+    description:
+      "Moves each 4K-to-1080p swap you started on the Unused 4K page a step along: searches, follows the download, then imports it over the 4K file. Does nothing when no swap is in progress.",
+    settingsHref: "/movies/unused-4k",
+    settingsLabel: "Unused 4K",
+  },
   "watchlist-sync": {
     kind: "system",
     group: "background",

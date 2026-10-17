@@ -79,6 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/discover", label: "Discover" },
       { to: "/movies", label: "Movies" },
+      { to: "/movies/unused-4k", label: "Unused 4K" },
       { to: "/tv", label: "TV" },
       { to: "/downloads", label: "Downloads", metric: { kind: "count", key: "arrQueue" } },
       { to: "/arrs", label: "Instances", metric: { kind: "status", key: "arrsStatus" } },

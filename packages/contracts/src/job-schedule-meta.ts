@@ -80,6 +80,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "sync-users": { essential: "warning", estimateMs: 2 * MINUTE_MS },
   "seerr-poll": { requires: "seerr", noopWithoutService: true, estimateMs: MINUTE_MS },
   "arr-poll": { requires: "arr", noopWithoutService: true, estimateMs: MINUTE_MS },
+  "quality-swaps": { requires: "arr", noopWithoutService: true, estimateMs: MINUTE_MS },
   "watchlist-sync": { requires: "watchlist", noopWithoutService: true, estimateMs: MINUTE_MS },
   // The clock for every rule's own cron — moving it moves all of them.
   "rule-schedules": { essential: "error", pinned: true, estimateMs: MINUTE_MS },

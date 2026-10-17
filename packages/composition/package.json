@@ -48,6 +48,7 @@
     "@tinkerbell/domain.prerolls": "workspace:*",
     "@tinkerbell/domain.preview": "workspace:*",
     "@tinkerbell/domain.problems": "workspace:*",
+    "@tinkerbell/domain.quality-swaps": "workspace:*",
     "@tinkerbell/domain.recommendations": "workspace:*",
     "@tinkerbell/domain.registry": "workspace:*",
     "@tinkerbell/domain.rule-history": "workspace:*",

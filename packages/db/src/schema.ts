@@ -2390,3 +2390,56 @@ export const problemDismissals = sqliteTable(
   },
   (table) => [uniqueIndex("idx_problem_dismissals_unique").on(table.kind, table.subject)],
 );
+
+/**
+ * One replacement of a film's 4K file with a 1080p one, driven step by step.
+ *
+ * Radarr never downgrades: a 2160p file meets any 1080p cutoff, and a 1080p
+ * release is refused at import as "not an upgrade". So a swap is a small
+ * state machine Tinkerbell walks itself, a poll at a time — set the 1080p
+ * profile, interactive-search, grab, wait for the download, then import it
+ * with ManualImport, which replaces the 4K file in one step. The 4K copy is
+ * never deleted ahead of a playable replacement, which is the whole reason
+ * this isn't "delete and search".
+ *
+ * `state`: pending | downloading | importing | done | failed | cancelled.
+ * A row is the memory between polls (the search is minutes, the download
+ * hours), and afterwards the record of what was swapped and what it freed.
+ *
+ * `fromProfileId` is what a failure or cancel puts back, so a swap that goes
+ * nowhere leaves the film exactly as it was.
+ */
+export const qualitySwaps = sqliteTable(
+  "quality_swaps",
+  {
+    id: text("id").primaryKey(),
+    instanceId: text("instance_id").notNull(),
+    arrMovieId: integer("arr_movie_id").notNull(),
+    plexRatingKey: text("plex_rating_key"),
+    title: text("title").notNull(),
+    fromProfileId: integer("from_profile_id"),
+    toProfileId: integer("to_profile_id").notNull(),
+    fromQuality: text("from_quality").notNull().default(""),
+    fromSize: integer("from_size"),
+    /** The release grabbed, matched against the queue by title until Radarr reports its download id. */
+    releaseTitle: text("release_title").notNull().default(""),
+    downloadId: text("download_id"),
+    /** The ManualImport command, polled until it finishes. */
+    commandId: integer("command_id"),
+    toQuality: text("to_quality").notNull().default(""),
+    toSize: integer("to_size"),
+    state: text("state").notNull(),
+    /** What happened last, in a sentence — shown beside the state. */
+    message: text("message").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    /** When the grab went out, for the "never finished downloading" deadline. */
+    grabbedAt: integer("grabbed_at"),
+    finishedAt: integer("finished_at"),
+  },
+  (table) => [
+    index("idx_quality_swaps_state").on(table.state),
+    index("idx_quality_swaps_movie").on(table.instanceId, table.arrMovieId),
+  ],
+);

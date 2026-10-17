@@ -269,3 +269,30 @@ export interface RadarrBlocklistItem {
   quality?: RadarrQuality;
   movie?: RadarrMovie;
 }
+
+/** One file `GET /manualimport` offers, with Radarr's verdict on it. */
+export interface RadarrManualImportItem {
+  id?: number;
+  path: string;
+  name?: string;
+  size?: number;
+  movie?: { id: number; title?: string };
+  quality?: RadarrQuality;
+  languages?: Array<{ id: number; name: string }>;
+  releaseGroup?: string;
+  downloadId?: string;
+  indexerFlags?: number;
+  /** Radarr's objections, e.g. "Not an upgrade for existing movie file". ManualImport imports regardless. */
+  rejections?: Array<{ reason: string; type?: string }>;
+}
+
+/** One file in a `ManualImport` command. */
+export interface RadarrManualImportFile {
+  path: string;
+  movieId: number;
+  quality?: RadarrQuality;
+  languages?: Array<{ id: number; name: string }>;
+  releaseGroup?: string;
+  downloadId?: string;
+  indexerFlags?: number;
+}

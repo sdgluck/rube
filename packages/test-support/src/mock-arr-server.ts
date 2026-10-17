@@ -81,6 +81,10 @@ export interface ArrJournal {
    */
   settingsWrites: Array<{ method: string; path: string; body: unknown }>;
   unhandled: string[];
+  /** Radarr only: every release grabbed, as posted. */
+  grabs: Array<Record<string, unknown>>;
+  /** Every `POST /command` body. */
+  commands: Array<Record<string, unknown>>;
   /** Every request, in order, as `METHOD path`. */
   requests: string[];
 }
@@ -110,6 +114,8 @@ export interface MockArr {
   failWith: (path: string, status: number, body?: string) => void;
   /** Live quality settings, mutable by a test to simulate an edit made in the *Arr's own UI. */
   quality: MockQualityState;
+  /** Radarr only: grabs, the queue and imports. */
+  pipeline: MockRadarrPipeline;
   close: () => Promise<void>;
 }
 
@@ -125,6 +131,39 @@ export interface MockQualityState {
   profiles: Map<number, Record<string, unknown>>;
   customFormats: Map<number, Record<string, unknown>>;
   definitions: Array<Record<string, unknown>>;
+}
+
+/**
+ * Radarr's grab → download → import pipeline, enough of it to drive a swap.
+ *
+ * Modelled on the real behaviour the 4K swap depends on, which was checked
+ * against a live Radarr: a finished download that isn't an upgrade sits in
+ * the queue as `importBlocked`, `GET /manualimport` still offers it (with the
+ * rejection), and the `ManualImport` command replaces the movie's file
+ * regardless. A test moves a download along with `finish` or `failDownload`.
+ */
+export interface MockRadarrPipeline {
+  /** What an interactive search for a movie returns. */
+  releases: Map<number, Array<Record<string, unknown>>>;
+  /** The movie's file on disk, as `/moviefile?movieId=` serves it. */
+  files: Map<number, Record<string, unknown>>;
+  /** Grabbed releases, by download id. */
+  downloads: Map<string, MockArrDownload>;
+  /** Mark a download complete; it becomes `importBlocked` with Radarr's "not an upgrade" message. */
+  finish: (downloadId: string) => void;
+  failDownload: (downloadId: string, message: string) => void;
+}
+
+export interface MockArrDownload {
+  id: number;
+  downloadId: string;
+  movieId: number;
+  title: string;
+  quality: Record<string, unknown>;
+  size: number;
+  trackedDownloadState: string;
+  status: string;
+  errorMessage?: string;
 }
 
 export interface MockArrExtra {
@@ -155,6 +194,8 @@ function startMockArr(opts: Options): Promise<MockArr> {
     lookups: [],
     settingsWrites: [],
     unhandled: [],
+    grabs: [],
+    commands: [],
     requests: [],
   };
 
@@ -173,6 +214,21 @@ function startMockArr(opts: Options): Promise<MockArr> {
     supportsCustomFormats: !(service === "sonarr" && /^[0-3]\./.test(opts.version ?? "")),
   };
 
+  const pipeline: MockRadarrPipeline = {
+    releases: new Map(),
+    files: new Map(),
+    downloads: new Map(),
+    finish(downloadId) {
+      const d = pipeline.downloads.get(downloadId);
+      if (d) Object.assign(d, { trackedDownloadState: "importBlocked", status: "completed" });
+    },
+    failDownload(downloadId, message) {
+      const d = pipeline.downloads.get(downloadId);
+      if (d) Object.assign(d, { trackedDownloadState: "failedPending", status: "failed", errorMessage: message });
+    },
+  };
+  const commands = new Map<number, Record<string, unknown>>();
+
   let failuresRemaining = 0;
   let failureStatus = 500;
   let failureBody = "";
@@ -188,6 +244,138 @@ function startMockArr(opts: Options): Promise<MockArr> {
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(body));
     };
+
+    const readJson = (then: (body: Record<string, unknown>) => void) => {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        let parsed: Record<string, unknown> = {};
+        try {
+          parsed = JSON.parse(raw || "{}") as Record<string, unknown>;
+        } catch {
+          // The test asserts on the journal.
+        }
+        then(parsed);
+      });
+    };
+
+    function handlePipeline(): boolean {
+      const movieId = Number(url.searchParams.get("movieId"));
+
+      if (path === "/api/v3/moviefile" && method === "GET") {
+        const file = pipeline.files.get(movieId);
+        json(file ? [file] : []);
+        return true;
+      }
+
+      if (path === "/api/v3/release" && method === "GET") {
+        json(pipeline.releases.get(movieId) ?? []);
+        return true;
+      }
+
+      if (path === "/api/v3/release" && method === "POST") {
+        readJson((release) => {
+          journal.grabs.push(release);
+          const owner = [...pipeline.releases].find(([, rs]) => rs.some((r) => r.guid === release.guid));
+          const downloadId = `DL${pipeline.downloads.size + 1}`;
+          pipeline.downloads.set(downloadId, {
+            id: pipeline.downloads.size + 1,
+            downloadId,
+            movieId: owner?.[0] ?? 0,
+            title: String(release.title),
+            quality: (release.quality as Record<string, unknown>) ?? {},
+            size: Number(release.size ?? 0),
+            trackedDownloadState: "downloading",
+            status: "downloading",
+          });
+          json(release);
+        });
+        return true;
+      }
+
+      if (path === "/api/v3/queue/details" && method === "GET") {
+        json(
+          [...pipeline.downloads.values()]
+            .filter((d) => d.movieId === movieId)
+            .map((d) => ({
+              ...d,
+              sizeleft: d.status === "downloading" ? d.size / 2 : 0,
+              statusMessages:
+                d.trackedDownloadState === "importBlocked"
+                  ? [{ title: d.title, messages: ["Not an upgrade for existing movie file."] }]
+                  : [],
+            })),
+        );
+        return true;
+      }
+
+      const queueId = /^\/api\/v3\/queue\/(\d+)$/.exec(path);
+      if (queueId && method === "DELETE") {
+        journal.deletes.push(`${path}${url.search}`);
+        for (const [key, d] of pipeline.downloads) if (d.id === Number(queueId[1])) pipeline.downloads.delete(key);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end();
+        return true;
+      }
+
+      if (path === "/api/v3/manualimport" && method === "GET") {
+        const d = pipeline.downloads.get(url.searchParams.get("downloadId") ?? "");
+        json(
+          d && d.status === "completed"
+            ? [
+                {
+                  path: `/downloads/${d.title}/${d.title}.mkv`,
+                  size: d.size,
+                  movie: { id: d.movieId },
+                  quality: d.quality,
+                  languages: [{ id: 1, name: "English" }],
+                  releaseGroup: "GRP",
+                  downloadId: d.downloadId,
+                  rejections: [{ reason: "Not an upgrade for existing movie file." }],
+                },
+                // A sample alongside the film, which must not be what gets imported.
+                { path: `/downloads/${d.title}/sample.mkv`, size: 1_000, movie: { id: d.movieId }, quality: d.quality },
+              ]
+            : [],
+        );
+        return true;
+      }
+
+      if (path === "/api/v3/command" && method === "POST") {
+        readJson((body) => {
+          journal.commands.push(body);
+          const id = commands.size + 1;
+          const command = { id, name: body.name, status: "completed", message: "" };
+          if (body.name === "ManualImport") {
+            for (const f of (body.files as Array<Record<string, unknown>>) ?? []) {
+              const fileMovie = Number(f.movieId);
+              const download = pipeline.downloads.get(String(f.downloadId));
+              // Replaces whatever file the movie had, as the real one does.
+              pipeline.files.set(fileMovie, {
+                id: 100 + id,
+                movieId: fileMovie,
+                path: f.path,
+                quality: f.quality,
+                size: download?.size ?? 0,
+              });
+              if (download) pipeline.downloads.delete(download.downloadId);
+            }
+            command.message = "Manually imported 1 files";
+          }
+          commands.set(id, command);
+          json(command, 201);
+        });
+        return true;
+      }
+
+      const commandId = /^\/api\/v3\/command\/(\d+)$/.exec(path);
+      if (commandId && method === "GET") {
+        json(commands.get(Number(commandId[1])) ?? { id: Number(commandId[1]), status: "failed" });
+        return true;
+      }
+
+      return false;
+    }
 
     const forced = pathFailures.get(path);
     if (forced) {
@@ -212,6 +400,8 @@ function startMockArr(opts: Options): Promise<MockArr> {
     }
 
     if (handleQualitySettings({ req, method, path, quality, fixtures, journal, json })) return;
+
+    if (service === "radarr" && handlePipeline()) return;
 
     if (path === "/api/v3/rootfolder") {
       json([{ id: 1, path: "/data/media", freeSpace: 1_000, accessible: true }]);
@@ -343,6 +533,7 @@ function startMockArr(opts: Options): Promise<MockArr> {
         records,
         movies: records,
         quality,
+        pipeline,
         failNext(n, status = 500, body = "") {
           failuresRemaining = n;
           failureStatus = status;

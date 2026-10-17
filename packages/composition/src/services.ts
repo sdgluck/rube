@@ -64,6 +64,7 @@ import { OverlaysToken, type Overlays } from "@tinkerbell/domain.overlays";
 import { PlaybackToken, type Playback } from "@tinkerbell/domain.playback";
 import { PrerollsToken, type Prerolls } from "@tinkerbell/domain.prerolls";
 import { ProblemsToken, type Problems } from "@tinkerbell/domain.problems";
+import { QualitySwapsToken, type QualitySwaps } from "@tinkerbell/domain.quality-swaps";
 import { RecommendationsToken, type Recommendations } from "@tinkerbell/domain.recommendations";
 import { RegistryToken, type Registry as RuleRegistry } from "@tinkerbell/domain.registry";
 import { RuleHistoryToken, type RuleHistory } from "@tinkerbell/domain.rule-history";
@@ -125,6 +126,7 @@ export interface Services {
   playback: Playback;
   prerolls: Prerolls;
   problems: Problems;
+  qualitySwaps: QualitySwaps;
   recommendations: Recommendations;
   registry: RuleRegistry;
   ruleHistory: RuleHistory;
@@ -182,6 +184,7 @@ export function registerServices(r: Registry): void {
     playback: c.resolve(PlaybackToken),
     prerolls: c.resolve(PrerollsToken),
     problems: c.resolve(ProblemsToken),
+    qualitySwaps: c.resolve(QualitySwapsToken),
     recommendations: c.resolve(RecommendationsToken),
     registry: c.resolve(RegistryToken),
     ruleHistory: c.resolve(RuleHistoryToken),

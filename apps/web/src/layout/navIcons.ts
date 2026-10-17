@@ -12,6 +12,7 @@ import {
   Film,
   LayoutGrid,
   Library,
+  Minimize2,
   Compass,
   Layers,
   MoreHorizontal,
@@ -54,6 +55,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   // Managers
   "/discover": Compass,
   "/movies": Clapperboard,
+  "/movies/unused-4k": Minimize2,
   "/tv": Tv,
   "/downloads": Download,
   "/arrs": Server,

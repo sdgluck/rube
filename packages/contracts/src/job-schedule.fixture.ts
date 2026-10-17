@@ -26,6 +26,7 @@ const ROWS: Array<[id: string, lane: ScheduleLane, timeoutMs: number, schedule: 
   ["seerr-poll", "internal", 5 * MINUTE_MS, "*/15 * * * *"],
   ["arr-poll", "internal", 2 * MINUTE_MS, "*/2 * * * *"],
   ["watchlist-sync", "internal", 5 * MINUTE_MS, "*/15 * * * *"],
+  ["quality-swaps", "internal", 10 * MINUTE_MS, "*/5 * * * *"],
   ["rule-schedules", "internal", 5 * MINUTE_MS, "* * * * *"],
   ["healthcheck", "internal", 3 * MINUTE_MS, "* * * * *"],
   ["playback-poll", "internal", 2 * MINUTE_MS, "*/30 * * * * *"],

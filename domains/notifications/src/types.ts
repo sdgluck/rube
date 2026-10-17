@@ -76,6 +76,10 @@ export const EVENT_TYPES = [
   // Fires on the transition only. A profile that drifted last week and is
   // still drifted is one notification, not seven.
   { id: "arr.quality_drift", label: "Quality Profile Drifted" },
+  // One per film, and only on the outcome: a swap takes hours, and the
+  // steps in between are on the Unused 4K page for anyone who wants them.
+  { id: "quality.swapped", label: "4K Replaced With 1080p" },
+  { id: "quality.swap_failed", label: "4K Replacement Failed" },
   // New entries on the Problems page, once per scan and only for ones no
   // earlier scan announced — a show with the wrong episode ordering is one
   // message, not one a night until somebody fixes it.

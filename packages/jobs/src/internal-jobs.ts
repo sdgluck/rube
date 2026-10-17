@@ -68,6 +68,7 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
     match,
     metadata,
     playback,
+    qualitySwaps,
     ruleRuns,
     rules,
     stats,
@@ -251,6 +252,25 @@ export const createInternalJobs = perDeps(function createInternalJobs(deps: Serv
      * nothing else, because the expensive half only happens when the list has
      * something on it we have never acted on.
      */
+    /**
+     * Moves each 4K→1080p swap on a step: one interactive search per run
+     * (they hit every indexer), plus the cheap queue and import polls.
+     * In-process because the common run is "nothing to do", answered by one
+     * indexed SELECT, and a worker thread for that would be most of the cost.
+     */
+    "quality-swaps": {
+      run: async (ctx: JobContext) => {
+        if (qualitySwaps.activeCount() === 0) return "No swaps in progress.";
+        const r = await qualitySwaps.advanceAll({ signal: ctx.signal, searchBudget: 1, log: ctx.log });
+        const parts = [`${r.active} swap(s) in progress`];
+        if (r.waiting) parts.push(`${r.waiting} waiting to search`);
+        if (r.errors) parts.push(`${r.errors} will retry`);
+        return `${parts.join(", ")}.`;
+      },
+      // The release search alone is allowed three minutes by the Radarr client.
+      timeoutMs: 10 * MINUTE_MS,
+      quiet: true,
+    },
     "watchlist-sync": {
       run: (ctx: JobContext) => syncWatchlist(ctx),
       // The library index it may have to build is the slow part, and that is

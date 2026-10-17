@@ -1,0 +1,33 @@
+.intro {
+  max-width: 80ch;
+  margin: 0 0 1.6rem;
+  color: var(--ink-2);
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.8rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.profilePick {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ink-2);
+}
+
+.cancelLink {
+  composes: btn btnLink from "../../styles/controls.module.css";
+}

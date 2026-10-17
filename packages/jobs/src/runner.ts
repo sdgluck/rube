@@ -141,6 +141,16 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   // and the download starting, and that is the whole experience of the
   // feature. It returns in milliseconds without touching the network when
   // watchlist sync is switched off, which it is until somebody configures it.
+  // Every five minutes: a swap waits on a download, and the gap between it
+  // finishing and the import is how long a film sits on two copies. Returns
+  // from one SELECT when nothing is in progress, which is almost always.
+  {
+    id: "quality-swaps",
+    name: "Replace Unused 4K",
+    command: "quality-swaps",
+    schedule: "*/5 * * * *",
+    enabled: 1,
+  },
   {
     id: "watchlist-sync",
     name: "Sync Plex Watchlist",

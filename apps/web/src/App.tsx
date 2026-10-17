@@ -77,6 +77,7 @@ const ProblemKind = lazy(() => import("#pages/Problems/ProblemKind"));
 const ArrLibrary = lazy(() => import("#pages/Arr/ArrLibrary"));
 const ArrInstances = lazy(() => import("#pages/Arr/ArrInstances"));
 const ArrDownloads = lazy(() => import("#pages/Arr/ArrDownloads"));
+const UnusedFourK = lazy(() => import("#pages/Arr/UnusedFourK"));
 const ArrItemDetail = lazy(() => import("#pages/Arr/ArrItemDetail"));
 const ArrInstanceDetail = lazy(() => import("#pages/Arr/ArrInstanceDetail"));
 const Discover = lazy(() => import("#pages/Discover/Discover"));
@@ -320,6 +321,14 @@ export default function App() {
                       element={
                         <LazyPage>
                           <ArrLibrary service="radarr" />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/movies/unused-4k"
+                      element={
+                        <LazyPage>
+                          <UnusedFourK />
                         </LazyPage>
                       }
                     />

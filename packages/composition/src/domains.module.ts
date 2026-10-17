@@ -48,6 +48,7 @@ import { createOverlays, OverlaysToken } from "@tinkerbell/domain.overlays";
 import { createPlayback, PlaybackToken } from "@tinkerbell/domain.playback";
 import { createPrerolls, PrerollsToken } from "@tinkerbell/domain.prerolls";
 import { createProblems, ProblemsToken } from "@tinkerbell/domain.problems";
+import { createQualitySwaps, QualitySwapsToken } from "@tinkerbell/domain.quality-swaps";
 import { createRecommendations, RecommendationsToken } from "@tinkerbell/domain.recommendations";
 import { createRegistry, RegistryToken } from "@tinkerbell/domain.registry";
 import { createRuleHistory, RuleHistoryToken } from "@tinkerbell/domain.rule-history";
@@ -227,6 +228,14 @@ export function registerDomains(r: Registry): void {
       reconcile: c.resolve(ArrLibraryToken),
       ruleConflicts: () => c.resolve(RulesToken).findRuleConflicts(),
       recordChange: c.resolve(ChangeRecorderToken),
+      emitEvent: c.resolve(EventBusToken),
+      now: c.resolve(ClockToken),
+    }),
+  );
+  r.register(QualitySwapsToken, (c) =>
+    createQualitySwaps({
+      db: c.resolve(DbToken),
+      arr: c.resolve(ArrInstancesToken),
       emitEvent: c.resolve(EventBusToken),
       now: c.resolve(ClockToken),
     }),

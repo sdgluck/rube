@@ -8,10 +8,12 @@
  * but reads still come straight from Radarr so a page is never behind.
  */
 
-import type { ServarrHttp } from "@tinkerbell/servarr-http";
+import type { ServarrCommand, ServarrHttp } from "@tinkerbell/servarr-http";
 import type {
   RadarrBlocklistItem,
   RadarrHistoryRecord,
+  RadarrManualImportFile,
+  RadarrManualImportItem,
   RadarrMovie,
   RadarrPage,
   RadarrQueueItem,
@@ -48,6 +50,43 @@ export function createActivity(http: ServarrHttp) {
       return http.get<RadarrPage<RadarrQueueItem>>("/queue", {
         params: { page, pageSize, sortKey, sortDirection, includeMovie, includeUnknownMovieItems: true },
       });
+    },
+
+    /**
+     * One movie's queue entries, unpaged. What a caller following a single
+     * grab needs — paging the whole queue to find one row would make a busy
+     * instance the slow path.
+     */
+    async queueForMovie(movieId: number): Promise<RadarrQueueItem[]> {
+      return (await http.get<RadarrQueueItem[]>("/queue/details", { params: { movieId, includeMovie: false } })) ?? [];
+    },
+
+    /**
+     * The files Radarr would import from a finished download, with its
+     * verdict on each. `filterExistingFiles=false`, or a download that is "not
+     * an upgrade" for the file on disk lists nothing at all.
+     */
+    async manualImportCandidates(downloadId: string): Promise<RadarrManualImportItem[]> {
+      return (
+        // No `movieId`: alongside a path Radarr reads it as "list this movie's
+        // own folder" and answers with the file on disk, not the download.
+        // Each item names its movie, so the caller filters instead.
+        (await http.get<RadarrManualImportItem[]>("/manualimport", {
+          params: { downloadId, filterExistingFiles: false },
+          timeoutMs: 60_000,
+        })) ?? []
+      );
+    },
+
+    /**
+     * Import specific files, regardless of Radarr's own verdict on them.
+     *
+     * This is how a file Radarr refused as "not an upgrade" gets in: the
+     * command imports what it is given, replacing (or recycling) whatever
+     * file the movie had. Returns the command, to be polled.
+     */
+    manualImport(files: RadarrManualImportFile[]): Promise<ServarrCommand> {
+      return http.post<ServarrCommand>("/command", { name: "ManualImport", importMode: "auto", files });
     },
 
     /** Just the counts — what a nav badge needs, without the records. */
