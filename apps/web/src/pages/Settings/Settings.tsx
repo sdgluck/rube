@@ -7,8 +7,8 @@ import { SETTINGS_SECTIONS } from "./sections";
 
 export default function Settings() {
   /**
-   * Thirty-odd settings pages across four headings, and the only way to reach
-   * one whose heading you couldn't guess was to read all four. Filtering the
+   * Thirty-odd settings pages across a column of headings, and the only way to reach
+   * one whose heading you couldn't guess was to read them all. Filtering the
    * rail is the cheapest fix: it needs no index, and it narrows the thing
    * you're already looking at rather than opening something over the top of it.
    *
@@ -23,7 +23,7 @@ export default function Settings() {
     if (!needle) return SETTINGS_SECTIONS;
     return SETTINGS_SECTIONS.map((section) => ({
       ...section,
-      // The heading matches too, so "integrations" shows everything under it —
+      // The heading matches too, so "connections" shows everything under it —
       // people remember which group a setting was in more often than its name.
       links: section.heading.toLowerCase().includes(needle)
         ? section.links
