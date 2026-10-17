@@ -156,7 +156,7 @@ export async function reconcileMembership(
   existing: ExistingCollection,
   machineId: string,
   ratingKeys: string[],
-  opts: { titleShared?: boolean } = {},
+  opts: { titleShare?: "none" | "rule" | "foreign" } = {},
 ): Promise<ReconcileResult | null> {
   let detail;
   try {
@@ -174,13 +174,24 @@ export async function reconcileMembership(
 
   // Another collection has this title, and this one holds nothing of its own:
   // it is the shell, viewing its twin's films (see `titleTakenElsewhere` in
-  // finalize.ts). Diffing it would add to and remove from the twin. Rebuilt,
-  // it gets a title of its own. Deleting the shell empties the twin for the
-  // night — the tag comes off every film — but that twin's own rule puts
-  // them back on its next run, and the two stop sharing for good.
-  if (opts.titleShared && detail.childCount === 0) {
-    ctx.log(`"${existing.title}" shares its title with another collection and holds none of its own - rebuilding it.`);
-    return null;
+  // finalize.ts). Diffing it would add to and remove from the twin.
+  if (opts.titleShare && opts.titleShare !== "none" && detail.childCount === 0) {
+    // Rebuilt, it gets a title of its own. Deleting the shell empties the twin
+    // for the night — the tag comes off every film — but the twin's own rule
+    // puts them back on its next run, and the two stop sharing for good.
+    if (opts.titleShare === "rule") {
+      ctx.log(
+        `"${existing.title}" shares its title with another rule's collection and holds none of its own - rebuilding it.`,
+      );
+      return null;
+    }
+    // A hand-made or Kometa twin would be emptied for good, with nothing to
+    // refill it. Writing nothing is the safe answer; renaming one is the fix.
+    ctx.log(
+      `"${existing.title}" shares its title with a collection no rule manages, so it can't hold its own items. ` +
+        `Leaving both alone - rename one of them in Plex to separate them.`,
+    );
+    return { ratingKey: existing.ratingKey, added: 0, removed: 0 };
   }
 
   // A smart collection's membership *is* its filter, and the add endpoint would

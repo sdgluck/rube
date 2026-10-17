@@ -358,6 +358,7 @@ describe("titles another collection already has", () => {
         sectionId: "1",
         sectionTitle: "Films",
         title: "Scary Films",
+        labels: ["Rule:someone-else"],
         syncedAt: Date.now(),
       })
       .run();
@@ -366,13 +367,40 @@ describe("titles another collection already has", () => {
     const log = await run();
 
     db.delete(collections).where(eq(collections.plexRatingKey, "9999")).run();
-    assert.ok(log.some((l) => l.includes("shares its title with another collection")));
+    assert.ok(log.some((l) => l.includes("shares its title with another rule's collection")));
     assert.deepEqual(plex.journal.deletedCollections, [shell.ratingKey]);
     const [rebuilt] = byRule(RULE_ID);
     assert.notEqual(rebuilt?.title, "Scary Films");
     assert.equal(displayTitle(rebuilt?.title ?? ""), "Scary Films");
     assert.equal(rebuilt?.memberKeys.length, 6);
   });
+});
+
+it("leaves a shell alone when its twin is a collection no rule manages", async () => {
+  // Deleting the shell would take the tag off every film in a hand-made
+  // collection, and nothing would ever put them back.
+  seedRule("Horror");
+  await run();
+  const [shell] = [...plex.collections.values()].filter((c) => c.labels.includes(`Rule:${RULE_ID}`));
+  assert.ok(shell);
+  shell.memberKeys.length = 0;
+  db.insert(collections)
+    .values({
+      plexRatingKey: "9998",
+      sectionId: "1",
+      sectionTitle: "Films",
+      title: "Scary Films",
+      syncedAt: Date.now(),
+    })
+    .run();
+  resetJournal();
+
+  const log = await run();
+
+  db.delete(collections).where(eq(collections.plexRatingKey, "9998")).run();
+  assert.ok(log.some((l) => l.includes("no rule manages")));
+  assert.deepEqual(plex.journal.deletedCollections, []);
+  assert.deepEqual(plex.journal.collectionItemAdds, []);
 });
 
 describe("the homepage", () => {

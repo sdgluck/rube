@@ -116,19 +116,33 @@ export function createFinalizeCommand(deps: Services) {
    * Case-insensitive, because there is no telling which way Plex's tag match
    * leans and the cost of guessing wrong is an empty shelf.
    */
-  function titleTakenElsewhere(sectionKey: string, title: string, exceptKey?: string): boolean {
+  function titleHolders(sectionKey: string, title: string, exceptKey?: string): Array<{ labels: string[] }> {
     const conditions = [
       eq(collectionsTable.sectionId, sectionKey),
       sql`lower(${collectionsTable.title}) = lower(${title})`,
     ];
     if (exceptKey) conditions.push(ne(collectionsTable.plexRatingKey, exceptKey));
-    return (
-      db
-        .select({ k: collectionsTable.plexRatingKey })
-        .from(collectionsTable)
-        .where(and(...conditions))
-        .get() != null
-    );
+    return db
+      .select({ labels: collectionsTable.labels })
+      .from(collectionsTable)
+      .where(and(...conditions))
+      .all();
+  }
+
+  function titleTakenElsewhere(sectionKey: string, title: string, exceptKey?: string): boolean {
+    return titleHolders(sectionKey, title, exceptKey).length > 0;
+  }
+
+  /**
+   * How an existing collection stands against others of its title. "rule"
+   * when every other holder is some rule's — rebuilding this one empties
+   * them, and their rules refill them. "foreign" when any is hand-made or
+   * Kometa's, which nothing would ever refill.
+   */
+  function titleShare(sectionKey: string, title: string, ownKey: string): "none" | "rule" | "foreign" {
+    const holders = titleHolders(sectionKey, title, ownKey);
+    if (holders.length === 0) return "none";
+    return holders.every((h) => h.labels.some((l) => l.startsWith("Rule:"))) ? "rule" : "foreign";
   }
   const { forgetCollections, getCollectionArtwork, recordCollectionArtwork, upsertCollectionByKey } = collections;
   const { fetchAutoPoster } = posters;
@@ -170,8 +184,7 @@ export function createFinalizeCommand(deps: Services) {
           const guardTitles = !opts.personalCopy && !!opts.ruleId;
           if (opts.existing) {
             const reconciled = await reconcileMembership(ctx, client, opts.existing, opts.machineId, ratingKeys, {
-              titleShared:
-                guardTitles && titleTakenElsewhere(section.key, opts.existing.title, opts.existing.ratingKey),
+              titleShare: guardTitles ? titleShare(section.key, opts.existing.title, opts.existing.ratingKey) : "none",
             });
             if (reconciled) {
               if (!opts.personalCopy) await applySummary(ctx, client, reconciled.ratingKey, opts);
