@@ -6,7 +6,7 @@
 export type SettingsLink = { to: string; label: string };
 export type SettingsSection = { heading: string; links: SettingsLink[] };
 
-// Seven short headings rather than four long ones: "Automation" and "Tools"
+// Eight short headings rather than four long ones: "Automation" and "Tools"
 // had grown to nine and eleven pages, and a heading that long stops telling
 // you where to look. Each heading now answers one question — what is
 // connected, what happens to the library, how it looks, what users see, who
