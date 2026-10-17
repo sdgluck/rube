@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-17
+
+### Added
+
+- The \*Arr integration now lists the 4K films that nobody watches in 4K, so you can see which 4K copies go unused.
+- You can now swap one of those unwatched 4K films to 1080p, and once the 1080p file has downloaded it is imported over the 4K one.
+- Tinkerbell can now publish current streams, jobs, failing rules, problems and service health to Home Assistant over MQTT, with discovery support; this integration only publishes and does not take commands from Home Assistant.
+- The collections list now shows the plays, the number of viewers and the last play for each collection, and it only counts plays made after a title joined that collection.
+- You can now sort the collections list by plays, by viewers or by last play.
+
+### Changed
+
+- **The end-user portal now opens on the tastes tab instead of your collections**, so people who sign in see their tastes first.
+
+### Fixed
+
+- Rules no longer fail every night when Plex refuses to add items to a collection or the collection disappears mid-run; Tinkerbell rebuilds the collection instead. It still never rebuilds an empty shell whose same-titled twin is not managed by any rule, because deleting that shell would empty the twin collection for good.
+- When another collection in the same library already has the name a rule wants, the rule's collection now gets a title of its own, so two rules no longer leave one of the collections as an empty shell.
+- When Tinkerbell sweeps duplicate collections, it now keeps the copy that actually has items in it rather than possibly keeping the empty one.
+
 ## [0.42.4] - 2026-10-16
 
 ### Fixed
