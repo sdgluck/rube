@@ -37,10 +37,25 @@ function hash(text: string): number {
   return h;
 }
 
+function marked(title: string, key: string): string {
+  const bits = hash(key).toString(2).padStart(32, "0");
+  return displayTitle(title) + [...bits].map((b) => (b === "1" ? ONE : ZERO)).join("");
+}
+
 /** `title` made unique to `username` — reads identically, tags separately. */
 export function personalRowTitle(title: string, username: string): string {
-  const bits = hash(username.toLowerCase()).toString(2).padStart(32, "0");
-  return displayTitle(title) + [...bits].map((b) => (b === "1" ? ONE : ZERO)).join("");
+  return marked(title, username.toLowerCase());
+}
+
+/**
+ * `title` made unique to one rule, for a shared collection whose name another
+ * collection in the library already has — Actors and Directors both building
+ * "Quentin Tarantino" in Films. Without it the second is a shell and its films
+ * land in the first. Keyed apart from usernames so a rule's marks can't equal
+ * a person's.
+ */
+export function ruleRowTitle(title: string, ruleId: string): string {
+  return marked(title, `rule:${ruleId}`);
 }
 
 /** A title as people read it: the per-person marks removed. */

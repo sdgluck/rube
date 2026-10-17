@@ -50,6 +50,21 @@ describe("classify", () => {
     );
   });
 
+  it("keeps the collection holding films over a newer empty shell", () => {
+    // The newer of two same-titled collections is often Plex's empty shell.
+    // Keeping it and deleting the original stripped the title tag off every
+    // film and left the rule writing to a collection Plex refused to add to.
+    const original = candidate({ addedAt: 1_700_000_000, itemCount: 2169 });
+    const shell = candidate({ addedAt: 1_700_000_200, itemCount: 0 });
+
+    const { duplicates } = classify([original, shell], KNOWN);
+
+    assert.deepEqual(
+      duplicates.map((c) => c.ratingKey),
+      [shell.ratingKey],
+    );
+  });
+
   it("keeps the newest of a duplicate group and deletes the rest", () => {
     const oldest = candidate({ addedAt: 1_700_000_000 });
     const middle = candidate({ addedAt: 1_700_000_100 });

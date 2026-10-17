@@ -33,7 +33,7 @@ import { type Services } from "@tinkerbell/composition";
 import PQueue from "p-queue";
 import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 
-import type { JobContext } from "@tinkerbell/core";
+import { displayTitle, type JobContext } from "@tinkerbell/core";
 
 /** How many Plex calls this module may have in flight. Mirrors `COMMIT_CONCURRENCY`. */
 const RECONCILE_CONCURRENCY = 6;
@@ -121,7 +121,16 @@ export async function readExistingCollections(
         });
         continue;
       }
-      owned.set(col.title.toLowerCase(), { ratingKey: col.ratingKey, title: col.title });
+      // By the title people read: one rebuilt under a title of its own
+      // (`ruleRowTitle`) must still be found under the rule's name, or it
+      // would be rebuilt every night and the old one swept as unproduced.
+      // Where both forms exist mid-transition, the marked one is the one
+      // holding the rule's films.
+      const key = displayTitle(col.title).toLowerCase();
+      const seen = owned.get(key);
+      if (!seen || (seen.title === displayTitle(seen.title) && col.title !== displayTitle(col.title))) {
+        owned.set(key, { ratingKey: col.ratingKey, title: col.title });
+      }
     }
     shared.set(section.key, owned);
   }
@@ -147,6 +156,7 @@ export async function reconcileMembership(
   existing: ExistingCollection,
   machineId: string,
   ratingKeys: string[],
+  opts: { titleShared?: boolean } = {},
 ): Promise<ReconcileResult | null> {
   let detail;
   try {
@@ -160,6 +170,17 @@ export async function reconcileMembership(
       return null;
     }
     throw err;
+  }
+
+  // Another collection has this title, and this one holds nothing of its own:
+  // it is the shell, viewing its twin's films (see `titleTakenElsewhere` in
+  // finalize.ts). Diffing it would add to and remove from the twin. Rebuilt,
+  // it gets a title of its own. Deleting the shell empties the twin for the
+  // night — the tag comes off every film — but that twin's own rule puts
+  // them back on its next run, and the two stop sharing for good.
+  if (opts.titleShared && detail.childCount === 0) {
+    ctx.log(`"${existing.title}" shares its title with another collection and holds none of its own - rebuilding it.`);
+    return null;
   }
 
   // A smart collection's membership *is* its filter, and the add endpoint would

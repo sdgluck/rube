@@ -2,7 +2,9 @@ import { type Services } from "@tinkerbell/composition";
 import PQueue from "p-queue";
 import type { PlexClient, PlexSection } from "@tinkerbell/plex";
 
-import type { JobContext } from "@tinkerbell/core";
+import { displayTitle, ruleRowTitle, type JobContext } from "@tinkerbell/core";
+import { and, eq, ne, sql } from "drizzle-orm";
+import { collections as collectionsTable } from "@tinkerbell/db";
 
 import {
   resolveCollectionPrefs,
@@ -31,6 +33,25 @@ export const COMMIT_CONCURRENCY = 6;
  * server is how you turn a generate run into a stalled Plex.
  */
 const commitQueue = new PQueue({ concurrency: COMMIT_CONCURRENCY });
+
+/**
+ * One commit at a time per (section, title). Rules in a batch run
+ * concurrently, and two that build the same name — Actors and Directors both
+ * making "Quentin Tarantino" — would each look for the other in the mirror
+ * before either had written it, and create two collections under one title.
+ * Held from the title check until the new collection is in the mirror.
+ */
+const titleLocks = new Map<string, Promise<unknown>>();
+function withTitleLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prior = titleLocks.get(key) ?? Promise.resolve();
+  const next = prior.then(fn, fn);
+  const settled = next.catch(() => {});
+  titleLocks.set(key, settled);
+  void settled.then(() => {
+    if (titleLocks.get(key) === settled) titleLocks.delete(key);
+  });
+  return next;
+}
 
 export interface CommitCollectionOptions {
   section: PlexSection;
@@ -76,7 +97,39 @@ export interface CommitCollectionOptions {
 
 export function createFinalizeCommand(deps: Services) {
   const { tagResolverFor } = createTagLabels(deps);
-  const { collections, posters } = deps;
+  const { collections, posters, db } = deps;
+
+  /**
+   * Whether another collection in the section already has this exact title.
+   *
+   * Plex keeps static membership as a tag named by the title, so a second
+   * collection under a taken title is an empty shell whose films land in the
+   * first — Actors and Directors both building "Quentin Tarantino" in Films
+   * left nine empty shells in one night. Verified against a real Plex
+   * (1.43.4): the shell lists its twin's films, adds to it go to the twin,
+   * renaming it changes nothing, and only a title of its own keeps the sets
+   * apart.
+   *
+   * Asked of the local mirror rather than Plex: `sync-collections` refreshes
+   * it before `generate`, and every collection a run creates is upserted into
+   * it as it goes, so a rule committed earlier tonight is already there.
+   * Case-insensitive, because there is no telling which way Plex's tag match
+   * leans and the cost of guessing wrong is an empty shelf.
+   */
+  function titleTakenElsewhere(sectionKey: string, title: string, exceptKey?: string): boolean {
+    const conditions = [
+      eq(collectionsTable.sectionId, sectionKey),
+      sql`lower(${collectionsTable.title}) = lower(${title})`,
+    ];
+    if (exceptKey) conditions.push(ne(collectionsTable.plexRatingKey, exceptKey));
+    return (
+      db
+        .select({ k: collectionsTable.plexRatingKey })
+        .from(collectionsTable)
+        .where(and(...conditions))
+        .get() != null
+    );
+  }
   const { forgetCollections, getCollectionArtwork, recordCollectionArtwork, upsertCollectionByKey } = collections;
   const { fetchAutoPoster } = posters;
 
@@ -106,43 +159,57 @@ export function createFinalizeCommand(deps: Services) {
     const { section, name, ratingKeys } = opts;
     const shown = opts.displayName ?? name;
     try {
-      return await commitQueue.add(async () => {
-        // Reconcile if this rule already owns a collection under this name. Only
-        // falls through to a rebuild when the diff declines the job — a smart
-        // collection, or churn past the point where removing items one at a time
-        // costs more than one POST.
-        if (opts.existing) {
-          const reconciled = await reconcileMembership(ctx, client, opts.existing, opts.machineId, ratingKeys);
-          if (reconciled) {
-            if (!opts.personalCopy) await applySummary(ctx, client, reconciled.ratingKey, opts);
-            await applyCollectionPrefs(ctx, client, reconciled.ratingKey, opts);
-            await upsertCollectionByKey(client, section, reconciled.ratingKey);
-            return reconciled.ratingKey;
+      const lockKey = `${section.key}\u0000${displayTitle(name).toLowerCase()}`;
+      return await withTitleLock(lockKey, () =>
+        commitQueue.add(async () => {
+          // Reconcile if this rule already owns a collection under this name. Only
+          // falls through to a rebuild when the diff declines the job — a smart
+          // collection, or churn past the point where removing items one at a time
+          // costs more than one POST.
+          // A personal copy's title is already its own; a rule's shared one may not be.
+          const guardTitles = !opts.personalCopy && !!opts.ruleId;
+          if (opts.existing) {
+            const reconciled = await reconcileMembership(ctx, client, opts.existing, opts.machineId, ratingKeys, {
+              titleShared:
+                guardTitles && titleTakenElsewhere(section.key, opts.existing.title, opts.existing.ratingKey),
+            });
+            if (reconciled) {
+              if (!opts.personalCopy) await applySummary(ctx, client, reconciled.ratingKey, opts);
+              await applyCollectionPrefs(ctx, client, reconciled.ratingKey, opts);
+              await upsertCollectionByKey(client, section, reconciled.ratingKey);
+              return reconciled.ratingKey;
+            }
+            // Declined. The old collection has to go before its replacement is
+            // built, or Plex keeps both under the same title.
+            await client.deleteItem(opts.existing.ratingKey).catch(() => {});
+            forgetCollections([opts.existing.ratingKey]);
           }
-          // Declined. The old collection has to go before its replacement is
-          // built, or Plex keeps both under the same title.
-          await client.deleteItem(opts.existing.ratingKey).catch(() => {});
-          forgetCollections([opts.existing.ratingKey]);
-        }
 
-        ctx.log(`Creating "${shown}" (${ratingKeys.length} items)...`);
+          const title = guardTitles && titleTakenElsewhere(section.key, name) ? ruleRowTitle(name, opts.ruleId!) : name;
+          if (title !== name) {
+            ctx.log(
+              `"${shown}" is already the title of another collection in ${section.title} - giving this one a title of its own.`,
+            );
+          }
+          ctx.log(`Creating "${shown}" (${ratingKeys.length} items)...`);
 
-        const collectionKey = await client.createCollectionWithLabel(
-          section.key,
-          section.type,
-          opts.machineId,
-          name,
-          ratingKeys,
-          opts.labels,
-        );
-        if (!collectionKey) return null;
+          const collectionKey = await client.createCollectionWithLabel(
+            section.key,
+            section.type,
+            opts.machineId,
+            title,
+            ratingKeys,
+            opts.labels,
+          );
+          if (!collectionKey) return null;
 
-        await applySummary(ctx, client, collectionKey, opts);
-        await applyCollectionPrefs(ctx, client, collectionKey, opts);
-        await applyAutoPoster(ctx, client, opts, collectionKey);
-        await upsertCollectionByKey(client, section, collectionKey);
-        return collectionKey;
-      });
+          await applySummary(ctx, client, collectionKey, opts);
+          await applyCollectionPrefs(ctx, client, collectionKey, opts);
+          await applyAutoPoster(ctx, client, opts, collectionKey);
+          await upsertCollectionByKey(client, section, collectionKey);
+          return collectionKey;
+        }),
+      );
     } finally {
       flush();
     }

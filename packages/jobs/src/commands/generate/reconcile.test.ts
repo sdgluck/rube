@@ -17,8 +17,9 @@ import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
 import { ServicesToken } from "@tinkerbell/composition";
 import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { rules } from "@tinkerbell/db";
+import { ConfigStoreToken, displayTitle } from "@tinkerbell/core";
+import { collections, rules } from "@tinkerbell/db";
+import { eq } from "drizzle-orm";
 import { noopCheckpoint } from "@tinkerbell/core";
 import { createGenerateCommand } from "./index.ts";
 
@@ -132,6 +133,9 @@ after(async () => {
 
 beforeEach(() => {
   plex.collections.clear();
+  // The mirror is what the run checks titles against; a collection left there
+  // by an earlier test would look like a clash.
+  db.delete(collections).run();
   // These tests change what matches by editing genres in place, and the mock's
   // item map is shared for the life of the server.
   for (const item of ITEMS) {
@@ -288,6 +292,86 @@ describe("reconciling a rule's collections", () => {
     await runGenerate({ ...ctx, signal: aborted.signal }, {}).catch(() => {});
 
     assert.equal(owned().length, 1, "the collection survived an aborted run");
+  });
+});
+
+describe("titles another collection already has", () => {
+  // Plex pools static collections by title: a second one under a taken title
+  // is an empty shell, and its films land in the first. The mock doesn't
+  // model the pooling, so these pin what the run does about it.
+  const OTHER_RULE = "other-rule";
+
+  function seedTwoRules(): void {
+    seedRule("Horror");
+    db.insert(rules)
+      .values({
+        id: OTHER_RULE,
+        name: "Funny films",
+        type: "smart_filter",
+        enabled: 1,
+        createdAt: Date.now(),
+        position: 1,
+        config: {
+          smartFilter: {
+            kind: "group",
+            combinator: "all",
+            children: [{ kind: "leaf", field: "genre", op: "=", value: "Comedy" }],
+          },
+          // The same name, as Actors and Directors both make "Quentin Tarantino".
+          collectionName: "Scary Films",
+          pinToHomepage: false,
+        },
+      })
+      .run();
+  }
+
+  const byRule = (ruleId: string) => [...plex.collections.values()].filter((c) => c.labels.includes(`Rule:${ruleId}`));
+
+  it("gives the second rule's collection a title of its own, and finds it again next run", async () => {
+    seedTwoRules();
+    const log = await run();
+
+    const [mine] = byRule(RULE_ID);
+    const [theirs] = byRule(OTHER_RULE);
+    assert.ok(mine && theirs);
+    assert.notEqual(mine.title, theirs.title, "two collections, two tags");
+    assert.equal(displayTitle(mine.title), displayTitle(theirs.title), "but they read the same");
+    assert.ok(log.some((l) => l.includes("giving this one a title of its own")));
+
+    resetJournal();
+    await run();
+    assert.deepEqual(plex.journal.createdCollections, [], "the marked one is found under the rule's name");
+    assert.deepEqual(plex.journal.deletedCollections, []);
+  });
+
+  it("rebuilds an existing shell under a title of its own, and leaves the populated twin alone", async () => {
+    seedRule("Horror");
+    await run();
+    const [shell] = byRule(RULE_ID);
+    assert.ok(shell);
+    // Another collection in Films now holds the title, and this one is empty:
+    // the state Plex leaves a shell in.
+    shell.memberKeys.length = 0;
+    db.insert(collections)
+      .values({
+        plexRatingKey: "9999",
+        sectionId: "1",
+        sectionTitle: "Films",
+        title: "Scary Films",
+        syncedAt: Date.now(),
+      })
+      .run();
+    resetJournal();
+
+    const log = await run();
+
+    db.delete(collections).where(eq(collections.plexRatingKey, "9999")).run();
+    assert.ok(log.some((l) => l.includes("shares its title with another collection")));
+    assert.deepEqual(plex.journal.deletedCollections, [shell.ratingKey]);
+    const [rebuilt] = byRule(RULE_ID);
+    assert.notEqual(rebuilt?.title, "Scary Films");
+    assert.equal(displayTitle(rebuilt?.title ?? ""), "Scary Films");
+    assert.equal(rebuilt?.memberKeys.length, 6);
   });
 });
 

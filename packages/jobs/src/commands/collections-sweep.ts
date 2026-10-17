@@ -91,7 +91,7 @@ async function takeInventory(
 /**
  * Split the candidates into what to delete. Orphans go first because they're
  * unconditional; duplicates are decided per (section, rule, title) group with
- * the newest member kept.
+ * the newest member that holds anything kept.
  */
 export function classify(
   candidates: Candidate[],
@@ -116,10 +116,19 @@ export function classify(
   const duplicates: Candidate[] = [];
   for (const bucket of groups.values()) {
     if (bucket.length < 2) continue;
-    // Newest wins. Plex hands out rating keys in ascending order, so it
-    // breaks ties on collections created within the same second — which is
-    // exactly what two racing runs produce.
-    const sorted = [...bucket].sort((a, b) => b.addedAt - a.addedAt || Number(b.ratingKey) - Number(a.ratingKey));
+    // One holding items beats an empty one, then newest wins. Two collections
+    // with one title share their items through Plex's title tag, so the
+    // newer is often the empty shell — and keeping it while deleting the
+    // populated one took the tag off every film and left the rule writing to
+    // a collection Plex refuses to add to, every night. Plex hands out rating
+    // keys in ascending order, so the key breaks ties on collections created
+    // within the same second, which is exactly what two racing runs produce.
+    const sorted = [...bucket].sort(
+      (a, b) =>
+        Number(b.itemCount > 0) - Number(a.itemCount > 0) ||
+        b.addedAt - a.addedAt ||
+        Number(b.ratingKey) - Number(a.ratingKey),
+    );
     duplicates.push(...sorted.slice(1));
   }
 
@@ -160,8 +169,8 @@ export function createCollectionsSweepCommand(deps: Pick<Services, "clients" | "
    *     rule (Because You Watched, migrations) are never touched.
    *   • A rule that merely exists but is *disabled* still owns its collections.
    *     Turning a rule off is not a request to delete its output.
-   *   • Within a duplicate group the newest survives — that's the one the most
-   *     recent run produced, and the one the Collections page links the rule to.
+   *   • Within a duplicate group the newest one holding items survives — the
+   *     one the most recent run produced, unless that one is an empty shell.
    */
   async function run(ctx: JobContext, config: CollectionsSweepJobConfig): Promise<void> {
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
