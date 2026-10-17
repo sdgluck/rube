@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - You can now swap one of those unwatched 4K films to 1080p, and once the 1080p file has downloaded it is imported over the 4K one.
 - Tinkerbell can now publish current streams, jobs, failing rules, problems and service health to Home Assistant over MQTT, with discovery support; this integration only publishes and does not take commands from Home Assistant.
 - The collections list now shows the plays, the number of viewers and the last play for each collection, and it only counts plays made after a title joined that collection.
-- You can now sort the collections list by plays, by viewers or by last play.
+- You can now sort the collections list by plays or by when a collection was last played.
 
 ### Changed
 
