@@ -15,7 +15,6 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/core": "workspace:*",
     "mqtt": "^5.16.1"
   },
   "devDependencies": {

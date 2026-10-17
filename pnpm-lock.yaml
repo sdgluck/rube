@@ -436,9 +436,6 @@ importers:
 
   clients/mqtt:
     dependencies:
-      '@tinkerbell/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       mqtt:
         specifier: ^5.16.1
         version: 5.16.1(supports-color@10.2.2)

@@ -12,7 +12,11 @@
  */
 
 import mqtt, { type IClientOptions, type MqttClient } from "mqtt";
-import { errorMessage } from "@tinkerbell/core";
+
+/** Inlined rather than imported from core: core's dev graph reaches back here through health, a cycle pnpm warns about on every install. */
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 export interface MqttSettings {
   /** `mqtt://`, `mqtts://`, `ws://` or `wss://`, with the port if it isn't the default. */
