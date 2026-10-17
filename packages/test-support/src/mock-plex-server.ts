@@ -231,6 +231,13 @@ export interface MockPlex {
      */
     failSessionsFor: number;
   };
+  /**
+   * Answer `METHOD path` with this status, as Plex's bare HTML error page,
+   * until cleared with `null`. For the states a real server gets into that
+   * the model can't reach on its own — a collection it lists but 404s on
+   * read, or one that refuses (400) any item added to it.
+   */
+  failWith: (method: string, path: string, status: number | null, opts?: { after?: number }) => void;
   close: () => Promise<void>;
 }
 
@@ -290,11 +297,22 @@ export function startMockPlex(opts: {
     sessions,
   };
 
+  /** `after` counts down the calls still allowed through — "it was there, then it wasn't". */
+  const forcedFailures = new Map<string, { status: number; after: number }>();
+
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://mock");
     const path = url.pathname;
     const q = url.searchParams;
     const method = (req.method ?? "GET").toUpperCase();
+
+    const forced = forcedFailures.get(`${method} ${path}`);
+    if (forced && forced.after > 0) forced.after--;
+    else if (forced) {
+      res.writeHead(forced.status, { "Content-Type": "text/html" });
+      res.end(`<html><head><title>Error</title></head><body><h1>${forced.status}</h1></body></html>`);
+      return;
+    }
 
     const json = (body: unknown) => {
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -892,6 +910,10 @@ export function startMockPlex(opts: {
         prefs,
         history,
         playback,
+        failWith(method, failPath, status, opts = {}) {
+          if (status == null) forcedFailures.delete(`${method} ${failPath}`);
+          else forcedFailures.set(`${method} ${failPath}`, { status, after: opts.after ?? 0 });
+        },
         close: () => closeServer(server),
       });
     });

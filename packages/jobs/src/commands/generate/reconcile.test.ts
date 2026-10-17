@@ -235,6 +235,45 @@ describe("reconciling a rule's collections", () => {
     assert.equal(plex.journal.deletedCollections.length, 1);
   });
 
+  it("rebuilds a collection Plex refuses to add to, instead of failing every night", async () => {
+    // The shell a duplicate title leaves behind: listed, readable, and a 400
+    // on every add. Seen on a real server — seven rules failed on it nightly.
+    seedRule("Horror");
+    await run();
+    const shell = owned()[0];
+    assert.ok(shell);
+    // Something new matches, so the run has to add.
+    const joined = plex.items.get("200");
+    assert.ok(joined);
+    joined.genre = "Horror";
+    plex.failWith("PUT", `/library/collections/${shell.ratingKey}/items`, 400);
+    resetJournal();
+
+    const log = await run();
+
+    plex.failWith("PUT", `/library/collections/${shell.ratingKey}/items`, null);
+    assert.ok(log.some((l) => l.includes("rebuilding it")));
+    assert.deepEqual(plex.journal.deletedCollections, [shell.ratingKey]);
+    assert.equal(plex.journal.createdCollections.length, 1);
+    assert.equal(owned()[0]?.memberKeys.length, 7);
+  });
+
+  it("builds again a collection that vanished between listing and reading it", async () => {
+    seedRule("Horror");
+    await run();
+    const gone = owned()[0];
+    assert.ok(gone);
+    // Readable when the run takes stock, gone when the rule gets to it.
+    plex.failWith("GET", `/library/metadata/${gone.ratingKey}`, 404, { after: 1 });
+    resetJournal();
+
+    const log = await run();
+
+    plex.failWith("GET", `/library/metadata/${gone.ratingKey}`, null);
+    assert.ok(log.some((l) => l.includes("no longer in Plex")));
+    assert.equal(plex.journal.createdCollections.length, 1, "built rather than failing the run");
+  });
+
   it("leaves a collection alone when the run failed before producing it", async () => {
     // A rule that threw halfway has an incomplete produced set, and sweeping
     // against it would delete shelves the rule still makes.

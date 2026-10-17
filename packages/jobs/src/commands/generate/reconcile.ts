@@ -31,7 +31,7 @@ import { type Services } from "@tinkerbell/composition";
  */
 
 import PQueue from "p-queue";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
 
 import type { JobContext } from "@tinkerbell/core";
 
@@ -148,7 +148,19 @@ export async function reconcileMembership(
   machineId: string,
   ratingKeys: string[],
 ): Promise<ReconcileResult | null> {
-  const detail = await client.getCollectionDetail(existing.ratingKey);
+  let detail;
+  try {
+    detail = await client.getCollectionDetail(existing.ratingKey);
+  } catch (err) {
+    // Listed at the start of the run, gone by the time this rule reached it.
+    // One missing collection used to fail the whole run — 526 studios built
+    // and none of them committed — when the answer is just to build it again.
+    if (err instanceof PlexApiError && err.status === 404) {
+      ctx.log(`"${existing.title}" is no longer in Plex - building it again.`);
+      return null;
+    }
+    throw err;
+  }
 
   // A smart collection's membership *is* its filter, and the add endpoint would
   // replace that filter with a fixed list. Rules build static collections, so
@@ -180,7 +192,23 @@ export async function reconcileMembership(
   // Additions first, as one call. Doing them before the removals means the
   // collection is never briefly emptier than either state - it only ever holds
   // the union, which is the better thing for somebody to catch mid-run.
-  if (toAdd.length > 0) await client.addCollectionItems(existing.ratingKey, machineId, toAdd);
+  if (toAdd.length > 0) {
+    try {
+      await client.addCollectionItems(existing.ratingKey, machineId, toAdd);
+    } catch (err) {
+      // Plex keeps collection membership as a tag named by the title, so a
+      // second collection created under a title already in use is a shell:
+      // it holds nothing, and once its twin is gone Plex answers every add to
+      // it with a 400, every night, for good. Seen on a real server after a
+      // run created rules' collections a second time. Rebuilding is the only
+      // way out, and the caller deletes the shell before it creates.
+      if (err instanceof PlexApiError && err.status === 400) {
+        ctx.log(`Plex won't add items to "${existing.title}" - rebuilding it.`);
+        return null;
+      }
+      throw err;
+    }
+  }
 
   let removed = 0;
   const removals = new PQueue({ concurrency: RECONCILE_CONCURRENCY });
