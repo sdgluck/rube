@@ -43,11 +43,20 @@ function closeServer(server: Server): Promise<void> {
 }
 
 export async function startMockPlexTv(
-  opts: { defaultAccount?: MockPlexTvAccount; port?: number; host?: string } = {},
+  opts: {
+    defaultAccount?: MockPlexTvAccount;
+    /** Tokens that already exist — a server's own Plex token, which names its owner. */
+    tokens?: Record<string, MockPlexTvAccount>;
+    /** Who the `/auth` page offers to sign in as; defaults to `defaultAccount` alone. */
+    accounts?: MockPlexTvAccount[];
+    port?: number;
+    host?: string;
+  } = {},
 ): Promise<MockPlexTvServer> {
   const defaultAccount = opts.defaultAccount ?? { id: 42, username: "owner" };
   const pins = new Map<number, { code: string; clientId: string; authToken: string | null }>();
-  const tokens = new Map<string, MockPlexTvAccount>();
+  const tokens = new Map<string, MockPlexTvAccount>(Object.entries(opts.tokens ?? {}));
+  const accounts = opts.accounts ?? [defaultAccount];
   const journal = { requests: [] as string[], clientIds: [] as string[] };
   let nextPin = 1000;
   let failuresRemaining = 0;
@@ -108,15 +117,32 @@ export async function startMockPlexTv(
       return;
     }
 
-    // The app.plex.tv stand-in: approve by code, then show a page the in-app
-    // browser sheet can sit on until the app's poll closes it.
+    // The app.plex.tv stand-in. With one account it approves on sight, so a
+    // test's browser needs no clicks; with several it offers each as a link,
+    // which is how a simulator signs in as the owner or as a shared user.
     if (method === "GET" && url.pathname === "/auth") {
       const code = url.searchParams.get("code");
       const entry = [...pins.entries()].find(([, p]) => p.code === code);
-      if (entry) approve(entry[0]);
-      res.writeHead(entry ? 200 : 404, { "Content-Type": "text/html" });
-      res.end(entry ? "<p>Approved by the mock plex.tv.</p>" : "<p>Unknown code.</p>");
-      return;
+      const html = (status: number, body: string) => {
+        res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(
+          `<!doctype html><meta name="viewport" content="width=device-width"><body style="font:17px system-ui;padding:24px">${body}`,
+        );
+      };
+      if (!entry) return html(404, "<p>Unknown code.</p>");
+      const as = url.searchParams.get("as");
+      const chosen = as ? accounts.find((a) => String(a.id) === as) : accounts.length === 1 ? accounts[0] : undefined;
+      if (chosen) {
+        approve(entry[0], chosen);
+        return html(200, `<p>Signed in to the mock plex.tv as <b>${chosen.username}</b>. Return to the app.</p>`);
+      }
+      const links = accounts
+        .map(
+          (a) =>
+            `<p><a href="/auth?code=${encodeURIComponent(code ?? "")}&as=${a.id}">Sign in as ${a.username}</a></p>`,
+        )
+        .join("");
+      return html(200, `<h2>Mock plex.tv</h2>${links}`);
     }
 
     json({ errors: [{ message: "unhandled" }] }, 404);

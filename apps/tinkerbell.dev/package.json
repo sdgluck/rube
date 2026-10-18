@@ -19,7 +19,8 @@
     "typecheck": "tsc",
     "capture": "node --experimental-strip-types harness/capture.ts",
     "serve": "node --experimental-strip-types harness/serve.ts",
-    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/registry/**/*.test.ts'"
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/registry/**/*.test.ts'",
+    "native-serve": "node --experimental-strip-types harness/native-serve.ts"
   },
   "dependencies": {
     "@tinkerbell/contracts": "workspace:*",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@tinkerbell/core": "workspace:*",
     "@tinkerbell/db": "workspace:*",
+    "@tinkerbell/test-support": "workspace:*",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

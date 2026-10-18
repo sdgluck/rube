@@ -8,3 +8,4 @@ public/registry
 # `postbuild` copies dist/index.html here so GitHub Pages serves the SPA for
 # deep links like /registry/netflix-style instead of a 404. It has to be
 # generated rather than checked in: it needs the hashed asset paths.
+.native-dev-data
