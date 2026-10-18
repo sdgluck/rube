@@ -6,12 +6,12 @@
  * grouped inset lists; Android has a left-aligned top bar, fade-through
  * transitions and Material sheets. Stylesheets read `<html data-platform>` for
  * those details, so it has to be right before first paint: each `index.html`
- * runs the same detection inline, and `bootNative` confirms it from Capacitor.
+ * runs the same detection inline.
  *
  * `?platform=` overrides detection, which is how the screenshot harness
  * captures both looks from one desktop Chromium.
  *
- * Pure apart from `applyPlatform`, so the detection is unit-tested under node.
+ * Pure apart from reading `navigator`, so the detection is unit-tested under node.
  */
 
 export type Platform = "ios" | "android" | "desktop";
@@ -39,17 +39,4 @@ export function getPlatform(): Platform {
     maxTouchPoints: navigator.maxTouchPoints,
     search: typeof location === "undefined" ? "" : location.search,
   });
-}
-
-/**
- * Stamp `<html data-platform>` (and `data-native` inside the apps). The
- * native value wins over the user-agent guess: an Android tablet in desktop
- * mode, say, still gets Android's conventions in the app.
- */
-export function applyPlatform(native?: { platform: string }): void {
-  const root = document.documentElement;
-  const platform =
-    native && (native.platform === "ios" || native.platform === "android") ? native.platform : getPlatform();
-  root.dataset.platform = platform;
-  if (native) root.dataset.native = "true";
 }

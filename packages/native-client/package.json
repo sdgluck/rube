@@ -14,20 +14,6 @@
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
-  "dependencies": {
-    "@aparajita/capacitor-biometric-auth": "^10.0.0",
-    "@aparajita/capacitor-secure-storage": "^8.0.1",
-    "@capacitor/app": "^8.1.2",
-    "@capacitor/browser": "^8.0.5",
-    "@capacitor/core": "8.5.2",
-    "@capacitor/filesystem": "^8.1.4",
-    "@capacitor/haptics": "^8.0.2",
-    "@capacitor/keyboard": "^8.0.6",
-    "@capacitor/preferences": "^8.0.1",
-    "@capacitor/share": "^8.0.3",
-    "@capacitor/splash-screen": "^8.0.2",
-    "@tinkerbell/contracts": "workspace:*"
-  },
   "devDependencies": {
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"

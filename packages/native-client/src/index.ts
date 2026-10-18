@@ -1,28 +1,16 @@
 /**
- * The native (Capacitor) side of the two SPAs.
+ * What is left of the Capacitor client: the pieces of the SPAs' phone layer —
+ * platform detection, push/pop transitions, Back closing an overlay, and the
+ * on-screen keyboard. All browser-only.
  *
- * Browser-only code — it runs in the admin and portal SPAs, never in the
- * server — and every export is a no-op or a pass-through in an ordinary
- * browser, so the web build behaves exactly as it did before the apps existed.
- * No UI lives here: the portal must not import the admin app's design system,
- * so each app draws its own server picker and lock screen from these parts.
+ * Here rather than in the SPAs because both use them and the portal may not
+ * import the admin app's code. It goes when the phone layer is replaced by
+ * plain responsive CSS (Phase 4, step 4 of the native-app plan); the native
+ * apps live in `native/`.
  */
-export {
-  apiUrl,
-  authHeaders,
-  getConnection,
-  mediaUrl,
-  setConnection,
-  subscribeConnection,
-  type Connection,
-} from "./connection.ts";
-export { bootNative, hideSplash, isNative, onDeepLink, onResume, setStatusBarTheme } from "./boot.ts";
-export { connectLink, isInAppPath, parseDeepLink, type DeepLink } from "./deep-links.ts";
-export { openExternal, saveFile } from "./files.ts";
-export { haptic, type HapticKind } from "./haptics.ts";
 export { watchKeyboard } from "./keyboard.ts";
 export { pushOverlay } from "./overlay-history.ts";
-export { applyPlatform, detectPlatform, getPlatform, type Platform } from "./platform.ts";
+export { detectPlatform, getPlatform, type Platform } from "./platform.ts";
 export {
   markTabNavigation,
   navigateBack,
@@ -32,22 +20,3 @@ export {
   transitionsEnabled,
   type NavDirection,
 } from "./transitions.ts";
-export { biometryAvailable, unlock, watchLock } from "./lock.ts";
-export { nativePlexSignIn, SignInCancelled, type NativeSignInCalls } from "./plex-sign-in.ts";
-export { probeServer } from "./probe.ts";
-export {
-  compareVersions,
-  MIN_SERVER_VERSION,
-  serverCandidates,
-  type ServerCheck,
-  type ServerProduct,
-} from "./server-url.ts";
-export {
-  dismiss,
-  getLockEnabled,
-  isDismissed,
-  saveMediaToken,
-  saveServer,
-  saveSession,
-  setLockEnabled,
-} from "./storage.ts";

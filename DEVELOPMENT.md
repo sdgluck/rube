@@ -233,18 +233,17 @@ cd native/android
   `test lint assembleDebug` on Linux. The UI tests run locally only. Signing
   and store upload are manual, and the keys stay outside the repo.
 
-### Capacitor apps (being retired)
+### The old Capacitor apps
 
-`apps/web` and `apps/portal` still build into Capacitor apps (`ios/`,
-`android/` and `capacitor.config.ts` in each, plus `packages/native-client`),
-until the native app has shipped. Run them with `pnpm native:ios web`,
-`pnpm native:android portal` and `pnpm native:sync`.
+The SPAs no longer build into Capacitor apps. Copies already installed carry
+their own bundle, so for one more release the server still supports them in
+three ways:
 
-- **Talking to the server.** They connect with bearer sessions and the old
-  `auth.start({ client: "native" })` handshake.
-- **CORS.** The server allows CORS only for the apps' fixed origins
-  (`apps/server/src/cors.ts`).
-- **Media.** Images and video use `?access_token=` media tokens.
+- the `auth.start({ client: "native" })` handshake;
+- CORS for their fixed origins (`apps/server/src/cors.ts`);
+- `?access_token=` media tokens.
+
+All three go in the following release.
 
 ## Release
 

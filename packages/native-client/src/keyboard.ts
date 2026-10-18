@@ -7,24 +7,16 @@
  * Native apps hide the tab bar while typing; the stylesheet does the same off
  * this attribute.
  *
- * In the apps the Keyboard plugin says so directly. In a mobile browser the
- * visual viewport shrinking well below the layout viewport while a field has
- * focus is the only signal there is.
+ * The visual viewport shrinking well below the layout viewport while a field
+ * has focus is the only signal a mobile browser gives.
  */
-import { Capacitor } from "@capacitor/core";
-import { Keyboard } from "@capacitor/keyboard";
 
 function set(open: boolean): void {
   if (open) document.documentElement.dataset.keyboard = "open";
   else delete document.documentElement.dataset.keyboard;
 }
 
-export async function watchKeyboard(): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
-    await Keyboard.addListener("keyboardWillShow", () => set(true));
-    await Keyboard.addListener("keyboardWillHide", () => set(false));
-    return;
-  }
+export function watchKeyboard(): void {
   const vv = window.visualViewport;
   if (!vv) return;
   const update = () => {

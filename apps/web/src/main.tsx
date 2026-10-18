@@ -62,7 +62,7 @@ const queryClient = new Client({
 });
 
 // Phones in a browser too: the tab bar hides while the keyboard is up.
-void watchKeyboard();
+watchKeyboard();
 
 // Back from the background: whatever is on screen refetches. Phone browsers
 // especially — a tab woken after an hour shows data an hour old otherwise.

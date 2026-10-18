@@ -28,11 +28,8 @@ apps/portal/dist
 # but the cache is machine- and version-specific, so it is never committed.
 *.tsbuildinfo
 
-# Native (Capacitor) builds. `dist-native` is the SPA bundled into the apps,
-# rebuilt by `pnpm native:sync`; the platform folders' own build output is
-# ignored by the .gitignore files Capacitor generated inside them. Signing keys
-# never belong in the repo.
-dist-native/
+# Signing keys for the native apps never belong in the repo; their build
+# output is ignored by native/.gitignore.
 *.jks
 *.keystore
 

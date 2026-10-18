@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
 });
 
 // Phones in a browser too: the tab bar hides while the keyboard is up.
-void watchKeyboard();
+watchKeyboard();
 
 // Back from the background: what's on screen refetches.
 document.addEventListener("visibilitychange", () => {

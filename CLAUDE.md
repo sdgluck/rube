@@ -192,21 +192,22 @@ tests are unchanged, and the portal never advertises the admin address. See
   ever reads a session from a response body.
 - **Bearer sessions** are accepted by both context factories alongside the
   cookie.
-- **The Capacitor builds are being retired.** That covers `ios/`, `android/`,
-  `capacitor.config.ts` in both SPAs, `packages/native-client`,
-  `apps/server/src/cors.ts`, `NATIVE_APPS`, and the
-  `auth.start({ client: "native" })` handshake. They stay until the native
-  app ships. Don't build new features on them.
+- **The Capacitor apps are gone, but the server still serves them for one
+  release.** Installed copies carry their own SPA bundle, so the server keeps
+  three things until the next release: `apps/server/src/cors.ts` with
+  `NATIVE_APPS`, the `auth.start({ client: "native" })` handshake, and the
+  `admin-media` tokens accepted as `?access_token=`. Don't build on any of
+  them. `packages/native-client` now holds only the phone layer's browser
+  helpers (below).
 
 ### The phone layout
 
-Goes with the Capacitor builds, replaced by plain responsive CSS, so keep it
-working but don't grow it.
+This is due to be replaced by plain responsive CSS, so keep it working but
+don't grow it.
 
-Below `--bp-md` (768px) both SPAs behave as native apps, in the Capacitor
-apps and in phone browsers alike. Platform details read `<html data-platform>`
-(`ios` | `android` | `desktop`, set before first paint by each `index.html` and
-confirmed by `bootNative`); iOS is the default look and Material is layered on
+Below `--bp-md` (768px) both SPAs imitate a native app in phone browsers.
+Platform details read `<html data-platform>` (`ios` | `android` | `desktop`,
+set before first paint by each `index.html`); iOS is the default look and Material is layered on
 with `[data-platform="android"]` rules. Desktop layouts don't change.
 
 - **Shared primitives carry it.** `Modal` is a draggable bottom sheet
