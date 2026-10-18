@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
-import SwipeRow from "../components/SwipeRow.tsx";
 
 /** How long "Not for me" can be taken back before it is sent. */
 const UNDO_MS = 4000;
@@ -61,9 +60,8 @@ export default function MyCollections({
 
   /**
    * Optimistic, and undoable: the row folds away at once and the request goes
-   * a few seconds later, so a slip of the thumb (or of a swipe) is one tap to
-   * take back — native lists do it this way, and the server has no "un-not-
-   * for-me" to call afterwards.
+   * a few seconds later, so a slip of the thumb is one tap to take back — the
+   * server has no "un-not-for-me" to call afterwards.
    */
   const exclude = (title: string) => {
     setPending((prev) => [...prev, title]);
@@ -94,32 +92,25 @@ export default function MyCollections({
             </button>
           </div>
         ) : (
-          <SwipeRow
-            key={collection.ratingKey}
-            tone="danger"
-            disabled={!components["action.notForMe"] || excluded.includes(collection.title)}
-            action={{ label: "Not for me", onAction: () => exclude(collection.title) }}
-          >
-            <div className="collection-row">
-              <div className="collection-head">
-                <span className="collection-title">{collection.title}</span>
-                <span className="muted">
-                  {collection.itemCount} item{collection.itemCount === 1 ? "" : "s"}
-                </span>
-              </div>
-              {collection.summary && <p className="collection-summary">{collection.summary}</p>}
-              {components["action.notForMe"] && (
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  disabled={excluded.includes(collection.title)}
-                  onClick={() => exclude(collection.title)}
-                >
-                  {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
-                </button>
-              )}
+          <div key={collection.ratingKey} className="collection-row">
+            <div className="collection-head">
+              <span className="collection-title">{collection.title}</span>
+              <span className="muted">
+                {collection.itemCount} item{collection.itemCount === 1 ? "" : "s"}
+              </span>
             </div>
-          </SwipeRow>
+            {collection.summary && <p className="collection-summary">{collection.summary}</p>}
+            {components["action.notForMe"] && (
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={excluded.includes(collection.title)}
+                onClick={() => exclude(collection.title)}
+              >
+                {excluded.includes(collection.title) ? "Won't show this again" : "Not for me"}
+              </button>
+            )}
+          </div>
         ),
       )}
     </div>

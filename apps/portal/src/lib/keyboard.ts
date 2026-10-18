@@ -4,13 +4,12 @@
  * The bottom tab bar is `position: fixed`, so with the keyboard open it either
  * sat on top of the keyboard, eating a fifth of what was left of the screen,
  * or — where the viewport doesn't resize — covered the field being typed in.
- * Native apps hide the tab bar while typing; the stylesheet does the same off
- * this attribute.
+ * So the stylesheet hides the tab bar off this attribute while typing — the
+ * Tastes search, the match code, a guest's name.
  *
  * The visual viewport shrinking well below the layout viewport while a field
- * has focus is the only signal a mobile browser gives. Portal-only now: it
- * came from the retired `packages/native-client` with the admin app's tab bar
- * gone.
+ * has focus is the only signal a mobile browser gives. Portal-only: the admin
+ * app has no bottom bar.
  */
 
 function set(open: boolean): void {

@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <meta name="color-scheme" content="light dark" />
     <!-- Archivo, self-hosted from /fonts — see src/fonts.css. -->
@@ -15,27 +15,6 @@
     <meta name="theme-color" content="#e8efec" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d1413" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-title" content="Tinkerbell" />
-    <script>
-      (function () {
-        // Platform conventions for the portal's phone styles (portal.css
-        // reads <html data-platform>). Before first paint, so the phone layout never
-        // draws in the wrong platform's style and then flips.
-        try {
-          var p = new URLSearchParams(location.search).get("platform");
-          if (p !== "ios" && p !== "android" && p !== "desktop") {
-            var ua = navigator.userAgent;
-            p = /android/i.test(ua)
-              ? "android"
-              : /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
-                ? "ios"
-                : "desktop";
-          }
-          document.documentElement.dataset.platform = p;
-        } catch (e) {
-          document.documentElement.dataset.platform = "desktop";
-        }
-      })();
-    </script>
     <title>Tinkerbell</title>
   </head>
   <body>

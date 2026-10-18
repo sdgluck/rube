@@ -1,11 +1,11 @@
 /**
  * Back closes the sheet, not the page behind it.
  *
- * On a phone, a sheet, an action sheet or the search palette is a screen the
- * user went "into", and Back — Android's back button or gesture, the iOS edge
- * swipe, a mobile browser's back — is how they expect to leave it. Overlays
- * never touched history, so Back navigated the page underneath while the
- * modal stayed open over it.
+ * On a phone, movie match's share and film sheets are a screen the user went
+ * "into", and Back — a mobile browser's back button, Android's back gesture,
+ * the iOS edge swipe — is how they expect to leave it. Overlays never touched
+ * history, so Back navigated the page underneath (out of the room) while the
+ * sheet stayed open over it.
  *
  * So opening an overlay pushes a history entry (same URL), and popping that
  * entry closes it. Closing it any other way (the ✕, a backdrop tap, saving)
@@ -13,9 +13,9 @@
  * on phones and touch devices: on a desktop, Back has always meant "previous
  * page", and a dialog that ate the first press would be a regression.
  *
- * Framework-free so the portal's sheets can wrap it in their own effect. It
- * came from the retired `packages/native-client` when the admin app dropped its
- * phone emulation; the portal's phone polish is reworked separately.
+ * Framework-free so `match/Sheet.tsx` wraps it in its own effect. It came from
+ * the retired `packages/native-client`; the portal kept it because a bottom
+ * sheet in a phone browser wants Back to close it as much as an app did.
  */
 
 const STATE_KEY = "tbOverlayDepth";

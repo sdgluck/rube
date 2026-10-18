@@ -158,10 +158,6 @@ when iterating locally (never commit its output):
 TB_CAPTURE_ONLY=settings,rules pnpm --filter @tinkerbell/tinkerbell.dev capture   # just these shots
 ```
 
-The portal still has per-platform phone styles: append `?platform=ios` or
-`?platform=android` to a portal URL to preview one in a desktop browser's
-device mode.
-
 ## Native apps
 
 One app per platform, both `dev.tinkerbell.app` with the `tinkerbell://` link

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
-import SwipeRow from "../components/SwipeRow.tsx";
 
 /**
  * What a cleanup rule is about to remove, and the way to say you would rather
@@ -62,31 +61,25 @@ export default function LeavingSoon({ components }: { components: PortalComponen
           {items.map((item) => {
             const voted = optimistic[item.ratingKey] ?? item.voted;
             return (
-              <SwipeRow
-                key={item.ratingKey}
-                disabled={!canVote}
-                action={{ label: voted ? "Undo keep" : "Keep", onAction: () => vote(item.ratingKey, !voted) }}
-              >
-                <div className="collection-row">
-                  <div className="collection-head">
-                    <span className="collection-title">{item.title}</span>
-                    <span className="muted">
-                      {item.runsRemaining === 0
-                        ? "Goes on the next run"
-                        : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
-                    </span>
-                  </div>
-                  {canVote && (
-                    <button
-                      type="button"
-                      className={`btn-ghost ${voted ? "voted" : ""}`}
-                      onClick={() => vote(item.ratingKey, !voted)}
-                    >
-                      {voted ? "Asked to keep \u2713" : "Keep this"}
-                    </button>
-                  )}
+              <div key={item.ratingKey} className="collection-row">
+                <div className="collection-head">
+                  <span className="collection-title">{item.title}</span>
+                  <span className="muted">
+                    {item.runsRemaining === 0
+                      ? "Goes on the next run"
+                      : `In ${item.runsRemaining} more run${item.runsRemaining === 1 ? "" : "s"}`}
+                  </span>
                 </div>
-              </SwipeRow>
+                {canVote && (
+                  <button
+                    type="button"
+                    className={`btn-ghost ${voted ? "voted" : ""}`}
+                    onClick={() => vote(item.ratingKey, !voted)}
+                  >
+                    {voted ? "Asked to keep \u2713" : "Keep this"}
+                  </button>
+                )}
+              </div>
             );
           })}
         </>

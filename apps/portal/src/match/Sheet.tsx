@@ -4,8 +4,13 @@ import { pushOverlay } from "../lib/overlay-history.ts";
 
 /**
  * A centred card on a desktop and a bottom sheet on a phone, for movie match's
- * share and film-detail screens. The portal's `ActionSheet` is a list of
- * choices; these hold content. Back closes it, as it does every overlay.
+ * share and film-detail screens — the portal's only overlay. Back closes it on
+ * a phone (lib/overlay-history.ts): a guest who opened an invite link in their
+ * phone's browser expects Back to dismiss the sheet, not leave the room.
+ *
+ * No grabber: nothing drags it, and a handle that doesn't move is a native
+ * app's affordance borrowed without its gesture. A backdrop tap, Escape and
+ * each sheet's own Done close it.
  */
 export default function Sheet({
   title,
@@ -32,7 +37,6 @@ export default function Sheet({
       role="presentation"
     >
       <div className="mm-sheet" role="dialog" aria-modal="true" aria-label={title}>
-        <span className="sheet-grabber" aria-hidden />
         {children}
       </div>
     </div>,

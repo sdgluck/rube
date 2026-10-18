@@ -37,8 +37,8 @@ body::before {
 }
 
 /* index.html sets `viewport-fit=cover`, so on a notched phone in landscape the
-   page runs under the notch unless the gutters make room for it — and in the
-   native app it runs under the status bar too, which the top inset clears. */
+   page runs under the notch unless the gutters make room for it — and, saved
+   to a home screen, under the status bar too, which the top inset clears. */
 .page {
   max-width: 680px;
   margin: 0 auto;
@@ -720,8 +720,8 @@ textarea {
  * edge of their box.
  */
 @media (max-width: 480px) {
-  /* The top inset too: in the native app the page runs under the status bar,
-     and this rule used to drop it, putting the header under the notch. */
+  /* The top inset too: saved to a home screen the page runs under the status
+     bar, and this rule used to drop it, putting the header under the notch. */
   .page {
     padding: calc(12px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
       calc(32px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
@@ -787,20 +787,26 @@ textarea {
   }
 }
 
-/* ─── The phone app ────────────────────────────────────────────────────────
+/* ─── The phone layout ─────────────────────────────────────────────────────
  *
- * Below 768px the portal is an app rather than a card on a page: a pinned
- * navigation bar, full-bleed screens with a large title, native grouped lists
- * and a bottom tab bar (PortalApp's phone layout). iOS by default; Material in
- * the [data-platform="android"] rules. Touch never sees hover, so the pressed
- * states here are :active.
+ * Below 768px the portal drops the card-on-a-page shape: a sticky header with
+ * the brand, full-width screens under a heading, grouped lists and a bottom
+ * tab bar (PortalApp's phone layout). The tab bar stays because five sections
+ * for one person is what a thumb reaches best; it is not trying to look like
+ * any one platform's app — that imitation (iOS here, Material under
+ * <html data-platform>) went with the Capacitor wrappers. Touch never sees
+ * hover, so the pressed states here are :active.
  */
 @media (pointer: coarse) {
+  /* No grey flash over every tap (the :active states below give the
+     feedback) and no double-tap-to-zoom delay — but pinch zoom still works. */
   html {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
+  /* A long press on a control selects its label or raises the link
+     callout instead of pressing it. */
   button,
   [role="button"],
   [role="switch"],
@@ -817,22 +823,21 @@ textarea {
   padding-bottom: calc(env(safe-area-inset-bottom) + var(--tabbar-h) + 24px);
 }
 
-.nav-bar {
+.phone-header {
   position: sticky;
   top: 0;
   z-index: 20;
   display: flex;
   align-items: center;
-  justify-content: center;
   height: calc(env(safe-area-inset-top) + var(--navbar-h));
-  padding: env(safe-area-inset-top) 16px 0;
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   background: var(--bar-bg);
   backdrop-filter: saturate(1.8) blur(20px);
   -webkit-backdrop-filter: saturate(1.8) blur(20px);
   border-bottom: 1px solid var(--bar-line);
 }
 
-.nav-brand {
+.phone-brand {
   font-weight: 600;
   font-size: 1.05rem;
 }
@@ -841,14 +846,14 @@ textarea {
   padding: 4px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
 }
 
-.large-title {
-  margin: 4px 0 16px;
-  font-size: 2.1rem;
+.screen-title {
+  margin: 16px 0 14px;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-/* Rows and states sit on the page colour as native grouped cells, rounded. */
+/* Rows and states sit on the page colour as grouped cells, rounded. */
 .phone-app .collection-row,
 .phone-app .state,
 .phone-app .skeleton-row,
@@ -856,15 +861,12 @@ textarea {
   border-radius: var(--r-list);
 }
 
-.phone-app .collection-row:active {
-  background: var(--bg-surface-2);
-}
-
 .phone-app .stack {
   gap: 12px;
 }
 
-/* The tab bar: icons over short labels, translucent like the nav bar. */
+/* The tab bar: icons over short labels. Fixed, so lib/keyboard.ts hides it
+   while the on-screen keyboard is up rather than letting it cover the field. */
 .tab-bar {
   position: fixed;
   left: 0;
@@ -873,7 +875,7 @@ textarea {
   z-index: 20;
   display: flex;
   height: calc(env(safe-area-inset-bottom) + var(--tabbar-h));
-  padding-bottom: env(safe-area-inset-bottom);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background: var(--bar-bg);
   backdrop-filter: saturate(1.8) blur(20px);
   -webkit-backdrop-filter: saturate(1.8) blur(20px);
@@ -889,16 +891,16 @@ html[data-keyboard="open"] .tab-bar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
   min-height: 0;
-  padding: 5px 0 0;
+  padding: 0;
   border: none;
   border-radius: 0;
   background: none;
   color: var(--text-muted);
-  font-size: 0.66rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .tab-bar-item.on {
@@ -906,58 +908,10 @@ html[data-keyboard="open"] .tab-bar {
 }
 
 .tab-bar-item:active {
-  opacity: 0.6;
+  background: var(--pressed);
 }
 
-html[data-platform="android"] .nav-bar {
-  justify-content: flex-start;
-  background: var(--bg-page);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-bottom: none;
-}
-
-html[data-platform="android"] .nav-brand {
-  font-size: 1.35rem;
-  font-weight: 400;
-}
-
-html[data-platform="android"] .tab-bar {
-  background: var(--bg-surface);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-top: none;
-}
-
-html[data-platform="android"] .tab-bar-item {
-  justify-content: center;
-  gap: 4px;
-  padding: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-html[data-platform="android"] .tab-bar-icon {
-  box-sizing: content-box;
-  padding: 4px 20px;
-  border-radius: 999px;
-}
-
-html[data-platform="android"] .tab-bar-item.on {
-  color: var(--text-primary);
-}
-
-html[data-platform="android"] .tab-bar-item.on .tab-bar-icon {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-
-html[data-platform="android"] .tab-bar-item:active {
-  opacity: 1;
-}
-
-/* ─── Native lists (Account) ─────────────────────────────────────────── */
+/* ─── Grouped lists (Account, the match lobby) ─────────────────────────── */
 
 .list-group {
   display: flex;
@@ -1007,13 +961,9 @@ html[data-platform="android"] .tab-bar-item:active {
   color: var(--hate);
 }
 
-html[data-platform="android"] .list-row + .list-row::before {
-  display: none;
-}
-
 /* ─── Switches ─────────────────────────────────────────────────────────
-   A setting's checkbox, drawn as the platform's switch on a phone — the
-   Tastes toggles. */
+   A setting's checkbox, drawn as a switch on a phone — the Tastes toggles,
+   where a 16px box at the far end of a full-width row was a small target. */
 @media (max-width: 768px) {
   .check {
     flex-direction: row-reverse;
@@ -1174,45 +1124,7 @@ html[data-platform="android"] .list-row + .list-row::before {
   transform: scale(0.96);
 }
 
-/* ─── Swipe rows ───────────────────────────────────────────────────────── */
-
-.swipe-row {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--r-list);
-  touch-action: pan-y;
-}
-
-.swipe-content {
-  position: relative;
-  z-index: 1;
-}
-
-.swipe-content.settling {
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.swipe-action {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  min-height: 0;
-  border: none;
-  border-radius: 0;
-  color: var(--on-accent);
-  font-weight: 600;
-}
-
-.swipe-action.accent {
-  background: var(--accent);
-}
-
-.swipe-action.danger {
-  background: var(--hate);
-}
-
-/* ─── Action sheet ─────────────────────────────────────────────────────── */
+/* ─── Overlays ─────────────────────────────────────────────────────────── */
 
 .sheet-backdrop {
   position: fixed;
@@ -1225,116 +1137,6 @@ html[data-platform="android"] .list-row + .list-row::before {
   animation: sheet-fade 0.18s ease-out;
 }
 
-.action-sheet {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  max-width: 480px;
-  padding: 0 8px calc(env(safe-area-inset-bottom) + 8px);
-  animation: sheet-up 0.36s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.sheet-grabber {
-  display: none;
-}
-
-.action-group {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: var(--r-alert);
-  background: var(--bg-surface);
-}
-
-.action-title {
-  padding: 14px 16px;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  text-align: center;
-  border-bottom: 1px solid var(--list-sep);
-}
-
-.action-item,
-.action-cancel {
-  min-height: 56px;
-  border: none;
-  border-radius: 0;
-  background: var(--bg-surface);
-  color: var(--accent);
-  font-size: 1.15rem;
-  font-weight: 400;
-}
-
-.action-item + .action-item {
-  border-top: 1px solid var(--list-sep);
-}
-
-.action-item.danger {
-  color: var(--hate);
-}
-
-.action-cancel {
-  border-radius: var(--r-alert);
-  font-weight: 600;
-}
-
-.action-item:active,
-.action-cancel:active {
-  background: var(--bg-surface-2);
-}
-
-html[data-platform="android"] .action-sheet {
-  gap: 0;
-  max-width: 640px;
-  padding: 0 0 env(safe-area-inset-bottom);
-  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  background: var(--bg-surface);
-}
-
-html[data-platform="android"] .sheet-grabber {
-  display: block;
-  width: 32px;
-  height: 4px;
-  margin: 16px auto 8px;
-  border-radius: 999px;
-  background: var(--grabber);
-}
-
-html[data-platform="android"] .action-group {
-  border-radius: 0;
-}
-
-html[data-platform="android"] .action-title {
-  text-align: left;
-  border-bottom: none;
-  padding: 4px 24px 12px;
-}
-
-html[data-platform="android"] .action-item {
-  padding: 0 24px;
-  color: var(--text-primary);
-  text-align: left;
-}
-
-html[data-platform="android"] .action-item.danger {
-  color: var(--hate);
-}
-
-html[data-platform="android"] .action-item + .action-item {
-  border-top: none;
-}
-
-html[data-platform="android"] .action-cancel {
-  display: none;
-}
-
-@keyframes sheet-up {
-  from {
-    transform: translateY(100%);
-  }
-}
-
 @keyframes sheet-fade {
   from {
     opacity: 0;
@@ -1342,8 +1144,8 @@ html[data-platform="android"] .action-cancel {
 }
 
 /* Moods as the same pill chips as genres, not boxes in a box; a row's action
-   as a word in the accent colour, the way a native list offers one (the
-   swipe is the quick way). */
+   as a word in the accent colour under its title — the one way to take it
+   on a phone now the rows no longer swipe. */
 .phone-app .chips {
   padding: 0;
   border: none;

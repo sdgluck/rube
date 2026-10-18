@@ -1,7 +1,7 @@
 /* Movie match — the portal's room, deck and matches.
  *
  * Prefixed `mm-` because the portal's stylesheet is global. The cards borrow
- * the native sheet radius (--r-sheet) rather than the portal's square corners:
+ * the sheet radius (--r-sheet) rather than the portal's square corners:
  * a poster you throw across the screen is a physical object, and reads as one.
  * Text on a poster uses the --on-poster tokens, which don't flip with the
  * scheme, because the poster under them doesn't either. */
@@ -100,6 +100,48 @@
 
 .mm-room-bar .btn-ghost {
   border: none;
+}
+
+/* The room's "⋯" menu: a plain dropdown under the button. */
+.mm-menu {
+  position: relative;
+}
+
+.mm-menu-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-list);
+  background: var(--bg-surface);
+  box-shadow: 0 8px 24px var(--scrim);
+}
+
+.mm-menu-list button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  font-weight: 500;
+  text-align: left;
+}
+
+.mm-menu-list button + button {
+  border-top: 1px solid var(--list-sep);
+}
+
+.mm-menu-list button.danger {
+  color: var(--hate);
+}
+
+.mm-menu-list button:active:not(:disabled) {
+  background: var(--pressed);
 }
 
 .mm-code {
@@ -527,10 +569,6 @@
   color: var(--text-primary);
 }
 
-.mm-sheet .sheet-grabber {
-  display: none;
-}
-
 .mm-sheet-title {
   margin: 0;
   font-size: 1.2rem;
@@ -607,7 +645,8 @@
 }
 
 @media (max-width: 768px) {
-  /* A phone is a bottom sheet, as the rest of the portal's overlays are. */
+  /* A phone is a bottom sheet: the share and film screens rise from where
+     the thumb is, and a backdrop tap, Back or Done closes them. */
   .mm-sheet-backdrop {
     align-items: flex-end;
   }
@@ -617,10 +656,6 @@
     max-width: none;
     border-radius: var(--r-sheet) var(--r-sheet) 0 0;
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  }
-
-  .mm-sheet .sheet-grabber {
-    display: block;
   }
 
   .mm-guest-card {

@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
 });
 
-// Phones in a browser too: the tab bar hides while the keyboard is up.
+// The phone layout's fixed tab bar hides while the on-screen keyboard is up.
 watchKeyboard();
 
 // Back from the background: what's on screen refetches.

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { describeMatchFilters } from "@tinkerbell/contracts";
 import { portalTrpc, type MatchState } from "../trpc.ts";
-import ActionSheet from "../components/ActionSheet.tsx";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 import Matches from "./Matches.tsx";
 import ShareSheet from "./ShareSheet.tsx";
@@ -109,9 +108,13 @@ export default function Room({
             · {online}/{state.members.length} here
           </span>
         </button>
-        <button type="button" className="btn-ghost" onClick={() => setMenu(true)} aria-label="Room options">
-          ⋯
-        </button>
+        <RoomMenu
+          open={menu}
+          onToggle={setMenu}
+          onInvite={() => setSharing(true)}
+          onLeave={leave}
+          leaving={leaveMutation.isPending}
+        />
       </div>
 
       <p className="muted mm-center mm-small">
@@ -184,15 +187,73 @@ export default function Room({
       )}
 
       {sharing && <ShareSheet code={state.code} link={state.link} onClose={() => setSharing(false)} />}
-      <ActionSheet
-        open={menu}
-        onClose={() => setMenu(false)}
-        title={`Room ${state.code}`}
-        actions={[
-          { label: "Invite people", onSelect: () => setSharing(true) },
-          { label: "Leave room", danger: true, onSelect: leave },
-        ]}
-      />
+    </div>
+  );
+}
+
+/**
+ * The room's "⋯": a small menu under the button, on a phone as on a desktop.
+ * It was an action sheet rising from the bottom of the screen — a native app's
+ * control, for two choices that fit beside the button that asked for them.
+ * Leaving stays a second tap away from the deck, as it was.
+ */
+function RoomMenu({
+  open,
+  onToggle,
+  onInvite,
+  onLeave,
+  leaving,
+}: {
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  onInvite: () => void;
+  onLeave: () => void;
+  leaving: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onToggle(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onToggle(false);
+    document.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onToggle]);
+
+  return (
+    <div className="mm-menu" ref={ref}>
+      <button
+        type="button"
+        className="btn-ghost"
+        onClick={() => onToggle(!open)}
+        aria-label="Room options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div className="mm-menu-list" role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onToggle(false);
+              onInvite();
+            }}
+          >
+            Invite people
+          </button>
+          <button type="button" role="menuitem" className="danger" onClick={onLeave} disabled={leaving}>
+            {leaving ? "Leaving…" : "Leave room"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Clock, Heart, LayoutGrid, Popcorn, UserRound, type LucideIcon } from "lucide-react";
-import ActionSheet from "./components/ActionSheet.tsx";
 import { useIsPhone } from "./useIsPhone.ts";
 import { portalTrpc } from "./trpc.ts";
 import BrandHeader, { type Branding } from "./components/BrandHeader.tsx";
@@ -80,7 +79,6 @@ export default function PortalApp() {
   const isPhone = useIsPhone();
   const [tab, setTabState] = useState<TabId>(() => tabFromHash() ?? "preferences");
   const scrollByTab = useRef(new Map<TabId, number>());
-  const [signingOut, setSigningOut] = useState(false);
 
   /**
    * On a phone each tab is a history entry, so Back (Android's key, a browser
@@ -286,28 +284,29 @@ export default function PortalApp() {
     ) : current === "leaving" ? (
       <LeavingSoon components={components} />
     ) : current === "account" ? (
-      <Account username={meQuery.data.username} onSignOut={() => setSigningOut(true)} />
+      <Account username={meQuery.data.username} onSignOut={signOut} signingOut={logoutMutation.isPending} />
     ) : (
       <EmptyState title="Nothing here yet">The server's owner hasn't turned anything on for you.</EmptyState>
     );
 
   /**
-   * The phone app: a pinned navigation bar, the screen, and a tab bar with
-   * icons — Account last, holding what the desktop's header and footer do.
-   * Full-bleed rather than a card floating on a page, which is a website's
-   * shape.
+   * The phone layout: a sticky header, the screen under its heading, and a
+   * bottom tab bar with icons — Account last, holding what the desktop's
+   * header does. Full-width rather than a card floating on a page, which
+   * wastes a 390px screen on gutters. A plain responsive page, not an
+   * imitation of either platform's app.
    */
   if (isPhone) {
     const phoneTabs: TabId[] = [...tabs.map((t) => t.id), "account"];
     return (
       <div className="phone-app">
-        <header className="nav-bar">
-          <span className="nav-brand">
+        <header className="phone-header">
+          <span className="phone-brand">
             <BrandHeader branding={branding} />
           </span>
         </header>
         <main className="phone-screen">
-          <h1 className="large-title">{PHONE_TABS[current ?? "account"].label}</h1>
+          <h1 className="screen-title">{PHONE_TABS[current ?? "account"].label}</h1>
           {content}
         </main>
         <nav className="tab-bar" aria-label="Portal sections">
@@ -328,12 +327,6 @@ export default function PortalApp() {
             );
           })}
         </nav>
-        <ActionSheet
-          open={signingOut}
-          onClose={() => setSigningOut(false)}
-          title={`Signed in as ${meQuery.data.username}`}
-          actions={[{ label: "Sign out", danger: true, onSelect: signOut }]}
-        />
       </div>
     );
   }
@@ -381,9 +374,19 @@ export default function PortalApp() {
 
 /**
  * The phone's Account tab: who you are, and signing out — the things that
- * belong to the person rather than to their tastes.
+ * belong to the person rather than to their tastes. Signing out is one tap,
+ * as the desktop's header button is: it used to raise an action sheet to
+ * confirm, and the way back in is a sign-in, not anything lost.
  */
-function Account({ username, onSignOut }: { username: string; onSignOut: () => void }) {
+function Account({
+  username,
+  onSignOut,
+  signingOut,
+}: {
+  username: string;
+  onSignOut: () => void;
+  signingOut: boolean;
+}) {
   return (
     <div className="stack">
       <div className="list-group">
@@ -393,8 +396,8 @@ function Account({ username, onSignOut }: { username: string; onSignOut: () => v
         </div>
       </div>
       <div className="list-group">
-        <button type="button" className="list-row list-button danger" onClick={onSignOut}>
-          Sign out
+        <button type="button" className="list-row list-button danger" onClick={onSignOut} disabled={signingOut}>
+          {signingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
     </div>

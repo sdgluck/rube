@@ -65,30 +65,22 @@
      configured. */
   --page-image: none;
 
-  /* ─── Native chrome (phones) ──────────────────────────────────────────
-     The phone app's bars, lists and sheets — the same values as the admin
-     app's (apps/web/src/App.css), kept in step by hand like the rest of this
-     file. Rounded where the desktop portal is square: these are the
-     platform's shapes, not the portal's. iOS here; Material below. */
+  /* ─── Phone chrome ────────────────────────────────────────────────────
+     The phone layout's header and tab bar, its grouped lists and sheets.
+     One look on every phone: the portal used to fork iOS and Material off
+     <html data-platform>, imitating whichever native app the browser sat on,
+     and that imitation went with the Capacitor wrappers. Rounded where the
+     desktop portal is square, because these sit edge to edge on a small
+     screen. */
   --bar-bg: rgba(232, 239, 236, 0.82);
   --bar-line: rgba(19, 28, 27, 0.12);
   --list-sep: rgba(19, 28, 27, 0.1);
   --pressed: rgba(19, 28, 27, 0.07);
-  --grabber: rgba(19, 28, 27, 0.2);
   --scrim: rgba(15, 22, 21, 0.48);
   --r-list: 11px;
   --r-sheet: 12px;
-  --r-alert: 14px;
   --navbar-h: 44px;
-  --tabbar-h: 49px;
-}
-
-:root[data-platform="android"] {
-  --r-list: 16px;
-  --r-sheet: 28px;
-  --r-alert: 28px;
-  --navbar-h: 64px;
-  --tabbar-h: 80px;
+  --tabbar-h: 56px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -121,6 +113,5 @@
     --bar-line: rgba(255, 255, 255, 0.1);
     --list-sep: rgba(255, 255, 255, 0.08);
     --pressed: rgba(255, 255, 255, 0.07);
-    --grabber: rgba(255, 255, 255, 0.28);
   }
 }

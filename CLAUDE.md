@@ -214,8 +214,12 @@ imitation of a native app (that is `native/`'s job):
 - `:hover` must sit inside `@media (hover: hover)` (`tinkerbell/hover-media`),
   and anything a hover reveals needs a `@media (hover: none)` fallback.
 
-The portal (`apps/portal`) still has its own per-platform phone styles
-(`<html data-platform>`, `src/lib/overlay-history.ts`, `src/lib/keyboard.ts`).
+The portal (`apps/portal`) is one look on every phone too, but keeps a phone
+shape of its own below 768px, because invite links put guests on the web
+portal in a phone browser: a sticky header, a fixed bottom tab bar
+(`src/lib/keyboard.ts` hides it while the on-screen keyboard is up), movie
+match's sheets as bottom sheets that Back closes (`src/lib/overlay-history.ts`)
+and the touch-dragged swipe deck. Row actions are visible buttons, not swipes.
 
 ### Agent API (`packages/agent-api`)
 
