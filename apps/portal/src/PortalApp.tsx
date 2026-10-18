@@ -374,9 +374,10 @@ export default function PortalApp() {
 
 /**
  * The phone's Account tab: who you are, and signing out — the things that
- * belong to the person rather than to their tastes. Signing out is one tap,
- * as the desktop's header button is: it used to raise an action sheet to
- * confirm, and the way back in is a sign-in, not anything lost.
+ * belong to the person rather than to their tastes. Signing out asks once,
+ * on the row itself: the first tap turns it into "Tap again to sign out" for
+ * a few seconds. That replaces the old action sheet without a dialog, and an
+ * accidental tap near the bottom of a phone screen undoes itself.
  */
 function Account({
   username,
@@ -387,6 +388,12 @@ function Account({
   onSignOut: () => void;
   signingOut: boolean;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 4000);
+    return () => clearTimeout(t);
+  }, [confirming]);
   return (
     <div className="stack">
       <div className="list-group">
@@ -396,8 +403,13 @@ function Account({
         </div>
       </div>
       <div className="list-group">
-        <button type="button" className="list-row list-button danger" onClick={onSignOut} disabled={signingOut}>
-          {signingOut ? "Signing out…" : "Sign out"}
+        <button
+          type="button"
+          className="list-row list-button danger"
+          onClick={() => (confirming ? onSignOut() : setConfirming(true))}
+          disabled={signingOut}
+        >
+          {signingOut ? "Signing out…" : confirming ? "Tap again to sign out" : "Sign out"}
         </button>
       </div>
     </div>
