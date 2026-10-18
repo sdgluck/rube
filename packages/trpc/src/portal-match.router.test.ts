@@ -8,6 +8,8 @@
  * even the rest of the portal.
  */
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { after, before, describe, test } from "node:test";
 import { initTRPC } from "@trpc/server";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
@@ -86,6 +88,24 @@ describe("movie match on the portal", () => {
     await rejects(dee.match.libraries(), "UNAUTHORIZED");
     await rejects(dee.me(), "UNAUTHORIZED");
     await rejects(dee.preferences.get(), "UNAUTHORIZED");
+  });
+
+  test("a member's room still answers when Plex doesn't say which server it is", async () => {
+    // `machineIdentifier` is optional in Plex's identity. Returned as undefined
+    // it failed the room's output schema, and every poll of the room was a 500.
+    const plex = createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ MediaContainer: { friendlyName: "Anonymous" } }));
+    });
+    await new Promise<void>((ok) => plex.listen(0, "127.0.0.1", ok));
+    after(() => new Promise<void>((ok) => plex.close(() => ok())));
+    const { port } = plex.address() as AddressInfo;
+    setConfig("global_plex_url", `http://127.0.0.1:${port}`);
+    setConfig("global_plex_token", "t");
+    setConfig("match_enabled", true);
+
+    const { code } = await alice.match.create({ sectionId: "1", filters: {} });
+    assert.equal((await alice.match.state({ code })).plexServerId, null);
   });
 
   test("nobody at all is refused before anything else is checked", async () => {

@@ -98,7 +98,9 @@ export function createPortalMatchRouter(
   async function serverId(): Promise<string | null> {
     if (plexServerId !== undefined) return plexServerId;
     try {
-      plexServerId = (await getPlexClient().getIdentity()).machineIdentifier;
+      // Plex may omit it; null is "no link", and `undefined` would both fail
+      // the output schema and be re-asked on every poll.
+      plexServerId = (await getPlexClient().getIdentity()).machineIdentifier ?? null;
     } catch {
       return null;
     }
